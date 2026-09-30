@@ -1,0 +1,14 @@
+{
+  "create": "Create",
+  "refresh": "Refresh",
+  "filters": "Filters",
+  "filters_active": "Filters ({{count}})",
+  "filters_description": "Narrow the list using filters.",
+  "filter_any": "Any",
+  "filter_unsupported": "API parameter for this filter is not available yet.",
+  "reset_filters": "Reset",
+  "apply_filters": "Apply",
+  "delete_title": "Delete: {{name}}",
+  "delete_description": "Are you sure you want to delete {{name}}?",
+  "delete_soft_description": "{{name}} will be soft-deleted. The record is archived, not permanently removed."
+}

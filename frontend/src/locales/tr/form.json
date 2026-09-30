@@ -1,0 +1,17 @@
+{
+  "pick_date": "Tarih seçin",
+  "show_password": "Şifreyi göster",
+  "hide_password": "Şifreyi gizle",
+  "cancel": "Vazgeç",
+  "clear": "Temizle",
+  "save": "Kaydet",
+  "required": "Zorunlu alan",
+  "on_this_page": "Bu sayfada",
+  "combobox_placeholder": "Seçin…",
+  "combobox_search": "Ara…",
+  "combobox_empty": "Sonuç bulunamadı",
+  "combobox_selected": "Seçili",
+  "command_title": "Komut / seçim",
+  "command_description": "Ara ve bir öğe seç",
+  "command_group_default": "Sonuçlar"
+}

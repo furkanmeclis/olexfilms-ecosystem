@@ -1,0 +1,17 @@
+{
+  "reconnected": "Canlı bağlantı yeniden kuruldu",
+  "offline": "Çevrimdışısınız — canlı bağlantı duraklatıldı",
+  "event_fallback": "Güncelleme: {{type}}",
+  "event_notifications_sent": "Bildirim gönderildi",
+  "event_notifications_delivered": "Bildirim iletildi",
+  "event_notifications_failed": "Bildirim gönderilemedi",
+  "event_jobs_completed": "İş tamamlandı",
+  "event_jobs_failed": "İş başarısız oldu",
+  "event_imports_completed": "İçe aktarma tamamlandı",
+  "event_imports_failed": "İçe aktarma başarısız oldu",
+  "event_exports_completed": "Dışa aktarma tamamlandı",
+  "event_exports_failed": "Dışa aktarma başarısız oldu",
+  "event_exports_cancelled": "Dışa aktarma iptal edildi",
+  "event_reports_export_completed": "Rapor dışa aktarma hazır",
+  "event_reports_export_failed": "Rapor dışa aktarma başarısız oldu"
+}

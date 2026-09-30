@@ -1,0 +1,8 @@
+{
+  "logo.upload": "Upload logo",
+  "logo.replace": "Replace logo",
+  "logo.clear": "Clear logo",
+  "logo.uploading": "Uploading…",
+  "logo.too_large": "Logo must be 2 MB or smaller.",
+  "logo.invalid_type": "Use a JPEG, PNG, or WebP image."
+}

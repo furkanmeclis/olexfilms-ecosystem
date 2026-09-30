@@ -1,0 +1,74 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "../styles/theme.css";
+@import "../components/editor/themes/editor-theme.css";
+@import "../components/shadix-ui/styles/signature-pad.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  html {
+    @apply overflow-x-hidden;
+  }
+
+  body {
+    @apply bg-background text-foreground has-[div[data-variant="inset"]]:bg-sidebar min-h-svh w-full font-sans leading-relaxed;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  .font-display {
+    font-family: var(--font-display);
+    @apply tracking-tight;
+  }
+
+  ::selection {
+    background: color-mix(in oklch, var(--primary) 22%, transparent);
+  }
+
+  /* Landing: page base behind the content wrapper is the hero colour, so
+     browsers that tint their chrome from the page (iOS Safari) and the
+     overscroll area match the dark hero. The wrapper keeps its own background. */
+  html:has([data-landing]),
+  html:has([data-landing]) body {
+    background-color: #1a1412;
+  }
+
+  body[data-scroll-locked] {
+    overflow: unset !important;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  @media screen and (max-width: 767px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+}
+
+/* Tenant branding override seam */
+[data-brand] {
+  --primary: var(--brand-primary, var(--primary));
+  --primary-foreground: var(
+    --brand-primary-foreground,
+    var(--primary-foreground)
+  );
+  --accent: var(--brand-accent, var(--accent));
+  --radius: var(--brand-radius, var(--radius));
+}

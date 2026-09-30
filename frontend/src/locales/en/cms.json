@@ -1,0 +1,7 @@
+{
+  "home.title": "Home",
+  "home.subtitle": "Content management shell — add modules here.",
+  "home.welcome": "Welcome",
+  "home.greeting": "Signed in as {{name}}.",
+  "home.placeholder": "Your CMS workspace is ready."
+}

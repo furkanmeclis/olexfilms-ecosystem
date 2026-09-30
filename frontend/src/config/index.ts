@@ -1,0 +1,10 @@
+export { apiConfig } from "./api";
+export { authConfig } from "./auth";
+export { brand } from "./brand";
+export { themeConfig } from "./theme";
+export { routes } from "./routes";
+export { permissions, Permission, ALL_PERMISSIONS } from "./permissions";
+export type { PermissionSlug } from "./permissions";
+export { realtimeConfig } from "./realtime";
+export { i18nConfig } from "./i18n";
+export { storageConfig } from "./storage";

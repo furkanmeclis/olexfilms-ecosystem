@@ -1,0 +1,13 @@
+.export-preview-spreadsheet {
+  --readonly-text-color: var(--text-color);
+}
+
+.export-preview-spreadsheet
+  .Spreadsheet__cell--readonly
+  .Spreadsheet__data-viewer {
+  color: var(--text-color);
+}
+
+.export-preview-spreadsheet .Spreadsheet__cell--readonly {
+  cursor: default;
+}

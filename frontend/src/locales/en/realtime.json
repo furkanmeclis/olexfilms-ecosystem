@@ -1,0 +1,17 @@
+{
+  "reconnected": "Realtime connection restored",
+  "offline": "You are offline — realtime paused",
+  "event_fallback": "Update: {{type}}",
+  "event_notifications_sent": "Notification sent",
+  "event_notifications_delivered": "Notification delivered",
+  "event_notifications_failed": "Notification failed",
+  "event_jobs_completed": "Job completed",
+  "event_jobs_failed": "Job failed",
+  "event_imports_completed": "Import completed",
+  "event_imports_failed": "Import failed",
+  "event_exports_completed": "Export completed",
+  "event_exports_failed": "Export failed",
+  "event_exports_cancelled": "Export cancelled",
+  "event_reports_export_completed": "Report export ready",
+  "event_reports_export_failed": "Report export failed"
+}
