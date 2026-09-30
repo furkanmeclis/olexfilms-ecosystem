@@ -1,0 +1,71 @@
+{
+  "token_hmac_secret_key": "orin-centrifugo-token-hmac-change-me",
+  "api_key": "orin-centrifugo-api-key-change-me",
+  "admin": false,
+  "allowed_origins": [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:3002",
+    "http://localhost:8080",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
+    "http://127.0.0.1:3002",
+    "http://127.0.0.1:8080"
+  ],
+  "allow_subscribe_for_client": false,
+  "namespaces": [
+    {
+      "name": "org",
+      "allow_subscribe_for_client": false,
+      "allow_publish_for_client": false,
+      "presence": true,
+      "join_leave": true,
+      "force_push_join_leave": true,
+      "allow_presence_for_subscriber": true
+    },
+    {
+      "name": "user",
+      "allow_subscribe_for_client": false,
+      "allow_publish_for_client": false,
+      "presence": true,
+      "join_leave": true,
+      "force_push_join_leave": true,
+      "allow_presence_for_subscriber": true
+    },
+    {
+      "name": "workspace",
+      "allow_subscribe_for_client": false,
+      "allow_publish_for_client": false,
+      "history_size": 1,
+      "history_ttl": "60s",
+      "force_recovery": true
+    },
+    {
+      "name": "conversation",
+      "allow_subscribe_for_client": false,
+      "allow_publish_for_client": false,
+      "history_size": 10,
+      "history_ttl": "120s",
+      "force_recovery": true
+    },
+    {
+      "name": "channel_account",
+      "allow_subscribe_for_client": false,
+      "allow_publish_for_client": false
+    },
+    {
+      "name": "tenant",
+      "allow_subscribe_for_client": false,
+      "allow_publish_for_client": false
+    },
+    {
+      "name": "inbox",
+      "allow_subscribe_for_client": false,
+      "allow_publish_for_client": false,
+      "presence": true,
+      "join_leave": true,
+      "force_push_join_leave": true,
+      "allow_presence_for_subscriber": true
+    }
+  ]
+}

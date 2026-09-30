@@ -1,0 +1,14 @@
+apis:
+  app@v1:
+    root: ../docs/openapi.yaml
+
+extends:
+  - recommended
+
+rules:
+  # Operation-level security is declared per route (public vs bearer).
+  security-defined: off
+  no-unused-components: warn
+  operation-4xx-response: warn
+  no-server-example.com: off
+  info-license-strict: warn

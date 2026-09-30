@@ -1,0 +1,17 @@
+.bin/
+tmp/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.git
+.idea
+.vscode
+.DS_Store
+coverage.*
+**/*_test.go
+docker-compose*.yml
+.air.toml
+Makefile
+prompts/

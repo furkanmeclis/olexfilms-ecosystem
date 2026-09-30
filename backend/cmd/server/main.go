@@ -1,0 +1,142 @@
+package main
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/cache"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/config"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/httpserver"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/logging"
+	logsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/logs/usecase"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/providers"
+	notifusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/usecase"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/mail"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/realtime"
+)
+
+func main() {
+	cfg, err := config.Load()
+	if err != nil {
+		_, _ = os.Stderr.WriteString("config load failed: " + err.Error() + "\n")
+		os.Exit(1)
+	}
+
+	log := logging.New(cfg.Log.Level, cfg.Log.Format)
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	db, err := database.NewPostgresPool(ctx, cfg.DB)
+	if err != nil {
+		log.Error("database_init_failed", "error", err)
+		os.Exit(1)
+	}
+	defer db.Close()
+
+	rdb, err := cache.NewRedisClient(ctx, cfg.Redis)
+	if err != nil {
+		log.Error("redis_init_failed", "error", err)
+		os.Exit(1)
+	}
+	defer func() { _ = rdb.Close() }()
+
+	store, err := storage.NewFromConfig(ctx, cfg.Storage)
+	if err != nil {
+		log.Error("storage_init_failed", "error", err)
+		os.Exit(1)
+	}
+	pingCtx, pingCancel := context.WithTimeout(ctx, 5*time.Second)
+	if err := store.Ping(pingCtx); err != nil {
+		pingCancel()
+		log.Error("storage_ping_failed", "error", err)
+		os.Exit(1)
+	}
+	pingCancel()
+
+	var publisher realtime.Publisher
+	if cfg.Centrifugo.Enabled {
+		publisher = realtime.NewCentrifugoClient(cfg.Centrifugo)
+	} else {
+		publisher = realtime.NoopPublisher{}
+	}
+
+	queries := database.NewQueries(db)
+	logsSvc := logsusecase.New(queries)
+	persist := logging.Attach(log, logsSvc)
+	log = persist.Logger()
+	defer persist.Close()
+
+	eventBus := events.NewBus(log)
+	mailer := mail.NewSMTPSender(cfg.SMTP)
+	provs := []providers.Provider{
+		providers.InappProvider{},
+		providers.EmailProvider{Mail: mailer},
+		providers.RealtimeProvider{Pub: publisher},
+		providers.NoopProvider{Name: "sms", Log: log},
+		providers.NoopProvider{Name: "push", Log: log},
+	}
+
+	var queueClient *queue.Client
+	var worker *queue.Worker
+	if cfg.Queue.Enabled {
+		queueClient = queue.NewClient(cfg.Redis)
+		notifSvc := notifusecase.New(queries, queueClient, provs, log)
+		if cfg.Queue.WorkerInProcess {
+			worker = queue.NewWorker(cfg, log, notifSvc.Deliver).
+				WithLogPurge(logsSvc.ApplyDueRules)
+			if n, err := notifSvc.ReclaimStuck(ctx, notifusecase.DefaultStuckProcessingMinutes); err != nil {
+				log.Error("notification_reclaim_failed", "error", err)
+			} else if n > 0 {
+				log.Info("notification_reclaim_completed", "count", n)
+			}
+		}
+	}
+
+	srv, err := httpserver.New(cfg, log, httpserver.Deps{
+		DB:       db,
+		Queries:  queries,
+		Redis:    rdb,
+		Queue:    queueClient,
+		Storage:  store,
+		Realtime: publisher,
+		Worker:   worker,
+		Events:   eventBus,
+	})
+	if err != nil {
+		log.Error("httpserver_init_failed", "error", err)
+		os.Exit(1)
+	}
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- srv.Start()
+	}()
+
+	select {
+	case <-ctx.Done():
+		log.Info("shutdown_signal_received")
+	case err := <-errCh:
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Error("server_failed", "error", err)
+			os.Exit(1)
+		}
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Error("shutdown_failed", "error", err)
+		os.Exit(1)
+	}
+	log.Info("server_stopped")
+}
