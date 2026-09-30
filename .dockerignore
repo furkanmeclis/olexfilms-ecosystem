@@ -1,0 +1,34 @@
+# Root .dockerignore used when docker build context = project root (frontend build).
+# Excludes files that are not needed to build the frontend image.
+
+.git
+.gitignore
+.github
+
+# Backend source — not needed for frontend image
+backend/
+
+# Frontend dev artifacts
+frontend/node_modules/
+frontend/.next/
+frontend/.turbo/
+
+# Docs, scripts, tmp
+docs/
+scripts/
+tmp/
+*.md
+*.txt
+
+# Local environment files (secrets must not leak into the image)
+.env*
+!.env.example
+
+# Compose files
+compose.*.yml
+docker-compose*.yml
+
+# IDE
+.idea/
+.vscode/
+*.swp
