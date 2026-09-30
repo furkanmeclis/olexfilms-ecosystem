@@ -83,6 +83,12 @@ Sen `furkanmeclis/olexfilms-ecosystem` reposunu sıfırdan inşa eden orkestrat�
 
 **Sınırlar:** prod sunucuya bağlanma, eski sistem DB'lerine yazma, Linear'da iş silme/kilometre taşı değiştirme yok, kapsam dışı maddeleri (design.md bölüm 9) yapma, secret commit'leme, `git push --force` yok.
 
+**Durma kuralı (gece boyu çalışacaksın):**
+- Hiçbir adımda benden onay, cevap veya seçim bekleme. Bana soru sorma; "devam edeyim mi" deme. Karar gerektiren her durumda `AGENTS.md` ve karar kartına göre en muhafazakâr seçeneği uygula, Linear'a yorumla gerekçesini yaz ve devam et.
+- Bir iş üç denemede geçmezse Linear'a yorum yaz, Todo'ya çek, sıradaki işe geç. Asla aynı işte takılı kalma.
+- Ortamsal engel (erişim yok, araç yok, kota) çıkarsa etkilenen işi Todo'ya çekip engellenmeyen işlere geç; hepsi engelliyse Linear'da `F-BLOCKED: <sebep>` başlıklı tek bir iş aç ve ancak o zaman dur.
+- Durduğunda son mesajın şu olsun: tamamlanan iş numaraları, Todo'ya çekilenler ve nedenleri, sıradaki iş.
+
 Başla: karar kartını üret, F0 listesini çek, F0-01 (TEC-78) için araştırma ajanını başlat.
 
 ---
