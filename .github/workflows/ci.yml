@@ -1,0 +1,60 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  ci:
+    name: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect stacks
+        id: detect
+        run: |
+          echo "backend=$([ -f backend/go.mod ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "frontend=$([ -f frontend/package.json ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Go
+        if: steps.detect.outputs.backend == 'true'
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Backend vet and test
+        if: steps.detect.outputs.backend == 'true'
+        working-directory: backend
+        run: |
+          go vet ./...
+          go test ./... -count=1
+
+      - name: Set up pnpm
+        if: steps.detect.outputs.frontend == 'true'
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Set up Node
+        if: steps.detect.outputs.frontend == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Frontend lint, typecheck, build
+        if: steps.detect.outputs.frontend == 'true'
+        working-directory: frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm lint
+          pnpm typecheck
+          pnpm build
+
+      - name: Nothing to build yet
+        if: steps.detect.outputs.backend != 'true' && steps.detect.outputs.frontend != 'true'
+        run: echo "No backend/ or frontend/ yet; CI passes so auto-merge works for bootstrap PRs."
