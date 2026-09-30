@@ -1,9 +1,4 @@
-import {
-  Trash2,
-  UserCheck,
-  UserX,
-  type LucideIcon,
-} from "lucide-react";
+import { Trash2, UserCheck, UserX, type LucideIcon } from "lucide-react";
 
 import type {
   BulkActionDef,

@@ -285,7 +285,6 @@ export function OrganizationDetailPage({ uuid }: OrganizationDetailPageProps) {
               </ul>
             )}
           </EntitySectionCard>
-
         </div>
       ) : null}
 

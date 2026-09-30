@@ -146,7 +146,9 @@ export function useCommandPaletteData(
 
     const recent = recentQuery.data ?? [];
     if (!searchText && !effectiveSpec && recent.length > 0) {
-      push(recent.map((item) => ({ ...item, group: t("search.group_recent") })));
+      push(
+        recent.map((item) => ({ ...item, group: t("search.group_recent") })),
+      );
     }
     push(filteredPages);
     push(remoteItems);

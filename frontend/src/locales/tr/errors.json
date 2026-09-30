@@ -67,5 +67,6 @@
   "sign_in": "Giriş yap",
   "back_to_login": "Girişe dön",
   "continue": "Devam et",
-  "area_requires": "Bu alan yalnızca {{area}} erişimi gerektirir."
+  "area_requires": "Bu alan yalnızca {{area}} erişimi gerektirir.",
+  "feature_disabled": "Bu özellik organizasyonunuz için açık değil."
 }

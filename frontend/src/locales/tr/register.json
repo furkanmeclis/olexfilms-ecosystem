@@ -1,0 +1,22 @@
+{
+  "title": "İşletme kaydı",
+  "description": "Olexfilms üzerinde organizasyonunuzu dakikalar içinde oluşturun.",
+  "submit": "Kaydı tamamla",
+  "submitting": "Kayıt oluşturuluyor…",
+  "error": "Kayıt tamamlanamadı. Bilgileri kontrol edip tekrar deneyin.",
+  "error_sign_in": "Kayıt oluştu ancak oturum açılamadı. Giriş sayfasından deneyin.",
+  "fields.name": "Yetkili adı",
+  "fields.surname": "Yetkili soyadı",
+  "fields.organization_name": "İşletme adı",
+  "fields.city": "İl",
+  "fields.district": "İlçe",
+  "fields.phone": "Telefon",
+  "fields.email": "E-posta",
+  "fields.address": "Adres",
+  "fields.password": "Şifre",
+  "validation.organization_name_required": "İşletme adı zorunludur",
+  "validation.city_required": "İl zorunludur",
+  "validation.district_required": "İlçe zorunludur",
+  "validation.phone_required": "Telefon zorunludur",
+  "validation.address_required": "Adres zorunludur"
+}

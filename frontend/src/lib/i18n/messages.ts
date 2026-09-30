@@ -29,6 +29,7 @@ import enStepup from "@/locales/en/stepup.json";
 import enStorage from "@/locales/en/storage.json";
 import enTable from "@/locales/en/table.json";
 import enUsers from "@/locales/en/users.json";
+import enRegister from "@/locales/en/register.json";
 import trAccess from "@/locales/tr/access.json";
 import trActivity from "@/locales/tr/activity.json";
 import trAuth from "@/locales/tr/auth.json";
@@ -58,6 +59,7 @@ import trStepup from "@/locales/tr/stepup.json";
 import trStorage from "@/locales/tr/storage.json";
 import trTable from "@/locales/tr/table.json";
 import trUsers from "@/locales/tr/users.json";
+import trRegister from "@/locales/tr/register.json";
 
 export type MessageDictionary = Record<string, string>;
 
@@ -91,6 +93,7 @@ const catalogs: Record<AppLocale, Record<string, MessageDictionary>> = {
     access: trAccess,
     integrations: trIntegrations,
     organizations: trOrganizations,
+    register: trRegister,
     stepup: trStepup,
   },
   en: {
@@ -122,6 +125,7 @@ const catalogs: Record<AppLocale, Record<string, MessageDictionary>> = {
     access: enAccess,
     integrations: enIntegrations,
     organizations: enOrganizations,
+    register: enRegister,
     stepup: enStepup,
   },
 };
@@ -139,7 +143,8 @@ export function translate(
   const path = rest.join(".");
   const primary = catalogs[locale]?.[ns]?.[path];
   const fallback = catalogs[fallbackLocale]?.[ns]?.[path];
-  if (primary === undefined) recordMissingKey(locale, key, fallback !== undefined);
+  if (primary === undefined)
+    recordMissingKey(locale, key, fallback !== undefined);
   let text = primary ?? fallback ?? key;
 
   if (params) {
@@ -167,8 +172,13 @@ export function translatePlural(
  * crawler (or `window.__i18nMissing` in devtools) can list them. No-op in
  * production builds.
  */
-function recordMissingKey(locale: AppLocale, key: string, hasFallback: boolean) {
-  if (process.env.NODE_ENV === "production" || typeof window === "undefined") return;
+function recordMissingKey(
+  locale: AppLocale,
+  key: string,
+  hasFallback: boolean,
+) {
+  if (process.env.NODE_ENV === "production" || typeof window === "undefined")
+    return;
   const w = window as unknown as { __i18nMissing?: Record<string, string> };
   w.__i18nMissing ??= {};
   w.__i18nMissing[`${locale}:${key}`] = hasFallback ? "fallback" : "missing";

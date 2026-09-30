@@ -1,0 +1,22 @@
+{
+  "title": "Business registration",
+  "description": "Create your organization on Olexfilms in minutes.",
+  "submit": "Complete registration",
+  "submitting": "Creating account…",
+  "error": "Registration could not be completed. Check your details and try again.",
+  "error_sign_in": "Registration succeeded but sign-in failed. Try from the login page.",
+  "fields.name": "Contact first name",
+  "fields.surname": "Contact last name",
+  "fields.organization_name": "Business name",
+  "fields.city": "City",
+  "fields.district": "District",
+  "fields.phone": "Phone",
+  "fields.email": "Email",
+  "fields.address": "Address",
+  "fields.password": "Password",
+  "validation.organization_name_required": "Business name is required",
+  "validation.city_required": "City is required",
+  "validation.district_required": "District is required",
+  "validation.phone_required": "Phone is required",
+  "validation.address_required": "Address is required"
+}

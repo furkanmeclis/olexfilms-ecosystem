@@ -27,7 +27,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       )
         return;
       if (error.code === "FEATURE_DISABLED") {
-        toast.error(t("billing.limit.feature_disabled"), {
+        toast.error(t("errors.feature_disabled"), {
           id: "feature-disabled",
         });
         return;
