@@ -1,0 +1,21 @@
+{
+  "title": "Erişim ve doğrulama",
+  "description": "Yeniden doğrulamanın ne kadar süre geçerli kalacağını ve hangi yöntemlerin kullanılabileceğini yapılandırın.",
+  "form.section_verification": "Doğrulama politikası",
+  "form.section_verification_hint": "Dışa aktarma ve korumalı alanlar gibi hassas işlemler için step-up davranışını belirler.",
+  "form.ttl_hours": "Doğrulama geçerliliği (saat)",
+  "form.ttl_hours_hint": "Başarılı şifre veya passkey doğrulamasından sonra kullanıcılar bu süre boyunca korumalı işlemleri yapabilir (1–168).",
+  "form.password_enabled": "Şifre ile doğrulamaya izin ver",
+  "form.password_enabled_hint": "Kullanıcılar hassas işlemleri hesap şifreleriyle onaylayabilir.",
+  "form.passkey_enabled": "Passkey ile doğrulamaya izin ver",
+  "form.passkey_enabled_hint": "Kayıtlı passkey'i olan kullanıcılar şifre yazmadan işlemleri onaylayabilir.",
+  "form.totp_enabled": "Authenticator ile doğrulamaya izin ver",
+  "form.totp_enabled_hint": "2FA açık kullanıcılar hassas işlemleri authenticator kodu ile onaylayabilir.",
+  "form.password_login_totp_required": "Şifre ile girişte 2FA zorunlu",
+  "form.password_login_totp_required_hint": "Açıkken kullanıcılar e-posta/şifre ile giriş yapmadan önce authenticator kurmalıdır. Passkey ve OAuth girişleri etkilenmez.",
+  "form.save": "Ayarları kaydet",
+  "toast.saved": "Erişim ayarları kaydedildi",
+  "toast.failed": "Erişim ayarları kaydedilemedi",
+  "error.title": "Ayarlar yüklenemedi",
+  "error.description": "Tekrar deneyin veya bir yöneticiyle iletişime geçin."
+}

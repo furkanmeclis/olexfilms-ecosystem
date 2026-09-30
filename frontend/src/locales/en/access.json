@@ -1,0 +1,21 @@
+{
+  "title": "Access and verification",
+  "description": "Configure how long re-authentication stays valid and which methods users may use.",
+  "form.section_verification": "Verification policy",
+  "form.section_verification_hint": "Controls step-up prompts for sensitive actions such as exports and protected fields.",
+  "form.ttl_hours": "Verification validity (hours)",
+  "form.ttl_hours_hint": "After a successful password or passkey check, users can perform protected actions for this many hours (1–168).",
+  "form.password_enabled": "Allow password verification",
+  "form.password_enabled_hint": "Users can confirm sensitive actions with their account password.",
+  "form.passkey_enabled": "Allow passkey verification",
+  "form.passkey_enabled_hint": "Users with registered passkeys can confirm actions without typing a password.",
+  "form.totp_enabled": "Allow authenticator verification",
+  "form.totp_enabled_hint": "Users with 2FA enabled can confirm sensitive actions with an authenticator code.",
+  "form.password_login_totp_required": "Require 2FA for password sign-in",
+  "form.password_login_totp_required_hint": "When enabled, users must set up an authenticator before they can sign in with email and password. Passkey and OAuth sign-in are not affected.",
+  "form.save": "Save settings",
+  "toast.saved": "Access settings saved",
+  "toast.failed": "Could not save access settings",
+  "error.title": "Could not load settings",
+  "error.description": "Try again or contact an administrator."
+}

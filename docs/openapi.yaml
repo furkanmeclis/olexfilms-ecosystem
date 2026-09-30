@@ -1,0 +1,4085 @@
+openapi: 3.1.0
+info:
+  title: Olexfilms API
+  version: 0.1.0
+  summary: Olexfilms HTTP API — auth, RBAC, organizations, platform infrastructure
+  description: |
+    Olexfilms Ecosystem HTTP API (infrastructure layer of the F0 base).
+
+    **In scope (F0 base):** authentication, global RBAC, platform users/roles,
+    organizations, notifications, Web Push (VAPID), passkeys, step-up, storage,
+    import/export/bulk engines, search, logs, and Centrifugo realtime tokens.
+
+    Business modules arrive with their own Linear issues. Live Go routes
+    (`backend/internal/modules/**/routes.go`) are the source of truth if a path
+    below is missing from the router.
+
+    **Roles:**
+    - `super_admin` — system role; assigned via `make create-super-admin`
+    - `organization_user` — system role for business owners/staff
+    - Custom roles via `/v1/platform/roles`
+
+    **Auth:** Bearer JWT access tokens + opaque refresh tokens.
+    See `backend/docs/auth.md` for the permission matrix and token claims.
+    Error catalog: `backend/docs/api/errors.md`.
+
+    **Conventions:**
+    - Success/error envelope: `{success,data|error,meta.request_id}` on all `/v1/*`.
+    - Lists: `{items,total,limit,offset}` under `data` (`limit`/`offset`/`q`/`sort`; never `page`/`search`).
+    - Probes `/healthz` and `/readyz` are **not** enveloped.
+    - See `backend/API_CONVENTIONS.md` and `backend/docs/api/errors.md`.
+  contact:
+    name: Olexfilms
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+
+servers:
+  - url: http://127.0.0.1:8080
+    description: Local development
+
+tags:
+  - name: Health
+    description: Liveness and readiness probes
+  - name: Auth
+    description: Register, login, tokens, sessions, profile
+  - name: Search
+    description: Command-palette search (Meilisearch-backed record lookup)
+  - name: Platform
+    description: Super-admin platform tenant/user catalog
+  - name: Realtime
+    description: Centrifugo connection and subscription tokens
+  - name: Notifications
+    description: In-app notification center, preferences, and admin send
+
+paths:
+  /healthz:
+    get:
+      tags: [Health]
+      operationId: getHealthz
+      summary: Liveness probe
+      description: Process is alive. Does not check dependencies.
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthzResponse"
+
+  /readyz:
+    get:
+      tags: [Health]
+      operationId: getReadyz
+      summary: Readiness probe
+      description: |
+        Pings Postgres and Redis. Returns 200 when both are up, 503 otherwise.
+        Object storage is a soft check (logged only).
+      security: []
+      responses:
+        "200":
+          description: Ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadyzResponse"
+        "503":
+          description: Not ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadyzResponse"
+
+  /v1/auth/register:
+    post:
+      tags: [Auth]
+      operationId: postAuthRegister
+      summary: Self-serve user register
+      description: |
+        Creates a global user account and returns it. Tokens are issued on login.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeRegister"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /v1/auth/login:
+    post:
+      tags: [Auth]
+      operationId: postAuthLogin
+      summary: Login
+      description: |
+        Authenticates with email/password and returns a token pair.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTokens"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /v1/auth/organization-context:
+    post:
+      tags: [Auth]
+      operationId: postAuthOrganizationContext
+      summary: Switch organization context
+      description: |
+        Re-issues access and refresh tokens with the JWT `oid` claim set for the
+        given organization. Requires an authenticated session and active membership.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationContextRequest"
+      responses:
+        "200":
+          description: Organization context applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTokens"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/auth/refresh:
+    post:
+      tags: [Auth]
+      operationId: postAuthRefresh
+      summary: Refresh tokens
+      description: Rotates an opaque refresh token and returns a new token pair.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+      responses:
+        "200":
+          description: Refreshed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTokens"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/auth/logout:
+    post:
+      tags: [Auth]
+      operationId: postAuthLogout
+      summary: Logout
+      description: Revokes the given refresh token. Requires a valid access JWT.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogoutRequest"
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStatus"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/auth/me:
+    get:
+      tags: [Auth]
+      operationId: getAuthMe
+      summary: Current session
+      description: Hydrates the authenticated user, roles, permissions, and tenant memberships.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMe"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/search/specs:
+    get:
+      tags: [Search]
+      operationId: getSearchSpecs
+      summary: Searchable resource specs
+      description: Returns Meilisearch-backed specs visible to the caller (permission-filtered).
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Spec catalog
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeSearchSpecs"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/search:
+    get:
+      tags: [Search]
+      operationId: getSearch
+      summary: Search indexed records
+      description: Typo-tolerant search across allowed specs. Use `q` (not `search`). Optional `spec` scopes to one resource.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: spec
+          in: query
+          schema:
+            type: string
+            example: users
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: Search hits
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeSearchHits"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/auth/step-up:
+    get:
+      tags: [Auth]
+      operationId: getAuthStepUp
+      summary: Step-up grant status
+      description: Returns whether the caller has a recent step-up grant and enabled verification methods.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Step-up status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStepUpStatus"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/auth/step-up/password:
+    post:
+      tags: [Auth]
+      operationId: postAuthStepUpPassword
+      summary: Verify password for step-up
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StepUpPasswordRequest"
+      responses:
+        "200":
+          description: Grant issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStepUpGrant"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/auth/step-up/passkey/options:
+    post:
+      tags: [Auth]
+      operationId: postAuthStepUpPasskeyOptions
+      summary: Begin passkey step-up assertion
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: WebAuthn request options
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/auth/step-up/passkey/verify:
+    post:
+      tags: [Auth]
+      operationId: postAuthStepUpPasskeyVerify
+      summary: Finish passkey step-up assertion
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Grant issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStepUpGrant"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/auth/step-up/totp:
+    post:
+      tags: [Auth]
+      operationId: postAuthStepUpTOTP
+      summary: Verify authenticator code for step-up
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TOTPCodeRequest"
+      responses:
+        "200":
+          description: Grant issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStepUpGrant"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/auth/totp:
+    get:
+      tags: [Auth]
+      operationId: getAuthTOTP
+      summary: Authenticator 2FA status
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: TOTP status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTOTPStatus"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/auth/totp/setup:
+    post:
+      tags: [Auth]
+      operationId: postAuthTOTPSetup
+      summary: Begin authenticator 2FA setup
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Setup secret
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTOTPSetup"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/auth/totp/confirm:
+    post:
+      tags: [Auth]
+      operationId: postAuthTOTPConfirm
+      summary: Confirm authenticator 2FA setup
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TOTPCodeRequest"
+      responses:
+        "200":
+          description: Confirmed with recovery codes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTOTPConfirm"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/auth/totp/disable:
+    post:
+      tags: [Auth]
+      operationId: postAuthTOTPDisable
+      summary: Disable authenticator 2FA
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TOTPCodeRequest"
+      responses:
+        "200":
+          description: Disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStatus"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/access/settings:
+    get:
+      tags: [Platform]
+      operationId: getPlatformAccessSettings
+      summary: Read step-up policy
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Access policy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStepUpPolicy"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      tags: [Platform]
+      operationId: patchPlatformAccessSettings
+      summary: Update step-up policy
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchStepUpPolicyRequest"
+      responses:
+        "200":
+          description: Updated policy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStepUpPolicy"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/integrations/github:
+    get:
+      tags: [Platform]
+      operationId: getPlatformGitHubIntegrationSettings
+      summary: Read GitHub App integration settings
+      description: Super admin only. Secrets are never returned; only configured flags.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: GitHub integration settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeGitHubIntegrationSettings"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      tags: [Platform]
+      operationId: patchPlatformGitHubIntegrationSettings
+      summary: Update GitHub App integration settings
+      description: Super admin only. Omit blank secret fields to keep existing values.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchGitHubIntegrationSettingsRequest"
+      responses:
+        "200":
+          description: Updated GitHub integration settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeGitHubIntegrationSettings"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/auth/settings:
+    get:
+      tags: [Platform]
+      operationId: getPlatformAuthSettings
+      summary: Read registration and auth method settings
+      description: Super admin only.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Auth settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAuthSettings"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      tags: [Platform]
+      operationId: patchPlatformAuthSettings
+      summary: Update registration and auth method settings
+      description: Super admin only.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchAuthSettingsRequest"
+      responses:
+        "200":
+          description: Updated auth settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAuthSettings"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/integrations/google:
+    get:
+      tags: [Platform]
+      operationId: getPlatformGoogleIntegrationSettings
+      summary: Read Google OAuth integration settings
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Google integration settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOAuthProviderSettings"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      tags: [Platform]
+      operationId: patchPlatformGoogleIntegrationSettings
+      summary: Update Google OAuth integration settings
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchOAuthProviderSettingsRequest"
+      responses:
+        "200":
+          description: Updated Google integration settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOAuthProviderSettings"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/integrations/facebook:
+    get:
+      tags: [Platform]
+      operationId: getPlatformFacebookIntegrationSettings
+      summary: Read Facebook OAuth integration settings
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Facebook integration settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOAuthProviderSettings"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      tags: [Platform]
+      operationId: patchPlatformFacebookIntegrationSettings
+      summary: Update Facebook OAuth integration settings
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchOAuthProviderSettingsRequest"
+      responses:
+        "200":
+          description: Updated Facebook integration settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOAuthProviderSettings"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/integrations/apple:
+    get:
+      tags: [Platform]
+      operationId: getPlatformAppleIntegrationSettings
+      summary: Read Apple OAuth integration settings
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Apple integration settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOAuthProviderSettings"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      tags: [Platform]
+      operationId: patchPlatformAppleIntegrationSettings
+      summary: Update Apple OAuth integration settings
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchOAuthProviderSettingsRequest"
+      responses:
+        "200":
+          description: Updated Apple integration settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOAuthProviderSettings"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/auth/identities:
+    get:
+      tags: [Auth]
+      operationId: getAuthIdentities
+      summary: List linked OAuth identities
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Linked identities
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeIdentityList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/auth/identities/{provider}:
+    delete:
+      tags: [Auth]
+      operationId: deleteAuthIdentity
+      summary: Unlink an OAuth identity
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [github, google, facebook, apple]
+      responses:
+        "200":
+          description: Unlinked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStatus"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/auth/passkeys:
+    get:
+      tags: [Auth]
+      operationId: getAuthPasskeys
+      summary: List own passkeys
+      description: Requires `auth.session`. Returns passkeys registered for the current user.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Passkeys
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePasskeyList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/auth/passkeys/{uuid}:
+    patch:
+      tags: [Auth]
+      operationId: patchAuthPasskey
+      summary: Rename a passkey
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchPasskeyRequest"
+      responses:
+        "200":
+          description: Updated passkey
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePasskey"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      tags: [Auth]
+      operationId: deleteAuthPasskey
+      summary: Delete a passkey
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStatus"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/users/meta:
+    get:
+      tags: [Platform]
+      operationId: getPlatformUsersMeta
+      summary: Platform users list metadata
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Resource meta
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeResourceMeta"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/users/bulk:
+    post:
+      tags: [Platform]
+      operationId: postPlatformUsersBulk
+      summary: Run a bulk action on platform users
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkExecuteRequest"
+      responses:
+        "200":
+          description: Sync bulk result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkSyncResult"
+        "202":
+          description: Async bulk job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/roles/bulk:
+    post:
+      tags: [Platform]
+      operationId: postPlatformRolesBulk
+      summary: Run a bulk action on platform roles
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkExecuteRequest"
+      responses:
+        "200":
+          description: Sync bulk result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkSyncResult"
+        "202":
+          description: Async bulk job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/bulk:
+    get:
+      tags: [Platform]
+      operationId: listPlatformBulkJobs
+      summary: List bulk jobs
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Bulk job page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkJobPage"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/bulk/{uuid}:
+    get:
+      tags: [Platform]
+      operationId: getPlatformBulkJob
+      summary: Get bulk job status
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Bulk job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkJob"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/platform/bulk/{uuid}/rollback:
+    post:
+      tags: [Platform]
+      operationId: postPlatformBulkJobRollback
+      summary: Roll back a completed bulk job
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Rolled back job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/public/organizations/register:
+    post:
+      tags: [Public]
+      operationId: postPublicOrganizationRegister
+      summary: Register business and owner
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationRegisterRequest"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrganizationRegisterResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /v1/public/organizations/by-slug/{slug}:
+    get:
+      tags: [Public]
+      operationId: getPublicOrganizationBySlug
+      summary: Public organization branding
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Organization branding
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePublicOrganization"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/public/organizations/logo/{uuid}:
+    get:
+      tags: [Public]
+      operationId: getPublicOrganizationLogo
+      summary: Stream organization logo
+      security: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Logo bytes
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/platform/organizations/meta:
+    get:
+      tags: [Platform]
+      operationId: getPlatformOrganizationsMeta
+      summary: Organizations list meta
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Meta
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeResourceMeta"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/organizations:
+    get:
+      tags: [Platform]
+      operationId: getPlatformOrganizations
+      summary: List organizations
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Organizations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrganizationPage"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      tags: [Platform]
+      operationId: createPlatformOrganization
+      summary: Create organization
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePlatformOrganizationRequest"
+      responses:
+        "201":
+          description: Created organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrganization"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/platform/organizations/{uuid}:
+    get:
+      tags: [Platform]
+      operationId: getPlatformOrganization
+      summary: Get organization
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Organization detail
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Platform]
+      operationId: patchPlatformOrganization
+      summary: Update organization
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Updated organization
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/platform/organizations/{uuid}/logo:
+    put:
+      tags: [Platform]
+      operationId: putPlatformOrganizationLogo
+      summary: Upload organization logo
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Updated organization
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      tags: [Platform]
+      operationId: deletePlatformOrganizationLogo
+      summary: Delete organization logo
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Updated organization
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/organizations/{uuid}/members:
+    post:
+      tags: [Platform]
+      operationId: postPlatformOrganizationMember
+      summary: Add organization member
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_uuid]
+              properties:
+                user_uuid:
+                  type: string
+                  format: uuid
+                role:
+                  type: string
+      responses:
+        "201":
+          description: Member added
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/users:
+    get:
+      tags: [Platform]
+      operationId: getPlatformUsers
+      summary: List platform users
+      description: Requires `super_admin` and `platform.users.read`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: is_super_admin
+          in: query
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: User page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePublicUserPage"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      tags: [Platform]
+      operationId: postPlatformUser
+      summary: Create platform user
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePlatformUserRequest"
+      responses:
+        "201":
+          description: Created user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePublicUser"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/users/{uuid}:
+    get:
+      tags: [Platform]
+      operationId: getPlatformUser
+      summary: Get platform user
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: User with memberships
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePlatformUserDetail"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      tags: [Platform]
+      operationId: patchPlatformUser
+      summary: Update platform user
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchPlatformUserRequest"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePublicUser"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/users/{uuid}/password:
+    post:
+      tags: [Platform]
+      operationId: postPlatformUserPassword
+      summary: Admin set user password
+      description: Sets password and revokes all refresh tokens.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetPlatformUserPasswordRequest"
+      responses:
+        "200":
+          description: Password set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStatus"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/users/{uuid}/impersonate:
+    post:
+      tags: [Platform]
+      operationId: postPlatformUserImpersonate
+      summary: Impersonate user
+      description: |
+        Issues tokens for the target user while preserving the actor in the `imp` JWT claim
+        and refresh token metadata. Requires step-up verification.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Impersonation session started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeImpersonationResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/auth/impersonation/stop:
+    post:
+      tags: [Auth]
+      operationId: postAuthImpersonationStop
+      summary: Stop impersonation
+      description: Restores the original actor session when the access token includes an impersonator claim.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Impersonation stopped
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeImpersonationResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/realtime/connection-token:
+    post:
+      tags: [Realtime]
+      operationId: postRealtimeConnectionToken
+      summary: Issue Centrifugo connection JWT
+      description: |
+        Returns `{ token, expires_at, ws_url }`. JWT `sub` is the user UUID string.
+        Requires `auth.session`. Disabled Centrifugo → `503 REALTIME_DISABLED`.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Connection token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeRealtimeConnectionToken"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "503":
+          description: Realtime disabled
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/realtime/subscription-token:
+    post:
+      tags: [Realtime]
+      operationId: postRealtimeSubscriptionToken
+      summary: Issue Centrifugo subscription JWT
+      description: |
+        Body `{ channel }`. Allowlist `user:{own_uuid}`, member `workspace:{uuid}`,
+        and `conversation:{uuid}` (authenticated session; HTTP inbox ACL is the hard boundary).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RealtimeSubscriptionTokenRequest"
+      responses:
+        "200":
+          description: Subscription token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeRealtimeSubscriptionToken"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "503":
+          description: Realtime disabled
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/auth/profile:
+    patch:
+      tags: [Auth]
+      operationId: patchAuthProfile
+      summary: Update own profile
+      description: Partial update of name/surname. Email/password/status/roles are not changeable here.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchProfileRequest"
+      responses:
+        "200":
+          description: Updated session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMe"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/auth/password/forgot:
+    post:
+      tags: [Auth]
+      operationId: postAuthPasswordForgot
+      summary: Request password reset
+      description: Always returns accepted. If the email exists, enqueues a reset OTP email via Notification Center.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordRequest"
+      responses:
+        "200":
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStatus"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /v1/auth/password/reset:
+    post:
+      tags: [Auth]
+      operationId: postAuthPasswordReset
+      summary: Reset password with OTP
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+      responses:
+        "200":
+          description: Password reset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStatus"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /v1/auth/password/change:
+    post:
+      tags: [Auth]
+      operationId: postAuthPasswordChange
+      summary: Change password
+      description: Verifies current password, sets a new one, and revokes all refresh tokens (including the current session).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        "200":
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStatus"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/auth/email/verify-request:
+    post:
+      tags: [Auth]
+      operationId: postAuthEmailVerifyRequest
+      summary: Request email verification OTP
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: Optional; must equal the caller's own email (other values are ignored).
+      responses:
+        "200":
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStatus"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/auth/email/verify:
+    post:
+      tags: [Auth]
+      operationId: postAuthEmailVerify
+      summary: Verify email with OTP
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyEmailRequest"
+      responses:
+        "200":
+          description: Verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStatus"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/notifications:
+    get:
+      tags: [Notifications]
+      operationId: getNotifications
+      summary: List own inbox
+      description: Requires `notifications.read`. Supports `limit`,`offset`,`q`,`sort`,`status`,`channel`,`unread`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: channel
+          in: query
+          schema: { type: string }
+        - name: unread
+          in: query
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Page of notifications
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNotificationPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/notifications/meta:
+    get:
+      tags: [Notifications]
+      operationId: getNotificationsMeta
+      summary: Notifications list metadata
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Resource meta
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeResourceMeta"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/notifications/unread-count:
+    get:
+      tags: [Notifications]
+      operationId: getNotificationsUnreadCount
+      summary: Unread in-app count
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeUnreadCount"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/notifications/read-all:
+    post:
+      tags: [Notifications]
+      operationId: postNotificationsReadAll
+      summary: Mark all in-app as read
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStatus"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/notifications/test:
+    post:
+      tags: [Notifications]
+      operationId: postNotificationsTest
+      summary: Enqueue a test notification to self
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: boolean
+      responses:
+        "202":
+          description: Queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNotificationItems"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+
+  /v1/notifications/send:
+    post:
+      tags: [Notifications]
+      operationId: postNotificationsSend
+      summary: Send notification to a user (tenant admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendNotificationRequest"
+      responses:
+        "202":
+          description: Queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNotificationItems"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/notifications/{uuid}:
+    get:
+      tags: [Notifications]
+      operationId: getNotificationByUUID
+      summary: Get own notification
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Notification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNotification"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/notifications/{uuid}/action:
+    get:
+      tags: [Notifications]
+      operationId: getNotificationAction
+      summary: Redeem a signed notification action
+      description: >
+        Verifies `exp` + `sig`, marks the in-app notification read, and returns
+        the stored destination. Requires `notifications.read`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - name: exp
+          in: query
+          required: true
+          schema: { type: integer, format: int64 }
+        - name: sig
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Action destination and updated notification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNotificationAction"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/notifications/{uuid}/read:
+    post:
+      tags: [Notifications]
+      operationId: postNotificationRead
+      summary: Mark notification read
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Updated notification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNotification"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/notification-preferences:
+    get:
+      tags: [Notifications]
+      operationId: getNotificationPreferences
+      summary: Get own preferences
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePreferences"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+    put:
+      tags: [Notifications]
+      operationId: putNotificationPreferences
+      summary: Update own preferences
+      description: |
+        Security emails (password reset / email verification) ignore `email_enabled`.
+        Web push requires `push_enabled` and an active browser subscription; it follows in-app delivery.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotificationPreferences"
+      responses:
+        "200":
+          description: Preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePreferences"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+
+  /v1/platform/notifications:
+    get:
+      tags: [Platform]
+      operationId: getPlatformNotifications
+      summary: List platform notifications
+      description: |
+        Defaults to the caller's own notifications (`scope=me`).
+        `platform.notifications.read_all` is required for `scope=all` or `user_uuid`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: channel
+          in: query
+          schema: { type: string }
+        - name: scope
+          in: query
+          description: "me (default) or all (requires read_all)"
+          schema:
+            type: string
+            enum: [me, all]
+        - name: user_uuid
+          in: query
+          description: "Filter to one user (requires read_all)"
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNotificationPage"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/notifications/meta:
+    get:
+      tags: [Platform]
+      operationId: getPlatformNotificationsMeta
+      summary: Platform notifications meta
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Resource meta
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeResourceMeta"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/app/config:
+    get:
+      tags: [Health]
+      operationId: getAppConfig
+      summary: Public app config
+      description: Unauthenticated bootstrap payload (auth methods, branding).
+      security: []
+      responses:
+        "200":
+          description: Config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStatus"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/auth/sessions:
+    get:
+      tags: [Auth]
+      operationId: listAuthSessions
+      summary: List active sessions
+      description: Refresh-token sessions for the current user. `current` is the session bound to this access token.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Session list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeSessionList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /v1/auth/sessions/revoke-others:
+    post:
+      tags: [Auth]
+      operationId: revokeOtherAuthSessions
+      summary: Revoke other sessions
+      description: Signs out every session except the current one.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Remaining current session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStatus"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/auth/sessions/{uuid}:
+    delete:
+      tags: [Auth]
+      operationId: revokeAuthSession
+      summary: Revoke a session
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStatus"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/tenant/settings:
+    get:
+      tags: [Tenant]
+      operationId: getTenantSettings
+      summary: Get organization export letterhead
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Letterhead settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTenantSettings"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      tags: [Tenant]
+      operationId: patchTenantSettings
+      summary: Update organization export letterhead
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchTenantSettingsRequest"
+      responses:
+        "200":
+          description: Updated letterhead
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTenantSettings"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/tenant/settings/logo:
+    put:
+      tags: [Tenant]
+      operationId: putTenantSettingsLogo
+      summary: Upload organization letterhead logo
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Updated letterhead
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTenantSettings"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      tags: [Tenant]
+      operationId: deleteTenantSettingsLogo
+      summary: Remove organization letterhead logo
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Updated letterhead
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTenantSettings"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/tenant/imports:
+    get:
+      tags: [Tenant]
+      operationId: listTenantImports
+      summary: List organization import jobs
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Import jobs page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeImportJobPage"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/tenant/imports/{uuid}:
+    get:
+      tags: [Tenant]
+      operationId: getTenantImport
+      summary: Get organization import job
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Import job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeImportJob"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/tenant/imports/{uuid}/mapping:
+    patch:
+      tags: [Tenant]
+      operationId: patchTenantImportMapping
+      summary: Save import column mapping
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Import job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeImportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/tenant/imports/{uuid}/preview:
+    post:
+      tags: [Tenant]
+      operationId: previewTenantImport
+      summary: Preview import rows
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Import job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeImportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/tenant/imports/{uuid}/confirm:
+    post:
+      tags: [Tenant]
+      operationId: confirmTenantImport
+      summary: Confirm and queue import apply
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "202":
+          description: Import queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeImportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/tenant/imports/{uuid}/rollback:
+    post:
+      tags: [Tenant]
+      operationId: rollbackTenantImport
+      summary: Roll back an applied import
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Import rolled back
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeImportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/tenant/exports:
+    get:
+      tags: [Tenant]
+      operationId: listTenantExports
+      summary: List organization export jobs
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Export jobs page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJobPage"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/tenant/exports/{uuid}:
+    get:
+      tags: [Tenant]
+      operationId: getTenantExport
+      summary: Get organization export job
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Export job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/tenant/exports/{uuid}/download:
+    get:
+      tags: [Tenant]
+      operationId: downloadTenantExport
+      summary: Download organization export file
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: File bytes
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    ResourceUUID:
+      name: uuid
+      in: path
+      required: true
+      description: Resource UUID
+      schema:
+        type: string
+        format: uuid
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    Offset:
+      name: offset
+      in: query
+      schema: { type: integer, minimum: 0, default: 0 }
+    Q:
+      name: q
+      in: query
+      schema: { type: string }
+    Sort:
+      name: sort
+      in: query
+      description: Comma-separated fields; prefix `-` for descending
+      schema: { type: string }
+
+  responses:
+    BadRequest:
+      description: Validation or malformed request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthenticated:
+      description: Missing or invalid credentials / access token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    TooManyRequests:
+      description: Rate limited
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    Forbidden:
+      description: Authenticated but not allowed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Conflict:
+      description: Conflict (duplicate / constraint)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    InternalError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+
+    SearchSpec:
+      type: object
+      required: [id, label_key]
+      properties:
+        id: { type: string, example: users }
+        label_key: { type: string, example: search.specs.users }
+        permission: { type: [string, "null"] }
+        icon: { type: [string, "null"] }
+        searchable_fields:
+          type: array
+          items: { type: string }
+        filterable_fields:
+          type: array
+          items: { type: string }
+        tenant_scoped: { type: boolean }
+
+    SearchHit:
+      type: object
+      required: [spec, id, title, href]
+      properties:
+        spec: { type: string }
+        id: { type: string, format: uuid }
+        title: { type: string }
+        subtitle: { type: [string, "null"] }
+        href: { type: string }
+        icon: { type: [string, "null"] }
+        score: { type: [number, "null"], format: double }
+
+    SearchSpecsData:
+      type: object
+      required: [items, enabled]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/SearchSpec" }
+        enabled: { type: boolean }
+
+    SearchHitsData:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/SearchHit" }
+
+    EnvelopeSearchSpecs:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/SearchSpecsData" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeSearchHits:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/SearchHitsData" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    ErrorDetail:
+      type: object
+      required: [message]
+      properties:
+        field: { type: string }
+        message: { type: string }
+        code: { type: string }
+
+    ErrorBody:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code
+          examples:
+            - VALIDATION_ERROR
+            - INVALID_RESET_CODE
+            - INVALID_VERIFICATION_CODE
+            - INVALID_CREDENTIALS
+            - UNAUTHENTICATED
+            - FORBIDDEN
+            - NOT_FOUND
+            - CONFLICT
+            - PASSWORD_RESET_FAILED
+            - INTERNAL_ERROR
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetail"
+
+    ResponseMeta:
+      type: object
+      required: [request_id]
+      properties:
+        request_id: { type: string }
+
+    Error:
+      type: object
+      required: [success, error, meta]
+      properties:
+        success:
+          type: boolean
+          enum: [false]
+        error:
+          $ref: "#/components/schemas/ErrorBody"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+
+    Tokens:
+      type: object
+      required: [access_token, refresh_token, token_type, expires_in, refresh_expires_at]
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        token_type:
+          type: string
+          examples: [Bearer]
+        expires_in:
+          type: integer
+          format: int64
+          description: Access token lifetime in seconds
+        refresh_expires_at:
+          type: string
+          format: date-time
+
+    PublicUser:
+      type: object
+      required: [uuid, email, name, surname, status, is_super_admin, email_verified]
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        surname:
+          type: string
+        status:
+          type: string
+          examples: [active, disabled]
+        is_super_admin:
+          type: boolean
+        email_verified:
+          type: boolean
+        locale:
+          type: string
+          enum: [tr, en]
+          default: tr
+
+    MeLinks:
+      type: object
+      required: [profile, change_password, notification_preferences]
+      properties:
+        profile: { type: string, examples: ["/v1/auth/profile"] }
+        change_password: { type: string, examples: ["/v1/auth/password/change"] }
+        notification_preferences: { type: string, examples: ["/v1/notification-preferences"] }
+
+    MeChannels:
+      type: object
+      properties:
+        user:
+          type: string
+          description: Centrifugo channel hint
+          examples: ["user:uuid"]
+
+    MeRealtime:
+      type: object
+      required: [enabled, user_channel]
+      properties:
+        enabled: { type: boolean }
+        ws_url: { type: string }
+        user_channel:
+          type: string
+          examples: ["user:uuid"]
+
+    Me:
+      type: object
+      required: [user, roles, permissions, links, channels, realtime]
+      properties:
+        user:
+          $ref: "#/components/schemas/PublicUser"
+        roles:
+          type: array
+          items:
+            type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        organizations:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrganizationMembership"
+        links:
+          $ref: "#/components/schemas/MeLinks"
+        channels:
+          $ref: "#/components/schemas/MeChannels"
+        realtime:
+          $ref: "#/components/schemas/MeRealtime"
+        impersonation:
+          $ref: "#/components/schemas/MeImpersonation"
+
+    MeImpersonation:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: "#/components/schemas/PublicUser"
+
+    OrganizationMembership:
+      type: object
+      required: [uuid, slug, name, role, status]
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [owner, staff]
+        logo_url:
+          type: [string, "null"]
+        status:
+          type: string
+        access_ends_at:
+          type: [string, "null"]
+          format: date-time
+
+    PublicOrganization:
+      type: object
+      required: [uuid, slug, name, status, access_ok]
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+        logo_url:
+          type: [string, "null"]
+        access_ok:
+          type: boolean
+
+    Organization:
+      type: object
+      required: [uuid, slug, name, city, district, phone, address, status, access_starts_at, created_at, updated_at]
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        name:
+          type: string
+        city:
+          type: string
+        district:
+          type: string
+        phone:
+          type: string
+        address:
+          type: string
+        status:
+          type: string
+        plan_code:
+          type: [string, "null"]
+        access_starts_at:
+          type: string
+          format: date-time
+        access_ends_at:
+          type: [string, "null"]
+          format: date-time
+        logo_url:
+          type: [string, "null"]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    OrganizationRegisterRequest:
+      type: object
+      required: [name, surname, email, password, organization_name, city, district, phone, address]
+      properties:
+        name:
+          type: string
+        surname:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        organization_name:
+          type: string
+        city:
+          type: string
+        district:
+          type: string
+        phone:
+          type: string
+        address:
+          type: string
+
+    CreatePlatformOrganizationRequest:
+      type: object
+      required: [name, owner_user_uuid]
+      properties:
+        name:
+          type: string
+        city:
+          type: string
+        district:
+          type: string
+        phone:
+          type: string
+        address:
+          type: string
+        owner_user_uuid:
+          type: string
+          format: uuid
+
+    OrganizationRegisterResult:
+      type: object
+      required: [user, organization, tokens]
+      properties:
+        user:
+          $ref: "#/components/schemas/PublicUser"
+        organization:
+          $ref: "#/components/schemas/Organization"
+        tokens:
+          $ref: "#/components/schemas/Tokens"
+
+    SessionSwitch:
+      type: object
+      required: [user_uuid, email]
+      properties:
+        user_uuid:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        impersonator_uuid:
+          type: string
+          format: uuid
+
+    ImpersonationResult:
+      allOf:
+        - $ref: "#/components/schemas/Tokens"
+        - type: object
+          required: [session]
+          properties:
+            session:
+              $ref: "#/components/schemas/SessionSwitch"
+
+    RegisterRequest:
+      type: object
+      required: [email, password, name, surname]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        name:
+          type: string
+        surname:
+          type: string
+
+    RegisterResponse:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: "#/components/schemas/PublicUser"
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        totp_code:
+          type: string
+          description: Authenticator or recovery code when 2FA is enabled
+          maxLength: 32
+        organization_slug:
+          type: string
+          description: When set, login is scoped to this organization membership
+
+    OrganizationContextRequest:
+      type: object
+      required: [organization_slug]
+      properties:
+        organization_slug:
+          type: string
+          description: Organization slug to scope the active session to
+
+    TOTPCodeRequest:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 32
+
+    TOTPStatus:
+      type: object
+      required: [enabled]
+      properties:
+        enabled: { type: boolean }
+        confirmed_at: { type: [string, "null"], format: date-time }
+
+    TOTPSetup:
+      type: object
+      required: [secret, otpauth_url]
+      properties:
+        secret: { type: string }
+        otpauth_url: { type: string }
+
+    TOTPConfirm:
+      type: object
+      required: [enabled, recovery_codes]
+      properties:
+        enabled: { type: boolean }
+        recovery_codes:
+          type: array
+          items: { type: string }
+
+    EnvelopeTOTPStatus:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/TOTPStatus" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeTOTPSetup:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/TOTPSetup" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeTOTPConfirm:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/TOTPConfirm" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    RefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+
+    LogoutRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+
+    CreatePlatformUserRequest:
+      type: object
+      required: [email, password, name, surname]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+        name: { type: string }
+        surname: { type: string }
+        status: { type: string, examples: [active, pending, disabled] }
+        role_uuids:
+          type: array
+          items: { type: string, format: uuid }
+
+    PatchPlatformUserRequest:
+      type: object
+      properties:
+        name: { type: string }
+        surname: { type: string }
+        status: { type: string }
+        role_uuids:
+          type: array
+          items: { type: string, format: uuid }
+
+    SetPlatformUserPasswordRequest:
+      type: object
+      required: [password]
+      properties:
+        password: { type: string, format: password }
+
+    RoleSummary:
+      type: object
+      required: [uuid, name, slug]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        description: { type: [string, "null"] }
+        is_system: { type: boolean }
+
+    PlatformUserDetail:
+      allOf:
+        - $ref: "#/components/schemas/PublicUser"
+        - type: object
+          required: [roles, auth_methods]
+          properties:
+            roles:
+              type: array
+              items:
+                $ref: "#/components/schemas/RoleSummary"
+            auth_methods:
+              type: array
+              items:
+                $ref: "#/components/schemas/UserAuthMethod"
+
+    UserAuthMethod:
+      type: object
+      required: [kind, linked_at]
+      properties:
+        kind:
+          type: string
+          enum: [password, passkey, oauth]
+        provider:
+          type: string
+          description: OAuth provider slug when kind is oauth
+          examples: [github, google, facebook, apple]
+        label:
+          type: [string, "null"]
+          description: Optional display label (e.g. passkey name)
+        linked_at:
+          type: string
+          format: date-time
+
+    PublicUserPage:
+      type: object
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlatformUserDetail"
+        total: { type: integer, format: int64 }
+        limit: { type: integer }
+        offset: { type: integer }
+
+    RealtimeConnectionToken:
+      type: object
+      required: [token, expires_at, ws_url]
+      properties:
+        token: { type: string }
+        expires_at: { type: string, format: date-time }
+        ws_url: { type: string }
+
+    RealtimeSubscriptionTokenRequest:
+      type: object
+      required: [channel]
+      properties:
+        channel: { type: string }
+
+    RealtimeSubscriptionToken:
+      type: object
+      required: [token, channel, expires_at]
+      properties:
+        token: { type: string }
+        channel: { type: string }
+        expires_at: { type: string, format: date-time }
+
+    Notification:
+      type: object
+      required: [uuid, channel, status, priority, title, body, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        channel: { type: string }
+        status: { type: string }
+        priority: { type: string }
+        title: { type: string }
+        body: { type: string }
+        payload: { type: object, additionalProperties: true }
+        action_url: { type: string }
+        signed_action_url: { type: string }
+        recipient: { type: string }
+        template_code: { type: string }
+        source_event: { type: string }
+        sent_at: { type: string, format: date-time }
+        read_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        user:
+          $ref: "#/components/schemas/NotificationUser"
+
+    NotificationUser:
+      type: object
+      required: [uuid, name, surname, email]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        surname: { type: string }
+        email: { type: string, format: email }
+
+    NotificationPage:
+      type: object
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Notification"
+        total: { type: integer, format: int64 }
+        limit: { type: integer }
+        offset: { type: integer }
+
+    NotificationPreferences:
+      type: object
+      required: [email_enabled, inapp_enabled, realtime_enabled, push_enabled]
+      properties:
+        email_enabled: { type: boolean }
+        inapp_enabled: { type: boolean }
+        realtime_enabled: { type: boolean }
+        push_enabled: { type: boolean }
+
+    ResourceMeta:
+      type: object
+      required: [resource, default_sort, capabilities]
+      properties:
+        resource: { type: string }
+        default_sort: { type: string }
+        default_fields:
+          type: array
+          items: { type: string }
+        capabilities:
+          type: object
+          additionalProperties: { type: boolean }
+        searchable_fields:
+          type: array
+          items: { type: string }
+        sortable_fields:
+          type: array
+          items: { type: string }
+        filterable_fields:
+          type: array
+          items: { type: string }
+        columns:
+          type: array
+          items: { type: object, additionalProperties: true }
+        filters:
+          type: array
+          items: { type: object, additionalProperties: true }
+        includes:
+          type: array
+          items: { type: string }
+        bulk_actions:
+          type: array
+          items: { type: string }
+
+    PatchProfileRequest:
+      type: object
+      properties:
+        name: { type: string }
+        surname: { type: string }
+        locale:
+          type: string
+          enum: [tr, en]
+
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email }
+
+    ResetPasswordRequest:
+      type: object
+      required: [email, code, password]
+      properties:
+        email: { type: string, format: email }
+        code: { type: string }
+        password: { type: string, format: password }
+
+    ChangePasswordRequest:
+      type: object
+      required: [current_password, new_password]
+      properties:
+        current_password: { type: string, format: password }
+        new_password: { type: string, format: password }
+
+    VerifyEmailRequest:
+      type: object
+      required: [email, code]
+      properties:
+        email: { type: string, format: email }
+        code: { type: string }
+
+    SendNotificationRequest:
+      type: object
+      required: [user_uuid]
+      properties:
+        user_uuid: { type: string, format: uuid }
+        channel: { type: string }
+        title: { type: string }
+        body: { type: string }
+        template_code: { type: string }
+        vars:
+          type: object
+          additionalProperties: { type: string }
+
+    StatusPayload:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string }
+
+    UnreadCount:
+      type: object
+      required: [count]
+      properties:
+        count: { type: integer, format: int64 }
+
+    Passkey:
+      type: object
+      required: [uuid, device_type, backed_up, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: [string, "null"] }
+        device_type: { type: string }
+        backed_up: { type: boolean }
+        transports: { type: [string, "null"] }
+        last_used_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+
+    PasskeyList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Passkey" }
+        total: { type: integer, format: int64 }
+
+    PatchPasskeyRequest:
+      type: object
+      properties:
+        name: { type: [string, "null"] }
+
+    EnvelopePasskey:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Passkey" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePasskeyList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PasskeyList" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    GitHubIntegrationSettings:
+      type: object
+      required: [enabled, register_enabled, app_id, client_id, client_secret_configured, private_key_configured]
+      properties:
+        enabled: { type: boolean }
+        register_enabled: { type: boolean }
+        app_id: { type: string }
+        client_id: { type: string }
+        client_secret_configured: { type: boolean }
+        private_key_configured: { type: boolean }
+
+    PatchGitHubIntegrationSettingsRequest:
+      type: object
+      properties:
+        enabled: { type: boolean }
+        register_enabled: { type: boolean }
+        app_id: { type: string }
+        client_id: { type: string }
+        client_secret: { type: string }
+        private_key: { type: string }
+
+    EnvelopeGitHubIntegrationSettings:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/GitHubIntegrationSettings" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    AuthSettingsDefaultRole:
+      type: object
+      required: [uuid, name, slug]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+
+    AuthSettings:
+      type: object
+      required:
+        - registration_enabled
+        - password_login_enabled
+        - password_register_enabled
+        - passkey_login_enabled
+      properties:
+        registration_enabled: { type: boolean }
+        default_role:
+          oneOf:
+            - $ref: "#/components/schemas/AuthSettingsDefaultRole"
+            - type: "null"
+        password_login_enabled: { type: boolean }
+        password_register_enabled: { type: boolean }
+        passkey_login_enabled: { type: boolean }
+
+    PatchAuthSettingsRequest:
+      type: object
+      properties:
+        registration_enabled: { type: boolean }
+        default_role_uuid: { type: [string, "null"], format: uuid }
+        clear_default_role: { type: boolean }
+        password_login_enabled: { type: boolean }
+        password_register_enabled: { type: boolean }
+        passkey_login_enabled: { type: boolean }
+
+    EnvelopeAuthSettings:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/AuthSettings" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    OAuthProviderSettings:
+      type: object
+      required: [provider, login_enabled, register_enabled, client_id, client_secret_configured]
+      properties:
+        provider: { type: string, enum: [google, facebook, apple] }
+        login_enabled: { type: boolean }
+        register_enabled: { type: boolean }
+        client_id: { type: string }
+        client_secret_configured: { type: boolean }
+
+    PatchOAuthProviderSettingsRequest:
+      type: object
+      properties:
+        login_enabled: { type: boolean }
+        register_enabled: { type: boolean }
+        client_id: { type: string }
+        client_secret: { type: string }
+
+    EnvelopeOAuthProviderSettings:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/OAuthProviderSettings" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    LinkedIdentity:
+      type: object
+      required: [provider, linked_at]
+      properties:
+        provider: { type: string, example: github }
+        github_login: { type: [string, "null"] }
+        linked_at: { type: string, format: date-time }
+
+    IdentityList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/LinkedIdentity" }
+        total: { type: integer, format: int64 }
+
+    EnvelopeIdentityList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/IdentityList" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    StepUpStatus:
+      type: object
+      required: [valid, methods]
+      properties:
+        valid: { type: boolean }
+        expires_at: { type: [string, "null"], format: date-time }
+        methods:
+          type: array
+          items: { type: string, enum: [password, passkey, totp] }
+
+    StepUpGrant:
+      type: object
+      required: [valid, expires_at, method]
+      properties:
+        valid: { type: boolean }
+        expires_at: { type: string, format: date-time }
+        method: { type: string, enum: [password, passkey, totp] }
+
+    StepUpPolicy:
+      type: object
+      required: [ttl_hours, password_enabled, passkey_enabled, totp_enabled, password_login_totp_required]
+      properties:
+        ttl_hours: { type: integer, minimum: 1, maximum: 168 }
+        password_enabled: { type: boolean }
+        passkey_enabled: { type: boolean }
+        totp_enabled: { type: boolean }
+        password_login_totp_required: { type: boolean }
+
+    StepUpPasswordRequest:
+      type: object
+      required: [password]
+      properties:
+        password: { type: string, format: password }
+
+    PatchStepUpPolicyRequest:
+      type: object
+      properties:
+        ttl_hours: { type: integer, minimum: 1, maximum: 168 }
+        password_enabled: { type: boolean }
+        passkey_enabled: { type: boolean }
+        totp_enabled: { type: boolean }
+        password_login_totp_required: { type: boolean }
+
+    EnvelopeStepUpStatus:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/StepUpStatus" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeStepUpGrant:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/StepUpGrant" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeStepUpPolicy:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/StepUpPolicy" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeRegister:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/RegisterResponse" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeOrganizationRegisterResult:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/OrganizationRegisterResult" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePublicOrganization:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PublicOrganization" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeOrganizationPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/Organization"
+            total: { type: integer }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeOrganization:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Organization" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeTokens:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Tokens" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    AuthSession:
+      type: object
+      required: [uuid, current, created_at, expires_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        current: { type: boolean }
+        user_agent: { type: [string, "null"] }
+        ip_address: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+        impersonated: { type: boolean }
+
+    SessionList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuthSession"
+
+    EnvelopeSessionList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/SessionList" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeMe:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Me" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeImpersonationResult:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ImpersonationResult" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeStatus:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/StatusPayload" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePublicUser:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PublicUser" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePublicUserPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PublicUserPage" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePlatformUserDetail:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PlatformUserDetail" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeRealtimeConnectionToken:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/RealtimeConnectionToken" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeRealtimeSubscriptionToken:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/RealtimeSubscriptionToken" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeNotificationPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/NotificationPage" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    NotificationAction:
+      type: object
+      required: [destination, notification]
+      properties:
+        destination: { type: string }
+        notification:
+          $ref: "#/components/schemas/Notification"
+
+    EnvelopeNotificationAction:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/NotificationAction" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeNotification:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Notification" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeNotificationItems:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/Notification"
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePreferences:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/NotificationPreferences" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeResourceMeta:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ResourceMeta" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeUnreadCount:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/UnreadCount" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    HealthzResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          examples: [ok]
+
+    BulkTarget:
+      type: object
+      required: [scope]
+      properties:
+        scope:
+          type: string
+          enum: [ids, query]
+        ids:
+          type: array
+          items: { type: string, format: uuid }
+        query:
+          type: object
+          additionalProperties: { type: string }
+        params:
+          type: object
+          additionalProperties: { type: string }
+
+    BulkExecuteRequest:
+      type: object
+      required: [action, target]
+      properties:
+        action: { type: string }
+        target: { $ref: "#/components/schemas/BulkTarget" }
+        locale: { type: string, enum: [tr, en] }
+
+    BulkSummary:
+      type: object
+      properties:
+        total: { type: integer }
+        succeeded: { type: integer }
+        failed: { type: integer }
+
+    BulkJob:
+      type: object
+      required: [uuid, resource, action, status, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        resource: { type: string }
+        action: { type: string }
+        status: { type: string }
+        target: { $ref: "#/components/schemas/BulkTarget" }
+        summary: { $ref: "#/components/schemas/BulkSummary" }
+        error: { type: [string, "null"] }
+        rollback_until: { type: [string, "null"], format: date-time }
+        applied_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+
+    EnvelopeBulkJob:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/BulkJob" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeBulkSyncResult:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          properties:
+            sync: { type: boolean }
+            summary: { $ref: "#/components/schemas/BulkSummary" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeBulkJobPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/BulkJob" }
+            total: { type: integer }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    ReadyzResponse:
+      type: object
+      required: [status, checks]
+      properties:
+        status:
+          type: string
+          examples: [ready, not_ready]
+        checks:
+          type: object
+          additionalProperties:
+            type: string
+          properties:
+            postgres:
+              type: string
+              examples: [ok, down]
+            redis:
+              type: string
+              examples: [ok, down]
+
+    ExportJob:
+      type: object
+      required: [uuid, resource, format, status, row_count, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        resource: { type: string }
+        format: { type: string, enum: [pdf, xlsx, csv, json] }
+        status: { type: string, enum: [queued, processing, completed, failed, expired] }
+        row_count: { type: integer }
+        error: { type: [string, "null"] }
+        download_url: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+
+    EnvelopeExportJob:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ExportJob" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeExportJobPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/ExportJob" }
+            total: { type: integer }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    ImportJob:
+      type: object
+      required: [uuid, resource, format, status, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        resource: { type: string }
+        format: { type: string, enum: [json, xlsx, csv, tsv] }
+        status: { type: string }
+        mapping:
+          type: object
+          additionalProperties: { type: string }
+        defaults:
+          type: object
+          additionalProperties: { type: string }
+        error: { type: [string, "null"] }
+        rollback_until: { type: [string, "null"], format: date-time }
+        applied_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+
+    EnvelopeImportJob:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ImportJob" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeImportJobPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/ImportJob" }
+            total: { type: integer }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    TenantSettings:
+      type: object
+      required: [company_name, tagline, primary_color, address, city, district, phone, email, website, footer_text, paper_size]
+      properties:
+        company_name: { type: string }
+        tagline: { type: string }
+        primary_color: { type: string }
+        address: { type: string }
+        city: { type: string }
+        district: { type: string }
+        phone: { type: string }
+        email: { type: string }
+        website: { type: string }
+        footer_text: { type: string }
+        paper_size: { type: string, enum: [A4, A3, Letter, Legal] }
+        logo_url: { type: [string, "null"] }
+
+    PatchTenantSettingsRequest:
+      type: object
+      properties:
+        company_name: { type: string }
+        tagline: { type: string }
+        primary_color: { type: string }
+        address: { type: string }
+        city: { type: string }
+        district: { type: string }
+        phone: { type: string }
+        email: { type: string }
+        website: { type: string }
+        footer_text: { type: string }
+        paper_size: { type: string, enum: [A4, A3, Letter, Legal] }
+
+    EnvelopeTenantSettings:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/TenantSettings" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }

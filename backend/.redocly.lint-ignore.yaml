@@ -1,0 +1,7 @@
+# Public probes and bootstrap do not use authenticated 4xx responses.
+# /readyz reports failure as 503.
+../docs/openapi.yaml:
+  operation-4xx-response:
+    - "#/paths/~1healthz/get/responses"
+    - "#/paths/~1readyz/get/responses"
+    - "#/paths/~1v1~1app~1config/get/responses"

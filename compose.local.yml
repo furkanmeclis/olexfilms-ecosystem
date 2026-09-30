@@ -1,0 +1,190 @@
+name: ${COMPOSE_PROJECT_NAME:-${NAME_PREFIX:-app}}
+
+# Local infrastructure only. Backend (air) and frontend (pnpm) run on the host
+# via `make local-dev`. No dokploy-network.
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: ${NAME_PREFIX:-app}-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-app}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me}
+      POSTGRES_DB: ${DB_NAME:-app}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app
+
+  redis:
+    image: redis:8-alpine
+    container_name: ${NAME_PREFIX:-app}-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - app
+
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: ${NAME_PREFIX:-app}-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app
+
+  minio-init:
+    image: quay.io/minio/mc:latest
+    container_name: ${NAME_PREFIX:-app}-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
+        mc mb --ignore-existing "local/$$S3_BUCKET"
+        mc anonymous set download "local/$$S3_BUCKET"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+      S3_BUCKET: ${S3_BUCKET:-app}
+    restart: "no"
+    networks:
+      - app
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    platform: linux/amd64
+    container_name: ${NAME_PREFIX:-app}-mailhog
+    restart: unless-stopped
+    ports:
+      - "${MAILHOG_SMTP_PORT:-1025}:1025"
+      - "${MAILHOG_UI_PORT:-8025}:8025"
+    networks:
+      - app
+
+  adminer:
+    image: adminer:4
+    container_name: ${NAME_PREFIX:-app}-adminer
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    ports:
+      - "${ADMINER_PORT:-8081}:8080"
+    networks:
+      - app
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    container_name: ${NAME_PREFIX:-app}-meilisearch
+    restart: unless-stopped
+    environment:
+      MEILI_ENV: development
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-app-dev-meili-master-key-change-me}
+    ports:
+      - "${MEILI_PORT:-7700}:7700"
+    volumes:
+      - meili_data:/meili_data
+    healthcheck:
+      # Use 127.0.0.1 — BusyBox wget resolves localhost to ::1; Meili listens on IPv4 only.
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:7700/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - app
+
+  centrifugo:
+    image: centrifugo/centrifugo:v5
+    container_name: ${NAME_PREFIX:-app}-centrifugo
+    restart: unless-stopped
+    command: centrifugo -c config.json
+    environment:
+      CENTRIFUGO_API_KEY: ${CENTRIFUGO_API_KEY:-app-centrifugo-api-key-change-me}
+      CENTRIFUGO_TOKEN_HMAC_SECRET_KEY: ${CENTRIFUGO_TOKEN_HMAC_SECRET:-app-centrifugo-token-hmac-change-me}
+      CENTRIFUGO_ALLOWED_ORIGINS: ${CENTRIFUGO_ALLOWED_ORIGINS:-http://localhost:3000 http://127.0.0.1:3000}
+    ports:
+      - "${CENTRIFUGO_PORT:-8000}:8000"
+    volumes:
+      - ./deploy/centrifugo/config.json:/centrifugo/config.json:ro
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD", "centrifugo", "healthcheck", "--address=http://localhost:8000"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app
+
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: ${NAME_PREFIX:-app}-gotenberg
+    restart: unless-stopped
+    command:
+      - gotenberg
+      - --api-timeout=60s
+      - --chromium-disable-javascript=true
+      - --chromium-allow-list=^file:///tmp/.*$
+    ports:
+      - "${GOTENBERG_PORT:-3001}:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app
+
+volumes:
+  postgres_data:
+    name: ${POSTGRES_VOLUME_NAME:-${NAME_PREFIX:-app}-postgres}
+  redis_data:
+    name: ${REDIS_VOLUME_NAME:-${NAME_PREFIX:-app}-redis}
+  minio_data:
+    name: ${MINIO_VOLUME_NAME:-${NAME_PREFIX:-app}-minio}
+  meili_data:
+    name: ${MEILI_VOLUME_NAME:-${NAME_PREFIX:-app}-meilisearch}
+
+networks:
+  app:
+    name: ${LOCAL_NETWORK_NAME:-${NAME_PREFIX:-app}}
+    driver: bridge

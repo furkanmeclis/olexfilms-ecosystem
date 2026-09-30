@@ -1,0 +1,22 @@
+{
+  "description": "Rol, kullanıcı ve bildirim özetleri ile hızlı bağlantılar.",
+  "forbidden_description": "Genel bakışı yalnızca platform kullanıcıları görebilir.",
+  "error_description": "Genel bakış verileri yüklenemedi.",
+  "kpi_roles_total": "Roller",
+  "kpi_users_total": "Kullanıcılar",
+  "kpi_notifications": "Bildirimler",
+  "quick_links_title": "Hızlı bağlantılar",
+  "quick_links_description": "Sık kullanılan platform alanlarına git.",
+  "link_roles_description": "Rolleri görüntüle ve yönet.",
+  "link_users_description": "Platform kullanıcılarını görüntüle ve yönet.",
+  "link_notifications_description": "Platform bildirim kaydı.",
+  "link_profile_description": "Hesap, şifre ve tercihler.",
+  "pipeline.follow_up": "Takip edilecek fırsat",
+  "pipeline.overdue": "{{count}} geciken takip",
+  "pipeline.open_leads": "{{count}} açık fırsat",
+  "pipeline.open_quotes": "Yanıt bekleyen teklifler",
+  "pipeline.expiring": "{{count}} teklif 3 gün içinde bitiyor",
+  "pipeline.awaiting": "{{count}} teklif yanıt bekliyor",
+  "tenant.welcome_title": "Hoş geldiniz",
+  "tenant.welcome_description": "Organizasyon paneli. Modüller eklendikçe burada görünecek."
+}

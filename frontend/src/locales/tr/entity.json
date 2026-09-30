@@ -1,0 +1,14 @@
+{
+  "create": "Oluştur",
+  "refresh": "Yenile",
+  "filters": "Filtreler",
+  "filters_active": "Filtreler ({{count}})",
+  "filters_description": "Listeyi daraltmak için filtreleri kullanın.",
+  "filter_any": "Tümü",
+  "filter_unsupported": "Bu filtre için API parametresi henüz yok.",
+  "reset_filters": "Sıfırla",
+  "apply_filters": "Uygula",
+  "delete_title": "Sil: {{name}}",
+  "delete_description": "{{name}} kaydını silmek istediğinize emin misiniz?",
+  "delete_soft_description": "{{name}} yumuşak silinecek. Kayıt arşivlenir; kalıcı olarak kaldırılmaz."
+}

@@ -1,0 +1,17 @@
+{
+  "pick_date": "Pick a date",
+  "show_password": "Show password",
+  "hide_password": "Hide password",
+  "cancel": "Cancel",
+  "clear": "Clear",
+  "save": "Save",
+  "required": "Required field",
+  "on_this_page": "On this page",
+  "combobox_placeholder": "Select…",
+  "combobox_search": "Search…",
+  "combobox_empty": "No results found",
+  "combobox_selected": "Selected",
+  "command_title": "Command / pick",
+  "command_description": "Search and select an item",
+  "command_group_default": "Results"
+}

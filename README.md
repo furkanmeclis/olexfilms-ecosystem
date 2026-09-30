@@ -23,3 +23,16 @@ compose.prod.yml
 ## Taban
 
 Kod tabanı `otopoly-go` altyapı katmanından türetilir; üzerine `technowide-ecosystem` düzeltmeleri (SeaweedFS, oturum, iOS push, compose düzeni, izin scope'ları, MCP) alınır. Ayrıntı ve referans yolları Linear F0 işlerinde.
+
+## Yerel geliştirme
+
+```bash
+cp .env.example .env                 # secret'ları doldur; .env commit'lenmez
+make local-dev                       # infra (docker) + migrate-up + backend (air) + frontend
+make create-super-admin SA_EMAIL=admin@olexfilms.app SA_PASSWORD=...
+```
+
+- API sözleşmesi: `docs/openapi.yaml` (kanonik). Değiştirince `make api-generate`
+  (backend'in gömdüğü kopyayı senkronlar ve frontend tiplerini üretir).
+- Backend: `cd backend && go vet ./... && go test ./...`
+- Frontend: `cd frontend && pnpm lint && pnpm typecheck && pnpm build`

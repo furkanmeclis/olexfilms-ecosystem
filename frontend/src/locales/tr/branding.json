@@ -1,0 +1,8 @@
+{
+  "logo.upload": "Logo yükle",
+  "logo.replace": "Logoyu değiştir",
+  "logo.clear": "Logoyu kaldır",
+  "logo.uploading": "Yükleniyor…",
+  "logo.too_large": "Logo en fazla 2 MB olabilir.",
+  "logo.invalid_type": "JPEG, PNG veya WebP görsel kullanın."
+}

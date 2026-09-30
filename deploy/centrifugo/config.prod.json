@@ -1,0 +1,32 @@
+{
+  "token_hmac_secret_key": "CHANGE_ME",
+  "api_key": "CHANGE_ME",
+  "admin": false,
+  "allowed_origins": [],
+  "allow_subscribe_for_client": false,
+  "namespaces": [
+    {
+      "name": "org",
+      "allow_subscribe_for_client": false,
+      "allow_publish_for_client": false,
+      "presence": true,
+      "join_leave": true,
+      "force_push_join_leave": true,
+      "allow_presence_for_subscriber": true
+    },
+    {
+      "name": "user",
+      "allow_subscribe_for_client": false,
+      "allow_publish_for_client": false,
+      "presence": true,
+      "join_leave": true,
+      "force_push_join_leave": true,
+      "allow_presence_for_subscriber": true
+    },
+    {
+      "name": "tenant",
+      "allow_subscribe_for_client": false,
+      "allow_publish_for_client": false
+    }
+  ]
+}

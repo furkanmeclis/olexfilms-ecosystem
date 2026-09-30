@@ -1,0 +1,37 @@
+{
+  "token_hmac_secret_key": "app-centrifugo-token-hmac-change-me",
+  "api_key": "app-centrifugo-api-key-change-me",
+  "admin": false,
+  "allowed_origins": [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8080",
+    "http://127.0.0.1:8080"
+  ],
+  "allow_subscribe_for_client": false,
+  "namespaces": [
+    {
+      "name": "org",
+      "allow_subscribe_for_client": false,
+      "allow_publish_for_client": false,
+      "presence": true,
+      "join_leave": true,
+      "force_push_join_leave": true,
+      "allow_presence_for_subscriber": true
+    },
+    {
+      "name": "user",
+      "allow_subscribe_for_client": false,
+      "allow_publish_for_client": false,
+      "presence": true,
+      "join_leave": true,
+      "force_push_join_leave": true,
+      "allow_presence_for_subscriber": true
+    },
+    {
+      "name": "tenant",
+      "allow_subscribe_for_client": false,
+      "allow_publish_for_client": false
+    }
+  ]
+}

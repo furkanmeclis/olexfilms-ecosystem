@@ -1,0 +1,38 @@
+# Binaries
+/bin/
+/dist/
+*.exe
+*.test
+*.out
+coverage.out
+coverage.html
+
+# Env & secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Tool caches
+.vendor-new/
+tmp/
+
+# Air / live reload
+tmp/
+bin/
+
+# Local object storage
+storage/objects/
+
+# whatsmeow Linked Devices session DBs (per channel_account uuid)
+storage/whatsmeow/
+
+# Debug
+debug
+__debug_bin*
