@@ -133,5 +133,8 @@
   "labels.platform.territories.write": "Gestire i territori",
   "labels.platform.rates.read": "Vedere i tassi di cambio",
   "labels.platform.rates.write": "Gestire i tassi di cambio",
-  "labels.platform.legal_texts.write": "Modificare i testi legali"
+  "labels.platform.legal_texts.write": "Modificare i testi legali",
+  "labels.catalog.read": "Visualizza catalogo",
+  "labels.catalog.write": "Gestisci catalogo",
+  "groups.catalog": "Catalogo"
 }

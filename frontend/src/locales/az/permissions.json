@@ -133,5 +133,8 @@
   "labels.platform.territories.write": "Əraziləri idarə etmək",
   "labels.platform.rates.read": "Valyuta məzənnələrinə baxmaq",
   "labels.platform.rates.write": "Valyuta məzənnələrini idarə etmək",
-  "labels.platform.legal_texts.write": "Hüquqi mətnləri yazmaq"
+  "labels.platform.legal_texts.write": "Hüquqi mətnləri yazmaq",
+  "labels.catalog.read": "Kataloqa bax",
+  "labels.catalog.write": "Kataloqu idarə et",
+  "groups.catalog": "Kataloq"
 }

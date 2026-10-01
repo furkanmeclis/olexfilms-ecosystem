@@ -133,5 +133,8 @@
   "labels.platform.territories.write": "Gebiete verwalten",
   "labels.platform.rates.read": "Wechselkurse ansehen",
   "labels.platform.rates.write": "Wechselkurse verwalten",
-  "labels.platform.legal_texts.write": "Rechtstexte bearbeiten"
+  "labels.platform.legal_texts.write": "Rechtstexte bearbeiten",
+  "labels.catalog.read": "Katalog anzeigen",
+  "labels.catalog.write": "Katalog verwalten",
+  "groups.catalog": "Katalog"
 }
