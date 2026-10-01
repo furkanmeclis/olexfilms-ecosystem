@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/sidebar";
 import { cmsNav, platformNav, tenantNav } from "@/config/nav";
 import { routes } from "@/config/routes";
+import { useEnabledFeatures } from "@/features/modules/hooks/use-features";
 import { NavEngine } from "@/features/nav-engine";
 import { useActiveOrganization } from "@/hooks/use-active-organization";
 
@@ -35,9 +36,13 @@ export function AppSidebar({
   const activeOrg = useActiveOrganization(
     variant === "tenant" ? tenantSlug : null,
   );
+  const features = useEnabledFeatures(variant === "tenant" ? tenantSlug : null);
   const navOrg = useMemo(
-    () => (activeOrg ? { type: activeOrg.type, role: activeOrg.role } : null),
-    [activeOrg],
+    () =>
+      activeOrg
+        ? { type: activeOrg.type, role: activeOrg.role, features }
+        : null,
+    [activeOrg, features],
   );
 
   const homeHref =

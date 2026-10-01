@@ -26,7 +26,7 @@ func TestRequireFeature(t *testing.T) {
 		want    int
 	}{
 		{"nil checker allows", nil, http.StatusOK},
-		{"allow-all allows", AllowAllFeatures{}, http.StatusOK},
+		{"enabled module allows", offChecker{key: "module.y"}, http.StatusOK},
 		{"disabled module 403", offChecker{key: "module.x"}, http.StatusForbidden},
 	}
 	for _, tc := range cases {

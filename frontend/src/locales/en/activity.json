@@ -151,5 +151,13 @@
   "resources.billing.subscription": "Subscription",
   "resources.billing.invoice": "Invoice",
   "resources.billing.discount_code": "Discount code",
-  "resources.billing": "Subscription"
+  "resources.billing": "Subscription",
+  "actions.modules.requested": "Module requested",
+  "actions.modules.dealers.updated": "Dealer modules updated",
+  "actions.modules.dealer_standard.updated": "Dealer standard updated",
+  "actions.modules.dealer_standard.cleared": "Dealer standard reset",
+  "actions.modules.platform.updated": "Module system setting updated",
+  "actions.modules.organization.updated": "Organization module updated",
+  "actions.modules.organization.cleared": "Organization module reset",
+  "resources.modules": "Modules"
 }

@@ -117,6 +117,11 @@
   "scopes.customer": "Kendi müşteri kayıtları",
   "sensitive": "Hassas izin",
   "super_admin_only": "Yalnızca süper admin",
+  "labels.modules.read": "Modül ayarlarını görüntüle",
+  "labels.modules.manage": "Bayi modüllerini yönet",
+  "labels.platform.modules.read": "Platform modüllerini görüntüle",
+  "labels.platform.modules.write": "Platform modüllerini yönet",
+  "groups.modules": "Modüller",
   "labels.platform.documents.templates.read": "Belge şablonlarını görüntüle",
   "labels.platform.documents.templates.write": "Belge şablonlarını düzenle"
 }

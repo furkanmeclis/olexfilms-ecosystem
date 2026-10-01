@@ -154,6 +154,20 @@ var Permissions = []PermissionDef{
 	// earlier sort orders stay stable; migration 000030 seeds them.
 	platformPerm(PermPlatformDocumentTemplatesRead, "Read document templates"),
 	platformPerm(PermPlatformDocumentTemplatesWrite, "Write document templates"),
+
+	// Module packages (TEC-86). Appended so earlier sort orders stay put.
+	{
+		Slug: PermModulesRead, Name: "Read module settings", Module: "modules",
+		Scopes:      []Scope{ScopeManaged, ScopeSubtree},
+		Description: "Module flags of the organization (managed) or of its dealers (subtree); request a module.",
+	},
+	{
+		Slug: PermModulesManage, Name: "Manage dealer modules", Module: "modules",
+		Scopes:      []Scope{ScopeSubtree},
+		Description: "Switch modules of the distributor's dealers and edit the dealer standard.",
+	},
+	platformPerm(PermPlatformModulesRead, "Read platform modules"),
+	platformPerm(PermPlatformModulesWrite, "Write platform modules"),
 }
 
 func grants(base map[string]Scope, extra map[string]Scope) map[string]Scope {
@@ -257,6 +271,8 @@ var Roles = []RoleDef{
 			PermAccountingWrite:        ScopeManaged,
 			PermWarehouseRead:          ScopeManaged,
 			PermWarehouseWrite:         ScopeManaged,
+			PermModulesRead:            ScopeSubtree,
+			PermModulesManage:          ScopeSubtree,
 		}),
 	},
 	{
@@ -308,6 +324,7 @@ var Roles = []RoleDef{
 			PermAccountingRead:         ScopeManaged,
 			PermAccountingWrite:        ScopeManaged,
 			PermWarehouseRead:          ScopeManaged,
+			PermModulesRead:            ScopeManaged,
 		}),
 	},
 	{

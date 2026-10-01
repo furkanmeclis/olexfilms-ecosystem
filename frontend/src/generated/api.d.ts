@@ -1834,6 +1834,214 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/features": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Modules of the active organization (Özellikler page, menus, guards)
+         * @description Every member may read it. `items` lists the modules the level above has access to (closed system wide or missing at the distributor are left out); `enabled` lists the keys that are on. The module catalog (keys, levels) comes from the backend; the frontend never duplicates it.
+         */
+        get: operations["listFeatures"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/features/{key}/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask the level above to switch a module on (in-app notification)
+         * @description Notifies the owners of the parent distributor, or the platform admins for a distributor (or a dealer under the center). Needs modules.read.
+         */
+        post: operations["requestFeature"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/modules/dealers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Module matrix of the distributor's dealers (modules.read subtree) */
+        get: operations["listDealerModules"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/modules/dealers/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Switch a module for several dealers at once (all or nothing)
+         * @description Needs modules.manage (subtree). A dealer outside the distributor's subtree rejects the whole batch (403). `enabled: null` clears the dealers' own values (back to the dealer standard).
+         */
+        post: operations["bulkDealerModules"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/modules/dealers/{uuid}/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Switch a module for one dealer (modules.manage) */
+        put: operations["setDealerModule"];
+        post?: never;
+        /** Drop a dealer's own value (back to the dealer standard) */
+        delete: operations["clearDealerModule"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/modules/dealer-standard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The distributor's dealer standard (what new dealers get) */
+        get: operations["getDealerStandard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/modules/dealer-standard/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change the dealer standard (modules.manage)
+         * @description Dealers without their own value follow the standard at once (live inheritance). Switching on needs the module on for the distributor (409).
+         */
+        put: operations["setDealerStandard"];
+        post?: never;
+        /** Drop a standard value (dealers follow the module default) */
+        delete: operations["clearDealerStandard"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/modules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Module catalog with system switches (platform.modules.read) */
+        get: operations["listPlatformModules"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/modules/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Close/reopen a module system wide or change its defaults
+         * @description `enabled: false` closes the module everywhere with no exception. Core modules cannot be closed (422 MODULE_CORE).
+         */
+        patch: operations["patchPlatformModule"];
+        trace?: never;
+    };
+    "/v1/platform/organizations/{uuid}/modules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Resolved module states of one organization (platform.modules.read) */
+        get: operations["listPlatformOrganizationModules"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/organizations/{uuid}/modules/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set an organization's module as admin (source=admin)
+         * @description Works for a dealer even when its distributor lacks the module; refused (409 FEATURE_DISABLED) when the module is closed system wide.
+         */
+        put: operations["setPlatformOrganizationModule"];
+        post?: never;
+        /** Drop an organization's own value (back to inheritance) */
+        delete: operations["clearPlatformOrganizationModule"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3119,8 +3327,159 @@ export interface components {
             };
             meta: components["schemas"]["ResponseMeta"];
         };
+        /** @enum {string} */
+        ModuleLevel: "core" | "standard" | "addon";
+        ModuleActor: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+        };
+        ModuleState: {
+            key: string;
+            level: components["schemas"]["ModuleLevel"];
+            enabled: boolean;
+            /** @description False when the level above has no access. */
+            visible: boolean;
+            paid: boolean;
+            default_enabled: boolean;
+            /** @description core | system | default | upstream | standard | admin | distributor | service */
+            source: string;
+            set_by?: components["schemas"]["ModuleActor"];
+            /** Format: date-time */
+            updated_at?: string;
+            upstream_enabled: boolean;
+            admin_override: boolean;
+        };
+        EnvelopeFeatureList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                organization_type: string;
+                items: components["schemas"]["ModuleState"][];
+                enabled: string[];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFeatureRequest: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                /** @enum {string} */
+                status: "requested";
+                recipients: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        DealerModuleEntry: {
+            key: string;
+            enabled: boolean;
+            visible: boolean;
+            source: string;
+            admin_override: boolean;
+        };
+        DealerModuleRow: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            slug: string;
+            modules: components["schemas"]["DealerModuleEntry"][];
+        };
+        EnvelopeDealerModuleList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["DealerModuleRow"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        ModuleSwitchRequest: {
+            enabled: boolean;
+        };
+        DealerModuleBulkRequest: {
+            dealer_uuids: string[];
+            key: string;
+            /** @description null clears the dealers' own values. */
+            enabled?: boolean | null;
+        };
+        EnvelopeModuleUpdated: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                updated: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        DealerStandardEntry: {
+            key: string;
+            level: components["schemas"]["ModuleLevel"];
+            paid: boolean;
+            distributor_enabled: boolean;
+            enabled: boolean;
+            explicit: boolean;
+            set_by?: components["schemas"]["ModuleActor"];
+        };
+        EnvelopeDealerStandard: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["DealerStandardEntry"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        PlatformModule: {
+            key: string;
+            level: components["schemas"]["ModuleLevel"];
+            /** @description False when closed system wide. */
+            enabled: boolean;
+            default_enabled: boolean;
+            paid: boolean;
+            set_by?: components["schemas"]["ModuleActor"];
+        };
+        PlatformModulePatch: {
+            enabled?: boolean;
+            default_enabled?: boolean;
+            paid?: boolean;
+        };
+        EnvelopePlatformModule: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PlatformModule"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePlatformModuleList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["PlatformModule"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePlatformOrganizationModules: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                organization_type: string;
+                items: components["schemas"]["ModuleState"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeModuleState: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ModuleState"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
     };
     responses: {
+        /** @description 409 FEATURE_DISABLED (closed one level up) or MODULE_ADMIN_OVERRIDE; 422 MODULE_CORE (core modules cannot be switched off) */
+        ModuleError: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description Validation or malformed request */
         BadRequest: {
             headers: {
@@ -3195,6 +3554,8 @@ export interface components {
         };
     };
     parameters: {
+        /** @description Module key from the backend catalog (GET /v1/features) */
+        ModuleKey: string;
         /** @description Resource UUID */
         ResourceUUID: string;
         Limit: number;
@@ -6277,6 +6638,404 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    listFeatures: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Module states */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFeatureList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    requestFeature: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Module key from the backend catalog (GET /v1/features) */
+                key: components["parameters"]["ModuleKey"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    note?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Request sent */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFeatureRequest"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ModuleError"];
+        };
+    };
+    listDealerModules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dealers with their module states */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDealerModuleList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    bulkDealerModules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DealerModuleBulkRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeModuleUpdated"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["ModuleError"];
+            422: components["responses"]["ModuleError"];
+        };
+    };
+    setDealerModule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                /** @description Module key from the backend catalog (GET /v1/features) */
+                key: components["parameters"]["ModuleKey"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModuleSwitchRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeModuleUpdated"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["ModuleError"];
+            422: components["responses"]["ModuleError"];
+        };
+    };
+    clearDealerModule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                /** @description Module key from the backend catalog (GET /v1/features) */
+                key: components["parameters"]["ModuleKey"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cleared */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeModuleUpdated"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["ModuleError"];
+            422: components["responses"]["ModuleError"];
+        };
+    };
+    getDealerStandard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dealer standard */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDealerStandard"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    setDealerStandard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Module key from the backend catalog (GET /v1/features) */
+                key: components["parameters"]["ModuleKey"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModuleSwitchRequest"];
+            };
+        };
+        responses: {
+            /** @description Dealer standard */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDealerStandard"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["ModuleError"];
+            422: components["responses"]["ModuleError"];
+        };
+    };
+    clearDealerStandard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Module key from the backend catalog (GET /v1/features) */
+                key: components["parameters"]["ModuleKey"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dealer standard */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDealerStandard"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ModuleError"];
+        };
+    };
+    listPlatformModules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Modules */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePlatformModuleList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    patchPlatformModule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Module key from the backend catalog (GET /v1/features) */
+                key: components["parameters"]["ModuleKey"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformModulePatch"];
+            };
+        };
+        responses: {
+            /** @description Module */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePlatformModule"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ModuleError"];
+        };
+    };
+    listPlatformOrganizationModules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Module states */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePlatformOrganizationModules"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    setPlatformOrganizationModule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                /** @description Module key from the backend catalog (GET /v1/features) */
+                key: components["parameters"]["ModuleKey"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModuleSwitchRequest"];
+            };
+        };
+        responses: {
+            /** @description Module state */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeModuleState"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["ModuleError"];
+            422: components["responses"]["ModuleError"];
+        };
+    };
+    clearPlatformOrganizationModule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                /** @description Module key from the backend catalog (GET /v1/features) */
+                key: components["parameters"]["ModuleKey"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Module state */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeModuleState"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ModuleError"];
         };
     };
 }
