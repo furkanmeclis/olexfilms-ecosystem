@@ -17,6 +17,13 @@ const (
 	CariEntryVoided   = "cari.entry_voided"
 )
 
+// Finance (income/expense ledger, TEC-99) domain events. A ledger row that
+// settles or charges a cari publishes the cari.* event instead.
+const (
+	FinanceEntryPosted = "finance.entry_posted"
+	FinanceEntryVoided = "finance.entry_voided"
+)
+
 // Jobs (operations / service jobs) domain events.
 const (
 	JobsCreated   = "jobs.created"
@@ -273,6 +280,8 @@ func catalogConstants() []string {
 		CariChargePosted,
 		CariPaymentPosted,
 		CariEntryVoided,
+		FinanceEntryPosted,
+		FinanceEntryVoided,
 		JobsCreated,
 		JobsReady,
 		JobsDelivered,
