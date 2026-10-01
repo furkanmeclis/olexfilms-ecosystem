@@ -16,6 +16,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/repository"
 	notifmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/model"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authrevoke"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/password"
 	"github.com/google/uuid"
 )
@@ -45,6 +46,44 @@ func (u *AuthUseCase) SetNotifier(n Notifier) {
 // SetLogger attaches a logger for OTP debug output.
 func (u *AuthUseCase) SetLogger(log *slog.Logger) {
 	u.log = log
+}
+
+// SetRevocations enables immediate access-token revocation (optional).
+func (u *AuthUseCase) SetRevocations(s *authrevoke.Store) {
+	u.revocations = s
+}
+
+// RevokeAccessSession rejects access tokens of one session before they expire.
+func (u *AuthUseCase) RevokeAccessSession(ctx context.Context, sid uuid.UUID) {
+	if err := u.revocations.RevokeSession(ctx, sid); err != nil && u.log != nil {
+		u.log.Warn("auth_revoke_session_failed", "error", err)
+	}
+}
+
+// AccessRevoked reports whether an access token was revoked before expiry.
+// Redis errors fail open: the token signature and expiry still hold, and an
+// outage should not sign everyone out.
+func (u *AuthUseCase) AccessRevoked(ctx context.Context, user, sid uuid.UUID, issuedAt time.Time) bool {
+	// Bound the wait so a hung Redis costs a fraction of a second per
+	// request, not the whole request budget.
+	ctx, cancel := context.WithTimeout(ctx, 750*time.Millisecond)
+	defer cancel()
+	revoked, err := u.revocations.IsRevoked(ctx, user, sid, issuedAt)
+	if err != nil {
+		if u.log != nil {
+			u.log.Warn("auth_revocation_check_failed", "error", err)
+		}
+		return false
+	}
+	return revoked
+}
+
+// revokeAllSessions ends every refresh session and every live access token of the user.
+func (u *AuthUseCase) revokeAllSessions(ctx context.Context, user model.User) error {
+	if err := u.revocations.RevokeUser(ctx, user.UUID); err != nil && u.log != nil {
+		u.log.Warn("auth_revoke_user_failed", "error", err)
+	}
+	return u.repo.RevokeAllRefresh(ctx, user.ID)
 }
 
 // SetSearchIndexer attaches the command-palette search indexer (optional).
@@ -169,7 +208,7 @@ func (u *AuthUseCase) ResetPassword(ctx context.Context, email, code, newPasswor
 	if err := u.repo.UpdatePassword(ctx, user.ID, hash); err != nil {
 		return ErrPasswordResetFail
 	}
-	_ = u.repo.RevokeAllRefresh(ctx, user.ID)
+	_ = u.revokeAllSessions(ctx, user)
 	return nil
 }
 
@@ -190,8 +229,8 @@ func (u *AuthUseCase) ChangePassword(ctx context.Context, userUUID uuid.UUID, cu
 	if err := u.repo.UpdatePassword(ctx, user.ID, hash); err != nil {
 		return err
 	}
-	// Revoke all refresh tokens (including current session).
-	return u.repo.RevokeAllRefresh(ctx, user.ID)
+	// Revoke all sessions (including the current one).
+	return u.revokeAllSessions(ctx, user)
 }
 
 // RequestEmailVerification issues a verification OTP email.

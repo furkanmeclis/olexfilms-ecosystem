@@ -151,7 +151,6 @@ export type UploadSession = {
   key: string;
   method: string;
   upload_url: string;
-  presigned_url?: string;
   expires_in: number;
 };
 

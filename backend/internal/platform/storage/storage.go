@@ -70,7 +70,7 @@ type VersionInfo struct {
 	IsLatest     bool
 }
 
-// Driver is the low-level object store backend (MinIO / S3).
+// Driver is the low-level object store backend (SeaweedFS / S3).
 type Driver interface {
 	Ping(ctx context.Context) error
 	Upload(ctx context.Context, file File, path string) error
@@ -93,7 +93,7 @@ type Driver interface {
 func NewFromConfig(ctx context.Context, cfg config.StorageConfig) (Driver, error) {
 	switch strings.ToLower(strings.TrimSpace(cfg.Driver)) {
 	case "minio":
-		return NewMinIO(ctx, cfg.MinIO)
+		return nil, fmt.Errorf("storage: STORAGE_DRIVER=minio was removed; use STORAGE_DRIVER=s3 with the S3_* settings")
 	case "s3":
 		return NewS3(ctx, cfg.S3)
 	default:

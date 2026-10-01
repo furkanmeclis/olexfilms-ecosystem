@@ -167,9 +167,6 @@ func (s *Service) CreateUploadSession(ctx context.Context, actor model.Actor, me
 		UploadURL: uploadURLPath,
 		ExpiresIn: 3600,
 	}
-	if url, err := s.store.PresignPut(ctx, key, meta.ContentType, time.Hour); err == nil {
-		out.PresignedURL = url
-	}
 	_ = actor
 	return out, nil
 }

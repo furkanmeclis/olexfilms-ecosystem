@@ -12,7 +12,13 @@ type Envelope<T> = {
   meta?: { request_id?: string };
 };
 
-let refreshPromise: Promise<boolean> | null = null;
+/**
+ * `unavailable`: offline, API down/restarting (5xx) or rate-limited (429).
+ * The session is kept; only `rejected` signs the user out.
+ */
+type RefreshOutcome = "ok" | "rejected" | "unavailable";
+
+let refreshPromise: Promise<RefreshOutcome> | null = null;
 let orgContextPromise: Promise<boolean> | null = null;
 let onAuthFailure: (() => void | Promise<void>) | null = null;
 
@@ -29,18 +35,28 @@ export function setAuthFailureHandler(
   onAuthFailure = handler;
 }
 
-async function refreshSession(): Promise<boolean> {
-  const response = await fetch(`${apiConfig.baseUrl}/v1/auth/refresh`, {
-    method: "POST",
-    headers: { Accept: "application/json", "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({}),
-  });
+async function refreshSession(): Promise<RefreshOutcome> {
+  let response: Response;
+  try {
+    response = await fetch(`${apiConfig.baseUrl}/v1/auth/refresh`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({}),
+    });
+  } catch {
+    // Offline or the server is restarting: keep the session.
+    return "unavailable";
+  }
 
-  if (!response.ok) return false;
+  if (response.status >= 500 || response.status === 429) return "unavailable";
+  if (!response.ok) return "rejected";
 
   const json = (await response.json()) as Envelope<{ authenticated?: boolean }>;
-  return Boolean(json.data?.authenticated ?? json.success);
+  return (json.data?.authenticated ?? json.success) ? "ok" : "rejected";
 }
 
 function enqueueRefresh() {
@@ -141,8 +157,9 @@ const bffMiddleware: Middleware = {
       return response;
     }
 
-    const ok = await enqueueRefresh();
-    if (!ok) {
+    const outcome = await enqueueRefresh();
+    if (outcome === "unavailable") return response;
+    if (outcome === "rejected") {
       await onAuthFailure?.();
       return response;
     }

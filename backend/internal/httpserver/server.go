@@ -61,6 +61,7 @@ import (
 	storagehandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/storage/handler"
 	storageusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/storage/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authrevoke"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine"
 	bulkadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine/adapters"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/crypto"
@@ -173,6 +174,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	uc := authusecase.New(repo, tokens)
 	uc.SetNotifier(notifSvc)
 	uc.SetLogger(log)
+	if deps.Redis != nil {
+		uc.SetRevocations(authrevoke.New(deps.Redis, cfg.App.Env, cfg.JWT.AccessTTL))
+	}
 
 	searchReg := searchengine.NewRegistry(
 		searchadapters.NewUsers(deps.Queries),

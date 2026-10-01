@@ -23,6 +23,8 @@ type memRepo struct {
 	nextID    int64
 	perms     map[string][]string
 	roles     map[string]int64
+	// Refresh sessions revoked through RevokeSession.
+	revokedSessions []uuid.UUID
 }
 
 func newMemRepo() *memRepo {
@@ -279,7 +281,10 @@ func (r *memRepo) ListActiveSessions(context.Context, int64) ([]model.DeviceSess
 	return nil, nil
 }
 
-func (r *memRepo) RevokeSession(context.Context, int64, uuid.UUID) error { return nil }
+func (r *memRepo) RevokeSession(_ context.Context, _ int64, sid uuid.UUID) error {
+	r.revokedSessions = append(r.revokedSessions, sid)
+	return nil
+}
 
 func (r *memRepo) RevokeOtherSessions(context.Context, int64, uuid.UUID) error {
 	return nil

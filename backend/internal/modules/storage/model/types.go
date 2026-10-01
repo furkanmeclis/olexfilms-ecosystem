@@ -81,12 +81,11 @@ type UploadMeta struct {
 }
 
 type UploadSession struct {
-	SessionID    string `json:"session_id"`
-	Key          string `json:"key"`
-	Method       string `json:"method"`
-	UploadURL    string `json:"upload_url"`
-	PresignedURL string `json:"presigned_url,omitempty"`
-	ExpiresIn    int    `json:"expires_in"`
+	SessionID string `json:"session_id"`
+	Key       string `json:"key"`
+	Method    string `json:"method"`
+	UploadURL string `json:"upload_url"`
+	ExpiresIn int    `json:"expires_in"`
 }
 
 type Version struct {

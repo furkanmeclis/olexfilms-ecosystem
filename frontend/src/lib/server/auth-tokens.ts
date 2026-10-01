@@ -10,8 +10,20 @@ const SESSION_COOKIE_BASES = [
 
 const SESSION_COOKIE_CHUNKS = 12;
 
+/**
+ * Auth.js picks `__Secure-` cookies from the site URL scheme, not NODE_ENV.
+ * Follow the same rule so a production build served over plain http (local
+ * prod compose, LAN preview) and an https dev tunnel both read and write the
+ * cookie Auth.js actually set.
+ */
+export function secureCookies() {
+  const url = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL;
+  if (url) return url.startsWith("https://");
+  return process.env.NODE_ENV === "production";
+}
+
 export function sessionCookieName() {
-  return process.env.NODE_ENV === "production"
+  return secureCookies()
     ? "__Secure-authjs.session-token"
     : "authjs.session-token";
 }
@@ -19,7 +31,7 @@ export function sessionCookieName() {
 function sessionCookieOptions() {
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: secureCookies(),
     sameSite: "lax" as const,
     path: "/",
   };

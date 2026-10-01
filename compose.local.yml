@@ -41,46 +41,42 @@ services:
     networks:
       - app
 
-  minio:
-    image: quay.io/minio/minio:latest
-    container_name: ${NAME_PREFIX:-app}-minio
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.47
+    container_name: ${NAME_PREFIX:-app}-seaweedfs
     restart: unless-stopped
-    command: server /data --console-address ":9001"
+    # Single-node SeaweedFS (master + volume + filer + S3 gateway). The bucket
+    # is created on start. The admin identity from AWS_ACCESS_KEY_ID denies
+    # anonymous S3 access; the JWT keys lock the filer / volume HTTP ports so
+    # only the S3 gateway (same process) can read or write objects.
+    command:
+      - mini
+      - -dir=/data
+      - -ip=127.0.0.1
+      - -ip.bind=0.0.0.0
+      - -bucket=${S3_BUCKET:-app}
+      - -s3.port=8333
+      - -s3.port.iceberg=0
+      - -s3.port.lance=0
+      - -webdav=false
+      - -admin.ui=false
+      - -master.telemetry=false
     environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:-s3admin}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-s3admin-secret}
+      WEED_JWT_SIGNING_KEY: ${SEAWEEDFS_JWT_WRITE_KEY:-local-seaweedfs-write-key}
+      WEED_JWT_FILER_SIGNING_KEY: ${SEAWEEDFS_JWT_WRITE_KEY:-local-seaweedfs-write-key}
+      WEED_JWT_SIGNING_READ_KEY: ${SEAWEEDFS_JWT_READ_KEY:-local-seaweedfs-read-key}
+      WEED_JWT_FILER_SIGNING_READ_KEY: ${SEAWEEDFS_JWT_READ_KEY:-local-seaweedfs-read-key}
     ports:
-      - "${MINIO_API_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+      - "${S3_PORT:-9000}:8333"
     volumes:
-      - minio_data:/data
+      - seaweedfs_data:/data
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:9000/minio/health/live"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:8333/healthz"]
       interval: 5s
       timeout: 5s
-      retries: 10
-    networks:
-      - app
-
-  minio-init:
-    image: quay.io/minio/mc:latest
-    container_name: ${NAME_PREFIX:-app}-minio-init
-    depends_on:
-      minio:
-        condition: service_healthy
-    entrypoint:
-      - /bin/sh
-      - -c
-      - |
-        set -eu
-        mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
-        mc mb --ignore-existing "local/$$S3_BUCKET"
-        mc anonymous set download "local/$$S3_BUCKET"
-    environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
-      S3_BUCKET: ${S3_BUCKET:-app}
-    restart: "no"
+      retries: 20
     networks:
       - app
 
@@ -179,8 +175,8 @@ volumes:
     name: ${POSTGRES_VOLUME_NAME:-${NAME_PREFIX:-app}-postgres}
   redis_data:
     name: ${REDIS_VOLUME_NAME:-${NAME_PREFIX:-app}-redis}
-  minio_data:
-    name: ${MINIO_VOLUME_NAME:-${NAME_PREFIX:-app}-minio}
+  seaweedfs_data:
+    name: ${SEAWEEDFS_VOLUME_NAME:-${NAME_PREFIX:-app}-seaweedfs}
   meili_data:
     name: ${MEILI_VOLUME_NAME:-${NAME_PREFIX:-app}-meilisearch}
 

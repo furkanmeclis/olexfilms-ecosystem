@@ -19,7 +19,12 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return out;
 }
 
-function hasBrowserPushSupport(): boolean {
+/**
+ * Whether this browser exposes the Web Push APIs. iOS Safari outside an
+ * installed home-screen app has no `Notification` global at all, so callers
+ * must check this before touching `Notification.permission`.
+ */
+export function hasBrowserPushSupport(): boolean {
   return (
     typeof window !== "undefined" &&
     "serviceWorker" in navigator &&

@@ -15,7 +15,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/config"
 )
 
-// S3Driver stores objects on S3-compatible backends (MinIO, AWS S3).
+// S3Driver stores objects on S3-compatible backends (SeaweedFS, AWS S3).
 type S3Driver struct {
 	client *s3.Client
 	bucket string
