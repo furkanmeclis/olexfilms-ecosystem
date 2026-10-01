@@ -84,14 +84,15 @@ CREATE TRIGGER trg_document_renders_set_updated_at
     EXECUTE FUNCTION set_updated_at();
 
 -- Permissions: center admin edits templates. Download rights come from the
--- source module (organization scope); these two only gate the editor.
-INSERT INTO permissions (name, slug) VALUES
-    ('Read document templates', 'platform.documents.templates.read'),
-    ('Write document templates', 'platform.documents.templates.write')
+-- source module (organization scope); these two only gate the editor. Rows
+-- mirror internal/platform/rbac/catalog.go (sort order = catalog position).
+INSERT INTO permissions (name, slug, module, scopes, is_sensitive, super_admin_only, description, sort_order) VALUES
+    ('Read document templates', 'platform.documents.templates.read', 'platform', ARRAY['all']::text[], false, false, NULL, 720),
+    ('Write document templates', 'platform.documents.templates.write', 'platform', ARRAY['all']::text[], false, false, NULL, 730)
 ON CONFLICT (slug) DO NOTHING;
 
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id
+INSERT INTO role_permissions (role_id, permission_id, scope)
+SELECT r.id, p.id, 'all'
 FROM roles r
 JOIN permissions p ON p.slug IN ('platform.documents.templates.read', 'platform.documents.templates.write')
 WHERE r.slug = 'super_admin'
