@@ -69,6 +69,8 @@ export const Permission = {
 
   ServicesRead: "services.read",
   ServicesWrite: "services.write",
+  ServicesComplete: "services.complete",
+  ServicesCancel: "services.cancel",
   CustomersRead: "customers.read",
   CustomersWrite: "customers.write",
   CustomersAnonymize: "customers.anonymize",
@@ -309,6 +311,8 @@ export const permissions = {
   services: {
     read: Permission.ServicesRead,
     write: Permission.ServicesWrite,
+    complete: Permission.ServicesComplete,
+    cancel: Permission.ServicesCancel,
   },
   customers: {
     read: Permission.CustomersRead,

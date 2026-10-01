@@ -161,5 +161,7 @@
   "labels.transfers.request": "申请库存调拨",
   "labels.transfers.approve": "审批库存调拨",
   "groups.orders": "订单",
-  "groups.transfers": "调拨"
+  "groups.transfers": "调拨",
+  "labels.services.complete": "完成服务",
+  "labels.services.cancel": "取消服务"
 }

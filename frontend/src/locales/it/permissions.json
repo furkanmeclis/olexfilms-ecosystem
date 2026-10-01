@@ -161,5 +161,7 @@
   "labels.transfers.request": "Richiedi trasferimento di giacenza",
   "labels.transfers.approve": "Approva trasferimenti di giacenza",
   "groups.orders": "Ordini",
-  "groups.transfers": "Trasferimenti"
+  "groups.transfers": "Trasferimenti",
+  "labels.services.complete": "Completare i servizi",
+  "labels.services.cancel": "Annullare i servizi"
 }

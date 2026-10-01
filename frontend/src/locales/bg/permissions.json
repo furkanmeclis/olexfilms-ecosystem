@@ -161,5 +161,7 @@
   "labels.transfers.request": "Заявка за прехвърляне на наличност",
   "labels.transfers.approve": "Одобряване на прехвърляния на наличност",
   "groups.orders": "Поръчки",
-  "groups.transfers": "Прехвърляния"
+  "groups.transfers": "Прехвърляния",
+  "labels.services.complete": "Завършване на услуги",
+  "labels.services.cancel": "Анулиране на услуги"
 }

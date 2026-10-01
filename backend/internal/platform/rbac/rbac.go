@@ -174,6 +174,10 @@ const (
 	PermOrdersCancel     = "orders.cancel"
 	PermTransfersRequest = "transfers.request"
 	PermTransfersApprove = "transfers.approve"
+
+	// TEC-178 (000050): service completion and center-only cancel.
+	PermServicesComplete = "services.complete"
+	PermServicesCancel   = "services.cancel"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

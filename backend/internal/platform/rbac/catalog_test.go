@@ -233,3 +233,28 @@ func TestOrderGrants(t *testing.T) {
 		}
 	}
 }
+
+// TEC-178: every role that writes services may complete them; only center
+// roles (and super_admin) cancel.
+func TestServiceGrants(t *testing.T) {
+	for _, r := range Roles {
+		if r.Slug == RoleSuperAdmin {
+			continue
+		}
+		if _, ok := r.Grants[PermServicesCancel]; ok && r.OrgType != OrgTypeCenter {
+			t.Fatalf("%s must not hold services.cancel", r.Slug)
+		}
+		if _, ok := r.Grants[PermServicesWrite]; ok {
+			if _, ok := r.Grants[PermServicesComplete]; !ok {
+				t.Fatalf("%s writes services but cannot complete them", r.Slug)
+			}
+		}
+	}
+	staff, _ := RoleBySlug(RoleCenterStaff)
+	if staff.Grants[PermServicesCancel] != ScopeBrand {
+		t.Fatalf("center_staff services.cancel = %q", staff.Grants[PermServicesCancel])
+	}
+	if g := RoleGrants(RoleDef{Slug: RoleSuperAdmin}); g[PermServicesCancel] != ScopeAll {
+		t.Fatalf("super_admin services.cancel = %q", g[PermServicesCancel])
+	}
+}

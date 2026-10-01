@@ -161,5 +161,7 @@
   "labels.transfers.request": "Request stock transfers",
   "labels.transfers.approve": "Approve stock transfers",
   "groups.orders": "Orders",
-  "groups.transfers": "Transfers"
+  "groups.transfers": "Transfers",
+  "labels.services.complete": "Complete services",
+  "labels.services.cancel": "Cancel services"
 }

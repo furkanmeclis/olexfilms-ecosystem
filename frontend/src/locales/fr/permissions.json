@@ -161,5 +161,7 @@
   "labels.transfers.request": "Demander un transfert de stock",
   "labels.transfers.approve": "Approuver les transferts de stock",
   "groups.orders": "Commandes",
-  "groups.transfers": "Transferts"
+  "groups.transfers": "Transferts",
+  "labels.services.complete": "Terminer les prestations",
+  "labels.services.cancel": "Annuler les prestations"
 }
