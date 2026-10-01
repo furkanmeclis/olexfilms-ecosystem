@@ -98,7 +98,9 @@ func TestIntegrationMobileAuth(t *testing.T) {
 	u, pw := it.user("mobile91")
 	it.member(orgA, u, "owner")
 	it.member(orgB, u, "staff")
-	t.Cleanup(func() { _, _ = it.pool.Exec(context.Background(), "DELETE FROM refresh_tokens WHERE user_id = $1", u.ID) })
+	t.Cleanup(func() {
+		_, _ = it.pool.Exec(context.Background(), "DELETE FROM refresh_tokens WHERE user_id = $1", u.ID)
+	})
 
 	// 6. Version gate: missing and unsupported versions answer 426.
 	for _, v := range []string{"", "0", "2", "abc"} {
@@ -255,7 +257,9 @@ func TestIntegrationMobilePushToken(t *testing.T) {
 	it := newIntegration(t)
 	ctx := context.Background()
 	u, pw := it.user("push91", "dealer_owner")
-	t.Cleanup(func() { _, _ = it.pool.Exec(context.Background(), "DELETE FROM refresh_tokens WHERE user_id = $1", u.ID) })
+	t.Cleanup(func() {
+		_, _ = it.pool.Exec(context.Background(), "DELETE FROM refresh_tokens WHERE user_id = $1", u.ID)
+	})
 	tp := it.mobileLogin(u.Email.String, pw, "", "dev-push-"+it.suffix)
 	token := "ExponentPushToken[t91-" + it.suffix + "]"
 
@@ -297,7 +301,9 @@ func TestIntegrationMobilePushToken(t *testing.T) {
 	if code, _, _ := it.doMobile("GET", "/v1/mobile/auth/me", tp.AccessToken, "1", nil); code != http.StatusUnauthorized {
 		t.Fatalf("me after logout = %d", code)
 	}
-	t.Cleanup(func() { _, _ = it.pool.Exec(context.Background(), "DELETE FROM device_push_tokens WHERE expo_token = $1", token) })
+	t.Cleanup(func() {
+		_, _ = it.pool.Exec(context.Background(), "DELETE FROM device_push_tokens WHERE expo_token = $1", token)
+	})
 }
 
 // Acceptance 4: QR web sign-in start -> scan -> approve -> complete; reject
@@ -315,7 +321,9 @@ func TestIntegrationQRLogin(t *testing.T) {
 	org := it.org("qr91", "dealer", center)
 	u, pw := it.user("qr91")
 	it.member(org, u, "owner")
-	t.Cleanup(func() { _, _ = it.pool.Exec(context.Background(), "DELETE FROM refresh_tokens WHERE user_id = $1", u.ID) })
+	t.Cleanup(func() {
+		_, _ = it.pool.Exec(context.Background(), "DELETE FROM refresh_tokens WHERE user_id = $1", u.ID)
+	})
 	mobile := it.mobileLogin(u.Email.String, pw, org.Slug, "dev-qr")
 
 	type start struct {
