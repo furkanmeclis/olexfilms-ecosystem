@@ -59,6 +59,8 @@ tags:
     description: Centrifugo connection and subscription tokens
   - name: Notifications
     description: In-app notification center, preferences, and admin send
+  - name: WhatsApp
+    description: WhatsApp gateway (wuzapi), phone OTP and the wuzapi webhook
 
 paths:
   /healthz:
@@ -2812,6 +2814,474 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /v1/auth/otp/request:
+    post:
+      tags: [Auth, WhatsApp]
+      operationId: postAuthOtpRequest
+      summary: Request a phone login code (WhatsApp, SMS fallback)
+      description: |
+        Sends a 6-digit code to the phone over WhatsApp (SMS when the admin
+        enabled the fallback and WhatsApp failed). The message carries the
+        KVKK notice of the request locale (`locale` or Accept-Language; tr/en).
+        The answer is the same whether or not an account exists for the number.
+        Limits: code valid 5 minutes, a new code after 60 seconds, 5 codes per
+        phone per hour (database counters) and Redis counters per phone and IP.
+        Without Redis the endpoint fails closed (503 RATE_LIMITER_UNAVAILABLE).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OTPRequest"
+      responses:
+        "202":
+          description: Code sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOTPRequestResult"
+        "400":
+          description: INVALID_PHONE or VALIDATION_ERROR (unsupported purpose)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: |
+            RATE_LIMITED. `error.details[0]` is `{field: resend_at, message: <RFC3339>, code: cooldown|hourly_limit|ip_limit}`;
+            `Retry-After` is set.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: OTP_DELIVERY_FAILED or RATE_LIMITER_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/auth/otp/verify:
+    post:
+      tags: [Auth, WhatsApp]
+      operationId: postAuthOtpVerify
+      summary: Verify a phone login code and sign in (portal)
+      description: |
+        Verifies the latest code of the phone and returns the same token pair as
+        `POST /v1/auth/login`. The access JWT has `aud: ["portal"]` and the
+        refresh session keeps realm `portal` across refreshes. An unknown phone
+        becomes a new customer account (role `customer`, no e-mail); an
+        existing unverified account with the phone is claimed (K11, K26).
+        Five wrong codes kill the code (429 OTP_LOCKED).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OTPVerifyRequest"
+      responses:
+        "200":
+          description: Authenticated (portal realm)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTokens"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: INVALID_OTP_CODE (wrong, expired or used code)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Account disabled (generic message)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: OTP_LOCKED (too many wrong codes) or RATE_LIMITED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: RATE_LIMITER_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/whatsapp:
+    get:
+      tags: [WhatsApp]
+      operationId: getPlatformWhatsApp
+      summary: WhatsApp gateway status and settings
+      description: Requires `whatsapp.manage`.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWhatsAppOverview"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: WHATSAPP_NOT_CONNECTED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: WHATSAPP_GATEWAY_ERROR (wuzapi answered with an error)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: WHATSAPP_NOT_CONFIGURED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/whatsapp/connect:
+    post:
+      tags: [WhatsApp]
+      operationId: postPlatformWhatsAppConnect
+      summary: Start the WhatsApp session (QR becomes available)
+      description: Requires `whatsapp.manage`.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWhatsAppAction"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: WHATSAPP_NOT_CONNECTED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: WHATSAPP_GATEWAY_ERROR (wuzapi answered with an error)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: WHATSAPP_NOT_CONFIGURED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/whatsapp/qr:
+    get:
+      tags: [WhatsApp]
+      operationId: getPlatformWhatsAppQr
+      summary: Current QR code (data URL) or connected state
+      description: Requires `whatsapp.manage`. Poll every 2-3 seconds until `connected` is true.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWhatsAppQR"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: WHATSAPP_NOT_CONNECTED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: WHATSAPP_GATEWAY_ERROR (wuzapi answered with an error)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: WHATSAPP_NOT_CONFIGURED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/whatsapp/pair-phone:
+    post:
+      tags: [WhatsApp]
+      operationId: postPlatformWhatsAppPairPhone
+      summary: Pair with a phone number (linking code)
+      description: Requires `whatsapp.manage`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WhatsAppPairPhoneRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWhatsAppPairPhone"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: WHATSAPP_NOT_CONNECTED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: WHATSAPP_GATEWAY_ERROR (wuzapi answered with an error)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: WHATSAPP_NOT_CONFIGURED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/whatsapp/logout:
+    post:
+      tags: [WhatsApp]
+      operationId: postPlatformWhatsAppLogout
+      summary: Log the WhatsApp session out
+      description: Requires `whatsapp.manage`.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWhatsAppAction"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: WHATSAPP_NOT_CONNECTED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: WHATSAPP_GATEWAY_ERROR (wuzapi answered with an error)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: WHATSAPP_NOT_CONFIGURED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/whatsapp/test-message:
+    post:
+      tags: [WhatsApp]
+      operationId: postPlatformWhatsAppTestMessage
+      summary: Send a test WhatsApp message
+      description: Requires `whatsapp.manage`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WhatsAppTestMessageRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWhatsAppTestMessage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: WHATSAPP_NOT_CONNECTED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: WHATSAPP_GATEWAY_ERROR (wuzapi answered with an error)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: WHATSAPP_NOT_CONFIGURED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/whatsapp/settings:
+    put:
+      tags: [WhatsApp]
+      operationId: putPlatformWhatsAppSettings
+      summary: Update SMS fallback and KVKK notice texts
+      description: Requires `whatsapp.manage`. A changed KVKK text becomes a new notice version.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WhatsAppSettingsRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWhatsAppOverview"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: WHATSAPP_NOT_CONNECTED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: WHATSAPP_GATEWAY_ERROR (wuzapi answered with an error)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: WHATSAPP_NOT_CONFIGURED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /hooks/wuzapi:
+    post:
+      tags: [WhatsApp]
+      operationId: postHooksWuzapi
+      summary: wuzapi webhook (JSON mode)
+      description: |
+        Called by wuzapi (WEBHOOK_FORMAT=json). Authenticated by the
+        `x-hmac-signature` header: hex(HMAC-SHA256(WUZAPI_WEBHOOK_SECRET, raw body)).
+        Message events are stored once (UNIQUE(channel, external_id)) and emit
+        `whatsapp.message.received` to the outbox; LoggedOut / TemporaryBan
+        update the gateway status and notify WhatsApp admins. A 5xx answer makes
+        wuzapi retry.
+      security: []
+      parameters:
+        - name: x-hmac-signature
+          in: header
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                type: { type: string, example: Message }
+                event: { type: object, additionalProperties: true }
+                token: { type: string }
+      responses:
+        "200":
+          description: Processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWhatsAppWebhookResult"
+        "401":
+          description: INVALID_SIGNATURE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: WHATSAPP_NOT_CONFIGURED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -4558,4 +5028,188 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/TenantSettings" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    OTPRequest:
+      type: object
+      required: [phone]
+      properties:
+        phone: { type: string, description: "Any format; normalized to E.164 (default region: country, else TR)", example: "0555 123 45 67" }
+        purpose: { type: string, enum: [customer_login], default: customer_login }
+        country: { type: string, description: ISO 3166-1 alpha-2 default region, example: TR }
+        locale: { type: string, description: Message / KVKK locale (falls back to Accept-Language), example: tr }
+
+    OTPRequestResult:
+      type: object
+      required: [status, channel, expires_at, resend_at]
+      properties:
+        status: { type: string, enum: [sent] }
+        channel: { type: string, enum: [whatsapp, sms] }
+        expires_at: { type: string, format: date-time }
+        resend_at: { type: string, format: date-time }
+
+    OTPVerifyRequest:
+      type: object
+      required: [phone, code]
+      properties:
+        phone: { type: string, example: "+905551234567" }
+        code: { type: string, example: "123456" }
+        purpose: { type: string, enum: [customer_login], default: customer_login }
+        country: { type: string, example: TR }
+        locale: { type: string, description: Locale of a newly created account, example: tr }
+
+    WhatsAppKVKKNotice:
+      type: object
+      required: [locale, version, body, updated_at]
+      properties:
+        locale: { type: string, example: tr }
+        version: { type: integer }
+        body: { type: string }
+        updated_at: { type: string, format: date-time }
+
+    WhatsAppConnectionLog:
+      type: object
+      required: [type, alarm, created_at]
+      properties:
+        type: { type: string, example: loggedout }
+        reason: { type: string }
+        alarm: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+    WhatsAppOverview:
+      type: object
+      required: [provider, configured, status, connected, logged_in, sms_fallback_enabled, webhook_configured, kvkk_notices, events]
+      properties:
+        provider: { type: string, example: wuzapi }
+        configured: { type: boolean }
+        status: { type: string, enum: [unknown, disconnected, connecting, qr, connected, logged_out, banned] }
+        connected: { type: boolean }
+        logged_in: { type: boolean }
+        jid: { type: string }
+        phone: { type: string, description: E.164 of the linked number }
+        last_seen_at: { type: string, format: date-time }
+        last_event_at: { type: string, format: date-time }
+        last_error_reason: { type: string }
+        sms_fallback_enabled: { type: boolean }
+        webhook_configured: { type: boolean }
+        gateway_error: { type: string }
+        kvkk_notices:
+          type: array
+          items: { $ref: "#/components/schemas/WhatsAppKVKKNotice" }
+        events:
+          type: array
+          items: { $ref: "#/components/schemas/WhatsAppConnectionLog" }
+
+    WhatsAppQR:
+      type: object
+      required: [connected]
+      properties:
+        connected: { type: boolean }
+        qr_code: { type: string, description: "data:image/png;base64,..." }
+
+    WhatsAppAction:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, example: connecting }
+
+    WhatsAppPairPhoneRequest:
+      type: object
+      required: [phone]
+      properties:
+        phone: { type: string, example: "+905551234567" }
+
+    WhatsAppPairPhone:
+      type: object
+      required: [linking_code]
+      properties:
+        linking_code: { type: string, example: ABCD-EFGH }
+
+    WhatsAppTestMessageRequest:
+      type: object
+      required: [phone, body]
+      properties:
+        phone: { type: string, example: "+905551234567" }
+        body: { type: string, maxLength: 4096 }
+
+    WhatsAppTestMessage:
+      type: object
+      required: [message_id, to]
+      properties:
+        message_id: { type: string }
+        to: { type: string }
+
+    WhatsAppSettingsRequest:
+      type: object
+      properties:
+        sms_fallback_enabled: { type: boolean }
+        kvkk_notices:
+          type: object
+          description: Locale (tr, en) → notice text (1-2000 characters)
+          additionalProperties: { type: string }
+
+    WhatsAppWebhookResult:
+      type: object
+      required: [messages, duplicates, statuses, connections, alarms]
+      properties:
+        messages: { type: integer }
+        duplicates: { type: integer }
+        statuses: { type: integer }
+        connections: { type: integer }
+        alarms: { type: integer }
+
+    EnvelopeOTPRequestResult:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/OTPRequestResult" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeWhatsAppOverview:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/WhatsAppOverview" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeWhatsAppQR:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/WhatsAppQR" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeWhatsAppAction:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/WhatsAppAction" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeWhatsAppPairPhone:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/WhatsAppPairPhone" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeWhatsAppTestMessage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/WhatsAppTestMessage" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeWhatsAppWebhookResult:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/WhatsAppWebhookResult" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
