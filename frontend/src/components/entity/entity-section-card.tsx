@@ -89,9 +89,7 @@ export function EntitySectionCard({
                   ) : null}
                 </CardTitle>
               </AccordionTrigger>
-              {action ? (
-                <div className="shrink-0 py-4">{action}</div>
-              ) : null}
+              {action ? <div className="shrink-0 py-4">{action}</div> : null}
             </div>
           </CardHeader>
           <AccordionContent className="px-4 pb-6">

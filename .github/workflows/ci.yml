@@ -4,58 +4,211 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
+
+# One run per ref. PRs cancel superseded runs; main runs always finish so
+# every green main commit gets its v0.N tag.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  GOLANGCI_LINT_VERSION: v2.14.0
+  SQLC_VERSION: "1.31.1"
+  MIGRATE_VERSION: v4.19.1
 
 jobs:
-  ci:
-    name: ci
+  backend:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: app_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U app -d app_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Integration tests skip when these are unset; here they always run
+      # against the migrated service database.
+      TEST_DATABASE_URL: postgres://app:app@localhost:5432/app_test?sslmode=disable
+      TEST_REDIS_URL: redis://localhost:6379/0
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Detect stacks
-        id: detect
-        run: |
-          echo "backend=$([ -f backend/go.mod ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
-          echo "frontend=$([ -f frontend/package.json ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
-
-      - name: Set up Go
-        if: steps.detect.outputs.backend == 'true'
-        uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
-
-      - name: Backend vet and test
-        if: steps.detect.outputs.backend == 'true'
-        working-directory: backend
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: frontend/.nvmrc
+      - uses: sqlc-dev/setup-sqlc@v5
+        with:
+          sqlc-version: ${{ env.SQLC_VERSION }}
+      - name: sqlc generate is up to date
         run: |
-          go vet ./...
-          go test ./... -count=1
-
-      - name: Set up pnpm
-        if: steps.detect.outputs.frontend == 'true'
-        uses: pnpm/action-setup@v4
+          sqlc generate
+          git diff --exit-code -- internal/database/db
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
         with:
-          version: 10
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
+          working-directory: backend
+      - name: go vet
+        run: go vet ./...
+      - name: Migrate test database
+        run: go run -tags postgres "github.com/golang-migrate/migrate/v4/cmd/migrate@${MIGRATE_VERSION}" -path migrations -database "$TEST_DATABASE_URL" up
+      - name: go test
+        run: go test ./... -count=1
+      - name: OpenAPI lint
+        working-directory: .
+        run: make openapi-lint
 
-      - name: Set up Node
-        if: steps.detect.outputs.frontend == 'true'
-        uses: actions/setup-node@v4
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with:
-          node-version: 22
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: frontend/.nvmrc
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm lint
+      - name: Format
+        run: pnpm format:check
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Unit tests
+        run: pnpm test
+      - name: Build
+        run: pnpm build
 
-      - name: Frontend lint, typecheck, test, build
-        if: steps.detect.outputs.frontend == 'true'
+  # Generated contracts must be committed: OpenAPI embed copy, frontend API
+  # types, and i18n catalogs in parity.
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install
         working-directory: frontend
+        run: pnpm install --frozen-lockfile
+      - name: api-generate is up to date
         run: |
-          pnpm install --frozen-lockfile
-          pnpm lint
-          pnpm typecheck
-          pnpm test
-          pnpm build
+          make api-generate
+          git diff --exit-code -- docs/openapi.yaml backend/docs/openapi.yaml frontend/src/generated/
+      - name: i18n
+        run: make check-i18n
 
-      - name: Nothing to build yet
-        if: steps.detect.outputs.backend != 'true' && steps.detect.outputs.frontend != 'true'
-        run: echo "No backend/ or frontend/ yet; CI passes so auto-merge works for bootstrap PRs."
+  # Builds the production images exactly as Dokploy does (compose.prod.yml),
+  # without pushing. A throw-away env file satisfies the required (:?) vars.
+  image-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      # Exposes the runtime token the type=gha cache needs to the docker CLI.
+      - uses: crazy-max/ghaction-github-runtime@v4
+      - name: CI env file (fake secrets)
+        run: |
+          scripts/gen-env-server.sh --app ci.example --realtime wss.ci.example --out "$RUNNER_TEMP/ci.env"
+          docker compose --env-file "$RUNNER_TEMP/ci.env" -f compose.prod.yml config -q
+      - name: Build backend and frontend images
+        run: |
+          set -a; . "$RUNNER_TEMP/ci.env"; set +a
+          docker buildx bake -f compose.prod.yml backend frontend \
+            --set '*.cache-from=type=gha,scope=prod-images' \
+            --set '*.cache-to=type=gha,scope=prod-images,mode=max'
+
+  # Backups are only real if they restore: backup.sh, drop everything,
+  # restore.sh, compare every table/file/index, sign in. About a minute,
+  # so it runs on every PR too.
+  dr-drill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Disaster-recovery drill
+        run: scripts/dr-drill.sh
+
+  # Single required status check. Branch protection and auto-merge wait on
+  # "ci"; it fails when any job above failed, was cancelled or skipped.
+  ci:
+    name: ci
+    if: always()
+    needs: [backend, frontend, contracts, image-build, dr-drill]
+    runs-on: ubuntu-latest
+    steps:
+      - name: All jobs green
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          echo "$RESULTS"
+          if ! echo "$RESULTS" | jq -e 'all(. == "success")' >/dev/null; then
+            echo "::error::a required CI job did not succeed"; exit 1
+          fi
+
+  # Every green push to main gets the next v0.N tag (first one: v0.1);
+  # Dokploy deploys on v0.* tag pushes. Tags pushed with GITHUB_TOKEN do not
+  # start other workflows, but GitHub still sends the tag push webhook.
+  release-tag:
+    needs: [ci]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Tag next version
+        run: |
+          git fetch --tags --force
+          if git tag --points-at HEAD | grep -qE '^v0\.[0-9]+$'; then
+            echo "HEAD already tagged: $(git tag --points-at HEAD)"; exit 0
+          fi
+          last=$(git tag -l 'v0.*' | grep -E '^v0\.[0-9]+$' | sed 's/^v0\.//' | sort -n | tail -1 || true)
+          next="v0.$(( ${last:-0} + 1 ))"
+          git tag "$next" "$GITHUB_SHA"
+          git push origin "$next"
+          echo "tagged $next" >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,19 @@
+# golangci-lint v2 config. CI pins the binary version (.github/workflows/ci.yml).
+# Start from the standard linter set (errcheck, govet, ineffassign,
+# staticcheck, unused); tighten in small steps, never in a feature PR.
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: standard
+  exclusions:
+    generated: lax
+    paths:
+      - internal/database/db
+
+formatters:
+  enable:
+    - gofmt
