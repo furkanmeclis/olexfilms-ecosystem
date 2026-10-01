@@ -25,7 +25,10 @@ import {
   loginWithPassword,
   type OAuthConfigPayload,
 } from "@/lib/auth/go-adapter-client";
-import { clientIpFromHeaders } from "@/lib/server/upstream";
+import {
+  clientIpFromHeaders,
+  forwardedHostFromHeaders,
+} from "@/lib/server/upstream";
 import { fetchAppPublicConfig } from "@/services/app-config.service";
 
 const pendingGitHubLogins = new Map<string, string>();
@@ -153,6 +156,9 @@ async function _doBuildProviders(): Promise<Provider[]> {
               organizationSlug || undefined,
               request instanceof Request
                 ? clientIpFromHeaders(request.headers)
+                : null,
+              request instanceof Request
+                ? forwardedHostFromHeaders(request.headers)
                 : null,
             );
             const user = await adapterGetUserByEmail(email);

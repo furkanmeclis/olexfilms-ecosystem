@@ -98,6 +98,8 @@ export interface paths {
          * Switch organization context
          * @description Re-issues access and refresh tokens with the JWT `oid` claim set for the
          *     given organization. Requires an authenticated session and active membership.
+         *     Returns 403 `BRAND_MISMATCH` when the organization belongs to another brand
+         *     than the request domain (Host / X-Forwarded-Host).
          */
         post: operations["postAuthOrganizationContext"];
         delete?: never;
@@ -656,6 +658,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/brand": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Brand of the request domain
+         * @description Resolves the brand from X-Forwarded-Host, then Host; unknown hosts fall
+         *     back to the default brand (DEFAULT_BRAND_SLUG, `olex`).
+         */
+        get: operations["getPublicBrand"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/organizations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My organizations
+         * @description Memberships of the caller within the request domain's brand, with tree info.
+         */
+        get: operations["getMeOrganizations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/organizations/register": {
         parameters: {
             query?: never;
@@ -758,6 +801,23 @@ export interface paths {
         head?: never;
         /** Update organization */
         patch: operations["patchPlatformOrganization"];
+        trace?: never;
+    };
+    "/v1/platform/organizations/{uuid}/children": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Direct children in the organization tree */
+        get: operations["getPlatformOrganizationChildren"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/platform/organizations/{uuid}/logo": {
@@ -1688,6 +1748,34 @@ export interface components {
             status: string;
             /** Format: date-time */
             access_ends_at?: string | null;
+            type?: components["schemas"]["OrganizationType"];
+            brand?: components["schemas"]["BrandRef"];
+            parent?: components["schemas"]["OrganizationParentRef"] | null;
+        };
+        /** @enum {string} */
+        OrganizationType: "center" | "distributor" | "dealer";
+        /**
+         * @description pending and expired are legacy values kept for compatibility.
+         * @enum {string}
+         */
+        OrganizationStatus: "pending" | "active" | "read_only" | "suspended" | "expired";
+        BrandRef: {
+            slug: string;
+            name?: string;
+        };
+        OrganizationParentRef: {
+            /** Format: uuid */
+            uuid: string;
+            slug?: string;
+            name: string;
+        };
+        PublicBrand: {
+            /** Format: uuid */
+            uuid: string;
+            slug: string;
+            name: string;
+            /** @enum {string} */
+            status: "active" | "inactive";
         };
         PublicOrganization: {
             /** Format: uuid */
@@ -1714,6 +1802,18 @@ export interface components {
             /** Format: date-time */
             access_ends_at?: string | null;
             logo_url?: string | null;
+            type?: components["schemas"]["OrganizationType"];
+            brand?: components["schemas"]["BrandRef"];
+            parent?: components["schemas"]["OrganizationParentRef"] | null;
+            /** @description ISO 4217 code */
+            currency?: string;
+            locale?: string;
+            timezone?: string;
+            /** Format: date */
+            contract_valid_until?: string | null;
+            settings?: {
+                [key: string]: unknown;
+            };
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -1740,6 +1840,43 @@ export interface components {
             address?: string;
             /** Format: uuid */
             owner_user_uuid: string;
+            /**
+             * @default dealer
+             * @enum {string}
+             */
+            type: "distributor" | "dealer";
+            /**
+             * Format: uuid
+             * @description Defaults to the brand center.
+             */
+            parent_uuid?: string | null;
+            /** @description Distributor only; stored in settings, the warehouse is created in F1. */
+            register_as_warehouse?: boolean;
+            currency?: string;
+            locale?: string;
+            timezone?: string;
+        };
+        PatchPlatformOrganizationRequest: {
+            name?: string;
+            city?: string;
+            district?: string;
+            phone?: string;
+            address?: string;
+            status?: components["schemas"]["OrganizationStatus"];
+            plan_code?: string;
+            /** Format: date-time */
+            access_starts_at?: string;
+            /** Format: date-time */
+            access_ends_at?: string;
+            clear_access_ends_at?: boolean;
+            currency?: string;
+            locale?: string;
+            timezone?: string;
+            /**
+             * Format: uuid
+             * @description Moves the organization in the tree (platform only).
+             */
+            parent_uuid?: string;
         };
         OrganizationRegisterResult: {
             user: components["schemas"]["PublicUser"];
@@ -2211,6 +2348,28 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["Organization"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeOrganizationList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["Organization"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeMembershipList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["OrganizationMembership"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePublicBrand: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PublicBrand"];
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeTokens: {
@@ -3700,6 +3859,49 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    getPublicBrand: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Brand */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePublicBrand"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getMeOrganizations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Memberships */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeMembershipList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            500: components["responses"]["InternalError"];
+        };
+    };
     postPublicOrganizationRegister: {
         parameters: {
             query?: never;
@@ -3800,7 +4002,9 @@ export interface operations {
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
                 q?: components["parameters"]["Q"];
-                status?: string;
+                status?: components["schemas"]["OrganizationStatus"];
+                type?: components["schemas"]["OrganizationType"];
+                parent_uuid?: string;
             };
             header?: never;
             path?: never;
@@ -3808,7 +4012,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Organizations */
+            /** @description Organizations of the request domain's brand */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -3880,9 +4084,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
+                "application/json": components["schemas"]["PatchPlatformOrganizationRequest"];
             };
         };
         responses: {
@@ -3891,8 +4093,36 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrganization"];
+                };
             };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getPlatformOrganizationChildren: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Children */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrganizationList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };

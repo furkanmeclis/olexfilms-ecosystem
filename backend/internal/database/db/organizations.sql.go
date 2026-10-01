@@ -16,7 +16,7 @@ const clearOrganizationLogo = `-- name: ClearOrganizationLogo :one
 UPDATE organizations
 SET logo_object_key = NULL
 WHERE uuid = $1 AND deleted_at IS NULL
-RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color
+RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings
 `
 
 func (q *Queries) ClearOrganizationLogo(ctx context.Context, argUuid uuid.UUID) (Organization, error) {
@@ -45,6 +45,16 @@ func (q *Queries) ClearOrganizationLogo(ctx context.Context, argUuid uuid.UUID) 
 		&i.FooterText,
 		&i.PaperSize,
 		&i.PrimaryColor,
+		&i.Type,
+		&i.ParentID,
+		&i.BrandID,
+		&i.Currency,
+		&i.Locale,
+		&i.Timezone,
+		&i.CountryID,
+		&i.ContractPdfKey,
+		&i.ContractValidUntil,
+		&i.Settings,
 	)
 	return i, err
 }
@@ -54,22 +64,34 @@ SELECT COUNT(*)::bigint
 FROM organizations
 WHERE deleted_at IS NULL
   AND ($1::text IS NULL OR status = $1)
+  AND ($2::bigint IS NULL OR brand_id = $2)
+  AND ($3::text IS NULL OR type = $3)
+  AND ($4::bigint IS NULL OR parent_id = $4)
   AND (
-    $2::text IS NULL
-    OR name ILIKE '%' || $2 || '%'
-    OR slug ILIKE '%' || $2 || '%'
-    OR city ILIKE '%' || $2 || '%'
-    OR phone ILIKE '%' || $2 || '%'
+    $5::text IS NULL
+    OR name ILIKE '%' || $5 || '%'
+    OR slug ILIKE '%' || $5 || '%'
+    OR city ILIKE '%' || $5 || '%'
+    OR phone ILIKE '%' || $5 || '%'
   )
 `
 
 type CountOrganizationsParams struct {
-	Status pgtype.Text `json:"status"`
-	Q      pgtype.Text `json:"q"`
+	Status   pgtype.Text `json:"status"`
+	BrandID  pgtype.Int8 `json:"brand_id"`
+	Type     pgtype.Text `json:"type"`
+	ParentID pgtype.Int8 `json:"parent_id"`
+	Q        pgtype.Text `json:"q"`
 }
 
 func (q *Queries) CountOrganizations(ctx context.Context, arg CountOrganizationsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countOrganizations, arg.Status, arg.Q)
+	row := q.db.QueryRow(ctx, countOrganizations,
+		arg.Status,
+		arg.BrandID,
+		arg.Type,
+		arg.ParentID,
+		arg.Q,
+	)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -78,11 +100,13 @@ func (q *Queries) CountOrganizations(ctx context.Context, arg CountOrganizations
 const createOrganization = `-- name: CreateOrganization :one
 INSERT INTO organizations (
     slug, name, city, district, phone, address, status, plan_code,
-    access_starts_at, access_ends_at
+    access_starts_at, access_ends_at,
+    type, parent_id, brand_id, currency, locale, timezone, settings
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+    $11, $12, $13, $14, $15, $16, $17
 )
-RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color
+RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings
 `
 
 type CreateOrganizationParams struct {
@@ -96,6 +120,13 @@ type CreateOrganizationParams struct {
 	PlanCode       pgtype.Text        `json:"plan_code"`
 	AccessStartsAt pgtype.Timestamptz `json:"access_starts_at"`
 	AccessEndsAt   pgtype.Timestamptz `json:"access_ends_at"`
+	Type           string             `json:"type"`
+	ParentID       pgtype.Int8        `json:"parent_id"`
+	BrandID        int64              `json:"brand_id"`
+	Currency       string             `json:"currency"`
+	Locale         string             `json:"locale"`
+	Timezone       string             `json:"timezone"`
+	Settings       []byte             `json:"settings"`
 }
 
 func (q *Queries) CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error) {
@@ -110,6 +141,13 @@ func (q *Queries) CreateOrganization(ctx context.Context, arg CreateOrganization
 		arg.PlanCode,
 		arg.AccessStartsAt,
 		arg.AccessEndsAt,
+		arg.Type,
+		arg.ParentID,
+		arg.BrandID,
+		arg.Currency,
+		arg.Locale,
+		arg.Timezone,
+		arg.Settings,
 	)
 	var i Organization
 	err := row.Scan(
@@ -135,6 +173,16 @@ func (q *Queries) CreateOrganization(ctx context.Context, arg CreateOrganization
 		&i.FooterText,
 		&i.PaperSize,
 		&i.PrimaryColor,
+		&i.Type,
+		&i.ParentID,
+		&i.BrandID,
+		&i.Currency,
+		&i.Locale,
+		&i.Timezone,
+		&i.CountryID,
+		&i.ContractPdfKey,
+		&i.ContractValidUntil,
+		&i.Settings,
 	)
 	return i, err
 }
@@ -164,8 +212,79 @@ func (q *Queries) CreateOrganizationMember(ctx context.Context, arg CreateOrgani
 	return i, err
 }
 
+const descendants = `-- name: Descendants :many
+WITH RECURSIVE tree AS (
+    SELECT c.id, 1 AS depth
+    FROM organizations c
+    WHERE c.parent_id = $1::bigint AND c.deleted_at IS NULL
+    UNION ALL
+    SELECT c.id, t.depth + 1
+    FROM organizations c
+    JOIN tree t ON c.parent_id = t.id
+    WHERE c.deleted_at IS NULL AND t.depth < 16
+)
+SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings
+FROM tree
+JOIN organizations o ON o.id = tree.id
+ORDER BY tree.depth ASC, o.name ASC
+`
+
+// Every organization below the given one (not including itself).
+func (q *Queries) Descendants(ctx context.Context, id int64) ([]Organization, error) {
+	rows, err := q.db.Query(ctx, descendants, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Organization{}
+	for rows.Next() {
+		var i Organization
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.Slug,
+			&i.Name,
+			&i.City,
+			&i.District,
+			&i.Phone,
+			&i.Address,
+			&i.LogoObjectKey,
+			&i.Status,
+			&i.PlanCode,
+			&i.AccessStartsAt,
+			&i.AccessEndsAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.Email,
+			&i.Website,
+			&i.Tagline,
+			&i.FooterText,
+			&i.PaperSize,
+			&i.PrimaryColor,
+			&i.Type,
+			&i.ParentID,
+			&i.BrandID,
+			&i.Currency,
+			&i.Locale,
+			&i.Timezone,
+			&i.CountryID,
+			&i.ContractPdfKey,
+			&i.ContractValidUntil,
+			&i.Settings,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getOrganizationByID = `-- name: GetOrganizationByID :one
-SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color FROM organizations
+SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings FROM organizations
 WHERE id = $1 AND deleted_at IS NULL
 `
 
@@ -195,12 +314,22 @@ func (q *Queries) GetOrganizationByID(ctx context.Context, id int64) (Organizati
 		&i.FooterText,
 		&i.PaperSize,
 		&i.PrimaryColor,
+		&i.Type,
+		&i.ParentID,
+		&i.BrandID,
+		&i.Currency,
+		&i.Locale,
+		&i.Timezone,
+		&i.CountryID,
+		&i.ContractPdfKey,
+		&i.ContractValidUntil,
+		&i.Settings,
 	)
 	return i, err
 }
 
 const getOrganizationBySlug = `-- name: GetOrganizationBySlug :one
-SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color FROM organizations
+SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings FROM organizations
 WHERE slug = $1 AND deleted_at IS NULL
 `
 
@@ -230,12 +359,22 @@ func (q *Queries) GetOrganizationBySlug(ctx context.Context, slug string) (Organ
 		&i.FooterText,
 		&i.PaperSize,
 		&i.PrimaryColor,
+		&i.Type,
+		&i.ParentID,
+		&i.BrandID,
+		&i.Currency,
+		&i.Locale,
+		&i.Timezone,
+		&i.CountryID,
+		&i.ContractPdfKey,
+		&i.ContractValidUntil,
+		&i.Settings,
 	)
 	return i, err
 }
 
 const getOrganizationByUUID = `-- name: GetOrganizationByUUID :one
-SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color FROM organizations
+SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings FROM organizations
 WHERE uuid = $1 AND deleted_at IS NULL
 `
 
@@ -265,6 +404,16 @@ func (q *Queries) GetOrganizationByUUID(ctx context.Context, argUuid uuid.UUID) 
 		&i.FooterText,
 		&i.PaperSize,
 		&i.PrimaryColor,
+		&i.Type,
+		&i.ParentID,
+		&i.BrandID,
+		&i.Currency,
+		&i.Locale,
+		&i.Timezone,
+		&i.CountryID,
+		&i.ContractPdfKey,
+		&i.ContractValidUntil,
+		&i.Settings,
 	)
 	return i, err
 }
@@ -309,9 +458,11 @@ func (q *Queries) GetOrganizationMember(ctx context.Context, arg GetOrganization
 const getOrganizationMemberByUserAndOrgUUID = `-- name: GetOrganizationMemberByUserAndOrgUUID :one
 SELECT om.id, om.organization_id, om.user_id, om.role, om.created_at,
        o.uuid AS organization_uuid, o.slug AS organization_slug, o.status AS organization_status,
-       o.access_starts_at, o.access_ends_at, o.name AS organization_name
+       o.access_starts_at, o.access_ends_at, o.name AS organization_name,
+       o.brand_id AS organization_brand_id, o.type AS organization_type, b.slug AS brand_slug
 FROM organization_members om
 JOIN organizations o ON o.id = om.organization_id AND o.deleted_at IS NULL
+JOIN brands b ON b.id = o.brand_id
 WHERE om.user_id = $1 AND o.uuid = $2
 `
 
@@ -321,17 +472,20 @@ type GetOrganizationMemberByUserAndOrgUUIDParams struct {
 }
 
 type GetOrganizationMemberByUserAndOrgUUIDRow struct {
-	ID                 int64              `json:"id"`
-	OrganizationID     int64              `json:"organization_id"`
-	UserID             int64              `json:"user_id"`
-	Role               string             `json:"role"`
-	CreatedAt          pgtype.Timestamptz `json:"created_at"`
-	OrganizationUuid   uuid.UUID          `json:"organization_uuid"`
-	OrganizationSlug   string             `json:"organization_slug"`
-	OrganizationStatus string             `json:"organization_status"`
-	AccessStartsAt     pgtype.Timestamptz `json:"access_starts_at"`
-	AccessEndsAt       pgtype.Timestamptz `json:"access_ends_at"`
-	OrganizationName   string             `json:"organization_name"`
+	ID                  int64              `json:"id"`
+	OrganizationID      int64              `json:"organization_id"`
+	UserID              int64              `json:"user_id"`
+	Role                string             `json:"role"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	OrganizationUuid    uuid.UUID          `json:"organization_uuid"`
+	OrganizationSlug    string             `json:"organization_slug"`
+	OrganizationStatus  string             `json:"organization_status"`
+	AccessStartsAt      pgtype.Timestamptz `json:"access_starts_at"`
+	AccessEndsAt        pgtype.Timestamptz `json:"access_ends_at"`
+	OrganizationName    string             `json:"organization_name"`
+	OrganizationBrandID int64              `json:"organization_brand_id"`
+	OrganizationType    string             `json:"organization_type"`
+	BrandSlug           string             `json:"brand_slug"`
 }
 
 func (q *Queries) GetOrganizationMemberByUserAndOrgUUID(ctx context.Context, arg GetOrganizationMemberByUserAndOrgUUIDParams) (GetOrganizationMemberByUserAndOrgUUIDRow, error) {
@@ -349,13 +503,17 @@ func (q *Queries) GetOrganizationMemberByUserAndOrgUUID(ctx context.Context, arg
 		&i.AccessStartsAt,
 		&i.AccessEndsAt,
 		&i.OrganizationName,
+		&i.OrganizationBrandID,
+		&i.OrganizationType,
+		&i.BrandSlug,
 	)
 	return i, err
 }
 
 const getOrganizationMemberByUserAndSlug = `-- name: GetOrganizationMemberByUserAndSlug :one
 SELECT om.id, om.organization_id, om.user_id, om.role, om.created_at, o.uuid AS organization_uuid, o.slug AS organization_slug, o.status AS organization_status,
-       o.access_starts_at, o.access_ends_at, o.name AS organization_name, o.logo_object_key
+       o.access_starts_at, o.access_ends_at, o.name AS organization_name, o.logo_object_key,
+       o.brand_id AS organization_brand_id, o.type AS organization_type
 FROM organization_members om
 JOIN organizations o ON o.id = om.organization_id AND o.deleted_at IS NULL
 WHERE om.user_id = $1 AND o.slug = $2
@@ -367,18 +525,20 @@ type GetOrganizationMemberByUserAndSlugParams struct {
 }
 
 type GetOrganizationMemberByUserAndSlugRow struct {
-	ID                 int64              `json:"id"`
-	OrganizationID     int64              `json:"organization_id"`
-	UserID             int64              `json:"user_id"`
-	Role               string             `json:"role"`
-	CreatedAt          pgtype.Timestamptz `json:"created_at"`
-	OrganizationUuid   uuid.UUID          `json:"organization_uuid"`
-	OrganizationSlug   string             `json:"organization_slug"`
-	OrganizationStatus string             `json:"organization_status"`
-	AccessStartsAt     pgtype.Timestamptz `json:"access_starts_at"`
-	AccessEndsAt       pgtype.Timestamptz `json:"access_ends_at"`
-	OrganizationName   string             `json:"organization_name"`
-	LogoObjectKey      pgtype.Text        `json:"logo_object_key"`
+	ID                  int64              `json:"id"`
+	OrganizationID      int64              `json:"organization_id"`
+	UserID              int64              `json:"user_id"`
+	Role                string             `json:"role"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	OrganizationUuid    uuid.UUID          `json:"organization_uuid"`
+	OrganizationSlug    string             `json:"organization_slug"`
+	OrganizationStatus  string             `json:"organization_status"`
+	AccessStartsAt      pgtype.Timestamptz `json:"access_starts_at"`
+	AccessEndsAt        pgtype.Timestamptz `json:"access_ends_at"`
+	OrganizationName    string             `json:"organization_name"`
+	LogoObjectKey       pgtype.Text        `json:"logo_object_key"`
+	OrganizationBrandID int64              `json:"organization_brand_id"`
+	OrganizationType    string             `json:"organization_type"`
 }
 
 func (q *Queries) GetOrganizationMemberByUserAndSlug(ctx context.Context, arg GetOrganizationMemberByUserAndSlugParams) (GetOrganizationMemberByUserAndSlugRow, error) {
@@ -397,6 +557,8 @@ func (q *Queries) GetOrganizationMemberByUserAndSlug(ctx context.Context, arg Ge
 		&i.AccessEndsAt,
 		&i.OrganizationName,
 		&i.LogoObjectKey,
+		&i.OrganizationBrandID,
+		&i.OrganizationType,
 	)
 	return i, err
 }
@@ -443,6 +605,136 @@ func (q *Queries) GetOrganizationMemberByUserUUID(ctx context.Context, arg GetOr
 		&i.Status,
 	)
 	return i, err
+}
+
+const getOrganizationTreeByUUID = `-- name: GetOrganizationTreeByUUID :one
+SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, b.slug AS brand_slug, p.uuid AS parent_uuid, p.name AS parent_name
+FROM organizations o
+JOIN brands b ON b.id = o.brand_id
+LEFT JOIN organizations p ON p.id = o.parent_id
+WHERE o.uuid = $1 AND o.deleted_at IS NULL
+`
+
+type GetOrganizationTreeByUUIDRow struct {
+	Organization Organization `json:"organization"`
+	BrandSlug    string       `json:"brand_slug"`
+	ParentUuid   pgtype.UUID  `json:"parent_uuid"`
+	ParentName   pgtype.Text  `json:"parent_name"`
+}
+
+func (q *Queries) GetOrganizationTreeByUUID(ctx context.Context, argUuid uuid.UUID) (GetOrganizationTreeByUUIDRow, error) {
+	row := q.db.QueryRow(ctx, getOrganizationTreeByUUID, argUuid)
+	var i GetOrganizationTreeByUUIDRow
+	err := row.Scan(
+		&i.Organization.ID,
+		&i.Organization.Uuid,
+		&i.Organization.Slug,
+		&i.Organization.Name,
+		&i.Organization.City,
+		&i.Organization.District,
+		&i.Organization.Phone,
+		&i.Organization.Address,
+		&i.Organization.LogoObjectKey,
+		&i.Organization.Status,
+		&i.Organization.PlanCode,
+		&i.Organization.AccessStartsAt,
+		&i.Organization.AccessEndsAt,
+		&i.Organization.CreatedAt,
+		&i.Organization.UpdatedAt,
+		&i.Organization.DeletedAt,
+		&i.Organization.Email,
+		&i.Organization.Website,
+		&i.Organization.Tagline,
+		&i.Organization.FooterText,
+		&i.Organization.PaperSize,
+		&i.Organization.PrimaryColor,
+		&i.Organization.Type,
+		&i.Organization.ParentID,
+		&i.Organization.BrandID,
+		&i.Organization.Currency,
+		&i.Organization.Locale,
+		&i.Organization.Timezone,
+		&i.Organization.CountryID,
+		&i.Organization.ContractPdfKey,
+		&i.Organization.ContractValidUntil,
+		&i.Organization.Settings,
+		&i.BrandSlug,
+		&i.ParentUuid,
+		&i.ParentName,
+	)
+	return i, err
+}
+
+const listOrganizationChildren = `-- name: ListOrganizationChildren :many
+SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, b.slug AS brand_slug, p.uuid AS parent_uuid, p.name AS parent_name
+FROM organizations o
+JOIN brands b ON b.id = o.brand_id
+LEFT JOIN organizations p ON p.id = o.parent_id
+WHERE o.parent_id = $1 AND o.deleted_at IS NULL
+ORDER BY o.name ASC
+`
+
+type ListOrganizationChildrenRow struct {
+	Organization Organization `json:"organization"`
+	BrandSlug    string       `json:"brand_slug"`
+	ParentUuid   pgtype.UUID  `json:"parent_uuid"`
+	ParentName   pgtype.Text  `json:"parent_name"`
+}
+
+func (q *Queries) ListOrganizationChildren(ctx context.Context, parentID pgtype.Int8) ([]ListOrganizationChildrenRow, error) {
+	rows, err := q.db.Query(ctx, listOrganizationChildren, parentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListOrganizationChildrenRow{}
+	for rows.Next() {
+		var i ListOrganizationChildrenRow
+		if err := rows.Scan(
+			&i.Organization.ID,
+			&i.Organization.Uuid,
+			&i.Organization.Slug,
+			&i.Organization.Name,
+			&i.Organization.City,
+			&i.Organization.District,
+			&i.Organization.Phone,
+			&i.Organization.Address,
+			&i.Organization.LogoObjectKey,
+			&i.Organization.Status,
+			&i.Organization.PlanCode,
+			&i.Organization.AccessStartsAt,
+			&i.Organization.AccessEndsAt,
+			&i.Organization.CreatedAt,
+			&i.Organization.UpdatedAt,
+			&i.Organization.DeletedAt,
+			&i.Organization.Email,
+			&i.Organization.Website,
+			&i.Organization.Tagline,
+			&i.Organization.FooterText,
+			&i.Organization.PaperSize,
+			&i.Organization.PrimaryColor,
+			&i.Organization.Type,
+			&i.Organization.ParentID,
+			&i.Organization.BrandID,
+			&i.Organization.Currency,
+			&i.Organization.Locale,
+			&i.Organization.Timezone,
+			&i.Organization.CountryID,
+			&i.Organization.ContractPdfKey,
+			&i.Organization.ContractValidUntil,
+			&i.Organization.Settings,
+			&i.BrandSlug,
+			&i.ParentUuid,
+			&i.ParentName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listOrganizationMemberOptions = `-- name: ListOrganizationMemberOptions :many
@@ -534,12 +826,22 @@ func (q *Queries) ListOrganizationMembers(ctx context.Context, organizationID in
 }
 
 const listOrganizationMembersByUserID = `-- name: ListOrganizationMembersByUserID :many
-SELECT om.role, o.uuid, o.slug, o.name, o.logo_object_key, o.status, o.access_ends_at
+SELECT om.role, o.uuid, o.slug, o.name, o.logo_object_key, o.status, o.access_ends_at,
+       o.type, o.brand_id, b.slug AS brand_slug, b.name AS brand_name,
+       p.uuid AS parent_uuid, p.slug AS parent_slug, p.name AS parent_name
 FROM organization_members om
 JOIN organizations o ON o.id = om.organization_id AND o.deleted_at IS NULL
+JOIN brands b ON b.id = o.brand_id
+LEFT JOIN organizations p ON p.id = o.parent_id
 WHERE om.user_id = $1
+  AND ($2::bigint IS NULL OR o.brand_id = $2)
 ORDER BY o.name ASC
 `
+
+type ListOrganizationMembersByUserIDParams struct {
+	UserID  int64       `json:"user_id"`
+	BrandID pgtype.Int8 `json:"brand_id"`
+}
 
 type ListOrganizationMembersByUserIDRow struct {
 	Role          string             `json:"role"`
@@ -549,10 +851,17 @@ type ListOrganizationMembersByUserIDRow struct {
 	LogoObjectKey pgtype.Text        `json:"logo_object_key"`
 	Status        string             `json:"status"`
 	AccessEndsAt  pgtype.Timestamptz `json:"access_ends_at"`
+	Type          string             `json:"type"`
+	BrandID       int64              `json:"brand_id"`
+	BrandSlug     string             `json:"brand_slug"`
+	BrandName     string             `json:"brand_name"`
+	ParentUuid    pgtype.UUID        `json:"parent_uuid"`
+	ParentSlug    pgtype.Text        `json:"parent_slug"`
+	ParentName    pgtype.Text        `json:"parent_name"`
 }
 
-func (q *Queries) ListOrganizationMembersByUserID(ctx context.Context, userID int64) ([]ListOrganizationMembersByUserIDRow, error) {
-	rows, err := q.db.Query(ctx, listOrganizationMembersByUserID, userID)
+func (q *Queries) ListOrganizationMembersByUserID(ctx context.Context, arg ListOrganizationMembersByUserIDParams) ([]ListOrganizationMembersByUserIDRow, error) {
+	rows, err := q.db.Query(ctx, listOrganizationMembersByUserID, arg.UserID, arg.BrandID)
 	if err != nil {
 		return nil, err
 	}
@@ -568,6 +877,13 @@ func (q *Queries) ListOrganizationMembersByUserID(ctx context.Context, userID in
 			&i.LogoObjectKey,
 			&i.Status,
 			&i.AccessEndsAt,
+			&i.Type,
+			&i.BrandID,
+			&i.BrandSlug,
+			&i.BrandName,
+			&i.ParentUuid,
+			&i.ParentSlug,
+			&i.ParentName,
 		); err != nil {
 			return nil, err
 		}
@@ -580,31 +896,49 @@ func (q *Queries) ListOrganizationMembersByUserID(ctx context.Context, userID in
 }
 
 const listOrganizationsFiltered = `-- name: ListOrganizationsFiltered :many
-SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color
-FROM organizations
-WHERE deleted_at IS NULL
-  AND ($1::text IS NULL OR status = $1)
+SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, b.slug AS brand_slug, p.uuid AS parent_uuid, p.name AS parent_name
+FROM organizations o
+JOIN brands b ON b.id = o.brand_id
+LEFT JOIN organizations p ON p.id = o.parent_id
+WHERE o.deleted_at IS NULL
+  AND ($1::text IS NULL OR o.status = $1)
+  AND ($2::bigint IS NULL OR o.brand_id = $2)
+  AND ($3::text IS NULL OR o.type = $3)
+  AND ($4::bigint IS NULL OR o.parent_id = $4)
   AND (
-    $2::text IS NULL
-    OR name ILIKE '%' || $2 || '%'
-    OR slug ILIKE '%' || $2 || '%'
-    OR city ILIKE '%' || $2 || '%'
-    OR phone ILIKE '%' || $2 || '%'
+    $5::text IS NULL
+    OR o.name ILIKE '%' || $5 || '%'
+    OR o.slug ILIKE '%' || $5 || '%'
+    OR o.city ILIKE '%' || $5 || '%'
+    OR o.phone ILIKE '%' || $5 || '%'
   )
-ORDER BY created_at DESC
-LIMIT $4 OFFSET $3
+ORDER BY o.created_at DESC
+LIMIT $7 OFFSET $6
 `
 
 type ListOrganizationsFilteredParams struct {
 	Status      pgtype.Text `json:"status"`
+	BrandID     pgtype.Int8 `json:"brand_id"`
+	Type        pgtype.Text `json:"type"`
+	ParentID    pgtype.Int8 `json:"parent_id"`
 	Q           pgtype.Text `json:"q"`
 	OffsetCount int32       `json:"offset_count"`
 	LimitCount  int32       `json:"limit_count"`
 }
 
-func (q *Queries) ListOrganizationsFiltered(ctx context.Context, arg ListOrganizationsFilteredParams) ([]Organization, error) {
+type ListOrganizationsFilteredRow struct {
+	Organization Organization `json:"organization"`
+	BrandSlug    string       `json:"brand_slug"`
+	ParentUuid   pgtype.UUID  `json:"parent_uuid"`
+	ParentName   pgtype.Text  `json:"parent_name"`
+}
+
+func (q *Queries) ListOrganizationsFiltered(ctx context.Context, arg ListOrganizationsFilteredParams) ([]ListOrganizationsFilteredRow, error) {
 	rows, err := q.db.Query(ctx, listOrganizationsFiltered,
 		arg.Status,
+		arg.BrandID,
+		arg.Type,
+		arg.ParentID,
 		arg.Q,
 		arg.OffsetCount,
 		arg.LimitCount,
@@ -613,32 +947,45 @@ func (q *Queries) ListOrganizationsFiltered(ctx context.Context, arg ListOrganiz
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Organization{}
+	items := []ListOrganizationsFilteredRow{}
 	for rows.Next() {
-		var i Organization
+		var i ListOrganizationsFilteredRow
 		if err := rows.Scan(
-			&i.ID,
-			&i.Uuid,
-			&i.Slug,
-			&i.Name,
-			&i.City,
-			&i.District,
-			&i.Phone,
-			&i.Address,
-			&i.LogoObjectKey,
-			&i.Status,
-			&i.PlanCode,
-			&i.AccessStartsAt,
-			&i.AccessEndsAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
-			&i.Email,
-			&i.Website,
-			&i.Tagline,
-			&i.FooterText,
-			&i.PaperSize,
-			&i.PrimaryColor,
+			&i.Organization.ID,
+			&i.Organization.Uuid,
+			&i.Organization.Slug,
+			&i.Organization.Name,
+			&i.Organization.City,
+			&i.Organization.District,
+			&i.Organization.Phone,
+			&i.Organization.Address,
+			&i.Organization.LogoObjectKey,
+			&i.Organization.Status,
+			&i.Organization.PlanCode,
+			&i.Organization.AccessStartsAt,
+			&i.Organization.AccessEndsAt,
+			&i.Organization.CreatedAt,
+			&i.Organization.UpdatedAt,
+			&i.Organization.DeletedAt,
+			&i.Organization.Email,
+			&i.Organization.Website,
+			&i.Organization.Tagline,
+			&i.Organization.FooterText,
+			&i.Organization.PaperSize,
+			&i.Organization.PrimaryColor,
+			&i.Organization.Type,
+			&i.Organization.ParentID,
+			&i.Organization.BrandID,
+			&i.Organization.Currency,
+			&i.Organization.Locale,
+			&i.Organization.Timezone,
+			&i.Organization.CountryID,
+			&i.Organization.ContractPdfKey,
+			&i.Organization.ContractValidUntil,
+			&i.Organization.Settings,
+			&i.BrandSlug,
+			&i.ParentUuid,
+			&i.ParentName,
 		); err != nil {
 			return nil, err
 		}
@@ -654,7 +1001,7 @@ const setOrganizationLogo = `-- name: SetOrganizationLogo :one
 UPDATE organizations
 SET logo_object_key = $2
 WHERE uuid = $1 AND deleted_at IS NULL
-RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color
+RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings
 `
 
 type SetOrganizationLogoParams struct {
@@ -688,6 +1035,16 @@ func (q *Queries) SetOrganizationLogo(ctx context.Context, arg SetOrganizationLo
 		&i.FooterText,
 		&i.PaperSize,
 		&i.PrimaryColor,
+		&i.Type,
+		&i.ParentID,
+		&i.BrandID,
+		&i.Currency,
+		&i.Locale,
+		&i.Timezone,
+		&i.CountryID,
+		&i.ContractPdfKey,
+		&i.ContractValidUntil,
+		&i.Settings,
 	)
 	return i, err
 }
@@ -705,6 +1062,55 @@ func (q *Queries) SlugExists(ctx context.Context, slug string) (bool, error) {
 	return exists, err
 }
 
+const supplierOf = `-- name: SupplierOf :one
+SELECT p.id, p.uuid, p.slug, p.name, p.city, p.district, p.phone, p.address, p.logo_object_key, p.status, p.plan_code, p.access_starts_at, p.access_ends_at, p.created_at, p.updated_at, p.deleted_at, p.email, p.website, p.tagline, p.footer_text, p.paper_size, p.primary_color, p.type, p.parent_id, p.brand_id, p.currency, p.locale, p.timezone, p.country_id, p.contract_pdf_key, p.contract_valid_until, p.settings
+FROM organizations o
+JOIN organizations p ON p.id = o.parent_id AND p.deleted_at IS NULL
+WHERE o.id = $1 AND o.deleted_at IS NULL
+`
+
+// The supplier of an organization is its parent in the tree (K9).
+// Returns no rows for a center.
+func (q *Queries) SupplierOf(ctx context.Context, id int64) (Organization, error) {
+	row := q.db.QueryRow(ctx, supplierOf, id)
+	var i Organization
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.Slug,
+		&i.Name,
+		&i.City,
+		&i.District,
+		&i.Phone,
+		&i.Address,
+		&i.LogoObjectKey,
+		&i.Status,
+		&i.PlanCode,
+		&i.AccessStartsAt,
+		&i.AccessEndsAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Email,
+		&i.Website,
+		&i.Tagline,
+		&i.FooterText,
+		&i.PaperSize,
+		&i.PrimaryColor,
+		&i.Type,
+		&i.ParentID,
+		&i.BrandID,
+		&i.Currency,
+		&i.Locale,
+		&i.Timezone,
+		&i.CountryID,
+		&i.ContractPdfKey,
+		&i.ContractValidUntil,
+		&i.Settings,
+	)
+	return i, err
+}
+
 const updateOrganizationLetterhead = `-- name: UpdateOrganizationLetterhead :one
 UPDATE organizations
 SET name = COALESCE($1, name),
@@ -719,7 +1125,7 @@ SET name = COALESCE($1, name),
     paper_size = COALESCE($10, paper_size),
     primary_color = COALESCE($11, primary_color)
 WHERE id = $12 AND deleted_at IS NULL
-RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color
+RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings
 `
 
 type UpdateOrganizationLetterheadParams struct {
@@ -776,6 +1182,68 @@ func (q *Queries) UpdateOrganizationLetterhead(ctx context.Context, arg UpdateOr
 		&i.FooterText,
 		&i.PaperSize,
 		&i.PrimaryColor,
+		&i.Type,
+		&i.ParentID,
+		&i.BrandID,
+		&i.Currency,
+		&i.Locale,
+		&i.Timezone,
+		&i.CountryID,
+		&i.ContractPdfKey,
+		&i.ContractValidUntil,
+		&i.Settings,
+	)
+	return i, err
+}
+
+const updateOrganizationParent = `-- name: UpdateOrganizationParent :one
+UPDATE organizations
+SET parent_id = $2
+WHERE id = $1 AND deleted_at IS NULL
+RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings
+`
+
+type UpdateOrganizationParentParams struct {
+	ID       int64       `json:"id"`
+	ParentID pgtype.Int8 `json:"parent_id"`
+}
+
+func (q *Queries) UpdateOrganizationParent(ctx context.Context, arg UpdateOrganizationParentParams) (Organization, error) {
+	row := q.db.QueryRow(ctx, updateOrganizationParent, arg.ID, arg.ParentID)
+	var i Organization
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.Slug,
+		&i.Name,
+		&i.City,
+		&i.District,
+		&i.Phone,
+		&i.Address,
+		&i.LogoObjectKey,
+		&i.Status,
+		&i.PlanCode,
+		&i.AccessStartsAt,
+		&i.AccessEndsAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Email,
+		&i.Website,
+		&i.Tagline,
+		&i.FooterText,
+		&i.PaperSize,
+		&i.PrimaryColor,
+		&i.Type,
+		&i.ParentID,
+		&i.BrandID,
+		&i.Currency,
+		&i.Locale,
+		&i.Timezone,
+		&i.CountryID,
+		&i.ContractPdfKey,
+		&i.ContractValidUntil,
+		&i.Settings,
 	)
 	return i, err
 }
@@ -790,9 +1258,12 @@ SET name = COALESCE($1, name),
     status = COALESCE($6, status),
     plan_code = COALESCE($7, plan_code),
     access_starts_at = COALESCE($8, access_starts_at),
-    access_ends_at = $9
-WHERE uuid = $10 AND deleted_at IS NULL
-RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color
+    access_ends_at = $9,
+    currency = COALESCE($10, currency),
+    locale = COALESCE($11, locale),
+    timezone = COALESCE($12, timezone)
+WHERE uuid = $13 AND deleted_at IS NULL
+RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings
 `
 
 type UpdateOrganizationPlatformParams struct {
@@ -805,6 +1276,9 @@ type UpdateOrganizationPlatformParams struct {
 	PlanCode       pgtype.Text        `json:"plan_code"`
 	AccessStartsAt pgtype.Timestamptz `json:"access_starts_at"`
 	AccessEndsAt   pgtype.Timestamptz `json:"access_ends_at"`
+	Currency       pgtype.Text        `json:"currency"`
+	Locale         pgtype.Text        `json:"locale"`
+	Timezone       pgtype.Text        `json:"timezone"`
 	Uuid           uuid.UUID          `json:"uuid"`
 }
 
@@ -819,6 +1293,9 @@ func (q *Queries) UpdateOrganizationPlatform(ctx context.Context, arg UpdateOrga
 		arg.PlanCode,
 		arg.AccessStartsAt,
 		arg.AccessEndsAt,
+		arg.Currency,
+		arg.Locale,
+		arg.Timezone,
 		arg.Uuid,
 	)
 	var i Organization
@@ -845,6 +1322,16 @@ func (q *Queries) UpdateOrganizationPlatform(ctx context.Context, arg UpdateOrga
 		&i.FooterText,
 		&i.PaperSize,
 		&i.PrimaryColor,
+		&i.Type,
+		&i.ParentID,
+		&i.BrandID,
+		&i.Currency,
+		&i.Locale,
+		&i.Timezone,
+		&i.CountryID,
+		&i.ContractPdfKey,
+		&i.ContractValidUntil,
+		&i.Settings,
 	)
 	return i, err
 }

@@ -161,6 +161,8 @@ paths:
       description: |
         Re-issues access and refresh tokens with the JWT `oid` claim set for the
         given organization. Requires an authenticated session and active membership.
+        Returns 403 `BRAND_MISMATCH` when the organization belongs to another brand
+        than the request domain (Host / X-Forwarded-Host).
       requestBody:
         required: true
         content:
@@ -1098,6 +1100,45 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/public/brand:
+    get:
+      tags: [Public]
+      operationId: getPublicBrand
+      summary: Brand of the request domain
+      description: |
+        Resolves the brand from X-Forwarded-Host, then Host; unknown hosts fall
+        back to the default brand (DEFAULT_BRAND_SLUG, `olex`).
+      security: []
+      responses:
+        "200":
+          description: Brand
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePublicBrand"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/me/organizations:
+    get:
+      tags: [Auth]
+      operationId: getMeOrganizations
+      summary: My organizations
+      description: Memberships of the caller within the request domain's brand, with tree info.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Memberships
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMembershipList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /v1/public/organizations/register:
     post:
       tags: [Public]
@@ -1200,10 +1241,19 @@ paths:
         - name: status
           in: query
           schema:
+            $ref: "#/components/schemas/OrganizationStatus"
+        - name: type
+          in: query
+          schema:
+            $ref: "#/components/schemas/OrganizationType"
+        - name: parent_uuid
+          in: query
+          schema:
             type: string
+            format: uuid
       responses:
         "200":
-          description: Organizations
+          description: Organizations of the request domain's brand
           content:
             application/json:
               schema:
@@ -1275,11 +1325,44 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: true
+              $ref: "#/components/schemas/PatchPlatformOrganizationRequest"
       responses:
         "200":
           description: Updated organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrganization"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/platform/organizations/{uuid}/children:
+    get:
+      tags: [Platform]
+      operationId: getPlatformOrganizationChildren
+      summary: Direct children in the organization tree
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Children
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrganizationList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -2894,6 +2977,59 @@ components:
         access_ends_at:
           type: [string, "null"]
           format: date-time
+        type:
+          $ref: "#/components/schemas/OrganizationType"
+        brand:
+          $ref: "#/components/schemas/BrandRef"
+        parent:
+          oneOf:
+            - $ref: "#/components/schemas/OrganizationParentRef"
+            - type: "null"
+
+    OrganizationType:
+      type: string
+      enum: [center, distributor, dealer]
+
+    OrganizationStatus:
+      type: string
+      description: pending and expired are legacy values kept for compatibility.
+      enum: [pending, active, read_only, suspended, expired]
+
+    BrandRef:
+      type: object
+      required: [slug]
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+
+    OrganizationParentRef:
+      type: object
+      required: [uuid, name]
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        name:
+          type: string
+
+    PublicBrand:
+      type: object
+      required: [uuid, slug, name, status]
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive]
 
     PublicOrganization:
       type: object
@@ -2944,6 +3080,27 @@ components:
           format: date-time
         logo_url:
           type: [string, "null"]
+        type:
+          $ref: "#/components/schemas/OrganizationType"
+        brand:
+          $ref: "#/components/schemas/BrandRef"
+        parent:
+          oneOf:
+            - $ref: "#/components/schemas/OrganizationParentRef"
+            - type: "null"
+        currency:
+          type: string
+          description: ISO 4217 code
+        locale:
+          type: string
+        timezone:
+          type: string
+        contract_valid_until:
+          type: [string, "null"]
+          format: date
+        settings:
+          type: object
+          additionalProperties: true
         created_at:
           type: string
           format: date-time
@@ -2993,6 +3150,59 @@ components:
         owner_user_uuid:
           type: string
           format: uuid
+        type:
+          type: string
+          enum: [distributor, dealer]
+          default: dealer
+        parent_uuid:
+          type: [string, "null"]
+          format: uuid
+          description: Defaults to the brand center.
+        register_as_warehouse:
+          type: boolean
+          description: Distributor only; stored in settings, the warehouse is created in F1.
+        currency:
+          type: string
+        locale:
+          type: string
+        timezone:
+          type: string
+
+    PatchPlatformOrganizationRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        city:
+          type: string
+        district:
+          type: string
+        phone:
+          type: string
+        address:
+          type: string
+        status:
+          $ref: "#/components/schemas/OrganizationStatus"
+        plan_code:
+          type: string
+        access_starts_at:
+          type: string
+          format: date-time
+        access_ends_at:
+          type: string
+          format: date-time
+        clear_access_ends_at:
+          type: boolean
+        currency:
+          type: string
+        locale:
+          type: string
+        timezone:
+          type: string
+        parent_uuid:
+          type: string
+          format: uuid
+          description: Moves the organization in the tree (platform only).
 
     OrganizationRegisterResult:
       type: object
@@ -3681,6 +3891,42 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/Organization" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeOrganizationList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/Organization" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeMembershipList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/OrganizationMembership" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePublicBrand:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PublicBrand" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeTokens:

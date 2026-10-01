@@ -626,6 +626,8 @@ func writeUsecaseError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Error(w, r, http.StatusForbidden, response.CodeOrganizationAccessExpired, "Organization access has expired")
 	case errors.Is(err, usecase.ErrOrganizationSuspended):
 		response.Forbidden(w, r, "Organization is suspended")
+	case errors.Is(err, usecase.ErrBrandMismatch):
+		response.Error(w, r, http.StatusForbidden, response.CodeBrandMismatch, "Organization does not belong to this domain's brand")
 	case errors.Is(err, usecase.ErrNotFound):
 		response.NotFound(w, r, "Resource was not found")
 	case errors.Is(err, usecase.ErrConflict):

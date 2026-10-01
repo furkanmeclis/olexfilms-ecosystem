@@ -1,18 +1,19 @@
 import type { ServerListParams } from "@/components/entity";
 import { apiConfig } from "@/config/api";
 import { platformFormRequest } from "@/lib/api/platform-form-request";
-import { platformRequest, unwrap } from "@/lib/api";
+import { apiClient, platformRequest, unwrap } from "@/lib/api";
+import type { OrganizationSummary, OrganizationType } from "@/lib/auth/types";
 
-export type OrganizationStatus = "pending" | "active" | "suspended" | "expired";
+export type { OrganizationSummary, OrganizationType };
 
-export type OrganizationSummary = {
+/** pending/expired are legacy statuses kept for compatibility. */
+export type OrganizationStatus =
+  "pending" | "active" | "read_only" | "suspended" | "expired";
+
+export type OrganizationParentRef = {
   uuid: string;
-  slug: string;
+  slug?: string;
   name: string;
-  role: string;
-  logo_url?: string | null;
-  status: string;
-  access_ends_at?: string | null;
 };
 
 export type PublicOrganization = {
@@ -37,6 +38,14 @@ export type Organization = {
   access_starts_at: string;
   access_ends_at?: string | null;
   logo_url?: string | null;
+  type: OrganizationType;
+  brand: { slug: string; name?: string };
+  parent?: OrganizationParentRef | null;
+  currency: string;
+  locale: string;
+  timezone: string;
+  contract_valid_until?: string | null;
+  settings: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 };
@@ -65,6 +74,8 @@ export type OrganizationListResult = {
 
 export type ListOrganizationsParams = ServerListParams & {
   status?: string;
+  type?: OrganizationType;
+  parent_uuid?: string;
 };
 
 export type CreatePlatformOrganizationRequest = {
@@ -74,6 +85,12 @@ export type CreatePlatformOrganizationRequest = {
   phone: string;
   address: string;
   owner_user_uuid: string;
+  type?: Exclude<OrganizationType, "center">;
+  parent_uuid?: string | null;
+  register_as_warehouse?: boolean;
+  currency?: string;
+  locale?: string;
+  timezone?: string;
 };
 
 export type PatchPlatformOrganizationRequest = {
@@ -86,6 +103,11 @@ export type PatchPlatformOrganizationRequest = {
   plan_code?: string;
   access_ends_at?: string;
   clear_access_ends_at?: boolean;
+  currency?: string;
+  locale?: string;
+  timezone?: string;
+  /** Moves the organization in the tree (platform only). */
+  parent_uuid?: string;
 };
 
 export type OrganizationRegisterInput = {
@@ -173,8 +195,25 @@ export const organizationsService = {
           sort: params.sort,
           q: params.q,
           status: params.status,
+          type: params.type,
+          parent_uuid: params.parent_uuid,
         },
       },
+    );
+  },
+
+  /** Caller's memberships within the domain's brand (org switcher). */
+  async listMine() {
+    const data = await unwrap<{ items: OrganizationSummary[] }>(
+      await apiClient.GET("/v1/me/organizations"),
+    );
+    return data.items ?? [];
+  },
+
+  async children(uuid: string) {
+    return platformRequest<{ items: Organization[] }>(
+      "GET",
+      `/v1/platform/organizations/${uuid}/children`,
     );
   },
 

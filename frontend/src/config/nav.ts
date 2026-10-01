@@ -194,6 +194,11 @@ export const cmsNav = defineNav({
   ],
 });
 
+/**
+ * Tenant menu. Items may narrow by organization type (orgTypes: center |
+ * distributor | dealer) and member role (orgRoles); tenant I/O routes are
+ * owner-only on the API (RequireOrgRole).
+ */
 export function tenantNav(slug: string) {
   return defineNav({
     id: "tenant",
@@ -230,6 +235,7 @@ export function tenantNav(slug: string) {
             href: routes.tenant.exports.root(slug),
             icon: Download,
             permission: permissions.imports.tenantRead,
+            orgRoles: ["owner"],
           },
           {
             id: "tenant-imports",
@@ -237,6 +243,7 @@ export function tenantNav(slug: string) {
             href: routes.tenant.imports.root(slug),
             icon: Upload,
             permission: permissions.imports.tenantRead,
+            orgRoles: ["owner"],
           },
           {
             id: "tenant-export-settings",
@@ -244,6 +251,7 @@ export function tenantNav(slug: string) {
             href: routes.tenant.settings.root(slug),
             icon: Settings2,
             permission: permissions.settings.tenantRead,
+            orgRoles: ["owner"],
           },
         ],
       },

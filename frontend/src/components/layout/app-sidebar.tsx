@@ -17,6 +17,7 @@ import {
 import { cmsNav, platformNav, tenantNav } from "@/config/nav";
 import { routes } from "@/config/routes";
 import { NavEngine } from "@/features/nav-engine";
+import { useActiveOrganization } from "@/hooks/use-active-organization";
 
 export function AppSidebar({
   variant = "platform",
@@ -30,6 +31,14 @@ export function AppSidebar({
     if (variant === "cms") return cmsNav;
     return platformNav;
   }, [tenantSlug, variant]);
+
+  const activeOrg = useActiveOrganization(
+    variant === "tenant" ? tenantSlug : null,
+  );
+  const navOrg = useMemo(
+    () => (activeOrg ? { type: activeOrg.type, role: activeOrg.role } : null),
+    [activeOrg],
+  );
 
   const homeHref =
     variant === "platform"
@@ -52,7 +61,7 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
 
-      <NavEngine catalog={catalog} homeHref={homeHref} />
+      <NavEngine catalog={catalog} homeHref={homeHref} org={navOrg} />
 
       <SidebarFooter />
       <SidebarRail />

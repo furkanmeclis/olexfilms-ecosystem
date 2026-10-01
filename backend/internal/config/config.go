@@ -62,6 +62,8 @@ type JWTConfig struct {
 type AppConfig struct {
 	Name string
 	Env  string
+	// DefaultBrandSlug is used when the request host matches no brand domain.
+	DefaultBrandSlug string
 }
 
 // EncryptionConfig holds at-rest secret encryption material.
@@ -182,8 +184,9 @@ func Load() (Config, error) {
 
 	cfg := Config{
 		App: AppConfig{
-			Name: getEnv("APP_NAME", "api"),
-			Env:  getEnv("APP_ENV", "development"),
+			Name:             getEnv("APP_NAME", "api"),
+			Env:              getEnv("APP_ENV", "development"),
+			DefaultBrandSlug: getEnv("DEFAULT_BRAND_SLUG", "olex"),
 		},
 		Encryption: EncryptionConfig{
 			Key: getEnv("APP_ENCRYPTION_KEY", defaultEncryptionKey),

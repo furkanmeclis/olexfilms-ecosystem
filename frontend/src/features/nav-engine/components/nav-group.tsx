@@ -41,7 +41,11 @@ import {
   mergeNavAdornment,
   visibleCountTotal,
 } from "@/features/nav-engine/lib/adornment";
-import type { NavGroupDef, ResolvedNavItem } from "@/features/nav-engine/types";
+import type {
+  NavGroupDef,
+  NavOrgContext,
+  ResolvedNavItem,
+} from "@/features/nav-engine/types";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 
@@ -49,13 +53,15 @@ export function NavGroup({
   group,
   catalogId,
   homeHref,
+  org,
 }: {
   group: NavGroupDef;
   catalogId: string;
   homeHref: string;
+  org?: NavOrgContext | null;
 }) {
   const { can, canAny } = usePermission();
-  const items = visibleNavItems(group, { can, canAny });
+  const items = visibleNavItems(group, { can, canAny, org });
   if (!items.length) return null;
 
   return (

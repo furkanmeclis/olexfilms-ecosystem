@@ -42,6 +42,7 @@ function json(status: number, body: unknown) {
 
 vi.mock("@/lib/server/upstream", () => ({
   clientIpFromHeaders: () => null,
+  forwardedHostFromHeaders: () => null,
   fetchUpstreamStream: vi.fn(),
   fetchUpstream: async (
     path: string,
