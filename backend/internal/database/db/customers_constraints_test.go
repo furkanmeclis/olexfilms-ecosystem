@@ -201,7 +201,8 @@ func TestVehiclesConstraints(t *testing.T) {
 	for _, vin := range []string{"WVWZZZ1JZXW00000", "WVWZZZ1JZXW0000012", "WVWZZZ1JZXI000001", "WVWZZZ1JZXO000001", "wvwzzz1jzxw000001", ""} {
 		arg := base()
 		arg.Vin = text(vin)
-		f.expectCode(t, "invalid vin "+vin, create(arg), "23514")
+		// An 18-character VIN hits VARCHAR(17) (22001) before the CHECK (23514).
+		f.expectCode(t, "invalid vin "+vin, create(arg), "23514", "22001")
 	}
 
 	// Same plate twice is allowed (plates change hands): no unique key.
