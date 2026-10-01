@@ -515,6 +515,7 @@ func (e *env) service(t *testing.T, org db.Organization) int64 {
 	if e.vehicle.ID == 0 {
 		user, err := e.q.CreateUser(e.ctx, db.CreateUserParams{
 			PasswordHash: "x", Name: "T178", Surname: e.suffix, Status: "active",
+			Email: pgtype.Text{String: "t178-ledger-" + e.suffix + "@example.test", Valid: true},
 		})
 		if err != nil {
 			t.Fatalf("customer: %v", err)

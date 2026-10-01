@@ -33,6 +33,7 @@ func newServiceFixture(t *testing.T) *serviceFixture {
 	var err error
 	f.customer, err = q.CreateUser(ctx, db.CreateUserParams{
 		PasswordHash: "x", Name: "Musteri", Surname: "T178", Status: "active",
+		Email: text("t178-customer-" + suffix + "@example.test"),
 	})
 	if err != nil {
 		t.Fatalf("customer: %v", err)
@@ -172,7 +173,10 @@ func TestServiceSchemaConstraints(t *testing.T) {
 		arg.BrandID = glorian.BrandID
 		f.expectTrigger(t, "brand mismatch", create(arg))
 		// The vehicle belongs to the customer.
-		other, err := f.q.CreateUser(ctx, db.CreateUserParams{PasswordHash: "x", Name: "Other", Surname: "T178", Status: "active"})
+		other, err := f.q.CreateUser(ctx, db.CreateUserParams{
+			PasswordHash: "x", Name: "Other", Surname: "T178", Status: "active",
+			Email: text(fmt.Sprintf("t178-other-%d@example.test", time.Now().UnixNano())),
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
