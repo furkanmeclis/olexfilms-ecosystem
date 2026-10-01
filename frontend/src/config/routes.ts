@@ -91,6 +91,10 @@ export const routes = {
       detail: (uuid: string) => `/platform/organizations/${uuid}`,
       edit: (uuid: string) => `/platform/organizations/${uuid}/edit`,
     },
+    documentTemplates: {
+      root: "/platform/document-templates",
+      edit: (uuid: string) => `/platform/document-templates/${uuid}`,
+    },
     activity: {
       root: "/platform/activity",
     },

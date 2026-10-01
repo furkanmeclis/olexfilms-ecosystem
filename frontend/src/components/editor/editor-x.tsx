@@ -31,16 +31,19 @@ import { RichTextExtension } from "@lexical/rich-text";
 import { TableCellNode, TableNode, TableRowNode } from "@lexical/table";
 import {
   $getRoot,
+  $insertNodes,
   configExtension,
   defineExtension,
   type EditorState,
+  type LexicalEditor,
 } from "lexical";
 import {
   $convertFromMarkdownString,
   $convertToMarkdownString,
 } from "@lexical/markdown";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 
 import { ContentEditable } from "@/components/editor/editor-ui/content-editable";
 import { DateTimeExtension } from "@/components/editor/extensions/date-time-extension";
@@ -133,7 +136,48 @@ type EditorXProps = {
   placeholder?: string;
   className?: string;
   contentClassName?: string;
+  /** Serialized Lexical state; wins over initialHtml / initialMarkdown. */
+  initialStateJson?: string | null;
+  /** HTML initial content, imported with @lexical/html. */
+  initialHtml?: string;
+  /** Emits HTML ($generateHtmlFromNodes) and the state JSON on change. */
+  onHtmlChange?: (html: string, stateJson: string) => void;
+  /** Extra toolbar items, rendered inside the editor context. */
+  toolbarExtra?: ReactNode;
 };
+
+function HtmlChangePlugin({
+  onHtmlChange,
+}: {
+  onHtmlChange?: (html: string, stateJson: string) => void;
+}) {
+  const [editor] = useLexicalComposerContext();
+  const skipFirst = useRef(true);
+
+  return (
+    <OnChangePlugin
+      ignoreSelectionChange
+      onChange={(editorState: EditorState) => {
+        if (!onHtmlChange) return;
+        if (skipFirst.current) {
+          skipFirst.current = false;
+          return;
+        }
+        editorState.read(() => {
+          const html = $generateHtmlFromNodes(editor, null);
+          onHtmlChange(html, JSON.stringify(editorState.toJSON()));
+        });
+      }}
+    />
+  );
+}
+
+function $importHtml(editor: LexicalEditor, html: string) {
+  const dom = new DOMParser().parseFromString(html, "text/html");
+  const nodes = $generateNodesFromDOM(editor, dom);
+  $getRoot().select();
+  $insertNodes(nodes);
+}
 
 function EditablePlugin({ editable }: { editable: boolean }) {
   const [editor] = useLexicalComposerContext();
@@ -183,6 +227,10 @@ export function EditorX({
   placeholder,
   className,
   contentClassName,
+  initialStateJson,
+  initialHtml,
+  onHtmlChange,
+  toolbarExtra,
 }: EditorXProps) {
   const { t } = useLocale();
   const resolvedPlaceholder = placeholder ?? t("editor.placeholder");
@@ -235,16 +283,22 @@ export function EditorX({
           LayoutContainerNode,
           LayoutItemNode,
         ],
-        $initialEditorState() {
-          const root = $getRoot();
-          if (root.getFirstChild() !== null) return;
-          $convertFromMarkdownString(
-            initialMarkdown,
-            EDITOR_X_MARKDOWN_TRANSFORMERS,
-            undefined,
-            true,
-          );
-        },
+        $initialEditorState: initialStateJson
+          ? initialStateJson
+          : (editor: LexicalEditor) => {
+              const root = $getRoot();
+              if (root.getFirstChild() !== null) return;
+              if (initialHtml) {
+                $importHtml(editor, initialHtml);
+                return;
+              }
+              $convertFromMarkdownString(
+                initialMarkdown,
+                EDITOR_X_MARKDOWN_TRANSFORMERS,
+                undefined,
+                true,
+              );
+            },
         theme: editorTheme,
       }),
     // Remount via `key` when initialMarkdown identity changes.
@@ -297,6 +351,7 @@ export function EditorX({
                         <InsertTable />
                         <InsertColumnsLayout />
                       </BlockInsertPlugin>
+                      {toolbarExtra}
                     </>
                   )}
                 </div>
@@ -390,6 +445,7 @@ export function EditorX({
 
           <EditablePlugin editable={editable} />
           <MarkdownChangePlugin onMarkdownChange={onMarkdownChange} />
+          <HtmlChangePlugin onHtmlChange={onHtmlChange} />
         </TooltipProvider>
       </LexicalExtensionComposer>
     </div>
