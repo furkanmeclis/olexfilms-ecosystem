@@ -30,6 +30,13 @@ type Config struct {
 	VAPID      VAPIDConfig
 	Search     SearchConfig
 	Gotenberg  GotenbergConfig
+	Rates      RatesConfig
+}
+
+// RatesConfig points the daily exchange rate fetch (TEC-84) at TCMB and ECB.
+type RatesConfig struct {
+	TCMBURL string
+	ECBURL  string
 }
 
 // GotenbergConfig controls HTML→PDF rendering via Gotenberg Chromium.
@@ -274,6 +281,10 @@ func Load() (Config, error) {
 		Gotenberg: GotenbergConfig{
 			URL:   getEnv("GOTENBERG_URL", "http://127.0.0.1:3001"),
 			Fonts: getEnv("PDF_FONTS", "embedded"),
+		},
+		Rates: RatesConfig{
+			TCMBURL: getEnv("RATES_TCMB_URL", "https://www.tcmb.gov.tr/kurlar/today.xml"),
+			ECBURL:  getEnv("RATES_ECB_URL", "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml"),
 		},
 	}
 

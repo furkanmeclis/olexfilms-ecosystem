@@ -37,6 +37,9 @@ type ProcessDocsRenderFunc func(ctx context.Context, renderID int64) error
 // PurgeLogsFunc applies due log retention rules.
 type PurgeLogsFunc func(ctx context.Context) error
 
+// FetchRatesFunc fetches and stores the daily exchange rates.
+type FetchRatesFunc func(ctx context.Context) error
+
 // Worker processes Asynq tasks.
 type Worker struct {
 	server               *asynq.Server
@@ -51,6 +54,7 @@ type Worker struct {
 	processSearchReindex ProcessSearchReindexFunc
 	purgeLogs            PurgeLogsFunc
 	processDocsRender    ProcessDocsRenderFunc
+	fetchRates           FetchRatesFunc
 }
 
 // NewWorker builds a worker that handles known task types on every queue.
@@ -104,6 +108,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskSearchDelete, w.handleSearchDelete)
 	mux.HandleFunc(TaskSearchReindex, w.handleSearchReindex)
 	mux.HandleFunc(TaskDocsRender, w.handleDocsRender)
+	mux.HandleFunc(TaskRatesFetch, w.handleRatesFetch)
 	return w
 }
 
@@ -159,6 +164,12 @@ func (w *Worker) WithLogPurge(fn PurgeLogsFunc) *Worker {
 // WithDocsRender registers the PDF document render processor.
 func (w *Worker) WithDocsRender(fn ProcessDocsRenderFunc) *Worker {
 	w.processDocsRender = fn
+	return w
+}
+
+// WithRatesFetch registers the exchange rate fetcher (TEC-84).
+func (w *Worker) WithRatesFetch(fn FetchRatesFunc) *Worker {
+	w.fetchRates = fn
 	return w
 }
 
@@ -235,6 +246,14 @@ func (w *Worker) handleLogPurgeSweep(ctx context.Context, _ *asynq.Task) error {
 		return nil
 	}
 	return w.purgeLogs(ctx)
+}
+
+func (w *Worker) handleRatesFetch(ctx context.Context, _ *asynq.Task) error {
+	if w.fetchRates == nil {
+		w.log.Warn("rates_fetch_handler_missing")
+		return nil
+	}
+	return w.fetchRates(ctx)
 }
 
 func (w *Worker) handleSearchUpsert(ctx context.Context, task *asynq.Task) error {

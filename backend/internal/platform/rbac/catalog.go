@@ -168,6 +168,24 @@ var Permissions = []PermissionDef{
 	},
 	platformPerm(PermPlatformModulesRead, "Read platform modules"),
 	platformPerm(PermPlatformModulesWrite, "Write platform modules"),
+
+	// TEC-84: geography, territories (K5) and exchange rates (K7). Appended
+	// last; migration 000035 continues the sort order from the highest row.
+	withDesc(platformPerm(PermPlatformGeoWrite, "Write geography"),
+		"Add or remove provinces and districts; activate countries."),
+	withDesc(platformPerm(PermPlatformTerritoriesRead, "Read territories"),
+		"Distributor territories (country, province, district)."),
+	withDesc(platformPerm(PermPlatformTerritoriesWrite, "Write territories"),
+		"Assign or remove distributor territories (K5)."),
+	withDesc(platformPerm(PermPlatformRatesRead, "Read exchange rates"),
+		"Daily TCMB/ECB rates and manual overrides."),
+	withDesc(platformPerm(PermPlatformRatesWrite, "Write exchange rates"),
+		"Manual rate overrides and on-demand fetch."),
+}
+
+func withDesc(p PermissionDef, desc string) PermissionDef {
+	p.Description = desc
+	return p
 }
 
 func grants(base map[string]Scope, extra map[string]Scope) map[string]Scope {

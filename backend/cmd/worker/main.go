@@ -24,6 +24,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine"
 	bulkadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine/adapters"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/fxrates"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	ioadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine/adapters"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/mail"
@@ -121,6 +122,7 @@ func main() {
 	)
 	bulkSvc := bulkusecase.New(queries, bulkReg, nil, notifSvc, activityRec, cfg.Bulk, log)
 	logsSvc := logsusecase.New(queries)
+	ratesSvc := fxrates.New(queries, fxrates.NewFetcher(cfg.Rates.TCMBURL, cfg.Rates.ECBURL), log)
 	searchReg := searchengine.NewRegistry(
 		searchadapters.NewUsers(queries),
 		searchadapters.NewRoles(queries),
@@ -143,6 +145,7 @@ func main() {
 		WithBulk(bulkSvc.ProcessBulk).
 		WithLogPurge(logsSvc.ApplyDueRules).
 		WithDocsRender(docSvc.ProcessRender).
+		WithRatesFetch(ratesSvc.FetchTask).
 		WithSearch(
 			searchIndexer.ProcessUpsert,
 			searchIndexer.ProcessDelete,
@@ -176,14 +179,14 @@ func main() {
 		go func() {
 			defer close(schedulerDone)
 			runAsLeader(ctx, lock, 10*time.Second, log, func() func() {
-				scheduler, err := queue.StartLogPurgeScheduler(cfg, log)
+				scheduler, err := queue.StartScheduler(cfg, log)
 				if err == nil {
 					err = scheduler.Start()
 				}
 				if err != nil {
-					log.Error("log_purge_scheduler_failed", "error", err)
+					log.Error("scheduler_failed", "error", err)
 					errtrack.CaptureTask(ctx, errtrack.TaskInfo{
-						Type: queue.TaskLogPurgeSweep, Queue: queue.QueueMaintenance, Scheduler: true,
+						Type: "scheduler", Queue: queue.QueueMaintenance, Scheduler: true,
 					}, err)
 					return func() {}
 				}

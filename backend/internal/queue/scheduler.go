@@ -4,32 +4,88 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/config"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/errtrack"
 	"github.com/hibiken/asynq"
 )
 
+// SchedulerTimezone is the zone cron expressions are read in.
+const SchedulerTimezone = "Europe/Istanbul"
+
+// Periodic is one scheduled task of worker-core.
+type Periodic struct {
+	Cron  string
+	Type  string
+	Queue string
+	Opts  []asynq.Option
+	New   func() (*asynq.Task, error)
+}
+
 const logPurgeCron = "@every 5m"
 
-// StartLogPurgeScheduler registers a periodic sweep for due log retention rules.
-func StartLogPurgeScheduler(cfg config.Config, log *slog.Logger) (*asynq.Scheduler, error) {
+// Exchange rates (TEC-84): TCMB publishes ~15:30 TR, ECB ~16:00 CET (17:00-18:00
+// TR), so the weekday run is after both; the morning run fills a missed day.
+const (
+	ratesFetchCron        = "30 18 * * 1-5"
+	ratesFetchCatchUpCron = "15 10 * * *"
+)
+
+// Schedules lists every periodic task. Fetches are idempotent upserts, so a
+// duplicate run (catch-up after a successful evening) is harmless.
+func Schedules() []Periodic {
+	rateOpts := []asynq.Option{asynq.MaxRetry(5), asynq.Timeout(2 * time.Minute)}
+	return []Periodic{
+		{Cron: logPurgeCron, Type: TaskLogPurgeSweep, Queue: QueueMaintenance, New: NewLogPurgeSweepTask},
+		{Cron: ratesFetchCron, Type: TaskRatesFetch, Queue: QueueMaintenance, Opts: rateOpts, New: NewRatesFetchTask},
+		{Cron: ratesFetchCatchUpCron, Type: TaskRatesFetch, Queue: QueueMaintenance, Opts: rateOpts, New: NewRatesFetchTask},
+	}
+}
+
+// Registrar is the part of *asynq.Scheduler that registers entries.
+type Registrar interface {
+	Register(cronspec string, task *asynq.Task, opts ...asynq.Option) (string, error)
+}
+
+// RegisterSchedules registers every entry of Schedules on r.
+func RegisterSchedules(r Registrar, log *slog.Logger) error {
 	if log == nil {
 		log = slog.Default()
 	}
+	for _, p := range Schedules() {
+		task, err := p.New()
+		if err != nil {
+			return fmt.Errorf("queue: %s task: %w", p.Type, err)
+		}
+		opts := append([]asynq.Option{asynq.Queue(p.Queue)}, p.Opts...)
+		if _, err := r.Register(p.Cron, task, opts...); err != nil {
+			return fmt.Errorf("queue: register %s schedule: %w", p.Type, err)
+		}
+		log.Info("queue_schedule_registered", "type", p.Type, "cron", p.Cron, "queue", p.Queue)
+	}
+	return nil
+}
+
+// StartScheduler builds the worker-core scheduler with every periodic task.
+// The caller starts it under the leader lock (one scheduler per cluster).
+func StartScheduler(cfg config.Config, log *slog.Logger) (*asynq.Scheduler, error) {
+	if log == nil {
+		log = slog.Default()
+	}
+	loc, err := time.LoadLocation(SchedulerTimezone)
+	if err != nil {
+		return nil, fmt.Errorf("queue: scheduler timezone: %w", err)
+	}
 	scheduler := asynq.NewScheduler(RedisOpt(cfg.Redis), &asynq.SchedulerOpts{
+		Location: loc,
 		// PostEnqueueFunc gets a nil TaskInfo on failure (no task type), so
 		// the deprecated error handler stays the only hook with task + error.
 		EnqueueErrorHandler: SchedulerErrorHandler(log), //nolint:staticcheck // see above
 	})
-	task, err := NewLogPurgeSweepTask()
-	if err != nil {
-		return nil, fmt.Errorf("queue: log purge task: %w", err)
+	if err := RegisterSchedules(scheduler, log); err != nil {
+		return nil, err
 	}
-	if _, err := scheduler.Register(logPurgeCron, task, asynq.Queue(QueueMaintenance)); err != nil {
-		return nil, fmt.Errorf("queue: register log purge schedule: %w", err)
-	}
-	log.Info("queue_log_purge_scheduler_registered", "cron", logPurgeCron)
 	return scheduler, nil
 }
 

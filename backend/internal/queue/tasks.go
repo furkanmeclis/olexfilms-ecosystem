@@ -20,6 +20,7 @@ const (
 	TaskSearchDelete        = "app:search:delete"
 	TaskSearchReindex       = "app:search:reindex"
 	TaskDocsRender          = "app:docs:render"
+	TaskRatesFetch          = "app:rates:fetch"
 	QueueNotifications      = "notifications"
 	QueueExports            = "exports"
 	QueueImports            = "imports"
@@ -154,6 +155,11 @@ func ParseBulkProcessPayload(data []byte) (BulkProcessPayload, error) {
 // NewLogPurgeSweepTask enqueues due log retention rule processing.
 func NewLogPurgeSweepTask() (*asynq.Task, error) {
 	return asynq.NewTask(TaskLogPurgeSweep, []byte("{}")), nil
+}
+
+// NewRatesFetchTask fetches the daily TCMB and ECB exchange rates.
+func NewRatesFetchTask() (*asynq.Task, error) {
+	return asynq.NewTask(TaskRatesFetch, []byte("{}")), nil
 }
 
 // SearchUpsertPayload identifies one entity to upsert into search indexes.
