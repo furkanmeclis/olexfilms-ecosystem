@@ -64,7 +64,7 @@ func (s *Service) Shares(ctx context.Context, key string) ([]model.Share, error)
 			ObjectKey: row.ObjectKey,
 			UserUUID:  row.UserUuid.String(),
 			Name:      strings.TrimSpace(row.UserName + " " + row.UserSurname),
-			Email:     row.UserEmail,
+			Email:     row.UserEmail.String,
 			Role:      row.Role,
 			CreatedAt: formatTS(row.CreatedAt),
 		})
@@ -107,7 +107,7 @@ func (s *Service) Share(ctx context.Context, actor model.Actor, in model.CreateS
 		ObjectKey: key,
 		UserUUID:  user.Uuid.String(),
 		Name:      strings.TrimSpace(user.Name + " " + user.Surname),
-		Email:     user.Email,
+		Email:     user.Email.String,
 		Role:      role,
 		CreatedAt: formatTS(row.CreatedAt),
 	}, nil

@@ -101,7 +101,7 @@ func (a *UsersAdapter) ApplyRow(ctx context.Context, row map[string]any, default
 	if locale == "" {
 		locale = "tr"
 	}
-	if _, err := a.q.GetUserByEmail(ctx, email); err == nil {
+	if _, err := a.q.GetUserByEmail(ctx, pgtype.Text{String: email, Valid: true}); err == nil {
 		return ioengine.RowResult{OK: false, Error: "email already exists"}, nil
 	} else if !errors.Is(err, pgx.ErrNoRows) {
 		return ioengine.RowResult{}, err
@@ -115,7 +115,7 @@ func (a *UsersAdapter) ApplyRow(ctx context.Context, row map[string]any, default
 		return ioengine.RowResult{}, err
 	}
 	created, err := a.q.CreateUser(ctx, db.CreateUserParams{
-		Email: email, PasswordHash: hash, Name: name, Surname: surname, Status: status,
+		Email: pgtype.Text{String: email, Valid: true}, PasswordHash: hash, Name: name, Surname: surname, Status: status,
 	})
 	if err != nil {
 		return ioengine.RowResult{OK: false, Error: err.Error()}, nil

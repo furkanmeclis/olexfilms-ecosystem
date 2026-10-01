@@ -168,7 +168,7 @@ func (it *itest) user(name string, roles ...string) (db.User, string) {
 		it.t.Fatal(err)
 	}
 	u, err := it.q.CreateUser(ctx, db.CreateUserParams{
-		Email: fmt.Sprintf("t83-%s-%s@example.test", name, it.suffix), PasswordHash: hash,
+		Email: pgtype.Text{String: fmt.Sprintf("t83-%s-%s@example.test", name, it.suffix), Valid: true}, PasswordHash: hash,
 		Name: name, Surname: "Test", Status: "active",
 		EmailVerifiedAt: pgtype.Timestamptz{Time: time.Now(), Valid: true},
 	})
@@ -254,7 +254,7 @@ func TestIntegrationMultiOrgRoles(t *testing.T) {
 	it.member(orgB, u, "staff")
 
 	tp := it.tokensFrom(it.do("POST", "/v1/auth/login", hostOlex, "", map[string]string{
-		"email": u.Email, "password": pw, "organization_slug": orgA.Slug,
+		"email": u.Email.String, "password": pw, "organization_slug": orgA.Slug,
 	}))
 	if got := it.oid(tp.AccessToken); got != orgA.Uuid.String() {
 		t.Fatalf("login oid = %s, want A", got)
@@ -309,14 +309,14 @@ func TestIntegrationBrandIsolation(t *testing.T) {
 	it.member(orgGlorian, u, "owner")
 
 	tp := it.tokensFrom(it.do("POST", "/v1/auth/login", hostOlex, "", map[string]string{
-		"email": u.Email, "password": pw,
+		"email": u.Email.String, "password": pw,
 	}))
 	if code, env := it.do("POST", "/v1/auth/organization-context", hostOlex, tp.AccessToken,
 		map[string]string{"organization_slug": orgGlorian.Slug}); code != http.StatusForbidden || errCode(env) != "BRAND_MISMATCH" {
 		t.Fatalf("switch to glorian org on olex domain: %d %s", code, errCode(env))
 	}
 	if code, env := it.do("POST", "/v1/auth/login", hostOlex, "", map[string]string{
-		"email": u.Email, "password": pw, "organization_slug": orgGlorian.Slug,
+		"email": u.Email.String, "password": pw, "organization_slug": orgGlorian.Slug,
 	}); code != http.StatusForbidden || errCode(env) != "BRAND_MISMATCH" {
 		t.Fatalf("login into glorian org on olex domain: %d %s", code, errCode(env))
 	}
@@ -371,7 +371,7 @@ func TestIntegrationBrandIsolation(t *testing.T) {
 	admin, apw := it.user("admin", rbac.RoleSuperAdmin)
 	_ = admin
 	atp := it.tokensFrom(it.do("POST", "/v1/auth/login", hostOlex, "", map[string]string{
-		"email": admin.Email, "password": apw,
+		"email": admin.Email.String, "password": apw,
 	}))
 	totalOf := func(host string) int64 {
 		code, env := it.do("GET", "/v1/platform/organizations?limit=100", host, atp.AccessToken, nil)
@@ -440,7 +440,7 @@ func TestIntegrationPlatformTree(t *testing.T) {
 	admin, apw := it.user("tree-admin", rbac.RoleSuperAdmin)
 	owner, _ := it.user("tree-owner")
 	atp := it.tokensFrom(it.do("POST", "/v1/auth/login", hostOlex, "", map[string]string{
-		"email": admin.Email, "password": apw,
+		"email": admin.Email.String, "password": apw,
 	}))
 	cleanup := func(uuid string) {
 		t.Cleanup(func() {

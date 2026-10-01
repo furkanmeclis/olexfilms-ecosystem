@@ -59,18 +59,20 @@ func (q *Queries) CountUsersWithRole(ctx context.Context, roleSlug string) (int6
 }
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (email, password_hash, name, surname, status, email_verified_at)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at
+INSERT INTO users (email, password_hash, name, surname, status, email_verified_at, phone_e164, phone_verified_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, phone_e164, phone_verified_at
 `
 
 type CreateUserParams struct {
-	Email           string             `json:"email"`
+	Email           pgtype.Text        `json:"email"`
 	PasswordHash    string             `json:"password_hash"`
 	Name            string             `json:"name"`
 	Surname         string             `json:"surname"`
 	Status          string             `json:"status"`
 	EmailVerifiedAt pgtype.Timestamptz `json:"email_verified_at"`
+	PhoneE164       pgtype.Text        `json:"phone_e164"`
+	PhoneVerifiedAt pgtype.Timestamptz `json:"phone_verified_at"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -81,6 +83,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		arg.Surname,
 		arg.Status,
 		arg.EmailVerifiedAt,
+		arg.PhoneE164,
+		arg.PhoneVerifiedAt,
 	)
 	var i User
 	err := row.Scan(
@@ -97,16 +101,18 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.PhoneE164,
+		&i.PhoneVerifiedAt,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at FROM users
+SELECT id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, phone_e164, phone_verified_at FROM users
 WHERE email = $1 AND deleted_at IS NULL
 `
 
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+func (q *Queries) GetUserByEmail(ctx context.Context, email pgtype.Text) (User, error) {
 	row := q.db.QueryRow(ctx, getUserByEmail, email)
 	var i User
 	err := row.Scan(
@@ -123,12 +129,14 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.PhoneE164,
+		&i.PhoneVerifiedAt,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at FROM users
+SELECT id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, phone_e164, phone_verified_at FROM users
 WHERE id = $1 AND deleted_at IS NULL
 `
 
@@ -149,12 +157,42 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.PhoneE164,
+		&i.PhoneVerifiedAt,
+	)
+	return i, err
+}
+
+const getUserByPhone = `-- name: GetUserByPhone :one
+SELECT id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, phone_e164, phone_verified_at FROM users
+WHERE phone_e164 = $1 AND deleted_at IS NULL
+`
+
+func (q *Queries) GetUserByPhone(ctx context.Context, phoneE164 pgtype.Text) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByPhone, phoneE164)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Name,
+		&i.Surname,
+		&i.Status,
+		&i.EmailVerifiedAt,
+		&i.LastLoginAt,
+		&i.Locale,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.PhoneE164,
+		&i.PhoneVerifiedAt,
 	)
 	return i, err
 }
 
 const getUserByUUID = `-- name: GetUserByUUID :one
-SELECT id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at FROM users
+SELECT id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, phone_e164, phone_verified_at FROM users
 WHERE uuid = $1 AND deleted_at IS NULL
 `
 
@@ -175,6 +213,8 @@ func (q *Queries) GetUserByUUID(ctx context.Context, argUuid uuid.UUID) (User, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.PhoneE164,
+		&i.PhoneVerifiedAt,
 	)
 	return i, err
 }
@@ -223,7 +263,7 @@ func (q *Queries) ListUserUUIDsForBulk(ctx context.Context, arg ListUserUUIDsFor
 }
 
 const listUsersFiltered = `-- name: ListUsersFiltered :many
-SELECT DISTINCT u.id, u.uuid, u.email, u.password_hash, u.name, u.surname, u.status, u.email_verified_at, u.last_login_at, u.locale, u.created_at, u.updated_at, u.deleted_at
+SELECT DISTINCT u.id, u.uuid, u.email, u.password_hash, u.name, u.surname, u.status, u.email_verified_at, u.last_login_at, u.locale, u.created_at, u.updated_at, u.deleted_at, u.phone_e164, u.phone_verified_at
 FROM users u
 LEFT JOIN user_roles ur ON ur.user_id = u.id
 LEFT JOIN roles r ON r.id = ur.role_id
@@ -277,6 +317,8 @@ func (q *Queries) ListUsersFiltered(ctx context.Context, arg ListUsersFilteredPa
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.PhoneE164,
+			&i.PhoneVerifiedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -289,7 +331,7 @@ func (q *Queries) ListUsersFiltered(ctx context.Context, arg ListUsersFilteredPa
 }
 
 const listUsersForExport = `-- name: ListUsersForExport :many
-SELECT DISTINCT u.id, u.uuid, u.email, u.password_hash, u.name, u.surname, u.status, u.email_verified_at, u.last_login_at, u.locale, u.created_at, u.updated_at, u.deleted_at
+SELECT DISTINCT u.id, u.uuid, u.email, u.password_hash, u.name, u.surname, u.status, u.email_verified_at, u.last_login_at, u.locale, u.created_at, u.updated_at, u.deleted_at, u.phone_e164, u.phone_verified_at
 FROM users u
 LEFT JOIN user_roles ur ON ur.user_id = u.id
 LEFT JOIN roles r ON r.id = ur.role_id
@@ -334,6 +376,8 @@ func (q *Queries) ListUsersForExport(ctx context.Context, arg ListUsersForExport
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.PhoneE164,
+			&i.PhoneVerifiedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -343,6 +387,17 @@ func (q *Queries) ListUsersForExport(ctx context.Context, arg ListUsersForExport
 		return nil, err
 	}
 	return items, nil
+}
+
+const markUserPhoneVerified = `-- name: MarkUserPhoneVerified :exec
+UPDATE users
+SET phone_verified_at = COALESCE(phone_verified_at, NOW())
+WHERE id = $1 AND deleted_at IS NULL
+`
+
+func (q *Queries) MarkUserPhoneVerified(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, markUserPhoneVerified, id)
+	return err
 }
 
 const updateUserLastLogin = `-- name: UpdateUserLastLogin :exec
@@ -394,7 +449,7 @@ SET name = COALESCE($1, name),
     surname = COALESCE($2, surname),
     status = COALESCE($3, status)
 WHERE uuid = $4 AND deleted_at IS NULL
-RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at
+RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, phone_e164, phone_verified_at
 `
 
 type UpdateUserPlatformParams struct {
@@ -426,6 +481,8 @@ func (q *Queries) UpdateUserPlatform(ctx context.Context, arg UpdateUserPlatform
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.PhoneE164,
+		&i.PhoneVerifiedAt,
 	)
 	return i, err
 }
@@ -462,7 +519,7 @@ SET name = COALESCE($1, name),
     surname = COALESCE($2, surname),
     locale = COALESCE($3, locale)
 WHERE uuid = $4 AND deleted_at IS NULL
-RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at
+RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, phone_e164, phone_verified_at
 `
 
 type UpdateUserProfileByUUIDParams struct {
@@ -494,6 +551,8 @@ func (q *Queries) UpdateUserProfileByUUID(ctx context.Context, arg UpdateUserPro
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.PhoneE164,
+		&i.PhoneVerifiedAt,
 	)
 	return i, err
 }

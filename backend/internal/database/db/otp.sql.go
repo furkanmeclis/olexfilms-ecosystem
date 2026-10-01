@@ -26,12 +26,12 @@ func (q *Queries) ConsumeOTP(ctx context.Context, id int64) error {
 const createOTPCode = `-- name: CreateOTPCode :one
 INSERT INTO otp_codes (user_id, email, code_hash, type, expires_at, max_attempts)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, uuid, user_id, email, code_hash, type, expires_at, consumed_at, attempt_count, max_attempts, created_at
+RETURNING id, uuid, user_id, email, code_hash, type, expires_at, consumed_at, attempt_count, max_attempts, created_at, phone_e164, channel, provider_ref, message_sha256, ip, user_agent, kvkk_locale, kvkk_version, delivered_at, delivery_error
 `
 
 type CreateOTPCodeParams struct {
 	UserID      pgtype.Int8        `json:"user_id"`
-	Email       string             `json:"email"`
+	Email       pgtype.Text        `json:"email"`
 	CodeHash    string             `json:"code_hash"`
 	Type        string             `json:"type"`
 	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
@@ -60,12 +60,22 @@ func (q *Queries) CreateOTPCode(ctx context.Context, arg CreateOTPCodeParams) (O
 		&i.AttemptCount,
 		&i.MaxAttempts,
 		&i.CreatedAt,
+		&i.PhoneE164,
+		&i.Channel,
+		&i.ProviderRef,
+		&i.MessageSha256,
+		&i.Ip,
+		&i.UserAgent,
+		&i.KvkkLocale,
+		&i.KvkkVersion,
+		&i.DeliveredAt,
+		&i.DeliveryError,
 	)
 	return i, err
 }
 
 const getActiveOTPByEmailType = `-- name: GetActiveOTPByEmailType :one
-SELECT id, uuid, user_id, email, code_hash, type, expires_at, consumed_at, attempt_count, max_attempts, created_at
+SELECT id, uuid, user_id, email, code_hash, type, expires_at, consumed_at, attempt_count, max_attempts, created_at, phone_e164, channel, provider_ref, message_sha256, ip, user_agent, kvkk_locale, kvkk_version, delivered_at, delivery_error
 FROM otp_codes
 WHERE email = $1
   AND type = $2
@@ -76,8 +86,8 @@ LIMIT 1
 `
 
 type GetActiveOTPByEmailTypeParams struct {
-	Email string `json:"email"`
-	Type  string `json:"type"`
+	Email pgtype.Text `json:"email"`
+	Type  string      `json:"type"`
 }
 
 func (q *Queries) GetActiveOTPByEmailType(ctx context.Context, arg GetActiveOTPByEmailTypeParams) (OtpCode, error) {
@@ -95,6 +105,16 @@ func (q *Queries) GetActiveOTPByEmailType(ctx context.Context, arg GetActiveOTPB
 		&i.AttemptCount,
 		&i.MaxAttempts,
 		&i.CreatedAt,
+		&i.PhoneE164,
+		&i.Channel,
+		&i.ProviderRef,
+		&i.MessageSha256,
+		&i.Ip,
+		&i.UserAgent,
+		&i.KvkkLocale,
+		&i.KvkkVersion,
+		&i.DeliveredAt,
+		&i.DeliveryError,
 	)
 	return i, err
 }
@@ -103,7 +123,7 @@ const incrementOTPAttempts = `-- name: IncrementOTPAttempts :one
 UPDATE otp_codes
 SET attempt_count = attempt_count + 1
 WHERE id = $1
-RETURNING id, uuid, user_id, email, code_hash, type, expires_at, consumed_at, attempt_count, max_attempts, created_at
+RETURNING id, uuid, user_id, email, code_hash, type, expires_at, consumed_at, attempt_count, max_attempts, created_at, phone_e164, channel, provider_ref, message_sha256, ip, user_agent, kvkk_locale, kvkk_version, delivered_at, delivery_error
 `
 
 func (q *Queries) IncrementOTPAttempts(ctx context.Context, id int64) (OtpCode, error) {
@@ -121,6 +141,16 @@ func (q *Queries) IncrementOTPAttempts(ctx context.Context, id int64) (OtpCode, 
 		&i.AttemptCount,
 		&i.MaxAttempts,
 		&i.CreatedAt,
+		&i.PhoneE164,
+		&i.Channel,
+		&i.ProviderRef,
+		&i.MessageSha256,
+		&i.Ip,
+		&i.UserAgent,
+		&i.KvkkLocale,
+		&i.KvkkVersion,
+		&i.DeliveredAt,
+		&i.DeliveryError,
 	)
 	return i, err
 }
@@ -134,8 +164,8 @@ WHERE email = $1
 `
 
 type InvalidateActiveOTPsParams struct {
-	Email string `json:"email"`
-	Type  string `json:"type"`
+	Email pgtype.Text `json:"email"`
+	Type  string      `json:"type"`
 }
 
 func (q *Queries) InvalidateActiveOTPs(ctx context.Context, arg InvalidateActiveOTPsParams) error {

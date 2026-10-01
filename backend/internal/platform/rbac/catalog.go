@@ -149,6 +149,13 @@ var Permissions = []PermissionDef{
 		Scopes: []Scope{ScopeManaged, ScopeBrand, ScopeAll}, Sensitive: true,
 		Description: "KVKK/GDPR anonymization (K19). Requires step-up.",
 	},
+
+	// TEC-92: WhatsApp gateway (wuzapi). Appended last so earlier sort orders
+	// stay stable; migration 000032 seeds it after the existing rows.
+	{
+		Slug: PermWhatsAppManage, Name: "Manage WhatsApp integration", Module: "whatsapp", Scopes: scopesAll,
+		Description: "Connect the WhatsApp number, send test messages, edit OTP/KVKK texts.",
+	},
 }
 
 func grants(base map[string]Scope, extra map[string]Scope) map[string]Scope {

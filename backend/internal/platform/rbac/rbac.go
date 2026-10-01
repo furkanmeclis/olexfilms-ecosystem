@@ -111,6 +111,7 @@ const (
 	PermSocialRead              = "social.read"
 	PermSocialWrite             = "social.write"
 	PermPrivacyAnonymize        = "privacy.anonymize"
+	PermWhatsAppManage          = "whatsapp.manage"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

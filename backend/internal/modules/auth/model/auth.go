@@ -10,7 +10,8 @@ import (
 type User struct {
 	ID            int64
 	UUID          uuid.UUID
-	Email         string
+	Email         string // empty for phone-only (customer) accounts
+	Phone         string // E.164, empty when unset
 	PasswordHash  string
 	Name          string
 	Surname       string

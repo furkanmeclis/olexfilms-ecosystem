@@ -56,7 +56,7 @@ func (it *itest) mountPlaceholders() {
 func (it *itest) loginOrg(u db.User, pw string, org db.Organization) string {
 	it.t.Helper()
 	tp := it.tokensFrom(it.do("POST", "/v1/auth/login", hostOlex, "", map[string]string{
-		"email": u.Email, "password": pw, "organization_slug": org.Slug,
+		"email": u.Email.String, "password": pw, "organization_slug": org.Slug,
 	}))
 	return tp.AccessToken
 }
@@ -272,7 +272,7 @@ func TestIntegrationImpersonationReserved(t *testing.T) {
 	admin, apw := it.user("rbac-admin", rbac.RoleSuperAdmin)
 	target, _ := it.user("rbac-target")
 	atp := it.tokensFrom(it.do("POST", "/v1/auth/login", hostOlex, "", map[string]string{
-		"email": admin.Email, "password": apw,
+		"email": admin.Email.String, "password": apw,
 	}))
 	slug := "rbac_custom_" + it.suffix
 	t.Cleanup(func() {
