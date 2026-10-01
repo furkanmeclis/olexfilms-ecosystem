@@ -513,6 +513,9 @@ const PORTAL_PATHS: readonly RegExp[] = [
   /^auth\/password\/(forgot|reset|change)$/,
   /^auth\/otp\/request$/,
   /^auth\/sessions(\/[^/]+)?$/,
+  // Vehicle catalog reads for portal tokens (TEC-149/150); also covered by
+  // the portal/* rule below, listed so the contract is explicit.
+  /^portal\/vehicle-catalog\/(brands|models)$/,
   /^portal\/.+$/,
   /^public\/.+$/,
 ];
@@ -523,7 +526,9 @@ export function isRealmPathAllowed(realm: AuthRealm, path: string): boolean {
   // The panel BFF never forwards portal routes, the phone OTP flow, the
   // mobile API (Bearer passthrough `/api/v1/mobile/*`, TEC-91) or the QR
   // sign-in exchange (Auth.js calls it server side, so the panel token pair
-  // never reaches the browser).
+  // never reaches the browser). Everything else is forwarded, e.g. the
+  // vehicle catalog reads `vehicle-catalog/*` and super_admin writes
+  // `platform/vehicle-catalog/*` (TEC-150).
   return !(
     path === "portal" ||
     path.startsWith("portal/") ||

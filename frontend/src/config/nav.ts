@@ -3,6 +3,7 @@ import {
   Bell,
   BellRing,
   Building2,
+  Car,
   Blocks,
   Coins,
   Download,
@@ -146,6 +147,14 @@ export const platformNav = defineNav({
           href: routes.platform.exchangeRates.root,
           icon: Coins,
           permission: permissions.rates.read,
+        },
+        {
+          // TEC-150: car brands / models; write is super_admin only.
+          id: "vehicle-catalog",
+          titleKey: "vehicles.nav",
+          href: routes.platform.vehicleCatalog.root,
+          icon: Car,
+          permission: permissions.vehicleCatalog.write,
         },
       ],
     },

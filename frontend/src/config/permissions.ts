@@ -348,4 +348,8 @@ export const permissions = {
     read: Permission.PlatformRatesRead,
     write: Permission.PlatformRatesWrite,
   },
+  vehicleCatalog: {
+    read: Permission.VehicleCatalogRead,
+    write: Permission.VehicleCatalogWrite,
+  },
 } as const;

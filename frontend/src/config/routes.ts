@@ -138,6 +138,11 @@ export const routes = {
     exchangeRates: {
       root: "/platform/settings/exchange-rates",
     },
+    /** TEC-150: car brands / models (super_admin). */
+    vehicleCatalog: {
+      root: "/platform/vehicle-catalog",
+      brand: (uuid: string) => `/platform/vehicle-catalog/${uuid}`,
+    },
     profile: {
       root: "/platform/profile",
       password: "/platform/profile/password",

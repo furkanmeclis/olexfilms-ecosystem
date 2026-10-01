@@ -255,6 +255,30 @@ describe("BFF realms (TEC-90)", () => {
     expect(isRealmPathAllowed("panel", "auth/organization-context")).toBe(true);
   });
 
+  it("forwards the vehicle catalog per realm (TEC-150)", () => {
+    for (const path of [
+      "vehicle-catalog/brands",
+      "vehicle-catalog/brands/0b5c4a39-6a43-4d47-9a3f-1f3a2b4c5d6e",
+      "vehicle-catalog/models",
+      "platform/vehicle-catalog/brands",
+      "platform/vehicle-catalog/brands/x/logo",
+    ]) {
+      expect(isRealmPathAllowed("panel", path), path).toBe(true);
+    }
+    expect(isRealmPathAllowed("portal", "portal/vehicle-catalog/brands")).toBe(
+      true,
+    );
+    expect(isRealmPathAllowed("portal", "portal/vehicle-catalog/models")).toBe(
+      true,
+    );
+    expect(isRealmPathAllowed("panel", "portal/vehicle-catalog/brands")).toBe(
+      false,
+    );
+    expect(
+      isRealmPathAllowed("portal", "platform/vehicle-catalog/brands"),
+    ).toBe(false);
+  });
+
   it("panel and portal BFFs refuse the mobile API and the QR exchange (TEC-91)", async () => {
     for (const path of [
       "mobile/auth/me",
