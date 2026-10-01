@@ -1,1 +1,17 @@
-{}
+{
+  "reconnected": "Connexion en temps réel rétablie",
+  "offline": "Vous êtes hors ligne – temps réel en pause",
+  "event_fallback": "Mise à jour : {{type}}",
+  "event_notifications_sent": "Notification envoyée",
+  "event_notifications_delivered": "Notification remise",
+  "event_notifications_failed": "Échec de la notification",
+  "event_jobs_completed": "Tâche terminée",
+  "event_jobs_failed": "Échec de la tâche",
+  "event_imports_completed": "Import terminé",
+  "event_imports_failed": "Échec de l'import",
+  "event_exports_completed": "Export terminé",
+  "event_exports_failed": "Échec de l'export",
+  "event_exports_cancelled": "Export annulé",
+  "event_reports_export_completed": "Export du rapport prêt",
+  "event_reports_export_failed": "Échec de l'export du rapport"
+}

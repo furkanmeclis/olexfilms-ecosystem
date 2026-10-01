@@ -1,1 +1,21 @@
-{}
+{
+  "title": "Accès et vérification",
+  "description": "Définissez la durée de validité de la réauthentification et les méthodes autorisées.",
+  "form.section_verification": "Politique de vérification",
+  "form.section_verification_hint": "Contrôle les demandes de confirmation pour les actions sensibles comme les exports et les champs protégés.",
+  "form.ttl_hours": "Validité de la vérification (heures)",
+  "form.ttl_hours_hint": "Après une vérification réussie par mot de passe ou clé d'accès, les utilisateurs peuvent effectuer des actions protégées pendant ce nombre d'heures (1–168).",
+  "form.password_enabled": "Autoriser la vérification par mot de passe",
+  "form.password_enabled_hint": "Les utilisateurs peuvent confirmer les actions sensibles avec le mot de passe de leur compte.",
+  "form.passkey_enabled": "Autoriser la vérification par clé d'accès",
+  "form.passkey_enabled_hint": "Les utilisateurs ayant enregistré une clé d'accès peuvent confirmer sans saisir de mot de passe.",
+  "form.totp_enabled": "Autoriser la vérification par application d'authentification",
+  "form.totp_enabled_hint": "Les utilisateurs ayant activé la 2FA peuvent confirmer les actions sensibles avec un code d'authentification.",
+  "form.password_login_totp_required": "Exiger la 2FA pour la connexion par mot de passe",
+  "form.password_login_totp_required_hint": "Si activé, les utilisateurs doivent configurer une application d'authentification avant de se connecter par e-mail et mot de passe. La connexion par clé d'accès et OAuth n'est pas concernée.",
+  "form.save": "Enregistrer les paramètres",
+  "toast.saved": "Paramètres d'accès enregistrés",
+  "toast.failed": "Impossible d'enregistrer les paramètres d'accès",
+  "error.title": "Impossible de charger les paramètres",
+  "error.description": "Réessayez ou contactez un administrateur."
+}

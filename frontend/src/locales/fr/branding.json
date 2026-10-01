@@ -1,1 +1,8 @@
-{}
+{
+  "logo.upload": "Téléverser le logo",
+  "logo.replace": "Remplacer le logo",
+  "logo.clear": "Supprimer le logo",
+  "logo.uploading": "Téléversement…",
+  "logo.too_large": "Le logo ne doit pas dépasser 2 Mo.",
+  "logo.invalid_type": "Utilisez une image JPEG, PNG ou WebP."
+}
