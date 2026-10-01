@@ -1,7 +1,9 @@
 name: ${COMPOSE_PROJECT_NAME:-${NAME_PREFIX:-app}}
 
-# Local infrastructure only. Backend (air) and frontend (pnpm) run on the host
-# via `make local-dev`. No dokploy-network.
+# Local infrastructure only: the prod infrastructure services (postgres, redis,
+# seaweedfs, meilisearch, centrifugo, gotenberg, wuzapi) + mailhog + adminer.
+# Backend (air) and frontend (pnpm) run on the host via `make local-dev`.
+# No dokploy-network. Host ports: adminer 8081, wuzapi 8082 (backend: 8080).
 
 services:
   postgres:
@@ -12,10 +14,12 @@ services:
       POSTGRES_USER: ${DB_USER:-app}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me}
       POSTGRES_DB: ${DB_NAME:-app}
+      WUZAPI_DB_NAME: ${WUZAPI_DB_NAME:-wuzapi}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
+      - ./deploy/postgres/initdb:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
@@ -170,6 +174,51 @@ services:
     networks:
       - app
 
+  wuzapi:
+    image: asternic/wuzapi:1.0.9
+    container_name: ${NAME_PREFIX:-app}-wuzapi
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        export PGPASSWORD="$$DB_PASSWORD";
+        psql -h "$$DB_HOST" -p "$$DB_PORT" -U "$$DB_USER" -d postgres -tAc
+        "SELECT 1 FROM pg_database WHERE datname = '$$DB_NAME'" | grep -q 1
+        || createdb -h "$$DB_HOST" -p "$$DB_PORT" -U "$$DB_USER" "$$DB_NAME";
+        unset PGPASSWORD;
+        exec /app/wuzapi --logtype=console --color=true
+    environment:
+      WUZAPI_ADMIN_TOKEN: ${WUZAPI_ADMIN_TOKEN:-app-dev-wuzapi-admin-token-change-me}
+      WUZAPI_GLOBAL_ENCRYPTION_KEY: ${WUZAPI_GLOBAL_ENCRYPTION_KEY:-app-dev-wuzapi-encryption-key-32}
+      WUZAPI_GLOBAL_HMAC_KEY: ${WUZAPI_WEBHOOK_SECRET:-app-dev-wuzapi-webhook-secret-change-me}
+      # Host backend from inside Docker (Linux: host-gateway mapping below).
+      WUZAPI_GLOBAL_WEBHOOK: ${WUZAPI_WEBHOOK_URL:-}
+      WEBHOOK_FORMAT: json
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: ${DB_USER:-app}
+      DB_PASSWORD: ${DB_PASSWORD:-change_me}
+      DB_NAME: ${WUZAPI_DB_NAME:-wuzapi}
+      DB_SSLMODE: "false"
+      TZ: ${WUZAPI_TZ:-Europe/Istanbul}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${WUZAPI_PORT:-8082}:8080"
+    volumes:
+      - wuzapi_data:/app/files
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - app
+
 volumes:
   postgres_data:
     name: ${POSTGRES_VOLUME_NAME:-${NAME_PREFIX:-app}-postgres}
@@ -179,6 +228,8 @@ volumes:
     name: ${SEAWEEDFS_VOLUME_NAME:-${NAME_PREFIX:-app}-seaweedfs}
   meili_data:
     name: ${MEILI_VOLUME_NAME:-${NAME_PREFIX:-app}-meilisearch}
+  wuzapi_data:
+    name: ${WUZAPI_VOLUME_NAME:-${NAME_PREFIX:-app}-wuzapi}
 
 networks:
   app:

@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/config"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database"
@@ -30,6 +32,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/realtime"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -118,7 +121,12 @@ func main() {
 	log = persist.Logger()
 	defer persist.Close()
 
-	worker := queue.NewWorker(cfg, log, notifSvc.Deliver).
+	queues, err := parseWorkerQueues(os.Getenv("WORKER_QUEUES"))
+	if err != nil {
+		log.Error("worker_queues_invalid", "error", err)
+		os.Exit(1)
+	}
+	worker := queue.NewWorkerWithQueues(cfg, log, notifSvc.Deliver, queues).
 		WithExport(exportSvc.ProcessExport).
 		WithImport(importSvc.ProcessImport).
 		WithBulk(bulkSvc.ProcessBulk).
@@ -133,22 +141,51 @@ func main() {
 		go searchIndexer.Bootstrap(ctx)
 	}
 
-	scheduler, err := queue.StartLogPurgeScheduler(cfg, log)
-	if err != nil {
-		log.Error("log_purge_scheduler_failed", "error", err)
-		os.Exit(1)
+	rdb := redis.NewClient(&redis.Options{Addr: cfg.Redis.Addr, Password: cfg.Redis.Password, DB: cfg.Redis.DB})
+	defer func() { _ = rdb.Close() }()
+
+	healthPath := os.Getenv("WORKER_HEALTH_FILE")
+	if healthPath == "" {
+		healthPath = "/tmp/worker.health"
 	}
-	go func() {
-		if err := scheduler.Run(); err != nil {
-			log.Error("log_purge_scheduler_stopped", "error", err)
+	go runHealthFile(ctx, rdb, healthPath, 15*time.Second, log)
+
+	// Periodic tasks: only workers with SCHEDULER_ENABLED (default true) run
+	// for the scheduler, and a Redis lease keeps a single leader among them.
+	schedulerDone := make(chan struct{})
+	if os.Getenv("SCHEDULER_ENABLED") != "false" {
+		hostname, _ := os.Hostname()
+		lock := &leaderLock{
+			rdb: rdb,
+			key: schedulerLockKey,
+			id:  fmt.Sprintf("%s:%d", hostname, os.Getpid()),
+			ttl: 30 * time.Second,
 		}
-	}()
+		go func() {
+			defer close(schedulerDone)
+			runAsLeader(ctx, lock, 10*time.Second, log, func() func() {
+				scheduler, err := queue.StartLogPurgeScheduler(cfg, log)
+				if err == nil {
+					err = scheduler.Start()
+				}
+				if err != nil {
+					log.Error("log_purge_scheduler_failed", "error", err)
+					return func() {}
+				}
+				return scheduler.Shutdown
+			})
+		}()
+	} else {
+		close(schedulerDone)
+	}
 
 	log.Info(
 		"worker_started",
 		"app", cfg.App.Name,
 		"env", cfg.App.Env,
 		"concurrency", cfg.Queue.Concurrency,
+		"queues", queues,
+		"scheduler", os.Getenv("SCHEDULER_ENABLED") != "false",
 	)
 
 	if n, err := notifSvc.ReclaimStuck(ctx, notifusecase.DefaultStuckProcessingMinutes); err != nil {
@@ -166,6 +203,7 @@ func main() {
 	case <-ctx.Done():
 		log.Info("worker_shutdown_signal")
 		worker.Shutdown()
+		<-schedulerDone
 	case err := <-errCh:
 		if err != nil {
 			log.Error("worker_failed", "error", err)

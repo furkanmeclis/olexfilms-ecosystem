@@ -1,4 +1,12 @@
 #!/bin/sh
+# Backend image entrypoint. APP_ROLE picks the process:
+#   server    HTTP API (default; AUTO_MIGRATE=true migrates first)
+#   worker    Asynq worker (WORKER_QUEUES, SCHEDULER_ENABLED)
+#   migrate   one-shot golang-migrate up (compose.prod.yml "migrate")
+#   migrator  one-shot legacy data import (F2; profile "migrator")
+#   create-super-admin  one-shot seed (profile "seed")
+# PDFs render in the Gotenberg container (GOTENBERG_URL); the image ships no
+# Chromium.
 set -eu
 
 ROLE="${APP_ROLE:-server}"
@@ -32,6 +40,15 @@ case "${ROLE}" in
       migrate -path /app/migrations -database "${DATABASE_URL}" force "${DIRTY_VERSION}"
     fi
     exec migrate -path /app/migrations -database "${DATABASE_URL}" up
+    ;;
+  migrator)
+    # Legacy-system import (design K26/K27). The binary arrives in F2; until
+    # then the profile is a no-op that says so instead of starting the API.
+    if [ -x /app/migrator ]; then
+      exec /app/migrator
+    fi
+    echo "migrator: not implemented yet (F2) — nothing was imported" >&2
+    exit 1
     ;;
   create-super-admin)
     exec /app/create-super-admin \
