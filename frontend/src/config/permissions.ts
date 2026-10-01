@@ -92,6 +92,8 @@ export const Permission = {
   ModulesManage: "modules.manage",
   PlatformModulesRead: "platform.modules.read",
   PlatformModulesWrite: "platform.modules.write",
+
+  WhatsAppManage: "whatsapp.manage",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];
@@ -244,6 +246,9 @@ export const permissions = {
     apple: {
       read: Permission.PlatformIntegrationsAppleRead,
       write: Permission.PlatformIntegrationsAppleWrite,
+    },
+    whatsapp: {
+      manage: Permission.WhatsAppManage,
     },
   },
   authSettings: {

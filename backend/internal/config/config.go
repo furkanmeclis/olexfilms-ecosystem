@@ -30,6 +30,7 @@ type Config struct {
 	VAPID      VAPIDConfig
 	Search     SearchConfig
 	Gotenberg  GotenbergConfig
+	Wuzapi     WuzapiConfig
 	Rates      RatesConfig
 }
 
@@ -45,6 +46,17 @@ type GotenbergConfig struct {
 	// Fonts is PDF_FONTS: embedded (Noto subsets inlined, default) or
 	// system (fonts installed in the Gotenberg image).
 	Fonts string
+}
+
+// WuzapiConfig is the WhatsApp gateway (design K16/K21). An empty URL or
+// admin token disables the gateway (OTP requests then fail closed).
+type WuzapiConfig struct {
+	URL        string
+	AdminToken string
+	// WebhookSecret verifies x-hmac-signature (wuzapi WUZAPI_GLOBAL_HMAC_KEY).
+	WebhookSecret string
+	// WebhookURL is registered on the instance user (backend /hooks/wuzapi).
+	WebhookURL string
 }
 
 // AuthConfig holds NextAuth adapter integration settings.
@@ -281,6 +293,12 @@ func Load() (Config, error) {
 		Gotenberg: GotenbergConfig{
 			URL:   getEnv("GOTENBERG_URL", "http://127.0.0.1:3001"),
 			Fonts: getEnv("PDF_FONTS", "embedded"),
+		},
+		Wuzapi: WuzapiConfig{
+			URL:           getEnv("WUZAPI_URL", ""),
+			AdminToken:    getEnv("WUZAPI_ADMIN_TOKEN", ""),
+			WebhookSecret: getEnv("WUZAPI_WEBHOOK_SECRET", ""),
+			WebhookURL:    getEnv("WUZAPI_WEBHOOK_URL", ""),
 		},
 		Rates: RatesConfig{
 			TCMBURL: getEnv("RATES_TCMB_URL", "https://www.tcmb.gov.tr/kurlar/today.xml"),

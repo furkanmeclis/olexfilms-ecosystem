@@ -47,7 +47,7 @@ func (it *itest) adminToken() string {
 	it.t.Helper()
 	admin, pw := it.user("feat-admin", rbac.RoleSuperAdmin)
 	return it.tokensFrom(it.do("POST", "/v1/auth/login", hostOlex, "", map[string]string{
-		"email": admin.Email, "password": pw,
+		"email": admin.Email.String, "password": pw,
 	})).AccessToken
 }
 

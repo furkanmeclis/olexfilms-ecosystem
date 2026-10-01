@@ -8,6 +8,7 @@ package db
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -23,15 +24,51 @@ func (q *Queries) ConsumeOTP(ctx context.Context, id int64) error {
 	return err
 }
 
+const consumeOTPAt = `-- name: ConsumeOTPAt :exec
+UPDATE otp_codes
+SET consumed_at = $1
+WHERE id = $2
+  AND consumed_at IS NULL
+`
+
+type ConsumeOTPAtParams struct {
+	Now pgtype.Timestamptz `json:"now"`
+	ID  int64              `json:"id"`
+}
+
+func (q *Queries) ConsumeOTPAt(ctx context.Context, arg ConsumeOTPAtParams) error {
+	_, err := q.db.Exec(ctx, consumeOTPAt, arg.Now, arg.ID)
+	return err
+}
+
+const countPhoneOTPsSince = `-- name: CountPhoneOTPsSince :one
+SELECT COUNT(*)::bigint
+FROM otp_codes
+WHERE phone_e164 = $1
+  AND created_at >= $2
+`
+
+type CountPhoneOTPsSinceParams struct {
+	PhoneE164 pgtype.Text        `json:"phone_e164"`
+	Since     pgtype.Timestamptz `json:"since"`
+}
+
+func (q *Queries) CountPhoneOTPsSince(ctx context.Context, arg CountPhoneOTPsSinceParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countPhoneOTPsSince, arg.PhoneE164, arg.Since)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const createOTPCode = `-- name: CreateOTPCode :one
 INSERT INTO otp_codes (user_id, email, code_hash, type, expires_at, max_attempts)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, uuid, user_id, email, code_hash, type, expires_at, consumed_at, attempt_count, max_attempts, created_at
+RETURNING id, uuid, user_id, email, code_hash, type, expires_at, consumed_at, attempt_count, max_attempts, created_at, phone_e164, channel, provider_ref, message_sha256, ip, user_agent, kvkk_locale, kvkk_version, delivered_at, delivery_error
 `
 
 type CreateOTPCodeParams struct {
 	UserID      pgtype.Int8        `json:"user_id"`
-	Email       string             `json:"email"`
+	Email       pgtype.Text        `json:"email"`
 	CodeHash    string             `json:"code_hash"`
 	Type        string             `json:"type"`
 	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
@@ -60,12 +97,93 @@ func (q *Queries) CreateOTPCode(ctx context.Context, arg CreateOTPCodeParams) (O
 		&i.AttemptCount,
 		&i.MaxAttempts,
 		&i.CreatedAt,
+		&i.PhoneE164,
+		&i.Channel,
+		&i.ProviderRef,
+		&i.MessageSha256,
+		&i.Ip,
+		&i.UserAgent,
+		&i.KvkkLocale,
+		&i.KvkkVersion,
+		&i.DeliveredAt,
+		&i.DeliveryError,
+	)
+	return i, err
+}
+
+const createPhoneOTP = `-- name: CreatePhoneOTP :one
+INSERT INTO otp_codes (
+    uuid, user_id, phone_e164, code_hash, type, expires_at, max_attempts,
+    ip, user_agent, kvkk_locale, kvkk_version, message_sha256, created_at
+) VALUES (
+    $1, $2, $3, $4, $5,
+    $6, $7, $8, $9,
+    $10, $11, $12, $13
+)
+RETURNING id, uuid, user_id, email, code_hash, type, expires_at, consumed_at, attempt_count, max_attempts, created_at, phone_e164, channel, provider_ref, message_sha256, ip, user_agent, kvkk_locale, kvkk_version, delivered_at, delivery_error
+`
+
+type CreatePhoneOTPParams struct {
+	Uuid          uuid.UUID          `json:"uuid"`
+	UserID        pgtype.Int8        `json:"user_id"`
+	PhoneE164     pgtype.Text        `json:"phone_e164"`
+	CodeHash      string             `json:"code_hash"`
+	Type          string             `json:"type"`
+	ExpiresAt     pgtype.Timestamptz `json:"expires_at"`
+	MaxAttempts   int32              `json:"max_attempts"`
+	Ip            pgtype.Text        `json:"ip"`
+	UserAgent     pgtype.Text        `json:"user_agent"`
+	KvkkLocale    pgtype.Text        `json:"kvkk_locale"`
+	KvkkVersion   pgtype.Int4        `json:"kvkk_version"`
+	MessageSha256 pgtype.Text        `json:"message_sha256"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) CreatePhoneOTP(ctx context.Context, arg CreatePhoneOTPParams) (OtpCode, error) {
+	row := q.db.QueryRow(ctx, createPhoneOTP,
+		arg.Uuid,
+		arg.UserID,
+		arg.PhoneE164,
+		arg.CodeHash,
+		arg.Type,
+		arg.ExpiresAt,
+		arg.MaxAttempts,
+		arg.Ip,
+		arg.UserAgent,
+		arg.KvkkLocale,
+		arg.KvkkVersion,
+		arg.MessageSha256,
+		arg.CreatedAt,
+	)
+	var i OtpCode
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.UserID,
+		&i.Email,
+		&i.CodeHash,
+		&i.Type,
+		&i.ExpiresAt,
+		&i.ConsumedAt,
+		&i.AttemptCount,
+		&i.MaxAttempts,
+		&i.CreatedAt,
+		&i.PhoneE164,
+		&i.Channel,
+		&i.ProviderRef,
+		&i.MessageSha256,
+		&i.Ip,
+		&i.UserAgent,
+		&i.KvkkLocale,
+		&i.KvkkVersion,
+		&i.DeliveredAt,
+		&i.DeliveryError,
 	)
 	return i, err
 }
 
 const getActiveOTPByEmailType = `-- name: GetActiveOTPByEmailType :one
-SELECT id, uuid, user_id, email, code_hash, type, expires_at, consumed_at, attempt_count, max_attempts, created_at
+SELECT id, uuid, user_id, email, code_hash, type, expires_at, consumed_at, attempt_count, max_attempts, created_at, phone_e164, channel, provider_ref, message_sha256, ip, user_agent, kvkk_locale, kvkk_version, delivered_at, delivery_error
 FROM otp_codes
 WHERE email = $1
   AND type = $2
@@ -76,8 +194,8 @@ LIMIT 1
 `
 
 type GetActiveOTPByEmailTypeParams struct {
-	Email string `json:"email"`
-	Type  string `json:"type"`
+	Email pgtype.Text `json:"email"`
+	Type  string      `json:"type"`
 }
 
 func (q *Queries) GetActiveOTPByEmailType(ctx context.Context, arg GetActiveOTPByEmailTypeParams) (OtpCode, error) {
@@ -95,6 +213,138 @@ func (q *Queries) GetActiveOTPByEmailType(ctx context.Context, arg GetActiveOTPB
 		&i.AttemptCount,
 		&i.MaxAttempts,
 		&i.CreatedAt,
+		&i.PhoneE164,
+		&i.Channel,
+		&i.ProviderRef,
+		&i.MessageSha256,
+		&i.Ip,
+		&i.UserAgent,
+		&i.KvkkLocale,
+		&i.KvkkVersion,
+		&i.DeliveredAt,
+		&i.DeliveryError,
+	)
+	return i, err
+}
+
+const getActivePhoneOTP = `-- name: GetActivePhoneOTP :one
+SELECT id, uuid, user_id, email, code_hash, type, expires_at, consumed_at, attempt_count, max_attempts, created_at, phone_e164, channel, provider_ref, message_sha256, ip, user_agent, kvkk_locale, kvkk_version, delivered_at, delivery_error
+FROM otp_codes
+WHERE phone_e164 = $1
+  AND type = $2
+  AND consumed_at IS NULL
+  AND expires_at > $3
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+type GetActivePhoneOTPParams struct {
+	PhoneE164 pgtype.Text        `json:"phone_e164"`
+	Type      string             `json:"type"`
+	Now       pgtype.Timestamptz `json:"now"`
+}
+
+func (q *Queries) GetActivePhoneOTP(ctx context.Context, arg GetActivePhoneOTPParams) (OtpCode, error) {
+	row := q.db.QueryRow(ctx, getActivePhoneOTP, arg.PhoneE164, arg.Type, arg.Now)
+	var i OtpCode
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.UserID,
+		&i.Email,
+		&i.CodeHash,
+		&i.Type,
+		&i.ExpiresAt,
+		&i.ConsumedAt,
+		&i.AttemptCount,
+		&i.MaxAttempts,
+		&i.CreatedAt,
+		&i.PhoneE164,
+		&i.Channel,
+		&i.ProviderRef,
+		&i.MessageSha256,
+		&i.Ip,
+		&i.UserAgent,
+		&i.KvkkLocale,
+		&i.KvkkVersion,
+		&i.DeliveredAt,
+		&i.DeliveryError,
+	)
+	return i, err
+}
+
+const getLatestPhoneOTP = `-- name: GetLatestPhoneOTP :one
+SELECT id, uuid, user_id, email, code_hash, type, expires_at, consumed_at, attempt_count, max_attempts, created_at, phone_e164, channel, provider_ref, message_sha256, ip, user_agent, kvkk_locale, kvkk_version, delivered_at, delivery_error
+FROM otp_codes
+WHERE phone_e164 = $1
+  AND type = $2
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+type GetLatestPhoneOTPParams struct {
+	PhoneE164 pgtype.Text `json:"phone_e164"`
+	Type      string      `json:"type"`
+}
+
+func (q *Queries) GetLatestPhoneOTP(ctx context.Context, arg GetLatestPhoneOTPParams) (OtpCode, error) {
+	row := q.db.QueryRow(ctx, getLatestPhoneOTP, arg.PhoneE164, arg.Type)
+	var i OtpCode
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.UserID,
+		&i.Email,
+		&i.CodeHash,
+		&i.Type,
+		&i.ExpiresAt,
+		&i.ConsumedAt,
+		&i.AttemptCount,
+		&i.MaxAttempts,
+		&i.CreatedAt,
+		&i.PhoneE164,
+		&i.Channel,
+		&i.ProviderRef,
+		&i.MessageSha256,
+		&i.Ip,
+		&i.UserAgent,
+		&i.KvkkLocale,
+		&i.KvkkVersion,
+		&i.DeliveredAt,
+		&i.DeliveryError,
+	)
+	return i, err
+}
+
+const getOTPByUUID = `-- name: GetOTPByUUID :one
+SELECT id, uuid, user_id, email, code_hash, type, expires_at, consumed_at, attempt_count, max_attempts, created_at, phone_e164, channel, provider_ref, message_sha256, ip, user_agent, kvkk_locale, kvkk_version, delivered_at, delivery_error FROM otp_codes WHERE uuid = $1
+`
+
+func (q *Queries) GetOTPByUUID(ctx context.Context, argUuid uuid.UUID) (OtpCode, error) {
+	row := q.db.QueryRow(ctx, getOTPByUUID, argUuid)
+	var i OtpCode
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.UserID,
+		&i.Email,
+		&i.CodeHash,
+		&i.Type,
+		&i.ExpiresAt,
+		&i.ConsumedAt,
+		&i.AttemptCount,
+		&i.MaxAttempts,
+		&i.CreatedAt,
+		&i.PhoneE164,
+		&i.Channel,
+		&i.ProviderRef,
+		&i.MessageSha256,
+		&i.Ip,
+		&i.UserAgent,
+		&i.KvkkLocale,
+		&i.KvkkVersion,
+		&i.DeliveredAt,
+		&i.DeliveryError,
 	)
 	return i, err
 }
@@ -103,7 +353,7 @@ const incrementOTPAttempts = `-- name: IncrementOTPAttempts :one
 UPDATE otp_codes
 SET attempt_count = attempt_count + 1
 WHERE id = $1
-RETURNING id, uuid, user_id, email, code_hash, type, expires_at, consumed_at, attempt_count, max_attempts, created_at
+RETURNING id, uuid, user_id, email, code_hash, type, expires_at, consumed_at, attempt_count, max_attempts, created_at, phone_e164, channel, provider_ref, message_sha256, ip, user_agent, kvkk_locale, kvkk_version, delivered_at, delivery_error
 `
 
 func (q *Queries) IncrementOTPAttempts(ctx context.Context, id int64) (OtpCode, error) {
@@ -121,6 +371,16 @@ func (q *Queries) IncrementOTPAttempts(ctx context.Context, id int64) (OtpCode, 
 		&i.AttemptCount,
 		&i.MaxAttempts,
 		&i.CreatedAt,
+		&i.PhoneE164,
+		&i.Channel,
+		&i.ProviderRef,
+		&i.MessageSha256,
+		&i.Ip,
+		&i.UserAgent,
+		&i.KvkkLocale,
+		&i.KvkkVersion,
+		&i.DeliveredAt,
+		&i.DeliveryError,
 	)
 	return i, err
 }
@@ -134,11 +394,87 @@ WHERE email = $1
 `
 
 type InvalidateActiveOTPsParams struct {
-	Email string `json:"email"`
-	Type  string `json:"type"`
+	Email pgtype.Text `json:"email"`
+	Type  string      `json:"type"`
 }
 
 func (q *Queries) InvalidateActiveOTPs(ctx context.Context, arg InvalidateActiveOTPsParams) error {
 	_, err := q.db.Exec(ctx, invalidateActiveOTPs, arg.Email, arg.Type)
+	return err
+}
+
+const invalidateActivePhoneOTPs = `-- name: InvalidateActivePhoneOTPs :exec
+UPDATE otp_codes
+SET consumed_at = $1
+WHERE phone_e164 = $2
+  AND type = $3
+  AND consumed_at IS NULL
+`
+
+type InvalidateActivePhoneOTPsParams struct {
+	Now       pgtype.Timestamptz `json:"now"`
+	PhoneE164 pgtype.Text        `json:"phone_e164"`
+	Type      string             `json:"type"`
+}
+
+func (q *Queries) InvalidateActivePhoneOTPs(ctx context.Context, arg InvalidateActivePhoneOTPsParams) error {
+	_, err := q.db.Exec(ctx, invalidateActivePhoneOTPs, arg.Now, arg.PhoneE164, arg.Type)
+	return err
+}
+
+const lockOTPSubject = `-- name: LockOTPSubject :exec
+
+SELECT pg_advisory_xact_lock(hashtextextended($1::text, 92))
+`
+
+// Phone OTP (TEC-92). Timestamps are passed in so tests can drive the clock.
+func (q *Queries) LockOTPSubject(ctx context.Context, subject string) error {
+	_, err := q.db.Exec(ctx, lockOTPSubject, subject)
+	return err
+}
+
+const markOTPDelivered = `-- name: MarkOTPDelivered :exec
+UPDATE otp_codes
+SET channel = $1,
+    provider_ref = $2,
+    delivered_at = $3,
+    delivery_error = $4
+WHERE id = $5
+`
+
+type MarkOTPDeliveredParams struct {
+	Channel       pgtype.Text        `json:"channel"`
+	ProviderRef   pgtype.Text        `json:"provider_ref"`
+	DeliveredAt   pgtype.Timestamptz `json:"delivered_at"`
+	DeliveryError pgtype.Text        `json:"delivery_error"`
+	ID            int64              `json:"id"`
+}
+
+func (q *Queries) MarkOTPDelivered(ctx context.Context, arg MarkOTPDeliveredParams) error {
+	_, err := q.db.Exec(ctx, markOTPDelivered,
+		arg.Channel,
+		arg.ProviderRef,
+		arg.DeliveredAt,
+		arg.DeliveryError,
+		arg.ID,
+	)
+	return err
+}
+
+const markOTPDeliveryFailed = `-- name: MarkOTPDeliveryFailed :exec
+UPDATE otp_codes
+SET delivery_error = $1,
+    consumed_at = COALESCE(consumed_at, $2)
+WHERE id = $3
+`
+
+type MarkOTPDeliveryFailedParams struct {
+	DeliveryError pgtype.Text        `json:"delivery_error"`
+	Now           pgtype.Timestamptz `json:"now"`
+	ID            int64              `json:"id"`
+}
+
+func (q *Queries) MarkOTPDeliveryFailed(ctx context.Context, arg MarkOTPDeliveryFailedParams) error {
+	_, err := q.db.Exec(ctx, markOTPDeliveryFailed, arg.DeliveryError, arg.Now, arg.ID)
 	return err
 }

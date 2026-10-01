@@ -124,6 +124,8 @@
   "groups.modules": "Modüller",
   "labels.platform.documents.templates.read": "Belge şablonlarını görüntüle",
   "labels.platform.documents.templates.write": "Belge şablonlarını düzenle",
+  "labels.whatsapp.manage": "WhatsApp entegrasyonunu yönet",
+  "groups.whatsapp": "WhatsApp",
   "labels.platform.geo.write": "Coğrafyayı yönet",
   "labels.platform.territories.read": "Bölgeleri görüntüle",
   "labels.platform.territories.write": "Bölgeleri yönet",

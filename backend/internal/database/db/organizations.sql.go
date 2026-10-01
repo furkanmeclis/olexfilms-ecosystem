@@ -630,7 +630,7 @@ type GetOrganizationMemberByUserUUIDRow struct {
 	Role           string             `json:"role"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UserUuid       uuid.UUID          `json:"user_uuid"`
-	Email          string             `json:"email"`
+	Email          pgtype.Text        `json:"email"`
 	Name           string             `json:"name"`
 	Surname        string             `json:"surname"`
 	Status         string             `json:"status"`
@@ -831,11 +831,11 @@ ORDER BY u.name ASC, u.surname ASC
 `
 
 type ListOrganizationMemberOptionsRow struct {
-	Uuid    uuid.UUID `json:"uuid"`
-	Email   string    `json:"email"`
-	Name    string    `json:"name"`
-	Surname string    `json:"surname"`
-	Role    string    `json:"role"`
+	Uuid    uuid.UUID   `json:"uuid"`
+	Email   pgtype.Text `json:"email"`
+	Name    string      `json:"name"`
+	Surname string      `json:"surname"`
+	Role    string      `json:"role"`
 }
 
 func (q *Queries) ListOrganizationMemberOptions(ctx context.Context, organizationID int64) ([]ListOrganizationMemberOptionsRow, error) {
@@ -874,7 +874,7 @@ ORDER BY om.created_at ASC
 
 type ListOrganizationMembersRow struct {
 	Uuid      uuid.UUID          `json:"uuid"`
-	Email     string             `json:"email"`
+	Email     pgtype.Text        `json:"email"`
 	Name      string             `json:"name"`
 	Surname   string             `json:"surname"`
 	Status    string             `json:"status"`

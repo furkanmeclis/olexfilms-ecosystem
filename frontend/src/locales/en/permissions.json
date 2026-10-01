@@ -124,6 +124,8 @@
   "groups.modules": "Modules",
   "labels.platform.documents.templates.read": "Read document templates",
   "labels.platform.documents.templates.write": "Write document templates",
+  "labels.whatsapp.manage": "Manage WhatsApp integration",
+  "groups.whatsapp": "WhatsApp",
   "labels.platform.geo.write": "Manage geography",
   "labels.platform.territories.read": "View territories",
   "labels.platform.territories.write": "Manage territories",

@@ -267,7 +267,7 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (RegisterResul
 	} else if dist != nil {
 		parent = *dist
 	}
-	if _, err := s.q.GetUserByEmail(ctx, in.Email); err == nil {
+	if _, err := s.q.GetUserByEmail(ctx, pgtype.Text{String: in.Email, Valid: true}); err == nil {
 		return RegisterResult{}, fmt.Errorf("%w: email already registered", ErrConflict)
 	} else if !errors.Is(err, pgx.ErrNoRows) {
 		return RegisterResult{}, err
@@ -289,7 +289,7 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (RegisterResul
 	defer func() { _ = tx.Rollback(ctx) }()
 	qtx := s.q.WithTx(tx)
 	user, err := qtx.CreateUser(ctx, db.CreateUserParams{
-		Email: in.Email, PasswordHash: hash, Name: in.Name, Surname: in.Surname,
+		Email: pgtype.Text{String: in.Email, Valid: true}, PasswordHash: hash, Name: in.Name, Surname: in.Surname,
 		Status: "active", EmailVerifiedAt: pgtype.Timestamptz{},
 	})
 	if err != nil {

@@ -120,6 +120,8 @@ const (
 	PermPlatformModulesRead  = "platform.modules.read"
 	PermPlatformModulesWrite = "platform.modules.write"
 
+	PermWhatsAppManage = "whatsapp.manage"
+
 	// Geography, territories and exchange rates (TEC-84).
 	PermPlatformGeoWrite         = "platform.geo.write"
 	PermPlatformTerritoriesRead  = "platform.territories.read"

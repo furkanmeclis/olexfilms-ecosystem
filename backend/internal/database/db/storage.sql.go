@@ -592,7 +592,7 @@ type ListStorageSharesByKeyRow struct {
 	UserUuid    uuid.UUID          `json:"user_uuid"`
 	UserName    string             `json:"user_name"`
 	UserSurname string             `json:"user_surname"`
-	UserEmail   string             `json:"user_email"`
+	UserEmail   pgtype.Text        `json:"user_email"`
 }
 
 func (q *Queries) ListStorageSharesByKey(ctx context.Context, objectKey string) ([]ListStorageSharesByKeyRow, error) {

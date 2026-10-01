@@ -87,6 +87,7 @@ export const routes = {
       google: "/platform/integrations/google",
       facebook: "/platform/integrations/facebook",
       apple: "/platform/integrations/apple",
+      whatsapp: "/platform/integrations/whatsapp",
     },
     organizations: {
       root: "/platform/organizations",
