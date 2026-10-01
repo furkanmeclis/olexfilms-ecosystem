@@ -15,6 +15,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/repository"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authrevoke"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/password"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
@@ -24,6 +25,7 @@ import (
 var (
 	ErrInvalidCredentials   = errors.New("invalid credentials")
 	ErrUserDisabled         = errors.New("user is disabled")
+	ErrSessionRevoked       = errors.New("session was signed out")
 	ErrForbidden            = errors.New("forbidden")
 	ErrNotFound             = errors.New("not found")
 	ErrConflict             = errors.New("conflict")
@@ -113,6 +115,8 @@ type AuthUseCase struct {
 	box          SecretBox
 	totpIssuer   string
 	orgResolver  OrganizationResolver
+	// Optional: rejects access tokens of signed-out sessions before expiry.
+	revocations *authrevoke.Store
 }
 
 // SecretBox encrypts at-rest secrets (TOTP).

@@ -2,6 +2,7 @@ package identity
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
@@ -19,6 +20,13 @@ func (l Loader) LoadPrincipal(r *http.Request, claims jwt.Claims) (authctx.Princ
 	userUUID, err := claims.UserUUID()
 	if err != nil {
 		return authctx.Principal{}, err
+	}
+	var issuedAt time.Time
+	if claims.IssuedAt != nil {
+		issuedAt = claims.IssuedAt.Time
+	}
+	if l.UC.AccessRevoked(ctx, userUUID, claims.SessionUUID(), issuedAt) {
+		return authctx.Principal{}, usecase.ErrSessionRevoked
 	}
 	user, err := l.UC.LoadUserByUUID(ctx, userUUID)
 	if err != nil {

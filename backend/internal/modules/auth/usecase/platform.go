@@ -323,7 +323,7 @@ func (u *AuthUseCase) SetPlatformUserPassword(ctx context.Context, userUUID uuid
 	if err := u.repo.UpdatePassword(ctx, user.ID, hash); err != nil {
 		return err
 	}
-	return u.repo.RevokeAllRefresh(ctx, user.ID)
+	return u.revokeAllSessions(ctx, user)
 }
 
 // ListPlatformRoles lists roles.

@@ -166,6 +166,11 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 		writeUsecaseError(w, r, err)
 		return
 	}
+	// Without the refresh token the access token's session is revoked, and
+	// the access token stops working now (see EndAccessSession).
+	if p, ok := authctx.PrincipalFrom(r.Context()); ok {
+		h.uc.EndAccessSession(r.Context(), in.RefreshToken, p.UserInternal, p.SessionID)
+	}
 	if h.stepUp != nil {
 		p, ok := authctx.PrincipalFrom(r.Context())
 		if ok {
