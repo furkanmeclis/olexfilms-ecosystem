@@ -32,6 +32,13 @@ type Config struct {
 	Search     SearchConfig
 	Gotenberg  GotenbergConfig
 	Wuzapi     WuzapiConfig
+	Rates      RatesConfig
+}
+
+// RatesConfig points the daily exchange rate fetch (TEC-84) at TCMB and ECB.
+type RatesConfig struct {
+	TCMBURL string
+	ECBURL  string
 }
 
 // GotenbergConfig controls HTML→PDF rendering via Gotenberg Chromium.
@@ -309,6 +316,10 @@ func Load() (Config, error) {
 			AdminToken:    getEnv("WUZAPI_ADMIN_TOKEN", ""),
 			WebhookSecret: getEnv("WUZAPI_WEBHOOK_SECRET", ""),
 			WebhookURL:    getEnv("WUZAPI_WEBHOOK_URL", ""),
+		},
+		Rates: RatesConfig{
+			TCMBURL: getEnv("RATES_TCMB_URL", "https://www.tcmb.gov.tr/kurlar/today.xml"),
+			ECBURL:  getEnv("RATES_ECB_URL", "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml"),
 		},
 	}
 

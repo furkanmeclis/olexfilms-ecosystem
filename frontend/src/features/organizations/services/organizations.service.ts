@@ -45,6 +45,9 @@ export type Organization = {
   locale: string;
   timezone: string;
   contract_valid_until?: string | null;
+  country_id?: number | null;
+  province_id?: number | null;
+  district_id?: number | null;
   settings: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -91,6 +94,9 @@ export type CreatePlatformOrganizationRequest = {
   currency?: string;
   locale?: string;
   timezone?: string;
+  country_id?: number | null;
+  province_id?: number | null;
+  district_id?: number | null;
 };
 
 export type PatchPlatformOrganizationRequest = {
@@ -108,6 +114,10 @@ export type PatchPlatformOrganizationRequest = {
   timezone?: string;
   /** Moves the organization in the tree (platform only). */
   parent_uuid?: string;
+  /** Present (null clears) replaces the structured address. */
+  country_id?: number | null;
+  province_id?: number | null;
+  district_id?: number | null;
 };
 
 export type OrganizationRegisterInput = {

@@ -114,5 +114,10 @@
   "switcher.select": "Organizasyon seçin",
   "switcher.error": "Organizasyon değiştirilemedi",
   "columns.type": "Tür",
-  "columns.parent": "Üst organizasyon"
+  "columns.parent": "Üst organizasyon",
+  "fields.type": "Tür",
+  "fields.city_hint": "Boş bırakılırsa ilden doldurulur.",
+  "fields.district_hint": "Boş bırakılırsa ilçeden doldurulur.",
+  "form.section_address": "Adres",
+  "form.section_address_desc": "Ülke, il ve ilçe. Bayi, bölgesinin distribütörüne bağlanır."
 }

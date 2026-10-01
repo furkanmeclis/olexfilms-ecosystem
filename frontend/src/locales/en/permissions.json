@@ -127,5 +127,10 @@
   "labels.whatsapp.manage": "Manage WhatsApp integration",
   "groups.whatsapp": "WhatsApp",
   "labels.notifications.templates.manage": "Manage notification templates and channels",
-  "labels.notification_deliveries.read": "Read notification delivery log"
+  "labels.notification_deliveries.read": "Read notification delivery log",
+  "labels.platform.geo.write": "Manage geography",
+  "labels.platform.territories.read": "View territories",
+  "labels.platform.territories.write": "Manage territories",
+  "labels.platform.rates.read": "View exchange rates",
+  "labels.platform.rates.write": "Manage exchange rates"
 }

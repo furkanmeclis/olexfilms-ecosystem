@@ -114,5 +114,10 @@
   "switcher.select": "Select organization",
   "switcher.error": "Could not switch organization",
   "columns.type": "Type",
-  "columns.parent": "Parent"
+  "columns.parent": "Parent",
+  "fields.type": "Type",
+  "fields.city_hint": "Filled from the province when left empty.",
+  "fields.district_hint": "Filled from the district when left empty.",
+  "form.section_address": "Address",
+  "form.section_address_desc": "Country, province and district. A dealer is attached to the distributor of its territory."
 }

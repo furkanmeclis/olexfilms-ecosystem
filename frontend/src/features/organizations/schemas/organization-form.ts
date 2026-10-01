@@ -7,14 +7,21 @@ import {
 
 type Translate = (key: string) => string;
 
+/** Structured address pickers (TEC-84): string ids, "" = none. */
+const addressShape = {
+  country_id: z.string().optional(),
+  province_id: z.string().optional(),
+  district_id: z.string().optional(),
+};
+
 export function createOrganizationFormSchema(t: Translate) {
   return z.object({
     name: z.string().trim().min(1, t("organizations.validation.name_required")),
-    city: z.string().trim().min(1, t("organizations.validation.city_required")),
-    district: z
-      .string()
-      .trim()
-      .min(1, t("organizations.validation.district_required")),
+    type: z.enum(["dealer", "distributor"]),
+    ...addressShape,
+    // Filled from the province/district on the server when left empty.
+    city: z.string().trim(),
+    district: z.string().trim(),
     phone: z
       .string()
       .trim()
@@ -36,11 +43,9 @@ export type CreateOrganizationFormValues = z.infer<
 export function updateOrganizationFormSchema(t: Translate) {
   return z.object({
     name: z.string().trim().min(1, t("organizations.validation.name_required")),
-    city: z.string().trim().min(1, t("organizations.validation.city_required")),
-    district: z
-      .string()
-      .trim()
-      .min(1, t("organizations.validation.district_required")),
+    ...addressShape,
+    city: z.string().trim(),
+    district: z.string().trim(),
     phone: z
       .string()
       .trim()

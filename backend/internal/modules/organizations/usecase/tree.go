@@ -10,6 +10,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/geo"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -208,6 +209,8 @@ type placementResult struct {
 	Locale    string
 	Timezone  string
 	Settings  []byte
+	// Address is the validated structured address (nil when none).
+	Address *geo.Address
 }
 
 // placement validates type/parent for a platform-created organization. The
@@ -227,6 +230,10 @@ func (s *Service) placement(ctx context.Context, in RegisterInput) (placementRes
 	if typ != TypeDistributor && typ != TypeDealer {
 		return placementResult{}, fmt.Errorf("%w: invalid organization type", ErrInvalidRequest)
 	}
+	addr, err := s.address(ctx, in.Location)
+	if err != nil {
+		return placementResult{}, err
+	}
 	var parent db.Organization
 	if in.ParentUUID != nil {
 		row, err := s.brandOrg(ctx, *in.ParentUUID)
@@ -242,6 +249,17 @@ func (s *Service) placement(ctx context.Context, in RegisterInput) (placementRes
 		if err != nil {
 			return placementResult{}, fmt.Errorf("brand center: %w", err)
 		}
+		// K5: a dealer opened in a distributor's territory belongs to that
+		// distributor. An explicit parent (platform admin, K25) wins.
+		if typ == TypeDealer {
+			dist, err := s.territoryParent(ctx, brand.ID, addr)
+			if err != nil {
+				return placementResult{}, err
+			}
+			if dist != nil {
+				parent = *dist
+			}
+		}
 	}
 	if !validChildType(parent.Type, typ) {
 		return placementResult{}, fmt.Errorf("%w: a %s cannot be placed under a %s", ErrInvalidRequest, typ, parent.Type)
@@ -252,7 +270,7 @@ func (s *Service) placement(ctx context.Context, in RegisterInput) (placementRes
 	out := placementResult{
 		Type: typ, Parent: parent, BrandSlug: brand.Slug,
 		Currency: parent.Currency, Locale: parent.Locale, Timezone: parent.Timezone,
-		Settings: []byte("{}"),
+		Settings: []byte("{}"), Address: addr,
 	}
 	if c := strings.ToUpper(strings.TrimSpace(in.Currency)); c != "" {
 		if !validCurrency(c) {

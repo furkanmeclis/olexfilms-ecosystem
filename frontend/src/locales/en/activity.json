@@ -165,5 +165,22 @@
   "actions.whatsapp.pair_phone": "WhatsApp phone pairing requested",
   "actions.whatsapp.logout": "WhatsApp session logged out",
   "actions.whatsapp.test_message": "WhatsApp test message sent",
-  "actions.whatsapp.settings.updated": "WhatsApp settings updated"
+  "actions.whatsapp.settings.updated": "WhatsApp settings updated",
+  "actions.geo.country.updated": "Country updated",
+  "actions.geo.province.created": "Province added",
+  "actions.geo.province.deleted": "Province removed",
+  "actions.geo.district.created": "District added",
+  "actions.geo.district.deleted": "District removed",
+  "actions.territories.assigned": "Territory assigned",
+  "actions.territories.removed": "Territory removed",
+  "actions.plate_formats.created": "Plate format added",
+  "actions.plate_formats.updated": "Plate format updated",
+  "actions.plate_formats.deleted": "Plate format deleted",
+  "actions.exchange_rates.override_set": "Exchange rate override saved",
+  "actions.exchange_rates.override_cleared": "Exchange rate override removed",
+  "actions.exchange_rates.fetched": "Exchange rates fetched",
+  "resources.geo": "Geography",
+  "resources.territories": "Territories",
+  "resources.plate_formats": "Plate formats",
+  "resources.exchange_rates": "Exchange rates"
 }

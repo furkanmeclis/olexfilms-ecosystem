@@ -125,6 +125,13 @@ const (
 	// Notification center (TEC-87).
 	PermNotificationTemplatesManage = "notifications.templates.manage"
 	PermNotificationDeliveriesRead  = "notification_deliveries.read"
+
+	// Geography, territories and exchange rates (TEC-84).
+	PermPlatformGeoWrite         = "platform.geo.write"
+	PermPlatformTerritoriesRead  = "platform.territories.read"
+	PermPlatformTerritoriesWrite = "platform.territories.write"
+	PermPlatformRatesRead        = "platform.rates.read"
+	PermPlatformRatesWrite       = "platform.rates.write"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

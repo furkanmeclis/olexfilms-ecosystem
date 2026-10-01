@@ -38,6 +38,9 @@ const (
 	CodeMFANotEnrolled            = "MFA_NOT_ENROLLED"
 	CodeRateLimited               = "RATE_LIMITED"
 	CodeInvalidMFACode            = "INVALID_MFA_CODE"
+	CodeTerritoryConflict         = "TERRITORY_CONFLICT"
+	CodeInvalidPlate              = "INVALID_PLATE"
+	CodeRateNotFound              = "RATE_NOT_FOUND"
 )
 
 // RequestIDFunc resolves the correlation id from request context.
