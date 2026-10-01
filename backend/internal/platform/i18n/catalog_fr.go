@@ -319,4 +319,16 @@ var frCatalog = map[string]string{
 	"export.title.tenant.accounting.balances":       "Rapport des soldes",
 	"resources.tenant.accounting.cari_statement":    "Relevé de compte",
 	"resources.tenant.accounting.balances":          "Rapport des soldes",
+	// TEC-166: order statuses.
+	"orders.status.draft":      "Brouillon",
+	"orders.status.submitted":  "Soumise",
+	"orders.status.approved":   "Approuvée",
+	"orders.status.preparing":  "En préparation",
+	"orders.status.ready":      "Prête",
+	"orders.status.processing": "En traitement",
+	"orders.status.shipped":    "Expédiée",
+	"orders.status.delivered":  "Livrée",
+	"orders.status.received":   "Réceptionnée",
+	"orders.status.cancelling": "Annulation en cours",
+	"orders.status.cancelled":  "Annulée",
 }

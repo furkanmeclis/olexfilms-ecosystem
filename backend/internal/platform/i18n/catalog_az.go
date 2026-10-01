@@ -319,4 +319,16 @@ var azCatalog = map[string]string{
 	"export.title.tenant.accounting.balances":       "Qalıqlar hesabatı",
 	"resources.tenant.accounting.cari_statement":    "Hesab çıxarışı",
 	"resources.tenant.accounting.balances":          "Qalıqlar hesabatı",
+	// TEC-166: order statuses.
+	"orders.status.draft":      "Qaralama",
+	"orders.status.submitted":  "Göndərildi",
+	"orders.status.approved":   "Təsdiqləndi",
+	"orders.status.preparing":  "Hazırlanır",
+	"orders.status.ready":      "Hazırdır",
+	"orders.status.processing": "Emal olunur",
+	"orders.status.shipped":    "Yola salındı",
+	"orders.status.delivered":  "Çatdırıldı",
+	"orders.status.received":   "Qəbul edildi",
+	"orders.status.cancelling": "Ləğv edilir",
+	"orders.status.cancelled":  "Ləğv edildi",
 }

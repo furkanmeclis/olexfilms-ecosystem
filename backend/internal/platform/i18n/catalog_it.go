@@ -319,4 +319,16 @@ var itCatalog = map[string]string{
 	"export.title.tenant.accounting.balances":       "Report dei saldi",
 	"resources.tenant.accounting.cari_statement":    "Estratto conto",
 	"resources.tenant.accounting.balances":          "Report dei saldi",
+	// TEC-166: order statuses.
+	"orders.status.draft":      "Bozza",
+	"orders.status.submitted":  "Inviato",
+	"orders.status.approved":   "Approvato",
+	"orders.status.preparing":  "In preparazione",
+	"orders.status.ready":      "Pronto",
+	"orders.status.processing": "In lavorazione",
+	"orders.status.shipped":    "Spedito",
+	"orders.status.delivered":  "Consegnato",
+	"orders.status.received":   "Ricevuto",
+	"orders.status.cancelling": "In annullamento",
+	"orders.status.cancelled":  "Annullato",
 }

@@ -66,6 +66,9 @@ import (
 	notifhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/handler"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/providers"
 	notifusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/usecase"
+	ordersmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/orders"
+	ordershandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/orders/handler"
+	ordersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/orders/usecase"
 	orgmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations"
 	orgusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
 	pricingmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/pricing"
@@ -325,6 +328,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	accountingSvc := accountingusecase.New(deps.DB, deps.Queries, accountingPoster, featureSvc)
 	accountingH := accountinghandler.New(accountingSvc)
 	accountinghandler.RegisterRoutes(mux, accountingH, tokens, loader, deps.Queries, stepUpSvc, featureSvc)
+	// TEC-166: orders (draft, server-side prices, rate frozen at approval).
+	ordersSvc := ordersusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries), ratesSvc)
+	ordersmodule.RegisterRoutes(mux, ordershandler.New(ordersSvc), tokens, loader, deps.Queries, featureSvc)
 	pdfClient := pdfrender.NewWithOptions(cfg.Gotenberg.URL, pdfrender.Options{MaxConnsPerHost: cfg.Queue.Concurrency})
 	realtime.RegisterRoutes(mux, realtime.NewHandler(rtIssuer, uc), tokens, loader)
 

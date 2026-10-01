@@ -319,4 +319,16 @@ var ruCatalog = map[string]string{
 	"export.title.tenant.accounting.balances":       "Отчёт об остатках",
 	"resources.tenant.accounting.cari_statement":    "Выписка по счёту",
 	"resources.tenant.accounting.balances":          "Отчёт об остатках",
+	// TEC-166: order statuses.
+	"orders.status.draft":      "Черновик",
+	"orders.status.submitted":  "Отправлен",
+	"orders.status.approved":   "Одобрен",
+	"orders.status.preparing":  "Готовится",
+	"orders.status.ready":      "Готов",
+	"orders.status.processing": "В обработке",
+	"orders.status.shipped":    "Отгружен",
+	"orders.status.delivered":  "Доставлен",
+	"orders.status.received":   "Получен",
+	"orders.status.cancelling": "Отменяется",
+	"orders.status.cancelled":  "Отменён",
 }

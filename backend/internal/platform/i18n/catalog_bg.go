@@ -319,4 +319,16 @@ var bgCatalog = map[string]string{
 	"export.title.tenant.accounting.balances":       "Отчет за салдата",
 	"resources.tenant.accounting.cari_statement":    "Извлечение по сметка",
 	"resources.tenant.accounting.balances":          "Отчет за салдата",
+	// TEC-166: order statuses.
+	"orders.status.draft":      "Чернова",
+	"orders.status.submitted":  "Изпратена",
+	"orders.status.approved":   "Одобрена",
+	"orders.status.preparing":  "Подготвя се",
+	"orders.status.ready":      "Готова",
+	"orders.status.processing": "В обработка",
+	"orders.status.shipped":    "Експедирана",
+	"orders.status.delivered":  "Доставена",
+	"orders.status.received":   "Получена",
+	"orders.status.cancelling": "Анулира се",
+	"orders.status.cancelled":  "Анулирана",
 }
