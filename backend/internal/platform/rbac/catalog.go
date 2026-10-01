@@ -261,8 +261,11 @@ var Roles = []RoleDef{
 		Slug: RoleCenterStaff, Name: "Center staff", OrgType: OrgTypeCenter,
 		Description: "Center staff: services, customers and the organization tree of the brand",
 		Grants: grants(baseGrants, map[string]Scope{
-			PermCatalogRead:            ScopeBrand,
-			PermCatalogWrite:           ScopeBrand,
+			PermCatalogRead:  ScopeBrand,
+			PermCatalogWrite: ScopeBrand,
+			// TEC-145 (000043): catalog import/export jobs of the center.
+			PermTenantImportsRead:      ScopeManaged,
+			PermTenantExportsRead:      ScopeManaged,
 			PermOrganizationsRead:      ScopeBrand,
 			PermMembersRead:            ScopeBrand,
 			PermServicesRead:           ScopeBrand,
