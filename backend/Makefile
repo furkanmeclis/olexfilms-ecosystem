@@ -27,7 +27,7 @@ endef
 
 DB_URL ?= postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
 
-.PHONY: tools run dev worker ping-job search-reindex roles-sync build test lint fmt tidy sqlc migrate-up migrate-down migrate-create health create-super-admin openapi-lint
+.PHONY: tools run dev worker ping-job search-reindex roles-sync normalize-org-phones build test lint fmt tidy sqlc migrate-up migrate-down migrate-create health create-super-admin openapi-lint
 
 tools:
 	@echo "go:            $$(go version)"
@@ -55,6 +55,11 @@ search-reindex:
 # Reconcile permissions and system role packages with the Go catalog.
 roles-sync:
 	@$(load_env) go run ./cmd/roles-sync $(ARGS)
+
+# K29 (TEC-159): parse organization phones moved aside by migration 000048
+# into E.164. ARGS=--dry-run reports without writing.
+normalize-org-phones:
+	@$(load_env) go run ./cmd/normalize-org-phones $(ARGS)
 
 build:
 	go build -o bin/$(APP_NAME) ./cmd/server

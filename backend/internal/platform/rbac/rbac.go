@@ -155,6 +155,13 @@ const (
 	// Accounting disputes (TEC-171, K24): a lower level never writes its
 	// parent's ledger; it opens a dispute on an entry the parent posted.
 	PermAccountingDispute = "accounting.dispute"
+
+	// Customers and vehicles (TEC-159, K11/K19). Anonymize and merge are
+	// center-only (brand scope) and super_admin.
+	PermVehiclesRead       = "vehicles.read"
+	PermVehiclesWrite      = "vehicles.write"
+	PermCustomersAnonymize = "customers.anonymize"
+	PermCustomersMerge     = "customers.merge"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

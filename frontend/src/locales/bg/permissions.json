@@ -146,5 +146,10 @@
   "labels.stock.adjust": "Корекция на наличностите",
   "labels.stock.reclassify": "Прекласифициране на наличности",
   "labels.stock.import": "Импорт на наличности",
-  "groups.stock": "Наличности"
+  "groups.stock": "Наличности",
+  "labels.vehicles.read": "Преглед на автомобили",
+  "labels.vehicles.write": "Управление на автомобили",
+  "labels.customers.anonymize": "Анонимизиране на клиенти",
+  "labels.customers.merge": "Обединяване на клиенти",
+  "groups.vehicles": "Автомобили"
 }

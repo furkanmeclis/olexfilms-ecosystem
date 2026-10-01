@@ -146,5 +146,10 @@
   "labels.stock.adjust": "Корректировка остатков",
   "labels.stock.reclassify": "Переклассификация остатков",
   "labels.stock.import": "Импорт остатков",
-  "groups.stock": "Остатки"
+  "groups.stock": "Остатки",
+  "labels.vehicles.read": "Просмотр автомобилей",
+  "labels.vehicles.write": "Управление автомобилями",
+  "labels.customers.anonymize": "Анонимизация клиентов",
+  "labels.customers.merge": "Объединение клиентов",
+  "groups.vehicles": "Автомобили"
 }
