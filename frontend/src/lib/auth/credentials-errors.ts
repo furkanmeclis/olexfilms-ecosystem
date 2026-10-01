@@ -6,6 +6,10 @@ export const CREDENTIAL_ERROR_CODES = {
   MFA_NOT_ENROLLED: "MFA_NOT_ENROLLED",
   NO_TENANT_MEMBERSHIP: "NO_TENANT_MEMBERSHIP",
   ORGANIZATION_ACCESS_EXPIRED: "ORGANIZATION_ACCESS_EXPIRED",
+  NO_PANEL_ACCESS: "NO_PANEL_ACCESS",
+  NO_PORTAL_ACCESS: "NO_PORTAL_ACCESS",
+  INVALID_OTP_CODE: "INVALID_OTP_CODE",
+  OTP_LOCKED: "OTP_LOCKED",
 } as const;
 
 export type CredentialErrorCode =
@@ -29,6 +33,24 @@ export class NoTenantMembershipError extends CredentialsSignin {
 
 export class OrganizationAccessExpiredError extends CredentialsSignin {
   code = CREDENTIAL_ERROR_CODES.ORGANIZATION_ACCESS_EXPIRED;
+}
+
+/** Customer / fleet only account on the panel login (TEC-90). */
+export class NoPanelAccessError extends CredentialsSignin {
+  code = CREDENTIAL_ERROR_CODES.NO_PANEL_ACCESS;
+}
+
+/** Staff account on the portal login (TEC-90). */
+export class NoPortalAccessError extends CredentialsSignin {
+  code = CREDENTIAL_ERROR_CODES.NO_PORTAL_ACCESS;
+}
+
+export class InvalidOTPCodeError extends CredentialsSignin {
+  code = CREDENTIAL_ERROR_CODES.INVALID_OTP_CODE;
+}
+
+export class OTPLockedError extends CredentialsSignin {
+  code = CREDENTIAL_ERROR_CODES.OTP_LOCKED;
 }
 
 export type CredentialSignInResult = {

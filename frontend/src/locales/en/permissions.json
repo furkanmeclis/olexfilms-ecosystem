@@ -127,5 +127,6 @@
   "labels.whatsapp.manage": "Manage WhatsApp integration",
   "groups.whatsapp": "WhatsApp",
   "labels.notifications.templates.manage": "Manage notification templates and channels",
-  "labels.notification_deliveries.read": "Read notification delivery log"
+  "labels.notification_deliveries.read": "Read notification delivery log",
+  "labels.platform.legal_texts.write": "Write legal texts"
 }

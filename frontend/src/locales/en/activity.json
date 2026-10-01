@@ -165,5 +165,7 @@
   "actions.whatsapp.pair_phone": "WhatsApp phone pairing requested",
   "actions.whatsapp.logout": "WhatsApp session logged out",
   "actions.whatsapp.test_message": "WhatsApp test message sent",
-  "actions.whatsapp.settings.updated": "WhatsApp settings updated"
+  "actions.whatsapp.settings.updated": "WhatsApp settings updated",
+  "resources.platform.legal_texts": "Legal texts",
+  "actions.legal_texts.published": "Legal text version published"
 }

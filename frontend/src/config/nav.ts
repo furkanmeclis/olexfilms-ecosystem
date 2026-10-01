@@ -172,6 +172,13 @@ export const platformNav = defineNav({
           icon: MessageCircle,
           permission: permissions.integrations.whatsapp.manage,
         },
+        {
+          id: "legal-texts",
+          titleKey: "layout.nav_legal_texts",
+          href: routes.platform.legalTexts,
+          icon: ScrollText,
+          permission: permissions.legalTexts.write,
+        },
       ],
     },
     {

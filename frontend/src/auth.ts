@@ -13,10 +13,16 @@ import {
   InvalidMFACodeError,
   MFANotEnrolledError,
   MFARequiredError,
+  NoPanelAccessError,
   NoTenantMembershipError,
   OrganizationAccessExpiredError,
 } from "@/lib/auth/credentials-errors";
 import { goAdapter } from "@/lib/auth/go-adapter";
+import {
+  AUTH_BASE_PATHS,
+  authCookies,
+  secureCookies,
+} from "@/lib/server/auth-cookies";
 import {
   adapterGetOAuthConfig,
   adapterGetOAuthAccountUser,
@@ -193,6 +199,9 @@ async function _doBuildProviders(): Promise<Provider[]> {
             if (code === "ORGANIZATION_ACCESS_EXPIRED") {
               throw new OrganizationAccessExpiredError();
             }
+            if (code === "NO_PANEL_ACCESS") {
+              throw new NoPanelAccessError();
+            }
             return null;
           }
         },
@@ -264,9 +273,14 @@ async function buildProviders(): Promise<Provider[]> {
   return _providersBuildPromise;
 }
 
+// Panel (staff) instance. The customer / fleet portal has its own instance
+// (auth-portal.ts) with its own basePath and realm-prefixed cookies (TEC-90).
 const authHandlers = NextAuth(async () => ({
   adapter: goAdapter({ pendingGitHubLogins }),
   trustHost: process.env.AUTH_TRUST_HOST === "true",
+  basePath: AUTH_BASE_PATHS.panel,
+  useSecureCookies: secureCookies(),
+  cookies: authCookies("panel"),
   session: { strategy: "jwt" },
   providers: await buildProviders(),
   experimental: {
@@ -315,7 +329,7 @@ const authHandlers = NextAuth(async () => ({
       }
 
       const { getApiTokens } = await import("@/lib/server/auth-tokens");
-      const session = await getApiTokens();
+      const session = await getApiTokens("panel");
       if (session.userId) {
         return true;
       }

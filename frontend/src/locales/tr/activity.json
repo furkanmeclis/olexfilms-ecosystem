@@ -165,5 +165,7 @@
   "actions.whatsapp.pair_phone": "WhatsApp telefonla eşleştirme istendi",
   "actions.whatsapp.logout": "WhatsApp oturumu kapatıldı",
   "actions.whatsapp.test_message": "WhatsApp test mesajı gönderildi",
-  "actions.whatsapp.settings.updated": "WhatsApp ayarları güncellendi"
+  "actions.whatsapp.settings.updated": "WhatsApp ayarları güncellendi",
+  "resources.platform.legal_texts": "Yasal metinler",
+  "actions.legal_texts.published": "Yasal metin sürümü yayımlandı"
 }

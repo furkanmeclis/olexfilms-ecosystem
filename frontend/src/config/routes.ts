@@ -30,6 +30,12 @@ export const routes = {
       root: (slug: string) => `/t/${slug}/features`,
     },
   },
+  /** Customer / fleet portal (TEC-90): its own Auth.js instance and BFF. */
+  portal: {
+    home: "/portal",
+    login: "/portal/login",
+    forgotPassword: "/portal/forgot-password",
+  },
   guest: {
     login: "/platform/login",
     register: "/platform/register",
@@ -90,6 +96,7 @@ export const routes = {
       apple: "/platform/integrations/apple",
       whatsapp: "/platform/integrations/whatsapp",
     },
+    legalTexts: "/platform/legal-texts",
     organizations: {
       root: "/platform/organizations",
       create: "/platform/organizations/create",

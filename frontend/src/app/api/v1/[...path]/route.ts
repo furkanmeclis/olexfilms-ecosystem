@@ -1,8 +1,4 @@
-import { proxyToUpstream } from "@/lib/server/bff-proxy";
-
-type RouteContext = {
-  params: Promise<{ path: string[] }>;
-};
+import { bffRouteHandler } from "@/lib/server/bff-route";
 
 /**
  * Long-lived SSE streams (AI chat and confirmed-action continuations) need a
@@ -12,21 +8,8 @@ type RouteContext = {
  */
 export const maxDuration = 900;
 
-async function handle(request: Request, context: RouteContext) {
-  const { path } = await context.params;
-  try {
-    return await proxyToUpstream(path ?? [], request);
-  } catch (err) {
-    console.error("[api/v1]", (path ?? []).join("/"), err);
-    return new Response(
-      JSON.stringify({ success: false, error: "internal_error" }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      },
-    );
-  }
-}
+/** Panel (staff) BFF: reads and writes the panel session cookie only. */
+const handle = bffRouteHandler("panel");
 
 export const GET = handle;
 export const POST = handle;

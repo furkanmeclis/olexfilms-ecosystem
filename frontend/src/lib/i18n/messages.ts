@@ -32,6 +32,7 @@ import enStorage from "@/locales/en/storage.json";
 import enTable from "@/locales/en/table.json";
 import enUsers from "@/locales/en/users.json";
 import enRegister from "@/locales/en/register.json";
+import enPortal from "@/locales/en/portal.json";
 import trAccess from "@/locales/tr/access.json";
 import trModules from "@/locales/tr/modules.json";
 import trActivity from "@/locales/tr/activity.json";
@@ -64,6 +65,7 @@ import trStorage from "@/locales/tr/storage.json";
 import trTable from "@/locales/tr/table.json";
 import trUsers from "@/locales/tr/users.json";
 import trRegister from "@/locales/tr/register.json";
+import trPortal from "@/locales/tr/portal.json";
 
 export type MessageDictionary = Record<string, string>;
 
@@ -100,6 +102,7 @@ const catalogs: Record<AppLocale, Record<string, MessageDictionary>> = {
     integrations: trIntegrations,
     organizations: trOrganizations,
     register: trRegister,
+    portal: trPortal,
     stepup: trStepup,
   },
   en: {
@@ -134,6 +137,7 @@ const catalogs: Record<AppLocale, Record<string, MessageDictionary>> = {
     integrations: enIntegrations,
     organizations: enOrganizations,
     register: enRegister,
+    portal: enPortal,
     stepup: enStepup,
   },
 };

@@ -92,6 +92,8 @@ export const Permission = {
 
   NotificationTemplatesManage: "notifications.templates.manage",
   NotificationDeliveriesRead: "notification_deliveries.read",
+
+  PlatformLegalTextsWrite: "platform.legal_texts.write",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];
@@ -250,6 +252,9 @@ export const permissions = {
     whatsapp: {
       manage: Permission.WhatsAppManage,
     },
+  },
+  legalTexts: {
+    write: Permission.PlatformLegalTextsWrite,
   },
   authSettings: {
     read: Permission.PlatformAuthSettingsRead,

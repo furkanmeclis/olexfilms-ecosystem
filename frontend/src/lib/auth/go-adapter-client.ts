@@ -267,6 +267,7 @@ export async function loginWithPassword(
   organizationSlug?: string,
   clientIp?: string | null,
   forwardedHost?: string | null,
+  realm: "panel" | "portal" = "panel",
 ) {
   const result = await fetchUpstream("auth/login", {
     method: "POST",
@@ -281,6 +282,40 @@ export async function loginWithPassword(
       password,
       ...(totpCode ? { totp_code: totpCode } : {}),
       ...(organizationSlug ? { organization_slug: organizationSlug } : {}),
+      realm,
+    }),
+  });
+  return unwrap<GoTokensPayload>(result);
+}
+
+/**
+ * Verifies a WhatsApp login code server side (portal Auth.js instance) and
+ * returns the portal token pair (JWT aud=portal). The browser never sees it.
+ */
+export async function verifyPhoneOTP(input: {
+  phone: string;
+  code: string;
+  country?: string | null;
+  locale?: string | null;
+  clientIp?: string | null;
+  forwardedHost?: string | null;
+}) {
+  const result = await fetchUpstream("auth/otp/verify", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(input.clientIp ? { "X-Forwarded-For": input.clientIp } : {}),
+      ...(input.forwardedHost
+        ? { "X-Forwarded-Host": input.forwardedHost }
+        : {}),
+    },
+    body: JSON.stringify({
+      phone: input.phone,
+      code: input.code,
+      purpose: "customer_login",
+      ...(input.country ? { country: input.country } : {}),
+      ...(input.locale ? { locale: input.locale } : {}),
     }),
   });
   return unwrap<GoTokensPayload>(result);

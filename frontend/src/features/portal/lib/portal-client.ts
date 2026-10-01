@@ -1,0 +1,214 @@
+/**
+ * Browser client of the customer / fleet portal (TEC-90). It talks only to
+ * the portal BFF (/api/portal/v1) and the portal Auth.js instance
+ * (/api/portal-auth), never to the panel endpoints, so the panel session
+ * cookie is never read or written from the portal.
+ */
+export const PORTAL_API_BASE = "/api/portal/v1";
+export const PORTAL_AUTH_BASE = "/api/portal-auth";
+
+export class PortalApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code: string | null,
+    readonly details: { field?: string; message?: string; code?: string }[],
+  ) {
+    super(message);
+    this.name = "PortalApiError";
+  }
+}
+
+type Envelope<T> = {
+  success?: boolean;
+  data?: T;
+  error?:
+    | {
+        code?: string;
+        message?: string;
+        details?: { field?: string; message?: string; code?: string }[];
+      }
+    | string;
+};
+
+async function parse<T>(response: Response): Promise<T> {
+  let body: Envelope<T> | null = null;
+  try {
+    body = (await response.json()) as Envelope<T>;
+  } catch {
+    body = null;
+  }
+  if (!response.ok) {
+    const err = body?.error;
+    const code = typeof err === "string" ? err : (err?.code ?? null);
+    const message =
+      typeof err === "object" && err?.message
+        ? err.message
+        : `Request failed (${response.status})`;
+    const details = typeof err === "object" ? (err?.details ?? []) : [];
+    throw new PortalApiError(message, response.status, code, details);
+  }
+  return (body?.data ?? (undefined as T)) as T;
+}
+
+let refreshing: Promise<boolean> | null = null;
+
+/** One refresh at a time; the BFF rotates the portal cookie. */
+function refreshPortalSession(): Promise<boolean> {
+  refreshing ??= fetch(`${PORTAL_API_BASE}/auth/refresh`, {
+    method: "POST",
+    credentials: "include",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: "{}",
+  })
+    .then((r) => r.ok)
+    .catch(() => false)
+    .finally(() => {
+      refreshing = null;
+    });
+  return refreshing;
+}
+
+export async function portalRequest<T>(
+  path: string,
+  init: { method?: string; body?: unknown; locale?: string } = {},
+): Promise<T> {
+  const send = () =>
+    fetch(`${PORTAL_API_BASE}/${path.replace(/^\//, "")}`, {
+      method: init.method ?? "GET",
+      credentials: "include",
+      cache: "no-store",
+      headers: {
+        Accept: "application/json",
+        ...(init.body !== undefined
+          ? { "Content-Type": "application/json" }
+          : {}),
+        ...(init.locale ? { "Accept-Language": init.locale } : {}),
+      },
+      body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+    });
+  let response = await send();
+  if (response.status === 401 && !path.startsWith("auth/")) {
+    if (await refreshPortalSession()) response = await send();
+  }
+  return parse<T>(response);
+}
+
+/**
+ * Credentials sign-in against the portal Auth.js instance (the same calls
+ * as the Auth.js client `signIn`, pinned to /api/portal-auth). Returns the
+ * error code (`CredentialsSignin` subtype code) or null on success.
+ */
+export async function portalSignIn(
+  provider: "phone-otp" | "fleet-password",
+  fields: Record<string, string>,
+): Promise<string | null> {
+  const csrf = await fetch(`${PORTAL_AUTH_BASE}/csrf`, {
+    credentials: "include",
+    cache: "no-store",
+  });
+  if (!csrf.ok) return "unavailable";
+  const { csrfToken } = (await csrf.json()) as { csrfToken?: string };
+  if (!csrfToken) return "unavailable";
+
+  const response = await fetch(`${PORTAL_AUTH_BASE}/callback/${provider}`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "X-Auth-Return-Redirect": "1",
+    },
+    body: new URLSearchParams({
+      ...fields,
+      csrfToken,
+      callbackUrl: window.location.href,
+    }),
+  });
+  let url: string | null = null;
+  try {
+    url = ((await response.json()) as { url?: string }).url ?? null;
+  } catch {
+    url = null;
+  }
+  return signInErrorCode(response.status, url);
+}
+
+/** Error code from an Auth.js credentials callback answer; null = signed in. */
+export function signInErrorCode(
+  status: number,
+  url: string | null,
+): string | null {
+  if (status >= 500) return "unavailable";
+  if (!url) return status < 400 ? null : "CredentialsSignin";
+  const parsed = new URL(url, "http://localhost");
+  const error = parsed.searchParams.get("error");
+  if (!error) return null;
+  return parsed.searchParams.get("code") ?? error;
+}
+
+/** Signs out of the portal only (revokes the refresh token, clears the portal cookie). */
+export async function portalSignOut(): Promise<void> {
+  await fetch(`${PORTAL_API_BASE}/auth/logout`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  }).catch(() => undefined);
+}
+
+export type OTPRequestResult = {
+  status: string;
+  channel: string;
+  expires_at: string;
+  resend_at: string;
+};
+
+export type PendingLegalText = {
+  uuid: string;
+  kind: string;
+  locale: string;
+  version: number;
+  body: string;
+};
+
+export const portalApi = {
+  requestOTP(phone: string, country: string, locale: string) {
+    return portalRequest<OTPRequestResult>("auth/otp/request", {
+      method: "POST",
+      body: { phone, country, locale, purpose: "customer_login" },
+    });
+  },
+  me() {
+    return portalRequest<{
+      user: { name?: string; surname?: string; email?: string | null };
+    }>("auth/me");
+  },
+  pendingConsents(locale: string) {
+    return portalRequest<{ items: PendingLegalText[] }>(
+      `portal/consents/pending?locale=${encodeURIComponent(locale)}`,
+    );
+  },
+  decideConsent(text: PendingLegalText, accepted: boolean) {
+    return portalRequest("portal/consents", {
+      method: "POST",
+      body: {
+        kind: text.kind,
+        locale: text.locale,
+        version: text.version,
+        accepted,
+      },
+    });
+  },
+  forgotPassword(email: string) {
+    return portalRequest("auth/password/forgot", {
+      method: "POST",
+      body: { email },
+    });
+  },
+  resetPassword(email: string, code: string, password: string) {
+    return portalRequest("auth/password/reset", {
+      method: "POST",
+      body: { email, code, password },
+    });
+  },
+};

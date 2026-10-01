@@ -127,5 +127,6 @@
   "labels.whatsapp.manage": "WhatsApp entegrasyonunu yönet",
   "groups.whatsapp": "WhatsApp",
   "labels.notifications.templates.manage": "Bildirim şablonlarını ve kanallarını yönet",
-  "labels.notification_deliveries.read": "Bildirim teslim günlüğünü görüntüle"
+  "labels.notification_deliveries.read": "Bildirim teslim günlüğünü görüntüle",
+  "labels.platform.legal_texts.write": "Yasal metinleri düzenle"
 }
