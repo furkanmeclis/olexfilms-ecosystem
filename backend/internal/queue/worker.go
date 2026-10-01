@@ -55,6 +55,8 @@ type Worker struct {
 	purgeLogs            PurgeLogsFunc
 	processDocsRender    ProcessDocsRenderFunc
 	fetchRates           FetchRatesFunc
+	purgeNotifications   NotificationPurgeFunc
+	pollWhatsApp         WhatsAppPollFunc
 }
 
 // NewWorker builds a worker that handles known task types on every queue.
@@ -76,6 +78,11 @@ func DefaultQueues() map[string]int {
 		QueueDocs:          2,
 	}
 }
+
+// Every task type is registered on the mux exactly once, here. The With*
+// setters only store the processor, so calling one twice (e.g. main and
+// httpserver.New both wiring the in-process worker) replaces it instead of
+// panicking with "asynq: multiple registrations" (TEC-142).
 
 // NewWorkerWithQueues builds a worker that consumes only the given queues
 // (queue name → priority weight). Production splits queues across
@@ -109,6 +116,8 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskSearchReindex, w.handleSearchReindex)
 	mux.HandleFunc(TaskDocsRender, w.handleDocsRender)
 	mux.HandleFunc(TaskRatesFetch, w.handleRatesFetch)
+	mux.HandleFunc(TaskNotificationPurge, w.handleNotificationPurge)
+	mux.HandleFunc(TaskWhatsAppStatusPoll, w.handleWhatsAppPoll)
 	return w
 }
 
