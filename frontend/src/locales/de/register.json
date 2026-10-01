@@ -1,1 +1,22 @@
-{}
+{
+  "title": "Unternehmensregistrierung",
+  "description": "Legen Sie Ihre Organisation in wenigen Minuten bei Olexfilms an.",
+  "submit": "Registrierung abschließen",
+  "submitting": "Konto wird erstellt…",
+  "error": "Die Registrierung konnte nicht abgeschlossen werden. Prüfen Sie Ihre Angaben und versuchen Sie es erneut.",
+  "error_sign_in": "Die Registrierung war erfolgreich, die Anmeldung jedoch nicht. Versuchen Sie es über die Anmeldeseite.",
+  "fields.name": "Vorname der Kontaktperson",
+  "fields.surname": "Nachname der Kontaktperson",
+  "fields.organization_name": "Firmenname",
+  "fields.city": "Stadt",
+  "fields.district": "Bezirk",
+  "fields.phone": "Telefon",
+  "fields.email": "E-Mail",
+  "fields.address": "Adresse",
+  "fields.password": "Passwort",
+  "validation.organization_name_required": "Firmenname ist erforderlich",
+  "validation.city_required": "Stadt ist erforderlich",
+  "validation.district_required": "Bezirk ist erforderlich",
+  "validation.phone_required": "Telefon ist erforderlich",
+  "validation.address_required": "Adresse ist erforderlich"
+}

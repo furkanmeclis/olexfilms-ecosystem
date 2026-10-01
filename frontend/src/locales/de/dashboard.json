@@ -1,1 +1,22 @@
-{}
+{
+  "description": "Plattformkennzahlen und Schnellzugriffe für Rollen, Benutzer und Benachrichtigungen.",
+  "forbidden_description": "Nur Plattformbenutzer können die Übersicht sehen.",
+  "error_description": "Die Übersichtsdaten konnten nicht geladen werden.",
+  "kpi_roles_total": "Rollen",
+  "kpi_users_total": "Benutzer",
+  "kpi_notifications": "Benachrichtigungen",
+  "quick_links_title": "Schnellzugriffe",
+  "quick_links_description": "Direkt zu häufig genutzten Plattformbereichen.",
+  "link_roles_description": "Rollen anzeigen und verwalten.",
+  "link_users_description": "Plattformbenutzer anzeigen und verwalten.",
+  "link_notifications_description": "Benachrichtigungsprotokoll der Plattform.",
+  "link_profile_description": "Konto, Passwort und Einstellungen.",
+  "pipeline.follow_up": "Nachzufassende Interessenten",
+  "pipeline.overdue": "Überfällige Nachfassaktionen: {{count}}",
+  "pipeline.open_leads": "Offene Interessenten: {{count}}",
+  "pipeline.open_quotes": "Angebote ohne Antwort",
+  "pipeline.expiring": "Innerhalb von 3 Tagen ablaufende Angebote: {{count}}",
+  "pipeline.awaiting": "Angebote ohne Antwort: {{count}}",
+  "tenant.welcome_title": "Willkommen",
+  "tenant.welcome_description": "Organisationsbereich. Module erscheinen hier, sobald sie hinzugefügt werden."
+}
