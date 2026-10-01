@@ -108,6 +108,20 @@ func (s *Service) PatchTenantSettings(ctx context.Context, orgID int64, in Lette
 		}
 		in.CompanyName = &name
 	}
+	if in.Phone != nil {
+		iso2, err := s.orgCountryISO2(ctx, orgID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return TenantSettings{}, ErrNotFound
+			}
+			return TenantSettings{}, err
+		}
+		p, err := normalizePhone(*in.Phone, iso2)
+		if err != nil {
+			return TenantSettings{}, err
+		}
+		in.Phone = &p
+	}
 	row, err := s.q.UpdateOrganizationLetterhead(ctx, db.UpdateOrganizationLetterheadParams{
 		ID:           orgID,
 		Name:         textNarg(in.CompanyName),
