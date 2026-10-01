@@ -97,5 +97,6 @@
   "toast.confirm_failed": "No se pudo confirmar la importación.",
   "toast.confirmed": "Importación confirmada y en cola.",
   "toast.rollback_success": "Importación deshecha correctamente.",
-  "toast.auto_mapped": "Columnas asignadas automáticamente: {{count}}."
+  "toast.auto_mapped": "Columnas asignadas automáticamente: {{count}}.",
+  "resources.tenant.catalog.products": "Productos"
 }

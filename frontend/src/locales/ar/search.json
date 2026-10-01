@@ -38,5 +38,6 @@
   "prefix_tenant_purchases": "مشتريات",
   "prefix_tenant_catalog_products": "منتجات",
   "prefix_tenant_catalog_services": "خدمات",
-  "prefix_vehicle_model_years": "مركبات"
+  "prefix_vehicle_model_years": "مركبات",
+  "prefix_products": "منتجات"
 }

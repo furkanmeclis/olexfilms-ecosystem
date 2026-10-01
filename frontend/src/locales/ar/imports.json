@@ -97,5 +97,6 @@
   "toast.confirm_failed": "تعذّر تأكيد الاستيراد.",
   "toast.confirmed": "أُكّد الاستيراد وأُضيف إلى قائمة الانتظار.",
   "toast.rollback_success": "تم التراجع عن الاستيراد بنجاح.",
-  "toast.auto_mapped": "طوبق {{count}} من الأعمدة تلقائيًا."
+  "toast.auto_mapped": "طوبق {{count}} من الأعمدة تلقائيًا.",
+  "resources.tenant.catalog.products": "المنتجات"
 }

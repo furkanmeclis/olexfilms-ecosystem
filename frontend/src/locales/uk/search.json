@@ -38,5 +38,6 @@
   "prefix_tenant_purchases": "закупівлі",
   "prefix_tenant_catalog_products": "товари",
   "prefix_tenant_catalog_services": "послуги",
-  "prefix_vehicle_model_years": "автомобілі"
+  "prefix_vehicle_model_years": "автомобілі",
+  "prefix_products": "товари"
 }

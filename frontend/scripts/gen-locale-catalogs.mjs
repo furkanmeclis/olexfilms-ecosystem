@@ -44,8 +44,12 @@ const namespaces = fs
   .map((n) => n.slice(0, -5))
   .sort();
 
-const ident = (ns) =>
-  ns.replace(/[^a-zA-Z0-9]+(.)/g, (_, c) => c.toUpperCase());
+// "catalog" (TEC-147) would shadow the generated `const catalog` below.
+const RESERVED_IDENTS = new Set(["catalog"]);
+const ident = (ns) => {
+  const id = ns.replace(/[^a-zA-Z0-9]+(.)/g, (_, c) => c.toUpperCase());
+  return RESERVED_IDENTS.has(id) ? `${id}Messages` : id;
+};
 
 function indexSource() {
   const imports = namespaces

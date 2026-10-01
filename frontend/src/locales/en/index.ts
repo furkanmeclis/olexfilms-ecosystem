@@ -6,6 +6,7 @@ import activity from "./activity.json";
 import auth from "./auth.json";
 import branding from "./branding.json";
 import bulk from "./bulk.json";
+import catalogMessages from "./catalog.json";
 import chart from "./chart.json";
 import cms from "./cms.json";
 import common from "./common.json";
@@ -44,6 +45,7 @@ const catalog: LocaleCatalog = {
   auth,
   branding,
   bulk,
+  catalog: catalogMessages,
   chart,
   cms,
   common,

@@ -29,6 +29,16 @@ export const routes = {
     features: {
       root: (slug: string) => `/t/${slug}/features`,
     },
+    /** TEC-147. Search hits link `/catalog/products/{uuid}` (TEC-145). */
+    catalog: {
+      products: (slug: string) => `/t/${slug}/catalog/products`,
+      productCreate: (slug: string) => `/t/${slug}/catalog/products/new`,
+      product: (slug: string, uuid: string) =>
+        `/t/${slug}/catalog/products/${uuid}`,
+      productEdit: (slug: string, uuid: string) =>
+        `/t/${slug}/catalog/products/${uuid}/edit`,
+      categories: (slug: string) => `/t/${slug}/catalog/categories`,
+    },
   },
   /** Customer / fleet portal (TEC-90): its own Auth.js instance and BFF. */
   portal: {

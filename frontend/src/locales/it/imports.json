@@ -97,5 +97,6 @@
   "toast.confirm_failed": "Impossibile confermare l'importazione.",
   "toast.confirmed": "Importazione confermata e messa in coda.",
   "toast.rollback_success": "Importazione annullata correttamente.",
-  "toast.auto_mapped": "Colonne associate automaticamente: {{count}}."
+  "toast.auto_mapped": "Colonne associate automaticamente: {{count}}.",
+  "resources.tenant.catalog.products": "Prodotti"
 }

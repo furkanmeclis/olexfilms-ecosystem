@@ -38,5 +38,6 @@
   "prefix_tenant_purchases": "αγορές",
   "prefix_tenant_catalog_products": "προϊόντα",
   "prefix_tenant_catalog_services": "υπηρεσίες",
-  "prefix_vehicle_model_years": "οχήματα"
+  "prefix_vehicle_model_years": "οχήματα",
+  "prefix_products": "προϊόντα"
 }

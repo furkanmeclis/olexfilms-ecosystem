@@ -97,5 +97,6 @@
   "toast.confirm_failed": "İçe aktarma onaylanamadı.",
   "toast.confirmed": "İçe aktarma onaylandı ve kuyruğa alındı.",
   "toast.rollback_success": "İçe aktarma başarıyla geri alındı.",
-  "toast.auto_mapped": "{{count}} kolon otomatik eşleştirildi."
+  "toast.auto_mapped": "{{count}} kolon otomatik eşleştirildi.",
+  "resources.tenant.catalog.products": "Ürünler"
 }
