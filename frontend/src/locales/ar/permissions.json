@@ -151,5 +151,15 @@
   "labels.vehicles.write": "إدارة المركبات",
   "labels.customers.anonymize": "إخفاء هوية العملاء",
   "labels.customers.merge": "دمج العملاء",
-  "groups.vehicles": "المركبات"
+  "groups.vehicles": "المركبات",
+  "labels.orders.read": "عرض الطلبات",
+  "labels.orders.write": "إدارة الطلبات",
+  "labels.orders.approve": "اعتماد الطلبات",
+  "labels.orders.ship": "شحن الطلبات",
+  "labels.orders.receive": "استلام الطلبات",
+  "labels.orders.cancel": "إلغاء الطلبات",
+  "labels.transfers.request": "طلب نقل مخزون",
+  "labels.transfers.approve": "اعتماد عمليات نقل المخزون",
+  "groups.orders": "الطلبات",
+  "groups.transfers": "عمليات النقل"
 }

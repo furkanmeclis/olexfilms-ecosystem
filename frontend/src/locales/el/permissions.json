@@ -151,5 +151,15 @@
   "labels.vehicles.write": "Διαχείριση οχημάτων",
   "labels.customers.anonymize": "Ανωνυμοποίηση πελατών",
   "labels.customers.merge": "Συγχώνευση πελατών",
-  "groups.vehicles": "Οχήματα"
+  "groups.vehicles": "Οχήματα",
+  "labels.orders.read": "Προβολή παραγγελιών",
+  "labels.orders.write": "Διαχείριση παραγγελιών",
+  "labels.orders.approve": "Έγκριση παραγγελιών",
+  "labels.orders.ship": "Αποστολή παραγγελιών",
+  "labels.orders.receive": "Παραλαβή παραγγελιών",
+  "labels.orders.cancel": "Ακύρωση παραγγελιών",
+  "labels.transfers.request": "Αίτημα μεταφοράς αποθέματος",
+  "labels.transfers.approve": "Έγκριση μεταφορών αποθέματος",
+  "groups.orders": "Παραγγελίες",
+  "groups.transfers": "Μεταφορές"
 }
