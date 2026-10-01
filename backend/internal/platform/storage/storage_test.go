@@ -1,6 +1,12 @@
 package storage
 
-import "testing"
+import (
+	"context"
+	"strings"
+	"testing"
+
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/config"
+)
 
 func TestSanitizePrefix(t *testing.T) {
 	t.Parallel()
@@ -56,5 +62,12 @@ func TestIsSystemKey(t *testing.T) {
 	}
 	if IsSystemKey("uploads/a.png") {
 		t.Fatal("did not expect system key")
+	}
+}
+
+func TestNewFromConfigRejectsMinIO(t *testing.T) {
+	_, err := NewFromConfig(context.Background(), config.StorageConfig{Driver: "minio"})
+	if err == nil || !strings.Contains(err.Error(), "STORAGE_DRIVER=s3") {
+		t.Fatalf("expected minio removal error, got %v", err)
 	}
 }

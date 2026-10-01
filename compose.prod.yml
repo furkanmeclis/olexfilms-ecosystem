@@ -32,16 +32,17 @@ x-backend-environment: &backend-environment
   DB_SSLMODE: ${DB_SSLMODE:-disable}
   REDIS_ADDR: ${NAME_PREFIX:-app}-redis:6379
   REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
-  # External S3-compatible storage (AWS S3, Cloudflare R2, Hetzner, Wasabi…).
-  # No object store runs in this stack.
   STORAGE_DRIVER: ${STORAGE_DRIVER:-s3}
-  S3_ENDPOINT: ${S3_ENDPOINT:?S3_ENDPOINT is required}
+  # SeaweedFS is private (app network only, no anonymous access): every object
+  # reaches browsers through API stream endpoints, never a bucket URL.
+  # Qualify with APP_NETWORK: a short service name can collide on
+  # dokploy-network (the backend is attached to both).
+  S3_ENDPOINT: http://seaweedfs.${APP_NETWORK_NAME:-${NAME_PREFIX:-app}-app}:8333
   S3_ACCESS_KEY: ${S3_ACCESS_KEY:?S3_ACCESS_KEY is required}
   S3_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY is required}
   S3_BUCKET: ${S3_BUCKET:?S3_BUCKET is required}
   S3_REGION: ${S3_REGION:-us-east-1}
-  S3_USE_PATH_STYLE: ${S3_USE_PATH_STYLE:-false}
-  S3_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL:-}
+  S3_USE_PATH_STYLE: "true"
   CENTRIFUGO_API_URL: http://centrifugo.${APP_NETWORK_NAME:-${NAME_PREFIX:-app}-app}:8000
   CENTRIFUGO_API_KEY: ${CENTRIFUGO_API_KEY:?CENTRIFUGO_API_KEY is required}
   CENTRIFUGO_TOKEN_HMAC_SECRET: ${CENTRIFUGO_TOKEN_HMAC_SECRET:?CENTRIFUGO_TOKEN_HMAC_SECRET is required}
@@ -60,6 +61,9 @@ x-backend-environment: &backend-environment
   MAIL_FROM_NAME: ${MAIL_FROM_NAME:-App}
   SMTP_HOST: ${SMTP_HOST:-}
   SMTP_PORT: ${SMTP_PORT:-587}
+  SMTP_USERNAME: ${SMTP_USERNAME:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  MAIL_DRIVER: ${MAIL_DRIVER:-smtp}
   QUEUE_ENABLED: ${QUEUE_ENABLED:-true}
   QUEUE_WORKER_INPROCESS: "false"
   QUEUE_CONCURRENCY: ${QUEUE_CONCURRENCY:-10}
@@ -111,6 +115,44 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    networks:
+      - app
+
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.47
+    container_name: ${NAME_PREFIX:-app}-seaweedfs
+    restart: unless-stopped
+    # Single-node SeaweedFS (master + volume + filer + S3 gateway). The bucket
+    # is created on start. The admin identity from AWS_ACCESS_KEY_ID denies
+    # anonymous S3 access; the JWT keys lock the filer / volume HTTP ports so
+    # only the S3 gateway (same process) can read or write objects.
+    command:
+      - mini
+      - -dir=/data
+      - -ip=127.0.0.1
+      - -ip.bind=0.0.0.0
+      - -bucket=${S3_BUCKET:?S3_BUCKET is required}
+      - -s3.port=8333
+      - -s3.port.iceberg=0
+      - -s3.port.lance=0
+      - -webdav=false
+      - -admin.ui=false
+      - -master.telemetry=false
+    environment:
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:?S3_ACCESS_KEY is required}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY is required}
+      WEED_JWT_SIGNING_KEY: ${SEAWEEDFS_JWT_WRITE_KEY:?SEAWEEDFS_JWT_WRITE_KEY is required}
+      WEED_JWT_FILER_SIGNING_KEY: ${SEAWEEDFS_JWT_WRITE_KEY:?SEAWEEDFS_JWT_WRITE_KEY is required}
+      WEED_JWT_SIGNING_READ_KEY: ${SEAWEEDFS_JWT_READ_KEY:?SEAWEEDFS_JWT_READ_KEY is required}
+      WEED_JWT_FILER_SIGNING_READ_KEY: ${SEAWEEDFS_JWT_READ_KEY:?SEAWEEDFS_JWT_READ_KEY is required}
+    volumes:
+      - seaweedfs_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8333/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    # Private: never attach SeaweedFS to dokploy-network or publish its ports.
     networks:
       - app
 
@@ -224,6 +266,8 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
+      seaweedfs:
+        condition: service_healthy
       centrifugo:
         condition: service_healthy
       meilisearch:
@@ -232,8 +276,11 @@ services:
         condition: service_healthy
     expose:
       - "8080"
+    # Liveness only: /readyz fails while Postgres or Redis blips, and an
+    # unhealthy container is dropped by Traefik (whole site 404) even though
+    # the API recovers on its own. Watch /readyz from monitoring instead.
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8080/readyz"]
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8080/healthz"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -254,6 +301,8 @@ services:
       migrate:
         condition: service_completed_successfully
       redis:
+        condition: service_healthy
+      seaweedfs:
         condition: service_healthy
       centrifugo:
         condition: service_healthy
@@ -309,6 +358,8 @@ volumes:
     name: ${POSTGRES_VOLUME_NAME:-${NAME_PREFIX:-app}-prod-postgres}
   redis_data:
     name: ${REDIS_VOLUME_NAME:-${NAME_PREFIX:-app}-prod-redis}
+  seaweedfs_data:
+    name: ${SEAWEEDFS_VOLUME_NAME:-${NAME_PREFIX:-app}-prod-seaweedfs}
   meili_data:
     name: ${MEILI_VOLUME_NAME:-${NAME_PREFIX:-app}-prod-meilisearch}
 

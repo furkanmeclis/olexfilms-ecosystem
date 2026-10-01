@@ -84,7 +84,7 @@ Shared infra: `components/ui`, `tables`, `entity`, `forms`, `layout`, `dialogs`,
 
 Brand tokens: `src/config/brand.ts`.
 
-Media: never assemble MinIO/S3 URLs in the browser. Use `assertServiceMediaURL` in `src/lib/media/urls.ts`.
+Media: never assemble SeaweedFS/S3 URLs in the browser. Use `assertServiceMediaURL` in `src/lib/media/urls.ts`.
 
 ## Scripts
 

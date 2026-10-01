@@ -1,6 +1,6 @@
 /**
  * Media URL rules (EWC-compatible):
- * - Never build MinIO/S3 URLs from object keys in the browser.
+ * - Never build SeaweedFS/S3 URLs from object keys in the browser.
  * - Only use `logo_url` / `public_url` (or auth-stream paths) returned by the API.
  * - Preview blobs from local File picks may use URL.createObjectURL; revoke after use.
  */

@@ -105,22 +105,21 @@ type RedisConfig struct {
 }
 
 type StorageConfig struct {
-	Driver    string // minio | s3 | local
+	Driver    string // s3 (SeaweedFS or any S3-compatible store)
 	LocalPath string
 	MaxBytes  int64
-	MinIO     ObjectStoreConfig
 	S3        ObjectStoreConfig
 }
 
-// ObjectStoreConfig holds S3-compatible credentials (MinIO or S3).
+// ObjectStoreConfig holds S3-compatible credentials (SeaweedFS or S3).
+// Objects are never served from a public bucket URL; the API streams them.
 type ObjectStoreConfig struct {
-	Endpoint      string
-	Region        string
-	Bucket        string
-	AccessKey     string
-	SecretKey     string
-	UsePathStyle  bool
-	PublicBaseURL string
+	Endpoint     string
+	Region       string
+	Bucket       string
+	AccessKey    string
+	SecretKey    string
+	UsePathStyle bool
 }
 
 type CORSConfig struct {
@@ -351,53 +350,17 @@ func (c Config) validate() error {
 }
 
 func loadStorageConfig() StorageConfig {
-	driver := strings.ToLower(getEnv("STORAGE_DRIVER", "minio"))
-	s3Endpoint := getEnv("S3_ENDPOINT", "http://127.0.0.1:9000")
-	s3Bucket := getEnv("S3_BUCKET", "app")
-	s3Access := getEnv("S3_ACCESS_KEY", "minioadmin")
-	s3Secret := getEnv("S3_SECRET_KEY", "minioadmin")
-	s3Region := getEnv("S3_REGION", "us-east-1")
-	s3PathStyle := getBool("S3_USE_PATH_STYLE", true)
-	s3Public := getEnv("S3_PUBLIC_BASE_URL", "")
-
-	minioEndpoint := firstNonEmpty(getEnv("MINIO_ENDPOINT", ""), s3Endpoint)
-	minioBucket := firstNonEmpty(getEnv("MINIO_BUCKET", ""), s3Bucket)
-	minioAccess := firstNonEmpty(getEnv("MINIO_ACCESS_KEY", ""), s3Access)
-	minioSecret := firstNonEmpty(getEnv("MINIO_SECRET_KEY", ""), s3Secret)
-	minioRegion := firstNonEmpty(getEnv("MINIO_REGION", ""), s3Region)
-	minioPathStyle := s3PathStyle
-	if os.Getenv("MINIO_USE_PATH_STYLE") != "" {
-		minioPathStyle = getBool("MINIO_USE_PATH_STYLE", true)
-	}
-	minioPublic := firstNonEmpty(getEnv("MINIO_PUBLIC_BASE_URL", ""), s3Public)
-	if minioPublic == "" {
-		minioPublic = strings.TrimRight(minioEndpoint, "/") + "/" + minioBucket
-	}
-	if s3Public == "" {
-		s3Public = strings.TrimRight(s3Endpoint, "/") + "/" + s3Bucket
-	}
-
 	return StorageConfig{
-		Driver:    driver,
+		Driver:    strings.ToLower(getEnv("STORAGE_DRIVER", "s3")),
 		LocalPath: getEnv("STORAGE_LOCAL_PATH", "./storage/objects"),
 		MaxBytes:  getInt64("STORAGE_MAX_BYTES", 10<<20),
-		MinIO: ObjectStoreConfig{
-			Endpoint:      minioEndpoint,
-			Region:        minioRegion,
-			Bucket:        minioBucket,
-			AccessKey:     minioAccess,
-			SecretKey:     minioSecret,
-			UsePathStyle:  minioPathStyle,
-			PublicBaseURL: minioPublic,
-		},
 		S3: ObjectStoreConfig{
-			Endpoint:      s3Endpoint,
-			Region:        s3Region,
-			Bucket:        s3Bucket,
-			AccessKey:     s3Access,
-			SecretKey:     s3Secret,
-			UsePathStyle:  s3PathStyle,
-			PublicBaseURL: s3Public,
+			Endpoint:     getEnv("S3_ENDPOINT", "http://127.0.0.1:9000"),
+			Region:       getEnv("S3_REGION", "us-east-1"),
+			Bucket:       getEnv("S3_BUCKET", "app"),
+			AccessKey:    getEnv("S3_ACCESS_KEY", "s3admin"),
+			SecretKey:    getEnv("S3_SECRET_KEY", "s3admin-secret"),
+			UsePathStyle: getBool("S3_USE_PATH_STYLE", true),
 		},
 	}
 }

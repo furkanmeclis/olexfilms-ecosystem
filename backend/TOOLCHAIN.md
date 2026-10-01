@@ -54,8 +54,7 @@ Infra is started from the **repo root**: `make infra` / `make local-dev`.
 | Health | `http://127.0.0.1:8080/healthz` |
 | Ready | `http://127.0.0.1:8080/readyz` |
 | Adminer | `http://127.0.0.1:8081` |
-| MinIO API | `http://127.0.0.1:9000` |
-| MinIO Console | `http://127.0.0.1:9001` |
+| SeaweedFS S3 API | `http://127.0.0.1:9000` |
 | MailHog UI | `http://127.0.0.1:8025` |
 | MailHog SMTP | `127.0.0.1:1025` |
 | Postgres | `127.0.0.1:5432` |
@@ -69,4 +68,4 @@ Infra is started from the **repo root**: `make infra` / `make local-dev`.
 - SQL access: **sqlc** + pgx — see [`DATABASE_RULES.md`](DATABASE_RULES.md).
 - Postgres image is **`postgres:18-alpine`**. `000001` enables `pgcrypto`.
 - Queue: in-process by default (`QUEUE_WORKER_INPROCESS=true`) or `make worker`.
-- Storage: MinIO via Compose (`STORAGE_DRIVER=minio`).
+- Storage: SeaweedFS (S3 API) via Compose (`STORAGE_DRIVER=s3`).
