@@ -46,7 +46,7 @@
   "products.pick_category": "اختر فئة",
   "products.unit_hint": "تُخزَّن منتجات اللفة / المتر وتُستهلك حسب الطول.",
   "products.fixed_barcode_hint": "تحمل جميع وحدات المنتج الباركود نفسه.",
-  "products.images_hint": "مفاتيح تخزين صور المنتج، مفتاح في كل سطر؛ الأول هو صورة الغلاف.",
+  "products.images_hint": "JPEG أو PNG أو WebP؛ بحد أقصى 5 ميغابايت لكل صورة، وحتى 10 صور. الصورة الأولى هي الغلاف؛ اسحب أو استخدم الأسهم لإعادة الترتيب.",
   "products.markdown_hint": "Markdown: عناوين وقوائم و**غامق** و*مائل* وروابط.",
   "products.preview": "معاينة",
   "products.locked_hint": "تتم مزامنة بعض الحقول من مركز العلامة التجارية ولا يمكن تغييرها هنا.",
@@ -93,5 +93,18 @@
   "validation.warranty": "من 0 إلى 600 شهر",
   "validation.micron": "رقم موجب",
   "validation.price": "مبلغ غير سالب بحد أقصى 4 خانات عشرية",
-  "validation.currency": "رمز عملة من ثلاثة أحرف، مثل TRY"
+  "validation.currency": "رمز عملة من ثلاثة أحرف، مثل TRY",
+  "images.drop": "اسحب الصور وأفلتها هنا أو انقر للاختيار",
+  "images.save_first": "احفظ المنتج أولاً لإضافة الصور.",
+  "images.uploading": "جارٍ الرفع…",
+  "images.remove": "إزالة الصورة",
+  "images.move_earlier": "تقديم",
+  "images.move_later": "تأخير",
+  "images.cover": "الغلاف",
+  "images.alt": "صورة المنتج {{n}}",
+  "images.uploaded": "تم رفع الصورة",
+  "images.removed": "تمت إزالة الصورة",
+  "images.invalid_type": "يمكن رفع صور JPEG وPNG وWebP فقط.",
+  "images.too_large": "يجب ألا يتجاوز حجم كل صورة 5 ميغابايت.",
+  "images.too_many": "يمكن أن يحتوي المنتج على {{max}} صور كحد أقصى."
 }

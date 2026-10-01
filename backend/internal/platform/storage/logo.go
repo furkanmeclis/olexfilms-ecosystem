@@ -97,6 +97,10 @@ func ValidateHeroSize(size int64) error {
 	return nil
 }
 
+// MaxProductImageBytes is the maximum accepted product image size (5 MiB).
+// Product images use the same raster-only MIME rules as logos (TEC-152).
+const MaxProductImageBytes = 5 << 20
+
 // TenantLogoObjectKey builds tenants/{uuid}/logo.{ext}.
 func TenantLogoObjectKey(tenantUUID uuid.UUID, ext string) string {
 	return fmt.Sprintf("tenants/%s/logo.%s", tenantUUID.String(), strings.TrimPrefix(ext, "."))

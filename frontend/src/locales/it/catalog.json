@@ -46,7 +46,7 @@
   "products.pick_category": "Scegli una categoria",
   "products.unit_hint": "I prodotti a rotolo / metro sono gestiti e consumati a lunghezza.",
   "products.fixed_barcode_hint": "Tutte le unità del prodotto hanno lo stesso codice a barre.",
-  "products.images_hint": "Chiavi di archiviazione delle immagini, una per riga; la prima è la copertina.",
+  "products.images_hint": "JPEG, PNG o WebP; massimo 5 MB per immagine, fino a 10 immagini. La prima immagine è la copertina; trascina o usa le frecce per riordinare.",
   "products.markdown_hint": "Markdown: titoli, elenchi, **grassetto**, *corsivo* e link.",
   "products.preview": "Anteprima",
   "products.locked_hint": "Alcuni campi sono sincronizzati dall'hub del marchio e non possono essere modificati qui.",
@@ -93,5 +93,18 @@
   "validation.warranty": "Da 0 a 600 mesi",
   "validation.micron": "Un numero positivo",
   "validation.price": "Un importo non negativo, al massimo 4 decimali",
-  "validation.currency": "Codice valuta di tre lettere, ad es. TRY"
+  "validation.currency": "Codice valuta di tre lettere, ad es. TRY",
+  "images.drop": "Trascina qui le immagini o fai clic per sceglierle",
+  "images.save_first": "Salva prima il prodotto per aggiungere immagini.",
+  "images.uploading": "Caricamento…",
+  "images.remove": "Rimuovi immagine",
+  "images.move_earlier": "Sposta prima",
+  "images.move_later": "Sposta dopo",
+  "images.cover": "Copertina",
+  "images.alt": "Immagine del prodotto {{n}}",
+  "images.uploaded": "Immagine caricata",
+  "images.removed": "Immagine rimossa",
+  "images.invalid_type": "Si possono caricare solo immagini JPEG, PNG e WebP.",
+  "images.too_large": "Ogni immagine può essere al massimo di 5 MB.",
+  "images.too_many": "Un prodotto può avere al massimo {{max}} immagini."
 }

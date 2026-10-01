@@ -46,7 +46,7 @@
   "products.pick_category": "Kategori seçin",
   "products.unit_hint": "Rulo / metraj ürünleri uzunlukla stoklanır ve tüketilir.",
   "products.fixed_barcode_hint": "Ürünün tüm birimleri aynı barkodu taşır.",
-  "products.images_hint": "Ürün görsellerinin depolama anahtarları, her satıra bir tane; ilki kapak görselidir.",
+  "products.images_hint": "JPEG, PNG veya WebP; görsel başına en fazla 5 MB, en fazla 10 görsel. İlk görsel kapak görselidir; sırayı sürükleyerek ya da oklarla değiştirin.",
   "products.markdown_hint": "Markdown: başlık, liste, **kalın**, *italik* ve bağlantı.",
   "products.preview": "Önizleme",
   "products.locked_hint": "Bazı alanlar marka merkezinden senkronlanır ve burada değiştirilemez.",
@@ -93,5 +93,18 @@
   "validation.warranty": "0 ile 600 ay arası",
   "validation.micron": "Pozitif bir sayı girin",
   "validation.price": "Negatif olmayan tutar, en fazla 4 ondalık",
-  "validation.currency": "Üç harfli para birimi kodu, örn. TRY"
+  "validation.currency": "Üç harfli para birimi kodu, örn. TRY",
+  "images.drop": "Görselleri buraya sürükleyip bırakın ya da seçmek için tıklayın",
+  "images.save_first": "Görsel eklemek için önce ürünü kaydedin.",
+  "images.uploading": "Yükleniyor…",
+  "images.remove": "Görseli kaldır",
+  "images.move_earlier": "Öne al",
+  "images.move_later": "Geriye al",
+  "images.cover": "Kapak",
+  "images.alt": "Ürün görseli {{n}}",
+  "images.uploaded": "Görsel yüklendi",
+  "images.removed": "Görsel kaldırıldı",
+  "images.invalid_type": "Yalnızca JPEG, PNG ve WebP görseller yüklenebilir.",
+  "images.too_large": "Her görsel en fazla 5 MB olabilir.",
+  "images.too_many": "Bir üründe en fazla {{max}} görsel olabilir."
 }

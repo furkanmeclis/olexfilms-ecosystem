@@ -12,6 +12,10 @@ import (
 )
 
 type Querier interface {
+	// TEC-152: product image uploads.
+	// Atomically appends one image while the product holds fewer than
+	// max_images; no row means the product is gone or already full.
+	AppendProductImage(ctx context.Context, arg AppendProductImageParams) (Product, error)
 	AssignMemberRoleBySlug(ctx context.Context, arg AssignMemberRoleBySlugParams) error
 	AssignUserRoleBySlug(ctx context.Context, arg AssignUserRoleBySlugParams) error
 	AttachNotificationDelivery(ctx context.Context, arg AttachNotificationDeliveryParams) error
@@ -132,6 +136,8 @@ type Querier interface {
 	GetActiveDocumentTemplate(ctx context.Context, arg GetActiveDocumentTemplateParams) (DocumentTemplate, error)
 	GetActiveOTPByEmailType(ctx context.Context, arg GetActiveOTPByEmailTypeParams) (OtpCode, error)
 	GetActivePhoneOTP(ctx context.Context, arg GetActivePhoneOTPParams) (OtpCode, error)
+	// Public image route: the active product (any brand) that lists the key.
+	GetActiveProductUUIDByImageKey(ctx context.Context, key string) (uuid.UUID, error)
 	GetAppLogByUUID(ctx context.Context, argUuid uuid.UUID) (AppLog, error)
 	GetAppSettings(ctx context.Context) (AppSetting, error)
 	GetAuthSettings(ctx context.Context) (GetAuthSettingsRow, error)
@@ -418,6 +424,9 @@ type Querier interface {
 	PurgeNotificationsBefore(ctx context.Context, arg PurgeNotificationsBeforeParams) (int64, error)
 	QueueImportJob(ctx context.Context, argUuid uuid.UUID) (ImportJob, error)
 	RemoveUserRoleBySlug(ctx context.Context, arg RemoveUserRoleBySlugParams) error
+	// Optimistic replacement of the image list: no row when another request
+	// changed the list since it was read (expected).
+	ReplaceProductImages(ctx context.Context, arg ReplaceProductImagesParams) (Product, error)
 	ReplaceUserRoles(ctx context.Context, userID int64) error
 	// The most specific territory covering an address (district > province >
 	// country) whose distributor is live.

@@ -46,7 +46,7 @@
   "products.pick_category": "Choisir une catégorie",
   "products.unit_hint": "Les produits au rouleau / mètre sont stockés et consommés à la longueur.",
   "products.fixed_barcode_hint": "Toutes les unités du produit portent le même code-barres.",
-  "products.images_hint": "Clés de stockage des images du produit, une par ligne ; la première sert de couverture.",
+  "products.images_hint": "JPEG, PNG ou WebP ; 5 Mo maximum par image, jusqu'à 10 images. La première image est la couverture ; faites glisser ou utilisez les flèches pour réordonner.",
   "products.markdown_hint": "Markdown : titres, listes, **gras**, *italique* et liens.",
   "products.preview": "Aperçu",
   "products.locked_hint": "Certains champs sont synchronisés depuis le hub de la marque et ne peuvent pas être modifiés ici.",
@@ -93,5 +93,18 @@
   "validation.warranty": "De 0 à 600 mois",
   "validation.micron": "Un nombre positif",
   "validation.price": "Un montant positif ou nul, 4 décimales au maximum",
-  "validation.currency": "Code devise à trois lettres, p. ex. TRY"
+  "validation.currency": "Code devise à trois lettres, p. ex. TRY",
+  "images.drop": "Glissez-déposez des images ici ou cliquez pour choisir",
+  "images.save_first": "Enregistrez d'abord le produit pour ajouter des images.",
+  "images.uploading": "Envoi en cours…",
+  "images.remove": "Retirer l'image",
+  "images.move_earlier": "Avancer",
+  "images.move_later": "Reculer",
+  "images.cover": "Couverture",
+  "images.alt": "Image du produit {{n}}",
+  "images.uploaded": "Image envoyée",
+  "images.removed": "Image retirée",
+  "images.invalid_type": "Seules les images JPEG, PNG et WebP peuvent être envoyées.",
+  "images.too_large": "Chaque image peut faire 5 Mo au maximum.",
+  "images.too_many": "Un produit peut avoir au maximum {{max}} images."
 }

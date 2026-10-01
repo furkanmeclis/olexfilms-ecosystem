@@ -1,4 +1,5 @@
 import type { components } from "@/generated/api";
+import { platformFormRequest } from "@/lib/api/platform-form-request";
 import { platformRequest } from "@/lib/api/platform-request";
 
 type Schemas = components["schemas"];
@@ -40,6 +41,21 @@ export type BulkActiveResult = {
   updated: number;
   uuids: string[];
 };
+
+/** Product image limits (TEC-152); the backend enforces the same. */
+export const PRODUCT_IMAGE_MAX = 10;
+export const PRODUCT_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+export const PRODUCT_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+/** Keys issued by the upload route (32 hex + raster extension). */
+const UPLOADED_IMAGE_KEY = /^[0-9a-f]{32}\.(jpg|png|webp)$/;
+
+/** Public, cacheable URL of an uploaded product image; null for legacy keys. */
+export function productImageUrl(key: string): string | null {
+  return UPLOADED_IMAGE_KEY.test(key)
+    ? `/product-images/${encodeURIComponent(key)}`
+    : null;
+}
 
 /** At most this many uuids per bulk-active request (TEC-145). */
 export const BULK_ACTIVE_MAX = 500;
@@ -128,6 +144,31 @@ export const catalogService = {
     return platformRequest<{ deleted: boolean }>(
       "DELETE",
       `/v1/catalog/products/${encodeURIComponent(uuid)}`,
+    );
+  },
+
+  uploadProductImage(uuid: string, file: File) {
+    const form = new FormData();
+    form.append("image", file);
+    return platformFormRequest<CatalogProduct>(
+      "POST",
+      `/v1/catalog/products/${encodeURIComponent(uuid)}/images`,
+      form,
+    );
+  },
+
+  deleteProductImage(uuid: string, key: string) {
+    return platformRequest<CatalogProduct>(
+      "DELETE",
+      `/v1/catalog/products/${encodeURIComponent(uuid)}/images/${encodeURIComponent(key)}`,
+    );
+  },
+
+  reorderProductImages(uuid: string, keys: string[]) {
+    return platformRequest<CatalogProduct>(
+      "PUT",
+      `/v1/catalog/products/${encodeURIComponent(uuid)}/images/order`,
+      { body: { keys } },
     );
   },
 

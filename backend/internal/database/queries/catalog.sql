@@ -151,3 +151,30 @@ SELECT * FROM products WHERE uuid = sqlc.arg(uuid);
 -- name: ListProductsForIndex :many
 -- Search indexer only (full reindex across brands).
 SELECT * FROM products ORDER BY id;
+
+-- TEC-152: product image uploads.
+
+-- name: AppendProductImage :one
+-- Atomically appends one image while the product holds fewer than
+-- max_images; no row means the product is gone or already full.
+UPDATE products
+SET images = images || jsonb_build_array(sqlc.arg(image)::jsonb)
+WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id)
+  AND jsonb_array_length(images) < sqlc.arg(max_images)::int
+RETURNING *;
+
+-- name: ReplaceProductImages :one
+-- Optimistic replacement of the image list: no row when another request
+-- changed the list since it was read (expected).
+UPDATE products
+SET images = sqlc.arg(images)::jsonb
+WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id)
+  AND images = sqlc.arg(expected)::jsonb
+RETURNING *;
+
+-- name: GetActiveProductUUIDByImageKey :one
+-- Public image route: the active product (any brand) that lists the key.
+SELECT uuid FROM products
+WHERE active
+  AND images @> jsonb_build_array(jsonb_build_object('key', sqlc.arg(key)::text))
+LIMIT 1;

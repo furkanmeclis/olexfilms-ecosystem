@@ -101,14 +101,6 @@ export function productFormSchema(t: Translate) {
         const n = Number(v.replace(",", "."));
         return Number.isFinite(n) && n > 0 && n <= 999999.99;
       }, t("catalog.validation.micron")),
-    images: z
-      .string()
-      .refine((v) => parseLines(v).length <= 20, {
-        message: t("catalog.validation.too_many", { max: 20 }),
-      })
-      .refine((v) => parseLines(v).every((k) => k.length <= 512), {
-        message: t("catalog.validation.too_long", { max: 512 }),
-      }),
     description_md: z
       .string()
       .max(20000, t("catalog.validation.too_long", { max: 20000 })),
@@ -119,7 +111,6 @@ export function productFormSchema(t: Translate) {
 export type ProductFormValues = z.infer<ReturnType<typeof productFormSchema>>;
 
 export function productDefaults(p?: CatalogProduct | null): ProductFormValues {
-  const images = [...(p?.images ?? [])].sort((a, b) => a.sort - b.sort);
   return {
     category_uuid: p?.category.uuid ?? "",
     sku: p?.sku ?? "",
@@ -135,13 +126,17 @@ export function productDefaults(p?: CatalogProduct | null): ProductFormValues {
       p?.micron_thickness === null || p?.micron_thickness === undefined
         ? ""
         : String(p.micron_thickness),
-    images: images.map((img) => img.key).join("\n"),
     description_md: p?.description_md ?? "",
     active: p?.active ?? true,
   };
 }
 
-/** Form values to the API body; empty optional numbers are sent as null (cleared). */
+/**
+ * Form values to the API body; empty optional numbers are sent as null
+ * (cleared). Images are not part of the form: they are uploaded, removed
+ * and reordered through the image routes (TEC-152), so a save never
+ * overwrites a concurrent upload.
+ */
 export function productInput(v: ProductFormValues): CatalogProductInput {
   const warranty = v.warranty_duration_months.trim();
   const micron = v.micron_thickness.trim().replace(",", ".");
@@ -153,7 +148,6 @@ export function productInput(v: ProductFormValues): CatalogProductInput {
     uses_fixed_barcode: v.uses_fixed_barcode,
     warranty_duration_months: warranty === "" ? null : Number(warranty),
     micron_thickness: micron === "" ? null : Number(micron),
-    images: parseLines(v.images).map((key, sort) => ({ key, sort })),
     description_md: v.description_md,
     active: v.active,
   };

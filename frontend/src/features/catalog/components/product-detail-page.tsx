@@ -21,7 +21,10 @@ import {
   catalogKeys,
   useCatalogAccess,
 } from "@/features/catalog/hooks/use-catalog-access";
-import { catalogService } from "@/features/catalog/services/catalog.service";
+import {
+  catalogService,
+  productImageUrl,
+} from "@/features/catalog/services/catalog.service";
 import { Markdown } from "@/features/portal/lib/markdown";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
@@ -179,12 +182,28 @@ export function ProductDetailPage({
               <p className="text-muted-foreground text-xs">
                 {t("catalog.fields.images")}
               </p>
-              <div className="flex flex-wrap gap-1">
-                {images.map((img) => (
-                  <Badge key={img.key} variant="outline" className="font-mono">
-                    {img.key}
-                  </Badge>
-                ))}
+              <div className="flex flex-wrap gap-2">
+                {images.map((img, index) => {
+                  const url = productImageUrl(img.key);
+                  return url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={img.key}
+                      src={url}
+                      alt={t("catalog.images.alt", { n: index + 1 })}
+                      loading="lazy"
+                      className="bg-muted size-24 rounded-md border object-cover"
+                    />
+                  ) : (
+                    <Badge
+                      key={img.key}
+                      variant="outline"
+                      className="font-mono"
+                    >
+                      {img.key}
+                    </Badge>
+                  );
+                })}
               </div>
             </div>
           ) : null}

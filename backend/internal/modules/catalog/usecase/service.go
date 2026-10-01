@@ -90,6 +90,10 @@ type Store interface {
 	ListProducts(ctx context.Context, arg db.ListProductsParams) ([]db.Product, error)
 	CountProducts(ctx context.Context, arg db.CountProductsParams) (int64, error)
 	SetProductsActiveByUUIDs(ctx context.Context, arg db.SetProductsActiveByUUIDsParams) ([]uuid.UUID, error)
+
+	AppendProductImage(ctx context.Context, arg db.AppendProductImageParams) (db.Product, error)
+	ReplaceProductImages(ctx context.Context, arg db.ReplaceProductImagesParams) (db.Product, error)
+	GetActiveProductUUIDByImageKey(ctx context.Context, key string) (uuid.UUID, error)
 }
 
 // Indexer receives search index mutations (searchengine.Indexer).
@@ -299,6 +303,9 @@ func (s *Service) CreateProduct(ctx context.Context, org orgctx.Scope, in model.
 	if err := requireCenter(org); err != nil {
 		return model.Product{}, err
 	}
+	if err := checkUploadedKeys(nil, in.Images); err != nil {
+		return model.Product{}, err
+	}
 	p := productFields{UnitType: model.UnitPiece, Active: true, Images: []model.Image{}}
 	p.apply(in)
 	cat, err := s.validateProduct(ctx, org.BrandID, &p, in.CategoryUUID, true)
@@ -326,6 +333,9 @@ func (s *Service) UpdateProduct(ctx context.Context, org orgctx.Scope, id uuid.U
 	}
 	cur, err := s.product(ctx, org.BrandID, id)
 	if err != nil {
+		return model.Product{}, err
+	}
+	if err := checkUploadedKeys(decodeImages(cur.Images), in.Images); err != nil {
 		return model.Product{}, err
 	}
 	p := fieldsOf(cur)
@@ -463,7 +473,6 @@ const (
 	maxDescriptionLen = 20000
 	maxPartLen        = 100
 	maxParts          = 100
-	maxImages         = 20
 	maxImageKeyLen    = 512
 	maxWarrantyMonths = 600
 	// NUMERIC(8,2)
@@ -592,8 +601,8 @@ func (s *Service) validateProduct(ctx context.Context, brandID int64, p *product
 	if p.Micron != nil && (*p.Micron <= 0 || *p.Micron > maxMicron || math.IsNaN(*p.Micron)) {
 		verr.add("micron_thickness", "out_of_range", "micron_thickness must be greater than 0")
 	}
-	if len(p.Images) > maxImages {
-		verr.add("images", "too_many", fmt.Sprintf("at most %d images", maxImages))
+	if len(p.Images) > MaxProductImages {
+		verr.add("images", "too_many", fmt.Sprintf("at most %d images", MaxProductImages))
 	}
 	for i := range p.Images {
 		p.Images[i].Key = strings.TrimSpace(p.Images[i].Key)

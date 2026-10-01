@@ -4720,6 +4720,153 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/catalog/products/{uuid}/images:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    post:
+      tags: [Catalog]
+      operationId: uploadCatalogProductImage
+      summary: Upload a product image (center only)
+      description: >-
+        Needs `catalog.write` and the brand center (K4). The type is detected
+        from the file content: only JPEG, PNG and WebP are accepted (SVG and
+        anything else is 400), at most 5 MiB (413) and at most 10 images per
+        product (422). The image is appended last and served publicly at
+        `/product-images/{key}` while the product is active.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image: { type: string, format: binary }
+      responses:
+        "201":
+          description: Image added; the updated product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCatalogProduct"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/catalog/products/{uuid}/images/order:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    put:
+      tags: [Catalog]
+      operationId: reorderCatalogProductImages
+      summary: Reorder product images (center only)
+      description: >-
+        `keys` must list every current image exactly once (422 otherwise);
+        `sort` is renumbered from 0. 409 when the images changed meanwhile.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogProductImageOrder"
+      responses:
+        "200":
+          description: Reordered; the updated product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCatalogProduct"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/catalog/products/{uuid}/images/{key}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+      - name: key
+        in: path
+        required: true
+        schema: { type: string }
+    delete:
+      tags: [Catalog]
+      operationId: deleteCatalogProductImage
+      summary: Remove a product image (center only)
+      description: Removes the image (and its stored object) and renumbers `sort`.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Removed; the updated product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCatalogProduct"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/public/product-images/{key}:
+    get:
+      tags: [Catalog]
+      operationId: getPublicProductImage
+      summary: Product image (public, cacheable)
+      description: >-
+        No auth, no signed URL. The frontend serves it at the fixed URL
+        `/product-images/{key}`. Answers the uploaded image with a strong
+        `ETag` and `Cache-Control: public, max-age=86400`; a matching
+        `If-None-Match` gets 304. Only images of active products are served;
+        removed, unknown and inactive-product images are 404.
+      security: []
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema: { type: string, pattern: "^[0-9a-f]{32}\\.(jpg|png|webp)$" }
+        - name: If-None-Match
+          in: header
+          schema: { type: string }
+      responses:
+        "200":
+          description: Image bytes
+          headers:
+            ETag: { schema: { type: string } }
+            Cache-Control: { schema: { type: string } }
+          content:
+            image/png: { schema: { type: string, format: binary } }
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+        "304":
+          description: Not modified (If-None-Match matched the ETag)
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/public/brand-logos/{uuid}:
     get:
       tags: [VehicleCatalog]
@@ -7008,6 +7155,12 @@ components:
             $ref: "#/components/schemas/Error"
     NotFound:
       description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    PayloadTooLarge:
+      description: Request body or uploaded file too large
       content:
         application/json:
           schema:
@@ -9813,7 +9966,12 @@ components:
       type: object
       required: [key, sort]
       properties:
-        key: { type: string, maxLength: 512, description: Storage object key }
+        key:
+          type: string
+          maxLength: 512
+          description: >-
+            Image key. Uploaded images (32 hex + .jpg/.png/.webp) are served
+            at `/product-images/{key}`.
         sort: { type: integer }
 
     CatalogProduct:
@@ -9863,6 +10021,17 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
 
+    CatalogProductImageOrder:
+      type: object
+      additionalProperties: false
+      required: [keys]
+      properties:
+        keys:
+          type: array
+          maxItems: 10
+          description: Every current image key, in the new order
+          items: { type: string }
+
     CatalogProductInput:
       type: object
       additionalProperties: false
@@ -9878,7 +10047,11 @@ components:
         micron_thickness: { type: [number, "null"], exclusiveMinimum: 0, maximum: 999999.99 }
         images:
           type: array
-          maxItems: 20
+          maxItems: 10
+          description: >-
+            Keys issued by the image upload route can only be kept or dropped
+            here, not added; prefer the `/images` routes for uploads, removal
+            and order.
           items: { $ref: "#/components/schemas/CatalogProductImage" }
         unit_type: { $ref: "#/components/schemas/CatalogUnitType" }
         uses_fixed_barcode: { type: boolean }

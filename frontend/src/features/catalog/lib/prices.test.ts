@@ -87,7 +87,7 @@ describe("product form", () => {
     ]);
   });
 
-  it("maps values to the API body (empty numbers clear, images keep order)", () => {
+  it("maps values to the API body (empty numbers clear, images untouched)", () => {
     const values = {
       ...productDefaults(null),
       category_uuid: "c1",
@@ -95,17 +95,14 @@ describe("product form", () => {
       name: "PPF",
       unit_type: "roll_meter" as const,
       micron_thickness: "190,5",
-      images: "a.jpg\nb.jpg",
     };
-    expect(productInput(values)).toMatchObject({
+    const body = productInput(values);
+    expect(body).not.toHaveProperty("images");
+    expect(body).toMatchObject({
       sku: "PPF-1",
       unit_type: "roll_meter",
       warranty_duration_months: null,
       micron_thickness: 190.5,
-      images: [
-        { key: "a.jpg", sort: 0 },
-        { key: "b.jpg", sort: 1 },
-      ],
       uses_fixed_barcode: false,
       active: true,
     });

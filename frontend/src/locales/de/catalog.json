@@ -46,7 +46,7 @@
   "products.pick_category": "Kategorie wählen",
   "products.unit_hint": "Produkte mit Rolle / Meter werden nach Länge gelagert und verbraucht.",
   "products.fixed_barcode_hint": "Alle Einheiten des Produkts tragen denselben Barcode.",
-  "products.images_hint": "Speicherschlüssel der Produktbilder, einer pro Zeile; der erste ist das Titelbild.",
+  "products.images_hint": "JPEG, PNG oder WebP; höchstens 5 MB pro Bild, bis zu 10 Bilder. Das erste Bild ist das Titelbild; zum Sortieren ziehen oder die Pfeile verwenden.",
   "products.markdown_hint": "Markdown: Überschriften, Listen, **fett**, *kursiv* und Links.",
   "products.preview": "Vorschau",
   "products.locked_hint": "Einige Felder werden vom Marken-Hub synchronisiert und können hier nicht geändert werden.",
@@ -93,5 +93,18 @@
   "validation.warranty": "0 bis 600 Monate",
   "validation.micron": "Eine positive Zahl",
   "validation.price": "Ein nicht negativer Betrag, höchstens 4 Nachkommastellen",
-  "validation.currency": "Dreistelliger Währungscode, z. B. TRY"
+  "validation.currency": "Dreistelliger Währungscode, z. B. TRY",
+  "images.drop": "Bilder hierher ziehen und ablegen oder zum Auswählen klicken",
+  "images.save_first": "Speichern Sie zuerst das Produkt, um Bilder hinzuzufügen.",
+  "images.uploading": "Wird hochgeladen…",
+  "images.remove": "Bild entfernen",
+  "images.move_earlier": "Nach vorne",
+  "images.move_later": "Nach hinten",
+  "images.cover": "Titelbild",
+  "images.alt": "Produktbild {{n}}",
+  "images.uploaded": "Bild hochgeladen",
+  "images.removed": "Bild entfernt",
+  "images.invalid_type": "Es können nur JPEG-, PNG- und WebP-Bilder hochgeladen werden.",
+  "images.too_large": "Jedes Bild darf höchstens 5 MB groß sein.",
+  "images.too_many": "Ein Produkt kann höchstens {{max}} Bilder haben."
 }

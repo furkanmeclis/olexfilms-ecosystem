@@ -46,7 +46,7 @@
   "products.pick_category": "Kateqoriya seçin",
   "products.unit_hint": "Rulon / metr məhsulları uzunluqla anbarlanır və istifadə olunur.",
   "products.fixed_barcode_hint": "Məhsulun bütün vahidləri eyni barkodu daşıyır.",
-  "products.images_hint": "Məhsul şəkillərinin saxlama açarları, hər sətirdə bir; birincisi örtük şəklidir.",
+  "products.images_hint": "JPEG, PNG və ya WebP; hər şəkil üçün ən çox 5 MB, ən çox 10 şəkil. İlk şəkil üz qabığıdır; sıranı dəyişmək üçün sürüşdürün və ya oxlardan istifadə edin.",
   "products.markdown_hint": "Markdown: başlıq, siyahı, **qalın**, *kursiv* və keçid.",
   "products.preview": "Önizləmə",
   "products.locked_hint": "Bəzi sahələr marka mərkəzindən sinxronlaşdırılır və burada dəyişdirilə bilməz.",
@@ -93,5 +93,18 @@
   "validation.warranty": "0 ilə 600 ay arası",
   "validation.micron": "Müsbət ədəd daxil edin",
   "validation.price": "Mənfi olmayan məbləğ, ən çox 4 onluq",
-  "validation.currency": "Üç hərfli valyuta kodu, məs. TRY"
+  "validation.currency": "Üç hərfli valyuta kodu, məs. TRY",
+  "images.drop": "Şəkilləri buraya sürüşdürüb buraxın və ya seçmək üçün klikləyin",
+  "images.save_first": "Şəkil əlavə etmək üçün əvvəlcə məhsulu yadda saxlayın.",
+  "images.uploading": "Yüklənir…",
+  "images.remove": "Şəkli sil",
+  "images.move_earlier": "Önə keçir",
+  "images.move_later": "Geriyə keçir",
+  "images.cover": "Üz qabığı",
+  "images.alt": "Məhsul şəkli {{n}}",
+  "images.uploaded": "Şəkil yükləndi",
+  "images.removed": "Şəkil silindi",
+  "images.invalid_type": "Yalnız JPEG, PNG və WebP şəkilləri yüklənə bilər.",
+  "images.too_large": "Hər şəkil ən çox 5 MB ola bilər.",
+  "images.too_many": "Bir məhsulun ən çox {{max}} şəkli ola bilər."
 }
