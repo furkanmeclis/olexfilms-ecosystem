@@ -226,6 +226,23 @@ describe("BFF realms (TEC-90)", () => {
     expect(isRealmPathAllowed("panel", "auth/organization-context")).toBe(true);
   });
 
+  it("panel and portal BFFs refuse the mobile API and the QR exchange (TEC-91)", async () => {
+    for (const path of [
+      "mobile/auth/me",
+      "mobile/auth/login",
+      "mobile/push-token",
+      "auth/qr/complete",
+    ]) {
+      const res = await get(path);
+      expect(res.status, path).toBe(404);
+      const portal = await portalGet(path, "POST");
+      expect(portal.status, path).toBe(404);
+    }
+    expect(calls).toHaveLength(0);
+    expect(isRealmPathAllowed("panel", "auth/qr/start")).toBe(true);
+    expect(isRealmPathAllowed("panel", "auth/qr/abc/status")).toBe(true);
+  });
+
   it("portal logout clears only the portal cookie", async () => {
     await portalGet("auth/logout", "POST");
     expect(clearAuthSessionCookie).toHaveBeenCalledTimes(1);
