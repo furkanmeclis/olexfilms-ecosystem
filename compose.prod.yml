@@ -5,6 +5,9 @@ x-backend-image: &backend-image
   build:
     context: ./backend
     dockerfile: Dockerfile
+    args:
+      # Error-tracking release (-X ldflags); SENTRY_RELEASE at runtime wins.
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-}
 
 x-frontend-image: &frontend-image
   image: ${FRONTEND_IMAGE:?FRONTEND_IMAGE is required}
@@ -19,11 +22,19 @@ x-frontend-image: &frontend-image
     args:
       # Landing SEO/OG URLs are baked at build time; defaults to AUTH_URL.
       SITE_URL: ${SITE_URL:-${AUTH_URL:-}}
+      # Browser error tracking is baked in at build (empty DSN = off).
+      NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
+      NEXT_PUBLIC_SENTRY_ENVIRONMENT: ${NEXT_PUBLIC_SENTRY_ENVIRONMENT:-production}
+      NEXT_PUBLIC_SENTRY_RELEASE: ${NEXT_PUBLIC_SENTRY_RELEASE:-${SENTRY_RELEASE:-}}
 
 x-backend-environment: &backend-environment
   APP_NAME: ${APP_NAME:-api}
   APP_ENV: production
   APP_HTTP_ADDR: :8080
+  # Error tracking (technowide errortracking); empty DSN = off.
+  SENTRY_DSN: ${SENTRY_DSN:-}
+  SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+  SENTRY_RELEASE: ${SENTRY_RELEASE:-}
   # Internal hosts are qualified as <service>.<app network>: a bare service
   # name can resolve to another stack's container on a shared Docker host.
   DB_HOST: postgres.${APP_NETWORK_NAME:-${NAME_PREFIX:-app}-app}
@@ -455,6 +466,10 @@ services:
       NEXT_PUBLIC_CENTRIFUGO_URL: ${NEXT_PUBLIC_CENTRIFUGO_URL:-}
       NEXT_PUBLIC_DEFAULT_LOCALE: ${NEXT_PUBLIC_DEFAULT_LOCALE:-tr}
       NEXT_PUBLIC_FALLBACK_LOCALE: ${NEXT_PUBLIC_FALLBACK_LOCALE:-en}
+      # Server/edge error tracking (browser DSN is a build arg above).
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-}
     # Starts last. Workers only need to have started: an unhealthy worker
     # must not take the whole site down.
     depends_on:
