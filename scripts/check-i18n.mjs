@@ -15,6 +15,13 @@
  *   - ioengine LabelKey → backend catalog (PDF/CSV/XLSX)
  *   - bulkengine / searchengine LabelKey → frontend locales
  *   - backend i18n catalog en/tr parity
+ *   - languages from frontend/src/config/i18n.ts (SUPPORTED_LOCALES, 13):
+ *     tr/en must match key for key (error); any other language may miss
+ *     keys (warning, error with --strict) but never has extra keys
+ *   - {{param}} sets equal to en in every language
+ *   - per-language catalog wiring (locales/<lang>/index.ts, catalog-loaders)
+ *   - physical Tailwind utilities (ml-/pr-/left-/text-left...) are banned:
+ *     RTL needs logical ones (TEC-137, K10)
  *
  * Usage (repo root):
  *   node scripts/check-i18n.mjs
@@ -27,11 +34,25 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  findPhysicalClasses,
+  isPhysicalClassIgnored,
+} from "../frontend/scripts/physical-classes.mjs";
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const LOCALES = ["en", "tr"];
+const I18N_CONFIG = path.join(ROOT, "frontend/src/config/i18n.ts");
+/** tr and en are complete: every key in one must exist in the other. */
+const REQUIRED_LOCALES = ["en", "tr"];
+const LOCALES = readSupportedLocales();
+/** Languages that may lag behind en (TEC-138 translates them). */
+const PARTIAL_LOCALES = LOCALES.filter((l) => !REQUIRED_LOCALES.includes(l));
 const LOCALES_DIR = path.join(ROOT, "frontend/src/locales");
-const MESSAGES_FILE = path.join(ROOT, "frontend/src/lib/i18n/messages.ts");
+const CATALOG_LOADERS = path.join(ROOT, "frontend/src/lib/i18n/catalog-loaders.ts");
 const BACKEND_CATALOG = path.join(ROOT, "backend/internal/platform/i18n/catalog.go");
+const BACKEND_CATALOG_LOCALES = path.join(
+  ROOT,
+  "backend/internal/platform/i18n/catalog_locales.go",
+);
 const RBAC_FILE = path.join(ROOT, "backend/internal/platform/rbac/rbac.go");
 const PERMISSIONS_TS = path.join(ROOT, "frontend/src/config/permissions.ts");
 const IO_TYPES = path.join(ROOT, "frontend/src/features/io/types.ts");
@@ -60,21 +81,69 @@ const argv = new Set(process.argv.slice(2));
 const WANT_JSON = argv.has("--json");
 const STRICT = argv.has("--strict");
 const WANT_UNUSED = argv.has("--unused");
+const VERBOSE = argv.has("--verbose");
 
 if (argv.has("--help") || argv.has("-h")) {
   console.log(`check-i18n — missing / unwired translation keys
 
 Usage:
-  node scripts/check-i18n.mjs [--json] [--strict] [--unused]
+  node scripts/check-i18n.mjs [--json] [--strict] [--unused] [--verbose]
 
   --json     machine-readable report
-  --strict   treat warnings as errors
+  --strict   treat warnings as errors (a language missing keys fails)
   --unused   also report locale keys that nothing references
+  --verbose  list missing keys per namespace for partial languages
 `);
   process.exit(0);
 }
 
 const findings = [];
+
+function readSupportedLocales() {
+  const src = fs.readFileSync(I18N_CONFIG, "utf8");
+  const m = src.match(/SUPPORTED_LOCALES\s*=\s*\[([\s\S]*?)\]/);
+  if (!m) {
+    console.error(`Cannot read SUPPORTED_LOCALES from ${I18N_CONFIG}`);
+    process.exit(2);
+  }
+  return [...m[1].matchAll(/"([^"]+)"/g)].map((x) => x[1]);
+}
+
+const PARAM_RE = /{{\s*([a-zA-Z0-9_]+)\s*}}/g;
+
+function paramSet(text) {
+  return [...new Set([...String(text ?? "").matchAll(PARAM_RE)].map((m) => m[1]))]
+    .sort()
+    .join(",");
+}
+
+/** Go identifier of a locale's catalog map: zh-CN -> zhCNCatalog. */
+function goCatalogVar(locale) {
+  return `${locale.replace(/-([A-Za-z]+)/g, (_, r) => r)}Catalog`;
+}
+
+function parseGoCatalog(src, varName) {
+  const re = new RegExp(String.raw`\b${varName}\s*=\s*map\[string\]string\{`);
+  const m = re.exec(src);
+  if (!m) return null;
+  let depth = 1;
+  let i = m.index + m[0].length;
+  const start = i;
+  for (; i < src.length && depth > 0; i++) {
+    if (src[i] === '"') {
+      for (i++; i < src.length && src[i] !== '"'; i++) if (src[i] === "\\") i++;
+      continue;
+    }
+    if (src[i] === "{") depth++;
+    if (src[i] === "}") depth--;
+  }
+  const body = src.slice(start, i - 1);
+  const map = {};
+  for (const hit of body.matchAll(/"((?:\\.|[^"\\])*)"\s*:\s*"((?:\\.|[^"\\])*)"/g)) {
+    map[JSON.parse(`"${hit[1]}"`)] = JSON.parse(`"${hit[2]}"`);
+  }
+  return map;
+}
 
 function add(level, code, message, extra = {}) {
   findings.push({ level, code, message, ...extra });
@@ -152,17 +221,16 @@ function frontendLookup(catalogs, locale, fullKey) {
   return { ok, ns, rest, value };
 }
 
-function parseMessagesCatalog(src) {
+/** Namespaces a locales/<lang>/index.ts imports and registers. */
+function parseLocaleIndex(src) {
   const files = new Set();
-  for (const m of src.matchAll(
-    /from\s+["']@\/locales\/(?:en|tr)\/([a-z0-9_-]+)\.json["']/g,
-  )) {
+  for (const m of src.matchAll(/from\s+["']\.\/([a-z0-9_-]+)\.json["']/g)) {
     files.add(m[1]);
   }
   const namespaces = new Set();
-  const block = src.match(/tr:\s*\{([\s\S]*?)\},\s*\n\s*en:\s*\{/);
+  const block = src.match(/const catalog[^=]*=\s*\{([\s\S]*?)\};/);
   if (block) {
-    for (const m of block[1].matchAll(/^\s*([a-z][a-z0-9_]*)\s*:/gm)) {
+    for (const m of block[1].matchAll(/^\s*"?([a-z][a-z0-9_-]*)"?\s*[:,]/gm)) {
       namespaces.add(m[1]);
     }
   }
@@ -431,11 +499,101 @@ function printHuman() {
   );
 }
 
+/**
+ * Languages beyond tr/en: a missing namespace or key is a warning (one line
+ * per language and namespace, --strict makes it an error); a key en does
+ * not have is always an error.
+ */
+function checkPartialLocales(catalogs, enNs) {
+  for (const locale of PARTIAL_LOCALES) {
+    const cat = catalogs[locale] ?? {};
+    let missingTotal = 0;
+    let total = 0;
+    const gaps = [];
+    for (const ns of enNs) {
+      const enKeys = Object.keys(catalogs.en[ns]?.keys ?? {});
+      const keys = cat[ns]?.keys ?? {};
+      const missing = enKeys.filter((k) => !String(keys[k] ?? "").trim());
+      total += enKeys.length;
+      missingTotal += missing.length;
+      if (missing.length) gaps.push(ns);
+      if (VERBOSE && missing.length) {
+        add(
+          "warning",
+          "locale-incomplete-namespace",
+          `${locale} ${ns}: ${missing.length}/${enKeys.length} keys missing, e.g. ${missing.slice(0, 3).join(", ")}`,
+          { at: rel(path.join(LOCALES_DIR, locale, `${ns}.json`)) },
+        );
+      }
+      for (const k of Object.keys(keys)) {
+        if (!(k in (catalogs.en[ns]?.keys ?? {}))) {
+          add("error", "locale-extra-key", `${locale} has ${ns}.${k}, en does not`, {
+            at: rel(cat[ns].file),
+          });
+        }
+      }
+    }
+    for (const ns of Object.keys(cat)) {
+      if (!enNs.has(ns)) {
+        add("error", "namespace-locale-gap", `Namespace "${ns}" exists in ${locale} but not en`);
+      }
+    }
+    if (missingTotal) {
+      const done = total - missingTotal;
+      const pct = total ? Math.round((done / total) * 100) : 0;
+      add(
+        "warning",
+        "locale-incomplete",
+        `${locale}: ${done}/${total} keys translated (${pct}%), ${gaps.length} namespace(s) fall back to en (--verbose lists them)`,
+        { at: rel(path.join(LOCALES_DIR, locale)) },
+      );
+    }
+  }
+}
+
+/** Every translation keeps exactly the {{params}} of the en text. */
+function checkParams(catalogs) {
+  for (const locale of LOCALES) {
+    if (locale === "en") continue;
+    for (const [ns, data] of Object.entries(catalogs[locale] ?? {})) {
+      const enKeys = catalogs.en[ns]?.keys ?? {};
+      for (const [k, v] of Object.entries(data.keys)) {
+        if (!(k in enKeys) || !String(v).trim()) continue;
+        const want = paramSet(enKeys[k]);
+        const got = paramSet(v);
+        if (want !== got) {
+          add(
+            "error",
+            "param-mismatch",
+            `${locale} ${ns}.${k}: {{params}} [${got}] differ from en [${want}]`,
+            { at: rel(data.file) },
+          );
+        }
+      }
+    }
+  }
+}
+
+/** Physical left/right utilities break RTL (K10); see frontend/scripts. */
+function checkPhysicalClasses() {
+  const frontend = path.join(ROOT, "frontend");
+  const files = walk(path.join(frontend, "src"), new Set([".ts", ".tsx", ".css"]));
+  for (const file of files) {
+    if (file.endsWith(".d.ts")) continue;
+    if (isPhysicalClassIgnored(path.relative(frontend, file))) continue;
+    for (const hit of findPhysicalClasses(readFile(file))) {
+      add(
+        "error",
+        "physical-class",
+        `"${hit.token}" breaks RTL, use "${hit.logical}" (pnpm codemod:logical)`,
+        { at: `${rel(file)}:${hit.line}` },
+      );
+    }
+  }
+}
+
 function main() {
-  const catalogs = {
-    en: parseLocaleDir("en"),
-    tr: parseLocaleDir("tr"),
-  };
+  const catalogs = Object.fromEntries(LOCALES.map((l) => [l, parseLocaleDir(l)]));
 
   const enNs = new Set(Object.keys(catalogs.en));
   const trNs = new Set(Object.keys(catalogs.tr));
@@ -492,30 +650,50 @@ function main() {
     }
   }
 
-  let wired = { files: new Set(), namespaces: new Set() };
-  if (!fs.existsSync(MESSAGES_FILE)) {
-    add("error", "messages-missing", `Cannot read ${rel(MESSAGES_FILE)}`);
-  } else {
-    wired = parseMessagesCatalog(readFile(MESSAGES_FILE));
-    for (const ns of allNs) {
-      if (!wired.files.has(ns) || !wired.namespaces.has(ns)) {
+  checkPartialLocales(catalogs, enNs);
+  checkParams(catalogs);
+
+  const wired = { namespaces: new Set() };
+  const loadersSrc = fs.existsSync(CATALOG_LOADERS) ? readFile(CATALOG_LOADERS) : "";
+  if (!loadersSrc) {
+    add("error", "catalog-loaders-missing", `Cannot read ${rel(CATALOG_LOADERS)}`);
+  }
+  for (const locale of LOCALES) {
+    if (loadersSrc && !loadersSrc.includes(`import("@/locales/${locale}")`)) {
+      add(
+        "error",
+        "unwired-locale",
+        `${rel(CATALOG_LOADERS)} has no loader for ${locale} (pnpm i18n:gen)`,
+      );
+    }
+    const indexFile = path.join(LOCALES_DIR, locale, "index.ts");
+    if (!fs.existsSync(indexFile)) {
+      add("error", "unwired-locale", `Missing ${rel(indexFile)} (pnpm i18n:gen)`);
+      continue;
+    }
+    const index = parseLocaleIndex(readFile(indexFile));
+    if (locale === "en") index.namespaces.forEach((ns) => wired.namespaces.add(ns));
+    for (const ns of Object.keys(catalogs[locale] ?? {})) {
+      if (!index.files.has(ns) || !index.namespaces.has(ns)) {
         add(
-          "warning",
+          REQUIRED_LOCALES.includes(locale) ? "error" : "warning",
           "unwired-namespace",
-          `Locale file ${ns}.json is not registered in messages.ts — t("${ns}.*") cannot resolve it`,
+          `${locale}/${ns}.json is not registered in ${rel(indexFile)} — t("${ns}.*") cannot resolve it (pnpm i18n:gen)`,
         );
       }
     }
-    for (const ns of wired.namespaces) {
-      if (!enNs.has(ns) || !trNs.has(ns)) {
+    for (const ns of index.namespaces) {
+      if (!catalogs[locale]?.[ns]) {
         add(
           "error",
           "catalog-file-missing",
-          `messages.ts catalogs.${ns} has no matching locales/{en,tr}/${ns}.json`,
+          `${rel(indexFile)} registers ${ns} but locales/${locale}/${ns}.json is missing`,
         );
       }
     }
   }
+
+  checkPhysicalClasses();
 
   const backendSrc = fs.existsSync(BACKEND_CATALOG) ? readFile(BACKEND_CATALOG) : "";
   if (!backendSrc) {
@@ -542,6 +720,38 @@ function main() {
     if (reason) add("error", "backend-untranslated", `tr catalog ${k} (${reason})`);
     if (backend.en[k] && backend.en[k] === backend.tr[k] && likelyEnglish(backend.en[k])) {
       add("warning", "backend-en-tr-identical", `en/tr identical: ${k}`);
+    }
+  }
+
+  const backendLocalesSrc = fs.existsSync(BACKEND_CATALOG_LOCALES)
+    ? readFile(BACKEND_CATALOG_LOCALES)
+    : "";
+  for (const locale of PARTIAL_LOCALES) {
+    const map =
+      parseGoCatalog(backendLocalesSrc, goCatalogVar(locale)) ??
+      parseGoCatalog(backendSrc, goCatalogVar(locale));
+    if (!map) {
+      add(
+        "warning",
+        "backend-locale-catalog-missing",
+        `Backend catalog ${goCatalogVar(locale)} not found (falls back to en)`,
+      );
+      continue;
+    }
+    const missing = Object.keys(backend.en).filter((k) => !map[k]?.trim());
+    if (missing.length) {
+      add(
+        "warning",
+        "backend-locale-incomplete",
+        `${locale} catalog: ${missing.length}/${Object.keys(backend.en).length} keys missing (fall back to en)`,
+      );
+    }
+    for (const [k, v] of Object.entries(map)) {
+      if (!(k in backend.en)) {
+        add("error", "backend-locale-extra", `${locale} catalog has ${k}, en does not`);
+      } else if (paramSet(v) !== paramSet(backend.en[k])) {
+        add("error", "backend-param-mismatch", `${locale} catalog ${k}: {{params}} differ from en`);
+      }
     }
   }
 
@@ -588,7 +798,7 @@ function main() {
   const usesActivityResourceFallback = displaySrc.includes("formatActivityResource");
   for (const [resource, at] of activity.resources) {
     const activityKey = `activity.resources.${resource}`;
-    const hasActivityLocale = LOCALES.every(
+    const hasActivityLocale = REQUIRED_LOCALES.every(
       (loc) => frontendLookup(catalogs, loc, activityKey).ok,
     );
     if (hasActivityLocale) continue;
@@ -672,7 +882,7 @@ function main() {
     requireKey(requiredFrontend, key, at, "searchengine LabelKey");
   }
   for (const [key, at] of labels.meta) {
-    const fe = LOCALES.some((loc) => frontendLookup(catalogs, loc, key).ok);
+    const fe = REQUIRED_LOCALES.some((loc) => frontendLookup(catalogs, loc, key).ok);
     const be = Boolean(backend.en[key]);
     if (!fe && !be) {
       add(
@@ -739,7 +949,7 @@ function main() {
   }
 
   for (const [key, rec] of requiredFrontend) {
-    for (const loc of LOCALES) {
+    for (const loc of REQUIRED_LOCALES) {
       if (!frontendLookup(catalogs, loc, key).ok) {
         add("error", "missing-frontend", `${loc} missing ${key} (${rec.why})`, {
           at: rec.at.slice(0, 6),
@@ -749,7 +959,7 @@ function main() {
   }
 
   for (const [key, rec] of requiredBackend) {
-    for (const loc of LOCALES) {
+    for (const loc of REQUIRED_LOCALES) {
       const val = backend[loc][key];
       if (typeof val !== "string" || !val.trim()) {
         add("error", "missing-backend", `${loc} catalog missing ${key} (${rec.why})`, {
