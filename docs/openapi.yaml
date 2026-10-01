@@ -59,6 +59,8 @@ tags:
     description: Centrifugo connection and subscription tokens
   - name: Notifications
     description: In-app notification center, preferences, and admin send
+  - name: Features
+    description: Module packages (feature flags), Özellikler page, dealer standard
 
 paths:
   /healthz:
@@ -2812,6 +2814,405 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /v1/features:
+    get:
+      tags: [Features]
+      operationId: listFeatures
+      summary: Modules of the active organization (Özellikler page, menus, guards)
+      description: >-
+        Every member may read it. `items` lists the modules the level above
+        has access to (closed system wide or missing at the distributor are
+        left out); `enabled` lists the keys that are on. The module catalog
+        (keys, levels) comes from the backend; the frontend never duplicates it.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Module states
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFeatureList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/features/{key}/request:
+    post:
+      tags: [Features]
+      operationId: requestFeature
+      summary: Ask the level above to switch a module on (in-app notification)
+      description: >-
+        Notifies the owners of the parent distributor, or the platform admins
+        for a distributor (or a dealer under the center). Needs modules.read.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ModuleKey"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note: { type: string, maxLength: 1000 }
+      responses:
+        "202":
+          description: Request sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFeatureRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ModuleError"
+
+  /v1/tenant/modules/dealers:
+    get:
+      tags: [Features]
+      operationId: listDealerModules
+      summary: Module matrix of the distributor's dealers (modules.read subtree)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dealers with their module states
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDealerModuleList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/tenant/modules/dealers/bulk:
+    post:
+      tags: [Features]
+      operationId: bulkDealerModules
+      summary: Switch a module for several dealers at once (all or nothing)
+      description: >-
+        Needs modules.manage (subtree). A dealer outside the distributor's
+        subtree rejects the whole batch (403). `enabled: null` clears the
+        dealers' own values (back to the dealer standard).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DealerModuleBulkRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeModuleUpdated"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/ModuleError"
+        "422":
+          $ref: "#/components/responses/ModuleError"
+
+  /v1/tenant/modules/dealers/{uuid}/{key}:
+    put:
+      tags: [Features]
+      operationId: setDealerModule
+      summary: Switch a module for one dealer (modules.manage)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - $ref: "#/components/parameters/ModuleKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModuleSwitchRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeModuleUpdated"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/ModuleError"
+        "422":
+          $ref: "#/components/responses/ModuleError"
+    delete:
+      tags: [Features]
+      operationId: clearDealerModule
+      summary: Drop a dealer's own value (back to the dealer standard)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - $ref: "#/components/parameters/ModuleKey"
+      responses:
+        "200":
+          description: Cleared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeModuleUpdated"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/ModuleError"
+        "422":
+          $ref: "#/components/responses/ModuleError"
+
+  /v1/tenant/modules/dealer-standard:
+    get:
+      tags: [Features]
+      operationId: getDealerStandard
+      summary: The distributor's dealer standard (what new dealers get)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dealer standard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDealerStandard"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/tenant/modules/dealer-standard/{key}:
+    put:
+      tags: [Features]
+      operationId: setDealerStandard
+      summary: Change the dealer standard (modules.manage)
+      description: >-
+        Dealers without their own value follow the standard at once (live
+        inheritance). Switching on needs the module on for the distributor (409).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ModuleKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModuleSwitchRequest"
+      responses:
+        "200":
+          description: Dealer standard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDealerStandard"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/ModuleError"
+        "422":
+          $ref: "#/components/responses/ModuleError"
+    delete:
+      tags: [Features]
+      operationId: clearDealerStandard
+      summary: Drop a standard value (dealers follow the module default)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ModuleKey"
+      responses:
+        "200":
+          description: Dealer standard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDealerStandard"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ModuleError"
+
+  /v1/platform/modules:
+    get:
+      tags: [Platform]
+      operationId: listPlatformModules
+      summary: Module catalog with system switches (platform.modules.read)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Modules
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePlatformModuleList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/modules/{key}:
+    patch:
+      tags: [Platform]
+      operationId: patchPlatformModule
+      summary: Close/reopen a module system wide or change its defaults
+      description: >-
+        `enabled: false` closes the module everywhere with no exception.
+        Core modules cannot be closed (422 MODULE_CORE).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ModuleKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlatformModulePatch"
+      responses:
+        "200":
+          description: Module
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePlatformModule"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ModuleError"
+
+  /v1/platform/organizations/{uuid}/modules:
+    get:
+      tags: [Platform]
+      operationId: listPlatformOrganizationModules
+      summary: Resolved module states of one organization (platform.modules.read)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Module states
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePlatformOrganizationModules"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/platform/organizations/{uuid}/modules/{key}:
+    put:
+      tags: [Platform]
+      operationId: setPlatformOrganizationModule
+      summary: Set an organization's module as admin (source=admin)
+      description: >-
+        Works for a dealer even when its distributor lacks the module; refused
+        (409 FEATURE_DISABLED) when the module is closed system wide.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - $ref: "#/components/parameters/ModuleKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModuleSwitchRequest"
+      responses:
+        "200":
+          description: Module state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeModuleState"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/ModuleError"
+        "422":
+          $ref: "#/components/responses/ModuleError"
+    delete:
+      tags: [Platform]
+      operationId: clearPlatformOrganizationModule
+      summary: Drop an organization's own value (back to inheritance)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - $ref: "#/components/parameters/ModuleKey"
+      responses:
+        "200":
+          description: Module state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeModuleState"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ModuleError"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -2820,6 +3221,12 @@ components:
       bearerFormat: JWT
 
   parameters:
+    ModuleKey:
+      name: key
+      in: path
+      required: true
+      description: Module key from the backend catalog (GET /v1/features)
+      schema: { type: string, example: ai_assistant }
     ResourceUUID:
       name: uuid
       in: path
@@ -2847,6 +3254,14 @@ components:
       schema: { type: string }
 
   responses:
+    ModuleError:
+      description: >-
+        409 FEATURE_DISABLED (closed one level up) or MODULE_ADMIN_OVERRIDE;
+        422 MODULE_CORE (core modules cannot be switched off)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
     BadRequest:
       description: Validation or malformed request
       content:
@@ -4558,4 +4973,225 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/TenantSettings" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    ModuleLevel:
+      type: string
+      enum: [core, standard, addon]
+
+    ModuleActor:
+      type: object
+      required: [uuid, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+
+    ModuleState:
+      type: object
+      required: [key, level, enabled, visible, paid, default_enabled, source, upstream_enabled, admin_override]
+      properties:
+        key: { type: string }
+        level: { $ref: "#/components/schemas/ModuleLevel" }
+        enabled: { type: boolean }
+        visible:
+          type: boolean
+          description: False when the level above has no access.
+        paid: { type: boolean }
+        default_enabled: { type: boolean }
+        source:
+          type: string
+          description: >-
+            core | system | default | upstream | standard | admin | distributor | service
+        set_by: { $ref: "#/components/schemas/ModuleActor" }
+        updated_at: { type: string, format: date-time }
+        upstream_enabled: { type: boolean }
+        admin_override: { type: boolean }
+
+    EnvelopeFeatureList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [organization_type, items, enabled]
+          properties:
+            organization_type: { type: string }
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/ModuleState" }
+            enabled:
+              type: array
+              items: { type: string }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFeatureRequest:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [status, recipients]
+          properties:
+            status: { type: string, enum: [requested] }
+            recipients: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    DealerModuleEntry:
+      type: object
+      required: [key, enabled, visible, source, admin_override]
+      properties:
+        key: { type: string }
+        enabled: { type: boolean }
+        visible: { type: boolean }
+        source: { type: string }
+        admin_override: { type: boolean }
+
+    DealerModuleRow:
+      type: object
+      required: [uuid, name, slug, modules]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        modules:
+          type: array
+          items: { $ref: "#/components/schemas/DealerModuleEntry" }
+
+    EnvelopeDealerModuleList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/DealerModuleRow" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    ModuleSwitchRequest:
+      type: object
+      required: [enabled]
+      properties:
+        enabled: { type: boolean }
+
+    DealerModuleBulkRequest:
+      type: object
+      required: [dealer_uuids, key]
+      properties:
+        dealer_uuids:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items: { type: string, format: uuid }
+        key: { type: string }
+        enabled:
+          type: [boolean, "null"]
+          description: null clears the dealers' own values.
+
+    EnvelopeModuleUpdated:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [updated]
+          properties:
+            updated: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    DealerStandardEntry:
+      type: object
+      required: [key, level, paid, distributor_enabled, enabled, explicit]
+      properties:
+        key: { type: string }
+        level: { $ref: "#/components/schemas/ModuleLevel" }
+        paid: { type: boolean }
+        distributor_enabled: { type: boolean }
+        enabled: { type: boolean }
+        explicit: { type: boolean }
+        set_by: { $ref: "#/components/schemas/ModuleActor" }
+
+    EnvelopeDealerStandard:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/DealerStandardEntry" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    PlatformModule:
+      type: object
+      required: [key, level, enabled, default_enabled, paid]
+      properties:
+        key: { type: string }
+        level: { $ref: "#/components/schemas/ModuleLevel" }
+        enabled:
+          type: boolean
+          description: False when closed system wide.
+        default_enabled: { type: boolean }
+        paid: { type: boolean }
+        set_by: { $ref: "#/components/schemas/ModuleActor" }
+
+    PlatformModulePatch:
+      type: object
+      properties:
+        enabled: { type: boolean }
+        default_enabled: { type: boolean }
+        paid: { type: boolean }
+
+    EnvelopePlatformModule:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PlatformModule" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePlatformModuleList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/PlatformModule" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePlatformOrganizationModules:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [organization_type, items]
+          properties:
+            organization_type: { type: string }
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/ModuleState" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeModuleState:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ModuleState" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }

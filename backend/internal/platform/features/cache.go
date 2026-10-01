@@ -15,6 +15,10 @@ import (
 // not invalidate it (design §6: "Redis 30 sn cache").
 const CacheTTL = 30 * time.Second
 
+// opTimeout bounds one cache call, so a Redis outage slows a request by at
+// most this much before the database answers.
+const opTimeout = 250 * time.Millisecond
+
 // Cache stores per-organization snapshots.
 //
 // Keys are feat:v{gen}:org:{id}. A system-wide change (system switch,
@@ -76,6 +80,8 @@ func (c *RedisCache) key(gen, orgID int64) string {
 
 // Get returns a cached snapshot.
 func (c *RedisCache) Get(ctx context.Context, orgID int64) ([]State, bool) {
+	ctx, cancel := context.WithTimeout(ctx, opTimeout)
+	defer cancel()
 	gen, err := c.gen(ctx)
 	if err != nil {
 		c.onErr("gen", err)
@@ -99,6 +105,8 @@ func (c *RedisCache) Get(ctx context.Context, orgID int64) ([]State, bool) {
 
 // Set stores a snapshot for CacheTTL.
 func (c *RedisCache) Set(ctx context.Context, orgID int64, states []State) {
+	ctx, cancel := context.WithTimeout(ctx, opTimeout)
+	defer cancel()
 	gen, err := c.gen(ctx)
 	if err != nil {
 		c.onErr("gen", err)
@@ -119,6 +127,8 @@ func (c *RedisCache) Invalidate(ctx context.Context, orgIDs ...int64) {
 	if len(orgIDs) == 0 {
 		return
 	}
+	ctx, cancel := context.WithTimeout(ctx, opTimeout)
+	defer cancel()
 	gen, err := c.gen(ctx)
 	if err != nil {
 		c.onErr("gen", err)
@@ -136,6 +146,8 @@ func (c *RedisCache) Invalidate(ctx context.Context, orgIDs ...int64) {
 
 // BumpGeneration drops every snapshot.
 func (c *RedisCache) BumpGeneration(ctx context.Context) {
+	ctx, cancel := context.WithTimeout(ctx, opTimeout)
+	defer cancel()
 	if err := c.rdb.Incr(ctx, c.genKey()).Err(); err != nil {
 		c.onErr("incr", err)
 	}
