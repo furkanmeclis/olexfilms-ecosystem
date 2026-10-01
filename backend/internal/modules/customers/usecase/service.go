@@ -112,7 +112,9 @@ func (c Caller) orgIDs() []int64 { return c.Filter.OrgIDsArg() }
 
 // brand is the domain brand: customers never cross brands, also for the
 // center and super admin (K20).
-func (c Caller) brand() pgtype.Int8 { return pgtype.Int8{Int64: c.Org.BrandID, Valid: c.Org.BrandID != 0} }
+func (c Caller) brand() pgtype.Int8 {
+	return pgtype.Int8{Int64: c.Org.BrandID, Valid: c.Org.BrandID != 0}
+}
 
 // Service implements the customer and vehicle use cases.
 type Service struct {
@@ -170,13 +172,6 @@ func (o *Optional[T]) UnmarshalJSON(b []byte) error {
 func Of[T any](v T) Optional[T] { return Optional[T]{Set: true, Value: &v} }
 
 func text(s string) pgtype.Text { return pgtype.Text{String: s, Valid: s != ""} }
-
-func textPtr(p *string) pgtype.Text {
-	if p == nil {
-		return pgtype.Text{}
-	}
-	return text(*p)
-}
 
 func strOrNil(t pgtype.Text) *string {
 	if !t.Valid {
