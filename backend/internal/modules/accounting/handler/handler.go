@@ -30,7 +30,8 @@ const (
 
 // Handler serves accounting endpoints.
 type Handler struct {
-	svc *acc.Service
+	svc     *acc.Service
+	exports Exports
 }
 
 // New creates the handler.

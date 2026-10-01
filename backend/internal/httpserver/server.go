@@ -319,9 +319,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		tokens, loader, deps.Queries, stepUpSvc, featureSvc)
 	// TEC-172: accounting accounts, cari, manual entries and settlements.
 	accountingPoster := accountingposting.New(deps.Queries, outbox.NewStore(deps.DB, deps.Queries), ratesSvc)
-	accountinghandler.RegisterRoutes(mux,
-		accountinghandler.New(accountingusecase.New(deps.DB, deps.Queries, accountingPoster, featureSvc)),
-		tokens, loader, deps.Queries, stepUpSvc, featureSvc)
+	accountingSvc := accountingusecase.New(deps.DB, deps.Queries, accountingPoster, featureSvc)
+	accountingH := accountinghandler.New(accountingSvc)
+	accountinghandler.RegisterRoutes(mux, accountingH, tokens, loader, deps.Queries, stepUpSvc, featureSvc)
 	pdfClient := pdfrender.NewWithOptions(cfg.Gotenberg.URL, pdfrender.Options{MaxConnsPerHost: cfg.Queue.Concurrency})
 	realtime.RegisterRoutes(mux, realtime.NewHandler(rtIssuer, uc), tokens, loader)
 
@@ -337,9 +337,13 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		ioadapters.NewRoles(deps.Queries),
 		ioadapters.NewNotifications(deps.Queries),
 		ioadapters.NewActivity(deps.Queries),
+		// TEC-175: cari statement and balance report exports.
+		accountingusecase.NewStatementAdapter(accountingSvc),
+		accountingusecase.NewBalancesAdapter(accountingSvc),
 	)
 	exportSvc := exportusecase.New(deps.Queries, deps.Storage, ioReg, deps.Queue, notifSvc, activityRec, log)
 	exportSvc.SetDocumentPDF(pdfClient)
+	accountingH.WithExports(exportSvc)
 	importSvc := importusecase.New(deps.Queries, deps.Storage, ioReg, deps.Queue, notifSvc, activityRec, log)
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(deps.Queries),
