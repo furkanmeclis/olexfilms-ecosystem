@@ -2042,6 +2042,368 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/geo/countries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** ISO 3166-1 countries for address and plate pickers */
+        get: operations["listCountries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/geo/countries/{iso2}/provinces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Provinces of a country (TR il with plate code, others ISO 3166-2) */
+        get: operations["listProvinces"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/geo/provinces/{id}/districts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Districts of a province */
+        get: operations["listDistricts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/geo/countries/{iso2}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Show or hide a country in pickers (platform.geo.write) */
+        patch: operations["patchCountry"];
+        trace?: never;
+    };
+    "/v1/platform/geo/countries/{iso2}/provinces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add a province (platform.geo.write) */
+        post: operations["createProvince"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/geo/provinces/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a province and its districts unless referenced (platform.geo.write) */
+        delete: operations["deleteProvince"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/geo/provinces/{id}/districts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add a district, e.g. a NL gemeente (platform.geo.write) */
+        post: operations["createDistrict"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/geo/districts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a district unless referenced (platform.geo.write) */
+        delete: operations["deleteDistrict"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/territories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Distributor territories of the request brand (platform.territories.read) */
+        get: operations["listTerritories"];
+        put?: never;
+        /**
+         * Assign a country, province or district to a distributor (platform.territories.write)
+         * @description K5: an area belongs to one distributor per brand. The same area and any ancestor/descendant overlap (NL with A blocks Amsterdam for B and vice versa) answer 409 TERRITORY_CONFLICT; details list the blocking territories (code territory_conflict).
+         */
+        post: operations["assignTerritory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/territories/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Distributor covering an address (district > province > country) */
+        get: operations["resolveTerritory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/territories/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a territory; existing dealers keep their parent (platform.territories.write) */
+        delete: operations["deleteTerritory"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/plate-formats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Active licence plate formats (plate inputs, masks, badge colors) */
+        get: operations["listPlateFormats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/plate-formats/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate a plate against its plate country
+         * @description The plate country is chosen on the vehicle and is independent of the customer's country (a German plate on a Turkish customer validates against DE). The regex runs on the compact form (upper case, no spaces/dashes/dots). A mismatch answers 422 INVALID_PLATE.
+         */
+        post: operations["validatePlate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/plate-formats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every plate format incl. inactive (platform.settings.read) */
+        get: operations["listPlatformPlateFormats"];
+        put?: never;
+        /**
+         * Add a country's plate format (platform.settings.write)
+         * @description The regex must be anchored and RE2 compatible (no lookaround); the example must match it.
+         */
+        post: operations["createPlateFormat"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/plate-formats/{iso2}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a country's plate format (platform.settings.write) */
+        delete: operations["deletePlateFormat"];
+        options?: never;
+        head?: never;
+        /** Change a country's plate format (platform.settings.write) */
+        patch: operations["patchPlateFormat"];
+        trace?: never;
+    };
+    "/v1/currencies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Active ISO 4217 currencies */
+        get: operations["listCurrencies"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/exchange-rates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stored rates of a day (platform.rates.read)
+         * @description Without date the latest stored day up to today. effective marks the row the resolver uses.
+         */
+        get: operations["listExchangeRates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/exchange-rates/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The rate a record of that day would freeze (rate_snapshot)
+         * @description Latest stored day not after `date` (up to 10 days back), on that day manual > tcmb > ecb, either direction; otherwise a cross rate via TRY or EUR. 404 RATE_NOT_FOUND when nothing qualifies.
+         */
+        get: operations["resolveExchangeRate"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/exchange-rates/override": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Manual rate for a day and pair; wins over TCMB/ECB (platform.rates.write) */
+        put: operations["setExchangeRateOverride"];
+        post?: never;
+        /** Remove a manual rate; the fetched value applies again (platform.rates.write) */
+        delete: operations["clearExchangeRateOverride"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/exchange-rates/fetch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fetch TCMB and ECB now (platform.rates.write)
+         * @description The worker-core scheduler runs the same fetch on weekdays 18:30 and daily 10:15 (Europe/Istanbul).
+         */
+        post: operations["fetchExchangeRates"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2273,6 +2635,15 @@ export interface components {
             /** Format: date-time */
             access_ends_at?: string | null;
             logo_url?: string | null;
+            /**
+             * Format: int64
+             * @description Structured address (GET /v1/geo/countries); city/district are the display copy.
+             */
+            country_id?: number | null;
+            /** Format: int64 */
+            province_id?: number | null;
+            /** Format: int64 */
+            district_id?: number | null;
             type?: components["schemas"]["OrganizationType"];
             brand?: components["schemas"]["BrandRef"];
             parent?: components["schemas"]["OrganizationParentRef"] | null;
@@ -2302,6 +2673,15 @@ export interface components {
             district: string;
             phone: string;
             address: string;
+            /**
+             * Format: int64
+             * @description Structured address. A dealer without parent_uuid is placed under the distributor whose territory covers it (district > province > country), otherwise under the brand center. Empty city/district are filled from the province/district names.
+             */
+            country_id?: number | null;
+            /** Format: int64 */
+            province_id?: number | null;
+            /** Format: int64 */
+            district_id?: number | null;
         };
         CreatePlatformOrganizationRequest: {
             name: string;
@@ -2327,6 +2707,15 @@ export interface components {
             /** @description Normalized to a Locale code (tr-TR -> tr, zh_CN -> zh-CN); unknown codes -> 422. */
             locale?: string;
             timezone?: string;
+            /**
+             * Format: int64
+             * @description Structured address. A dealer without parent_uuid is placed under the distributor whose territory covers it (district > province > country), otherwise under the brand center. Empty city/district are filled from the province/district names.
+             */
+            country_id?: number | null;
+            /** Format: int64 */
+            province_id?: number | null;
+            /** Format: int64 */
+            district_id?: number | null;
         };
         PatchPlatformOrganizationRequest: {
             name?: string;
@@ -2350,6 +2739,15 @@ export interface components {
              * @description Moves the organization in the tree (platform only).
              */
             parent_uuid?: string;
+            /**
+             * Format: int64
+             * @description Present (null clears) replaces the structured address together with province_id/district_id. The parent does not follow the address (only the platform admin changes a distributor, K25).
+             */
+            country_id?: number | null;
+            /** Format: int64 */
+            province_id?: number | null;
+            /** Format: int64 */
+            district_id?: number | null;
         };
         OrganizationRegisterResult: {
             user: components["schemas"]["PublicUser"];
@@ -3469,8 +3867,346 @@ export interface components {
             data: components["schemas"]["ModuleState"];
             meta: components["schemas"]["ResponseMeta"];
         };
+        Country: {
+            /** Format: int64 */
+            id: number;
+            /** @example NL */
+            iso2: string;
+            /** @example NLD */
+            iso3: string;
+            name_en: string;
+            name_tr: string;
+            /** @example +31 */
+            phone_code?: string;
+            /** @example EUR */
+            default_currency?: string;
+            default_locale?: string;
+            timezone?: string;
+            is_active: boolean;
+            has_provinces: boolean;
+        };
+        Province: {
+            /** Format: int64 */
+            id: number;
+            /** Format: int64 */
+            country_id: number;
+            /** @description TR plate code (01..81) or the ISO 3166-2 code (NL-NH) */
+            code: string;
+            name: string;
+            has_districts: boolean;
+        };
+        District: {
+            /** Format: int64 */
+            id: number;
+            /** Format: int64 */
+            province_id: number;
+            code?: string;
+            name: string;
+        };
+        GeoNodeRequest: {
+            /** @description Required for provinces */
+            code?: string;
+            name: string;
+        };
+        /** @enum {string} */
+        TerritoryLevel: "country" | "province" | "district";
+        Territory: {
+            /** Format: uuid */
+            uuid: string;
+            level: components["schemas"]["TerritoryLevel"];
+            /**
+             * Format: uuid
+             * @description The distributor
+             */
+            organization_uuid: string;
+            organization_name: string;
+            /** Format: int64 */
+            country_id: number;
+            country_iso2: string;
+            country_name_en: string;
+            country_name_tr: string;
+            /** Format: int64 */
+            province_id?: number;
+            province_name?: string;
+            /** Format: int64 */
+            district_id?: number;
+            district_name?: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        AssignTerritoryRequest: {
+            /** Format: uuid */
+            distributor_uuid: string;
+            /** Format: int64 */
+            country_id: number;
+            /** Format: int64 */
+            province_id?: number | null;
+            /**
+             * Format: int64
+             * @description Needs province_id; must be inside it.
+             */
+            district_id?: number | null;
+        };
+        TerritoryMatch: {
+            /** Format: uuid */
+            territory_uuid: string;
+            level: components["schemas"]["TerritoryLevel"];
+            /** Format: uuid */
+            organization_uuid: string;
+            organization_name: string;
+        };
+        PlateFormat: {
+            /** @example DE */
+            country_iso2: string;
+            country_name_en: string;
+            country_name_tr: string;
+            /** @description RE2 regex on the compact plate (upper case, no separators) */
+            regex: string;
+            /** @example AAA AA 9999 */
+            input_mask: string;
+            /** @example B AB 1234 */
+            example: string;
+            /** @example D */
+            country_label: string;
+            /** @example #003399 */
+            strip_color: string;
+            /** @example #FFFFFF */
+            background_color: string;
+            /** @example #000000 */
+            text_color: string;
+            is_active: boolean;
+            sort_order: number;
+        };
+        PlateFormatRequest: {
+            /** @description ISO 3166-1 alpha-2 (create only) */
+            country?: string;
+            regex?: string;
+            input_mask?: string;
+            example?: string;
+            country_label?: string;
+            strip_color?: string;
+            background_color?: string;
+            text_color?: string;
+            is_active?: boolean;
+            sort_order?: number;
+        };
+        PlateCheck: {
+            country: string;
+            /** @example BAB1234 */
+            normalized: string;
+            valid: boolean;
+        };
+        Currency: {
+            /** @example EUR */
+            code: string;
+            name: string;
+            symbol: string;
+            decimals: number;
+        };
+        /**
+         * @description manual > tcmb > ecb; cross rates join two sources with "+"; identity for base = quote
+         * @example tcmb
+         */
+        RateSource: string;
+        StoredExchangeRate: {
+            /** Format: date */
+            rate_date: string;
+            base: string;
+            quote: string;
+            /** @description Decimal string, 1 base = rate quote (10 fraction digits max) */
+            rate: string;
+            source: components["schemas"]["RateSource"];
+            note?: string;
+            /** @description The row the resolver picks for this pair on this day */
+            effective: boolean;
+            /** Format: date-time */
+            fetched_at: string;
+        };
+        /** @description The frozen rate of an order / journal entry (rate_snapshot, K7). */
+        RateSnapshot: {
+            base: string;
+            quote: string;
+            /** @example 48.7988 */
+            rate: string;
+            /** Format: date */
+            rate_date: string;
+            source: components["schemas"]["RateSource"];
+            /** @description Pivot currency of a cross rate (TRY or EUR) */
+            via?: string;
+        };
+        ExchangeRateOverrideRequest: {
+            /** Format: date */
+            date: string;
+            /** @example EUR */
+            base: string;
+            /** @example TRY */
+            quote: string;
+            /** @example 48.75 */
+            rate: string;
+            note?: string;
+        };
+        FetchSourceReport: {
+            /** @enum {string} */
+            source: "tcmb" | "ecb";
+            /** Format: date */
+            date?: string;
+            count: number;
+            error?: string;
+        };
+        EnvelopeCountryList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["Country"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeCountry: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Country"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeProvinceList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["Province"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeProvince: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Province"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeDistrictList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["District"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeDistrict: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["District"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeTerritoryList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["Territory"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeTerritory: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Territory"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeTerritoryMatch: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                match: components["schemas"]["TerritoryMatch"] | null;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePlateFormatList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["PlateFormat"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePlateFormat: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PlateFormat"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePlateCheck: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PlateCheck"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeCurrencyList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["Currency"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeExchangeRateDay: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                /** Format: date */
+                date: string;
+                items: components["schemas"]["StoredExchangeRate"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeRateSnapshot: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["RateSnapshot"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFetchReport: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                sources: components["schemas"]["FetchSourceReport"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeDeleted: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                /** @enum {boolean} */
+                deleted: true;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
     };
     responses: {
+        /** @description Deleted */
+        Deleted: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["EnvelopeDeleted"];
+            };
+        };
+        /** @description 409 TERRITORY_CONFLICT: the area, an ancestor or a descendant already belongs to a distributor of the brand (details[].code territory_conflict). */
+        TerritoryConflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description 422 INVALID_PLATE (or VALIDATION_ERROR for a malformed country code) */
+        InvalidPlate: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description 409 FEATURE_DISABLED (closed one level up) or MODULE_ADMIN_OVERRIDE; 422 MODULE_CORE (core modules cannot be switched off) */
         ModuleError: {
             headers: {
@@ -3554,6 +4290,10 @@ export interface components {
         };
     };
     parameters: {
+        /** @description ISO 3166-1 alpha-2 country code (case-insensitive) */
+        CountryISO2: string;
+        /** @description Province or district id */
+        GeoID: number;
         /** @description Module key from the backend catalog (GET /v1/features) */
         ModuleKey: string;
         /** @description Resource UUID */
@@ -7036,6 +7776,618 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ModuleError"];
+        };
+    };
+    listCountries: {
+        parameters: {
+            query?: {
+                /** @description true includes inactive countries */
+                all?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Countries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCountryList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listProvinces: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ISO 3166-1 alpha-2 country code (case-insensitive) */
+                iso2: components["parameters"]["CountryISO2"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provinces */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeProvinceList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listDistricts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Province or district id */
+                id: components["parameters"]["GeoID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Districts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDistrictList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchCountry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ISO 3166-1 alpha-2 country code (case-insensitive) */
+                iso2: components["parameters"]["CountryISO2"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    is_active: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Country */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCountry"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createProvince: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ISO 3166-1 alpha-2 country code (case-insensitive) */
+                iso2: components["parameters"]["CountryISO2"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GeoNodeRequest"];
+            };
+        };
+        responses: {
+            /** @description Province */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeProvince"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    deleteProvince: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Province or district id */
+                id: components["parameters"]["GeoID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["Deleted"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    createDistrict: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Province or district id */
+                id: components["parameters"]["GeoID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GeoNodeRequest"];
+            };
+        };
+        responses: {
+            /** @description District */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDistrict"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    deleteDistrict: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Province or district id */
+                id: components["parameters"]["GeoID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["Deleted"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listTerritories: {
+        parameters: {
+            query?: {
+                distributor_uuid?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Territories */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTerritoryList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    assignTerritory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignTerritoryRequest"];
+            };
+        };
+        responses: {
+            /** @description Territory */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTerritory"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["TerritoryConflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    resolveTerritory: {
+        parameters: {
+            query: {
+                country_id: number;
+                province_id?: number;
+                district_id?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Match (null when no distributor covers the address) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTerritoryMatch"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    deleteTerritory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["Deleted"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listPlateFormats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Plate formats */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePlateFormatList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    validatePlate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description ISO 3166-1 alpha-2
+                     * @example DE
+                     */
+                    country: string;
+                    /** @example B AB 1234 */
+                    plate: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Valid plate */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePlateCheck"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["InvalidPlate"];
+        };
+    };
+    listPlatformPlateFormats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Plate formats */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePlateFormatList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createPlateFormat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlateFormatRequest"];
+            };
+        };
+        responses: {
+            /** @description Plate format */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePlateFormat"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    deletePlateFormat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ISO 3166-1 alpha-2 country code (case-insensitive) */
+                iso2: components["parameters"]["CountryISO2"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["Deleted"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchPlateFormat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ISO 3166-1 alpha-2 country code (case-insensitive) */
+                iso2: components["parameters"]["CountryISO2"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlateFormatRequest"];
+            };
+        };
+        responses: {
+            /** @description Plate format */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePlateFormat"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    listCurrencies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Currencies */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCurrencyList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listExchangeRates: {
+        parameters: {
+            query?: {
+                date?: string;
+                base?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rates */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExchangeRateDay"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    resolveExchangeRate: {
+        parameters: {
+            query: {
+                date?: string;
+                base: string;
+                quote: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rate snapshot */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeRateSnapshot"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    setExchangeRateOverride: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExchangeRateOverrideRequest"];
+            };
+        };
+        responses: {
+            /** @description Stored override */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeRateSnapshot"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    clearExchangeRateOverride: {
+        parameters: {
+            query: {
+                date: string;
+                base: string;
+                quote: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["Deleted"];
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    fetchExchangeRates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Fetch report per source (a failing source carries error) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFetchReport"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
 }

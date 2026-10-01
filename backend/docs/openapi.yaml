@@ -63,6 +63,10 @@ tags:
     description: Module packages (feature flags), Özellikler page, dealer standard
   - name: Documents
     description: PDF document templates (Gotenberg) and rendered documents
+  - name: Geo
+    description: Countries, provinces, districts, distributor territories and plate formats
+  - name: Rates
+    description: Currencies and daily exchange rates (TCMB, ECB, manual override)
 
 paths:
   /healthz:
@@ -3545,6 +3549,642 @@ paths:
         "422":
           $ref: "#/components/responses/ModuleError"
 
+  /v1/geo/countries:
+    get:
+      tags: [Geo]
+      operationId: listCountries
+      summary: ISO 3166-1 countries for address and plate pickers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: all
+          in: query
+          description: true includes inactive countries
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Countries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCountryList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+
+  /v1/geo/countries/{iso2}/provinces:
+    get:
+      tags: [Geo]
+      operationId: listProvinces
+      summary: Provinces of a country (TR il with plate code, others ISO 3166-2)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CountryISO2"
+      responses:
+        "200":
+          description: Provinces
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeProvinceList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/geo/provinces/{id}/districts:
+    get:
+      tags: [Geo]
+      operationId: listDistricts
+      summary: Districts of a province
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/GeoID"
+      responses:
+        "200":
+          description: Districts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDistrictList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/platform/geo/countries/{iso2}:
+    patch:
+      tags: [Geo]
+      operationId: patchCountry
+      summary: Show or hide a country in pickers (platform.geo.write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CountryISO2"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [is_active]
+              properties:
+                is_active: { type: boolean }
+      responses:
+        "200":
+          description: Country
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCountry"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/platform/geo/countries/{iso2}/provinces:
+    post:
+      tags: [Geo]
+      operationId: createProvince
+      summary: Add a province (platform.geo.write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CountryISO2"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GeoNodeRequest"
+      responses:
+        "201":
+          description: Province
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeProvince"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/platform/geo/provinces/{id}:
+    delete:
+      tags: [Geo]
+      operationId: deleteProvince
+      summary: Remove a province and its districts unless referenced (platform.geo.write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/GeoID"
+      responses:
+        "200":
+          $ref: "#/components/responses/Deleted"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/platform/geo/provinces/{id}/districts:
+    post:
+      tags: [Geo]
+      operationId: createDistrict
+      summary: Add a district, e.g. a NL gemeente (platform.geo.write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/GeoID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GeoNodeRequest"
+      responses:
+        "201":
+          description: District
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDistrict"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/platform/geo/districts/{id}:
+    delete:
+      tags: [Geo]
+      operationId: deleteDistrict
+      summary: Remove a district unless referenced (platform.geo.write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/GeoID"
+      responses:
+        "200":
+          $ref: "#/components/responses/Deleted"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/platform/territories:
+    get:
+      tags: [Geo]
+      operationId: listTerritories
+      summary: Distributor territories of the request brand (platform.territories.read)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: distributor_uuid
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Territories
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTerritoryList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Geo]
+      operationId: assignTerritory
+      summary: Assign a country, province or district to a distributor (platform.territories.write)
+      description: >-
+        K5: an area belongs to one distributor per brand. The same area and
+        any ancestor/descendant overlap (NL with A blocks Amsterdam for B and
+        vice versa) answer 409 TERRITORY_CONFLICT; details list the blocking
+        territories (code territory_conflict).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignTerritoryRequest"
+      responses:
+        "201":
+          description: Territory
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTerritory"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/TerritoryConflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/platform/territories/resolve:
+    get:
+      tags: [Geo]
+      operationId: resolveTerritory
+      summary: Distributor covering an address (district > province > country)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: country_id
+          in: query
+          required: true
+          schema: { type: integer, format: int64 }
+        - name: province_id
+          in: query
+          schema: { type: integer, format: int64 }
+        - name: district_id
+          in: query
+          schema: { type: integer, format: int64 }
+      responses:
+        "200":
+          description: Match (null when no distributor covers the address)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTerritoryMatch"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/platform/territories/{uuid}:
+    delete:
+      tags: [Geo]
+      operationId: deleteTerritory
+      summary: Remove a territory; existing dealers keep their parent (platform.territories.write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          $ref: "#/components/responses/Deleted"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/plate-formats:
+    get:
+      tags: [Geo]
+      operationId: listPlateFormats
+      summary: Active licence plate formats (plate inputs, masks, badge colors)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Plate formats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePlateFormatList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+
+  /v1/plate-formats/validate:
+    post:
+      tags: [Geo]
+      operationId: validatePlate
+      summary: Validate a plate against its plate country
+      description: >-
+        The plate country is chosen on the vehicle and is independent of the
+        customer's country (a German plate on a Turkish customer validates
+        against DE). The regex runs on the compact form (upper case, no
+        spaces/dashes/dots). A mismatch answers 422 INVALID_PLATE.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [country, plate]
+              properties:
+                country: { type: string, example: DE, description: ISO 3166-1 alpha-2 }
+                plate: { type: string, example: B AB 1234 }
+      responses:
+        "200":
+          description: Valid plate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePlateCheck"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/InvalidPlate"
+
+  /v1/platform/plate-formats:
+    get:
+      tags: [Geo]
+      operationId: listPlatformPlateFormats
+      summary: Every plate format incl. inactive (platform.settings.read)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Plate formats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePlateFormatList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Geo]
+      operationId: createPlateFormat
+      summary: Add a country's plate format (platform.settings.write)
+      description: The regex must be anchored and RE2 compatible (no lookaround); the example must match it.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlateFormatRequest"
+      responses:
+        "201":
+          description: Plate format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePlateFormat"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/platform/plate-formats/{iso2}:
+    patch:
+      tags: [Geo]
+      operationId: patchPlateFormat
+      summary: Change a country's plate format (platform.settings.write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CountryISO2"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlateFormatRequest"
+      responses:
+        "200":
+          description: Plate format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePlateFormat"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+    delete:
+      tags: [Geo]
+      operationId: deletePlateFormat
+      summary: Remove a country's plate format (platform.settings.write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CountryISO2"
+      responses:
+        "200":
+          $ref: "#/components/responses/Deleted"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/currencies:
+    get:
+      tags: [Rates]
+      operationId: listCurrencies
+      summary: Active ISO 4217 currencies
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Currencies
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCurrencyList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+
+  /v1/platform/exchange-rates:
+    get:
+      tags: [Rates]
+      operationId: listExchangeRates
+      summary: Stored rates of a day (platform.rates.read)
+      description: Without date the latest stored day up to today. effective marks the row the resolver uses.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date
+          in: query
+          schema: { type: string, format: date }
+        - name: base
+          in: query
+          schema: { type: string, example: EUR }
+      responses:
+        "200":
+          description: Rates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExchangeRateDay"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/exchange-rates/resolve:
+    get:
+      tags: [Rates]
+      operationId: resolveExchangeRate
+      summary: The rate a record of that day would freeze (rate_snapshot)
+      description: >-
+        Latest stored day not after `date` (up to 10 days back), on that day
+        manual > tcmb > ecb, either direction; otherwise a cross rate via TRY
+        or EUR. 404 RATE_NOT_FOUND when nothing qualifies.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date
+          in: query
+          schema: { type: string, format: date }
+        - name: base
+          in: query
+          required: true
+          schema: { type: string, example: EUR }
+        - name: quote
+          in: query
+          required: true
+          schema: { type: string, example: TRY }
+      responses:
+        "200":
+          description: Rate snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeRateSnapshot"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/platform/exchange-rates/override:
+    put:
+      tags: [Rates]
+      operationId: setExchangeRateOverride
+      summary: Manual rate for a day and pair; wins over TCMB/ECB (platform.rates.write)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExchangeRateOverrideRequest"
+      responses:
+        "200":
+          description: Stored override
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeRateSnapshot"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+    delete:
+      tags: [Rates]
+      operationId: clearExchangeRateOverride
+      summary: Remove a manual rate; the fetched value applies again (platform.rates.write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: base
+          in: query
+          required: true
+          schema: { type: string }
+        - name: quote
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          $ref: "#/components/responses/Deleted"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/platform/exchange-rates/fetch:
+    post:
+      tags: [Rates]
+      operationId: fetchExchangeRates
+      summary: Fetch TCMB and ECB now (platform.rates.write)
+      description: The worker-core scheduler runs the same fetch on weekdays 18:30 and daily 10:15 (Europe/Istanbul).
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Fetch report per source (a failing source carries error)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFetchReport"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -3553,6 +4193,18 @@ components:
       bearerFormat: JWT
 
   parameters:
+    CountryISO2:
+      name: iso2
+      in: path
+      required: true
+      description: ISO 3166-1 alpha-2 country code (case-insensitive)
+      schema: { type: string, example: NL }
+    GeoID:
+      name: id
+      in: path
+      required: true
+      description: Province or district id
+      schema: { type: integer, format: int64 }
     ModuleKey:
       name: key
       in: path
@@ -3586,6 +4238,26 @@ components:
       schema: { type: string }
 
   responses:
+    Deleted:
+      description: Deleted
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/EnvelopeDeleted"
+    TerritoryConflict:
+      description: >-
+        409 TERRITORY_CONFLICT: the area, an ancestor or a descendant already
+        belongs to a distributor of the brand (details[].code territory_conflict).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    InvalidPlate:
+      description: 422 INVALID_PLATE (or VALIDATION_ERROR for a malformed country code)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
     ModuleError:
       description: >-
         409 FEATURE_DISABLED (closed one level up) or MODULE_ADMIN_OVERRIDE;
@@ -4028,6 +4700,16 @@ components:
           format: date-time
         logo_url:
           type: [string, "null"]
+        country_id:
+          type: [integer, "null"]
+          format: int64
+          description: Structured address (GET /v1/geo/countries); city/district are the display copy.
+        province_id:
+          type: [integer, "null"]
+          format: int64
+        district_id:
+          type: [integer, "null"]
+          format: int64
         type:
           $ref: "#/components/schemas/OrganizationType"
         brand:
@@ -4080,6 +4762,20 @@ components:
           type: string
         address:
           type: string
+        country_id:
+          type: [integer, "null"]
+          format: int64
+          description: >-
+            Structured address. A dealer without parent_uuid is placed under
+            the distributor whose territory covers it (district > province >
+            country), otherwise under the brand center. Empty city/district
+            are filled from the province/district names.
+        province_id:
+          type: [integer, "null"]
+          format: int64
+        district_id:
+          type: [integer, "null"]
+          format: int64
 
     CreatePlatformOrganizationRequest:
       type: object
@@ -4116,6 +4812,20 @@ components:
           description: Normalized to a Locale code (tr-TR -> tr, zh_CN -> zh-CN); unknown codes -> 422.
         timezone:
           type: string
+        country_id:
+          type: [integer, "null"]
+          format: int64
+          description: >-
+            Structured address. A dealer without parent_uuid is placed under
+            the distributor whose territory covers it (district > province >
+            country), otherwise under the brand center. Empty city/district
+            are filled from the province/district names.
+        province_id:
+          type: [integer, "null"]
+          format: int64
+        district_id:
+          type: [integer, "null"]
+          format: int64
 
     PatchPlatformOrganizationRequest:
       type: object
@@ -4153,6 +4863,19 @@ components:
           type: string
           format: uuid
           description: Moves the organization in the tree (platform only).
+        country_id:
+          type: [integer, "null"]
+          format: int64
+          description: >-
+            Present (null clears) replaces the structured address together
+            with province_id/district_id. The parent does not follow the
+            address (only the platform admin changes a distributor, K25).
+        province_id:
+          type: [integer, "null"]
+          format: int64
+        district_id:
+          type: [integer, "null"]
+          format: int64
 
     OrganizationRegisterResult:
       type: object
@@ -5712,4 +6435,400 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/ModuleState" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    Country:
+      type: object
+      required: [id, iso2, iso3, name_en, name_tr, is_active, has_provinces]
+      properties:
+        id: { type: integer, format: int64 }
+        iso2: { type: string, example: NL }
+        iso3: { type: string, example: NLD }
+        name_en: { type: string }
+        name_tr: { type: string }
+        phone_code: { type: string, example: "+31" }
+        default_currency: { type: string, example: EUR }
+        default_locale: { type: string }
+        timezone: { type: string }
+        is_active: { type: boolean }
+        has_provinces: { type: boolean }
+
+    Province:
+      type: object
+      required: [id, country_id, code, name, has_districts]
+      properties:
+        id: { type: integer, format: int64 }
+        country_id: { type: integer, format: int64 }
+        code:
+          type: string
+          description: TR plate code (01..81) or the ISO 3166-2 code (NL-NH)
+        name: { type: string }
+        has_districts: { type: boolean }
+
+    District:
+      type: object
+      required: [id, province_id, name]
+      properties:
+        id: { type: integer, format: int64 }
+        province_id: { type: integer, format: int64 }
+        code: { type: string }
+        name: { type: string }
+
+    GeoNodeRequest:
+      type: object
+      required: [name]
+      properties:
+        code:
+          type: string
+          maxLength: 16
+          description: Required for provinces
+        name: { type: string, maxLength: 120 }
+
+    TerritoryLevel:
+      type: string
+      enum: [country, province, district]
+
+    Territory:
+      type: object
+      required: [uuid, level, organization_uuid, organization_name, country_id, country_iso2, country_name_en, country_name_tr, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        level: { $ref: "#/components/schemas/TerritoryLevel" }
+        organization_uuid:
+          type: string
+          format: uuid
+          description: The distributor
+        organization_name: { type: string }
+        country_id: { type: integer, format: int64 }
+        country_iso2: { type: string }
+        country_name_en: { type: string }
+        country_name_tr: { type: string }
+        province_id: { type: integer, format: int64 }
+        province_name: { type: string }
+        district_id: { type: integer, format: int64 }
+        district_name: { type: string }
+        created_at: { type: string, format: date-time }
+
+    AssignTerritoryRequest:
+      type: object
+      required: [distributor_uuid, country_id]
+      properties:
+        distributor_uuid: { type: string, format: uuid }
+        country_id: { type: integer, format: int64 }
+        province_id: { type: [integer, "null"], format: int64 }
+        district_id:
+          type: [integer, "null"]
+          format: int64
+          description: Needs province_id; must be inside it.
+
+    TerritoryMatch:
+      type: object
+      required: [territory_uuid, level, organization_uuid, organization_name]
+      properties:
+        territory_uuid: { type: string, format: uuid }
+        level: { $ref: "#/components/schemas/TerritoryLevel" }
+        organization_uuid: { type: string, format: uuid }
+        organization_name: { type: string }
+
+    PlateFormat:
+      type: object
+      required: [country_iso2, country_name_en, country_name_tr, regex, input_mask, example, country_label, strip_color, background_color, text_color, is_active, sort_order]
+      properties:
+        country_iso2: { type: string, example: DE }
+        country_name_en: { type: string }
+        country_name_tr: { type: string }
+        regex:
+          type: string
+          description: RE2 regex on the compact plate (upper case, no separators)
+        input_mask: { type: string, example: "AAA AA 9999" }
+        example: { type: string, example: "B AB 1234" }
+        country_label: { type: string, example: D }
+        strip_color: { type: string, example: "#003399" }
+        background_color: { type: string, example: "#FFFFFF" }
+        text_color: { type: string, example: "#000000" }
+        is_active: { type: boolean }
+        sort_order: { type: integer }
+
+    PlateFormatRequest:
+      type: object
+      properties:
+        country:
+          type: string
+          description: ISO 3166-1 alpha-2 (create only)
+        regex: { type: string }
+        input_mask: { type: string }
+        example: { type: string }
+        country_label: { type: string, maxLength: 4 }
+        strip_color: { type: string, pattern: "^#[0-9A-Fa-f]{6}$" }
+        background_color: { type: string, pattern: "^#[0-9A-Fa-f]{6}$" }
+        text_color: { type: string, pattern: "^#[0-9A-Fa-f]{6}$" }
+        is_active: { type: boolean }
+        sort_order: { type: integer }
+
+    PlateCheck:
+      type: object
+      required: [country, normalized, valid]
+      properties:
+        country: { type: string }
+        normalized: { type: string, example: BAB1234 }
+        valid: { type: boolean }
+
+    Currency:
+      type: object
+      required: [code, name, symbol, decimals]
+      properties:
+        code: { type: string, example: EUR }
+        name: { type: string }
+        symbol: { type: string }
+        decimals: { type: integer }
+
+    RateSource:
+      type: string
+      description: manual > tcmb > ecb; cross rates join two sources with "+"; identity for base = quote
+      example: tcmb
+
+    StoredExchangeRate:
+      type: object
+      required: [rate_date, base, quote, rate, source, effective, fetched_at]
+      properties:
+        rate_date: { type: string, format: date }
+        base: { type: string }
+        quote: { type: string }
+        rate:
+          type: string
+          description: Decimal string, 1 base = rate quote (10 fraction digits max)
+        source: { $ref: "#/components/schemas/RateSource" }
+        note: { type: string }
+        effective:
+          type: boolean
+          description: The row the resolver picks for this pair on this day
+        fetched_at: { type: string, format: date-time }
+
+    RateSnapshot:
+      type: object
+      description: The frozen rate of an order / journal entry (rate_snapshot, K7).
+      required: [base, quote, rate, rate_date, source]
+      properties:
+        base: { type: string }
+        quote: { type: string }
+        rate: { type: string, example: "48.7988" }
+        rate_date: { type: string, format: date }
+        source: { $ref: "#/components/schemas/RateSource" }
+        via:
+          type: string
+          description: Pivot currency of a cross rate (TRY or EUR)
+
+    ExchangeRateOverrideRequest:
+      type: object
+      required: [date, base, quote, rate]
+      properties:
+        date: { type: string, format: date }
+        base: { type: string, example: EUR }
+        quote: { type: string, example: TRY }
+        rate: { type: string, example: "48.75" }
+        note: { type: string }
+
+    FetchSourceReport:
+      type: object
+      required: [source, count]
+      properties:
+        source: { type: string, enum: [tcmb, ecb] }
+        date: { type: string, format: date }
+        count: { type: integer }
+        error: { type: string }
+
+    EnvelopeCountryList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/Country" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeCountry:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Country" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeProvinceList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/Province" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeProvince:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Province" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeDistrictList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/District" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeDistrict:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/District" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeTerritoryList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/Territory" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeTerritory:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Territory" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeTerritoryMatch:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [match]
+          properties:
+            match:
+              oneOf:
+                - $ref: "#/components/schemas/TerritoryMatch"
+                - type: "null"
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePlateFormatList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/PlateFormat" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePlateFormat:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PlateFormat" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePlateCheck:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PlateCheck" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeCurrencyList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/Currency" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeExchangeRateDay:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [date, items]
+          properties:
+            date: { type: string, format: date }
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/StoredExchangeRate" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeRateSnapshot:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/RateSnapshot" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFetchReport:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [sources]
+          properties:
+            sources:
+              type: array
+              items: { $ref: "#/components/schemas/FetchSourceReport" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeDeleted:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [deleted]
+          properties:
+            deleted: { type: boolean, enum: [true] }
         meta: { $ref: "#/components/schemas/ResponseMeta" }

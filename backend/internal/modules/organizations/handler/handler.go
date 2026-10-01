@@ -51,6 +51,9 @@ func (h *Handler) PublicRegister(w http.ResponseWriter, r *http.Request) {
 		District         string `json:"district"`
 		Phone            string `json:"phone"`
 		Address          string `json:"address"`
+		CountryID        *int64 `json:"country_id"`
+		ProvinceID       *int64 `json:"province_id"`
+		DistrictID       *int64 `json:"district_id"`
 	}
 	if err := decodeJSON(w, r, &in); err != nil {
 		return
@@ -68,6 +71,7 @@ func (h *Handler) PublicRegister(w http.ResponseWriter, r *http.Request) {
 		Name: in.Name, Surname: in.Surname, Email: in.Email, Password: in.Password,
 		OrganizationName: in.OrganizationName, City: in.City, District: in.District,
 		Phone: in.Phone, Address: in.Address,
+		Location: orgusecase.AddressInput{CountryID: in.CountryID, ProvinceID: in.ProvinceID, DistrictID: in.DistrictID},
 	})
 	if err != nil {
 		writeError(w, r, err)
@@ -174,6 +178,11 @@ func (h *Handler) PlatformCreate(w http.ResponseWriter, r *http.Request) {
 		Currency            string  `json:"currency"`
 		Locale              string  `json:"locale"`
 		Timezone            string  `json:"timezone"`
+		// Structured address (TEC-84). A dealer without parent_uuid lands
+		// under the distributor whose territory covers it.
+		CountryID  *int64 `json:"country_id"`
+		ProvinceID *int64 `json:"province_id"`
+		DistrictID *int64 `json:"district_id"`
 	}
 	if err := decodeJSON(w, r, &in); err != nil {
 		return
@@ -204,6 +213,7 @@ func (h *Handler) PlatformCreate(w http.ResponseWriter, r *http.Request) {
 		Currency:            in.Currency,
 		Locale:              in.Locale,
 		Timezone:            in.Timezone,
+		Location:            orgusecase.AddressInput{CountryID: in.CountryID, ProvinceID: in.ProvinceID, DistrictID: in.DistrictID},
 	}, owner.ID)
 	if err != nil {
 		writeError(w, r, err)
@@ -256,6 +266,11 @@ func (h *Handler) PlatformPatch(w http.ResponseWriter, r *http.Request) {
 		Timezone       *string `json:"timezone"`
 		// ParentUUID moves the organization (platform only, K25).
 		ParentUUID *string `json:"parent_uuid"`
+		// A present country_id (null clears) replaces the structured
+		// address; the parent does not follow it.
+		CountryID  optionalID `json:"country_id"`
+		ProvinceID *int64     `json:"province_id"`
+		DistrictID *int64     `json:"district_id"`
 	}
 	if err := decodeJSON(w, r, &in); err != nil {
 		return
@@ -272,6 +287,12 @@ func (h *Handler) PlatformPatch(w http.ResponseWriter, r *http.Request) {
 		Address: in.Address, Status: in.Status, PlanCode: in.PlanCode,
 		Currency: in.Currency, Locale: in.Locale, Timezone: in.Timezone,
 		ParentUUID: parentUUID,
+	}
+	if in.CountryID.Set {
+		patch.Location = &orgusecase.AddressInput{CountryID: in.CountryID.Value, ProvinceID: in.ProvinceID, DistrictID: in.DistrictID}
+	} else if in.ProvinceID != nil || in.DistrictID != nil {
+		response.BadRequest(w, r, response.CodeValidationError, "country_id is required with province_id/district_id")
+		return
 	}
 	if in.AccessStartsAt != nil {
 		t, err := time.Parse(time.RFC3339, strings.TrimSpace(*in.AccessStartsAt))
@@ -533,6 +554,26 @@ func (h *Handler) PublicBrand(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, r, http.StatusOK, b)
+}
+
+// optionalID tells an absent JSON field from an explicit null.
+type optionalID struct {
+	Set   bool
+	Value *int64
+}
+
+func (o *optionalID) UnmarshalJSON(b []byte) error {
+	o.Set = true
+	if string(b) == "null" {
+		o.Value = nil
+		return nil
+	}
+	var v int64
+	if err := json.Unmarshal(b, &v); err != nil {
+		return err
+	}
+	o.Value = &v
+	return nil
 }
 
 func optionalUUID(w http.ResponseWriter, r *http.Request, raw *string, field string) (*uuid.UUID, bool) {

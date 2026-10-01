@@ -38,6 +38,7 @@ const trialDays = 14
 type Service struct {
 	pool *pgxpool.Pool
 	q    *db.Queries
+	geo  GeoResolver
 }
 
 // New creates an organizations service.
@@ -59,6 +60,10 @@ type Organization struct {
 	AccessStartsAt time.Time  `json:"access_starts_at"`
 	AccessEndsAt   *time.Time `json:"access_ends_at,omitempty"`
 	LogoURL        *string    `json:"logo_url,omitempty"`
+	// Structured address (TEC-84); city/district above are the display copy.
+	CountryID  *int64 `json:"country_id,omitempty"`
+	ProvinceID *int64 `json:"province_id,omitempty"`
+	DistrictID *int64 `json:"district_id,omitempty"`
 	// Type is center, distributor or dealer.
 	Type     string     `json:"type"`
 	Brand    BrandRef   `json:"brand"`
@@ -108,6 +113,9 @@ type RegisterInput struct {
 	District         string
 	Phone            string
 	Address          string
+	// Structured address (TEC-84). A dealer without an explicit parent is
+	// placed under the distributor whose territory covers it (K5).
+	Location AddressInput
 	// Platform create only. Type defaults to dealer; ParentUUID defaults to
 	// the brand center.
 	Type                string
@@ -142,6 +150,9 @@ type PatchInput struct {
 	Timezone       *string
 	// ParentUUID moves the organization in the tree (platform only, K25).
 	ParentUUID *uuid.UUID
+	// Location replaces the structured address when set; the parent does not
+	// follow (only the platform admin changes a distributor, K25).
+	Location *AddressInput
 }
 
 // AddMemberInput assigns an existing user to an organization.
@@ -172,7 +183,8 @@ func mapOrganization(row db.Organization) Organization {
 		AccessEndsAt:   accessEnds,
 		LogoURL:        logoURL(row.Uuid, row.LogoObjectKey),
 		Type:           row.Type,
-		Currency:       row.Currency, Locale: row.Locale, Timezone: row.Timezone,
+		CountryID:      int8Ptr(row.CountryID), ProvinceID: int8Ptr(row.ProvinceID), DistrictID: int8Ptr(row.DistrictID),
+		Currency: row.Currency, Locale: row.Locale, Timezone: row.Timezone,
 		ContractValidUntil: contractDate(row.ContractValidUntil),
 		Settings:           decodeSettings(row.Settings),
 		CreatedAt:          row.CreatedAt.Time, UpdatedAt: row.UpdatedAt.Time,
@@ -245,6 +257,16 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (RegisterResul
 	if err != nil {
 		return RegisterResult{}, fmt.Errorf("brand center: %w", err)
 	}
+	addr, err := s.address(ctx, in.Location)
+	if err != nil {
+		return RegisterResult{}, err
+	}
+	parent := center
+	if dist, err := s.territoryParent(ctx, brand.ID, addr); err != nil {
+		return RegisterResult{}, err
+	} else if dist != nil {
+		parent = *dist
+	}
 	if _, err := s.q.GetUserByEmail(ctx, in.Email); err == nil {
 		return RegisterResult{}, fmt.Errorf("%w: email already registered", ErrConflict)
 	} else if !errors.Is(err, pgx.ErrNoRows) {
@@ -273,18 +295,21 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (RegisterResul
 	if err != nil {
 		return RegisterResult{}, err
 	}
+	city, district := addressText(addr, in.City, in.District)
+	countryID, provinceID, districtID := addressIDs(addr)
 	org, err := qtx.CreateOrganization(ctx, db.CreateOrganizationParams{
 		Slug: orgSlug, Name: in.OrganizationName,
-		City: strings.TrimSpace(in.City), District: strings.TrimSpace(in.District),
+		City: city, District: district,
 		Phone: strings.TrimSpace(in.Phone), Address: strings.TrimSpace(in.Address),
 		Status: "active", PlanCode: pgtype.Text{String: "trial", Valid: true},
 		AccessStartsAt: pgtype.Timestamptz{Time: now, Valid: true},
 		AccessEndsAt:   pgtype.Timestamptz{Time: trialEnd, Valid: true},
 		Type:           TypeDealer,
-		ParentID:       pgtype.Int8{Int64: center.ID, Valid: true},
+		ParentID:       pgtype.Int8{Int64: parent.ID, Valid: true},
 		BrandID:        brand.ID,
-		Currency:       center.Currency, Locale: center.Locale, Timezone: center.Timezone,
-		Settings: []byte("{}"),
+		Currency:       parent.Currency, Locale: parent.Locale, Timezone: parent.Timezone,
+		Settings:  []byte("{}"),
+		CountryID: countryID, ProvinceID: provinceID, DistrictID: districtID,
 	})
 	if err != nil {
 		return RegisterResult{}, err
@@ -296,7 +321,7 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (RegisterResul
 		return RegisterResult{}, err
 	}
 	return RegisterResult{
-		Organization: withBrandParent(mapOrganization(org), brand.Slug, center),
+		Organization: withBrandParent(mapOrganization(org), brand.Slug, parent),
 		OwnerUserID:  user.ID,
 		OwnerUUID:    user.Uuid,
 	}, nil
@@ -324,9 +349,12 @@ func (s *Service) RegisterOrganization(ctx context.Context, in RegisterInput, ow
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 	qtx := s.q.WithTx(tx)
+	city, district := addressText(place.Address, in.City, in.District)
+	countryID, provinceID, districtID := addressIDs(place.Address)
 	org, err := qtx.CreateOrganization(ctx, db.CreateOrganizationParams{
 		Slug: orgSlug, Name: in.OrganizationName,
-		City: strings.TrimSpace(in.City), District: strings.TrimSpace(in.District),
+		City: city, District: district,
+		CountryID: countryID, ProvinceID: provinceID, DistrictID: districtID,
 		Phone: strings.TrimSpace(in.Phone), Address: strings.TrimSpace(in.Address),
 		Status: "active", PlanCode: pgtype.Text{String: "trial", Valid: true},
 		AccessStartsAt: pgtype.Timestamptz{Time: now, Valid: true},
@@ -501,6 +529,14 @@ func (s *Service) Patch(ctx context.Context, id uuid.UUID, in PatchInput) (Organ
 		params.AccessEndsAt = pgtype.Timestamptz{Valid: false}
 	} else if in.AccessEndsAt != nil {
 		params.AccessEndsAt = pgtype.Timestamptz{Time: *in.AccessEndsAt, Valid: true}
+	}
+	if in.Location != nil {
+		addr, err := s.address(ctx, *in.Location)
+		if err != nil {
+			return Organization{}, err
+		}
+		params.SetAddress = true
+		params.CountryID, params.ProvinceID, params.DistrictID = addressIDs(addr)
 	}
 	if in.ParentUUID != nil {
 		if err := s.ChangeParent(ctx, id, *in.ParentUUID); err != nil {
