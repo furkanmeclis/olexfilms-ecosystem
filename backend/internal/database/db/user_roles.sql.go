@@ -119,7 +119,7 @@ func (q *Queries) ListUserRoleSlugs(ctx context.Context, userID int64) ([]string
 }
 
 const listUserRolesByUserID = `-- name: ListUserRolesByUserID :many
-SELECT r.id, r.uuid, r.name, r.slug, r.description, r.is_system, r.created_at, r.updated_at
+SELECT r.id, r.uuid, r.name, r.slug, r.description, r.is_system, r.created_at, r.updated_at, r.org_type
 FROM roles r
 INNER JOIN user_roles ur ON ur.role_id = r.id
 WHERE ur.user_id = $1
@@ -144,6 +144,7 @@ func (q *Queries) ListUserRolesByUserID(ctx context.Context, userID int64) ([]Ro
 			&i.IsSystem,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.OrgType,
 		); err != nil {
 			return nil, err
 		}
@@ -156,7 +157,7 @@ func (q *Queries) ListUserRolesByUserID(ctx context.Context, userID int64) ([]Ro
 }
 
 const listUserRolesByUserUUID = `-- name: ListUserRolesByUserUUID :many
-SELECT r.id, r.uuid, r.name, r.slug, r.description, r.is_system, r.created_at, r.updated_at
+SELECT r.id, r.uuid, r.name, r.slug, r.description, r.is_system, r.created_at, r.updated_at, r.org_type
 FROM roles r
 INNER JOIN user_roles ur ON ur.role_id = r.id
 INNER JOIN users u ON u.id = ur.user_id
@@ -182,6 +183,7 @@ func (q *Queries) ListUserRolesByUserUUID(ctx context.Context, argUuid uuid.UUID
 			&i.IsSystem,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.OrgType,
 		); err != nil {
 			return nil, err
 		}

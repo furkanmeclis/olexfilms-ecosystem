@@ -590,6 +590,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/platform/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Permission catalog with modules and allowed scopes */
+        get: operations["listPlatformPermissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/roles/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Role with its scoped grants */
+        get: operations["getPlatformRole"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/platform/roles/bulk": {
         parameters: {
             query?: never;
@@ -1404,6 +1438,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/tenant/organizations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Organizations inside the caller's organizations.read scope
+         * @description managed: the active organization; subtree: a distributor and its dealers; brand: every organization of the brand. Never leaves the request brand.
+         */
+        get: operations["listTenantOrganizations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/organizations/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One organization inside the caller's scope (404 outside it) */
+        get: operations["getTenantOrganization"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/tenant/settings": {
         parameters: {
             query?: never;
@@ -1728,6 +1799,14 @@ export interface components {
             user: components["schemas"]["PublicUser"];
             roles: string[];
             permissions: string[];
+            /** @description Permission slug -> scope in the active organization context (global roles + roles of the active membership). */
+            grants?: {
+                [key: string]: components["schemas"]["PermissionScope"];
+            };
+            /** Format: uuid */
+            active_organization_uuid?: string;
+            /** @description Roles of the user in the active organization. */
+            organization_roles?: string[];
             organizations?: components["schemas"]["OrganizationMembership"][];
             links: components["schemas"]["MeLinks"];
             channels: components["schemas"]["MeChannels"];
@@ -1991,6 +2070,35 @@ export interface components {
             slug: string;
             description?: string | null;
             is_system?: boolean;
+            /**
+             * @description Subject kind of the role; organization roles are granted per membership.
+             * @enum {string}
+             */
+            org_type?: "platform" | "center" | "distributor" | "dealer" | "customer" | "fleet";
+        };
+        /**
+         * @description Reach of a grant. all > brand > subtree > managed > assigned > own; customer only covers itself.
+         * @enum {string}
+         */
+        PermissionScope: "all" | "brand" | "subtree" | "managed" | "assigned" | "own" | "customer";
+        PermissionSummary: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            slug: string;
+            module: string;
+            scopes: components["schemas"]["PermissionScope"][];
+            is_sensitive: boolean;
+            super_admin_only: boolean;
+            description?: string | null;
+        };
+        RoleGrant: {
+            permission: string;
+            scope: components["schemas"]["PermissionScope"];
+        };
+        RoleDetail: components["schemas"]["RoleSummary"] & {
+            permission_slugs: string[];
+            grants: components["schemas"]["RoleGrant"][];
         };
         PlatformUserDetail: components["schemas"]["PublicUser"] & {
             roles: components["schemas"]["RoleSummary"][];
@@ -2355,6 +2463,15 @@ export interface components {
             success: true;
             data: {
                 items: components["schemas"]["Organization"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeScopedOrganizationList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["Organization"][];
+                scope: components["schemas"]["PermissionScope"];
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -3745,6 +3862,73 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    listPlatformPermissions: {
+        parameters: {
+            query?: {
+                q?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Permissions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: true;
+                        data: {
+                            items: components["schemas"]["PermissionSummary"][];
+                            /** Format: int64 */
+                            total: number;
+                            limit: number;
+                            offset: number;
+                        };
+                        meta: components["schemas"]["ResponseMeta"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getPlatformRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Role detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: true;
+                        data: components["schemas"]["RoleDetail"];
+                        meta: components["schemas"]["ResponseMeta"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     postPlatformRolesBulk: {
         parameters: {
             query?: never;
@@ -4190,7 +4374,10 @@ export interface operations {
                 "application/json": {
                     /** Format: uuid */
                     user_uuid: string;
-                    role?: string;
+                    /** @enum {string} */
+                    role?: "owner" | "staff";
+                    /** @description Organization roles of the org type (e.g. dealer_accounting). Empty means the default role of the org type and `role`. */
+                    role_slugs?: string[];
                 };
             };
         };
@@ -5072,6 +5259,57 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
             500: components["responses"]["InternalError"];
+        };
+    };
+    listTenantOrganizations: {
+        parameters: {
+            query?: {
+                type?: components["schemas"]["OrganizationType"];
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Organizations in scope */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeScopedOrganizationList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getTenantOrganization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Organization */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrganization"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getTenantSettings: {

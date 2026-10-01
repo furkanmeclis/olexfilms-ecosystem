@@ -148,6 +148,9 @@ type PatchInput struct {
 type AddMemberInput struct {
 	UserUUID uuid.UUID
 	Role     string
+	// RoleSlugs are optional organization roles (e.g. dealer_accounting);
+	// empty means the default role of the org type and Role.
+	RoleSlugs []string
 }
 
 func mapOrganization(row db.Organization) Organization {
@@ -286,19 +289,7 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (RegisterResul
 	if err != nil {
 		return RegisterResult{}, err
 	}
-	if _, err := qtx.CreateOrganizationMember(ctx, db.CreateOrganizationMemberParams{
-		OrganizationID: org.ID, UserID: user.ID, Role: "owner",
-	}); err != nil {
-		return RegisterResult{}, err
-	}
-	if err := qtx.AssignUserRoleBySlug(ctx, db.AssignUserRoleBySlugParams{
-		UserID: user.ID, Slug: rbac.RoleOrganizationUser,
-	}); err != nil {
-		return RegisterResult{}, err
-	}
-	if err := qtx.AssignUserRoleBySlug(ctx, db.AssignUserRoleBySlugParams{
-		UserID: user.ID, Slug: rbac.RoleOrganizationOwner,
-	}); err != nil {
+	if err := addMember(ctx, qtx, org, user.ID, "owner", nil); err != nil {
 		return RegisterResult{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -349,19 +340,7 @@ func (s *Service) RegisterOrganization(ctx context.Context, in RegisterInput, ow
 	if err != nil {
 		return RegisterResult{}, err
 	}
-	if _, err := qtx.CreateOrganizationMember(ctx, db.CreateOrganizationMemberParams{
-		OrganizationID: org.ID, UserID: ownerUserID, Role: "owner",
-	}); err != nil {
-		return RegisterResult{}, err
-	}
-	if err := qtx.AssignUserRoleBySlug(ctx, db.AssignUserRoleBySlugParams{
-		UserID: ownerUserID, Slug: rbac.RoleOrganizationUser,
-	}); err != nil {
-		return RegisterResult{}, err
-	}
-	if err := qtx.AssignUserRoleBySlug(ctx, db.AssignUserRoleBySlugParams{
-		UserID: ownerUserID, Slug: rbac.RoleOrganizationOwner,
-	}); err != nil {
+	if err := addMember(ctx, qtx, org, ownerUserID, "owner", nil); err != nil {
 		return RegisterResult{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -685,24 +664,61 @@ func (s *Service) AddMember(ctx context.Context, orgUUID uuid.UUID, in AddMember
 	if role != "owner" && role != "staff" {
 		return fmt.Errorf("%w: invalid role", ErrInvalidRequest)
 	}
-	_, err = s.q.CreateOrganizationMember(ctx, db.CreateOrganizationMemberParams{
-		OrganizationID: org.ID, UserID: user.ID, Role: role,
-	})
+	roleSlugs, err := validMemberRoles(org.Type, in.RoleSlugs)
 	if err != nil {
+		return err
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if err := addMember(ctx, s.q.WithTx(tx), org, user.ID, role, roleSlugs); err != nil {
 		if strings.Contains(err.Error(), "uq_organization_members") {
 			return ErrConflict
 		}
 		return err
 	}
-	if err := s.q.AssignUserRoleBySlug(ctx, db.AssignUserRoleBySlugParams{
-		UserID: user.ID, Slug: rbac.RoleOrganizationUser,
-	}); err != nil {
+	return tx.Commit(ctx)
+}
+
+// validMemberRoles checks that explicit membership roles are system roles of
+// the organization's type (a dealer member cannot get a center role).
+func validMemberRoles(orgType string, slugs []string) ([]string, error) {
+	out := make([]string, 0, len(slugs))
+	seen := map[string]struct{}{}
+	for _, raw := range slugs {
+		slug := strings.TrimSpace(raw)
+		if slug == "" {
+			continue
+		}
+		def, ok := rbac.RoleBySlug(slug)
+		if !ok || def.OrgType != orgType {
+			return nil, fmt.Errorf("%w: role %q cannot be granted in a %s organization", ErrInvalidRequest, slug, orgType)
+		}
+		if _, dup := seen[slug]; dup {
+			continue
+		}
+		seen[slug] = struct{}{}
+		out = append(out, slug)
+	}
+	return out, nil
+}
+
+// addMember creates a membership and grants its organization roles. Without
+// explicit roles the default role of the org type and membership kind is used.
+func addMember(ctx context.Context, q *db.Queries, org db.Organization, userID int64, memberRole string, roleSlugs []string) error {
+	member, err := q.CreateOrganizationMember(ctx, db.CreateOrganizationMemberParams{
+		OrganizationID: org.ID, UserID: userID, Role: memberRole,
+	})
+	if err != nil {
 		return err
 	}
-	if role == "owner" {
-		if err := s.q.AssignUserRoleBySlug(ctx, db.AssignUserRoleBySlugParams{
-			UserID: user.ID, Slug: rbac.RoleOrganizationOwner,
-		}); err != nil {
+	if len(roleSlugs) == 0 {
+		roleSlugs = []string{rbac.DefaultMemberRole(org.Type, memberRole)}
+	}
+	for _, slug := range roleSlugs {
+		if err := q.AssignMemberRoleBySlug(ctx, db.AssignMemberRoleBySlugParams{MemberID: member.ID, Slug: slug}); err != nil {
 			return err
 		}
 	}

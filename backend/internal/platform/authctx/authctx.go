@@ -3,6 +3,7 @@ package authctx
 import (
 	"context"
 
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/google/uuid"
 )
 
@@ -14,11 +15,15 @@ const (
 
 // Principal is the authenticated identity attached to a request context.
 type Principal struct {
-	UserID             uuid.UUID
-	UserInternal       int64
-	Email              string
-	Roles              []string
-	Permissions        []string
+	UserID       uuid.UUID
+	UserInternal int64
+	Email        string
+	// Roles are the global roles plus the roles of the active organization.
+	Roles       []string
+	Permissions []string
+	// PermissionScopes maps each held permission to the broadest scope
+	// granted by the user's global roles and the active organization roles.
+	PermissionScopes   map[string]rbac.Scope
 	IsSuperAdmin       bool
 	ImpersonatorUserID *uuid.UUID
 	SessionID          uuid.UUID
@@ -45,17 +50,46 @@ func MustPrincipal(ctx context.Context) Principal {
 	return p
 }
 
-// HasPermission reports whether the principal includes the given permission slug.
+// HasPermission reports whether the principal includes the given permission
+// slug. Super admins hold every permission; super_admin-only permissions
+// (impersonation) are never satisfied through another role.
 func (p Principal) HasPermission(slug string) bool {
+	_, ok := p.ScopeFor(slug)
+	return ok
+}
+
+// ScopeFor returns the broadest scope the principal holds for a permission.
+// Super admins hold every permission at its broadest catalog scope. A
+// permission listed without a recorded scope counts as its broadest scope.
+func (p Principal) ScopeFor(slug string) (rbac.Scope, bool) {
 	if p.IsSuperAdmin {
-		return true
+		if def, ok := rbac.PermissionBySlug(slug); ok {
+			return rbac.Broadest(def.Scopes), true
+		}
+		return rbac.ScopeAll, true
+	}
+	if rbac.SuperAdminOnly(slug) {
+		return "", false
+	}
+	if scope, ok := p.PermissionScopes[slug]; ok {
+		return scope, true
 	}
 	for _, perm := range p.Permissions {
 		if perm == slug {
-			return true
+			if def, ok := rbac.PermissionBySlug(slug); ok {
+				return rbac.Broadest(def.Scopes), true
+			}
+			return rbac.ScopeAll, true
 		}
 	}
-	return false
+	return "", false
+}
+
+// Can reports whether the principal holds a permission with a scope that
+// covers need (e.g. a subtree grant covers a managed check).
+func (p Principal) Can(slug string, need rbac.Scope) bool {
+	scope, ok := p.ScopeFor(slug)
+	return ok && scope.Covers(need)
 }
 
 // HasRole reports whether the principal includes the given role slug.

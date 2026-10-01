@@ -19,6 +19,7 @@ WHERE (
     $1::text IS NULL
     OR slug ILIKE '%' || $1 || '%'
     OR name ILIKE '%' || $1 || '%'
+    OR module ILIKE '%' || $1 || '%'
 )
 `
 
@@ -49,7 +50,7 @@ func (q *Queries) CountRoles(ctx context.Context, q_ pgtype.Text) (int64, error)
 const createRole = `-- name: CreateRole :one
 INSERT INTO roles (name, slug, description, is_system)
 VALUES ($1, $2, $3, false)
-RETURNING id, uuid, name, slug, description, is_system, created_at, updated_at
+RETURNING id, uuid, name, slug, description, is_system, created_at, updated_at, org_type
 `
 
 type CreateRoleParams struct {
@@ -70,8 +71,18 @@ func (q *Queries) CreateRole(ctx context.Context, arg CreateRoleParams) (Role, e
 		&i.IsSystem,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OrgType,
 	)
 	return i, err
+}
+
+const deletePermissionBySlug = `-- name: DeletePermissionBySlug :exec
+DELETE FROM permissions WHERE slug = $1
+`
+
+func (q *Queries) DeletePermissionBySlug(ctx context.Context, slug string) error {
+	_, err := q.db.Exec(ctx, deletePermissionBySlug, slug)
+	return err
 }
 
 const deleteRole = `-- name: DeleteRole :exec
@@ -85,8 +96,26 @@ func (q *Queries) DeleteRole(ctx context.Context, argUuid uuid.UUID) error {
 	return err
 }
 
+const deleteRolePermission = `-- name: DeleteRolePermission :exec
+DELETE FROM role_permissions rp
+USING permissions p
+WHERE rp.role_id = $1
+  AND rp.permission_id = p.id
+  AND p.slug = $2
+`
+
+type DeleteRolePermissionParams struct {
+	RoleID         int64  `json:"role_id"`
+	PermissionSlug string `json:"permission_slug"`
+}
+
+func (q *Queries) DeleteRolePermission(ctx context.Context, arg DeleteRolePermissionParams) error {
+	_, err := q.db.Exec(ctx, deleteRolePermission, arg.RoleID, arg.PermissionSlug)
+	return err
+}
+
 const getPermissionBySlug = `-- name: GetPermissionBySlug :one
-SELECT id, uuid, name, slug, created_at FROM permissions
+SELECT id, uuid, name, slug, created_at, module, scopes, is_sensitive, super_admin_only, description, sort_order FROM permissions
 WHERE slug = $1
 `
 
@@ -99,12 +128,18 @@ func (q *Queries) GetPermissionBySlug(ctx context.Context, slug string) (Permiss
 		&i.Name,
 		&i.Slug,
 		&i.CreatedAt,
+		&i.Module,
+		&i.Scopes,
+		&i.IsSensitive,
+		&i.SuperAdminOnly,
+		&i.Description,
+		&i.SortOrder,
 	)
 	return i, err
 }
 
 const getRoleByID = `-- name: GetRoleByID :one
-SELECT id, uuid, name, slug, description, is_system, created_at, updated_at FROM roles
+SELECT id, uuid, name, slug, description, is_system, created_at, updated_at, org_type FROM roles
 WHERE id = $1
 `
 
@@ -120,12 +155,13 @@ func (q *Queries) GetRoleByID(ctx context.Context, id int64) (Role, error) {
 		&i.IsSystem,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OrgType,
 	)
 	return i, err
 }
 
 const getRoleBySlug = `-- name: GetRoleBySlug :one
-SELECT id, uuid, name, slug, description, is_system, created_at, updated_at FROM roles
+SELECT id, uuid, name, slug, description, is_system, created_at, updated_at, org_type FROM roles
 WHERE slug = $1
 `
 
@@ -141,12 +177,13 @@ func (q *Queries) GetRoleBySlug(ctx context.Context, slug string) (Role, error) 
 		&i.IsSystem,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OrgType,
 	)
 	return i, err
 }
 
 const getRoleByUUID = `-- name: GetRoleByUUID :one
-SELECT id, uuid, name, slug, description, is_system, created_at, updated_at FROM roles
+SELECT id, uuid, name, slug, description, is_system, created_at, updated_at, org_type FROM roles
 WHERE uuid = $1
 `
 
@@ -162,23 +199,25 @@ func (q *Queries) GetRoleByUUID(ctx context.Context, argUuid uuid.UUID) (Role, e
 		&i.IsSystem,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OrgType,
 	)
 	return i, err
 }
 
 const insertRolePermission = `-- name: InsertRolePermission :exec
-INSERT INTO role_permissions (role_id, permission_id)
-VALUES ($1, $2)
-ON CONFLICT DO NOTHING
+INSERT INTO role_permissions (role_id, permission_id, scope)
+VALUES ($1, $2, $3)
+ON CONFLICT (role_id, permission_id) DO UPDATE SET scope = EXCLUDED.scope
 `
 
 type InsertRolePermissionParams struct {
-	RoleID       int64 `json:"role_id"`
-	PermissionID int64 `json:"permission_id"`
+	RoleID       int64  `json:"role_id"`
+	PermissionID int64  `json:"permission_id"`
+	Scope        string `json:"scope"`
 }
 
 func (q *Queries) InsertRolePermission(ctx context.Context, arg InsertRolePermissionParams) error {
-	_, err := q.db.Exec(ctx, insertRolePermission, arg.RoleID, arg.PermissionID)
+	_, err := q.db.Exec(ctx, insertRolePermission, arg.RoleID, arg.PermissionID, arg.Scope)
 	return err
 }
 
@@ -188,6 +227,191 @@ SELECT slug FROM permissions ORDER BY slug
 
 func (q *Queries) ListAllPermissionSlugs(ctx context.Context) ([]string, error) {
 	rows, err := q.db.Query(ctx, listAllPermissionSlugs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var slug string
+		if err := rows.Scan(&slug); err != nil {
+			return nil, err
+		}
+		items = append(items, slug)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAllPermissions = `-- name: ListAllPermissions :many
+SELECT id, uuid, name, slug, created_at, module, scopes, is_sensitive, super_admin_only, description, sort_order FROM permissions ORDER BY sort_order, slug
+`
+
+func (q *Queries) ListAllPermissions(ctx context.Context) ([]Permission, error) {
+	rows, err := q.db.Query(ctx, listAllPermissions)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Permission{}
+	for rows.Next() {
+		var i Permission
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.Name,
+			&i.Slug,
+			&i.CreatedAt,
+			&i.Module,
+			&i.Scopes,
+			&i.IsSensitive,
+			&i.SuperAdminOnly,
+			&i.Description,
+			&i.SortOrder,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAllRoles = `-- name: ListAllRoles :many
+SELECT id, uuid, name, slug, description, is_system, created_at, updated_at, org_type FROM roles ORDER BY slug
+`
+
+func (q *Queries) ListAllRoles(ctx context.Context) ([]Role, error) {
+	rows, err := q.db.Query(ctx, listAllRoles)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Role{}
+	for rows.Next() {
+		var i Role
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.Name,
+			&i.Slug,
+			&i.Description,
+			&i.IsSystem,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.OrgType,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listGrantsByRoleSlugs = `-- name: ListGrantsByRoleSlugs :many
+SELECT r.slug AS role_slug, p.slug AS permission_slug, rp.scope
+FROM role_permissions rp
+INNER JOIN roles r ON r.id = rp.role_id
+INNER JOIN permissions p ON p.id = rp.permission_id
+WHERE r.slug = ANY ($1::text[])
+ORDER BY r.slug, p.slug
+`
+
+type ListGrantsByRoleSlugsRow struct {
+	RoleSlug       string `json:"role_slug"`
+	PermissionSlug string `json:"permission_slug"`
+	Scope          string `json:"scope"`
+}
+
+// Grants of global roles (user_roles / JWT roles claim).
+func (q *Queries) ListGrantsByRoleSlugs(ctx context.Context, roleSlugs []string) ([]ListGrantsByRoleSlugsRow, error) {
+	rows, err := q.db.Query(ctx, listGrantsByRoleSlugs, roleSlugs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListGrantsByRoleSlugsRow{}
+	for rows.Next() {
+		var i ListGrantsByRoleSlugsRow
+		if err := rows.Scan(&i.RoleSlug, &i.PermissionSlug, &i.Scope); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listMemberGrants = `-- name: ListMemberGrants :many
+SELECT r.slug AS role_slug, p.slug AS permission_slug, rp.scope
+FROM organization_members om
+INNER JOIN organizations o ON o.id = om.organization_id AND o.deleted_at IS NULL
+INNER JOIN organization_member_roles mr ON mr.member_id = om.id
+INNER JOIN roles r ON r.id = mr.role_id
+INNER JOIN role_permissions rp ON rp.role_id = r.id
+INNER JOIN permissions p ON p.id = rp.permission_id
+WHERE om.user_id = $1 AND o.uuid = $2
+ORDER BY r.slug, p.slug
+`
+
+type ListMemberGrantsParams struct {
+	UserID           int64     `json:"user_id"`
+	OrganizationUuid uuid.UUID `json:"organization_uuid"`
+}
+
+type ListMemberGrantsRow struct {
+	RoleSlug       string `json:"role_slug"`
+	PermissionSlug string `json:"permission_slug"`
+	Scope          string `json:"scope"`
+}
+
+// Grants of the user's roles in one organization (active org context).
+func (q *Queries) ListMemberGrants(ctx context.Context, arg ListMemberGrantsParams) ([]ListMemberGrantsRow, error) {
+	rows, err := q.db.Query(ctx, listMemberGrants, arg.UserID, arg.OrganizationUuid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListMemberGrantsRow{}
+	for rows.Next() {
+		var i ListMemberGrantsRow
+		if err := rows.Scan(&i.RoleSlug, &i.PermissionSlug, &i.Scope); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listMemberRoleSlugs = `-- name: ListMemberRoleSlugs :many
+SELECT r.slug
+FROM organization_members om
+INNER JOIN organizations o ON o.id = om.organization_id AND o.deleted_at IS NULL
+INNER JOIN organization_member_roles mr ON mr.member_id = om.id
+INNER JOIN roles r ON r.id = mr.role_id
+WHERE om.user_id = $1 AND o.uuid = $2
+ORDER BY r.slug
+`
+
+type ListMemberRoleSlugsParams struct {
+	UserID           int64     `json:"user_id"`
+	OrganizationUuid uuid.UUID `json:"organization_uuid"`
+}
+
+func (q *Queries) ListMemberRoleSlugs(ctx context.Context, arg ListMemberRoleSlugsParams) ([]string, error) {
+	rows, err := q.db.Query(ctx, listMemberRoleSlugs, arg.UserID, arg.OrganizationUuid)
 	if err != nil {
 		return nil, err
 	}
@@ -264,14 +488,15 @@ func (q *Queries) ListPermissionSlugsByRoleSlug(ctx context.Context, slug string
 }
 
 const listPermissionsFiltered = `-- name: ListPermissionsFiltered :many
-SELECT id, uuid, name, slug, created_at
+SELECT id, uuid, name, slug, created_at, module, scopes, is_sensitive, super_admin_only, description, sort_order
 FROM permissions
 WHERE (
     $1::text IS NULL
     OR slug ILIKE '%' || $1 || '%'
     OR name ILIKE '%' || $1 || '%'
+    OR module ILIKE '%' || $1 || '%'
 )
-ORDER BY slug
+ORDER BY sort_order, slug
 LIMIT $3 OFFSET $2
 `
 
@@ -296,7 +521,80 @@ func (q *Queries) ListPermissionsFiltered(ctx context.Context, arg ListPermissio
 			&i.Name,
 			&i.Slug,
 			&i.CreatedAt,
+			&i.Module,
+			&i.Scopes,
+			&i.IsSensitive,
+			&i.SuperAdminOnly,
+			&i.Description,
+			&i.SortOrder,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRoleGrantsByRoleID = `-- name: ListRoleGrantsByRoleID :many
+SELECT p.slug, rp.scope
+FROM permissions p
+INNER JOIN role_permissions rp ON rp.permission_id = p.id
+WHERE rp.role_id = $1
+ORDER BY p.sort_order, p.slug
+`
+
+type ListRoleGrantsByRoleIDRow struct {
+	Slug  string `json:"slug"`
+	Scope string `json:"scope"`
+}
+
+func (q *Queries) ListRoleGrantsByRoleID(ctx context.Context, roleID int64) ([]ListRoleGrantsByRoleIDRow, error) {
+	rows, err := q.db.Query(ctx, listRoleGrantsByRoleID, roleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListRoleGrantsByRoleIDRow{}
+	for rows.Next() {
+		var i ListRoleGrantsByRoleIDRow
+		if err := rows.Scan(&i.Slug, &i.Scope); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRoleGrantsByRoleUUID = `-- name: ListRoleGrantsByRoleUUID :many
+SELECT p.slug, rp.scope
+FROM permissions p
+INNER JOIN role_permissions rp ON rp.permission_id = p.id
+INNER JOIN roles r ON r.id = rp.role_id
+WHERE r.uuid = $1
+ORDER BY p.sort_order, p.slug
+`
+
+type ListRoleGrantsByRoleUUIDRow struct {
+	Slug  string `json:"slug"`
+	Scope string `json:"scope"`
+}
+
+func (q *Queries) ListRoleGrantsByRoleUUID(ctx context.Context, argUuid uuid.UUID) ([]ListRoleGrantsByRoleUUIDRow, error) {
+	rows, err := q.db.Query(ctx, listRoleGrantsByRoleUUID, argUuid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListRoleGrantsByRoleUUIDRow{}
+	for rows.Next() {
+		var i ListRoleGrantsByRoleUUIDRow
+		if err := rows.Scan(&i.Slug, &i.Scope); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -368,7 +666,7 @@ func (q *Queries) ListRoleUUIDsForBulk(ctx context.Context, q_ pgtype.Text) ([]u
 }
 
 const listRolesFiltered = `-- name: ListRolesFiltered :many
-SELECT id, uuid, name, slug, description, is_system, created_at, updated_at
+SELECT id, uuid, name, slug, description, is_system, created_at, updated_at, org_type
 FROM roles
 WHERE (
     $1::text IS NULL
@@ -403,6 +701,7 @@ func (q *Queries) ListRolesFiltered(ctx context.Context, arg ListRolesFilteredPa
 			&i.IsSystem,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.OrgType,
 		); err != nil {
 			return nil, err
 		}
@@ -415,7 +714,7 @@ func (q *Queries) ListRolesFiltered(ctx context.Context, arg ListRolesFilteredPa
 }
 
 const listRolesForExport = `-- name: ListRolesForExport :many
-SELECT id, uuid, name, slug, description, is_system, created_at, updated_at
+SELECT id, uuid, name, slug, description, is_system, created_at, updated_at, org_type
 FROM roles
 WHERE (
     $1::text IS NULL
@@ -443,6 +742,7 @@ func (q *Queries) ListRolesForExport(ctx context.Context, q_ pgtype.Text) ([]Rol
 			&i.IsSystem,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.OrgType,
 		); err != nil {
 			return nil, err
 		}
@@ -470,7 +770,7 @@ SET name = COALESCE($1, name),
     description = COALESCE($2, description)
 WHERE uuid = $3
   AND is_system = false
-RETURNING id, uuid, name, slug, description, is_system, created_at, updated_at
+RETURNING id, uuid, name, slug, description, is_system, created_at, updated_at, org_type
 `
 
 type UpdateRoleParams struct {
@@ -491,6 +791,88 @@ func (q *Queries) UpdateRole(ctx context.Context, arg UpdateRoleParams) (Role, e
 		&i.IsSystem,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OrgType,
+	)
+	return i, err
+}
+
+const upsertPermission = `-- name: UpsertPermission :exec
+INSERT INTO permissions (name, slug, module, scopes, is_sensitive, super_admin_only, description, sort_order)
+VALUES (
+    $1, $2, $3, $4::text[],
+    $5, $6, $7, $8
+)
+ON CONFLICT (slug) DO UPDATE SET
+    name = EXCLUDED.name,
+    module = EXCLUDED.module,
+    scopes = EXCLUDED.scopes,
+    is_sensitive = EXCLUDED.is_sensitive,
+    super_admin_only = EXCLUDED.super_admin_only,
+    description = EXCLUDED.description,
+    sort_order = EXCLUDED.sort_order
+`
+
+type UpsertPermissionParams struct {
+	Name           string      `json:"name"`
+	Slug           string      `json:"slug"`
+	Module         string      `json:"module"`
+	Scopes         []string    `json:"scopes"`
+	IsSensitive    bool        `json:"is_sensitive"`
+	SuperAdminOnly bool        `json:"super_admin_only"`
+	Description    pgtype.Text `json:"description"`
+	SortOrder      int32       `json:"sort_order"`
+}
+
+func (q *Queries) UpsertPermission(ctx context.Context, arg UpsertPermissionParams) error {
+	_, err := q.db.Exec(ctx, upsertPermission,
+		arg.Name,
+		arg.Slug,
+		arg.Module,
+		arg.Scopes,
+		arg.IsSensitive,
+		arg.SuperAdminOnly,
+		arg.Description,
+		arg.SortOrder,
+	)
+	return err
+}
+
+const upsertSystemRole = `-- name: UpsertSystemRole :one
+INSERT INTO roles (name, slug, description, is_system, org_type)
+VALUES ($1, $2, $3, true, $4)
+ON CONFLICT (slug) DO UPDATE SET
+    name = EXCLUDED.name,
+    description = EXCLUDED.description,
+    is_system = true,
+    org_type = EXCLUDED.org_type
+RETURNING id, uuid, name, slug, description, is_system, created_at, updated_at, org_type
+`
+
+type UpsertSystemRoleParams struct {
+	Name        string      `json:"name"`
+	Slug        string      `json:"slug"`
+	Description pgtype.Text `json:"description"`
+	OrgType     pgtype.Text `json:"org_type"`
+}
+
+func (q *Queries) UpsertSystemRole(ctx context.Context, arg UpsertSystemRoleParams) (Role, error) {
+	row := q.db.QueryRow(ctx, upsertSystemRole,
+		arg.Name,
+		arg.Slug,
+		arg.Description,
+		arg.OrgType,
+	)
+	var i Role
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.Name,
+		&i.Slug,
+		&i.Description,
+		&i.IsSystem,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.OrgType,
 	)
 	return i, err
 }

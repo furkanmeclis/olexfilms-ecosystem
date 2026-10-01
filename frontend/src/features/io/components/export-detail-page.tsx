@@ -84,7 +84,7 @@ export function ExportDetailPage({
       title={title}
       description={t("exports.detail.description")}
       permission={
-        tenant ? permissions.finance.export : permissions.exports.read
+        tenant ? permissions.exports.tenantRead : permissions.exports.read
       }
       forbiddenFallback={
         <ErrorState

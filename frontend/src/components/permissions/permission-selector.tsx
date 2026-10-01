@@ -28,6 +28,9 @@ type PermissionSelectorProps = {
   className?: string;
   /** When true, renders sticky summary counter */
   showSummary?: boolean;
+  /** Grant scope per permission slug (TEC-85); enables the scope picker. */
+  scopes?: Record<string, string>;
+  onScopesChange?: (next: Record<string, string>) => void;
 };
 
 /**
@@ -40,6 +43,8 @@ export function PermissionSelector({
   disabled,
   className,
   showSummary = true,
+  scopes,
+  onScopesChange,
 }: PermissionSelectorProps) {
   const { t } = useLocale();
   const [query, setQuery] = useState("");
@@ -69,6 +74,13 @@ export function PermissionSelector({
     onChange([...next].sort());
   };
 
+  const selectable = (p: Permission) => !p.super_admin_only;
+
+  const setScope = (slug: string, scope: string) => {
+    if (!onScopesChange) return;
+    onScopesChange({ ...(scopes ?? {}), [slug]: scope });
+  };
+
   const toggle = (slug: string, next: boolean) => {
     const copy = new Set(selected);
     if (next) copy.add(slug);
@@ -89,7 +101,7 @@ export function PermissionSelector({
   };
 
   const selectAll = () => {
-    setSelected(new Set(filtered.map((p) => p.slug)));
+    setSelected(new Set(filtered.filter(selectable).map((p) => p.slug)));
   };
 
   const clearAll = () => {
@@ -197,8 +209,12 @@ export function PermissionSelector({
                   selected={selected}
                   disabled={disabled}
                   onToggle={toggle}
+                  scopes={scopes}
+                  onScopeChange={onScopesChange ? setScope : undefined}
                   onSelectGroup={() =>
-                    selectGroup(group.permissions.map((p) => p.slug))
+                    selectGroup(
+                      group.permissions.filter(selectable).map((p) => p.slug),
+                    )
                   }
                   onClearGroup={() =>
                     clearGroup(group.permissions.map((p) => p.slug))

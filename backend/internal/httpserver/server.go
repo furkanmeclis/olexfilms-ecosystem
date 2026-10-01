@@ -117,6 +117,12 @@ type Server struct {
 	oauthProvSvc  *oauthproviderusecase.Service
 	authSettings  *authsettingsusecase.Service
 	http          *http.Server
+	// Kept for integration tests that mount placeholder routes behind the
+	// real auth chain.
+	mux    *http.ServeMux
+	tokens *jwt.Manager
+	loader middleware.IdentityLoader
+	stepUp *stepup.Service
 }
 
 // New wires router and middleware for the API skeleton.
@@ -237,10 +243,11 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	h := authhandler.New(uc, oauthUC, githubSvc, oauthProvSvc, authSettingsSvc, cfg.Auth.AdapterSecret, stepUpSvc, activityRec)
 	h.SetRateLimiter(ratelimit.New(deps.Redis, cfg.App.Env))
 	loader := identity.Loader{UC: uc}
+	s.mux, s.tokens, s.loader, s.stepUp = mux, tokens, loader, stepUpSvc
 	orgSvc := orgusecase.New(deps.DB, deps.Queries)
 	uc.SetOrganizationResolver(orgSvc)
 	authmodule.RegisterRoutes(mux, h, tokens, loader, stepUpSvc)
-	orgmodule.RegisterRoutes(mux, orgSvc, uc, deps.Storage, tokens, loader, deps.Queries, ratelimit.New(deps.Redis, cfg.App.Env))
+	orgmodule.RegisterRoutes(mux, orgSvc, uc, deps.Storage, tokens, loader, deps.Queries, ratelimit.New(deps.Redis, cfg.App.Env), stepUpSvc)
 	pdfClient := pdfrender.New(cfg.Gotenberg.URL)
 	realtime.RegisterRoutes(mux, realtime.NewHandler(rtIssuer, uc), tokens, loader)
 

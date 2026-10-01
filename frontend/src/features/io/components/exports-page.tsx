@@ -68,7 +68,7 @@ export function ExportsPage({ scope = "platform", slug }: ExportsPageProps) {
         tenant ? t("exports.tenant_description") : t("exports.description")
       }
       permission={
-        tenant ? permissions.finance.export : permissions.exports.read
+        tenant ? permissions.exports.tenantRead : permissions.exports.read
       }
       forbiddenFallback={
         <ErrorState

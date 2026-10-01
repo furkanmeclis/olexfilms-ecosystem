@@ -1,4 +1,5 @@
 import type { components } from "@/generated/api";
+import { isPermissionScope, type PermissionScope } from "@/config/permissions";
 
 export type PublicUser = components["schemas"]["PublicUser"];
 export type LoginRequest = components["schemas"]["LoginRequest"];
@@ -41,7 +42,11 @@ export type AuthUser = {
   isSuperAdmin: boolean;
   emailVerified: boolean;
   permissions: string[];
+  /** Permission slug -> scope in the active organization (TEC-85). */
+  grants: Record<string, PermissionScope>;
   roles: string[];
+  /** Roles of the user in the active organization. */
+  organizationRoles: string[];
   organizations: OrganizationSummary[];
   realtimeUserChannel?: string;
   realtimeEnabled?: boolean;
@@ -57,6 +62,12 @@ export type AuthUser = {
 export function mapMeToAuthUser(me: Me): AuthUser {
   const { user, roles, permissions, realtime, impersonation, organizations } =
     me;
+  const grants: Record<string, PermissionScope> = {};
+  for (const [slug, scope] of Object.entries(me.grants ?? {})) {
+    if (typeof scope === "string" && isPermissionScope(scope)) {
+      grants[slug] = scope;
+    }
+  }
   const locale =
     typeof user.locale === "string" && user.locale ? user.locale : "tr";
   const mapped: AuthUser = {
@@ -70,7 +81,9 @@ export function mapMeToAuthUser(me: Me): AuthUser {
     isSuperAdmin: Boolean(user.is_super_admin),
     emailVerified: Boolean(user.email_verified),
     permissions: permissions ?? [],
+    grants,
     roles: roles ?? [],
+    organizationRoles: me.organization_roles ?? [],
     organizations: (organizations ?? []).map((org) => ({
       uuid: org.uuid,
       slug: org.slug,

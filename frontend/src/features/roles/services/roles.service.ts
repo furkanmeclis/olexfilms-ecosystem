@@ -8,17 +8,43 @@ export type RoleSummary = {
   slug: string;
   description?: string | null;
   is_system?: boolean;
+  org_type?: string;
+};
+
+export type RoleGrant = {
+  permission: string;
+  scope: string;
 };
 
 export type RoleDetail = RoleSummary & {
   permission_slugs: string[];
+  grants?: RoleGrant[];
 };
 
 export type PermissionSummary = {
   uuid: string;
   name: string;
   slug: string;
+  module?: string;
+  scopes?: string[];
+  is_sensitive?: boolean;
+  super_admin_only?: boolean;
+  description?: string | null;
 };
+
+/** Scopes of selected permissions only (the API grants every key it gets). */
+export function pickGrants(
+  slugs: string[],
+  grants: Record<string, string> | undefined,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!grants) return out;
+  for (const slug of slugs) {
+    const scope = grants[slug];
+    if (scope) out[slug] = scope;
+  }
+  return out;
+}
 
 export type RoleListResult = {
   items: RoleSummary[];
@@ -58,8 +84,11 @@ export const rolesService = {
     slug: string;
     description?: string;
     permission_slugs: string[];
+    grants?: Record<string, string>;
   }) {
-    return platformRequest<RoleDetail>("POST", "/v1/platform/roles", { body });
+    return platformRequest<RoleDetail>("POST", "/v1/platform/roles", {
+      body: { ...body, grants: pickGrants(body.permission_slugs, body.grants) },
+    });
   },
 
   async update(
@@ -68,10 +97,14 @@ export const rolesService = {
       name?: string;
       description?: string;
       permission_slugs?: string[];
+      grants?: Record<string, string>;
     },
   ) {
+    const payload = body.permission_slugs
+      ? { ...body, grants: pickGrants(body.permission_slugs, body.grants) }
+      : body;
     return platformRequest<RoleDetail>("PATCH", `/v1/platform/roles/${uuid}`, {
-      body,
+      body: payload,
     });
   },
 

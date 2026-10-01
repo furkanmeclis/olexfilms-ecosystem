@@ -38,10 +38,17 @@ export function RoleDetailPage({ uuid }: { uuid: string }) {
   const data = roleQuery.data;
   const title = data?.name ?? t("roles.detail_title");
 
-  const permissionCatalog = (permissionsQuery.data?.items ?? []).map((p) => ({
-    slug: p.slug,
-    name: p.name,
-  }));
+  const grantScopes = new Map(
+    (data?.grants ?? []).map((g) => [g.permission, g.scope]),
+  );
+  const permissionCatalog = (permissionsQuery.data?.items ?? []).map((p) => {
+    const scope = grantScopes.get(p.slug);
+    return {
+      slug: p.slug,
+      module: p.module,
+      name: scope ? `${p.name} · ${t(`permissions.scopes.${scope}`)}` : p.name,
+    };
+  });
 
   return (
     <EntityPage

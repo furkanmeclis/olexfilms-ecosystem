@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -50,7 +51,8 @@ type Repository interface {
 	CountUsersWithRole(ctx context.Context, roleSlug string) (int64, error)
 	UpsertSuperAdmin(ctx context.Context, email, name, surname, hash string) (model.User, bool, error)
 	GetRoleIDBySlug(ctx context.Context, slug string) (int64, error)
-	ListPermissionsByRoleSlug(ctx context.Context, slug string) ([]string, error)
+	ListGrantsByRoleSlugs(ctx context.Context, slugs []string) ([]model.Grant, error)
+	ListMemberGrants(ctx context.Context, userID int64, orgUUID uuid.UUID) ([]model.Grant, error)
 	ListUserRoleSlugs(ctx context.Context, userID int64) ([]string, error)
 	UserHasRoleSlug(ctx context.Context, userID int64, slug string) (bool, error)
 	ListUserRolesByUserUUID(ctx context.Context, userUUID uuid.UUID) ([]model.RoleSummary, error)
@@ -96,7 +98,8 @@ type Repository interface {
 	CreateRole(ctx context.Context, name, slug string, description *string) (model.RoleSummary, error)
 	UpdateRole(ctx context.Context, roleUUID uuid.UUID, name, description *string) (model.RoleSummary, error)
 	DeleteRole(ctx context.Context, roleUUID uuid.UUID) error
-	SetRolePermissions(ctx context.Context, roleID int64, permissionSlugs []string) error
+	SetRolePermissions(ctx context.Context, roleID int64, grants map[string]string) error
+	ListRoleGrants(ctx context.Context, roleUUID uuid.UUID) ([]model.RoleGrant, error)
 	ListPermissionsFiltered(ctx context.Context, limit, offset int32, q string) ([]model.PermissionSummary, int64, error)
 }
 
@@ -418,24 +421,36 @@ func (u *AuthUseCase) Logout(ctx context.Context, rawToken string) error {
 	return nil
 }
 
-// Me returns session hydration.
-func (u *AuthUseCase) Me(ctx context.Context, userUUID uuid.UUID, impersonatorUUID *uuid.UUID) (model.Me, error) {
+// Me returns session hydration. orgUUID is the active organization of the
+// session (JWT oid); its membership roles add scoped grants.
+func (u *AuthUseCase) Me(ctx context.Context, userUUID uuid.UUID, impersonatorUUID *uuid.UUID, orgUUID *uuid.UUID) (model.Me, error) {
 	user, err := u.repo.FindUserByUUID(ctx, userUUID)
 	if err != nil {
 		return model.Me{}, ErrNotFound
 	}
-	roles, isSuperAdmin, perms, err := u.resolveUserAccess(ctx, user.ID)
+	roles, err := u.repo.ListUserRoleSlugs(ctx, user.ID)
 	if err != nil {
 		return model.Me{}, err
 	}
+	access, err := u.ResolveAccess(ctx, user.ID, roles, orgUUID)
+	if err != nil {
+		return model.Me{}, err
+	}
+	grants := make(map[string]string, len(access.Grants))
+	for slug, scope := range access.Grants {
+		grants[slug] = string(scope)
+	}
 	out := model.Me{
-		User:          model.ToPublicUser(user, isSuperAdmin),
-		Roles:         roles,
-		Permissions:   perms,
-		Organizations: []model.OrganizationSummary{},
-		Links:         model.DefaultMeLinks(),
-		Channels:      model.MeChannels{User: "user:" + user.UUID.String()},
-		Realtime:      model.MeRealtime{Enabled: u.realtime.Enabled, WSURL: u.realtime.WSURL, UserChannel: "user:" + user.UUID.String()},
+		User:               model.ToPublicUser(user, access.IsSuperAdmin),
+		Roles:              access.Roles,
+		Permissions:        access.Permissions,
+		Grants:             grants,
+		ActiveOrganization: access.OrganizationUUID,
+		OrganizationRoles:  access.OrganizationRoles,
+		Organizations:      []model.OrganizationSummary{},
+		Links:              model.DefaultMeLinks(),
+		Channels:           model.MeChannels{User: "user:" + user.UUID.String()},
+		Realtime:           model.MeRealtime{Enabled: u.realtime.Enabled, WSURL: u.realtime.WSURL, UserChannel: "user:" + user.UUID.String()},
 	}
 	if u.orgResolver != nil {
 		memberships, err := u.orgResolver.ListMembershipsForUser(ctx, user.ID)
@@ -463,35 +478,90 @@ func (u *AuthUseCase) Me(ctx context.Context, userUUID uuid.UUID, impersonatorUU
 	return out, nil
 }
 
-// ResolvePermissions returns permission slugs for roles (+ super admin expansion).
-func (u *AuthUseCase) ResolvePermissions(ctx context.Context, roles []string, isSuperAdmin bool) ([]string, error) {
-	set := map[string]struct{}{}
-	if isSuperAdmin {
-		all, err := u.repo.ListPermissionsByRoleSlug(ctx, rbac.RoleSuperAdmin)
-		if err != nil {
-			return nil, err
-		}
-		for _, p := range all {
-			set[p] = struct{}{}
-		}
-	}
-	for _, role := range roles {
-		if role == rbac.RoleSuperAdmin {
+// Access is the resolved authorization of a user in one organization context.
+type Access struct {
+	// Roles are the global roles followed by the active organization roles.
+	Roles             []string
+	OrganizationRoles []string
+	IsSuperAdmin      bool
+	Permissions       []string
+	Grants            map[string]rbac.Scope
+	OrganizationUUID  *uuid.UUID
+}
+
+// ResolveAccess merges the grants of the user's global roles (platform,
+// customer, fleet) with the grants of their roles in the active organization.
+// Organization-type roles found among the global roles are ignored: they only
+// apply through a membership. Super admins hold the whole catalog.
+func (u *AuthUseCase) ResolveAccess(ctx context.Context, userID int64, globalRoles []string, orgUUID *uuid.UUID) (Access, error) {
+	out := Access{Grants: map[string]rbac.Scope{}, OrganizationRoles: []string{}}
+	global := make([]string, 0, len(globalRoles))
+	for _, role := range uniqueStrings(globalRoles) {
+		if def, ok := rbac.RoleBySlug(role); ok && rbac.IsOrganizationRoleType(def.OrgType) {
 			continue
 		}
-		ps, err := u.repo.ListPermissionsByRoleSlug(ctx, role)
+		if role == rbac.RoleSuperAdmin {
+			out.IsSuperAdmin = true
+		}
+		global = append(global, role)
+	}
+	if out.IsSuperAdmin {
+		sa, _ := rbac.RoleBySlug(rbac.RoleSuperAdmin)
+		for slug, scope := range rbac.RoleGrants(sa) {
+			out.Grants[slug] = scope
+		}
+	}
+	rows, err := u.repo.ListGrantsByRoleSlugs(ctx, global)
+	if err != nil {
+		return Access{}, err
+	}
+	mergeGrants(out.Grants, rows)
+	if orgUUID != nil && *orgUUID != uuid.Nil {
+		memberRows, err := u.repo.ListMemberGrants(ctx, userID, *orgUUID)
 		if err != nil {
-			return nil, err
+			return Access{}, err
 		}
-		for _, p := range ps {
-			set[p] = struct{}{}
+		mergeGrants(out.Grants, memberRows)
+		seen := map[string]struct{}{}
+		for _, g := range memberRows {
+			if _, ok := seen[g.Role]; !ok {
+				seen[g.Role] = struct{}{}
+				out.OrganizationRoles = append(out.OrganizationRoles, g.Role)
+			}
 		}
+		sort.Strings(out.OrganizationRoles)
+		id := *orgUUID
+		out.OrganizationUUID = &id
 	}
-	out := make([]string, 0, len(set))
-	for p := range set {
-		out = append(out, p)
-	}
+	out.Roles = append(append([]string{}, global...), out.OrganizationRoles...)
+	out.Permissions = rbac.SortedGrantSlugs(out.Grants)
 	return out, nil
+}
+
+func mergeGrants(dst map[string]rbac.Scope, rows []model.Grant) {
+	for _, g := range rows {
+		if rbac.SuperAdminOnly(g.Permission) && g.Role != rbac.RoleSuperAdmin {
+			continue
+		}
+		scope, ok := rbac.ParseScope(g.Scope)
+		if !ok {
+			continue
+		}
+		dst[g.Permission] = rbac.Broader(dst[g.Permission], scope)
+	}
+}
+
+// ResolvePermissions returns permission slugs of global roles (+ super admin
+// expansion), without organization roles.
+func (u *AuthUseCase) ResolvePermissions(ctx context.Context, roles []string, isSuperAdmin bool) ([]string, error) {
+	if isSuperAdmin {
+		roles = append(append([]string{}, roles...), rbac.RoleSuperAdmin)
+	}
+	access, err := u.ResolveAccess(ctx, 0, roles, nil)
+	if err != nil {
+		return nil, err
+	}
+	return access.Permissions, nil
 }
 
 // LoadUserByUUID is used by middleware identity hydration.

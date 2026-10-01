@@ -5,6 +5,7 @@
 #   migrate   one-shot golang-migrate up (compose.prod.yml "migrate")
 #   migrator  one-shot legacy data import (F2; profile "migrator")
 #   create-super-admin  one-shot seed (profile "seed")
+#   roles-sync  one-shot RBAC catalog reconcile (ROLES_SYNC_ARGS, e.g. -dry-run)
 # PDFs render in the Gotenberg container (GOTENBERG_URL); the image ships no
 # Chromium.
 set -eu
@@ -56,6 +57,10 @@ case "${ROLE}" in
       -password "${SA_PASSWORD:-Password1}" \
       -name "${SA_NAME:-Platform}" \
       -surname "${SA_SURNAME:-Admin}"
+    ;;
+  roles-sync)
+    # shellcheck disable=SC2086
+    exec /app/roles-sync ${ROLES_SYNC_ARGS:-}
     ;;
   *)
     exec /app/server

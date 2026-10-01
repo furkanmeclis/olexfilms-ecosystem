@@ -27,6 +27,7 @@ type Handler struct {
 	auth    *authusecase.AuthUseCase
 	store   storage.Driver
 	limiter *ratelimit.Limiter
+	stepUp  StepUpChecker
 }
 
 // SetRateLimiter enables per-IP limits on public business registration.
@@ -262,6 +263,9 @@ func (h *Handler) PlatformPatch(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if parentUUID != nil && !h.requireSupplierChange(w, r) {
+		return
+	}
 	patch := orgusecase.PatchInput{
 		Name: in.Name, City: in.City, District: in.District, Phone: in.Phone,
 		Address: in.Address, Status: in.Status, PlanCode: in.PlanCode,
@@ -473,8 +477,9 @@ func (h *Handler) PlatformAddMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in struct {
-		UserUUID string `json:"user_uuid"`
-		Role     string `json:"role"`
+		UserUUID  string   `json:"user_uuid"`
+		Role      string   `json:"role"`
+		RoleSlugs []string `json:"role_slugs"`
 	}
 	if err := decodeJSON(w, r, &in); err != nil {
 		return
@@ -485,7 +490,7 @@ func (h *Handler) PlatformAddMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.svc.AddMember(r.Context(), id, orgusecase.AddMemberInput{
-		UserUUID: userUUID, Role: in.Role,
+		UserUUID: userUUID, Role: in.Role, RoleSlugs: in.RoleSlugs,
 	}); err != nil {
 		writeError(w, r, err)
 		return

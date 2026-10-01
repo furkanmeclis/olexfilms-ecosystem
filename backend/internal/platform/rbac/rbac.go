@@ -1,10 +1,37 @@
 package rbac
 
-// Role slugs (seeded).
+// Role slugs (seeded; see catalog.go for the packages).
 const (
-	RoleSuperAdmin        = "super_admin"
-	RoleOrganizationUser  = "organization_user"
-	RoleOrganizationOwner = "organization_owner"
+	RoleSuperAdmin = "super_admin"
+
+	RoleCenterStaff      = "center_staff"
+	RoleCenterWarehouse  = "center_warehouse"
+	RoleCenterAccounting = "center_accounting"
+	RoleCenterSocial     = "center_social"
+
+	RoleDistributorOwner          = "distributor_owner"
+	RoleDistributorStaff          = "distributor_staff"
+	RoleDistributorWarehouseStaff = "distributor_warehouse_staff"
+	RoleDistributorAccounting     = "distributor_accounting"
+
+	RoleDealerOwner      = "dealer_owner"
+	RoleDealerStaff      = "dealer_staff"
+	RoleDealerAccounting = "dealer_accounting"
+
+	RoleCustomer = "customer"
+	RoleFleet    = "fleet"
+)
+
+// Role org types: which kind of subject a role is granted to. Platform,
+// customer and fleet roles are global (user_roles); center, distributor and
+// dealer roles are organization roles (organization_member_roles).
+const (
+	OrgTypePlatform    = "platform"
+	OrgTypeCenter      = "center"
+	OrgTypeDistributor = "distributor"
+	OrgTypeDealer      = "dealer"
+	OrgTypeCustomer    = "customer"
+	OrgTypeFleet       = "fleet"
 )
 
 // Permission slugs (seeded).
@@ -54,14 +81,77 @@ const (
 	PermTenantSettingsRead                = "tenant.settings.read"
 	PermTenantSettingsWrite               = "tenant.settings.write"
 	PermTenantImportsRead                 = "tenant.imports.read"
+	PermTenantExportsRead                 = "tenant.exports.read"
+
+	// Organization tree and members.
+	PermOrganizationsRead          = "organizations.read"
+	PermOrganizationsWrite         = "organizations.write"
+	PermOrganizationsSupplierWrite = "organizations.supplier.write"
+	PermMembersRead                = "members.read"
+	PermMembersWrite               = "members.write"
+
+	// Business modules (routes arrive with their modules).
+	PermServicesRead            = "services.read"
+	PermServicesWrite           = "services.write"
+	PermCustomersRead           = "customers.read"
+	PermCustomersWrite          = "customers.write"
+	PermPricingPurchaseRead     = "pricing.purchase.read"
+	PermPricingSaleRead         = "pricing.sale.read"
+	PermPricingSaleWrite        = "pricing.sale.write"
+	PermPricingRecommendedRead  = "pricing.recommended.read"
+	PermPricingRecommendedWrite = "pricing.recommended.write"
+	PermAccountingRead          = "accounting.read"
+	PermAccountingWrite         = "accounting.write"
+	PermWarehouseRead           = "warehouse.read"
+	PermWarehouseWrite          = "warehouse.write"
+	PermCampaignsRead           = "campaigns.read"
+	PermCampaignsWrite          = "campaigns.write"
+	PermLeadsRead               = "leads.read"
+	PermLeadsWrite              = "leads.write"
+	PermSocialRead              = "social.read"
+	PermSocialWrite             = "social.write"
+	PermPrivacyAnonymize        = "privacy.anonymize"
 )
 
 // IsSystemRole reports whether slug is a protected system role.
 func IsSystemRole(slug string) bool {
-	switch slug {
-	case RoleSuperAdmin, RoleOrganizationUser, RoleOrganizationOwner:
+	_, ok := RoleBySlug(slug)
+	return ok
+}
+
+// SuperAdminOnly reports whether a permission may only be granted to
+// super_admin (impersonation).
+func SuperAdminOnly(slug string) bool {
+	p, ok := PermissionBySlug(slug)
+	return ok && p.SuperAdminOnly
+}
+
+// IsOrganizationRoleType reports whether roles of this org type are granted
+// through organization membership rather than globally.
+func IsOrganizationRoleType(orgType string) bool {
+	switch orgType {
+	case OrgTypeCenter, OrgTypeDistributor, OrgTypeDealer:
 		return true
 	default:
 		return false
+	}
+}
+
+// DefaultMemberRole maps an organization type and membership kind
+// (owner|staff) to the default organization role slug.
+func DefaultMemberRole(orgType, memberRole string) string {
+	switch orgType {
+	case OrgTypeCenter:
+		return RoleCenterStaff
+	case OrgTypeDistributor:
+		if memberRole == "owner" {
+			return RoleDistributorOwner
+		}
+		return RoleDistributorStaff
+	default:
+		if memberRole == "owner" {
+			return RoleDealerOwner
+		}
+		return RoleDealerStaff
 	}
 }

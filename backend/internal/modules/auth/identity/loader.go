@@ -7,6 +7,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 )
 
 // Loader hydrates Principal from JWT claims via AuthUseCase.
@@ -35,11 +36,6 @@ func (l Loader) LoadPrincipal(r *http.Request, claims jwt.Claims) (authctx.Princ
 	if user.Status == "disabled" {
 		return authctx.Principal{}, usecase.ErrUserDisabled
 	}
-	isSuperAdmin := claims.IsSuperAdmin
-	perms, err := l.UC.ResolvePermissions(ctx, claims.Roles, isSuperAdmin)
-	if err != nil {
-		return authctx.Principal{}, err
-	}
 	impersonatorUUID, err := claims.ImpersonatorUUID()
 	if err != nil {
 		return authctx.Principal{}, err
@@ -48,13 +44,24 @@ func (l Loader) LoadPrincipal(r *http.Request, claims jwt.Claims) (authctx.Princ
 	if err != nil {
 		return authctx.Principal{}, err
 	}
+	roles := claims.Roles
+	if claims.IsSuperAdmin {
+		roles = append(append([]string{}, roles...), rbac.RoleSuperAdmin)
+	}
+	// Global roles come from the token; organization roles are read for the
+	// active organization (oid) on every request so revocations apply at once.
+	access, err := l.UC.ResolveAccess(ctx, user.ID, roles, orgUUID)
+	if err != nil {
+		return authctx.Principal{}, err
+	}
 	return authctx.Principal{
 		UserID:             user.UUID,
 		UserInternal:       user.ID,
 		Email:              user.Email,
-		Roles:              claims.Roles,
-		Permissions:        perms,
-		IsSuperAdmin:       isSuperAdmin,
+		Roles:              access.Roles,
+		Permissions:        access.Permissions,
+		PermissionScopes:   access.Grants,
+		IsSuperAdmin:       access.IsSuperAdmin,
 		ImpersonatorUserID: impersonatorUUID,
 		SessionID:          claims.SessionUUID(),
 		OrganizationUUID:   orgUUID,
