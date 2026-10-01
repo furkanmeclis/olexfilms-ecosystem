@@ -12,6 +12,57 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const appendProductImage = `-- name: AppendProductImage :one
+
+UPDATE products
+SET images = images || jsonb_build_array($1::jsonb)
+WHERE id = $2 AND brand_id = $3
+  AND jsonb_array_length(images) < $4::int
+RETURNING id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at
+`
+
+type AppendProductImageParams struct {
+	Image     []byte `json:"image"`
+	ID        int64  `json:"id"`
+	BrandID   int64  `json:"brand_id"`
+	MaxImages int32  `json:"max_images"`
+}
+
+// TEC-152: product image uploads.
+// Atomically appends one image while the product holds fewer than
+// max_images; no row means the product is gone or already full.
+func (q *Queries) AppendProductImage(ctx context.Context, arg AppendProductImageParams) (Product, error) {
+	row := q.db.QueryRow(ctx, appendProductImage,
+		arg.Image,
+		arg.ID,
+		arg.BrandID,
+		arg.MaxImages,
+	)
+	var i Product
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.CategoryID,
+		&i.Sku,
+		&i.Name,
+		&i.DescriptionMd,
+		&i.WarrantyDurationMonths,
+		&i.MicronThickness,
+		&i.Images,
+		&i.UnitType,
+		&i.UsesFixedBarcode,
+		&i.Active,
+		&i.ExternalID,
+		&i.ConnectionID,
+		&i.LockedFields,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const countProductCategories = `-- name: CountProductCategories :one
 SELECT COUNT(*)::bigint FROM product_categories
 WHERE brand_id = $1
@@ -225,6 +276,21 @@ func (q *Queries) DeleteProductCategory(ctx context.Context, arg DeleteProductCa
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const getActiveProductUUIDByImageKey = `-- name: GetActiveProductUUIDByImageKey :one
+SELECT uuid FROM products
+WHERE active
+  AND images @> jsonb_build_array(jsonb_build_object('key', $1::text))
+LIMIT 1
+`
+
+// Public image route: the active product (any brand) that lists the key.
+func (q *Queries) GetActiveProductUUIDByImageKey(ctx context.Context, key string) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, getActiveProductUUIDByImageKey, key)
+	var uuid uuid.UUID
+	err := row.Scan(&uuid)
+	return uuid, err
 }
 
 const getProduct = `-- name: GetProduct :one
@@ -627,6 +693,55 @@ func (q *Queries) ListProductsForIndex(ctx context.Context) ([]Product, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const replaceProductImages = `-- name: ReplaceProductImages :one
+UPDATE products
+SET images = $1::jsonb
+WHERE id = $2 AND brand_id = $3
+  AND images = $4::jsonb
+RETURNING id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at
+`
+
+type ReplaceProductImagesParams struct {
+	Images   []byte `json:"images"`
+	ID       int64  `json:"id"`
+	BrandID  int64  `json:"brand_id"`
+	Expected []byte `json:"expected"`
+}
+
+// Optimistic replacement of the image list: no row when another request
+// changed the list since it was read (expected).
+func (q *Queries) ReplaceProductImages(ctx context.Context, arg ReplaceProductImagesParams) (Product, error) {
+	row := q.db.QueryRow(ctx, replaceProductImages,
+		arg.Images,
+		arg.ID,
+		arg.BrandID,
+		arg.Expected,
+	)
+	var i Product
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.CategoryID,
+		&i.Sku,
+		&i.Name,
+		&i.DescriptionMd,
+		&i.WarrantyDurationMonths,
+		&i.MicronThickness,
+		&i.Images,
+		&i.UnitType,
+		&i.UsesFixedBarcode,
+		&i.Active,
+		&i.ExternalID,
+		&i.ConnectionID,
+		&i.LockedFields,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const setProductsActive = `-- name: SetProductsActive :execrows

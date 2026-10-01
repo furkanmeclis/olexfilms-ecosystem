@@ -19,6 +19,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
 	"github.com/google/uuid"
@@ -42,12 +43,14 @@ type Handler struct {
 	svc      *catalogusecase.Service
 	exports  Exporter
 	imports  Importer
+	store    storage.Driver
 	activity *activity.Recorder
 }
 
-// New creates the handler. exports, imports and rec may be nil.
-func New(svc *catalogusecase.Service, exports Exporter, imports Importer, rec *activity.Recorder) *Handler {
-	return &Handler{svc: svc, exports: exports, imports: imports, activity: rec}
+// New creates the handler. exports, imports, store and rec may be nil
+// (store nil: image uploads answer 503, public images 404).
+func New(svc *catalogusecase.Service, exports Exporter, imports Importer, store storage.Driver, rec *activity.Recorder) *Handler {
+	return &Handler{svc: svc, exports: exports, imports: imports, store: store, activity: rec}
 }
 
 const maxBody = 1 << 20
@@ -88,6 +91,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Forbidden(w, r, "Only the center organization writes the catalog")
 	case errors.Is(err, catalogusecase.ErrNotFound):
 		response.NotFound(w, r, "Catalog record not found")
+	case errors.Is(err, catalogusecase.ErrImagesChanged):
+		response.Conflict(w, r, response.CodeConflict, "The product images changed; reload and try again")
 	case errors.Is(err, catalogusecase.ErrInUse):
 		response.Conflict(w, r, response.CodeConflict, "The record is still in use")
 	case errors.Is(err, exportusecase.ErrInvalidRequest), errors.Is(err, importusecase.ErrInvalidRequest):
@@ -313,9 +318,17 @@ func (h *Handler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if err := h.svc.DeleteProduct(r.Context(), orgctx.MustScope(r.Context()), id); err != nil {
+	org := orgctx.MustScope(r.Context())
+	var images []model.Image
+	if org.OrgType == catalogusecase.OrgTypeCenter {
+		images = h.productImages(r.Context(), org, id)
+	}
+	if err := h.svc.DeleteProduct(r.Context(), org, id); err != nil {
 		writeError(w, r, err)
 		return
+	}
+	for _, img := range images {
+		h.deleteObjects(r.Context(), id, img.Key)
 	}
 	h.record(r, "catalog.product.deleted", &id, nil)
 	response.JSON(w, r, http.StatusOK, map[string]bool{"deleted": true})

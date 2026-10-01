@@ -368,7 +368,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	exportmodule.RegisterRoutes(mux, exporthandler.New(exportSvc), tokens, loader, stepUpSvc, deps.Queries)
 	importmodule.RegisterRoutes(mux, importhandler.New(importSvc), tokens, loader, deps.Queries)
 	bulkmodule.RegisterRoutes(mux, bulkhandler.New(bulkSvc), tokens, loader)
-	catalogmodule.RegisterRoutes(mux, cataloghandler.New(catalogSvc, exportSvc, importSvc, activityRec), featureSvc, tokens, loader, deps.Queries)
+	catalogmodule.RegisterRoutes(mux, cataloghandler.New(catalogSvc, exportSvc, importSvc, deps.Storage, activityRec), featureSvc, tokens, loader, deps.Queries)
 	// TEC-149: vehicle catalog (global car brands/models, super_admin writes).
 	vehiclecatalogmodule.RegisterRoutes(mux, vehiclecataloghandler.New(
 		vehiclecatalogusecase.New(deps.Queries), deps.Storage, activityRec), tokens, loader)

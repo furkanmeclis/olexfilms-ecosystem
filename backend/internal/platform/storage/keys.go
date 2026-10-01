@@ -38,6 +38,12 @@ func VehicleModelHeroObjectKey(modelUUID uuid.UUID, version, ext string) string 
 	return fmt.Sprintf("vehicle-models/%s/hero-%s.%s", modelUUID.String(), version, trimExt(ext))
 }
 
+// ProductImageObjectKey builds products/{uuid}/images/{imageKey} (TEC-152).
+// imageKey is the flat, random image id stored in products.images.
+func ProductImageObjectKey(productUUID uuid.UUID, imageKey string) string {
+	return fmt.Sprintf("products/%s/images/%s", productUUID.String(), imageKey)
+}
+
 // DocumentObjectKey builds documents/{org}/{kind}/{render}.pdf (TEC-88).
 func DocumentObjectKey(orgUUID uuid.UUID, kind string, renderUUID uuid.UUID) string {
 	return fmt.Sprintf("documents/%s/%s/%s.pdf", orgUUID.String(), kind, renderUUID.String())

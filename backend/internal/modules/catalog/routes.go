@@ -49,4 +49,12 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/catalog/products/{uuid}", read(h.GetProduct))
 	mux.Handle("PATCH /v1/catalog/products/{uuid}", write(h.UpdateProduct))
 	mux.Handle("DELETE /v1/catalog/products/{uuid}", write(h.DeleteProduct))
+
+	// TEC-152: product images (center only on top of catalog.write, K4).
+	mux.Handle("POST /v1/catalog/products/{uuid}/images", write(h.UploadProductImage))
+	mux.Handle("PUT /v1/catalog/products/{uuid}/images/order", write(h.ReorderProductImages))
+	mux.Handle("DELETE /v1/catalog/products/{uuid}/images/{key}", write(h.DeleteProductImage))
+	// Public, unauthenticated and cacheable (ETag + Cache-Control): only
+	// images of active products are served.
+	mux.HandleFunc("GET /v1/public/product-images/{key}", h.PublicProductImage)
 }
