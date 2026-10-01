@@ -45,7 +45,7 @@
   "rules.enabled_no": "Dayandırılıb",
   "rules.older_than_value": "{{hours}} saat",
   "rules.columns.name": "Ad",
-  "rules.columns.enabled": "Status",
+  "rules.columns.enabled": "Vəziyyət",
   "rules.columns.levels": "Səviyyələr",
   "rules.columns.older_than": "Bundan köhnə",
   "rules.columns.schedule": "Cədvəl",

@@ -1,1 +1,17 @@
-{}
+{
+  "reconnected": "Echtzeitverbindung wiederhergestellt",
+  "offline": "Sie sind offline – Echtzeit pausiert",
+  "event_fallback": "Aktualisierung: {{type}}",
+  "event_notifications_sent": "Benachrichtigung gesendet",
+  "event_notifications_delivered": "Benachrichtigung zugestellt",
+  "event_notifications_failed": "Benachrichtigung fehlgeschlagen",
+  "event_jobs_completed": "Auftrag abgeschlossen",
+  "event_jobs_failed": "Auftrag fehlgeschlagen",
+  "event_imports_completed": "Import abgeschlossen",
+  "event_imports_failed": "Import fehlgeschlagen",
+  "event_exports_completed": "Export abgeschlossen",
+  "event_exports_failed": "Export fehlgeschlagen",
+  "event_exports_cancelled": "Export abgebrochen",
+  "event_reports_export_completed": "Berichtsexport bereit",
+  "event_reports_export_failed": "Berichtsexport fehlgeschlagen"
+}

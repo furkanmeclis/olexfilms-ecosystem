@@ -1,1 +1,22 @@
-{}
+{
+  "description": "Totali della piattaforma e scorciatoie per ruoli, utenti e notifiche.",
+  "forbidden_description": "Solo gli utenti della piattaforma possono vedere la panoramica.",
+  "error_description": "Impossibile caricare i dati della panoramica.",
+  "kpi_roles_total": "Ruoli",
+  "kpi_users_total": "Utenti",
+  "kpi_notifications": "Notifiche",
+  "quick_links_title": "Collegamenti rapidi",
+  "quick_links_description": "Vai direttamente alle aree più usate della piattaforma.",
+  "link_roles_description": "Consulta e gestisci i ruoli.",
+  "link_users_description": "Consulta e gestisci gli utenti della piattaforma.",
+  "link_notifications_description": "Registro delle notifiche della piattaforma.",
+  "link_profile_description": "Account, password e preferenze.",
+  "pipeline.follow_up": "Contatti da ricontattare",
+  "pipeline.overdue": "Ricontatti scaduti: {{count}}",
+  "pipeline.open_leads": "Contatti aperti: {{count}}",
+  "pipeline.open_quotes": "Preventivi in attesa di risposta",
+  "pipeline.expiring": "Preventivi in scadenza entro 3 giorni: {{count}}",
+  "pipeline.awaiting": "Preventivi in attesa di risposta: {{count}}",
+  "tenant.welcome_title": "Benvenuto",
+  "tenant.welcome_description": "Pannello dell'organizzazione. I moduli compariranno qui man mano che vengono aggiunti."
+}

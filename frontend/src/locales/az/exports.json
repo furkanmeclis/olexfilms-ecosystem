@@ -40,7 +40,7 @@
   "formats.json": "JSON (məlumat)",
   "columns.resource": "Resurs",
   "columns.format": "Format",
-  "columns.status": "Status",
+  "columns.status": "Vəziyyət",
   "columns.rows": "Sətir sayı",
   "columns.created_at": "Yaradılıb",
   "columns.actions": "Əməliyyatlar",

@@ -1,1 +1,14 @@
-{}
+{
+  "create": "Создать",
+  "refresh": "Обновить",
+  "filters": "Фильтры",
+  "filters_active": "Фильтры ({{count}})",
+  "filters_description": "Сузьте список с помощью фильтров.",
+  "filter_any": "Любой",
+  "filter_unsupported": "Параметр API для этого фильтра пока недоступен.",
+  "reset_filters": "Сбросить",
+  "apply_filters": "Применить",
+  "delete_title": "Удаление: {{name}}",
+  "delete_description": "Удалить {{name}}?",
+  "delete_soft_description": "{{name}} будет удалён мягко: запись архивируется, а не удаляется навсегда."
+}

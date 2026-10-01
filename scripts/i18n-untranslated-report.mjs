@@ -2,20 +2,20 @@
 /**
  * Untranslated-copy report (TEC-138).
  *
- * For every language beyond tr/en, counts the values that are still the en
- * text word for word: frontend locale JSON and the backend label catalog.
- * Universal terms (OK, PDF, VIN, brand names...) do not count: a value made
- * only of such words, {{params}}, numbers and punctuation is skipped. Each
- * language adds its own list in frontend/scripts/i18n-glossary.<lang>.json
- * ("keep").
+ * For every language beyond en/tr it counts the frontend keys whose value is
+ * missing (falls back to en at runtime) or exactly the en text, and does the
+ * same for the backend label catalog. Universal terms (brand names, acronyms
+ * such as PDF/VIN/OTP/UUID, numbers, e-mail/URL samples, pure {{params}}) may
+ * stay equal to en: they are listed apart as "universal" and left out of the
+ * gated percentage (the raw share including them is printed too).
  *
  * Usage (repo root):
  *   node scripts/i18n-untranslated-report.mjs
- *   node scripts/i18n-untranslated-report.mjs --locales=bg,ar --max=3
- *   node scripts/i18n-untranslated-report.mjs --list      # print the values
- *   node scripts/i18n-untranslated-report.mjs --json
+ *   node scripts/i18n-untranslated-report.mjs --locales de,fr,es,it,ru,uk
+ *   node scripts/i18n-untranslated-report.mjs --locales de --list
+ *   node scripts/i18n-untranslated-report.mjs --threshold 3 --json
  *
- * --max=<pct> exits 1 when a language is above the threshold.
+ * Exits 1 when a selected language is at or above the threshold (default 3%).
  */
 
 import fs from "node:fs";
@@ -24,42 +24,70 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const LOCALES_DIR = path.join(ROOT, "frontend/src/locales");
-const GLOSSARY_DIR = path.join(ROOT, "frontend/scripts");
-const I18N_DIR = path.join(ROOT, "backend/internal/platform/i18n");
 const I18N_CONFIG = path.join(ROOT, "frontend/src/config/i18n.ts");
+const BACKEND_DIR = path.join(ROOT, "backend/internal/platform/i18n");
+const SKIP = new Set(["en", "tr"]);
 
-/** Words that stay the same in every language. */
-const UNIVERSAL = [
-  "OK", "PDF", "CSV", "XLSX", "XLS", "JSON", "HTML", "XML", "ZIP", "PNG", "JPG", "JPEG",
-  "SVG", "WEBP", "GIF", "URL", "URI", "API", "ID", "UUID", "VIN", "SMS", "OTP", "QR",
-  "IBAN", "SWIFT", "BIC", "E.164", "ISO", "UTC", "GMT", "TCMB", "ECB", "KVKK", "GDPR",
-  "SKU", "EAN", "HTTP", "HTTPS", "SMTP", "IMAP", "DNS", "IP", "TLS", "SSL", "S3", "JWT",
-  "2FA", "TOTP", "MFA", "AI", "MCP", "LLM", "CPU", "RAM", "GB", "MB", "KB", "TB",
-  "iOS", "Android", "Web", "Slug", "Markdown", "Webhook", "Cron", "Redis", "Postgres",
-  "PostgreSQL", "Meilisearch", "SeaweedFS", "Centrifugo", "Gotenberg", "Asynq", "Sentry",
-  "Lexical", "Expo", "WhatsApp", "Telegram", "Google", "Apple", "Microsoft", "GitHub",
-  "Slack", "Stripe", "iyzico", "Anthropic", "Claude", "OpenAI", "Twilio", "Netgsm",
-  "wuzapi", "Olexfilms", "Olex", "Glorian", "NexPTG", "Dokploy", "TRY", "EUR", "USD",
-  "GBP", "Bold", "A3", "A4", "A5", "Letter", "Legal", "px", "Email", "E-mail", "Logo",
-  "Facebook", "TSV", "CMS", "OAuth", "Regex", "RSA", "PEM", "BEGIN", "PRIVATE", "KEY",
-];
+const args = process.argv.slice(2);
+const flag = (name) => args.includes(name);
+function option(name) {
+  const i = args.findIndex((a) => a === name || a.startsWith(`${name}=`));
+  if (i < 0) return null;
+  return args[i].includes("=") ? args[i].split("=").slice(1).join("=") : args[i + 1];
+}
 
-const argv = process.argv.slice(2);
-const flag = (name) => argv.includes(`--${name}`);
-const option = (name) => {
-  const i = argv.findIndex((a) => a === `--${name}` || a.startsWith(`--${name}=`));
-  if (i === -1) return null;
-  return argv[i].includes("=") ? argv[i].slice(argv[i].indexOf("=") + 1) : argv[i + 1];
-};
+if (flag("--help") || flag("-h")) {
+  console.log(`i18n-untranslated-report — share of keys still equal to en
 
-function supportedLocales() {
-  const src = fs.readFileSync(I18N_CONFIG, "utf8");
-  const m = src.match(/SUPPORTED_LOCALES\s*=\s*\[([\s\S]*?)\]/);
+  --locales a,b    languages to report (default: every language but en/tr)
+  --threshold N    fail when a language reaches N percent (default 3)
+  --list           print the keys that equal en (and missing keys)
+  --json           machine-readable output`);
+  process.exit(0);
+}
+
+const supported = (() => {
+  const m = fs.readFileSync(I18N_CONFIG, "utf8").match(/SUPPORTED_LOCALES\s*=\s*\[([\s\S]*?)\]/);
   return m ? [...m[1].matchAll(/"([^"]+)"/g)].map((x) => x[1]) : [];
+})();
+const selected = option("--locales")
+  ? option("--locales")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+  : supported.filter((l) => !SKIP.has(l));
+const unknown = selected.filter((l) => !supported.includes(l));
+if (unknown.length) {
+  console.error(`Unknown locale(s): ${unknown.join(", ")}`);
+  process.exit(2);
+}
+const threshold = Number(option("--threshold") ?? 3);
+
+/** Tokens that stay the same in every language. */
+const UNIVERSAL_WORDS = new Set(
+  [
+    "olex", "olexfilms", "glorian", "ppf", "pdf", "csv", "json", "xlsx", "excel", "vin", "otp",
+    "whatsapp", "mcp", "uuid", "id", "tcmb", "ecb", "kvkk", "ubl-tr", "html", "xslt", "api",
+    "url", "sms", "ok", "github", "google", "facebook", "apple", "a4", "a3", "png", "jpg",
+    "jpeg", "webp", "svg", "cms", "ai", "totp", "2fa", "e-mail", "smtp", "iban", "regex",
+    "oauth", "webhook", "markdown", "wuzapi", "expo", "centrifugo", "meilisearch", "s3",
+    "gotenberg", "sentry", "dsn", "ip", "min", "max", "slug", "gtin", "ean", "sku", "qr", "passkey", "passkeys", "tsv",
+  ].map((w) => w.toLowerCase()),
+);
+
+function isUniversal(value) {
+  // PEM armour placeholders and other ASCII-only markers stay as they are.
+  if (/^-+BEGIN [A-Z ]+-+$/.test(String(value).trim())) return true;
+  const text = String(value)
+    .replace(/{{\s*[a-zA-Z0-9_]+\s*}}/g, " ")
+    .replace(/\S+@\S+\.\S+/g, " ")
+    .replace(/https?:\/\/\S+/g, " ");
+  const words = text.match(/[\p{L}][\p{L}\p{N}.-]*/gu) ?? [];
+  return words.every((w) => UNIVERSAL_WORDS.has(w.toLowerCase().replace(/[.-]+$/, "")));
 }
 
 function flatten(value, prefix = "", out = {}) {
-  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
     for (const [k, v] of Object.entries(value)) flatten(v, prefix ? `${prefix}.${k}` : k, out);
   } else if (prefix) {
     out[prefix] = value == null ? "" : String(value);
@@ -69,124 +97,114 @@ function flatten(value, prefix = "", out = {}) {
 
 function readLocale(locale) {
   const dir = path.join(LOCALES_DIR, locale);
-  const out = {};
-  if (!fs.existsSync(dir)) return out;
+  const keys = {};
+  if (!fs.existsSync(dir)) return keys;
   for (const name of fs.readdirSync(dir).filter((n) => n.endsWith(".json"))) {
     const ns = name.slice(0, -5);
     const flat = flatten(JSON.parse(fs.readFileSync(path.join(dir, name), "utf8")));
-    for (const [k, v] of Object.entries(flat)) out[`${ns}.${k}`] = v;
+    for (const [k, v] of Object.entries(flat)) keys[`${ns}.${k}`] = v;
   }
-  return out;
+  return keys;
 }
 
-/** Go identifier of a locale's catalog map: zh-CN -> zhCNCatalog. */
-function goVar(locale) {
-  return `${locale.replace(/-([A-Za-z]+)/g, (_, r) => r)}Catalog`;
+/** map[string]string literal named varName in the Go sources. */
+function readGoCatalog(varName, locale) {
+  const own = locale ? [`catalog_${locale.toLowerCase().replace(/-/g, "_")}.go`] : [];
+  for (const file of [...own, "catalog_locales.go", "catalog.go"]) {
+    const full = path.join(BACKEND_DIR, file);
+    if (!fs.existsSync(full)) continue;
+    const src = fs.readFileSync(full, "utf8");
+    const m = new RegExp(String.raw`\b${varName}\s*=\s*map\[string\]string\{`).exec(src);
+    if (!m) continue;
+    let depth = 1;
+    let i = m.index + m[0].length;
+    const start = i;
+    for (; i < src.length && depth > 0; i++) {
+      if (src[i] === '"') {
+        for (i++; i < src.length && src[i] !== '"'; i++) if (src[i] === "\\") i++;
+        continue;
+      }
+      if (src[i] === "{") depth++;
+      if (src[i] === "}") depth--;
+    }
+    const body = src.slice(start, i - 1);
+    const map = {};
+    for (const hit of body.matchAll(/"((?:\\.|[^"\\])*)"\s*:\s*"((?:\\.|[^"\\])*)"/g)) {
+      map[JSON.parse(`"${hit[1]}"`)] = JSON.parse(`"${hit[2]}"`);
+    }
+    return map;
+  }
+  return null;
 }
 
-function readGoCatalog(src, varName) {
-  const m = new RegExp(String.raw`\b${varName}\s*=\s*map\[string\]string\{`).exec(src);
-  if (!m) return {};
-  let depth = 1;
-  let i = m.index + m[0].length;
-  const start = i;
-  for (; i < src.length && depth; i++) {
-    if (src[i] === "{") depth++;
-    else if (src[i] === "}") depth--;
-    else if (src[i] === '"' || src[i] === "`") {
-      const q = src[i];
-      for (i++; i < src.length && src[i] !== q; i++) if (q === '"' && src[i] === "\\") i++;
+const goVar = (locale) => `${locale.replace(/-([A-Za-z]+)/g, (_, r) => r)}Catalog`;
+
+function compare(en, other) {
+  const missing = [];
+  const identical = [];
+  const universal = [];
+  for (const [k, v] of Object.entries(en)) {
+    const got = other[k];
+    if (got == null || !String(got).trim()) missing.push(k);
+    else if (String(got).trim() === String(v).trim()) {
+      (isUniversal(v) ? universal : identical).push(k);
     }
   }
-  const body = src.slice(start, i - 1);
-  const out = {};
-  const re = /"((?:[^"\\]|\\.)*)"\s*:\s*"((?:[^"\\]|\\.)*)"/g;
-  for (const x of body.matchAll(re)) out[JSON.parse(`"${x[1]}"`)] = JSON.parse(`"${x[2]}"`);
-  return out;
+  const total = Object.keys(en).length;
+  // Gate: missing keys plus copies equal to en that are not universal terms.
+  const untranslated = missing.length + identical.length;
+  const raw = untranslated + universal.length;
+  return {
+    total,
+    missing,
+    identical,
+    universal,
+    untranslated,
+    pct: total ? (untranslated / total) * 100 : 0,
+    rawPct: total ? (raw / total) * 100 : 0,
+  };
 }
 
-function backendSources() {
-  return fs
-    .readdirSync(I18N_DIR)
-    .filter((n) => /^catalog.*\.go$/.test(n) && !n.endsWith("_test.go"))
-    .map((n) => fs.readFileSync(path.join(I18N_DIR, n), "utf8"))
-    .join("\n");
+const enFrontend = readLocale("en");
+const enBackend = readGoCatalog("enCatalog") ?? {};
+const report = [];
+for (const locale of selected) {
+  const fe = compare(enFrontend, readLocale(locale));
+  const be = compare(enBackend, readGoCatalog(goVar(locale), locale) ?? {});
+  report.push({ locale, frontend: fe, backend: be });
 }
 
-function keepSet(locale) {
-  const file = path.join(GLOSSARY_DIR, `i18n-glossary.${locale}.json`);
-  const words = [...UNIVERSAL];
-  if (fs.existsSync(file)) {
-    const g = JSON.parse(fs.readFileSync(file, "utf8"));
-    words.push(...(g.keep ?? []), ...(g.brands ?? []));
-  }
-  return new Set(words.map((w) => w.toLowerCase()));
-}
+const failed = report.filter((r) => r.frontend.pct >= threshold || r.backend.pct >= threshold);
 
-/** True when the text has nothing a translator should change. */
-function isUniversal(text, keep) {
-  const stripped = text
-    .replace(/{{\s*[a-zA-Z0-9_]+\s*}}/g, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/https?:\/\/\S+/g, " ")
-    .replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, " ");
-  if (keep.has(stripped.trim().toLowerCase())) return true;
-  const words = stripped.match(/[\p{L}][\p{L}\p{N}.+-]*/gu) ?? [];
-  return words.every((w) => keep.has(w.toLowerCase()) || keep.has(w.replace(/[.]+$/, "").toLowerCase()));
-}
-
-function compare(en, other, keep) {
-  const same = [];
-  let total = 0;
-  for (const [k, v] of Object.entries(en)) {
-    if (!/\p{L}/u.test(v)) continue;
-    total++;
-    if (other[k] === v && !isUniversal(v, keep)) same.push(k);
-  }
-  return { total, same };
-}
-
-function main() {
-  const all = supportedLocales().filter((l) => l !== "en" && l !== "tr");
-  const only = option("locales");
-  const locales = only ? only.split(",").map((x) => x.trim()).filter(Boolean) : all;
-  const max = option("max") == null ? null : Number(option("max"));
-  const en = readLocale("en");
-  const goSrc = backendSources();
-  const goEn = readGoCatalog(goSrc, "enCatalog");
-
-  const rows = locales.map((locale) => {
-    const keep = keepSet(locale);
-    const fe = compare(en, readLocale(locale), keep);
-    const be = compare(goEn, readGoCatalog(goSrc, goVar(locale)), keep);
-    const total = fe.total + be.total;
-    const same = fe.same.length + be.same.length;
-    const pct = total ? (same / total) * 100 : 0;
-    return {
-      locale,
-      frontend: { total: fe.total, same: fe.same.length },
-      backend: { total: be.total, same: be.same.length },
-      pct: Math.round(pct * 100) / 100,
-      keys: [...fe.same, ...be.same.map((k) => `backend:${k}`)],
-      ok: max == null || pct < max,
-    };
-  });
-
-  if (flag("json")) {
-    console.log(JSON.stringify(rows, null, 2));
-  } else {
-    console.log("locale   frontend same/total   backend same/total   untranslated %");
-    for (const r of rows) {
-      console.log(
-        `${r.locale.padEnd(8)} ${`${r.frontend.same}/${r.frontend.total}`.padStart(19)}   ${`${r.backend.same}/${r.backend.total}`.padStart(18)}   ${r.pct.toFixed(2).padStart(6)}%${r.ok ? "" : "  > max"}`,
-      );
-      if (flag("list")) {
-        const fe = readLocale(r.locale);
-        for (const k of r.keys) console.log(`    ${k}: ${JSON.stringify(k.startsWith("backend:") ? goEn[k.slice(8)] : fe[k])}`);
+if (flag("--json")) {
+  console.log(JSON.stringify({ threshold, ok: failed.length === 0, report }, null, 2));
+} else {
+  const fmt = (r) =>
+    `${r.pct.toFixed(2).padStart(6)}%  (${r.untranslated}/${r.total}: missing ${r.missing.length}, same as en ${r.identical.length}; universal terms ${r.universal.length}, ${r.rawPct.toFixed(2)}% with them)`;
+  console.log(`Untranslated share per language (threshold ${threshold}%)\n`);
+  for (const r of report) {
+    console.log(`${r.locale.padEnd(6)} frontend ${fmt(r.frontend)}`);
+    console.log(`${"".padEnd(6)} backend  ${fmt(r.backend)}`);
+    if (flag("--list")) {
+      for (const [label, list] of [
+        ["missing", [...r.frontend.missing, ...r.backend.missing.map((k) => `backend:${k}`)]],
+        ["same as en", [...r.frontend.identical, ...r.backend.identical.map((k) => `backend:${k}`)]],
+        ["universal", [...r.frontend.universal, ...r.backend.universal.map((k) => `backend:${k}`)]],
+      ]) {
+        if (!list.length) continue;
+        console.log(`  ${label}:`);
+        for (const k of list) {
+          const key = k.startsWith("backend:") ? k.slice(8) : k;
+          const v = k.startsWith("backend:") ? enBackend[key] : enFrontend[key];
+          console.log(`    - ${k} = ${JSON.stringify(v)}`);
+        }
       }
     }
   }
-  process.exit(rows.every((r) => r.ok) ? 0 : 1);
+  console.log(
+    failed.length
+      ? `\nFAIL: ${failed.map((r) => r.locale).join(", ")} at or above ${threshold}%`
+      : `\nOK: every language below ${threshold}%`,
+  );
 }
-
-main();
+process.exit(failed.length ? 1 : 0);

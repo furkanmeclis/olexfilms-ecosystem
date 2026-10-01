@@ -1,1 +1,22 @@
-{}
+{
+  "description": "Підсумки платформи та швидкі посилання на ролі, користувачів і сповіщення.",
+  "forbidden_description": "Огляд доступний лише користувачам платформи.",
+  "error_description": "Не вдалося завантажити дані огляду.",
+  "kpi_roles_total": "Ролі",
+  "kpi_users_total": "Користувачі",
+  "kpi_notifications": "Сповіщення",
+  "quick_links_title": "Швидкі посилання",
+  "quick_links_description": "Перехід до основних розділів платформи.",
+  "link_roles_description": "Перегляд і керування ролями.",
+  "link_users_description": "Перегляд і керування користувачами платформи.",
+  "link_notifications_description": "Журнал сповіщень платформи.",
+  "link_profile_description": "Обліковий запис, пароль і налаштування.",
+  "pipeline.follow_up": "Ліди для повторного контакту",
+  "pipeline.overdue": "Прострочені контакти: {{count}}",
+  "pipeline.open_leads": "Відкриті ліди: {{count}}",
+  "pipeline.open_quotes": "Пропозиції без відповіді",
+  "pipeline.expiring": "Пропозиції, що спливають протягом 3 днів: {{count}}",
+  "pipeline.awaiting": "Пропозиції без відповіді: {{count}}",
+  "tenant.welcome_title": "Ласкаво просимо",
+  "tenant.welcome_description": "Панель організації. Модулі з'являтимуться тут у міру додавання."
+}

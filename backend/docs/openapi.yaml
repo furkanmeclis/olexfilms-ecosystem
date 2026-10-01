@@ -74,6 +74,17 @@ tags:
     description: Countries, provinces, districts, distributor territories and plate formats
   - name: Rates
     description: Currencies and daily exchange rates (TCMB, ECB, manual override)
+  - name: Mobile
+    description: |
+      Mobile app API (TEC-91). `/v1/mobile/*` is reached through the BFF
+      passthrough `/api/v1/mobile/*` with `Authorization: Bearer` and no
+      cookies (a request with a Cookie header gets 400). Tokens carry JWT
+      `aud=mobile`; a mobile token is accepted on `/v1/mobile/*` only and
+      `/v1/mobile/*` accepts mobile tokens only (403 `REALM_FORBIDDEN`).
+      Every `/v1/mobile/*` route requires `X-Mobile-Api-Version` within the
+      configured range (`MOBILE_API_MIN_VERSION`..`MOBILE_API_MAX_VERSION`),
+      otherwise 426 `MOBILE_API_VERSION_UNSUPPORTED`. Also the QR web sign-in
+      (`/v1/auth/qr/*`).
 
 paths:
   /healthz:
@@ -1791,7 +1802,8 @@ paths:
       summary: Issue Centrifugo connection JWT
       description: |
         Returns `{ token, expires_at, ws_url }`. JWT `sub` is the user UUID string.
-        Requires `auth.session`. Disabled Centrifugo → `503 REALTIME_DISABLED`.
+        Any authenticated panel session; no active organization (`oid`) is needed
+        since the token grants no channel. Disabled Centrifugo → `503 REALTIME_DISABLED`.
       security:
         - bearerAuth: []
       responses:
@@ -1818,6 +1830,8 @@ paths:
       description: |
         Body `{ channel }`. Allowlist `user:{own_uuid}`, member `workspace:{uuid}`,
         and `conversation:{uuid}` (authenticated session; HTTP inbox ACL is the hard boundary).
+        `user:{own_uuid}` needs no active organization; every other channel requires
+        `auth.session` from the active organization, otherwise `403`.
       security:
         - bearerAuth: []
       requestBody:
@@ -5039,6 +5053,467 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  # --- TEC-91: mobile API (tag Mobile) -----------------------------------
+  /v1/mobile/auth/login:
+    post:
+      tags: [Mobile]
+      operationId: postMobileAuthLogin
+      summary: Mobile sign-in (device)
+      description: |
+        E-mail + password sign-in of the mobile app with the device
+        description. Returns a mobile token pair (JWT `aud=mobile`, refresh
+        30 days, `JWT_MOBILE_REFRESH_TTL`) and the session hydration. Same
+        account rules as the panel (customer / fleet only accounts use the
+        portal: 403 `NO_PANEL_ACCESS`). An older session of the same device
+        ends. The app keeps the tokens itself and calls
+        `/api/v1/mobile/*` with `Authorization: Bearer` (no cookies).
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MobileLoginRequest"
+      responses:
+        "200":
+          description: Signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMobileLogin"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /v1/mobile/auth/refresh:
+    post:
+      tags: [Mobile]
+      operationId: postMobileAuthRefresh
+      summary: Rotate the mobile refresh token
+      description: |
+        Single-use rotation; the new pair continues the device chain. A
+        rotated token presented again revokes the whole chain of that device
+        (401 `REFRESH_TOKEN_REUSED`): the app signs in again. Web refresh
+        tokens are refused here and mobile ones on `/v1/auth/refresh`.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MobileRefreshRequest"
+      responses:
+        "200":
+          description: Rotated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTokens"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/auth/me:
+    get:
+      tags: [Mobile]
+      operationId: getMobileAuthMe
+      summary: Mobile session
+      description: |
+        `/v1/auth/me` plus the device session and `current_warehouse`
+        (reserved for F1, always null now).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+      responses:
+        "200":
+          description: Session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMobileMe"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/auth/logout:
+    post:
+      tags: [Mobile]
+      operationId: postMobileAuthLogout
+      summary: Sign this device out
+      description: Ends every session of the caller's device and drops its Expo push tokens.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+      responses:
+        "200":
+          description: Signed out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStatus"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/auth/logout-all:
+    post:
+      tags: [Mobile]
+      operationId: postMobileAuthLogoutAll
+      summary: Sign out everywhere
+      description: Ends every session of the user (all devices and browsers, this one included) and drops every push token.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+      responses:
+        "200":
+          description: Signed out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStatus"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/auth/organization-context:
+    post:
+      tags: [Mobile]
+      operationId: postMobileAuthOrganizationContext
+      summary: Switch the active organization
+      description: |
+        Re-issues the device's token pair with another active organization
+        (`oid`); the current session ends. A `warehouse_id` context (`whid`)
+        is reserved for F1.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationContextRequest"
+      responses:
+        "200":
+          description: New token pair
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTokens"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/push-token:
+    put:
+      tags: [Mobile]
+      operationId: putMobilePushToken
+      summary: Register the device's Expo push token
+      description: |
+        Idempotent upsert into `device_push_tokens` (same store and use case
+        as `POST /v1/notifications/push-devices`). Shape of the previous
+        mobile API: `expo_push_token` + `platform`; `device_id`, `platform`
+        and `app_version` default to the session's device.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MobilePushTokenRequest"
+      responses:
+        "200":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePushDevice"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+    delete:
+      tags: [Mobile]
+      operationId: deleteMobilePushToken
+      summary: Delete an Expo push token
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expo_push_token]
+              properties:
+                expo_push_token: { type: string }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStatus"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/auth/qr/{code}:
+    get:
+      tags: [Mobile]
+      operationId: getMobileAuthQR
+      summary: Scan a QR web sign-in
+      description: |
+        Shows the browser's IP and user agent before the user decides and
+        marks the challenge scanned (published as `{status: scanned}`).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - $ref: "#/components/parameters/QRCode"
+      responses:
+        "200":
+          description: Challenge summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeQRScan"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "410":
+          $ref: "#/components/responses/QRLoginExpired"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/auth/qr/{code}/approve:
+    post:
+      tags: [Mobile]
+      operationId: postMobileAuthQRApprove
+      summary: Approve a QR web sign-in
+      description: |
+        Signs the waiting browser in as the caller, in the session's active
+        organization (panel realm rules apply). Mobile sessions only.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - $ref: "#/components/parameters/QRCode"
+      responses:
+        "200":
+          description: Approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeQRStatus"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "410":
+          $ref: "#/components/responses/QRLoginExpired"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/auth/qr/{code}/reject:
+    post:
+      tags: [Mobile]
+      operationId: postMobileAuthQRReject
+      summary: Reject a QR web sign-in
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - $ref: "#/components/parameters/QRCode"
+      responses:
+        "200":
+          description: Rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeQRStatus"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "410":
+          $ref: "#/components/responses/QRLoginExpired"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/measurements:
+    post:
+      tags: [Mobile]
+      operationId: postMobileMeasurement
+      summary: Upload a paint thickness measurement (contract draft, K28)
+      description: |
+        **Draft contract — answers 501 until F3.** The schema is finalized in
+        F3 (measurement module); fields may still change there, while `vin`,
+        `raw` and the version header stay mandatory. Idempotent by the
+        `Idempotency-Key` header or `client_measurement_id`. Accepted uploads
+        will answer `202 {uuid, status: accepted}`. Permission:
+        `measurements.write` (managed scope) once the module exists.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: Client generated key; a repeated key returns the first result.
+          schema: { type: string, maxLength: 128 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MobileMeasurementRequest"
+      responses:
+        "202":
+          description: Accepted (F3)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMobileMeasurementAccepted"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+        "501":
+          description: 501 NOT_IMPLEMENTED until F3
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # --- TEC-91: QR web sign-in (web side) ---------------------------------
+  /v1/auth/qr/start:
+    post:
+      tags: [Mobile]
+      operationId: postAuthQRStart
+      summary: Start a QR web sign-in
+      description: |
+        For a browser that is not signed in. Returns the code (shown as the
+        QR `payload`), a secret only this browser knows, and a short-lived
+        anonymous Centrifugo connection token subscribed to `qr:{code}`
+        only (subscribe-only namespace). The channel carries `{status}`
+        only: `scanned`, `approved`, `rejected`, `consumed`. Lifetime
+        `QR_LOGIN_TTL` (120 s). Fallback: poll `GET /v1/auth/qr/{code}/status`.
+      security: []
+      responses:
+        "201":
+          description: Challenge
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeQRStart"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /v1/auth/qr/{code}/status:
+    get:
+      tags: [Mobile]
+      operationId: getAuthQRStatus
+      summary: QR web sign-in status (polling)
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/QRCode"
+      responses:
+        "200":
+          description: Status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeQRStatus"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "410":
+          $ref: "#/components/responses/QRLoginExpired"
+
+  /v1/auth/qr/complete:
+    post:
+      tags: [Mobile]
+      operationId: postAuthQRComplete
+      summary: Exchange an approved QR sign-in for a panel session
+      description: |
+        Single use. Called server side by the BFF (Auth.js `qr-login`
+        provider); the panel BFF never forwards it from the browser. 403
+        `QR_LOGIN_REJECTED`, 409 `QR_LOGIN_PENDING` / `QR_LOGIN_CLOSED`, 410
+        `QR_LOGIN_EXPIRED`, 422 `QR_LOGIN_INVALID_SECRET`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QRCompleteRequest"
+      responses:
+        "200":
+          description: Panel token pair
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeQRComplete"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "410":
+          $ref: "#/components/responses/QRLoginExpired"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -5047,6 +5522,18 @@ components:
       bearerFormat: JWT
 
   parameters:
+    MobileApiVersion:
+      name: X-Mobile-Api-Version
+      in: header
+      required: true
+      description: Mobile API contract major version (e.g. `1`); the response names the newest supported one.
+      schema: { type: string, examples: ["1"] }
+    QRCode:
+      name: code
+      in: path
+      required: true
+      description: QR sign-in challenge code
+      schema: { type: string, maxLength: 64 }
     CountryISO2:
       name: iso2
       in: path
@@ -5092,6 +5579,18 @@ components:
       schema: { type: string }
 
   responses:
+    MobileApiVersionUnsupported:
+      description: 426 MOBILE_API_VERSION_UNSUPPORTED (missing or unsupported X-Mobile-Api-Version; update the app)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    QRLoginExpired:
+      description: 410 QR_LOGIN_EXPIRED
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
     Deleted:
       description: Deleted
       content:
@@ -6785,6 +7284,13 @@ components:
         created_at: { type: string, format: date-time }
         expires_at: { type: string, format: date-time }
         impersonated: { type: boolean }
+        client:
+          type: string
+          enum: [web, mobile]
+          description: Mobile sessions describe the device (TEC-91)
+        device_name: { type: [string, "null"] }
+        platform: { type: [string, "null"], enum: [ios, android, null] }
+        app_version: { type: [string, "null"] }
 
     SessionList:
       type: object
@@ -8209,4 +8715,242 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/Consent" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    # --- TEC-91: mobile API --------------------------------------------------
+    MobileDevice:
+      type: object
+      required: [id, platform]
+      properties:
+        id:
+          type: string
+          maxLength: 128
+          description: Stable installation id of the app (one refresh chain per device)
+        name: { type: string, maxLength: 128, examples: ["Pixel 9"] }
+        platform: { type: string, enum: [ios, android] }
+        app_version: { type: string, maxLength: 32, examples: ["2.0.0"] }
+
+    MobileLoginRequest:
+      type: object
+      required: [email, password, device]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+        totp_code: { type: string }
+        organization_slug: { type: string }
+        device: { $ref: "#/components/schemas/MobileDevice" }
+
+    MobileRefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token: { type: string }
+        app_version:
+          type: string
+          maxLength: 32
+          description: Current app version (updates the stored device)
+
+    MobileSession:
+      type: object
+      required: [uuid, device, expires_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        device: { $ref: "#/components/schemas/MobileDevice" }
+        expires_at: { type: string, format: date-time }
+
+    MobileMe:
+      allOf:
+        - $ref: "#/components/schemas/Me"
+        - type: object
+          required: [session, current_warehouse]
+          properties:
+            session:
+              oneOf:
+                - $ref: "#/components/schemas/MobileSession"
+                - type: "null"
+            current_warehouse:
+              type: "null"
+              description: Warehouse context, reserved for F1 (always null)
+
+    MobileLoginResult:
+      allOf:
+        - $ref: "#/components/schemas/Tokens"
+        - type: object
+          required: [me]
+          properties:
+            me: { $ref: "#/components/schemas/MobileMe" }
+
+    MobilePushTokenRequest:
+      type: object
+      required: [expo_push_token]
+      properties:
+        expo_push_token: { type: string, examples: ["ExponentPushToken[xxxxxxxx]"] }
+        platform: { type: string, enum: [ios, android] }
+        device_id: { type: string, maxLength: 128 }
+        device_name:
+          type: string
+          description: Accepted for compatibility with the previous mobile API (not stored)
+        app_version: { type: string, maxLength: 32 }
+
+    # K28 draft: finalized in F3 (measurement module). Fields can still
+    # change there; vin, raw and the version header stay mandatory.
+    MobileMeasurementRequest:
+      type: object
+      required: [vin, device, measured_at, parts, raw]
+      properties:
+        client_measurement_id:
+          type: string
+          maxLength: 128
+          description: Idempotency key in the body (alternative to the Idempotency-Key header)
+        vin: { type: string, minLength: 11, maxLength: 17 }
+        plate: { type: string }
+        service_uuid: { type: string, format: uuid }
+        measured_at: { type: string, format: date-time }
+        body_type: { type: string, description: NexPTG body type }
+        unit: { type: string, enum: [um], default: um }
+        device:
+          type: object
+          required: [serial]
+          properties:
+            serial: { type: string }
+            model: { type: string }
+            firmware: { type: string }
+        parts:
+          type: array
+          items:
+            type: object
+            required: [part, values]
+            properties:
+              part: { type: string, description: "Body part key, e.g. hood, roof, front_left_door" }
+              place: { type: string, description: "Measuring spot on the part" }
+              values:
+                type: array
+                items: { type: number }
+        raw:
+          type: object
+          additionalProperties: true
+          description: Device report as received (NexPTG JSON), stored unchanged
+
+    MobileMeasurementAccepted:
+      type: object
+      required: [uuid, status]
+      properties:
+        uuid: { type: string, format: uuid }
+        status: { type: string, enum: [accepted] }
+
+    QRRealtime:
+      type: object
+      required: [enabled, channel, expires_at]
+      properties:
+        enabled: { type: boolean }
+        ws_url: { type: string }
+        channel: { type: string, examples: ["qr:3q2-7w1abc"] }
+        token:
+          type: string
+          description: Anonymous connection JWT, server-side subscribed to channel only
+        subscription_token:
+          type: string
+          description: Subscription JWT for channel (clients that subscribe themselves)
+        expires_at: { type: string, format: date-time }
+
+    QRStart:
+      type: object
+      required: [code, secret, payload, status, expires_at, realtime]
+      properties:
+        code: { type: string }
+        secret:
+          type: string
+          description: Shown once; proves this browser on complete
+        payload: { type: string, examples: ["olexfilms://qr-login/abc"] }
+        status: { type: string, enum: [pending] }
+        expires_at: { type: string, format: date-time }
+        realtime: { $ref: "#/components/schemas/QRRealtime" }
+
+    QRStatus:
+      type: object
+      required: [status, expires_at]
+      properties:
+        status: { type: string, enum: [pending, scanned, approved, rejected, consumed] }
+        expires_at: { type: string, format: date-time }
+
+    QRScan:
+      type: object
+      required: [code, status, created_at, expires_at]
+      properties:
+        code: { type: string }
+        status: { type: string, enum: [pending, scanned] }
+        web_ip: { type: string }
+        web_user_agent: { type: string }
+        created_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+
+    QRCompleteRequest:
+      type: object
+      required: [code, secret]
+      properties:
+        code: { type: string }
+        secret: { type: string }
+
+    QRComplete:
+      allOf:
+        - $ref: "#/components/schemas/Tokens"
+        - type: object
+          required: [user]
+          properties:
+            user: { $ref: "#/components/schemas/PublicUser" }
+
+    EnvelopeMobileLogin:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/MobileLoginResult" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeMobileMe:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/MobileMe" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeMobileMeasurementAccepted:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/MobileMeasurementAccepted" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeQRStart:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/QRStart" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeQRStatus:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/QRStatus" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeQRScan:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/QRScan" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeQRComplete:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/QRComplete" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }

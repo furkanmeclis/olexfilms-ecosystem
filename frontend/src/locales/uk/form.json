@@ -1,1 +1,17 @@
-{}
+{
+  "pick_date": "Виберіть дату",
+  "show_password": "Показати пароль",
+  "hide_password": "Приховати пароль",
+  "cancel": "Скасувати",
+  "clear": "Очистити",
+  "save": "Зберегти",
+  "required": "Обов'язкове поле",
+  "on_this_page": "На цій сторінці",
+  "combobox_placeholder": "Виберіть…",
+  "combobox_search": "Пошук…",
+  "combobox_empty": "Нічого не знайдено",
+  "combobox_selected": "Вибрано",
+  "command_title": "Команда / вибір",
+  "command_description": "Знайдіть і виберіть елемент",
+  "command_group_default": "Результати"
+}

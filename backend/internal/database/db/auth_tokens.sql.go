@@ -14,9 +14,17 @@ import (
 )
 
 const createRefreshToken = `-- name: CreateRefreshToken :one
-INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip_address, impersonator_user_id, organization_id, realm)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, uuid, user_id, token_hash, expires_at, revoked_at, user_agent, ip_address, impersonator_user_id, created_at, organization_id, realm
+INSERT INTO refresh_tokens (
+    user_id, token_hash, expires_at, user_agent, ip_address, impersonator_user_id, organization_id, realm,
+    client, device_id, device_name, platform, app_version, family_id
+)
+VALUES (
+    $1, $2, $3, $4, $5,
+    $6, $7, $8,
+    $9, $10, $11, $12, $13,
+    $14
+)
+RETURNING id, uuid, user_id, token_hash, expires_at, revoked_at, user_agent, ip_address, impersonator_user_id, created_at, organization_id, realm, client, device_id, device_name, platform, app_version, family_id, rotated_at
 `
 
 type CreateRefreshTokenParams struct {
@@ -28,6 +36,12 @@ type CreateRefreshTokenParams struct {
 	ImpersonatorUserID pgtype.Int8        `json:"impersonator_user_id"`
 	OrganizationID     pgtype.Int8        `json:"organization_id"`
 	Realm              string             `json:"realm"`
+	Client             string             `json:"client"`
+	DeviceID           pgtype.Text        `json:"device_id"`
+	DeviceName         pgtype.Text        `json:"device_name"`
+	Platform           pgtype.Text        `json:"platform"`
+	AppVersion         pgtype.Text        `json:"app_version"`
+	FamilyID           pgtype.UUID        `json:"family_id"`
 }
 
 func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error) {
@@ -40,6 +54,12 @@ func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshToken
 		arg.ImpersonatorUserID,
 		arg.OrganizationID,
 		arg.Realm,
+		arg.Client,
+		arg.DeviceID,
+		arg.DeviceName,
+		arg.Platform,
+		arg.AppVersion,
+		arg.FamilyID,
 	)
 	var i RefreshToken
 	err := row.Scan(
@@ -55,12 +75,85 @@ func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshToken
 		&i.CreatedAt,
 		&i.OrganizationID,
 		&i.Realm,
+		&i.Client,
+		&i.DeviceID,
+		&i.DeviceName,
+		&i.Platform,
+		&i.AppVersion,
+		&i.FamilyID,
+		&i.RotatedAt,
+	)
+	return i, err
+}
+
+const getRefreshTokenByHashAny = `-- name: GetRefreshTokenByHashAny :one
+SELECT id, uuid, user_id, token_hash, expires_at, revoked_at, user_agent, ip_address, impersonator_user_id, created_at, organization_id, realm, client, device_id, device_name, platform, app_version, family_id, rotated_at
+FROM refresh_tokens
+WHERE token_hash = $1
+`
+
+func (q *Queries) GetRefreshTokenByHashAny(ctx context.Context, tokenHash string) (RefreshToken, error) {
+	row := q.db.QueryRow(ctx, getRefreshTokenByHashAny, tokenHash)
+	var i RefreshToken
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.UserID,
+		&i.TokenHash,
+		&i.ExpiresAt,
+		&i.RevokedAt,
+		&i.UserAgent,
+		&i.IpAddress,
+		&i.ImpersonatorUserID,
+		&i.CreatedAt,
+		&i.OrganizationID,
+		&i.Realm,
+		&i.Client,
+		&i.DeviceID,
+		&i.DeviceName,
+		&i.Platform,
+		&i.AppVersion,
+		&i.FamilyID,
+		&i.RotatedAt,
+	)
+	return i, err
+}
+
+const getRefreshTokenByUUID = `-- name: GetRefreshTokenByUUID :one
+SELECT id, uuid, user_id, token_hash, expires_at, revoked_at, user_agent, ip_address, impersonator_user_id, created_at, organization_id, realm, client, device_id, device_name, platform, app_version, family_id, rotated_at
+FROM refresh_tokens
+WHERE uuid = $1
+`
+
+func (q *Queries) GetRefreshTokenByUUID(ctx context.Context, argUuid uuid.UUID) (RefreshToken, error) {
+	row := q.db.QueryRow(ctx, getRefreshTokenByUUID, argUuid)
+	var i RefreshToken
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.UserID,
+		&i.TokenHash,
+		&i.ExpiresAt,
+		&i.RevokedAt,
+		&i.UserAgent,
+		&i.IpAddress,
+		&i.ImpersonatorUserID,
+		&i.CreatedAt,
+		&i.OrganizationID,
+		&i.Realm,
+		&i.Client,
+		&i.DeviceID,
+		&i.DeviceName,
+		&i.Platform,
+		&i.AppVersion,
+		&i.FamilyID,
+		&i.RotatedAt,
 	)
 	return i, err
 }
 
 const getValidRefreshTokenByHash = `-- name: GetValidRefreshTokenByHash :one
-SELECT id, uuid, user_id, token_hash, expires_at, revoked_at, user_agent, ip_address, impersonator_user_id, created_at, organization_id, realm
+SELECT id, uuid, user_id, token_hash, expires_at, revoked_at, user_agent, ip_address, impersonator_user_id, created_at, organization_id, realm, client, device_id, device_name, platform, app_version, family_id, rotated_at
 FROM refresh_tokens
 WHERE token_hash = $1
   AND revoked_at IS NULL
@@ -83,12 +176,82 @@ func (q *Queries) GetValidRefreshTokenByHash(ctx context.Context, tokenHash stri
 		&i.CreatedAt,
 		&i.OrganizationID,
 		&i.Realm,
+		&i.Client,
+		&i.DeviceID,
+		&i.DeviceName,
+		&i.Platform,
+		&i.AppVersion,
+		&i.FamilyID,
+		&i.RotatedAt,
 	)
 	return i, err
 }
 
+const listActiveMobileSessionUUIDsForDevice = `-- name: ListActiveMobileSessionUUIDsForDevice :many
+SELECT uuid
+FROM refresh_tokens
+WHERE user_id = $1
+  AND client = 'mobile'
+  AND device_id = $2
+  AND uuid <> $3
+  AND revoked_at IS NULL
+`
+
+type ListActiveMobileSessionUUIDsForDeviceParams struct {
+	UserID   int64       `json:"user_id"`
+	DeviceID pgtype.Text `json:"device_id"`
+	Uuid     uuid.UUID   `json:"uuid"`
+}
+
+func (q *Queries) ListActiveMobileSessionUUIDsForDevice(ctx context.Context, arg ListActiveMobileSessionUUIDsForDeviceParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, listActiveMobileSessionUUIDsForDevice, arg.UserID, arg.DeviceID, arg.Uuid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []uuid.UUID{}
+	for rows.Next() {
+		var uuid uuid.UUID
+		if err := rows.Scan(&uuid); err != nil {
+			return nil, err
+		}
+		items = append(items, uuid)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listActiveRefreshTokenUUIDsByFamily = `-- name: ListActiveRefreshTokenUUIDsByFamily :many
+SELECT uuid
+FROM refresh_tokens
+WHERE family_id = $1
+  AND revoked_at IS NULL
+`
+
+func (q *Queries) ListActiveRefreshTokenUUIDsByFamily(ctx context.Context, familyID pgtype.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, listActiveRefreshTokenUUIDsByFamily, familyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []uuid.UUID{}
+	for rows.Next() {
+		var uuid uuid.UUID
+		if err := rows.Scan(&uuid); err != nil {
+			return nil, err
+		}
+		items = append(items, uuid)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listActiveRefreshTokensByUserID = `-- name: ListActiveRefreshTokensByUserID :many
-SELECT id, uuid, user_id, token_hash, expires_at, revoked_at, user_agent, ip_address, impersonator_user_id, created_at, organization_id, realm
+SELECT id, uuid, user_id, token_hash, expires_at, revoked_at, user_agent, ip_address, impersonator_user_id, created_at, organization_id, realm, client, device_id, device_name, platform, app_version, family_id, rotated_at
 FROM refresh_tokens
 WHERE user_id = $1
   AND revoked_at IS NULL
@@ -118,6 +281,13 @@ func (q *Queries) ListActiveRefreshTokensByUserID(ctx context.Context, userID in
 			&i.CreatedAt,
 			&i.OrganizationID,
 			&i.Realm,
+			&i.Client,
+			&i.DeviceID,
+			&i.DeviceName,
+			&i.Platform,
+			&i.AppVersion,
+			&i.FamilyID,
+			&i.RotatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -139,6 +309,30 @@ WHERE user_id = $1
 func (q *Queries) RevokeAllRefreshTokensForUser(ctx context.Context, userID int64) error {
 	_, err := q.db.Exec(ctx, revokeAllRefreshTokensForUser, userID)
 	return err
+}
+
+const revokeMobileSessionsForDevice = `-- name: RevokeMobileSessionsForDevice :execrows
+UPDATE refresh_tokens
+SET revoked_at = NOW()
+WHERE user_id = $1
+  AND client = 'mobile'
+  AND device_id = $2
+  AND uuid <> $3
+  AND revoked_at IS NULL
+`
+
+type RevokeMobileSessionsForDeviceParams struct {
+	UserID   int64       `json:"user_id"`
+	DeviceID pgtype.Text `json:"device_id"`
+	Uuid     uuid.UUID   `json:"uuid"`
+}
+
+func (q *Queries) RevokeMobileSessionsForDevice(ctx context.Context, arg RevokeMobileSessionsForDeviceParams) (int64, error) {
+	result, err := q.db.Exec(ctx, revokeMobileSessionsForDevice, arg.UserID, arg.DeviceID, arg.Uuid)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const revokeOtherRefreshTokensForUser = `-- name: RevokeOtherRefreshTokensForUser :exec
@@ -189,6 +383,38 @@ type RevokeRefreshTokenByUUIDForUserParams struct {
 
 func (q *Queries) RevokeRefreshTokenByUUIDForUser(ctx context.Context, arg RevokeRefreshTokenByUUIDForUserParams) (int64, error) {
 	result, err := q.db.Exec(ctx, revokeRefreshTokenByUUIDForUser, arg.Uuid, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const revokeRefreshTokenFamily = `-- name: RevokeRefreshTokenFamily :execrows
+UPDATE refresh_tokens
+SET revoked_at = NOW()
+WHERE family_id = $1
+  AND revoked_at IS NULL
+`
+
+func (q *Queries) RevokeRefreshTokenFamily(ctx context.Context, familyID pgtype.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, revokeRefreshTokenFamily, familyID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const rotateRefreshTokenByHash = `-- name: RotateRefreshTokenByHash :execrows
+
+UPDATE refresh_tokens
+SET revoked_at = NOW(), rotated_at = NOW()
+WHERE token_hash = $1
+  AND revoked_at IS NULL
+`
+
+// TEC-91: mobile refresh chains (rotation, reuse detection, device sign-out).
+func (q *Queries) RotateRefreshTokenByHash(ctx context.Context, tokenHash string) (int64, error) {
+	result, err := q.db.Exec(ctx, rotateRefreshTokenByHash, tokenHash)
 	if err != nil {
 		return 0, err
 	}

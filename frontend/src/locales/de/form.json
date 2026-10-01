@@ -1,1 +1,17 @@
-{}
+{
+  "pick_date": "Datum wählen",
+  "show_password": "Passwort anzeigen",
+  "hide_password": "Passwort verbergen",
+  "cancel": "Abbrechen",
+  "clear": "Leeren",
+  "save": "Speichern",
+  "required": "Pflichtfeld",
+  "on_this_page": "Auf dieser Seite",
+  "combobox_placeholder": "Auswählen…",
+  "combobox_search": "Suchen…",
+  "combobox_empty": "Keine Ergebnisse gefunden",
+  "combobox_selected": "Ausgewählt",
+  "command_title": "Befehl / Auswahl",
+  "command_description": "Eintrag suchen und auswählen",
+  "command_group_default": "Ergebnisse"
+}

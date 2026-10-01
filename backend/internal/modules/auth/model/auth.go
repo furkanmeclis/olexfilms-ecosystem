@@ -243,8 +243,18 @@ type RefreshSession struct {
 	ImpersonatorUserID *int64
 	// OrganizationUUID is the tenant scope stamped on the prior access token, if any.
 	OrganizationUUID *uuid.UUID
-	// Realm is the stored session realm (panel | portal).
+	// Realm is the stored session realm (panel | portal | mobile).
 	Realm string
+	// ID is the internal refresh_tokens.id (QR approver reference).
+	ID int64
+	// Client is web or mobile; mobile sessions carry Device and FamilyID.
+	Client   string
+	Device   *DeviceInfo
+	FamilyID uuid.UUID
+	// RevokedAt / RotatedAt are only set by lookups that include revoked rows.
+	RevokedAt *time.Time
+	RotatedAt *time.Time
+	ExpiresAt time.Time
 }
 
 // DeviceSession is a user-visible refresh session (token never included).
@@ -256,6 +266,11 @@ type DeviceSession struct {
 	CreatedAt    time.Time `json:"created_at"`
 	ExpiresAt    time.Time `json:"expires_at"`
 	Impersonated bool      `json:"impersonated"`
+	// Client is web or mobile (TEC-91); mobile sessions describe the device.
+	Client     string  `json:"client"`
+	DeviceName *string `json:"device_name,omitempty"`
+	Platform   *string `json:"platform,omitempty"`
+	AppVersion *string `json:"app_version,omitempty"`
 }
 
 // SessionMeta carries optional request metadata for refresh tokens.
@@ -267,6 +282,25 @@ type SessionMeta struct {
 	OrganizationID *int64
 	// Realm is the session realm: "panel" (default) or "portal" (OTP).
 	Realm string
+	// Client is "web" (default) or "mobile" (TEC-91). Mobile sessions carry
+	// the device and keep FamilyID across rotations (nil = new chain).
+	Client   string
+	Device   *DeviceInfo
+	FamilyID uuid.UUID
+}
+
+// Session clients (refresh_tokens.client).
+const (
+	ClientWeb    = "web"
+	ClientMobile = "mobile"
+)
+
+// DeviceInfo describes the mobile device of a session (TEC-91).
+type DeviceInfo struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	Platform   string `json:"platform"`
+	AppVersion string `json:"app_version"`
 }
 
 // SessionSwitch tells clients which identity the issued tokens represent.

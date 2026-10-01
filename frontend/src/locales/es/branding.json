@@ -1,1 +1,8 @@
-{}
+{
+  "logo.upload": "Subir logotipo",
+  "logo.replace": "Reemplazar logotipo",
+  "logo.clear": "Quitar logotipo",
+  "logo.uploading": "Subiendo…",
+  "logo.too_large": "El logotipo debe pesar 2 MB o menos.",
+  "logo.invalid_type": "Use una imagen JPEG, PNG o WebP."
+}

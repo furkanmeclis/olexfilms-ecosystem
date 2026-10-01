@@ -73,6 +73,14 @@ vi.mock("@/lib/server/upstream", () => ({
         },
       });
     }
+    if (path.endsWith("/rate-limited")) {
+      const res = json(429, {
+        success: false,
+        error: { code: "RATE_LIMITED" },
+      });
+      res.headers.set("Retry-After", "59");
+      return res;
+    }
     if (auth === "Bearer access-new") return json(200, { success: true });
     if (path.startsWith("portal/") || path === "auth/me") {
       return json(200, { success: true });
@@ -166,6 +174,27 @@ describe("BFF refresh", () => {
   });
 });
 
+describe("BFF response headers (TEC-142)", () => {
+  beforeEach(() => {
+    state.accessToken = "access-new";
+    state.refreshToken = "refresh-new";
+    calls.length = 0;
+    resetSharedRefresh();
+  });
+
+  it("forwards Retry-After on a panel 429", async () => {
+    const res = await get("tenant/items/rate-limited");
+    expect(res.status).toBe(429);
+    expect(res.headers.get("retry-after")).toBe("59");
+  });
+
+  it("forwards Retry-After on a portal 429", async () => {
+    const res = await portalGet("portal/otp/rate-limited");
+    expect(res.status).toBe(429);
+    expect(res.headers.get("retry-after")).toBe("59");
+  });
+});
+
 describe("BFF realms (TEC-90)", () => {
   beforeEach(() => {
     calls.length = 0;
@@ -224,6 +253,23 @@ describe("BFF realms (TEC-90)", () => {
     expect(calls).toHaveLength(0);
     expect(isRealmPathAllowed("panel", "platform/users")).toBe(true);
     expect(isRealmPathAllowed("panel", "auth/organization-context")).toBe(true);
+  });
+
+  it("panel and portal BFFs refuse the mobile API and the QR exchange (TEC-91)", async () => {
+    for (const path of [
+      "mobile/auth/me",
+      "mobile/auth/login",
+      "mobile/push-token",
+      "auth/qr/complete",
+    ]) {
+      const res = await get(path);
+      expect(res.status, path).toBe(404);
+      const portal = await portalGet(path, "POST");
+      expect(portal.status, path).toBe(404);
+    }
+    expect(calls).toHaveLength(0);
+    expect(isRealmPathAllowed("panel", "auth/qr/start")).toBe(true);
+    expect(isRealmPathAllowed("panel", "auth/qr/abc/status")).toBe(true);
   });
 
   it("portal logout clears only the portal cookie", async () => {

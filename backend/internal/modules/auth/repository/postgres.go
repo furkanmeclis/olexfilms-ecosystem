@@ -303,14 +303,28 @@ func (r *Postgres) SaveRefresh(ctx context.Context, userID int64, hash string, e
 	if meta.OrganizationID != nil {
 		organizationID = pgtype.Int8{Int64: *meta.OrganizationID, Valid: true}
 	}
-	row, err := r.q.CreateRefreshToken(ctx, db.CreateRefreshTokenParams{
+	params := db.CreateRefreshTokenParams{
 		UserID: userID, TokenHash: hash,
 		ExpiresAt: pgtype.Timestamptz{Time: expiresAt.UTC(), Valid: true},
 		UserAgent: ua, IpAddress: ip,
 		ImpersonatorUserID: impersonator,
 		OrganizationID:     organizationID,
 		Realm:              jwt.NormalizeAudience(meta.Realm),
-	})
+		Client:             model.ClientWeb,
+	}
+	if meta.Client == model.ClientMobile && meta.Device != nil {
+		params.Client = model.ClientMobile
+		params.DeviceID = textOrNull(meta.Device.ID)
+		params.DeviceName = textOrNull(meta.Device.Name)
+		params.Platform = textOrNull(meta.Device.Platform)
+		params.AppVersion = textOrNull(meta.Device.AppVersion)
+		family := meta.FamilyID
+		if family == uuid.Nil {
+			family = uuid.New()
+		}
+		params.FamilyID = pgtype.UUID{Bytes: family, Valid: true}
+	}
+	row, err := r.q.CreateRefreshToken(ctx, params)
 	if err != nil {
 		return uuid.Nil, err
 	}
@@ -325,7 +339,14 @@ func (r *Postgres) GetRefreshSession(ctx context.Context, hash string) (model.Re
 		}
 		return model.RefreshSession{}, err
 	}
-	out := model.RefreshSession{UUID: row.Uuid, UserID: row.UserID, Realm: row.Realm}
+	return r.toRefreshSession(ctx, row), nil
+}
+
+func (r *Postgres) toRefreshSession(ctx context.Context, row db.RefreshToken) model.RefreshSession {
+	out := model.RefreshSession{
+		UUID: row.Uuid, UserID: row.UserID, Realm: row.Realm,
+		ID: row.ID, Client: row.Client, ExpiresAt: row.ExpiresAt.Time,
+	}
 	if row.ImpersonatorUserID.Valid {
 		id := row.ImpersonatorUserID.Int64
 		out.ImpersonatorUserID = &id
@@ -337,7 +358,106 @@ func (r *Postgres) GetRefreshSession(ctx context.Context, hash string) (model.Re
 			out.OrganizationUUID = &id
 		}
 	}
-	return out, nil
+	if row.Client == model.ClientMobile {
+		out.Device = &model.DeviceInfo{
+			ID: row.DeviceID.String, Name: row.DeviceName.String,
+			Platform: row.Platform.String, AppVersion: row.AppVersion.String,
+		}
+	}
+	if row.FamilyID.Valid {
+		out.FamilyID = uuid.UUID(row.FamilyID.Bytes)
+	}
+	if row.RevokedAt.Valid {
+		t := row.RevokedAt.Time
+		out.RevokedAt = &t
+	}
+	if row.RotatedAt.Valid {
+		t := row.RotatedAt.Time
+		out.RotatedAt = &t
+	}
+	return out
+}
+
+// RotateRefresh revokes an active refresh token as rotated (rotated_at set),
+// so a later reuse can be told apart from a sign-out. ErrNotFound when no
+// active row matched (the token is single-use).
+func (r *Postgres) RotateRefresh(ctx context.Context, hash string) error {
+	n, err := r.q.RotateRefreshTokenByHash(ctx, hash)
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// FindRefreshAny loads a refresh row by hash including revoked and expired
+// rows (reuse detection).
+func (r *Postgres) FindRefreshAny(ctx context.Context, hash string) (model.RefreshSession, error) {
+	row, err := r.q.GetRefreshTokenByHashAny(ctx, hash)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return model.RefreshSession{}, ErrNotFound
+		}
+		return model.RefreshSession{}, err
+	}
+	return r.toRefreshSession(ctx, row), nil
+}
+
+// FindRefreshByUUID loads a refresh row by its public uuid (access token sid).
+func (r *Postgres) FindRefreshByUUID(ctx context.Context, id uuid.UUID) (model.RefreshSession, error) {
+	row, err := r.q.GetRefreshTokenByUUID(ctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return model.RefreshSession{}, ErrNotFound
+		}
+		return model.RefreshSession{}, err
+	}
+	return r.toRefreshSession(ctx, row), nil
+}
+
+// RevokeRefreshFamily revokes every active row of a refresh chain and
+// returns their uuids (access sessions to end).
+func (r *Postgres) RevokeRefreshFamily(ctx context.Context, family uuid.UUID) ([]uuid.UUID, error) {
+	fid := pgtype.UUID{Bytes: family, Valid: true}
+	ids, err := r.q.ListActiveRefreshTokenUUIDsByFamily(ctx, fid)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := r.q.RevokeRefreshTokenFamily(ctx, fid); err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
+// RevokeMobileDeviceSessions revokes the user's active mobile sessions of one
+// device except keep (uuid.Nil keeps none) and returns their uuids.
+func (r *Postgres) RevokeMobileDeviceSessions(ctx context.Context, userID int64, deviceID string, keep uuid.UUID) ([]uuid.UUID, error) {
+	dev := pgtype.Text{String: deviceID, Valid: true}
+	ids, err := r.q.ListActiveMobileSessionUUIDsForDevice(ctx, db.ListActiveMobileSessionUUIDsForDeviceParams{UserID: userID, DeviceID: dev, Uuid: keep})
+	if err != nil {
+		return nil, err
+	}
+	if _, err := r.q.RevokeMobileSessionsForDevice(ctx, db.RevokeMobileSessionsForDeviceParams{UserID: userID, DeviceID: dev, Uuid: keep}); err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
+func textOrNull(s string) pgtype.Text {
+	if s == "" {
+		return pgtype.Text{}
+	}
+	return pgtype.Text{String: s, Valid: true}
+}
+
+func optionalString(t pgtype.Text) *string {
+	if !t.Valid || t.String == "" {
+		return nil
+	}
+	v := t.String
+	return &v
 }
 
 func (r *Postgres) ResolveOrganizationInternalID(ctx context.Context, orgUUID uuid.UUID) (int64, error) {
@@ -380,6 +500,12 @@ func (r *Postgres) ListActiveSessions(ctx context.Context, userID int64) ([]mode
 			CreatedAt:    row.CreatedAt.Time,
 			ExpiresAt:    row.ExpiresAt.Time,
 			Impersonated: row.ImpersonatorUserID.Valid,
+			Client:       row.Client,
+		}
+		if row.Client == model.ClientMobile {
+			item.DeviceName = optionalString(row.DeviceName)
+			item.Platform = optionalString(row.Platform)
+			item.AppVersion = optionalString(row.AppVersion)
 		}
 		if row.UserAgent.Valid && row.UserAgent.String != "" {
 			ua := row.UserAgent.String

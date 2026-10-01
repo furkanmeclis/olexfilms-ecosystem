@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -94,9 +95,7 @@ func main() {
 			Mail: mail.NewSMTPSender(cfg.SMTP), SMS: sms.Noop{Log: log}, Log: log,
 		})
 		if cfg.Queue.WorkerInProcess {
-			worker = queue.NewWorker(cfg, log, notifSvc.Deliver).
-				WithLogPurge(logsSvc.ApplyDueRules).
-				WithNotificationPurge(notifSvc.PurgeExpired)
+			worker = newInProcessWorker(cfg, log, notifSvc.Deliver)
 			if n, err := notifSvc.ReclaimStuck(ctx, notifusecase.DefaultStuckProcessingMinutes); err != nil {
 				log.Error("notification_reclaim_failed", "error", err)
 			} else if n > 0 {
@@ -144,4 +143,13 @@ func main() {
 		os.Exit(1)
 	}
 	log.Info("server_stopped")
+}
+
+// newInProcessWorker builds the QUEUE_WORKER_INPROCESS worker. It only binds
+// notification delivery: every other processor (export, import, bulk, log and
+// notification purge, rates, WhatsApp poll, search, docs) is wired by
+// httpserver.New from its own services. Wiring them here as well registered
+// app:notifications:purge twice and panicked at startup (TEC-142).
+func newInProcessWorker(cfg config.Config, log *slog.Logger, deliver queue.DeliverNotificationFunc) *queue.Worker {
+	return queue.NewWorker(cfg, log, deliver)
 }

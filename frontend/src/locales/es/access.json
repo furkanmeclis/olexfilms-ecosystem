@@ -1,1 +1,21 @@
-{}
+{
+  "title": "Acceso y verificación",
+  "description": "Configure cuánto tiempo sigue siendo válida la reautenticación y qué métodos pueden usar los usuarios.",
+  "form.section_verification": "Política de verificación",
+  "form.section_verification_hint": "Controla las solicitudes de verificación en acciones sensibles, como exportaciones y campos protegidos.",
+  "form.ttl_hours": "Validez de la verificación (horas)",
+  "form.ttl_hours_hint": "Tras una verificación correcta con contraseña o llave de acceso, los usuarios pueden realizar acciones protegidas durante este número de horas (1–168).",
+  "form.password_enabled": "Permitir verificación con contraseña",
+  "form.password_enabled_hint": "Los usuarios pueden confirmar acciones sensibles con la contraseña de su cuenta.",
+  "form.passkey_enabled": "Permitir verificación con llave de acceso",
+  "form.passkey_enabled_hint": "Los usuarios con llaves de acceso registradas pueden confirmar acciones sin escribir la contraseña.",
+  "form.totp_enabled": "Permitir verificación con aplicación de autenticación",
+  "form.totp_enabled_hint": "Los usuarios con 2FA activada pueden confirmar acciones sensibles con un código de autenticación.",
+  "form.password_login_totp_required": "Exigir 2FA para iniciar sesión con contraseña",
+  "form.password_login_totp_required_hint": "Si se activa, los usuarios deben configurar una aplicación de autenticación antes de iniciar sesión con correo y contraseña. El inicio de sesión con llave de acceso y OAuth no se ve afectado.",
+  "form.save": "Guardar configuración",
+  "toast.saved": "Configuración de acceso guardada",
+  "toast.failed": "No se pudo guardar la configuración de acceso",
+  "error.title": "No se pudo cargar la configuración",
+  "error.description": "Inténtelo de nuevo o contacte con un administrador."
+}

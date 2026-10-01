@@ -1,1 +1,14 @@
-{}
+{
+  "create": "Erstellen",
+  "refresh": "Aktualisieren",
+  "filters": "Filter",
+  "filters_active": "Filter ({{count}})",
+  "filters_description": "Liste mit Filtern eingrenzen.",
+  "filter_any": "Beliebig",
+  "filter_unsupported": "Der API-Parameter für diesen Filter ist noch nicht verfügbar.",
+  "reset_filters": "Zurücksetzen",
+  "apply_filters": "Anwenden",
+  "delete_title": "Löschen: {{name}}",
+  "delete_description": "Möchten Sie {{name}} wirklich löschen?",
+  "delete_soft_description": "{{name}} wird vorläufig gelöscht. Der Datensatz wird archiviert, nicht endgültig entfernt."
+}

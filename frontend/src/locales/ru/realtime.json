@@ -1,1 +1,17 @@
-{}
+{
+  "reconnected": "Соединение в реальном времени восстановлено",
+  "offline": "Нет подключения — обновления в реальном времени приостановлены",
+  "event_fallback": "Обновление: {{type}}",
+  "event_notifications_sent": "Уведомление отправлено",
+  "event_notifications_delivered": "Уведомление доставлено",
+  "event_notifications_failed": "Ошибка уведомления",
+  "event_jobs_completed": "Задача выполнена",
+  "event_jobs_failed": "Ошибка задачи",
+  "event_imports_completed": "Импорт завершён",
+  "event_imports_failed": "Ошибка импорта",
+  "event_exports_completed": "Экспорт завершён",
+  "event_exports_failed": "Ошибка экспорта",
+  "event_exports_cancelled": "Экспорт отменён",
+  "event_reports_export_completed": "Экспорт отчёта готов",
+  "event_reports_export_failed": "Ошибка экспорта отчёта"
+}

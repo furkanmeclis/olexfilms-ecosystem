@@ -1,1 +1,24 @@
-{}
+{
+  "dialog.title": "Confirme su identidad",
+  "dialog.description": "Esta acción requiere una verificación reciente con contraseña, llave de acceso o aplicación de autenticación.",
+  "dialog.password": "Contraseña",
+  "dialog.password_placeholder": "Introduzca su contraseña",
+  "dialog.totp": "Código de autenticación",
+  "dialog.totp_placeholder": "Código de 6 dígitos o código de recuperación",
+  "dialog.verify": "Verificar",
+  "dialog.verify_pending": "Verificando…",
+  "dialog.passkey": "Usar llave de acceso",
+  "dialog.passkey_pending": "Esperando la llave de acceso…",
+  "dialog.or_password": "o contraseña",
+  "dialog.no_methods": "No hay métodos de verificación activados. Contacte con un administrador.",
+  "gate.title": "Contenido protegido",
+  "gate.description": "Verifique su identidad para ver esta sección.",
+  "gate.purpose.users.detail.roles": "Verifique su identidad para ver los roles asignados a este usuario.",
+  "gate.unlock": "Desbloquear",
+  "gate.unlocking": "Desbloqueando…",
+  "validation.password_required": "La contraseña es obligatoria",
+  "validation.totp_required": "El código de autenticación es obligatorio",
+  "error.verification_failed": "Error de verificación",
+  "error.passkey_failed": "Error en la verificación con llave de acceso",
+  "error.totp_failed": "Error en la verificación con la aplicación de autenticación"
+}

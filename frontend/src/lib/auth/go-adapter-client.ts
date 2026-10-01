@@ -288,6 +288,36 @@ export async function loginWithPassword(
   return unwrap<GoTokensPayload>(result);
 }
 
+export type GoQRCompletePayload = GoTokensPayload & {
+  user: { uuid: string; email: string | null; name: string };
+};
+
+/**
+ * Exchanges an approved QR sign-in (code + this browser's secret) for the
+ * panel token pair, server side (TEC-91). The panel BFF refuses
+ * `auth/qr/complete`, so the tokens never reach the browser.
+ */
+export async function completeQRLogin(input: {
+  code: string;
+  secret: string;
+  clientIp?: string | null;
+  forwardedHost?: string | null;
+}) {
+  const result = await fetchUpstream("auth/qr/complete", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(input.clientIp ? { "X-Forwarded-For": input.clientIp } : {}),
+      ...(input.forwardedHost
+        ? { "X-Forwarded-Host": input.forwardedHost }
+        : {}),
+    },
+    body: JSON.stringify({ code: input.code, secret: input.secret }),
+  });
+  return unwrap<GoQRCompletePayload>(result);
+}
+
 /**
  * Verifies a WhatsApp login code server side (portal Auth.js instance) and
  * returns the portal token pair (JWT aud=portal). The browser never sees it.

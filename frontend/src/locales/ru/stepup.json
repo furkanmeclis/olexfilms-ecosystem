@@ -1,1 +1,24 @@
-{}
+{
+  "dialog.title": "Подтвердите личность",
+  "dialog.description": "Для этого действия требуется недавнее подтверждение паролем, ключом доступа или приложением-аутентификатором.",
+  "dialog.password": "Пароль",
+  "dialog.password_placeholder": "Введите пароль",
+  "dialog.totp": "Код аутентификатора",
+  "dialog.totp_placeholder": "6-значный код или код восстановления",
+  "dialog.verify": "Подтвердить",
+  "dialog.verify_pending": "Проверка…",
+  "dialog.passkey": "Использовать ключ доступа",
+  "dialog.passkey_pending": "Ожидание ключа доступа…",
+  "dialog.or_password": "или пароль",
+  "dialog.no_methods": "Способы подтверждения не включены. Обратитесь к администратору.",
+  "gate.title": "Защищённые данные",
+  "gate.description": "Подтвердите личность, чтобы открыть этот раздел.",
+  "gate.purpose.users.detail.roles": "Подтвердите личность, чтобы увидеть роли этого пользователя.",
+  "gate.unlock": "Разблокировать",
+  "gate.unlocking": "Разблокировка…",
+  "validation.password_required": "Введите пароль",
+  "validation.totp_required": "Введите код аутентификатора",
+  "error.verification_failed": "Подтверждение не удалось",
+  "error.passkey_failed": "Не удалось подтвердить ключом доступа",
+  "error.totp_failed": "Не удалось подтвердить кодом аутентификатора"
+}

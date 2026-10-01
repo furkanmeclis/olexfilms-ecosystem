@@ -1,1 +1,8 @@
-{}
+{
+  "logo.upload": "Logo hochladen",
+  "logo.replace": "Logo ersetzen",
+  "logo.clear": "Logo entfernen",
+  "logo.uploading": "Wird hochgeladen…",
+  "logo.too_large": "Das Logo darf höchstens 2 MB groß sein.",
+  "logo.invalid_type": "Verwenden Sie ein JPEG-, PNG- oder WebP-Bild."
+}

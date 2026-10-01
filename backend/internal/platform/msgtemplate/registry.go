@@ -37,13 +37,13 @@ type Placeholder struct {
 	SampleEN string `json:"sample_en"`
 }
 
-// Sample returns the sample for a locale: tr samples for tr, the locale's own
-// sample when localeSamples has one (TEC-138), otherwise the en sample (the
+// Sample returns the sample for a locale: tr samples for tr, a localized
+// sample (samples.go) when the locale has one, otherwise the en sample (the
 // en fallback), tr when no en sample exists.
 func (p Placeholder) Sample(locale string) string {
 	l, ok := i18n.Parse(locale)
 	if ok && l != i18n.LocaleTR && l != i18n.LocaleEN {
-		if v := localeSamples[p.Key][string(l)]; v != "" {
+		if v, found := localizedSample(p.Key, l); found {
 			return v
 		}
 	}

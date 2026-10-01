@@ -1,1 +1,7 @@
-{}
+{
+  "home.title": "Startseite",
+  "home.subtitle": "Grundgerüst der Inhaltsverwaltung – Module hier hinzufügen.",
+  "home.welcome": "Willkommen",
+  "home.greeting": "Angemeldet als {{name}}.",
+  "home.placeholder": "Ihr CMS-Arbeitsbereich ist bereit."
+}

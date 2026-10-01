@@ -1,1 +1,17 @@
-{}
+{
+  "pick_date": "Scegli una data",
+  "show_password": "Mostra password",
+  "hide_password": "Nascondi password",
+  "cancel": "Annulla",
+  "clear": "Cancella",
+  "save": "Salva",
+  "required": "Campo obbligatorio",
+  "on_this_page": "In questa pagina",
+  "combobox_placeholder": "Seleziona…",
+  "combobox_search": "Cerca…",
+  "combobox_empty": "Nessun risultato",
+  "combobox_selected": "Selezionato",
+  "command_title": "Comando / selezione",
+  "command_description": "Cerca e seleziona un elemento",
+  "command_group_default": "Risultati"
+}

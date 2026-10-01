@@ -9,7 +9,7 @@
   "fields.brand": "Marka",
   "fields.name": "Şablonun adı",
   "fields.version": "Versiya",
-  "fields.status": "Status",
+  "fields.status": "Vəziyyət",
   "status.active": "Dərc edilib",
   "status.draft": "Qaralama",
   "status.superseded": "Əvəz edilib",
