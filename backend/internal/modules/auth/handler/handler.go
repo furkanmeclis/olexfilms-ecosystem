@@ -14,6 +14,7 @@ import (
 	oauthproviderusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/integrations/oauthprovider/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/password"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ratelimit"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/resourcemeta"
@@ -193,14 +194,17 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	p := authctx.MustPrincipal(r.Context())
 	var in struct {
-		Name    *string `json:"name"`
-		Surname *string `json:"surname"`
-		Locale  *string `json:"locale"`
+		Name     *string `json:"name"`
+		Surname  *string `json:"surname"`
+		Locale   *string `json:"locale"`
+		Timezone *string `json:"timezone"`
 	}
 	if err := decodeJSON(w, r, &in); err != nil {
 		return
 	}
-	me, err := h.uc.UpdateProfile(r.Context(), p.UserID, p.ImpersonatorUserID, p.OrganizationUUID, in.Name, in.Surname, in.Locale)
+	me, err := h.uc.UpdateProfile(r.Context(), p.UserID, p.ImpersonatorUserID, p.OrganizationUUID, model.ProfilePatch{
+		Name: in.Name, Surname: in.Surname, Locale: in.Locale, Timezone: in.Timezone,
+	})
 	if err != nil {
 		writeUsecaseError(w, r, err)
 		return
@@ -635,6 +639,12 @@ func writeUsecaseError(w http.ResponseWriter, r *http.Request, err error) {
 		response.NotFound(w, r, "Resource was not found")
 	case errors.Is(err, usecase.ErrConflict):
 		response.Conflict(w, r, response.CodeConflict, err.Error())
+	case errors.Is(err, i18n.ErrInvalidLocale):
+		response.ErrorWithDetails(w, r, http.StatusUnprocessableEntity, response.CodeValidationError, "Unsupported locale",
+			[]response.Detail{{Field: "locale", Message: "locale must be one of " + i18n.SupportedList(), Code: "unsupported_locale"}})
+	case errors.Is(err, i18n.ErrInvalidTimezone):
+		response.ErrorWithDetails(w, r, http.StatusUnprocessableEntity, response.CodeValidationError, "Invalid timezone",
+			[]response.Detail{{Field: "timezone", Message: "timezone must be an IANA name such as Europe/Istanbul", Code: "invalid_timezone"}})
 	case errors.Is(err, usecase.ErrInvalidRequest), errors.Is(err, password.ErrInvalidPassword):
 		response.BadRequest(w, r, response.CodeValidationError, err.Error())
 	default:

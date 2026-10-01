@@ -55,7 +55,7 @@ func TestRenderAndDownloadHTTP(t *testing.T) {
 			Slug: fmt.Sprintf("t88h-%s-%d", name, time.Now().UnixNano()), Name: "Bayi " + name, Status: "active",
 			AccessStartsAt: pgtype.Timestamptz{Time: time.Now().Add(-time.Hour), Valid: true},
 			Type:           "dealer", ParentID: pgtype.Int8{Int64: center.ID, Valid: true},
-			BrandID: brand.ID, Currency: "TRY", Locale: "tr-TR", Timezone: "Europe/Istanbul", Settings: []byte("{}"),
+			BrandID: brand.ID, Currency: "TRY", Locale: "tr", Timezone: "Europe/Istanbul", Settings: []byte("{}"),
 		})
 		if err != nil {
 			t.Fatal(err)

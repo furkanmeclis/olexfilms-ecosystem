@@ -460,7 +460,11 @@ func (s *Service) Patch(ctx context.Context, id uuid.UUID, in PatchInput) (Organ
 		params.Currency = pgtype.Text{String: c, Valid: true}
 	}
 	if in.Locale != nil && strings.TrimSpace(*in.Locale) != "" {
-		params.Locale = pgtype.Text{String: strings.TrimSpace(*in.Locale), Valid: true}
+		l, err := parseOrgLocale(*in.Locale)
+		if err != nil {
+			return Organization{}, err
+		}
+		params.Locale = pgtype.Text{String: l, Valid: true}
 	}
 	if in.Timezone != nil && strings.TrimSpace(*in.Timezone) != "" {
 		tz := strings.TrimSpace(*in.Timezone)

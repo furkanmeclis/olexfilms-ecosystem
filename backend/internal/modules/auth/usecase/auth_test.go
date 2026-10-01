@@ -9,6 +9,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/repository"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/password"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
@@ -27,6 +28,27 @@ type memRepo struct {
 	memberGrants map[uuid.UUID][]model.Grant
 	// Refresh sessions revoked through RevokeSession.
 	revokedSessions []uuid.UUID
+	// orgLocale holds {locale, timezone} per organization; center is the
+	// brand center's pair (LocaleSources).
+	orgLocale map[uuid.UUID][2]string
+	center    [2]string
+}
+
+func (r *memRepo) LocaleSources(_ context.Context, userID int64, orgUUID *uuid.UUID, _ *int64) (i18n.Sources, error) {
+	u, ok := r.users[userID]
+	if !ok {
+		return i18n.Sources{}, repository.ErrNotFound
+	}
+	src := i18n.Sources{
+		UserLocale: u.Locale, UserTimezone: u.Timezone,
+		CenterLocale: r.center[0], CenterTimezone: r.center[1],
+	}
+	if orgUUID != nil {
+		if o, ok := r.orgLocale[*orgUUID]; ok {
+			src.OrgLocale, src.OrgTimezone = o[0], o[1]
+		}
+	}
+	return src, nil
 }
 
 func newMemRepo() *memRepo {
@@ -99,19 +121,22 @@ func (r *memRepo) UpdatePassword(_ context.Context, userID int64, hash string) e
 	return nil
 }
 
-func (r *memRepo) UpdateProfile(_ context.Context, userUUID uuid.UUID, name, surname, locale *string) (model.User, error) {
+func (r *memRepo) UpdateProfile(_ context.Context, userUUID uuid.UUID, in model.ProfilePatch) (model.User, error) {
 	u, ok := r.byUUID[userUUID]
 	if !ok {
 		return model.User{}, repository.ErrNotFound
 	}
-	if name != nil {
-		u.Name = *name
+	if in.Name != nil {
+		u.Name = *in.Name
 	}
-	if surname != nil {
-		u.Surname = *surname
+	if in.Surname != nil {
+		u.Surname = *in.Surname
 	}
-	if locale != nil {
-		u.Locale = *locale
+	if in.Locale != nil {
+		u.Locale = *in.Locale
+	}
+	if in.Timezone != nil {
+		u.Timezone = *in.Timezone
 	}
 	r.users[u.ID] = u
 	r.byEmail[u.Email] = u

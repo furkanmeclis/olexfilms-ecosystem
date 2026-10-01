@@ -112,6 +112,10 @@ func (m *pushTestQuerier) GetUserByUUID(context.Context, uuid.UUID) (db.User, er
 	return db.User{}, nil
 }
 
+func (m *pushTestQuerier) GetLocaleSources(context.Context, db.GetLocaleSourcesParams) (db.GetLocaleSourcesRow, error) {
+	return db.GetLocaleSourcesRow{}, nil
+}
+
 var _ Querier = (*pushTestQuerier)(nil)
 
 func TestPushBestEffortRespectsPushEnabled(t *testing.T) {

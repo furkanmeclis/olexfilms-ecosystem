@@ -8,14 +8,17 @@ import (
 
 // User is the domain identity.
 type User struct {
-	ID            int64
-	UUID          uuid.UUID
-	Email         string
-	PasswordHash  string
-	Name          string
-	Surname       string
-	Status        string
+	ID           int64
+	UUID         uuid.UUID
+	Email        string
+	PasswordHash string
+	Name         string
+	Surname      string
+	Status       string
+	// Locale and Timezone are the stored preferences; "" means inherit from
+	// the organization (i18n.Resolve).
 	Locale        string
+	Timezone      string
 	EmailVerified bool
 	CreatedAt     time.Time
 }
@@ -122,6 +125,19 @@ type Me struct {
 	Channels          MeChannels            `json:"channels"`
 	Realtime          MeRealtime            `json:"realtime"`
 	Impersonation     *MeImpersonation      `json:"impersonation,omitempty"`
+	// EffectiveLocale / EffectiveTimezone: user -> active org -> brand center
+	// -> Accept-Language (locale only) -> tr / Europe/Istanbul.
+	EffectiveLocale   string `json:"effective_locale"`
+	EffectiveTimezone string `json:"effective_timezone"`
+}
+
+// ProfilePatch is a PATCH /v1/auth/profile body. Nil fields are left as is;
+// an empty Locale or Timezone clears it (inherit from the organization).
+type ProfilePatch struct {
+	Name     *string
+	Surname  *string
+	Locale   *string
+	Timezone *string
 }
 
 // OrganizationSummary is a tenant membership on /auth/me.
@@ -154,14 +170,17 @@ type OrganizationSummaryParent struct {
 
 // PublicUser is the safe user projection.
 type PublicUser struct {
-	UUID          uuid.UUID `json:"uuid"`
-	Email         string    `json:"email"`
-	Name          string    `json:"name"`
-	Surname       string    `json:"surname"`
-	Status        string    `json:"status"`
-	Locale        string    `json:"locale"`
-	IsSuperAdmin  bool      `json:"is_super_admin"`
-	EmailVerified bool      `json:"email_verified"`
+	UUID    uuid.UUID `json:"uuid"`
+	Email   string    `json:"email"`
+	Name    string    `json:"name"`
+	Surname string    `json:"surname"`
+	Status  string    `json:"status"`
+	// Locale and Timezone are the user's own choice; null inherits from the
+	// organization. Me carries the resolved effective values.
+	Locale        *string `json:"locale"`
+	Timezone      *string `json:"timezone"`
+	IsSuperAdmin  bool    `json:"is_super_admin"`
+	EmailVerified bool    `json:"email_verified"`
 }
 
 // PlatformUserDetail is a platform user with assigned roles and login methods.
@@ -271,8 +290,16 @@ func DefaultMeLinks() MeLinks {
 func ToPublicUser(u User, isSuperAdmin bool) PublicUser {
 	return PublicUser{
 		UUID: u.UUID, Email: u.Email, Name: u.Name, Surname: u.Surname,
-		Status: u.Status, Locale: u.Locale, IsSuperAdmin: isSuperAdmin, EmailVerified: u.EmailVerified,
+		Status: u.Status, Locale: optString(u.Locale), Timezone: optString(u.Timezone),
+		IsSuperAdmin: isSuperAdmin, EmailVerified: u.EmailVerified,
 	}
+}
+
+func optString(v string) *string {
+	if v == "" {
+		return nil
+	}
+	return &v
 }
 
 // UserTOTP is the persisted authenticator binding for a user.

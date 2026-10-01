@@ -97,6 +97,10 @@ type Querier interface {
 	GetGitHubAppSettings(ctx context.Context) (GithubAppSetting, error)
 	GetImportJobByID(ctx context.Context, id int64) (ImportJob, error)
 	GetImportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ImportJob, error)
+	// Stored locale/timezone preferences for i18n.Resolve: the user, the active
+	// organization (when given) and the center of its brand, or of the request
+	// brand when there is no active organization.
+	GetLocaleSources(ctx context.Context, arg GetLocaleSourcesParams) (GetLocaleSourcesRow, error)
 	GetLogPurgeRuleByUUID(ctx context.Context, argUuid uuid.UUID) (LogPurgeRule, error)
 	GetNotificationByID(ctx context.Context, id int64) (Notification, error)
 	GetNotificationByUUID(ctx context.Context, argUuid uuid.UUID) (Notification, error)

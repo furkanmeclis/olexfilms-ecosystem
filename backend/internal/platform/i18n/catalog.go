@@ -1,37 +1,32 @@
 package i18n
 
-import "strings"
-
-// Locale is a supported BCP-47 short code.
-type Locale string
-
-const (
-	LocaleTR Locale = "tr"
-	LocaleEN Locale = "en"
-)
-
-// Normalize returns a supported locale or the fallback.
-func Normalize(locale string) Locale {
-	switch strings.ToLower(strings.TrimSpace(locale)) {
-	case "en":
-		return LocaleEN
-	default:
-		return LocaleTR
-	}
-}
-
+// catalogs holds one label map per supported locale. tr and en are complete
+// (scripts/check-i18n.mjs enforces their parity); the other locales are filled
+// by translation work (TEC-138) and fall back to en key by key.
 var catalogs = map[Locale]map[string]string{
-	LocaleTR: trCatalog,
-	LocaleEN: enCatalog,
+	LocaleTR:   trCatalog,
+	LocaleEN:   enCatalog,
+	LocaleBG:   bgCatalog,
+	LocaleDE:   deCatalog,
+	LocaleEL:   elCatalog,
+	LocaleUK:   ukCatalog,
+	LocaleRU:   ruCatalog,
+	LocaleFR:   frCatalog,
+	LocaleES:   esCatalog,
+	LocaleIT:   itCatalog,
+	LocaleZhCN: zhCNCatalog,
+	LocaleAZ:   azCatalog,
+	LocaleAR:   arCatalog,
 }
 
-// Translate resolves a dotted key for the locale with en fallback.
+// Translate resolves a dotted key for the locale. A key missing (or empty) in
+// the locale's catalog falls back to en, then to the key itself.
 func Translate(locale Locale, key string) string {
 	if v, ok := catalogs[locale][key]; ok && v != "" {
 		return v
 	}
-	if locale != LocaleEN {
-		if v, ok := catalogs[LocaleEN][key]; ok {
+	if locale != FallbackLocale {
+		if v, ok := catalogs[FallbackLocale][key]; ok && v != "" {
 			return v
 		}
 	}

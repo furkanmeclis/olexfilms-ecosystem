@@ -17,6 +17,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/repository"
 	notifmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authrevoke"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/password"
 	"github.com/google/uuid"
 )
@@ -91,59 +92,73 @@ func (u *AuthUseCase) SetSearchIndexer(indexer SearchIndexer) {
 	u.searchIndexer = indexer
 }
 
-// UpdateProfile patches the caller's name/surname/locale and returns refreshed Me.
+// UpdateProfile patches the caller's name/surname/locale/timezone and returns
+// refreshed Me. Locale accepts any spelling Parse maps to a supported code
+// ("zh_CN" is stored as "zh-CN"); timezone must be an IANA name. An empty
+// locale or timezone clears it so the organization's value applies.
 func (u *AuthUseCase) UpdateProfile(
 	ctx context.Context,
 	userUUID uuid.UUID,
 	impersonatorUUID *uuid.UUID,
 	orgUUID *uuid.UUID,
-	name, surname, locale *string,
+	in model.ProfilePatch,
 ) (model.Me, error) {
 	user, err := u.repo.FindUserByUUID(ctx, userUUID)
 	if err != nil {
 		return model.Me{}, ErrNotFound
 	}
-	if name != nil {
-		v := strings.TrimSpace(*name)
+	if in.Name != nil {
+		v := strings.TrimSpace(*in.Name)
 		if v == "" {
 			return model.Me{}, fmt.Errorf("%w: name cannot be empty", ErrInvalidRequest)
 		}
-		name = &v
+		in.Name = &v
 	}
-	if surname != nil {
-		v := strings.TrimSpace(*surname)
+	if in.Surname != nil {
+		v := strings.TrimSpace(*in.Surname)
 		if v == "" {
 			return model.Me{}, fmt.Errorf("%w: surname cannot be empty", ErrInvalidRequest)
 		}
-		surname = &v
+		in.Surname = &v
 	}
-	if locale != nil {
-		v := strings.TrimSpace(*locale)
-		if v != "tr" && v != "en" {
-			return model.Me{}, fmt.Errorf("%w: locale must be tr or en", ErrInvalidRequest)
+	if in.Locale != nil {
+		v := ""
+		if strings.TrimSpace(*in.Locale) != "" {
+			l, ok := i18n.Parse(*in.Locale)
+			if !ok {
+				return model.Me{}, fmt.Errorf("%w: locale %q", i18n.ErrInvalidLocale, *in.Locale)
+			}
+			v = string(l)
 		}
-		locale = &v
+		in.Locale = &v
 	}
-	if name == nil && surname == nil && locale == nil {
-		return model.Me{}, fmt.Errorf("%w: name, surname, or locale is required", ErrInvalidRequest)
+	if in.Timezone != nil {
+		v := strings.TrimSpace(*in.Timezone)
+		if v != "" && !i18n.ValidTimezone(v) {
+			return model.Me{}, fmt.Errorf("%w: timezone %q", i18n.ErrInvalidTimezone, *in.Timezone)
+		}
+		in.Timezone = &v
 	}
-	if _, err := u.repo.UpdateProfile(ctx, userUUID, name, surname, locale); err != nil {
+	if in.Name == nil && in.Surname == nil && in.Locale == nil && in.Timezone == nil {
+		return model.Me{}, fmt.Errorf("%w: name, surname, locale, or timezone is required", ErrInvalidRequest)
+	}
+	if _, err := u.repo.UpdateProfile(ctx, userUUID, in); err != nil {
 		return model.Me{}, err
 	}
-	if u.notifier != nil && (name != nil || surname != nil) {
+	me, err := u.Me(ctx, userUUID, impersonatorUUID, orgUUID)
+	if err != nil {
+		return model.Me{}, err
+	}
+	if u.notifier != nil && (in.Name != nil || in.Surname != nil) {
 		uid := user.ID
-		lang := user.Locale
-		if locale != nil {
-			lang = *locale
-		}
 		_, _ = u.notifier.Enqueue(ctx, notifmodel.EnqueueInput{
 			UserID: &uid, Channels: []string{notifmodel.ChannelInapp},
 			TemplateCode: "auth.profile_updated", SourceEvent: "auth.profile_updated",
-			Language:     lang,
+			Language:     me.EffectiveLocale,
 			TemplateVars: map[string]string{"name": user.Name},
 		})
 	}
-	return u.Me(ctx, userUUID, impersonatorUUID, orgUUID)
+	return me, nil
 }
 
 // ForgotPassword always returns accepted; enqueues reset email when user exists.

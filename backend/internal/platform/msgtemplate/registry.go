@@ -1,6 +1,10 @@
 package msgtemplate
 
-import "sort"
+import (
+	"sort"
+
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
+)
 
 // Audience of a template type.
 const (
@@ -16,8 +20,15 @@ const (
 	ChannelSMS      = "sms"
 )
 
-// Locales with seeded defaults.
-var Locales = []string{"tr", "en"}
+// Locales a template may be written in (K10, i18n.Supported). Defaults are
+// seeded for tr and en; a missing locale falls back to en at send time.
+var Locales = func() []string {
+	out := make([]string, len(i18n.Supported))
+	for i, l := range i18n.Supported {
+		out[i] = string(l)
+	}
+	return out
+}()
 
 // Placeholder is one allowed `{{key}}` with localized sample values.
 type Placeholder struct {
@@ -26,9 +37,10 @@ type Placeholder struct {
 	SampleEN string `json:"sample_en"`
 }
 
-// Sample returns the sample for a locale.
+// Sample returns the sample for a locale: tr samples for tr, en samples for
+// every other locale (the en fallback), tr when no en sample exists.
 func (p Placeholder) Sample(locale string) string {
-	if locale == "en" && p.SampleEN != "" {
+	if l, ok := i18n.Parse(locale); ok && l != i18n.LocaleTR && p.SampleEN != "" {
 		return p.SampleEN
 	}
 	return p.SampleTR
