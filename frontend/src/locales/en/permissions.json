@@ -123,5 +123,10 @@
   "labels.platform.modules.write": "Manage platform modules",
   "groups.modules": "Modules",
   "labels.platform.documents.templates.read": "Read document templates",
-  "labels.platform.documents.templates.write": "Write document templates"
+  "labels.platform.documents.templates.write": "Write document templates",
+  "labels.platform.geo.write": "Manage geography",
+  "labels.platform.territories.read": "View territories",
+  "labels.platform.territories.write": "Manage territories",
+  "labels.platform.rates.read": "View exchange rates",
+  "labels.platform.rates.write": "Manage exchange rates"
 }

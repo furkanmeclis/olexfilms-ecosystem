@@ -123,5 +123,10 @@
   "labels.platform.modules.write": "Platform modüllerini yönet",
   "groups.modules": "Modüller",
   "labels.platform.documents.templates.read": "Belge şablonlarını görüntüle",
-  "labels.platform.documents.templates.write": "Belge şablonlarını düzenle"
+  "labels.platform.documents.templates.write": "Belge şablonlarını düzenle",
+  "labels.platform.geo.write": "Coğrafyayı yönet",
+  "labels.platform.territories.read": "Bölgeleri görüntüle",
+  "labels.platform.territories.write": "Bölgeleri yönet",
+  "labels.platform.rates.read": "Döviz kurlarını görüntüle",
+  "labels.platform.rates.write": "Döviz kurlarını yönet"
 }

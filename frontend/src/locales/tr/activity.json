@@ -159,5 +159,22 @@
   "actions.modules.platform.updated": "Modül sistem ayarı güncellendi",
   "actions.modules.organization.updated": "Organizasyon modülü güncellendi",
   "actions.modules.organization.cleared": "Organizasyon modülü varsayılana döndü",
-  "resources.modules": "Modüller"
+  "resources.modules": "Modüller",
+  "actions.geo.country.updated": "Ülke güncellendi",
+  "actions.geo.province.created": "İl eklendi",
+  "actions.geo.province.deleted": "İl kaldırıldı",
+  "actions.geo.district.created": "İlçe eklendi",
+  "actions.geo.district.deleted": "İlçe kaldırıldı",
+  "actions.territories.assigned": "Bölge atandı",
+  "actions.territories.removed": "Bölge kaldırıldı",
+  "actions.plate_formats.created": "Plaka formatı eklendi",
+  "actions.plate_formats.updated": "Plaka formatı güncellendi",
+  "actions.plate_formats.deleted": "Plaka formatı silindi",
+  "actions.exchange_rates.override_set": "Manuel kur kaydedildi",
+  "actions.exchange_rates.override_cleared": "Manuel kur kaldırıldı",
+  "actions.exchange_rates.fetched": "Döviz kurları çekildi",
+  "resources.geo": "Coğrafya",
+  "resources.territories": "Bölgeler",
+  "resources.plate_formats": "Plaka formatları",
+  "resources.exchange_rates": "Döviz kurları"
 }

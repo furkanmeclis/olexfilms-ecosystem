@@ -6,6 +6,7 @@ import { ErrorState } from "@/components/common/error-state";
 import { EntityForm, EntityPage } from "@/components/entity";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import { addressIds } from "@/features/geo";
 import { OrganizationCreateForm } from "@/features/organizations/components/organization-create-form";
 import { useCreateOrganization } from "@/features/organizations/hooks/use-organization-mutations";
 import type { CreateOrganizationFormValues } from "@/features/organizations/schemas/organization-form";
@@ -22,6 +23,8 @@ function toCreateBody(
     phone: values.phone.trim(),
     address: values.address.trim(),
     owner_user_uuid: values.owner_user_uuid,
+    type: values.type,
+    ...addressIds(values),
   };
 }
 

@@ -110,6 +110,15 @@ export const routes = {
     modules: {
       root: "/platform/modules",
     },
+    territories: {
+      root: "/platform/territories",
+    },
+    plateFormats: {
+      root: "/platform/settings/plate-formats",
+    },
+    exchangeRates: {
+      root: "/platform/settings/exchange-rates",
+    },
     profile: {
       root: "/platform/profile",
       password: "/platform/profile/password",

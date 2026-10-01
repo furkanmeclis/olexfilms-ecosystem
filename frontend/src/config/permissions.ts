@@ -50,6 +50,11 @@ export const Permission = {
   PlatformOrganizationsWrite: "platform.organizations.write",
   PlatformDocumentTemplatesRead: "platform.documents.templates.read",
   PlatformDocumentTemplatesWrite: "platform.documents.templates.write",
+  PlatformGeoWrite: "platform.geo.write",
+  PlatformTerritoriesRead: "platform.territories.read",
+  PlatformTerritoriesWrite: "platform.territories.write",
+  PlatformRatesRead: "platform.rates.read",
+  PlatformRatesWrite: "platform.rates.write",
 
   TenantSettingsRead: "tenant.settings.read",
   TenantSettingsWrite: "tenant.settings.write",
@@ -306,5 +311,16 @@ export const permissions = {
   },
   auth: {
     session: Permission.AuthSession,
+  },
+  geo: {
+    write: Permission.PlatformGeoWrite,
+  },
+  territories: {
+    read: Permission.PlatformTerritoriesRead,
+    write: Permission.PlatformTerritoriesWrite,
+  },
+  rates: {
+    read: Permission.PlatformRatesRead,
+    write: Permission.PlatformRatesWrite,
   },
 } as const;

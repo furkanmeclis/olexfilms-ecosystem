@@ -75,5 +75,8 @@
   "breadcrumb_label": "Breadcrumb",
   "nav_features": "Features",
   "nav_modules": "Modules",
-  "nav_document_templates": "PDF templates"
+  "nav_document_templates": "PDF templates",
+  "nav_territories": "Territories",
+  "nav_plate_formats": "Plate formats",
+  "nav_exchange_rates": "Exchange rates"
 }
