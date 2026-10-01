@@ -36,6 +36,7 @@ import stepup from "./stepup.json";
 import storage from "./storage.json";
 import table from "./table.json";
 import users from "./users.json";
+import vehicles from "./vehicles.json";
 
 const catalog: LocaleCatalog = {
   access,
@@ -73,6 +74,7 @@ const catalog: LocaleCatalog = {
   storage,
   table,
   users,
+  vehicles,
 };
 
 export default catalog;
