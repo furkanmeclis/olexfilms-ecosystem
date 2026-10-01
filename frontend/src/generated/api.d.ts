@@ -2591,6 +2591,96 @@ export interface paths {
         patch: operations["updateCatalogProduct"];
         trace?: never;
     };
+    "/v1/catalog/products/{uuid}/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload a product image (center only)
+         * @description Needs `catalog.write` and the brand center (K4). The type is detected from the file content: only JPEG, PNG and WebP are accepted (SVG and anything else is 400), at most 5 MiB (413) and at most 10 images per product (422). The image is appended last and served publicly at `/product-images/{key}` while the product is active.
+         */
+        post: operations["uploadCatalogProductImage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/catalog/products/{uuid}/images/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Reorder product images (center only)
+         * @description `keys` must list every current image exactly once (422 otherwise); `sort` is renumbered from 0. 409 when the images changed meanwhile.
+         */
+        put: operations["reorderCatalogProductImages"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/catalog/products/{uuid}/images/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a product image (center only)
+         * @description Removes the image (and its stored object) and renumbers `sort`.
+         */
+        delete: operations["deleteCatalogProductImage"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/product-images/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Product image (public, cacheable)
+         * @description No auth, no signed URL. The frontend serves it at the fixed URL `/product-images/{key}`. Answers the uploaded image with a strong `ETag` and `Cache-Control: public, max-age=86400`; a matching `If-None-Match` gets 304. Only images of active products are served; removed, unknown and inactive-product images are 404.
+         */
+        get: operations["getPublicProductImage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/brand-logos/{uuid}": {
         parameters: {
             query?: never;
@@ -5828,7 +5918,7 @@ export interface components {
             active?: boolean;
         };
         CatalogProductImage: {
-            /** @description Storage object key */
+            /** @description Image key. Uploaded images (32 hex + .jpg/.png/.webp) are served at `/product-images/{key}`. */
             key: string;
             sort: number;
         };
@@ -5860,6 +5950,10 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        CatalogProductImageOrder: {
+            /** @description Every current image key, in the new order */
+            keys: string[];
+        };
         /** @description POST needs category_uuid, sku and name (unit_type defaults to piece, active to true). PATCH changes only the fields it names. */
         CatalogProductInput: {
             /** Format: uuid */
@@ -5869,6 +5963,7 @@ export interface components {
             description_md?: string;
             warranty_duration_months?: number | null;
             micron_thickness?: number | null;
+            /** @description Keys issued by the image upload route can only be kept or dropped here, not added; prefer the `/images` routes for uploads, removal and order. */
             images?: components["schemas"]["CatalogProductImage"][];
             unit_type?: components["schemas"]["CatalogUnitType"];
             uses_fixed_barcode?: boolean;
@@ -6586,6 +6681,15 @@ export interface components {
         };
         /** @description Resource not found */
         NotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Request body or uploaded file too large */
+        PayloadTooLarge: {
             headers: {
                 [name: string]: unknown;
             };
@@ -11298,6 +11402,139 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    uploadCatalogProductImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    image: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Image added; the updated product */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCatalogProduct"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            413: components["responses"]["PayloadTooLarge"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    reorderCatalogProductImages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CatalogProductImageOrder"];
+            };
+        };
+        responses: {
+            /** @description Reordered; the updated product */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCatalogProduct"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    deleteCatalogProductImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed; the updated product */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCatalogProduct"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getPublicProductImage: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-None-Match"?: string;
+            };
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Image bytes */
+            200: {
+                headers: {
+                    ETag?: string;
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                    "image/jpeg": string;
+                    "image/webp": string;
+                };
+            };
+            /** @description Not modified (If-None-Match matched the ETag) */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
         };
     };
     getPublicBrandLogo: {

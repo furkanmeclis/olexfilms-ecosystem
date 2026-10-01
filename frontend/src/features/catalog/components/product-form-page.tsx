@@ -22,6 +22,7 @@ import {
   catalogKeys,
   useCatalogAccess,
 } from "@/features/catalog/hooks/use-catalog-access";
+import { ProductImagesField } from "@/features/catalog/components/product-images-field";
 import { useCategoryOptions } from "@/features/catalog/hooks/use-category-options";
 import {
   productDefaults,
@@ -206,10 +207,8 @@ export function ProductFormPage({
               title={t("catalog.fields.images")}
               description={t("catalog.products.images_hint")}
             >
-              <AppTextarea
-                name="images"
-                label={t("catalog.fields.images")}
-                rows={4}
+              <ProductImagesField
+                product={product.data}
                 readOnly={locked.has("images")}
               />
             </FormSection>

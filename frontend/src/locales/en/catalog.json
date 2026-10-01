@@ -46,7 +46,7 @@
   "products.pick_category": "Pick a category",
   "products.unit_hint": "Roll / meter products are stocked and consumed by length.",
   "products.fixed_barcode_hint": "Every unit of the product carries the same barcode.",
-  "products.images_hint": "Storage keys of the product images, one per line; the first one is the cover.",
+  "products.images_hint": "JPEG, PNG or WebP; at most 5 MB per image, up to 10 images. The first image is the cover; drag or use the arrows to reorder.",
   "products.markdown_hint": "Markdown: headings, lists, **bold**, *italic* and links.",
   "products.preview": "Preview",
   "products.locked_hint": "Some fields are synced from the brand hub and cannot be changed here.",
@@ -93,5 +93,18 @@
   "validation.warranty": "0 to 600 months",
   "validation.micron": "A positive number",
   "validation.price": "A non-negative amount, at most 4 decimals",
-  "validation.currency": "Three-letter currency code, e.g. TRY"
+  "validation.currency": "Three-letter currency code, e.g. TRY",
+  "images.drop": "Drag and drop images here or click to choose",
+  "images.save_first": "Save the product first to add images.",
+  "images.uploading": "Uploading…",
+  "images.remove": "Remove image",
+  "images.move_earlier": "Move earlier",
+  "images.move_later": "Move later",
+  "images.cover": "Cover",
+  "images.alt": "Product image {{n}}",
+  "images.uploaded": "Image uploaded",
+  "images.removed": "Image removed",
+  "images.invalid_type": "Only JPEG, PNG and WebP images can be uploaded.",
+  "images.too_large": "Each image can be at most 5 MB.",
+  "images.too_many": "A product can have at most {{max}} images."
 }

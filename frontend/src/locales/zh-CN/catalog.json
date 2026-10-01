@@ -46,7 +46,7 @@
   "products.pick_category": "选择类别",
   "products.unit_hint": "按卷 / 米计量的产品按长度入库和消耗。",
   "products.fixed_barcode_hint": "该产品的所有单位使用同一条码。",
-  "products.images_hint": "产品图片的存储键，每行一个；第一个为封面。",
+  "products.images_hint": "JPEG、PNG 或 WebP；每张图片最大 5 MB，最多 10 张。第一张图片为封面；拖动或使用箭头调整顺序。",
   "products.markdown_hint": "Markdown：标题、列表、**粗体**、*斜体*和链接。",
   "products.preview": "预览",
   "products.locked_hint": "部分字段由品牌中心同步，无法在此修改。",
@@ -93,5 +93,18 @@
   "validation.warranty": "0 至 600 个月",
   "validation.micron": "请输入正数",
   "validation.price": "非负金额，最多 4 位小数",
-  "validation.currency": "三位字母币种代码，例如 TRY"
+  "validation.currency": "三位字母币种代码，例如 TRY",
+  "images.drop": "将图片拖放到此处，或点击选择",
+  "images.save_first": "请先保存产品，再添加图片。",
+  "images.uploading": "正在上传…",
+  "images.remove": "移除图片",
+  "images.move_earlier": "前移",
+  "images.move_later": "后移",
+  "images.cover": "封面",
+  "images.alt": "产品图片 {{n}}",
+  "images.uploaded": "图片已上传",
+  "images.removed": "图片已移除",
+  "images.invalid_type": "仅可上传 JPEG、PNG 和 WebP 图片。",
+  "images.too_large": "每张图片最大 5 MB。",
+  "images.too_many": "每个产品最多 {{max}} 张图片。"
 }
