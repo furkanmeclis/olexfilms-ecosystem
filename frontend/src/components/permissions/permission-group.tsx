@@ -4,6 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import type { Permission } from "@/components/permissions/permission-groups";
+import { broadestScope } from "@/config/permissions";
 import { useLocale } from "@/providers/locale-provider";
 
 type PermissionGroupProps = {
@@ -13,6 +14,8 @@ type PermissionGroupProps = {
   selected: Set<string>;
   disabled?: boolean;
   onToggle: (slug: string, next: boolean) => void;
+  scopes?: Record<string, string>;
+  onScopeChange?: (slug: string, scope: string) => void;
   onSelectGroup: () => void;
   onClearGroup: () => void;
 };
@@ -24,6 +27,8 @@ export function PermissionGroupPanel({
   selected,
   disabled,
   onToggle,
+  scopes,
+  onScopeChange,
   onSelectGroup,
   onClearGroup,
 }: PermissionGroupProps) {
@@ -76,12 +81,16 @@ export function PermissionGroupPanel({
         {permissions.map((permission) => {
           const id = `perm-${permission.slug}`;
           const checked = selected.has(permission.slug);
+          const allowed = permission.scopes ?? [];
+          const scope =
+            scopes?.[permission.slug] ?? broadestScope(allowed) ?? "";
+          const locked = Boolean(permission.super_admin_only);
           return (
             <li key={permission.slug} className="flex items-start gap-2">
               <Checkbox
                 id={id}
                 checked={checked}
-                disabled={disabled}
+                disabled={disabled || (locked && !checked)}
                 onCheckedChange={(value) =>
                   onToggle(permission.slug, value === true)
                 }
@@ -93,6 +102,34 @@ export function PermissionGroupPanel({
                 <p className="text-muted-foreground truncate font-mono text-[11px]">
                   {permission.slug}
                 </p>
+                {permission.is_sensitive || locked ? (
+                  <p className="text-destructive text-[11px]">
+                    {locked
+                      ? t("permissions.super_admin_only")
+                      : t("permissions.sensitive")}
+                  </p>
+                ) : null}
+                {checked && onScopeChange && allowed.length > 1 ? (
+                  <select
+                    aria-label={t("permissions.scope_label")}
+                    className="border-input bg-background mt-1 h-7 rounded-md border px-2 text-xs"
+                    value={scope}
+                    disabled={disabled}
+                    onChange={(e) =>
+                      onScopeChange(permission.slug, e.target.value)
+                    }
+                  >
+                    {allowed.map((s) => (
+                      <option key={s} value={s}>
+                        {t(`permissions.scopes.${s}`)}
+                      </option>
+                    ))}
+                  </select>
+                ) : checked && allowed.length === 1 ? (
+                  <p className="text-muted-foreground text-[11px]">
+                    {t(`permissions.scopes.${allowed[0]}`)}
+                  </p>
+                ) : null}
               </div>
             </li>
           );

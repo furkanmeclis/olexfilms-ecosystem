@@ -3,10 +3,12 @@
 import type { ReactNode } from "react";
 
 import { PermissionGuard } from "@/components/common/permission-guard";
+import type { PermissionScope } from "@/config/permissions";
 
 type CanProps = {
   permission: string | string[];
   mode?: "all" | "any";
+  scope?: PermissionScope;
   fallback?: ReactNode;
   children: ReactNode;
 };
@@ -17,11 +19,17 @@ type CanProps = {
 export function Can({
   permission,
   mode = "all",
+  scope,
   fallback = null,
   children,
 }: CanProps) {
   return (
-    <PermissionGuard permission={permission} mode={mode} fallback={fallback}>
+    <PermissionGuard
+      permission={permission}
+      mode={mode}
+      scope={scope}
+      fallback={fallback}
+    >
       {children}
     </PermissionGuard>
   );

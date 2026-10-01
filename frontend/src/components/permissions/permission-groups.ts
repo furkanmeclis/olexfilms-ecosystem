@@ -1,11 +1,17 @@
 /**
- * Permission grouping helpers for matrix UX.
- * Local type — OpenAPI does not yet expose a Permission schema.
+ * Permission grouping helpers for matrix UX (OpenAPI PermissionSummary).
  */
 export type Permission = {
   slug: string;
   name?: string;
   description?: string;
+  /** Catalog module (groups the matrix); falls back to the slug prefix. */
+  module?: string;
+  /** Scopes a grant may use (TEC-85). */
+  scopes?: string[];
+  is_sensitive?: boolean;
+  /** Only super_admin may hold it (impersonation); never selectable. */
+  super_admin_only?: boolean;
 };
 
 /**
@@ -16,6 +22,18 @@ export const PERMISSION_GROUP_ORDER = [
   "platform",
   "auth",
   "notifications",
+  "tenant",
+  "organizations",
+  "members",
+  "services",
+  "customers",
+  "pricing",
+  "accounting",
+  "warehouse",
+  "campaigns",
+  "leads",
+  "social",
+  "privacy",
   "roles",
   "permissions",
   "system",
@@ -43,7 +61,7 @@ export function groupPermissions(items: Permission[]): PermissionGroup[] {
   const map = new Map<string, Permission[]>();
 
   for (const permission of items) {
-    const key = permissionGroupKey(permission.slug);
+    const key = permission.module || permissionGroupKey(permission.slug);
     const bucket = map.get(key) ?? [];
     bucket.push(permission);
     map.set(key, bucket);
