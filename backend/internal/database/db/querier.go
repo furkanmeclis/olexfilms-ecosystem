@@ -29,6 +29,7 @@ type Querier interface {
 	CountAppLogs(ctx context.Context, arg CountAppLogsParams) (int64, error)
 	CountAppLogsByLevel(ctx context.Context) ([]CountAppLogsByLevelRow, error)
 	CountBulkJobsForActor(ctx context.Context, actorID int64) (int64, error)
+	CountDistributorPriceOverrides(ctx context.Context, arg CountDistributorPriceOverridesParams) (int64, error)
 	CountDocumentTemplates(ctx context.Context, arg CountDocumentTemplatesParams) (int64, error)
 	CountExportJobsForActor(ctx context.Context, actorID int64) (int64, error)
 	CountExportJobsForOrganization(ctx context.Context, organizationID pgtype.Int8) (int64, error)
@@ -42,6 +43,8 @@ type Querier interface {
 	CountPermissions(ctx context.Context, q_ pgtype.Text) (int64, error)
 	CountPhoneOTPsSince(ctx context.Context, arg CountPhoneOTPsSinceParams) (int64, error)
 	CountPlatformNotifications(ctx context.Context, arg CountPlatformNotificationsParams) (int64, error)
+	CountProductCategories(ctx context.Context, arg CountProductCategoriesParams) (int64, error)
+	CountProducts(ctx context.Context, arg CountProductsParams) (int64, error)
 	CountRoles(ctx context.Context, q_ pgtype.Text) (int64, error)
 	CountStorageActivity(ctx context.Context, objectKey string) (int64, error)
 	CountStorageTrash(ctx context.Context) (int64, error)
@@ -61,6 +64,11 @@ type Querier interface {
 	CreateOrganizationMember(ctx context.Context, arg CreateOrganizationMemberParams) (OrganizationMember, error)
 	CreatePhoneOTP(ctx context.Context, arg CreatePhoneOTPParams) (OtpCode, error)
 	CreatePlateFormat(ctx context.Context, arg CreatePlateFormatParams) (PlateFormat, error)
+	CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error)
+	// TEC-144: product categories and products. Every query is brand-filtered;
+	// callers pass the active brand (K1/K20). Writes are center-only (K4) and
+	// are checked in the use case layer.
+	CreateProductCategory(ctx context.Context, arg CreateProductCategoryParams) (ProductCategory, error)
 	CreateProvince(ctx context.Context, arg CreateProvinceParams) (Province, error)
 	// TEC-91: QR web sign-in challenges.
 	CreateQRLoginChallenge(ctx context.Context, arg CreateQRLoginChallengeParams) (QrLoginChallenge, error)
@@ -74,6 +82,7 @@ type Querier interface {
 	DeleteAppLogByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	DeleteAppLogsByUUIDs(ctx context.Context, uuids []uuid.UUID) (int64, error)
 	DeleteAppLogsMatching(ctx context.Context, arg DeleteAppLogsMatchingParams) (int64, error)
+	DeleteDistributorPriceOverride(ctx context.Context, arg DeleteDistributorPriceOverrideParams) (int64, error)
 	DeleteDistrict(ctx context.Context, id int64) (int64, error)
 	DeleteLogPurgeRule(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	DeleteManualExchangeRate(ctx context.Context, arg DeleteManualExchangeRateParams) (int64, error)
@@ -84,6 +93,10 @@ type Querier interface {
 	DeleteOrgModuleFlag(ctx context.Context, arg DeleteOrgModuleFlagParams) (int64, error)
 	DeletePermissionBySlug(ctx context.Context, slug string) error
 	DeletePlateFormat(ctx context.Context, countryID int64) (int64, error)
+	DeleteProduct(ctx context.Context, arg DeleteProductParams) (int64, error)
+	// Fails with a foreign key violation while products still use the category.
+	DeleteProductCategory(ctx context.Context, arg DeleteProductCategoryParams) (int64, error)
+	DeleteProductPrice(ctx context.Context, arg DeleteProductPriceParams) (int64, error)
 	DeleteProvince(ctx context.Context, id int64) (int64, error)
 	DeletePushSubscription(ctx context.Context, arg DeletePushSubscriptionParams) error
 	DeletePushSubscriptionByEndpoint(ctx context.Context, endpoint string) error
@@ -118,6 +131,7 @@ type Querier interface {
 	GetConsentForText(ctx context.Context, arg GetConsentForTextParams) (Consent, error)
 	GetCountryByID(ctx context.Context, id int64) (Country, error)
 	GetCountryByISO2(ctx context.Context, iso2 string) (Country, error)
+	GetDistributorPriceOverride(ctx context.Context, arg GetDistributorPriceOverrideParams) (GetDistributorPriceOverrideRow, error)
 	GetDistrictByID(ctx context.Context, id int64) (District, error)
 	GetDocumentRenderByID(ctx context.Context, id int64) (DocumentRender, error)
 	GetDocumentRenderByUUID(ctx context.Context, argUuid uuid.UUID) (DocumentRender, error)
@@ -164,6 +178,12 @@ type Querier interface {
 	GetOrganizationTreeByUUID(ctx context.Context, argUuid uuid.UUID) (GetOrganizationTreeByUUIDRow, error)
 	GetPermissionBySlug(ctx context.Context, slug string) (Permission, error)
 	GetPlateFormatByCountry(ctx context.Context, iso2 string) (GetPlateFormatByCountryRow, error)
+	GetProduct(ctx context.Context, arg GetProductParams) (Product, error)
+	GetProductBySKU(ctx context.Context, arg GetProductBySKUParams) (Product, error)
+	GetProductByUUID(ctx context.Context, arg GetProductByUUIDParams) (Product, error)
+	GetProductCategory(ctx context.Context, arg GetProductCategoryParams) (ProductCategory, error)
+	GetProductCategoryByUUID(ctx context.Context, arg GetProductCategoryByUUIDParams) (ProductCategory, error)
+	GetProductPrice(ctx context.Context, arg GetProductPriceParams) (GetProductPriceRow, error)
 	GetProvinceByID(ctx context.Context, id int64) (Province, error)
 	GetQRLoginChallengeByCode(ctx context.Context, code string) (QrLoginChallenge, error)
 	GetRefreshTokenByHashAny(ctx context.Context, tokenHash string) (RefreshToken, error)
@@ -237,6 +257,7 @@ type Querier interface {
 	// TEC-84: currencies and daily exchange rates. Rates travel as text so no
 	// precision is lost between NUMERIC and Go.
 	ListCurrencies(ctx context.Context, activeOnly bool) ([]Currency, error)
+	ListDistributorPriceOverrides(ctx context.Context, arg ListDistributorPriceOverridesParams) ([]ListDistributorPriceOverridesRow, error)
 	ListDistrictsByProvince(ctx context.Context, provinceID int64) ([]District, error)
 	ListDocumentTemplateVersions(ctx context.Context, arg ListDocumentTemplateVersionsParams) ([]DocumentTemplate, error)
 	ListDocumentTemplates(ctx context.Context, arg ListDocumentTemplatesParams) ([]ListDocumentTemplatesRow, error)
@@ -286,6 +307,9 @@ type Querier interface {
 	ListPlateFormats(ctx context.Context, activeOnly bool) ([]ListPlateFormatsRow, error)
 	ListPlatformNotifications(ctx context.Context, arg ListPlatformNotificationsParams) ([]Notification, error)
 	ListPlatformNotificationsForExport(ctx context.Context, arg ListPlatformNotificationsForExportParams) ([]Notification, error)
+	ListProductCategories(ctx context.Context, arg ListProductCategoriesParams) ([]ProductCategory, error)
+	ListProductPrices(ctx context.Context, arg ListProductPricesParams) ([]ListProductPricesRow, error)
+	ListProducts(ctx context.Context, arg ListProductsParams) ([]Product, error)
 	ListProvincesByCountry(ctx context.Context, countryID int64) ([]ListProvincesByCountryRow, error)
 	ListPushSubscriptionsByUser(ctx context.Context, userID int64) ([]PushSubscription, error)
 	ListRoleGrantsByRoleID(ctx context.Context, roleID int64) ([]ListRoleGrantsByRoleIDRow, error)
@@ -382,6 +406,8 @@ type Querier interface {
 	SetCountryActive(ctx context.Context, arg SetCountryActiveParams) (Country, error)
 	SetNotificationChannelEnabled(ctx context.Context, arg SetNotificationChannelEnabledParams) (NotificationChannelSetting, error)
 	SetOrganizationLogo(ctx context.Context, arg SetOrganizationLogoParams) (Organization, error)
+	// Bulk activate/deactivate within one brand.
+	SetProductsActive(ctx context.Context, arg SetProductsActiveParams) (int64, error)
 	SetRolePermissions(ctx context.Context, roleID int64) error
 	SetUserEmailVerified(ctx context.Context, id int64) (User, error)
 	SetWhatsAppInstance(ctx context.Context, arg SetWhatsAppInstanceParams) (WhatsappSetting, error)
@@ -405,6 +431,11 @@ type Querier interface {
 	UpdateOrganizationParent(ctx context.Context, arg UpdateOrganizationParentParams) (Organization, error)
 	UpdateOrganizationPlatform(ctx context.Context, arg UpdateOrganizationPlatformParams) (Organization, error)
 	UpdatePlateFormat(ctx context.Context, arg UpdatePlateFormatParams) (PlateFormat, error)
+	// Full replacement of the editable fields (read-modify-write in the use case).
+	// The F2 sync columns are not touched here.
+	UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error)
+	// Full replacement of the editable fields (read-modify-write in the use case).
+	UpdateProductCategory(ctx context.Context, arg UpdateProductCategoryParams) (ProductCategory, error)
 	UpdateRole(ctx context.Context, arg UpdateRoleParams) (Role, error)
 	UpdateStepupSettings(ctx context.Context, arg UpdateStepupSettingsParams) (StepupSetting, error)
 	UpdateUserLastLogin(ctx context.Context, id int64) error
@@ -420,6 +451,8 @@ type Querier interface {
 	UpdateWhatsAppStatus(ctx context.Context, arg UpdateWhatsAppStatusParams) (WhatsappSetting, error)
 	UpsertConversation(ctx context.Context, arg UpsertConversationParams) (Conversation, error)
 	UpsertDevicePushToken(ctx context.Context, arg UpsertDevicePushTokenParams) (DevicePushToken, error)
+	// The database refuses a target that is not a distributor of the brand.
+	UpsertDistributorPriceOverride(ctx context.Context, arg UpsertDistributorPriceOverrideParams) (UpsertDistributorPriceOverrideRow, error)
 	// One row per cache key: a repeated request returns the existing row.
 	UpsertDocumentRender(ctx context.Context, arg UpsertDocumentRenderParams) (DocumentRender, error)
 	UpsertExchangeRate(ctx context.Context, arg UpsertExchangeRateParams) error
@@ -431,6 +464,10 @@ type Querier interface {
 	UpsertNotificationTemplate(ctx context.Context, arg UpsertNotificationTemplateParams) (NotificationTemplate, error)
 	UpsertOrgModuleFlag(ctx context.Context, arg UpsertOrgModuleFlagParams) (ModuleFlag, error)
 	UpsertPermission(ctx context.Context, arg UpsertPermissionParams) error
+	// TEC-144: product price list and distributor-specific prices (K8). Prices
+	// travel as text so no precision is lost between NUMERIC and Go. Field
+	// masking by pricing.* permission happens in the use case layer.
+	UpsertProductPrice(ctx context.Context, arg UpsertProductPriceParams) (UpsertProductPriceRow, error)
 	UpsertPushSubscription(ctx context.Context, arg UpsertPushSubscriptionParams) (PushSubscription, error)
 	UpsertSystemModuleFlag(ctx context.Context, arg UpsertSystemModuleFlagParams) (ModuleFlag, error)
 	UpsertSystemRole(ctx context.Context, arg UpsertSystemRoleParams) (Role, error)

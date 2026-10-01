@@ -70,6 +70,7 @@ type Brand struct {
 	Status    string             `json:"status"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	Currency  string             `json:"currency"`
 }
 
 type BrandDomain struct {
@@ -172,6 +173,17 @@ type DevicePushToken struct {
 	RevokedAt  pgtype.Timestamptz `json:"revoked_at"`
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
+}
+
+type DistributorPriceOverride struct {
+	ID               int64              `json:"id"`
+	ProductID        int64              `json:"product_id"`
+	BrandID          int64              `json:"brand_id"`
+	DistributorOrgID int64              `json:"distributor_org_id"`
+	Currency         string             `json:"currency"`
+	Price            pgtype.Numeric     `json:"price"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
 type District struct {
@@ -639,6 +651,53 @@ type PlateFormat struct {
 	SortOrder       int32              `json:"sort_order"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Product struct {
+	ID                     int64              `json:"id"`
+	Uuid                   uuid.UUID          `json:"uuid"`
+	OrganizationID         int64              `json:"organization_id"`
+	BrandID                int64              `json:"brand_id"`
+	CategoryID             int64              `json:"category_id"`
+	Sku                    string             `json:"sku"`
+	Name                   string             `json:"name"`
+	DescriptionMd          string             `json:"description_md"`
+	WarrantyDurationMonths pgtype.Int4        `json:"warranty_duration_months"`
+	MicronThickness        pgtype.Numeric     `json:"micron_thickness"`
+	Images                 []byte             `json:"images"`
+	UnitType               string             `json:"unit_type"`
+	UsesFixedBarcode       bool               `json:"uses_fixed_barcode"`
+	Active                 bool               `json:"active"`
+	ExternalID             pgtype.Text        `json:"external_id"`
+	ConnectionID           pgtype.Int8        `json:"connection_id"`
+	LockedFields           []string           `json:"locked_fields"`
+	CreatedAt              pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ProductCategory struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Name           string             `json:"name"`
+	AvailableParts []byte             `json:"available_parts"`
+	Sort           int32              `json:"sort"`
+	Active         bool               `json:"active"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ProductPrice struct {
+	ID                     int64              `json:"id"`
+	ProductID              int64              `json:"product_id"`
+	BrandID                int64              `json:"brand_id"`
+	Currency               string             `json:"currency"`
+	PurchasePrice          pgtype.Numeric     `json:"purchase_price"`
+	SaleToDistributorPrice pgtype.Numeric     `json:"sale_to_distributor_price"`
+	RecommendedSalePrice   pgtype.Numeric     `json:"recommended_sale_price"`
+	CreatedAt              pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Province struct {

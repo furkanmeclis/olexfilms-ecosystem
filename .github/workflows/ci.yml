@@ -79,6 +79,12 @@ jobs:
         run: go vet ./...
       - name: Migrate test database
         run: go run -tags postgres "github.com/golang-migrate/migrate/v4/cmd/migrate@${MIGRATE_VERSION}" -path migrations -database "$TEST_DATABASE_URL" up
+      # Down files of the newest migrations must undo them cleanly: roll the
+      # last two back and apply them again (up -> down -> up).
+      - name: Migration roundtrip (last two)
+        run: |
+          go run -tags postgres "github.com/golang-migrate/migrate/v4/cmd/migrate@${MIGRATE_VERSION}" -path migrations -database "$TEST_DATABASE_URL" down 2
+          go run -tags postgres "github.com/golang-migrate/migrate/v4/cmd/migrate@${MIGRATE_VERSION}" -path migrations -database "$TEST_DATABASE_URL" up
       - name: go test
         run: go test ./... -count=1
       - name: OpenAPI lint

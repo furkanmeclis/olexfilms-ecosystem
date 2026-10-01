@@ -10,7 +10,7 @@ import (
 )
 
 const getBrandByID = `-- name: GetBrandByID :one
-SELECT id, uuid, slug, name, status, created_at, updated_at FROM brands
+SELECT id, uuid, slug, name, status, created_at, updated_at, currency FROM brands
 WHERE id = $1
 `
 
@@ -25,12 +25,13 @@ func (q *Queries) GetBrandByID(ctx context.Context, id int64) (Brand, error) {
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Currency,
 	)
 	return i, err
 }
 
 const getBrandBySlug = `-- name: GetBrandBySlug :one
-SELECT id, uuid, slug, name, status, created_at, updated_at FROM brands
+SELECT id, uuid, slug, name, status, created_at, updated_at, currency FROM brands
 WHERE slug = $1
 `
 
@@ -45,6 +46,7 @@ func (q *Queries) GetBrandBySlug(ctx context.Context, slug string) (Brand, error
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Currency,
 	)
 	return i, err
 }
@@ -128,7 +130,7 @@ func (q *Queries) ListBrandDomains(ctx context.Context) ([]ListBrandDomainsRow, 
 }
 
 const listBrands = `-- name: ListBrands :many
-SELECT id, uuid, slug, name, status, created_at, updated_at FROM brands
+SELECT id, uuid, slug, name, status, created_at, updated_at, currency FROM brands
 ORDER BY id ASC
 `
 
@@ -149,6 +151,7 @@ func (q *Queries) ListBrands(ctx context.Context) ([]Brand, error) {
 			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Currency,
 		); err != nil {
 			return nil, err
 		}
