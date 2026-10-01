@@ -38,5 +38,6 @@
   "prefix_tenant_purchases": "alislar",
   "prefix_tenant_catalog_products": "ürünler",
   "prefix_tenant_catalog_services": "hizmetler",
-  "prefix_vehicle_model_years": "araçlar"
+  "prefix_vehicle_model_years": "araçlar",
+  "prefix_products": "urunler"
 }

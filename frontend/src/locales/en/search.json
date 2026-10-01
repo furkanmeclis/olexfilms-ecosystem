@@ -38,5 +38,6 @@
   "prefix_tenant_purchases": "purchases",
   "prefix_tenant_catalog_products": "products",
   "prefix_tenant_catalog_services": "services",
-  "prefix_vehicle_model_years": "vehicles"
+  "prefix_vehicle_model_years": "vehicles",
+  "prefix_products": "products"
 }

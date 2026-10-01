@@ -38,5 +38,6 @@
   "prefix_tenant_purchases": "alışlar",
   "prefix_tenant_catalog_products": "məhsullar",
   "prefix_tenant_catalog_services": "xidmətlər",
-  "prefix_vehicle_model_years": "avtomobillər"
+  "prefix_vehicle_model_years": "avtomobillər",
+  "prefix_products": "mehsullar"
 }

@@ -38,5 +38,6 @@
   "prefix_tenant_purchases": "采购",
   "prefix_tenant_catalog_products": "产品",
   "prefix_tenant_catalog_services": "服务",
-  "prefix_vehicle_model_years": "车辆"
+  "prefix_vehicle_model_years": "车辆",
+  "prefix_products": "产品"
 }

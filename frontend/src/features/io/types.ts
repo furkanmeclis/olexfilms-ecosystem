@@ -88,13 +88,15 @@ export type IoResource =
   | "platform.users"
   | "platform.roles"
   | "platform.notifications"
-  | "platform.activity";
+  | "platform.activity"
+  | "tenant.catalog.products";
 
 export const EXPORT_PATHS: Record<IoResource, string> = {
   "platform.users": "/v1/platform/users/export",
   "platform.roles": "/v1/platform/roles/export",
   "platform.notifications": "/v1/platform/notifications/export",
   "platform.activity": "/v1/platform/activity/export",
+  "tenant.catalog.products": "/v1/catalog/products/export",
 };
 
 export const IMPORT_PATHS: Partial<
@@ -107,6 +109,10 @@ export const IMPORT_PATHS: Partial<
   "platform.roles": {
     upload: "/v1/platform/roles/import",
     sample: "/v1/platform/roles/import/sample",
+  },
+  "tenant.catalog.products": {
+    upload: "/v1/catalog/products/import",
+    sample: "/v1/catalog/products/import/sample",
   },
 };
 
@@ -126,5 +132,23 @@ export const IMPORT_SCHEMA: Partial<
     { key: "slug", labelKey: "roles.fields.slug", required: true },
     { key: "description", labelKey: "roles.fields.description" },
     { key: "permission_slugs", labelKey: "roles.fields.permissions" },
+  ],
+  // Category is matched by name and must exist (TEC-145).
+  "tenant.catalog.products": [
+    { key: "sku", labelKey: "catalog.fields.sku", required: true },
+    { key: "name", labelKey: "catalog.fields.name", required: true },
+    { key: "category", labelKey: "catalog.fields.category", required: true },
+    { key: "unit_type", labelKey: "catalog.fields.unit_type" },
+    {
+      key: "warranty_duration_months",
+      labelKey: "catalog.fields.warranty_duration_months",
+    },
+    { key: "micron_thickness", labelKey: "catalog.fields.micron_thickness" },
+    {
+      key: "uses_fixed_barcode",
+      labelKey: "catalog.fields.uses_fixed_barcode",
+    },
+    { key: "active", labelKey: "catalog.fields.active" },
+    { key: "description_md", labelKey: "catalog.fields.description_md" },
   ],
 };

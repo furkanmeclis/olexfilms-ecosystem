@@ -97,5 +97,6 @@
   "toast.confirm_failed": "Δεν ήταν δυνατή η επιβεβαίωση της εισαγωγής.",
   "toast.confirmed": "Η εισαγωγή επιβεβαιώθηκε και μπήκε σε ουρά.",
   "toast.rollback_success": "Η εισαγωγή αναιρέθηκε επιτυχώς.",
-  "toast.auto_mapped": "Αντιστοιχίστηκαν αυτόματα στήλες: {{count}}."
+  "toast.auto_mapped": "Αντιστοιχίστηκαν αυτόματα στήλες: {{count}}.",
+  "resources.tenant.catalog.products": "Προϊόντα"
 }
