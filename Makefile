@@ -21,7 +21,7 @@ FRONTEND_PORT ?= 3000
 .PHONY: infra infra-down infra-logs infra-ps migrate-up backend-dev frontend-dev local-dev \
 	free-dev-ports prod-config prod-up prod-down prod-create-super-admin tools create-super-admin \
 	gen-env-server backup restore dr-drill \
-	search-reindex check-i18n openapi-sync openapi-lint api-generate
+	search-reindex check-i18n check-i18n-translations openapi-sync openapi-lint api-generate
 
 infra:
 	@if [ -n "$(ENV_FILE)" ]; then \
@@ -181,6 +181,12 @@ search-reindex:
 
 check-i18n:
 	node scripts/check-i18n.mjs
+
+# Fully translated languages (TEC-138): no missing keys, < 3% copy equal to en.
+I18N_TRANSLATED ?= de,fr,es,it,ru,uk
+check-i18n-translations:
+	node scripts/check-i18n.mjs --strict --locales $(I18N_TRANSLATED)
+	node scripts/i18n-untranslated-report.mjs --locales $(I18N_TRANSLATED)
 
 # docs/openapi.yaml is canonical; backend embeds a synced copy (see backend/docs/embed.go).
 openapi-sync:
