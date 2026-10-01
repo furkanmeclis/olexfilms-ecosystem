@@ -12,7 +12,6 @@ import { formatNotificationText } from "@/features/notifications/lib/notificatio
 import { runNotificationAction } from "@/features/notifications/lib/run-notification-action";
 import type { Notification } from "@/features/notifications/services/notifications.service";
 import { useOptionalTenant } from "@/features/organizations/providers/tenant-provider";
-import { datetime } from "@/lib/utils";
 import { appToast } from "@/providers/toast-provider";
 import { useLocale } from "@/providers/locale-provider";
 
@@ -45,7 +44,7 @@ export function NotificationDetailDrawer({
   open,
   onOpenChange,
 }: NotificationDetailDrawerProps) {
-  const { t, locale } = useLocale();
+  const { t, format } = useLocale();
   const router = useRouter();
   const tenant = useOptionalTenant();
   const actions = notificationActions(notification?.action_url, {
@@ -148,13 +147,13 @@ export function NotificationDetailDrawer({
             />
             <DetailField
               label={t("notifications.fields.created_at")}
-              value={datetime(notification.created_at, undefined, locale)}
+              value={format.dateTime(notification.created_at)}
             />
             <DetailField
               label={t("notifications.fields.sent_at")}
               value={
                 notification.sent_at
-                  ? datetime(notification.sent_at, undefined, locale)
+                  ? format.dateTime(notification.sent_at)
                   : "—"
               }
             />
@@ -162,7 +161,7 @@ export function NotificationDetailDrawer({
               label={t("notifications.fields.read_at")}
               value={
                 notification.read_at
-                  ? datetime(notification.read_at, undefined, locale)
+                  ? format.dateTime(notification.read_at)
                   : "—"
               }
             />

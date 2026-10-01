@@ -23,6 +23,7 @@ import { useDocumentTemplates } from "@/features/document-templates/hooks/use-do
 import {
   DOCUMENT_KINDS,
   DOCUMENT_LANGUAGES,
+  documentLanguage,
   type DocumentKind,
   type DocumentTemplate,
 } from "@/features/document-templates/services/document-templates.service";
@@ -157,7 +158,9 @@ export function DocumentTemplatesPage() {
                 {(byKind.get(k) ?? []).map((row) => (
                   <tr key={row.uuid} className="border-t">
                     <td className="px-4 py-2">
-                      {t(`documents.languages.${row.language}`)}
+                      {t(
+                        `documents.languages.${documentLanguage(row.language)}`,
+                      )}
                     </td>
                     <td className="px-4 py-2">
                       {row.brand_slug ?? t("documents.brand_default")}

@@ -41,7 +41,7 @@ export function ImpersonationBanner() {
         variant="outline"
         onClick={() => void stop()}
       >
-        <LogOut className="mr-2 size-4" />
+        <LogOut className="me-2 size-4" />
         {t("users.impersonation.stop")}
       </Button>
     </div>

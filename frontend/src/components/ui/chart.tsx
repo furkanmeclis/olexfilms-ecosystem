@@ -5,6 +5,7 @@ import * as RechartsPrimitive from "recharts";
 import type { TooltipValueType } from "recharts";
 
 import { cn } from "@/lib/utils/index";
+import { useFormatter } from "@/providers/locale-provider";
 
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: "", dark: ".dark" } as const;
@@ -145,6 +146,7 @@ function ChartTooltipContent({
     "accessibilityLayer"
   >) {
   const { config } = useChart();
+  const format = useFormatter();
 
   const tooltipLabel = React.useMemo(() => {
     if (hideLabel || !payload?.length) {
@@ -255,7 +257,7 @@ function ChartTooltipContent({
                       {item.value != null && (
                         <span className="text-foreground font-mono font-medium tabular-nums">
                           {typeof item.value === "number"
-                            ? item.value.toLocaleString()
+                            ? format.number(item.value)
                             : String(item.value)}
                         </span>
                       )}

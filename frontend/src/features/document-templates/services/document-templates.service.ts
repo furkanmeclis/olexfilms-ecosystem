@@ -1,4 +1,5 @@
 import { apiConfig } from "@/config/api";
+import { SUPPORTED_LOCALES, normalizeLocale } from "@/config/i18n";
 import type { components } from "@/generated/api";
 import { ApiError } from "@/lib/api/errors";
 import { platformRequest } from "@/lib/api/platform-request";
@@ -27,22 +28,17 @@ export type ListDocumentTemplatesParams = {
   offset?: number;
 };
 
-/** Template languages (K10: 12 languages + Arabic). */
-export const DOCUMENT_LANGUAGES = [
-  "tr",
-  "en",
-  "bg",
-  "de",
-  "el",
-  "uk",
-  "ru",
-  "fr",
-  "es",
-  "it",
-  "zh_CN",
-  "az",
-  "ar",
-] as const;
+/**
+ * Template languages (K10: 12 languages + Arabic), the app's locale codes.
+ * The API stores Chinese as "zh_CN"; it accepts "zh-CN" and rows are read
+ * through documentLanguage().
+ */
+export const DOCUMENT_LANGUAGES = SUPPORTED_LOCALES;
+
+/** Canonical code of a template language from the API ("zh_CN" -> zh-CN). */
+export function documentLanguage(code: string): string {
+  return normalizeLocale(code) ?? code;
+}
 
 export const DOCUMENT_KINDS: readonly DocumentKind[] = [
   "service",

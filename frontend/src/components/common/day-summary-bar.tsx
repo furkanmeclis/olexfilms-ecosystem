@@ -54,7 +54,7 @@ export function DaySummaryBar({
           aria-label={t("common.day.prev")}
           onClick={() => onDateChange(shiftDate(date, -1))}
         >
-          <ChevronLeft className="size-4" />
+          <ChevronLeft className="size-4 rtl:rotate-180" />
         </Button>
         <DatePicker
           value={date}
@@ -69,7 +69,7 @@ export function DaySummaryBar({
           aria-label={t("common.day.next")}
           onClick={() => onDateChange(shiftDate(date, 1))}
         >
-          <ChevronRight className="size-4" />
+          <ChevronRight className="size-4 rtl:rotate-180" />
         </Button>
         {!isToday ? (
           <Button
@@ -81,7 +81,7 @@ export function DaySummaryBar({
             {t("common.day.today")}
           </Button>
         ) : live ? (
-          <span className="ml-1 flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+          <span className="ms-1 flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">
             <span className="size-1.5 animate-pulse rounded-full bg-emerald-500" />
             {t("common.day.live")}
           </span>
@@ -89,7 +89,7 @@ export function DaySummaryBar({
       </div>
       <dl
         className={cn(
-          "grid flex-1 grid-cols-2 gap-x-4 gap-y-2 lg:border-l lg:pl-4",
+          "grid flex-1 grid-cols-2 gap-x-4 gap-y-2 lg:border-s lg:ps-4",
           stats.length >= 5
             ? "sm:grid-cols-5"
             : stats.length === 4

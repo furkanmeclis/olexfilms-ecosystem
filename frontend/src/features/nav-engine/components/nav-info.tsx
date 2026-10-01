@@ -1,6 +1,7 @@
 "use client";
 
 import { Info } from "lucide-react";
+import { Direction } from "radix-ui";
 import type { ReactNode } from "react";
 
 import {
@@ -38,6 +39,7 @@ export function NavInfoButton({
   info: NavInfo;
   label: string;
 }) {
+  const dir = Direction.useDirection();
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -49,7 +51,11 @@ export function NavInfoButton({
           <Info />
         </SidebarMenuAction>
       </PopoverTrigger>
-      <PopoverContent side="right" align="start" className="w-64 p-3">
+      <PopoverContent
+        side={dir === "rtl" ? "left" : "right"}
+        align="start"
+        className="w-64 p-3"
+      >
         <NavInfoBody info={info} />
       </PopoverContent>
     </Popover>

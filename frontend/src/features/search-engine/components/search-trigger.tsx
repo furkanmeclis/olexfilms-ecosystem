@@ -43,7 +43,7 @@ export function SearchTrigger({
       onClick={() => setOpen(true)}
     >
       <Search className="size-4 shrink-0 opacity-60" />
-      <span className="flex-1 truncate text-left text-sm">
+      <span className="flex-1 truncate text-start text-sm">
         {t("search.trigger_label")}
       </span>
       <kbd className="bg-muted pointer-events-none hidden rounded border px-1.5 py-0.5 font-mono text-[10px] font-medium sm:inline-block">

@@ -31,12 +31,14 @@ const sheetVariants = cva(
       side: {
         top: "inset-x-0 top-0 border-b",
         bottom: "inset-x-0 bottom-0 border-t",
-        left: "inset-y-0 left-0 h-full w-3/4 border-r sm:max-w-sm",
-        right: "inset-y-0 right-0 h-full w-3/4 border-l sm:max-w-sm",
+        // Logical sides (TEC-137): start/end follow <html dir>, so an "end"
+        // sheet opens from the right in LTR and from the left in RTL.
+        start: "inset-y-0 start-0 h-full w-3/4 border-e sm:max-w-sm",
+        end: "inset-y-0 end-0 h-full w-3/4 border-s sm:max-w-sm",
       },
     },
     defaultVariants: {
-      side: "right",
+      side: "end",
     },
   },
 );
@@ -45,7 +47,7 @@ export const SheetContent = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> &
     VariantProps<typeof sheetVariants>
->(({ side = "right", className, children, ...props }, ref) => (
+>(({ side = "end", className, children, ...props }, ref) => (
   <SheetPortal>
     <SheetOverlay />
     <DialogPrimitive.Content
@@ -54,7 +56,7 @@ export const SheetContent = React.forwardRef<
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="focus:ring-ring absolute top-4 right-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:outline-none">
+      <DialogPrimitive.Close className="focus:ring-ring absolute end-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:outline-none">
         <X className="h-4 w-4" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>
@@ -70,7 +72,7 @@ export function SheetHeader({
   return (
     <div
       className={cn(
-        "flex flex-col space-y-2 text-center sm:text-left",
+        "flex flex-col space-y-2 text-center sm:text-start",
         className,
       )}
       {...props}

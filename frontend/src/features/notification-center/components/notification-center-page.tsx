@@ -450,7 +450,7 @@ function ChannelsPanel() {
 // --- Deliveries ---------------------------------------------------------------
 
 function DeliveriesPanel() {
-  const { t } = useLocale();
+  const { t, format } = useLocale();
   const [status, setStatus] = useState<string>(ALL);
   const [channel, setChannel] = useState<string>(ALL);
   const [offset, setOffset] = useState(0);
@@ -468,7 +468,7 @@ function DeliveriesPanel() {
     queryKey: [...KEY, "deliveries", filter],
     queryFn: () => notificationCenterService.deliveries(filter),
   });
-  const fmt = (v: string) => new Date(v).toLocaleString();
+  const fmt = (v: string) => format.dateTime(v);
 
   return (
     <Card>

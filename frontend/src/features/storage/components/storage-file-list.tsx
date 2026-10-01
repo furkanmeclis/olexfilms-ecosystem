@@ -13,7 +13,6 @@ import { StorageFileThumbnail } from "@/features/storage/components/storage-file
 import { formatBytes } from "@/features/storage/lib/format";
 import type { StorageObject } from "@/features/storage/types";
 import { cn } from "@/lib/utils";
-import { datetime } from "@/lib/utils/format";
 import { useLocale } from "@/providers/locale-provider";
 
 export function StorageFileList({
@@ -35,7 +34,7 @@ export function StorageFileList({
   onOpen: (item: StorageObject) => void;
   onAction: (action: StorageAction, item: StorageObject) => void;
 }) {
-  const { t, locale } = useLocale();
+  const { t, format } = useLocale();
 
   if (loading) {
     return (
@@ -123,7 +122,7 @@ export function StorageFileList({
                     {item.kind === "folder" ? "—" : formatBytes(item.size)}
                   </td>
                   <td className="text-muted-foreground px-3 py-2">
-                    {datetime(item.updated_at, "dd.MM.yyyy HH:mm", locale)}
+                    {format.dateTime(item.updated_at)}
                   </td>
                   <td className="px-3 py-2">
                     <StorageAccessBadge access={item.access} />

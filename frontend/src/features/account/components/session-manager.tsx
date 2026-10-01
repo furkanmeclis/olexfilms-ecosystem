@@ -25,7 +25,6 @@ import {
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isApiError } from "@/lib/api";
-import { datetime } from "@/lib/utils/format";
 import { useLocale } from "@/providers/locale-provider";
 import { authService, type DeviceSession } from "@/services/auth.service";
 
@@ -35,7 +34,7 @@ function sessionLabel(item: DeviceSession, fallback: string) {
 }
 
 export function SessionManager() {
-  const { t, locale } = useLocale();
+  const { t, format } = useLocale();
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [revokingOthers, setRevokingOthers] = useState(false);
   const [pending, setPending] = useState<DeviceSession | null>(null);
@@ -191,14 +190,14 @@ export function SessionManager() {
                     <Calendar className="size-3.5 shrink-0" aria-hidden />
                     <dd>
                       {t("auth.sessions.created_at")}:{" "}
-                      {datetime(item.created_at, "dd MMM yyyy HH:mm", locale)}
+                      {format.dateTime(item.created_at, { style: "medium" })}
                     </dd>
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock className="size-3.5 shrink-0" aria-hidden />
                     <dd>
                       {t("auth.sessions.expires_at")}:{" "}
-                      {datetime(item.expires_at, "dd MMM yyyy HH:mm", locale)}
+                      {format.dateTime(item.expires_at, { style: "medium" })}
                     </dd>
                   </div>
                 </dl>

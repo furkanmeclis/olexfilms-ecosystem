@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import { StatusChip } from "@/components/common/status-chip";
 import { EntityDrawer } from "@/components/entity";
 import type { AppLog } from "@/features/logs/services/logs.service";
-import { datetime } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
 
 type LogDetailDrawerProps = {
@@ -34,7 +33,7 @@ export function LogDetailDrawer({
   open,
   onOpenChange,
 }: LogDetailDrawerProps) {
-  const { t, locale } = useLocale();
+  const { t, format } = useLocale();
 
   return (
     <EntityDrawer
@@ -57,7 +56,7 @@ export function LogDetailDrawer({
           />
           <DetailField
             label={t("logs.columns.created_at")}
-            value={datetime(log.created_at, "dd.MM.yyyy HH:mm:ss", locale)}
+            value={format.dateTime(log.created_at, { seconds: true })}
           />
           <DetailField label={t("logs.columns.source")} value={log.source} />
           <DetailField

@@ -17,6 +17,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "i18n:check": "node ../scripts/check-i18n.mjs",
+    "i18n:gen": "node scripts/gen-locale-catalogs.mjs",
+    "codemod:logical": "node scripts/logical-classes-codemod.mjs",
     "api:generate": "openapi-typescript ../docs/openapi.yaml -o src/generated/api.d.ts"
   },
   "dependencies": {
