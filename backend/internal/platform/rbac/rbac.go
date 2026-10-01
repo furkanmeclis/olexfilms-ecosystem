@@ -111,6 +111,12 @@ const (
 	PermSocialRead              = "social.read"
 	PermSocialWrite             = "social.write"
 	PermPrivacyAnonymize        = "privacy.anonymize"
+
+	// Module packages (TEC-86).
+	PermModulesRead          = "modules.read"
+	PermModulesManage        = "modules.manage"
+	PermPlatformModulesRead  = "platform.modules.read"
+	PermPlatformModulesWrite = "platform.modules.write"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

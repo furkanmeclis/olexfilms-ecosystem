@@ -34,6 +34,8 @@ import (
 	exportmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports"
 	exporthandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/handler"
 	exportusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/usecase"
+	featuremodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/features"
+	featurehandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/features/handler"
 	importmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/imports"
 	importhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/imports/handler"
 	importusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/imports/usecase"
@@ -68,6 +70,7 @@ import (
 	bulkadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine/adapters"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/crypto"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	ioadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine/adapters"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
@@ -123,6 +126,8 @@ type Server struct {
 	tokens *jwt.Manager
 	loader middleware.IdentityLoader
 	stepUp *stepup.Service
+	// features resolves module flags (TEC-86).
+	features *features.Service
 }
 
 // New wires router and middleware for the API skeleton.
@@ -247,7 +252,16 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	orgSvc := orgusecase.New(deps.DB, deps.Queries)
 	uc.SetOrganizationResolver(orgSvc)
 	authmodule.RegisterRoutes(mux, h, tokens, loader, stepUpSvc)
-	orgmodule.RegisterRoutes(mux, orgSvc, uc, deps.Storage, tokens, loader, deps.Queries, ratelimit.New(deps.Redis, cfg.App.Env), stepUpSvc)
+	var featureCache features.Cache = features.NoCache{}
+	if deps.Redis != nil {
+		featureCache = features.NewRedisCache(deps.Redis, cfg.App.Env, func(op string, err error) {
+			log.Warn("feature_cache_error", "op", op, "error", err)
+		})
+	}
+	featureSvc := features.New(deps.DB, deps.Queries, featureCache, log)
+	s.features = featureSvc
+	orgmodule.RegisterRoutes(mux, orgSvc, uc, deps.Storage, tokens, loader, deps.Queries, ratelimit.New(deps.Redis, cfg.App.Env), stepUpSvc, featureSvc)
+	featuremodule.RegisterRoutes(mux, featurehandler.New(featureSvc, deps.Queries, notifSvc, activityRec, log), featureSvc, tokens, loader, deps.Queries)
 	pdfClient := pdfrender.New(cfg.Gotenberg.URL)
 	realtime.RegisterRoutes(mux, realtime.NewHandler(rtIssuer, uc), tokens, loader)
 
@@ -336,6 +350,15 @@ func (s *Server) Start() error {
 	}
 	if s.searchIndexer != nil {
 		go s.searchIndexer.Bootstrap(context.Background())
+	}
+	if s.features != nil && s.queries != nil {
+		// Catalog sync: modules added to the Go catalog after the last
+		// migration get their rows (level/sort follow the catalog).
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		if err := s.features.SyncCatalog(ctx); err != nil {
+			s.log.Warn("feature_catalog_sync_failed", "error", err)
+		}
+		cancel()
 	}
 	s.log.Info("http_listen", "addr", s.cfg.HTTP.Addr, "env", s.cfg.App.Env)
 	if err := s.http.ListenAndServe(); err != nil && err != http.ErrServerClosed {

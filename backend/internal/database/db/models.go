@@ -187,6 +187,30 @@ type LogPurgeRule struct {
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
+type Module struct {
+	Key            string             `json:"key"`
+	Level          string             `json:"level"`
+	DefaultEnabled bool               `json:"default_enabled"`
+	IsPaid         bool               `json:"is_paid"`
+	SortOrder      int32              `json:"sort_order"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ModuleFlag struct {
+	ID             int64              `json:"id"`
+	Scope          string             `json:"scope"`
+	OrganizationID pgtype.Int8        `json:"organization_id"`
+	ModuleKey      string             `json:"module_key"`
+	Enabled        bool               `json:"enabled"`
+	Source         string             `json:"source"`
+	SetByUserID    pgtype.Int8        `json:"set_by_user_id"`
+	ServiceID      pgtype.Int8        `json:"service_id"`
+	Note           pgtype.Text        `json:"note"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Notification struct {
 	ID                int64              `json:"id"`
 	Uuid              uuid.UUID          `json:"uuid"`
