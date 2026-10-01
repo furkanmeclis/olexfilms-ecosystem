@@ -1,1 +1,14 @@
-{}
+{
+  "create": "Crear",
+  "refresh": "Actualizar",
+  "filters": "Filtros",
+  "filters_active": "Filtros ({{count}})",
+  "filters_description": "Acote la lista con filtros.",
+  "filter_any": "Cualquiera",
+  "filter_unsupported": "El parámetro de API para este filtro aún no está disponible.",
+  "reset_filters": "Restablecer",
+  "apply_filters": "Aplicar",
+  "delete_title": "Eliminar: {{name}}",
+  "delete_description": "¿Seguro que desea eliminar {{name}}?",
+  "delete_soft_description": "{{name}} se eliminará de forma lógica. El registro se archiva, no se borra definitivamente."
+}

@@ -1,1 +1,17 @@
-{}
+{
+  "pick_date": "Выберите дату",
+  "show_password": "Показать пароль",
+  "hide_password": "Скрыть пароль",
+  "cancel": "Отмена",
+  "clear": "Очистить",
+  "save": "Сохранить",
+  "required": "Обязательное поле",
+  "on_this_page": "На этой странице",
+  "combobox_placeholder": "Выберите…",
+  "combobox_search": "Поиск…",
+  "combobox_empty": "Ничего не найдено",
+  "combobox_selected": "Выбрано",
+  "command_title": "Команда / выбор",
+  "command_description": "Найдите и выберите элемент",
+  "command_group_default": "Результаты"
+}

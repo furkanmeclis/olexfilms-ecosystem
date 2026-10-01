@@ -1,1 +1,22 @@
-{}
+{
+  "title": "Реєстрація компанії",
+  "description": "Створіть свою організацію в Olexfilms за кілька хвилин.",
+  "submit": "Завершити реєстрацію",
+  "submitting": "Створення облікового запису…",
+  "error": "Не вдалося завершити реєстрацію. Перевірте дані та спробуйте ще раз.",
+  "error_sign_in": "Реєстрація пройшла успішно, але увійти не вдалося. Спробуйте зі сторінки входу.",
+  "fields.name": "Ім'я контактної особи",
+  "fields.surname": "Прізвище контактної особи",
+  "fields.organization_name": "Назва компанії",
+  "fields.city": "Місто",
+  "fields.district": "Район",
+  "fields.phone": "Телефон",
+  "fields.email": "Ел. пошта",
+  "fields.address": "Адреса",
+  "fields.password": "Пароль",
+  "validation.organization_name_required": "Вкажіть назву компанії",
+  "validation.city_required": "Вкажіть місто",
+  "validation.district_required": "Вкажіть район",
+  "validation.phone_required": "Вкажіть телефон",
+  "validation.address_required": "Вкажіть адресу"
+}

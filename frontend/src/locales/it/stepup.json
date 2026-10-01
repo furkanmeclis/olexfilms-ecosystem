@@ -1,1 +1,24 @@
-{}
+{
+  "dialog.title": "Conferma la tua identità",
+  "dialog.description": "Questa azione richiede una verifica recente con password, passkey o app di autenticazione.",
+  "dialog.password": "Password",
+  "dialog.password_placeholder": "Inserisci la password",
+  "dialog.totp": "Codice di autenticazione",
+  "dialog.totp_placeholder": "Codice a 6 cifre o codice di recupero",
+  "dialog.verify": "Verifica",
+  "dialog.verify_pending": "Verifica in corso…",
+  "dialog.passkey": "Usa passkey",
+  "dialog.passkey_pending": "In attesa della passkey…",
+  "dialog.or_password": "oppure password",
+  "dialog.no_methods": "Nessun metodo di verifica attivo. Contatta un amministratore.",
+  "gate.title": "Contenuto protetto",
+  "gate.description": "Verifica la tua identità per vedere questa sezione.",
+  "gate.purpose.users.detail.roles": "Verifica la tua identità per vedere i ruoli assegnati a questo utente.",
+  "gate.unlock": "Sblocca",
+  "gate.unlocking": "Sblocco in corso…",
+  "validation.password_required": "La password è obbligatoria",
+  "validation.totp_required": "Il codice di autenticazione è obbligatorio",
+  "error.verification_failed": "Verifica non riuscita",
+  "error.passkey_failed": "Verifica con passkey non riuscita",
+  "error.totp_failed": "Verifica con app di autenticazione non riuscita"
+}

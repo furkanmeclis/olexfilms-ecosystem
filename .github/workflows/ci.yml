@@ -142,6 +142,8 @@ jobs:
           git diff --exit-code -- docs/openapi.yaml backend/docs/openapi.yaml frontend/src/generated/
       - name: i18n
         run: make check-i18n
+      - name: i18n translations
+        run: make check-i18n-translations
 
   # Builds the production images exactly as Dokploy does (compose.prod.yml),
   # without pushing. A throw-away env file satisfies the required (:?) vars.

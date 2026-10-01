@@ -1,1 +1,8 @@
-{}
+{
+  "logo.upload": "Загрузить логотип",
+  "logo.replace": "Заменить логотип",
+  "logo.clear": "Удалить логотип",
+  "logo.uploading": "Загрузка…",
+  "logo.too_large": "Размер логотипа — не более 2 МБ.",
+  "logo.invalid_type": "Используйте изображение JPEG, PNG или WebP."
+}

@@ -1,1 +1,22 @@
-{}
+{
+  "title": "Registrazione azienda",
+  "description": "Crea la tua organizzazione su Olexfilms in pochi minuti.",
+  "submit": "Completa la registrazione",
+  "submitting": "Creazione dell'account…",
+  "error": "Impossibile completare la registrazione. Controlla i dati e riprova.",
+  "error_sign_in": "Registrazione riuscita, ma l'accesso non è andato a buon fine. Riprova dalla pagina di accesso.",
+  "fields.name": "Nome del referente",
+  "fields.surname": "Cognome del referente",
+  "fields.organization_name": "Ragione sociale",
+  "fields.city": "Città",
+  "fields.district": "Distretto",
+  "fields.phone": "Telefono",
+  "fields.email": "E-mail",
+  "fields.address": "Indirizzo",
+  "fields.password": "Password",
+  "validation.organization_name_required": "La ragione sociale è obbligatoria",
+  "validation.city_required": "La città è obbligatoria",
+  "validation.district_required": "Il distretto è obbligatorio",
+  "validation.phone_required": "Il telefono è obbligatorio",
+  "validation.address_required": "L'indirizzo è obbligatorio"
+}

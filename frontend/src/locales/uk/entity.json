@@ -1,1 +1,14 @@
-{}
+{
+  "create": "Створити",
+  "refresh": "Оновити",
+  "filters": "Фільтри",
+  "filters_active": "Фільтри ({{count}})",
+  "filters_description": "Звузьте список за допомогою фільтрів.",
+  "filter_any": "Будь-який",
+  "filter_unsupported": "Параметр API для цього фільтра поки недоступний.",
+  "reset_filters": "Скинути",
+  "apply_filters": "Застосувати",
+  "delete_title": "Видалення: {{name}}",
+  "delete_description": "Видалити {{name}}?",
+  "delete_soft_description": "{{name}} буде видалено м'яко: запис архівується, а не видаляється назавжди."
+}

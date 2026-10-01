@@ -1,1 +1,21 @@
-{}
+{
+  "title": "Zugriff und Bestätigung",
+  "description": "Legen Sie fest, wie lange eine erneute Anmeldung gültig bleibt und welche Methoden Benutzer verwenden dürfen.",
+  "form.section_verification": "Bestätigungsrichtlinie",
+  "form.section_verification_hint": "Steuert die erneute Identitätsabfrage bei sensiblen Aktionen wie Exporten und geschützten Feldern.",
+  "form.ttl_hours": "Gültigkeit der Bestätigung (Stunden)",
+  "form.ttl_hours_hint": "Nach erfolgreicher Prüfung per Passwort oder Passkey können Benutzer so viele Stunden geschützte Aktionen ausführen (1–168).",
+  "form.password_enabled": "Bestätigung per Passwort erlauben",
+  "form.password_enabled_hint": "Benutzer können sensible Aktionen mit ihrem Kontopasswort bestätigen.",
+  "form.passkey_enabled": "Bestätigung per Passkey erlauben",
+  "form.passkey_enabled_hint": "Benutzer mit registrierten Passkeys können Aktionen ohne Passworteingabe bestätigen.",
+  "form.totp_enabled": "Bestätigung per Authenticator erlauben",
+  "form.totp_enabled_hint": "Benutzer mit aktivierter 2FA können sensible Aktionen mit einem Authenticator-Code bestätigen.",
+  "form.password_login_totp_required": "2FA für die Passwortanmeldung verlangen",
+  "form.password_login_totp_required_hint": "Wenn aktiviert, müssen Benutzer einen Authenticator einrichten, bevor sie sich mit E-Mail und Passwort anmelden können. Anmeldung per Passkey und OAuth ist nicht betroffen.",
+  "form.save": "Einstellungen speichern",
+  "toast.saved": "Zugriffseinstellungen gespeichert",
+  "toast.failed": "Zugriffseinstellungen konnten nicht gespeichert werden",
+  "error.title": "Einstellungen konnten nicht geladen werden",
+  "error.description": "Versuchen Sie es erneut oder wenden Sie sich an einen Administrator."
+}

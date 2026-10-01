@@ -1,1 +1,22 @@
-{}
+{
+  "title": "Inscription de l'entreprise",
+  "description": "Créez votre organisation sur Olexfilms en quelques minutes.",
+  "submit": "Terminer l'inscription",
+  "submitting": "Création du compte…",
+  "error": "L'inscription n'a pas pu aboutir. Vérifiez vos informations et réessayez.",
+  "error_sign_in": "L'inscription a réussi, mais la connexion a échoué. Réessayez depuis la page de connexion.",
+  "fields.name": "Prénom du contact",
+  "fields.surname": "Nom du contact",
+  "fields.organization_name": "Nom de l'entreprise",
+  "fields.city": "Ville",
+  "fields.district": "District",
+  "fields.phone": "Téléphone",
+  "fields.email": "E-mail",
+  "fields.address": "Adresse",
+  "fields.password": "Mot de passe",
+  "validation.organization_name_required": "Le nom de l'entreprise est obligatoire",
+  "validation.city_required": "La ville est obligatoire",
+  "validation.district_required": "Le district est obligatoire",
+  "validation.phone_required": "Le téléphone est obligatoire",
+  "validation.address_required": "L'adresse est obligatoire"
+}
