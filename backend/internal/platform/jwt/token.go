@@ -12,6 +12,22 @@ import (
 
 var ErrInvalidToken = errors.New("invalid token")
 
+// Audiences (session realms). Panel logins (password, passkey, OAuth) get
+// "panel"; customer WhatsApp OTP logins get "portal". Enforcement per route
+// group is the portal work (TEC-90).
+const (
+	AudiencePanel  = "panel"
+	AudiencePortal = "portal"
+)
+
+// NormalizeAudience maps "" and unknown values to panel.
+func NormalizeAudience(aud string) string {
+	if aud == AudiencePortal {
+		return AudiencePortal
+	}
+	return AudiencePanel
+}
+
 // Claims are verified identity data carried by an access token.
 type Claims struct {
 	Roles          []string `json:"roles"`
@@ -30,6 +46,8 @@ type AccessInput struct {
 	ImpersonatorID *uuid.UUID
 	SessionID      uuid.UUID
 	OrganizationID *uuid.UUID
+	// Audience is the session realm (AudiencePanel when empty).
+	Audience string
 }
 
 // Manager issues and validates access JWTs. Refresh tokens are opaque (not JWT).
@@ -95,6 +113,7 @@ func (m *Manager) IssueAccess(in AccessInput) (string, time.Time, error) {
 		OrganizationID: oid,
 		RegisteredClaims: jwtlib.RegisteredClaims{
 			Subject:   in.UserID.String(),
+			Audience:  jwtlib.ClaimStrings{NormalizeAudience(in.Audience)},
 			ExpiresAt: jwtlib.NewNumericDate(expiresAt),
 			IssuedAt:  jwtlib.NewNumericDate(now),
 			ID:        uuid.NewString(),
@@ -129,6 +148,16 @@ func (m *Manager) ParseAccess(token string) (Claims, error) {
 }
 
 // UserUUID returns the subject as a UUID.
+// Realm returns the token audience (panel for tokens issued before aud).
+func (c Claims) Realm() string {
+	for _, a := range c.Audience {
+		if a == AudiencePortal || a == AudiencePanel {
+			return a
+		}
+	}
+	return AudiencePanel
+}
+
 func (c Claims) UserUUID() (uuid.UUID, error) {
 	return uuid.Parse(c.Subject)
 }

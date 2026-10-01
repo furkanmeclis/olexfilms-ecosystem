@@ -191,8 +191,10 @@ services:
       WUZAPI_ADMIN_TOKEN: ${WUZAPI_ADMIN_TOKEN:-app-dev-wuzapi-admin-token-change-me}
       WUZAPI_GLOBAL_ENCRYPTION_KEY: ${WUZAPI_GLOBAL_ENCRYPTION_KEY:-app-dev-wuzapi-encryption-key-32}
       WUZAPI_GLOBAL_HMAC_KEY: ${WUZAPI_WEBHOOK_SECRET:-app-dev-wuzapi-webhook-secret-change-me}
-      # Host backend from inside Docker (Linux: host-gateway mapping below).
-      WUZAPI_GLOBAL_WEBHOOK: ${WUZAPI_WEBHOOK_URL:-}
+      # The local backend runs on the host (make run), reached from Docker
+      # through the host-gateway mapping below. A containerized backend on
+      # this network would be http://backend.${LOCAL_NETWORK_NAME}:8080/hooks/wuzapi.
+      WUZAPI_GLOBAL_WEBHOOK: ${WUZAPI_WEBHOOK_URL:-http://host.docker.internal:8080/hooks/wuzapi}
       WEBHOOK_FORMAT: json
       DB_HOST: postgres
       DB_PORT: "5432"

@@ -168,6 +168,13 @@ var Permissions = []PermissionDef{
 	},
 	platformPerm(PermPlatformModulesRead, "Read platform modules"),
 	platformPerm(PermPlatformModulesWrite, "Write platform modules"),
+
+	// TEC-92: WhatsApp gateway (wuzapi). Appended last so earlier sort orders
+	// stay stable; migration 000034 seeds it after the existing rows.
+	{
+		Slug: PermWhatsAppManage, Name: "Manage WhatsApp integration", Module: "whatsapp", Scopes: scopesAll,
+		Description: "Connect the WhatsApp number, send test messages, edit OTP/KVKK texts.",
+	},
 }
 
 func grants(base map[string]Scope, extra map[string]Scope) map[string]Scope {

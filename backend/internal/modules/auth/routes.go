@@ -35,6 +35,8 @@ func RegisterRoutes(
 	mux.HandleFunc("POST /v1/auth/password/forgot", h.ForgotPassword)
 	mux.HandleFunc("POST /v1/auth/password/reset", h.ResetPassword)
 	mux.HandleFunc("POST /v1/auth/email/verify", h.VerifyEmail)
+	mux.HandleFunc("POST /v1/auth/otp/request", h.OTPRequest)
+	mux.HandleFunc("POST /v1/auth/otp/verify", h.OTPVerify)
 
 	mux.HandleFunc("GET /v1/internal/auth/users/by-email", h.AdapterGetUserByEmail)
 	mux.HandleFunc("GET /v1/internal/auth/users/{uuid}", h.AdapterGetUserByUUID)

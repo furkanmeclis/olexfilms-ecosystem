@@ -66,7 +66,7 @@ func TestIntegrationLocaleTimezone(t *testing.T) {
 
 	// Without an organization: the brand center (tr / Istanbul).
 	plain := it.tokensFrom(it.do("POST", "/v1/auth/login", hostOlex, "", map[string]string{
-		"email": u.Email, "password": pw,
+		"email": u.Email.String, "password": pw,
 	}))
 	me := it.meLocale("GET", "/v1/auth/me", hostOlex, plain.AccessToken, nil)
 	if me.EffectiveLocale != "tr" || me.EffectiveTimezone != "Europe/Istanbul" {
@@ -75,7 +75,7 @@ func TestIntegrationLocaleTimezone(t *testing.T) {
 
 	// Acceptance 2: NULL user locale inherits the active organization.
 	tp := it.tokensFrom(it.do("POST", "/v1/auth/login", hostOlex, "", map[string]string{
-		"email": u.Email, "password": pw, "organization_slug": org.Slug,
+		"email": u.Email.String, "password": pw, "organization_slug": org.Slug,
 	}))
 	me = it.meLocale("GET", "/v1/auth/me", hostOlex, tp.AccessToken, nil)
 	if me.User.Locale != nil || me.User.Timezone != nil {

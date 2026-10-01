@@ -20,9 +20,11 @@ import (
 	notifmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/providers"
 	notifusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/usecase"
+	whatsappmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine"
 	bulkadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine/adapters"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/crypto"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	ioadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine/adapters"
@@ -137,7 +139,15 @@ func main() {
 		log.Error("worker_queues_invalid", "error", err)
 		os.Exit(1)
 	}
+	secretBox, err := crypto.NewSecretBox(cfg.Encryption.Key)
+	if err != nil {
+		log.Error("encryption_init_failed", "error", err)
+		os.Exit(1)
+	}
+	waSvc := whatsappmodule.NewService(cfg.Wuzapi, pool, queries, secretBox, notifSvc, log)
+
 	worker := queue.NewWorkerWithQueues(cfg, log, notifSvc.Deliver, queues).
+		WithWhatsAppPoll(waSvc.PollStatus).
 		WithExport(exportSvc.ProcessExport).
 		WithImport(importSvc.ProcessImport).
 		WithBulk(bulkSvc.ProcessBulk).
@@ -177,6 +187,9 @@ func main() {
 			defer close(schedulerDone)
 			runAsLeader(ctx, lock, 10*time.Second, log, func() func() {
 				scheduler, err := queue.StartLogPurgeScheduler(cfg, log)
+				if err == nil {
+					err = queue.RegisterWhatsAppPoll(scheduler)
+				}
 				if err == nil {
 					err = scheduler.Start()
 				}

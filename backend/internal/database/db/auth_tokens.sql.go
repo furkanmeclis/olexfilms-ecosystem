@@ -14,9 +14,9 @@ import (
 )
 
 const createRefreshToken = `-- name: CreateRefreshToken :one
-INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip_address, impersonator_user_id, organization_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, uuid, user_id, token_hash, expires_at, revoked_at, user_agent, ip_address, impersonator_user_id, created_at, organization_id
+INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip_address, impersonator_user_id, organization_id, realm)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING id, uuid, user_id, token_hash, expires_at, revoked_at, user_agent, ip_address, impersonator_user_id, created_at, organization_id, realm
 `
 
 type CreateRefreshTokenParams struct {
@@ -27,6 +27,7 @@ type CreateRefreshTokenParams struct {
 	IpAddress          *netip.Addr        `json:"ip_address"`
 	ImpersonatorUserID pgtype.Int8        `json:"impersonator_user_id"`
 	OrganizationID     pgtype.Int8        `json:"organization_id"`
+	Realm              string             `json:"realm"`
 }
 
 func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error) {
@@ -38,6 +39,7 @@ func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshToken
 		arg.IpAddress,
 		arg.ImpersonatorUserID,
 		arg.OrganizationID,
+		arg.Realm,
 	)
 	var i RefreshToken
 	err := row.Scan(
@@ -52,12 +54,13 @@ func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshToken
 		&i.ImpersonatorUserID,
 		&i.CreatedAt,
 		&i.OrganizationID,
+		&i.Realm,
 	)
 	return i, err
 }
 
 const getValidRefreshTokenByHash = `-- name: GetValidRefreshTokenByHash :one
-SELECT id, uuid, user_id, token_hash, expires_at, revoked_at, user_agent, ip_address, impersonator_user_id, created_at, organization_id
+SELECT id, uuid, user_id, token_hash, expires_at, revoked_at, user_agent, ip_address, impersonator_user_id, created_at, organization_id, realm
 FROM refresh_tokens
 WHERE token_hash = $1
   AND revoked_at IS NULL
@@ -79,12 +82,13 @@ func (q *Queries) GetValidRefreshTokenByHash(ctx context.Context, tokenHash stri
 		&i.ImpersonatorUserID,
 		&i.CreatedAt,
 		&i.OrganizationID,
+		&i.Realm,
 	)
 	return i, err
 }
 
 const listActiveRefreshTokensByUserID = `-- name: ListActiveRefreshTokensByUserID :many
-SELECT id, uuid, user_id, token_hash, expires_at, revoked_at, user_agent, ip_address, impersonator_user_id, created_at, organization_id
+SELECT id, uuid, user_id, token_hash, expires_at, revoked_at, user_agent, ip_address, impersonator_user_id, created_at, organization_id, realm
 FROM refresh_tokens
 WHERE user_id = $1
   AND revoked_at IS NULL
@@ -113,6 +117,7 @@ func (q *Queries) ListActiveRefreshTokensByUserID(ctx context.Context, userID in
 			&i.ImpersonatorUserID,
 			&i.CreatedAt,
 			&i.OrganizationID,
+			&i.Realm,
 		); err != nil {
 			return nil, err
 		}

@@ -119,6 +119,8 @@ const (
 	PermModulesManage        = "modules.manage"
 	PermPlatformModulesRead  = "platform.modules.read"
 	PermPlatformModulesWrite = "platform.modules.write"
+
+	PermWhatsAppManage = "whatsapp.manage"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

@@ -66,6 +66,8 @@ import (
 	storagemodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/storage"
 	storagehandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/storage/handler"
 	storageusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/storage/usecase"
+	whatsappmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp"
+	whatsapphandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/handler"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authrevoke"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
@@ -78,13 +80,16 @@ import (
 	ioadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine/adapters"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/mail"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/otp"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ratelimit"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
 	searchadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine/adapters"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/sms"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/stepup"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/whatsapp"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/realtime"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -251,6 +256,19 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 
 	h := authhandler.New(uc, oauthUC, githubSvc, oauthProvSvc, authSettingsSvc, cfg.Auth.AdapterSecret, stepUpSvc, activityRec)
 	h.SetRateLimiter(ratelimit.New(deps.Redis, cfg.App.Env))
+
+	// WhatsApp gateway (wuzapi) + phone OTP (TEC-92). The OTP message is
+	// critical: it is sent synchronously through the provider, not queued.
+	waSvc := whatsappmodule.NewService(cfg.Wuzapi, deps.DB, deps.Queries, secretBox, notifSvc, log)
+	otpSvc := otp.New(
+		otp.NewPGStore(deps.DB, deps.Queries),
+		&whatsapp.Sender{WhatsApp: waSvc.Provider(), SMS: sms.Noop{Log: log}, SMSFallback: waSvc.SMSFallbackEnabled},
+		ratelimit.New(deps.Redis, cfg.App.Env),
+		otp.Config{Key: otp.DeriveKey(cfg.Encryption.Key)},
+		log,
+	)
+	h.SetOTP(otpSvc)
+	uc.SetPhoneRepository(repo)
 	loader := identity.Loader{UC: uc}
 	s.mux, s.tokens, s.loader, s.stepUp = mux, tokens, loader, stepUpSvc
 	orgSvc := orgusecase.New(deps.DB, deps.Queries)
@@ -292,7 +310,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		s.worker.WithExport(exportSvc.ProcessExport).
 			WithImport(importSvc.ProcessImport).
 			WithBulk(bulkSvc.ProcessBulk).
-			WithLogPurge(logsSvc.ApplyDueRules)
+			WithLogPurge(logsSvc.ApplyDueRules).
+			WithWhatsAppPoll(waSvc.PollStatus)
 		if searchIndexer != nil {
 			s.worker.WithSearch(
 				searchIndexer.ProcessUpsert,
@@ -318,6 +337,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	accessmodule.RegisterRoutes(mux, accesshandler.New(stepUpSvc, activityRec), tokens, loader)
 	authsettingsmodule.RegisterRoutes(mux, authsettingshandler.New(authSettingsSvc, activityRec), tokens, loader)
 	githubmodule.RegisterRoutes(mux, githubhandler.New(githubSvc, activityRec), tokens, loader)
+	whatsappmodule.RegisterRoutes(mux, whatsapphandler.New(waSvc, activityRec, log), tokens, loader)
 	oauthprovidermodule.RegisterRoutes(mux, oauthproviderhandler.New(oauthProvSvc, activityRec), tokens, loader)
 	activitymodule.RegisterRoutes(mux, activityhandler.New(activityusecase.New(deps.Queries)), tokens, loader)
 	logsmodule.RegisterRoutes(mux, logshandler.New(logsSvc), tokens, loader)

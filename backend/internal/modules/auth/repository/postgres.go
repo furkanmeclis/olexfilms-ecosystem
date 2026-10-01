@@ -11,6 +11,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -52,7 +53,7 @@ func (r *Postgres) CreateUser(ctx context.Context, u model.User, emailVerified b
 		verified = pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true}
 	}
 	row, err := r.q.CreateUser(ctx, db.CreateUserParams{
-		Email: u.Email, PasswordHash: u.PasswordHash, Name: u.Name, Surname: u.Surname,
+		Email: optText(u.Email), PhoneE164: optText(u.Phone), PasswordHash: u.PasswordHash, Name: u.Name, Surname: u.Surname,
 		Status: u.Status, EmailVerifiedAt: verified,
 	})
 	if err != nil {
@@ -62,7 +63,7 @@ func (r *Postgres) CreateUser(ctx context.Context, u model.User, emailVerified b
 }
 
 func (r *Postgres) FindUserByEmail(ctx context.Context, email string) (model.User, error) {
-	row, err := r.q.GetUserByEmail(ctx, email)
+	row, err := r.q.GetUserByEmail(ctx, optText(email))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return model.User{}, ErrNotFound
@@ -111,7 +112,7 @@ func (r *Postgres) UpsertSuperAdmin(ctx context.Context, email, name, surname, h
 		var user model.User
 		err := r.withTx(ctx, func(q *db.Queries) error {
 			row, err := q.CreateUser(ctx, db.CreateUserParams{
-				Email: email, PasswordHash: hash, Name: name, Surname: surname, Status: "active",
+				Email: optText(email), PasswordHash: hash, Name: name, Surname: surname, Status: "active",
 				EmailVerifiedAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
 			})
 			if err != nil {
@@ -308,6 +309,7 @@ func (r *Postgres) SaveRefresh(ctx context.Context, userID int64, hash string, e
 		UserAgent: ua, IpAddress: ip,
 		ImpersonatorUserID: impersonator,
 		OrganizationID:     organizationID,
+		Realm:              jwt.NormalizeAudience(meta.Realm),
 	})
 	if err != nil {
 		return uuid.Nil, err
@@ -323,7 +325,7 @@ func (r *Postgres) GetRefreshSession(ctx context.Context, hash string) (model.Re
 		}
 		return model.RefreshSession{}, err
 	}
-	out := model.RefreshSession{UUID: row.Uuid, UserID: row.UserID}
+	out := model.RefreshSession{UUID: row.Uuid, UserID: row.UserID, Realm: row.Realm}
 	if row.ImpersonatorUserID.Valid {
 		id := row.ImpersonatorUserID.Int64
 		out.ImpersonatorUserID = &id
@@ -454,18 +456,18 @@ func (r *Postgres) CreateOTP(ctx context.Context, userID *int64, email, codeHash
 		uid = pgtype.Int8{Int64: *userID, Valid: true}
 	}
 	_, err := r.q.CreateOTPCode(ctx, db.CreateOTPCodeParams{
-		UserID: uid, Email: email, CodeHash: codeHash, Type: otpType,
+		UserID: uid, Email: optText(email), CodeHash: codeHash, Type: otpType,
 		ExpiresAt: pgtype.Timestamptz{Time: expiresAt.UTC(), Valid: true}, MaxAttempts: 5,
 	})
 	return err
 }
 
 func (r *Postgres) InvalidateOTPs(ctx context.Context, email, otpType string) error {
-	return r.q.InvalidateActiveOTPs(ctx, db.InvalidateActiveOTPsParams{Email: email, Type: otpType})
+	return r.q.InvalidateActiveOTPs(ctx, db.InvalidateActiveOTPsParams{Email: optText(email), Type: otpType})
 }
 
 func (r *Postgres) GetActiveOTP(ctx context.Context, email, otpType string) (id int64, codeHash string, attempts, maxAttempts int32, err error) {
-	row, err := r.q.GetActiveOTPByEmailType(ctx, db.GetActiveOTPByEmailTypeParams{Email: email, Type: otpType})
+	row, err := r.q.GetActiveOTPByEmailType(ctx, db.GetActiveOTPByEmailTypeParams{Email: optText(email), Type: otpType})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return 0, "", 0, 0, ErrNotFound
@@ -722,7 +724,7 @@ func (r *Postgres) LocaleSources(ctx context.Context, userID int64, orgUUID *uui
 
 func mapUser(row db.User) model.User {
 	return model.User{
-		ID: row.ID, UUID: row.Uuid, Email: row.Email, PasswordHash: row.PasswordHash,
+		ID: row.ID, UUID: row.Uuid, Email: row.Email.String, Phone: row.PhoneE164.String, PasswordHash: row.PasswordHash,
 		Name: row.Name, Surname: row.Surname, Status: row.Status,
 		Locale: row.Locale.String, Timezone: row.Timezone.String,
 		EmailVerified: row.EmailVerifiedAt.Valid, CreatedAt: row.CreatedAt.Time,
@@ -1061,4 +1063,12 @@ func mapUserTOTP(row db.UserTotp) model.UserTOTP {
 		out.RecoveryHashes = []string{}
 	}
 	return out
+}
+
+// optText maps "" to SQL NULL (users.email / phone_e164 are nullable).
+func optText(s string) pgtype.Text {
+	if s == "" {
+		return pgtype.Text{}
+	}
+	return pgtype.Text{String: s, Valid: true}
 }

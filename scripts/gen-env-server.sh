@@ -189,6 +189,8 @@ set_kv PDF_FONTS "$(keep PDF_FONTS embedded)"
 set_kv WUZAPI_URL "http://wuzapi.$NET:8080"
 set_kv WUZAPI_ADMIN_TOKEN "$(secret WUZAPI_ADMIN_TOKEN hex 32)"
 set_kv WUZAPI_WEBHOOK_SECRET "$(secret WUZAPI_WEBHOOK_SECRET hex 32)"
+# Backend webhook on the private app network (wuzapi → backend).
+set_kv WUZAPI_WEBHOOK_URL "$(keep WUZAPI_WEBHOOK_URL "http://backend.$NET:8080/hooks/wuzapi")"
 # AES-256 key, exactly 32 characters. Never rotated by this script.
 set_kv WUZAPI_GLOBAL_ENCRYPTION_KEY "$(stable WUZAPI_GLOBAL_ENCRYPTION_KEY 0 hex 16)"
 # --- Queue: separate worker containers in production ---
@@ -224,7 +226,7 @@ set_kv NEXT_PUBLIC_SENTRY_RELEASE "$(keep NEXT_PUBLIC_SENTRY_RELEASE "")"
 set_kv VAPID_PUBLIC_KEY "$VAPID_PUB"
 set_kv VAPID_PRIVATE_KEY "$VAPID_PRIV"
 set_kv VAPID_SUBJECT "mailto:$MAIL_FROM"
-# Everything else (migrator DSNs, WUZAPI_WEBHOOK_URL, hand-edited values)
+# Everything else (migrator DSNs, hand-edited values)
 # keeps its value from the existing output file; see the awk merge below.
 
 TMP_OUT="$(mktemp)"
@@ -281,7 +283,7 @@ if [ "$ROTATE_ENC" = 1 ]; then
   echo "  ! --rotate-encryption-key: data encrypted with the old APP_ENCRYPTION_KEY is unreadable now"
 fi
 [ -n "$(grep -E '^SMTP_HOST=.' "$OUT" || true)" ] || echo "  ! SMTP_HOST empty: e-mail notifications will not be sent"
-echo "  migrator DSNs (MIGRATOR_*_DSN) and WUZAPI_WEBHOOK_URL stay empty unless set by hand."
+echo "  migrator DSNs (MIGRATOR_*_DSN) stay empty unless set by hand."
 echo
 echo "Traefik / Dokploy domains (only these two services are public):"
 echo "  $APP_DOMAIN  → service frontend,   port 3000  ($APP_URL)"

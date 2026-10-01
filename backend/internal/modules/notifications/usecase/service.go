@@ -181,8 +181,8 @@ func (s *Service) Enqueue(ctx context.Context, in model.EnqueueInput) ([]model.N
 		}
 		recipient := textPtr(in.Recipient)
 		if ch == model.ChannelEmail && !recipient.Valid && in.UserID != nil {
-			if u, err := s.q.GetUserByID(ctx, *in.UserID); err == nil {
-				recipient = pgtype.Text{String: u.Email, Valid: true}
+			if u, err := s.q.GetUserByID(ctx, *in.UserID); err == nil && u.Email.Valid {
+				recipient = pgtype.Text{String: u.Email.String, Valid: true}
 			}
 		}
 		row, err := s.q.CreateNotification(ctx, db.CreateNotificationParams{
@@ -511,7 +511,7 @@ func (s *Service) ListPlatform(
 				n.User = &copied
 			} else if row, err := s.q.GetUserByID(ctx, r.UserID.Int64); err == nil {
 				u := model.NotificationUser{
-					UUID: row.Uuid, Name: row.Name, Surname: row.Surname, Email: row.Email,
+					UUID: row.Uuid, Name: row.Name, Surname: row.Surname, Email: row.Email.String,
 				}
 				users[r.UserID.Int64] = u
 				n.User = &u

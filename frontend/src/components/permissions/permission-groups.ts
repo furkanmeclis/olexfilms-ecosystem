@@ -34,6 +34,7 @@ export const PERMISSION_GROUP_ORDER = [
   "leads",
   "social",
   "privacy",
+  "whatsapp",
   "roles",
   "permissions",
   "system",

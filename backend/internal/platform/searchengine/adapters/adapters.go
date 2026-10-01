@@ -74,7 +74,7 @@ func (a *UsersAdapter) documentFromUser(ctx context.Context, u db.User) (searche
 		return searchengine.Document{}, err
 	}
 	title := strings.TrimSpace(u.Name + " " + u.Surname)
-	keywords := []string{u.Email, u.Status}
+	keywords := []string{u.Email.String, u.PhoneE164.String, u.Status}
 	if len(roleSlugs) > 0 {
 		keywords = append(keywords, strings.Join(roleSlugs, " "))
 	}
@@ -82,7 +82,7 @@ func (a *UsersAdapter) documentFromUser(ctx context.Context, u db.User) (searche
 		ID:       u.Uuid.String(),
 		Spec:     SpecUsers,
 		Title:    title,
-		Subtitle: u.Email,
+		Subtitle: firstNonEmpty(u.Email.String, u.PhoneE164.String),
 		Keywords: keywords,
 		Href:     "/platform/users/" + u.Uuid.String(),
 		Icon:     "users",
@@ -159,3 +159,12 @@ var (
 	_ searchengine.Adapter = (*UsersAdapter)(nil)
 	_ searchengine.Adapter = (*RolesAdapter)(nil)
 )
+
+func firstNonEmpty(vals ...string) string {
+	for _, v := range vals {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
+}

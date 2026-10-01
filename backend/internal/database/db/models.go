@@ -107,6 +107,20 @@ type BulkJob struct {
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 }
 
+type Conversation struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID pgtype.Int8        `json:"organization_id"`
+	BrandID        pgtype.Int8        `json:"brand_id"`
+	Channel        string             `json:"channel"`
+	ContactE164    string             `json:"contact_e164"`
+	ContactName    pgtype.Text        `json:"contact_name"`
+	UserID         pgtype.Int8        `json:"user_id"`
+	LastMessageAt  pgtype.Timestamptz `json:"last_message_at"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
 type DocumentRender struct {
 	ID              int64              `json:"id"`
 	Uuid            uuid.UUID          `json:"uuid"`
@@ -212,6 +226,15 @@ type ImportJob struct {
 	OrganizationID pgtype.Int8        `json:"organization_id"`
 }
 
+type KvkkNotice struct {
+	ID        int64              `json:"id"`
+	Locale    string             `json:"locale"`
+	Version   int32              `json:"version"`
+	Body      string             `json:"body"`
+	CreatedBy pgtype.Int8        `json:"created_by"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 type LogPurgeRule struct {
 	ID               int64              `json:"id"`
 	Uuid             uuid.UUID          `json:"uuid"`
@@ -229,6 +252,24 @@ type LogPurgeRule struct {
 	CreatedBy        pgtype.Int8        `json:"created_by"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Message struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	ConversationID int64              `json:"conversation_id"`
+	OrganizationID pgtype.Int8        `json:"organization_id"`
+	BrandID        pgtype.Int8        `json:"brand_id"`
+	Channel        string             `json:"channel"`
+	Direction      string             `json:"direction"`
+	SenderType     string             `json:"sender_type"`
+	ExternalID     string             `json:"external_id"`
+	Body           pgtype.Text        `json:"body"`
+	Media          []byte             `json:"media"`
+	Status         string             `json:"status"`
+	Raw            []byte             `json:"raw"`
+	SentAt         pgtype.Timestamptz `json:"sent_at"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
 type Module struct {
@@ -395,17 +436,27 @@ type OrganizationMemberRole struct {
 }
 
 type OtpCode struct {
-	ID           int64              `json:"id"`
-	Uuid         uuid.UUID          `json:"uuid"`
-	UserID       pgtype.Int8        `json:"user_id"`
-	Email        string             `json:"email"`
-	CodeHash     string             `json:"code_hash"`
-	Type         string             `json:"type"`
-	ExpiresAt    pgtype.Timestamptz `json:"expires_at"`
-	ConsumedAt   pgtype.Timestamptz `json:"consumed_at"`
-	AttemptCount int32              `json:"attempt_count"`
-	MaxAttempts  int32              `json:"max_attempts"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	ID            int64              `json:"id"`
+	Uuid          uuid.UUID          `json:"uuid"`
+	UserID        pgtype.Int8        `json:"user_id"`
+	Email         pgtype.Text        `json:"email"`
+	CodeHash      string             `json:"code_hash"`
+	Type          string             `json:"type"`
+	ExpiresAt     pgtype.Timestamptz `json:"expires_at"`
+	ConsumedAt    pgtype.Timestamptz `json:"consumed_at"`
+	AttemptCount  int32              `json:"attempt_count"`
+	MaxAttempts   int32              `json:"max_attempts"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	PhoneE164     pgtype.Text        `json:"phone_e164"`
+	Channel       pgtype.Text        `json:"channel"`
+	ProviderRef   pgtype.Text        `json:"provider_ref"`
+	MessageSha256 pgtype.Text        `json:"message_sha256"`
+	Ip            pgtype.Text        `json:"ip"`
+	UserAgent     pgtype.Text        `json:"user_agent"`
+	KvkkLocale    pgtype.Text        `json:"kvkk_locale"`
+	KvkkVersion   pgtype.Int4        `json:"kvkk_version"`
+	DeliveredAt   pgtype.Timestamptz `json:"delivered_at"`
+	DeliveryError pgtype.Text        `json:"delivery_error"`
 }
 
 type OutboxEvent struct {
@@ -462,6 +513,7 @@ type RefreshToken struct {
 	ImpersonatorUserID pgtype.Int8        `json:"impersonator_user_id"`
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
 	OrganizationID     pgtype.Int8        `json:"organization_id"`
+	Realm              string             `json:"realm"`
 }
 
 type Role struct {
@@ -553,7 +605,7 @@ type StorageTrash struct {
 type User struct {
 	ID              int64              `json:"id"`
 	Uuid            uuid.UUID          `json:"uuid"`
-	Email           string             `json:"email"`
+	Email           pgtype.Text        `json:"email"`
 	PasswordHash    string             `json:"password_hash"`
 	Name            string             `json:"name"`
 	Surname         string             `json:"surname"`
@@ -565,6 +617,8 @@ type User struct {
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
 	Timezone        pgtype.Text        `json:"timezone"`
+	PhoneE164       pgtype.Text        `json:"phone_e164"`
+	PhoneVerifiedAt pgtype.Timestamptz `json:"phone_verified_at"`
 }
 
 type UserRole struct {
@@ -598,4 +652,30 @@ type WebauthnCredential struct {
 	LastUsedAt        pgtype.Timestamptz `json:"last_used_at"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type WhatsappConnectionEvent struct {
+	ID        int64              `json:"id"`
+	Type      string             `json:"type"`
+	Reason    pgtype.Text        `json:"reason"`
+	Alarm     bool               `json:"alarm"`
+	Raw       []byte             `json:"raw"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type WhatsappSetting struct {
+	ID                 int16              `json:"id"`
+	Provider           string             `json:"provider"`
+	InstanceName       string             `json:"instance_name"`
+	InstanceID         pgtype.Text        `json:"instance_id"`
+	UserTokenEnc       pgtype.Text        `json:"user_token_enc"`
+	Status             string             `json:"status"`
+	Jid                pgtype.Text        `json:"jid"`
+	PhoneE164          pgtype.Text        `json:"phone_e164"`
+	LastSeenAt         pgtype.Timestamptz `json:"last_seen_at"`
+	LastEventAt        pgtype.Timestamptz `json:"last_event_at"`
+	LastErrorReason    pgtype.Text        `json:"last_error_reason"`
+	SmsFallbackEnabled bool               `json:"sms_fallback_enabled"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
 }

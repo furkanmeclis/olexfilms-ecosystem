@@ -2,6 +2,7 @@ package ratelimit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -86,4 +87,38 @@ func (l *Limiter) allowWindow(ctx context.Context, action, subject string, limit
 		return false, ttl
 	}
 	return true, 0
+}
+
+// ErrUnavailable is returned by AllowStrict when Redis cannot be reached.
+var ErrUnavailable = errors.New("ratelimit: redis unavailable")
+
+// AllowStrict is Allow that fails closed: a missing or failing Redis returns
+// ErrUnavailable instead of allowing the request. Used for paid / abusable
+// actions such as OTP sends.
+func (l *Limiter) AllowStrict(ctx context.Context, action, subject string, limit int, window time.Duration) (bool, time.Duration, error) {
+	if l == nil || l.rdb == nil {
+		return false, 0, ErrUnavailable
+	}
+	subject = strings.TrimSpace(subject)
+	if limit <= 0 || window <= 0 || subject == "" {
+		return true, 0, nil
+	}
+	key := fmt.Sprintf("app:%s:rl:%s:%s", l.env, action, subject)
+	n, err := l.rdb.Incr(ctx, key).Result()
+	if err != nil {
+		return false, 0, ErrUnavailable
+	}
+	if n == 1 {
+		if err := l.rdb.Expire(ctx, key, window).Err(); err != nil {
+			return false, 0, ErrUnavailable
+		}
+	}
+	if n > int64(limit) {
+		ttl, ttlErr := l.rdb.TTL(ctx, key).Result()
+		if ttlErr != nil || ttl < 0 {
+			ttl = window
+		}
+		return false, ttl, nil
+	}
+	return true, 0, nil
 }
