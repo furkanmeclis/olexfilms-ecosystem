@@ -77,6 +77,10 @@ export interface paths {
         /**
          * Login
          * @description Authenticates with email/password and returns a token pair.
+         *     `realm=portal` signs a fleet / customer account in to the portal
+         *     (JWT `aud=portal`); staff get 403 `NO_PORTAL_ACCESS`. The default
+         *     realm `panel` refuses accounts whose only roles are customer / fleet
+         *     (403 `NO_PANEL_ACCESS`). The realm rule runs after the password check.
          */
         post: operations["postAuthLogin"];
         delete?: never;
@@ -2409,6 +2413,79 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portal/consents/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Legal texts the portal user still has to answer
+         * @description Returns the current version of each legal text (AI guidelines, K22)
+         *     the user has not answered yet. A declined text is not asked again
+         *     until a new version is published. Locale: `locale` query, else
+         *     Accept-Language; falls back to tr, then en.
+         */
+        get: operations["getPortalPendingConsents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/consents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record accept / decline of a legal text version
+         * @description Records the decision with time, IP and user agent. Answering the same
+         *     version twice keeps the first decision. A version that is no longer
+         *     current answers 409 `LEGAL_TEXT_STALE`.
+         */
+        post: operations["postPortalConsent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/legal-texts/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: "ai_guidelines";
+            };
+            cookie?: never;
+        };
+        /**
+         * Legal text editor (latest per locale + history)
+         * @description Requires `platform.legal_texts.write`.
+         */
+        get: operations["getPlatformLegalTexts"];
+        /**
+         * Publish a new version of one locale's text (Markdown)
+         * @description Requires `platform.legal_texts.write`. A changed body becomes a new
+         *     version and every portal user is asked again; an unchanged body is
+         *     not a new version (`created=false`).
+         */
+        put: operations["putPlatformLegalText"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2752,8 +2829,14 @@ export interface components {
             password: string;
             /** @description Authenticator or recovery code when 2FA is enabled */
             totp_code?: string;
-            /** @description When set, login is scoped to this organization membership */
+            /** @description When set, login is scoped to this organization membership (panel realm only) */
             organization_slug?: string;
+            /**
+             * @description Session realm (JWT `aud`). Refresh keeps it.
+             * @default panel
+             * @enum {string}
+             */
+            realm: "panel" | "portal";
         };
         OrganizationContextRequest: {
             /** @description Organization slug to scope the active session to */
@@ -4183,6 +4266,79 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["WhatsAppWebhookResult"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        LegalText: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            kind: "ai_guidelines";
+            locale: string;
+            version: number;
+            /** @description Markdown */
+            body: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        LegalTextList: {
+            items: components["schemas"]["LegalText"][];
+        };
+        LegalTextAdmin: {
+            kind: string;
+            /** @description Latest version per locale */
+            texts: components["schemas"]["LegalText"][];
+            /** @description Recent versions, newest first */
+            versions: components["schemas"]["LegalText"][];
+        };
+        LegalTextPublishRequest: {
+            locale: string;
+            /** @description Markdown */
+            body: string;
+        };
+        LegalTextPublish: {
+            text: components["schemas"]["LegalText"];
+            created: boolean;
+        };
+        ConsentDecisionRequest: {
+            /** @enum {string} */
+            kind: "ai_guidelines";
+            /** @description Locale of the text shown (from pending) */
+            locale: string;
+            version: number;
+            accepted: boolean;
+        };
+        Consent: {
+            /** Format: uuid */
+            uuid: string;
+            kind: string;
+            locale: string;
+            text_version: number;
+            accepted: boolean;
+            /** Format: date-time */
+            decided_at: string;
+        };
+        EnvelopeLegalTextList: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["LegalTextList"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeLegalTextAdmin: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["LegalTextAdmin"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeLegalTextPublish: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["LegalTextPublish"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeConsent: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Consent"];
             meta: components["schemas"]["ResponseMeta"];
         };
     };
@@ -8530,6 +8686,125 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+        };
+    };
+    getPortalPendingConsents: {
+        parameters: {
+            query?: {
+                locale?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLegalTextList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    postPortalConsent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsentDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Recorded */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeConsent"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            /** @description LEGAL_TEXT_STALE */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getPlatformLegalTexts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: "ai_guidelines";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLegalTextAdmin"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    putPlatformLegalText: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: "ai_guidelines";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LegalTextPublishRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLegalTextPublish"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
         };
     };
 }

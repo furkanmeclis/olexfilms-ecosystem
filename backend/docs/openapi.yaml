@@ -61,6 +61,11 @@ tags:
     description: In-app notification center, preferences, and admin send
   - name: WhatsApp
     description: WhatsApp gateway (wuzapi), phone OTP and the wuzapi webhook
+  - name: Portal
+    description: |
+      Customer / fleet portal (TEC-90). `/v1/portal/*` accepts portal session
+      tokens (JWT `aud=portal`) only; a portal token is refused on panel routes
+      (platform, tenant, organizations, ...) with 403 `REALM_FORBIDDEN`.
   - name: Features
     description: Module packages (feature flags), Özellikler page, dealer standard
   - name: Documents
@@ -142,6 +147,10 @@ paths:
       summary: Login
       description: |
         Authenticates with email/password and returns a token pair.
+        `realm=portal` signs a fleet / customer account in to the portal
+        (JWT `aud=portal`); staff get 403 `NO_PORTAL_ACCESS`. The default
+        realm `panel` refuses accounts whose only roles are customer / fleet
+        (403 `NO_PANEL_ACCESS`). The realm rule runs after the password check.
       security: []
       requestBody:
         required: true
@@ -4256,6 +4265,140 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /v1/portal/consents/pending:
+    get:
+      tags: [Portal]
+      operationId: getPortalPendingConsents
+      summary: Legal texts the portal user still has to answer
+      description: |
+        Returns the current version of each legal text (AI guidelines, K22)
+        the user has not answered yet. A declined text is not asked again
+        until a new version is published. Locale: `locale` query, else
+        Accept-Language; falls back to tr, then en.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: locale
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeLegalTextList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/portal/consents:
+    post:
+      tags: [Portal]
+      operationId: postPortalConsent
+      summary: Record accept / decline of a legal text version
+      description: |
+        Records the decision with time, IP and user agent. Answering the same
+        version twice keeps the first decision. A version that is no longer
+        current answers 409 `LEGAL_TEXT_STALE`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConsentDecisionRequest"
+      responses:
+        "201":
+          description: Recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeConsent"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: LEGAL_TEXT_STALE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/legal-texts/{kind}:
+    parameters:
+      - name: kind
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [ai_guidelines]
+    get:
+      tags: [Portal]
+      operationId: getPlatformLegalTexts
+      summary: Legal text editor (latest per locale + history)
+      description: Requires `platform.legal_texts.write`.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeLegalTextAdmin"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    put:
+      tags: [Portal]
+      operationId: putPlatformLegalText
+      summary: Publish a new version of one locale's text (Markdown)
+      description: |
+        Requires `platform.legal_texts.write`. A changed body becomes a new
+        version and every portal user is asked again; an unchanged body is
+        not a new version (`created=false`).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LegalTextPublishRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeLegalTextPublish"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -4937,7 +5080,12 @@ components:
           maxLength: 32
         organization_slug:
           type: string
-          description: When set, login is scoped to this organization membership
+          description: When set, login is scoped to this organization membership (panel realm only)
+        realm:
+          type: string
+          enum: [panel, portal]
+          default: panel
+          description: Session realm (JWT `aud`). Refresh keeps it.
 
     OrganizationContextRequest:
       type: object
@@ -6843,4 +6991,103 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/WhatsAppWebhookResult" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    LegalText:
+      type: object
+      required: [uuid, kind, locale, version, body, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        kind: { type: string, enum: [ai_guidelines] }
+        locale: { type: string }
+        version: { type: integer }
+        body: { type: string, description: Markdown }
+        created_at: { type: string, format: date-time }
+
+    LegalTextList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/LegalText" }
+
+    LegalTextAdmin:
+      type: object
+      required: [kind, texts, versions]
+      properties:
+        kind: { type: string }
+        texts:
+          type: array
+          description: Latest version per locale
+          items: { $ref: "#/components/schemas/LegalText" }
+        versions:
+          type: array
+          description: Recent versions, newest first
+          items: { $ref: "#/components/schemas/LegalText" }
+
+    LegalTextPublishRequest:
+      type: object
+      required: [locale, body]
+      properties:
+        locale: { type: string }
+        body: { type: string, maxLength: 65536, description: Markdown }
+
+    LegalTextPublish:
+      type: object
+      required: [text, created]
+      properties:
+        text: { $ref: "#/components/schemas/LegalText" }
+        created: { type: boolean }
+
+    ConsentDecisionRequest:
+      type: object
+      required: [kind, locale, version, accepted]
+      properties:
+        kind: { type: string, enum: [ai_guidelines] }
+        locale: { type: string, description: Locale of the text shown (from pending) }
+        version: { type: integer }
+        accepted: { type: boolean }
+
+    Consent:
+      type: object
+      required: [uuid, kind, locale, text_version, accepted, decided_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        kind: { type: string }
+        locale: { type: string }
+        text_version: { type: integer }
+        accepted: { type: boolean }
+        decided_at: { type: string, format: date-time }
+
+    EnvelopeLegalTextList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/LegalTextList" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeLegalTextAdmin:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/LegalTextAdmin" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeLegalTextPublish:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/LegalTextPublish" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeConsent:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Consent" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
