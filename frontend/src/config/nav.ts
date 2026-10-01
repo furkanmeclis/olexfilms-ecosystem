@@ -4,6 +4,7 @@ import {
   Building2,
   Blocks,
   Download,
+  FileText,
   HardDrive,
   KeyRound,
   LayoutDashboard,
@@ -75,6 +76,13 @@ export const platformNav = defineNav({
           href: routes.platform.activity.root,
           icon: Activity,
           permission: permissions.activity.read,
+        },
+        {
+          id: "document-templates",
+          titleKey: "layout.nav_document_templates",
+          href: routes.platform.documentTemplates.root,
+          icon: FileText,
+          permission: permissions.documentTemplates.read,
         },
         {
           id: "logs",

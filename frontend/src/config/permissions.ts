@@ -48,6 +48,8 @@ export const Permission = {
   PlatformAuthSettingsWrite: "platform.auth.settings.write",
   PlatformOrganizationsRead: "platform.organizations.read",
   PlatformOrganizationsWrite: "platform.organizations.write",
+  PlatformDocumentTemplatesRead: "platform.documents.templates.read",
+  PlatformDocumentTemplatesWrite: "platform.documents.templates.write",
 
   TenantSettingsRead: "tenant.settings.read",
   TenantSettingsWrite: "tenant.settings.write",
@@ -249,6 +251,10 @@ export const permissions = {
     tenantRead: Permission.OrganizationsRead,
     tenantWrite: Permission.OrganizationsWrite,
     supplierWrite: Permission.OrganizationsSupplierWrite,
+  },
+  documentTemplates: {
+    read: Permission.PlatformDocumentTemplatesRead,
+    write: Permission.PlatformDocumentTemplatesWrite,
   },
   members: {
     read: Permission.MembersRead,

@@ -31,6 +31,9 @@ import (
 	bulkmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/bulk"
 	bulkhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/bulk/handler"
 	bulkusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/bulk/usecase"
+	documentsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents"
+	dochandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/handler"
+	docusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/usecase"
 	exportmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports"
 	exporthandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/handler"
 	exportusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/usecase"
@@ -119,6 +122,7 @@ type Server struct {
 	githubSvc     *githubusecase.Service
 	oauthProvSvc  *oauthproviderusecase.Service
 	authSettings  *authsettingsusecase.Service
+	documents     *docusecase.Service
 	http          *http.Server
 	// Kept for integration tests that mount placeholder routes behind the
 	// real auth chain.
@@ -262,7 +266,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	s.features = featureSvc
 	orgmodule.RegisterRoutes(mux, orgSvc, uc, deps.Storage, tokens, loader, deps.Queries, ratelimit.New(deps.Redis, cfg.App.Env), stepUpSvc, featureSvc)
 	featuremodule.RegisterRoutes(mux, featurehandler.New(featureSvc, deps.Queries, notifSvc, activityRec, log), featureSvc, tokens, loader, deps.Queries)
-	pdfClient := pdfrender.New(cfg.Gotenberg.URL)
+	pdfClient := pdfrender.NewWithOptions(cfg.Gotenberg.URL, pdfrender.Options{MaxConnsPerHost: cfg.Queue.Concurrency})
 	realtime.RegisterRoutes(mux, realtime.NewHandler(rtIssuer, uc), tokens, loader)
 
 	nh := notifhandler.New(notifSvc)
@@ -297,6 +301,16 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 			)
 		}
 	}
+	var docQueue docusecase.Enqueuer
+	if deps.Queue != nil {
+		docQueue = deps.Queue
+	}
+	docSvc := docusecase.New(deps.DB, deps.Queries, deps.Storage, pdfClient, docQueue, pdfrender.ParseFontMode(cfg.Gotenberg.Fonts), log)
+	s.documents = docSvc
+	if s.worker != nil {
+		s.worker.WithDocsRender(docSvc.ProcessRender)
+	}
+	documentsmodule.RegisterRoutes(mux, dochandler.New(docSvc, ratelimit.New(deps.Redis, cfg.App.Env)), tokens, loader, deps.Queries)
 	exportmodule.RegisterRoutes(mux, exporthandler.New(exportSvc), tokens, loader, stepUpSvc, deps.Queries)
 	importmodule.RegisterRoutes(mux, importhandler.New(importSvc), tokens, loader, deps.Queries)
 	bulkmodule.RegisterRoutes(mux, bulkhandler.New(bulkSvc), tokens, loader)
@@ -495,3 +509,7 @@ func writeJSON(w http.ResponseWriter, status int, body any) {
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(body)
 }
+
+// Documents exposes the documents use case so business modules can register
+// their SourceLoader per document kind.
+func (s *Server) Documents() *docusecase.Service { return s.documents }

@@ -75,6 +75,8 @@ const (
 	PermPlatformAuthSettingsWrite         = "platform.auth.settings.write"
 	PermPlatformOrganizationsRead         = "platform.organizations.read"
 	PermPlatformOrganizationsWrite        = "platform.organizations.write"
+	PermPlatformDocumentTemplatesRead     = "platform.documents.templates.read"
+	PermPlatformDocumentTemplatesWrite    = "platform.documents.templates.write"
 	PermAuthSession                       = "auth.session"
 	PermNotificationsRead                 = "notifications.read"
 	PermNotificationsManage               = "notifications.manage"

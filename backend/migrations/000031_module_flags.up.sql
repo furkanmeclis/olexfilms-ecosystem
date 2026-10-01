@@ -96,14 +96,14 @@ INSERT INTO modules (key, level, default_enabled, is_paid, sort_order) VALUES
     ('e_invoice', 'addon', false, true, 360),
     ('short_url', 'addon', false, true, 370);
 
--- Permissions (rbac catalog, appended after privacy.anonymize = 710).
+-- Permissions (rbac catalog, appended after the TEC-88 document template permissions = 730).
 INSERT INTO permissions (name, slug, module, scopes, is_sensitive, super_admin_only, description, sort_order) VALUES
     ('Read module settings', 'modules.read', 'modules', ARRAY['managed', 'subtree']::text[], false, false,
-     'Module flags of the organization (managed) or of its dealers (subtree); request a module.', 720),
+     'Module flags of the organization (managed) or of its dealers (subtree); request a module.', 740),
     ('Manage dealer modules', 'modules.manage', 'modules', ARRAY['subtree']::text[], false, false,
-     'Switch modules of the distributor''s dealers and edit the dealer standard.', 730),
-    ('Read platform modules', 'platform.modules.read', 'platform', ARRAY['all']::text[], false, false, NULL, 740),
-    ('Write platform modules', 'platform.modules.write', 'platform', ARRAY['all']::text[], false, false, NULL, 750)
+     'Switch modules of the distributor''s dealers and edit the dealer standard.', 750),
+    ('Read platform modules', 'platform.modules.read', 'platform', ARRAY['all']::text[], false, false, NULL, 760),
+    ('Write platform modules', 'platform.modules.write', 'platform', ARRAY['all']::text[], false, false, NULL, 770)
 ON CONFLICT (slug) DO UPDATE SET
     name = EXCLUDED.name,
     module = EXCLUDED.module,

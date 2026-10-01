@@ -4,7 +4,7 @@
 // core modules can never be switched off, standard modules are on by default
 // and may be switched off, add-ons are off by default and are switched on by
 // a higher level. The catalog in this file is the single source of truth for
-// module keys: migration 000030 seeds the same rows, SyncCatalog reconciles a
+// module keys: migration 000031 seeds the same rows, SyncCatalog reconciles a
 // database at start-up and the frontend reads the list from GET /v1/features.
 package features
 

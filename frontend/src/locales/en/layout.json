@@ -74,5 +74,6 @@
   "nav_billing_dashboard": "Dashboard",
   "breadcrumb_label": "Breadcrumb",
   "nav_features": "Features",
-  "nav_modules": "Modules"
+  "nav_modules": "Modules",
+  "nav_document_templates": "PDF templates"
 }

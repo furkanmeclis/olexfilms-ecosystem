@@ -61,6 +61,8 @@ tags:
     description: In-app notification center, preferences, and admin send
   - name: Features
     description: Module packages (feature flags), Özellikler page, dealer standard
+  - name: Documents
+    description: PDF document templates (Gotenberg) and rendered documents
 
 paths:
   /healthz:
@@ -2814,6 +2816,332 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /v1/platform/document-templates:
+    get:
+      tags: [Documents]
+      operationId: listDocumentTemplates
+      summary: List PDF document template versions
+      description: Without `current=false` only active and draft versions are listed. Requires platform.documents.templates.read.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: kind
+          in: query
+          schema: { $ref: "#/components/schemas/DocumentKind" }
+        - name: language
+          in: query
+          schema: { type: string }
+        - name: current
+          in: query
+          schema: { type: boolean, default: true }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Template versions page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDocumentTemplatePage"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      tags: [Documents]
+      operationId: saveDocumentTemplateDraft
+      summary: Save the open draft of a kind / brand / language
+      description: Updates the open draft or opens the next version. HTML is sanitized server-side; unknown variables are rejected with 422. Requires platform.documents.templates.write.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentTemplateSaveRequest"
+      responses:
+        "200":
+          description: Saved draft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDocumentTemplate"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/document-templates/kinds:
+    get:
+      tags: [Documents]
+      operationId: listDocumentKinds
+      summary: Document kinds with their variable schema
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Kinds
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDocumentKindList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/document-templates/preview:
+    post:
+      tags: [Documents]
+      operationId: previewDocumentTemplate
+      summary: Render editor HTML or a stored version with sample data
+      description: Synchronous Gotenberg call (rate limited per user). Nothing is stored.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentPreviewRequest"
+      responses:
+        "200":
+          description: PDF
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/document-templates/{uuid}:
+    get:
+      tags: [Documents]
+      operationId: getDocumentTemplate
+      summary: Get a template version with HTML and editor state
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Template version
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDocumentTemplate"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Documents]
+      operationId: updateDocumentTemplateDraft
+      summary: Edit a draft version (published versions are immutable, 409)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentTemplateSaveRequest"
+      responses:
+        "200":
+          description: Updated draft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDocumentTemplate"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/BadRequest"
+
+  /v1/platform/document-templates/{uuid}/publish:
+    post:
+      tags: [Documents]
+      operationId: publishDocumentTemplate
+      summary: Publish a draft (retires the previous active version)
+      description: Rendered PDFs of older versions are no longer served; the cache key contains the template hash and version.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Published version
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDocumentTemplate"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/platform/document-templates/{uuid}/versions:
+    get:
+      tags: [Documents]
+      operationId: listDocumentTemplateVersions
+      summary: Every version of the template's kind / brand / language
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Versions, newest first
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDocumentTemplateList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/tenant/documents/render:
+    post:
+      tags: [Documents]
+      operationId: requestDocumentRender
+      summary: Request the PDF of a business record in the active organization
+      description: 200 with the cached document when ready, 202 while worker-docs renders it. Repeated requests for the same cache key queue a single task. Visibility comes from the source module (SourceLoader).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentRenderRequest"
+      responses:
+        "200":
+          description: Ready document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDocumentRender"
+        "202":
+          description: Queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDocumentRender"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/tenant/documents/{uuid}:
+    get:
+      tags: [Documents]
+      operationId: getDocumentRender
+      summary: Document render status
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Render
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDocumentRender"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/tenant/documents/{uuid}/download:
+    get:
+      tags: [Documents]
+      operationId: downloadDocument
+      summary: Stream a ready PDF (other organizations get 404)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: PDF bytes
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/features:
     get:
       tags: [Features]
@@ -4973,6 +5301,150 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/TenantSettings" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    DocumentKind:
+      type: string
+      enum: [service, measurement, contract, order_slip, invoice_view, warranty]
+
+    DocumentVariable:
+      type: object
+      required: [key, type, group, label_tr, label_en]
+      properties:
+        key: { type: string, example: customer_name }
+        type: { type: string, enum: [text, html] }
+        group: { type: string }
+        label_tr: { type: string }
+        label_en: { type: string }
+
+    DocumentKindInfo:
+      type: object
+      required: [kind, variables, has_source]
+      properties:
+        kind: { $ref: "#/components/schemas/DocumentKind" }
+        variables:
+          type: array
+          items: { $ref: "#/components/schemas/DocumentVariable" }
+        has_source: { type: boolean, description: A business module registered a SourceLoader }
+
+    DocumentTemplate:
+      type: object
+      required: [uuid, kind, language, name, version, status, is_active, variables, content_hash, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        kind: { $ref: "#/components/schemas/DocumentKind" }
+        brand_uuid: { type: [string, "null"], format: uuid }
+        brand_slug: { type: [string, "null"] }
+        language: { type: string, example: tr }
+        name: { type: string }
+        version: { type: integer }
+        status: { type: string, enum: [draft, active, superseded] }
+        is_active: { type: boolean }
+        html: { type: [string, "null"] }
+        lexical_json: {}
+        variables:
+          type: array
+          items: { type: string }
+        content_hash: { type: string }
+        published_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    DocumentTemplateSaveRequest:
+      type: object
+      required: [html]
+      properties:
+        kind: { $ref: "#/components/schemas/DocumentKind" }
+        brand_slug: { type: string, description: Empty = platform default }
+        language: { type: string }
+        name: { type: string, maxLength: 150 }
+        html: { type: string, description: "Editor HTML with {{key}} placeholders" }
+        lexical_json: { description: Lexical editor state }
+
+    DocumentPreviewRequest:
+      type: object
+      properties:
+        kind: { $ref: "#/components/schemas/DocumentKind" }
+        template_uuid: { type: [string, "null"], format: uuid }
+        html: { type: string }
+        locale: { type: string }
+
+    DocumentRenderRequest:
+      type: object
+      required: [kind, source_id]
+      properties:
+        kind: { $ref: "#/components/schemas/DocumentKind" }
+        source_id: { type: string, maxLength: 64 }
+        locale: { type: string }
+
+    DocumentRender:
+      type: object
+      required: [uuid, kind, source_type, source_id, locale, status, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        kind: { $ref: "#/components/schemas/DocumentKind" }
+        source_type: { type: string }
+        source_id: { type: string }
+        locale: { type: string }
+        status: { type: string, enum: [pending, processing, ready, failed] }
+        size_bytes: { type: [integer, "null"] }
+        sha256: { type: [string, "null"] }
+        error: { type: [string, "null"] }
+        download_url: { type: [string, "null"] }
+        rendered_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+
+    EnvelopeDocumentTemplate:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/DocumentTemplate" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeDocumentTemplateList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: 
+          type: array
+          items: { $ref: "#/components/schemas/DocumentTemplate" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeDocumentKindList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: 
+          type: array
+          items: { $ref: "#/components/schemas/DocumentKindInfo" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeDocumentRender:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/DocumentRender" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeDocumentTemplatePage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/DocumentTemplate" }
+            total: { type: integer }
+            limit: { type: integer }
+            offset: { type: integer }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     ModuleLevel:

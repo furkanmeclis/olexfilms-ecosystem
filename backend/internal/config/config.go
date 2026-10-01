@@ -35,6 +35,9 @@ type Config struct {
 // GotenbergConfig controls HTML→PDF rendering via Gotenberg Chromium.
 type GotenbergConfig struct {
 	URL string
+	// Fonts is PDF_FONTS: embedded (Noto subsets inlined, default) or
+	// system (fonts installed in the Gotenberg image).
+	Fonts string
 }
 
 // AuthConfig holds NextAuth adapter integration settings.
@@ -269,7 +272,8 @@ func Load() (Config, error) {
 			IndexPrefix: getEnv("MEILI_INDEX_PREFIX", "app"),
 		},
 		Gotenberg: GotenbergConfig{
-			URL: getEnv("GOTENBERG_URL", "http://127.0.0.1:3001"),
+			URL:   getEnv("GOTENBERG_URL", "http://127.0.0.1:3001"),
+			Fonts: getEnv("PDF_FONTS", "embedded"),
 		},
 	}
 

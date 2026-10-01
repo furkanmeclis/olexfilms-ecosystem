@@ -150,6 +150,11 @@ var Permissions = []PermissionDef{
 		Description: "KVKK/GDPR anonymization (K19). Requires step-up.",
 	},
 
+	// TEC-88: PDF document templates (center admin editor). Appended last so
+	// earlier sort orders stay stable; migration 000030 seeds them.
+	platformPerm(PermPlatformDocumentTemplatesRead, "Read document templates"),
+	platformPerm(PermPlatformDocumentTemplatesWrite, "Write document templates"),
+
 	// Module packages (TEC-86). Appended so earlier sort orders stay put.
 	{
 		Slug: PermModulesRead, Name: "Read module settings", Module: "modules",

@@ -121,5 +121,7 @@
   "labels.modules.manage": "Manage dealer modules",
   "labels.platform.modules.read": "View platform modules",
   "labels.platform.modules.write": "Manage platform modules",
-  "groups.modules": "Modules"
+  "groups.modules": "Modules",
+  "labels.platform.documents.templates.read": "Read document templates",
+  "labels.platform.documents.templates.write": "Write document templates"
 }

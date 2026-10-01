@@ -26,6 +26,11 @@ func VehicleBrandLogoObjectKey(brandUUID uuid.UUID, ext string) string {
 	return fmt.Sprintf("vehicle-brands/%s/logo.%s", brandUUID.String(), trimExt(ext))
 }
 
+// DocumentObjectKey builds documents/{org}/{kind}/{render}.pdf (TEC-88).
+func DocumentObjectKey(orgUUID uuid.UUID, kind string, renderUUID uuid.UUID) string {
+	return fmt.Sprintf("documents/%s/%s/%s.pdf", orgUUID.String(), kind, renderUUID.String())
+}
+
 // ContractExecutedPDFObjectKey builds contracts/{org}/{instance}/executed.pdf.
 func ContractExecutedPDFObjectKey(orgUUID, instanceUUID uuid.UUID) string {
 	return fmt.Sprintf("contracts/%s/%s/executed.pdf", orgUUID.String(), instanceUUID.String())
