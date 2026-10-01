@@ -1,8 +1,27 @@
 {
   "locale": "zh-CN",
   "source": "Legacy app olexfilms/lang/zh_CN (machine-translated in places: plate, status, save, order corrected), TEC-138",
-  "brands": ["Olexfilms", "Olex", "Glorian", "NexPTG", "WhatsApp", "Meilisearch"],
-  "keep": ["SKU", "IBAN", "VIN", "PDF", "CSV", "Excel", "JSON", "OTP", "SMS", "UUID", "Slug"],
+  "brands": [
+    "Olexfilms",
+    "Olex",
+    "Glorian",
+    "NexPTG",
+    "WhatsApp",
+    "Meilisearch"
+  ],
+  "keep": [
+    "SKU",
+    "IBAN",
+    "VIN",
+    "PDF",
+    "CSV",
+    "Excel",
+    "JSON",
+    "OTP",
+    "SMS",
+    "UUID",
+    "Slug"
+  ],
   "terms": {
     "customer": "客户",
     "dealer": "经销商",

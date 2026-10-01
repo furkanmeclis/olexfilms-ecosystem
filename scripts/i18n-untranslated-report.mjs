@@ -40,7 +40,8 @@ const UNIVERSAL = [
   "Lexical", "Expo", "WhatsApp", "Telegram", "Google", "Apple", "Microsoft", "GitHub",
   "Slack", "Stripe", "iyzico", "Anthropic", "Claude", "OpenAI", "Twilio", "Netgsm",
   "wuzapi", "Olexfilms", "Olex", "Glorian", "NexPTG", "Dokploy", "TRY", "EUR", "USD",
-  "GBP", "Bold", "A4", "A5", "Letter", "Legal", "px", "Email", "E-mail", "Logo",
+  "GBP", "Bold", "A3", "A4", "A5", "Letter", "Legal", "px", "Email", "E-mail", "Logo",
+  "Facebook", "TSV", "CMS", "OAuth", "Regex", "RSA", "PEM", "BEGIN", "PRIVATE", "KEY",
 ];
 
 const argv = process.argv.slice(2);

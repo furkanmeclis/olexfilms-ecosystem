@@ -1,8 +1,27 @@
 {
   "locale": "bg",
   "source": "Legacy app olexfilms/lang/bg, reviewed and corrected (TEC-138)",
-  "brands": ["Olexfilms", "Olex", "Glorian", "NexPTG", "WhatsApp", "Meilisearch"],
-  "keep": ["SKU", "IBAN", "VIN", "PDF", "CSV", "Excel", "JSON", "OTP", "SMS", "UUID", "Slug"],
+  "brands": [
+    "Olexfilms",
+    "Olex",
+    "Glorian",
+    "NexPTG",
+    "WhatsApp",
+    "Meilisearch"
+  ],
+  "keep": [
+    "SKU",
+    "IBAN",
+    "VIN",
+    "PDF",
+    "CSV",
+    "Excel",
+    "JSON",
+    "OTP",
+    "SMS",
+    "UUID",
+    "Slug"
+  ],
   "terms": {
     "customer": "клиент",
     "dealer": "дилър",

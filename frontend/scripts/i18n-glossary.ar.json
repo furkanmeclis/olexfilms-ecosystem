@@ -1,8 +1,27 @@
 {
   "locale": "ar",
   "source": "No legacy Arabic catalog; domain terms chosen for TEC-138 (Modern Standard Arabic, automotive film/coating trade)",
-  "brands": ["Olexfilms", "Olex", "Glorian", "NexPTG", "WhatsApp", "Meilisearch"],
-  "keep": ["SKU", "IBAN", "VIN", "PDF", "CSV", "Excel", "JSON", "OTP", "SMS", "UUID", "Slug"],
+  "brands": [
+    "Olexfilms",
+    "Olex",
+    "Glorian",
+    "NexPTG",
+    "WhatsApp",
+    "Meilisearch"
+  ],
+  "keep": [
+    "SKU",
+    "IBAN",
+    "VIN",
+    "PDF",
+    "CSV",
+    "Excel",
+    "JSON",
+    "OTP",
+    "SMS",
+    "UUID",
+    "Slug"
+  ],
   "bidi": "Wrap Latin-script values (plate, VIN, codes, e-mail) that sit inside Arabic sentences in U+2068 FSI ... U+2069 PDI only where they would otherwise reorder; plain {{param}} labels need no marks.",
   "terms": {
     "customer": "عميل",

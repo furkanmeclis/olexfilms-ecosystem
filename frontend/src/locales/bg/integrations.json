@@ -72,7 +72,7 @@
   "apple.toast.failed": "Настройките за Apple не можаха да бъдат запазени",
   "apple.form.section_title": "Вход с Apple",
   "apple.form.section_hint": "Apple изисква HTTPS (включително локално). Използвайте Services ID като Client ID и генериран JWT като тайна на клиента.",
-  "apple.form.callback_hint": "Return URL: {{url}}",
+  "apple.form.callback_hint": "URL за връщане: {{url}}",
   "apple.form.login_enabled": "Включи вход с Apple",
   "apple.form.login_enabled_hint": "Изисква Services ID и JWT тайна на клиента.",
   "apple.form.register_enabled": "Разреши самостоятелна регистрация с Apple",

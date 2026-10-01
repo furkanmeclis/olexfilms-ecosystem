@@ -1,8 +1,36 @@
 {
   "locale": "az",
   "source": "Legacy app olexfilms/lang/az, reviewed and corrected (TEC-138); Latin script",
-  "brands": ["Olexfilms", "Olex", "Glorian", "NexPTG", "WhatsApp", "Meilisearch"],
-  "keep": ["SKU", "IBAN", "VIN", "PDF", "CSV", "Excel", "JSON", "OTP", "SMS", "UUID", "Slug", "Status", "Model", "Plan", "Bank"],
+  "brands": [
+    "Olexfilms",
+    "Olex",
+    "Glorian",
+    "NexPTG",
+    "WhatsApp",
+    "Meilisearch"
+  ],
+  "keep": [
+    "SKU",
+    "IBAN",
+    "VIN",
+    "PDF",
+    "CSV",
+    "Excel",
+    "JSON",
+    "OTP",
+    "SMS",
+    "UUID",
+    "Slug",
+    "Status",
+    "Model",
+    "Plan",
+    "Bank",
+    "Link",
+    "Format",
+    "Normal",
+    "Video",
+    "Audio"
+  ],
   "terms": {
     "customer": "müştəri",
     "dealer": "diler",

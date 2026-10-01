@@ -72,7 +72,7 @@
   "apple.toast.failed": "Δεν ήταν δυνατή η αποθήκευση των ρυθμίσεων Apple",
   "apple.form.section_title": "Σύνδεση με Apple",
   "apple.form.section_hint": "Η Apple απαιτεί HTTPS (και τοπικά). Χρησιμοποιήστε ένα Services ID ως Client ID και ένα παραγόμενο JWT ως μυστικό πελάτη.",
-  "apple.form.callback_hint": "Return URL: {{url}}",
+  "apple.form.callback_hint": "URL επιστροφής: {{url}}",
   "apple.form.login_enabled": "Ενεργοποίηση σύνδεσης με Apple",
   "apple.form.login_enabled_hint": "Απαιτεί Services ID και JWT μυστικό πελάτη.",
   "apple.form.register_enabled": "Να επιτρέπεται αυτοεγγραφή με Apple",
