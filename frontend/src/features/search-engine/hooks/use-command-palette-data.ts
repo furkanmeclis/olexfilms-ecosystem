@@ -6,6 +6,7 @@ import { createElement, useCallback, useMemo, useState } from "react";
 import type { AppLayoutVariant } from "@/components/layout/app-layout";
 import { buildNavPageItems } from "@/features/search-engine/lib/nav-pages";
 import { parsePaletteQuery } from "@/features/search-engine/lib/parse-query";
+import { resolveSearchHitHref } from "@/features/search-engine/lib/hit-href";
 import { readRecentItems } from "@/features/search-engine/lib/recent";
 import {
   buildSpecPrefixMap,
@@ -65,8 +66,11 @@ export function useCommandPaletteData(
   const remoteSpecs = useMemo(() => {
     const items = specsQuery.data?.items ?? [];
     return items.filter((spec) => {
-      if (spec.tenant_scoped && variant !== "tenant") return false;
-      if (!spec.tenant_scoped && variant === "tenant") return false;
+      // Brand-scoped specs (catalog products, TEC-145) filter on the active
+      // organization's brand, so they belong to the tenant shell too.
+      const tenantOnly = Boolean(spec.tenant_scoped || spec.brand_scoped);
+      if (tenantOnly && variant !== "tenant") return false;
+      if (!tenantOnly && variant === "tenant") return false;
       return !spec.permission || can(spec.permission);
     });
   }, [can, specsQuery.data?.items, variant]);
@@ -126,11 +130,14 @@ export function useCommandPaletteData(
       spec: hit.spec,
       label: hit.title,
       description: hit.subtitle,
-      href: hit.href,
+      href: resolveSearchHitHref(
+        hit.href,
+        variant === "tenant" ? tenantSlug : null,
+      ),
       iconKey: hit.icon,
       group: t(`search.specs_${hit.spec}`),
     }));
-  }, [remoteQuery.data, t]);
+  }, [remoteQuery.data, t, tenantSlug, variant]);
 
   const specOptions = useMemo(() => {
     const options = [

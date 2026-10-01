@@ -17,6 +17,8 @@ export type RemoteSearchSpec = {
   permission?: string;
   icon?: string;
   tenant_scoped?: boolean;
+  /** Documents carry brand_id; search filters on the active brand. */
+  brand_scoped?: boolean;
 };
 
 export type SearchHit = {

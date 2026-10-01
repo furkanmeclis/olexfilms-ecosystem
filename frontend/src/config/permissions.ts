@@ -291,6 +291,10 @@ export const permissions = {
     read: Permission.CustomersRead,
     write: Permission.CustomersWrite,
   },
+  catalog: {
+    read: Permission.CatalogRead,
+    write: Permission.CatalogWrite,
+  },
   pricing: {
     purchaseRead: Permission.PricingPurchaseRead,
     saleRead: Permission.PricingSaleRead,
