@@ -16,7 +16,7 @@ type AppSheetProps = {
   title: string;
   description?: string;
   children?: ReactNode;
-  side?: "top" | "bottom" | "left" | "right";
+  side?: "top" | "bottom" | "start" | "end";
 };
 
 export function AppSheet({
@@ -25,7 +25,7 @@ export function AppSheet({
   title,
   description,
   children,
-  side = "right",
+  side = "end",
 }: AppSheetProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

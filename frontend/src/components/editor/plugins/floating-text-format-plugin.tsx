@@ -193,6 +193,7 @@ function TextFormatFloatingToolbar({
   return (
     <div
       ref={popupCharStylesEditorRef}
+      // eslint-disable-next-line local/no-physical-classes -- positioned by JS from physical coordinates
       className="bg-popover text-popover-foreground absolute top-0 left-0 flex gap-1 rounded-md border p-1 opacity-0 shadow-md transition-opacity duration-300 will-change-transform"
     >
       {editor.isEditable() && (

@@ -544,7 +544,7 @@ export function StorageExplorer() {
       />
 
       <Sheet open={mobileNav} onOpenChange={setMobileNav}>
-        <SheetContent side="left" className="w-72 p-0">
+        <SheetContent side="start" className="w-72 p-0">
           <SheetHeader className="p-4">
             <SheetTitle>{t("storage.mobile_menu")}</SheetTitle>
           </SheetHeader>

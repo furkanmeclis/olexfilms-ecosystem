@@ -18,7 +18,7 @@ type AppDrawerProps = {
   description?: string;
   children?: ReactNode;
   footer?: ReactNode;
-  side?: "left" | "right";
+  side?: "start" | "end";
   /** Width preset for form / detail drawers */
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
@@ -31,7 +31,7 @@ const sizeClass: Record<NonNullable<AppDrawerProps["size"]>, string> = {
   xl: "sm:max-w-xl",
 };
 
-/** Drawer alias — left/right sheet for denser admin workflows */
+/** Drawer alias — start/end (reading direction) sheet for denser admin workflows */
 export function AppDrawer({
   open,
   onOpenChange,
@@ -39,7 +39,7 @@ export function AppDrawer({
   description,
   children,
   footer,
-  side = "right",
+  side = "end",
   size = "sm",
   className,
 }: AppDrawerProps) {
@@ -53,7 +53,7 @@ export function AppDrawer({
           className,
         )}
       >
-        <SheetHeader className="shrink-0 pr-8 text-left">
+        <SheetHeader className="shrink-0 pe-8 text-start">
           <SheetTitle>{title}</SheetTitle>
           {description ? (
             <SheetDescription>{description}</SheetDescription>

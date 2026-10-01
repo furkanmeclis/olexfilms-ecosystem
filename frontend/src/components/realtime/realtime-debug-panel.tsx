@@ -152,7 +152,7 @@ export function RealtimeDebugPanel() {
         onClick={() => setPanelMode("open")}
         className={cn(
           "border-border bg-background/95 text-foreground",
-          "fixed bottom-3 left-3 z-[100] flex items-center gap-2 rounded-full",
+          "fixed start-3 bottom-3 z-[100] flex items-center gap-2 rounded-full",
           "border px-2.5 py-1.5 font-mono text-[11px] shadow-md",
           "hover:bg-accent transition-colors",
         )}
@@ -178,7 +178,7 @@ export function RealtimeDebugPanel() {
       aria-label="Realtime debug"
       className={cn(
         "border-border bg-background/95",
-        "fixed bottom-3 left-3 z-[100] w-[min(100vw-1.5rem,22rem)]",
+        "fixed start-3 bottom-3 z-[100] w-[min(100vw-1.5rem,22rem)]",
         "overflow-hidden rounded-lg border shadow-lg",
       )}
     >

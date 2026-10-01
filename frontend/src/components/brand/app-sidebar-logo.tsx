@@ -19,7 +19,7 @@ export function AppSidebarLogo({ className }: AppSidebarLogoProps) {
       >
         <AppMark className="size-7" />
       </span>
-      <span className="grid flex-1 text-left text-sm leading-tight">
+      <span className="grid flex-1 text-start text-sm leading-tight">
         <span className="truncate font-medium">{brand.productName}</span>
         <span className="truncate text-xs opacity-70">{brand.subtitle}</span>
       </span>

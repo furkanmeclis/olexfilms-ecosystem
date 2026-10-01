@@ -14,7 +14,7 @@ export function PublicAuthShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="bg-muted relative flex min-h-svh flex-col items-center justify-center p-6 md:p-10">
-      <div className="absolute top-4 right-4 flex items-center gap-1">
+      <div className="absolute end-4 top-4 flex items-center gap-1">
         <LocaleSwitch />
         <ThemeSwitch />
       </div>

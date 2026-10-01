@@ -244,18 +244,21 @@ export function ImageResizer({
         }}
       />
       <div
+        // eslint-disable-next-line local/no-physical-classes -- drag handles map to physical east/west in JS
         className="border-background bg-primary absolute -top-1.5 -right-1.5 h-3 w-3 cursor-nesw-resize rounded-sm border-2 shadow-sm"
         onPointerDown={(event) => {
           handlePointerDown(event, Direction.north | Direction.east);
         }}
       />
       <div
+        // eslint-disable-next-line local/no-physical-classes -- drag handles map to physical east/west in JS
         className="border-background bg-primary absolute top-1/2 -right-1.5 h-3 w-3 -translate-y-1/2 cursor-ew-resize rounded-sm border-2 shadow-sm"
         onPointerDown={(event) => {
           handlePointerDown(event, Direction.east);
         }}
       />
       <div
+        // eslint-disable-next-line local/no-physical-classes -- drag handles map to physical east/west in JS
         className="border-background bg-primary absolute -right-1.5 -bottom-1.5 h-3 w-3 cursor-nwse-resize rounded-sm border-2 shadow-sm"
         onPointerDown={(event) => {
           handlePointerDown(event, Direction.south | Direction.east);
@@ -268,18 +271,21 @@ export function ImageResizer({
         }}
       />
       <div
+        // eslint-disable-next-line local/no-physical-classes -- drag handles map to physical east/west in JS
         className="border-background bg-primary absolute -bottom-1.5 -left-1.5 h-3 w-3 cursor-nesw-resize rounded-sm border-2 shadow-sm"
         onPointerDown={(event) => {
           handlePointerDown(event, Direction.south | Direction.west);
         }}
       />
       <div
+        // eslint-disable-next-line local/no-physical-classes -- drag handles map to physical east/west in JS
         className="border-background bg-primary absolute top-1/2 -left-1.5 h-3 w-3 -translate-y-1/2 cursor-ew-resize rounded-sm border-2 shadow-sm"
         onPointerDown={(event) => {
           handlePointerDown(event, Direction.west);
         }}
       />
       <div
+        // eslint-disable-next-line local/no-physical-classes -- drag handles map to physical east/west in JS
         className="border-background bg-primary absolute -top-1.5 -left-1.5 h-3 w-3 cursor-nwse-resize rounded-sm border-2 shadow-sm"
         onPointerDown={(event) => {
           handlePointerDown(event, Direction.north | Direction.west);

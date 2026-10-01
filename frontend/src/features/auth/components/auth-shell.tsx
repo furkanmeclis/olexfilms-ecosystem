@@ -14,7 +14,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="from-background via-muted/70 to-accent/25 relative flex min-h-svh flex-col items-center justify-center bg-gradient-to-br p-6 md:p-10">
-      <div className="absolute top-4 right-4 flex items-center gap-1">
+      <div className="absolute end-4 top-4 flex items-center gap-1">
         <LocaleSwitch />
         <ThemeSwitch />
       </div>

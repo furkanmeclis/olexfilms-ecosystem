@@ -19,7 +19,7 @@ export function ContentEditable({
       aria-placeholder={placeholder}
       placeholder={
         <div
-          className={`text-muted-foreground pointer-events-none absolute top-0 left-0 overflow-hidden px-4 py-2 text-ellipsis select-none ${placeholderClassName ?? ""}`.trim()}
+          className={`text-muted-foreground pointer-events-none absolute start-0 top-0 overflow-hidden px-4 py-2 text-ellipsis select-none ${placeholderClassName ?? ""}`.trim()}
         >
           {placeholder}
         </div>

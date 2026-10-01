@@ -3,7 +3,9 @@ import { type EditorThemeClasses } from "lexical";
 import "./editor-theme.css";
 
 export const editorTheme: EditorThemeClasses = {
+  // eslint-disable-next-line local/no-physical-classes -- Lexical block direction / JS table geometry are physical
   ltr: "text-left",
+  // eslint-disable-next-line local/no-physical-classes -- Lexical block direction / JS table geometry are physical
   rtl: "text-right",
   heading: {
     h1: "scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl",
@@ -14,15 +16,15 @@ export const editorTheme: EditorThemeClasses = {
     h6: "scroll-m-20 text-base font-semibold tracking-tight",
   },
   paragraph: "leading-7 [&:not(:first-child)]:mt-6",
-  quote: "mt-6 border-l-2 pl-6 italic",
+  quote: "mt-6 border-s-2 ps-6 italic",
   link: "text-primary underline-offset-4 hover:underline hover:cursor-pointer",
   list: {
     checklist: "relative",
     listitem: "mx-8",
     listitemChecked:
-      'relative mx-2 px-6 list-none outline-none line-through before:content-[""] before:w-4 before:h-4 before:top-0.5 before:left-0 before:cursor-pointer before:block before:bg-cover before:absolute before:border before:border-primary before:rounded before:bg-primary before:bg-no-repeat after:content-[""] after:cursor-pointer after:border-white after:border-solid after:absolute after:block after:top-[6px] after:w-[3px] after:left-[7px] after:right-[7px] after:h-[6px] after:rotate-45 after:border-r-2 after:border-b-2 after:border-l-0 after:border-t-0',
+      'relative mx-2 px-6 list-none outline-none line-through before:content-[""] before:w-4 before:h-4 before:top-0.5 before:start-0 before:cursor-pointer before:block before:bg-cover before:absolute before:border before:border-primary before:rounded before:bg-primary before:bg-no-repeat after:content-[""] after:cursor-pointer after:border-white after:border-solid after:absolute after:block after:top-[6px] after:w-[3px] after:start-[7px] after:end-[7px] after:h-[6px] after:rotate-45 after:border-e-2 after:border-b-2 after:border-s-0 after:border-t-0',
     listitemUnchecked:
-      'relative mx-2 px-6 list-none outline-none before:content-[""] before:w-4 before:h-4 before:top-0.5 before:left-0 before:cursor-pointer before:block before:bg-cover before:absolute before:border before:border-primary before:rounded',
+      'relative mx-2 px-6 list-none outline-none before:content-[""] before:w-4 before:h-4 before:top-0.5 before:start-0 before:cursor-pointer before:block before:bg-cover before:absolute before:border before:border-primary before:rounded',
     nested: {
       listitem: "list-none before:hidden after:hidden",
     },
@@ -94,21 +96,26 @@ export const editorTheme: EditorThemeClasses = {
   characterLimit: "!bg-destructive/50",
   table: "EditorTheme__table w-fit overflow-scroll border-collapse",
   tableCell:
-    'EditorTheme__tableCell w-24 relative border px-4 py-2 text-left [&[align=center]]:text-center [&[align=right]]:text-right"',
+    // eslint-disable-next-line local/no-physical-classes -- HTML align=right is physical
+    'EditorTheme__tableCell w-24 relative border px-4 py-2 text-start [&[align=center]]:text-center [&[align=right]]:text-right"',
   tableCellActionButton:
     "EditorTheme__tableCellActionButton bg-background block border-0 rounded-2xl w-5 h-5 text-foreground cursor-pointer",
   tableCellActionButtonContainer:
+    // eslint-disable-next-line local/no-physical-classes -- Lexical block direction / JS table geometry are physical
     "EditorTheme__tableCellActionButtonContainer block right-1 top-1.5 absolute z-10 w-5 h-5",
   tableCellEditing: "EditorTheme__tableCellEditing rounded-sm shadow-sm",
   tableCellHeader:
-    "EditorTheme__tableCellHeader bg-muted border px-4 py-2 text-left font-bold [&[align=center]]:text-center [&[align=right]]:text-right",
+    // eslint-disable-next-line local/no-physical-classes -- HTML align=right is physical
+    "EditorTheme__tableCellHeader bg-muted border px-4 py-2 text-start font-bold [&[align=center]]:text-center [&[align=right]]:text-right",
   tableCellPrimarySelected:
+    // eslint-disable-next-line local/no-physical-classes -- Lexical block direction / JS table geometry are physical
     "EditorTheme__tableCellPrimarySelected border border-primary border-solid block h-[calc(100%-2px)] w-[calc(100%-2px)] absolute -left-[1px] -top-[1px] z-10 ",
   tableCellResizer:
+    // eslint-disable-next-line local/no-physical-classes -- Lexical block direction / JS table geometry are physical
     "EditorTheme__tableCellResizer absolute -right-1 h-full w-2 cursor-ew-resize z-10 top-0",
   tableCellSelected: "EditorTheme__tableCellSelected bg-muted",
   tableCellSortedIndicator:
-    "EditorTheme__tableCellSortedIndicator block opacity-50 bsolute bottom-0 left-0 w-full h-1 bg-muted",
+    "EditorTheme__tableCellSortedIndicator block opacity-50 bsolute bottom-0 start-0 w-full h-1 bg-muted",
   tableResizeRuler:
     "EditorTheme__tableCellResizeRuler block absolute w-[1px] h-full bg-primary top-0",
   tableRowStriping:

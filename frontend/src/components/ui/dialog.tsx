@@ -41,7 +41,7 @@ export const DialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="ring-offset-background focus:ring-ring absolute top-4 right-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:outline-none">
+      <DialogPrimitive.Close className="ring-offset-background focus:ring-ring absolute end-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:outline-none">
         <X className="h-4 w-4" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>
@@ -57,7 +57,7 @@ export function DialogHeader({
   return (
     <div
       className={cn(
-        "flex flex-col space-y-1.5 text-center sm:text-left",
+        "flex flex-col space-y-1.5 text-center sm:text-start",
         className,
       )}
       {...props}

@@ -111,14 +111,14 @@ export function ColumnHeader<TData>({
           ) : null}
 
           <DropdownMenuItem onClick={() => move(-1)} disabled={index <= 0}>
-            <ChevronLeft className="size-3.5" />
+            <ChevronLeft className="size-3.5 rtl:rotate-180" />
             {t("table.move_left")}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => move(1)}
             disabled={index < 0 || index >= allIds.length - 1}
           >
-            <ChevronRight className="size-3.5" />
+            <ChevronRight className="size-3.5 rtl:rotate-180" />
             {t("table.move_right")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
