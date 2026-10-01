@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/config"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/errtrack"
 	"github.com/hibiken/asynq"
 )
 
@@ -82,11 +83,9 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 		concurrency = 10
 	}
 	server := asynq.NewServer(RedisOpt(cfg.Redis), asynq.Config{
-		Concurrency: concurrency,
-		Queues:      queues,
-		ErrorHandler: asynq.ErrorHandlerFunc(func(_ context.Context, task *asynq.Task, err error) {
-			log.Error("queue_task_failed", "type", task.Type(), "error", err)
-		}),
+		Concurrency:  concurrency,
+		Queues:       queues,
+		ErrorHandler: TaskErrorHandler(log),
 	})
 	mux := asynq.NewServeMux()
 	w := &Worker{server: server, mux: mux, log: log, deliver: deliver}
@@ -100,6 +99,23 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskSearchDelete, w.handleSearchDelete)
 	mux.HandleFunc(TaskSearchReindex, w.handleSearchReindex)
 	return w
+}
+
+// TaskErrorHandler logs a failed task and reports it to error tracking with
+// task type, queue, retry and module tags. Handler panics reach it too:
+// asynq recovers them into errors.
+func TaskErrorHandler(log *slog.Logger) asynq.ErrorHandler {
+	if log == nil {
+		log = slog.Default()
+	}
+	return asynq.ErrorHandlerFunc(func(ctx context.Context, task *asynq.Task, err error) {
+		log.Error("queue_task_failed", "type", task.Type(), "error", err)
+		info := errtrack.TaskInfo{Type: task.Type()}
+		info.Queue, _ = asynq.GetQueueName(ctx)
+		info.Retry, _ = asynq.GetRetryCount(ctx)
+		info.MaxRetry, _ = asynq.GetMaxRetry(ctx)
+		errtrack.CaptureTask(ctx, info, err)
+	})
 }
 
 // WithExport registers export job processor.

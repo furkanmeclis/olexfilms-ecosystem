@@ -10,6 +10,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/config"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/errtrack"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/logging"
 	bulkusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/bulk/usecase"
 	exportusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/usecase"
@@ -43,6 +44,12 @@ func main() {
 	}
 
 	log := logging.New(cfg.Log.Level, cfg.Log.Format)
+	if on, err := errtrack.Init(errtrack.OptionsFromEnv(cfg.App.Env, "worker")); err != nil {
+		log.Warn("errtrack_init_failed", "error", err)
+	} else if on {
+		log.Info("errtrack_enabled", "release", errtrack.OptionsFromEnv(cfg.App.Env, "worker").Release)
+	}
+	defer errtrack.Flush(2 * time.Second)
 	if !cfg.Queue.Enabled {
 		log.Error("queue_disabled")
 		os.Exit(1)
@@ -170,6 +177,9 @@ func main() {
 				}
 				if err != nil {
 					log.Error("log_purge_scheduler_failed", "error", err)
+					errtrack.CaptureTask(ctx, errtrack.TaskInfo{
+						Type: queue.TaskLogPurgeSweep, Queue: queue.QueueMaintenance, Scheduler: true,
+					}, err)
 					return func() {}
 				}
 				return scheduler.Shutdown
@@ -207,6 +217,8 @@ func main() {
 	case err := <-errCh:
 		if err != nil {
 			log.Error("worker_failed", "error", err)
+			errtrack.Capture(context.Background(), errtrack.ModuleUnknown, err, errtrack.Tags{errtrack.TagComponent: "worker"})
+			errtrack.Flush(2 * time.Second)
 			os.Exit(1)
 		}
 	}
