@@ -70,9 +70,22 @@ type Querier interface {
 	// no organization/brand filter; only super_admin writes (use case + route).
 	CreateCarBrand(ctx context.Context, arg CreateCarBrandParams) (CarBrand, error)
 	CreateCarModel(ctx context.Context, arg CreateCarModelParams) (CarModel, error)
+	// ---------------------------------------------------------------------------
+	// Cari accounts.
+	CreateCariAccount(ctx context.Context, arg CreateCariAccountParams) (CariAccount, error)
+	// CreateCariForOrgIfMissing opens the cari of organization_id with a
+	// counterparty organization. When it already exists no row is returned
+	// (pgx.ErrNoRows) and the caller reads it with GetCariAccountByCounterpartyOrg.
+	CreateCariForOrgIfMissing(ctx context.Context, arg CreateCariForOrgIfMissingParams) (CariAccount, error)
 	CreateDistrict(ctx context.Context, arg CreateDistrictParams) (District, error)
 	CreateDocumentTemplate(ctx context.Context, arg CreateDocumentTemplateParams) (DocumentTemplate, error)
 	CreateExportJob(ctx context.Context, arg CreateExportJobParams) (ExportJob, error)
+	// TEC-171: accounting primitives for the finance/cari use cases (TEC-99b)
+	// and the source API (TEC-99c). finance_entries is append-only: corrections
+	// are reversal rows. Organization scope is applied by the caller.
+	// ---------------------------------------------------------------------------
+	// Cash and bank accounts.
+	CreateFinanceAccount(ctx context.Context, arg CreateFinanceAccountParams) (FinanceAccount, error)
 	CreateImportJob(ctx context.Context, arg CreateImportJobParams) (ImportJob, error)
 	CreateLogPurgeRule(ctx context.Context, arg CreateLogPurgeRuleParams) (LogPurgeRule, error)
 	CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error)
@@ -190,6 +203,12 @@ type Querier interface {
 	GetCarBrandByID(ctx context.Context, id int64) (CarBrand, error)
 	GetCarBrandByUUID(ctx context.Context, argUuid uuid.UUID) (CarBrand, error)
 	GetCarModelByUUID(ctx context.Context, argUuid uuid.UUID) (CarModel, error)
+	GetCariAccount(ctx context.Context, arg GetCariAccountParams) (CariAccount, error)
+	GetCariAccountByCounterpartyOrg(ctx context.Context, arg GetCariAccountByCounterpartyOrgParams) (CariAccount, error)
+	GetCariAccountByUUID(ctx context.Context, argUuid uuid.UUID) (CariAccount, error)
+	// ---------------------------------------------------------------------------
+	// Balances (views over the ledger).
+	GetCariBalance(ctx context.Context, arg GetCariBalanceParams) (CariAccountBalance, error)
 	GetConsentForText(ctx context.Context, arg GetConsentForTextParams) (Consent, error)
 	GetCountryByID(ctx context.Context, id int64) (Country, error)
 	GetCountryByISO2(ctx context.Context, iso2 string) (Country, error)
@@ -202,6 +221,14 @@ type Querier interface {
 	GetDraftDocumentTemplate(ctx context.Context, arg GetDraftDocumentTemplateParams) (DocumentTemplate, error)
 	GetExportJobByID(ctx context.Context, id int64) (ExportJob, error)
 	GetExportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ExportJob, error)
+	GetFinanceAccount(ctx context.Context, arg GetFinanceAccountParams) (FinanceAccount, error)
+	GetFinanceAccountBalance(ctx context.Context, arg GetFinanceAccountBalanceParams) (FinanceAccountBalance, error)
+	GetFinanceAccountByUUID(ctx context.Context, argUuid uuid.UUID) (FinanceAccount, error)
+	GetFinanceEntry(ctx context.Context, arg GetFinanceEntryParams) (FinanceEntry, error)
+	GetFinanceEntryBySource(ctx context.Context, arg GetFinanceEntryBySourceParams) (FinanceEntry, error)
+	GetFinanceEntryByUUID(ctx context.Context, argUuid uuid.UUID) (FinanceEntry, error)
+	// GetFinanceEntryReversal returns the reversal row of an entry, if any.
+	GetFinanceEntryReversal(ctx context.Context, entryID pgtype.Int8) (FinanceEntry, error)
 	GetGitHubAppSettings(ctx context.Context) (GithubAppSetting, error)
 	GetImportJobByID(ctx context.Context, id int64) (ImportJob, error)
 	GetImportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ImportJob, error)
@@ -289,6 +316,17 @@ type Querier interface {
 	InsertAppLog(ctx context.Context, arg InsertAppLogParams) error
 	InsertBulkChange(ctx context.Context, arg InsertBulkChangeParams) (BulkChange, error)
 	InsertConsent(ctx context.Context, arg InsertConsentParams) (Consent, error)
+	// ---------------------------------------------------------------------------
+	// Ledger entries.
+	// InsertFinanceEntry appends an original row. A retried sourced write (same
+	// organization, source, role and revision) conflicts with
+	// uq_finance_entries_source and returns no row (pgx.ErrNoRows); the caller
+	// then reads the existing row with GetFinanceEntryBySource.
+	InsertFinanceEntry(ctx context.Context, arg InsertFinanceEntryParams) (FinanceEntry, error)
+	// InsertFinanceReversal appends the mirror row of entry reversal_of_id
+	// (negated amounts, same targets and source). A second reversal of the same
+	// entry conflicts with uq_finance_entries_reversal_of and returns no row.
+	InsertFinanceReversal(ctx context.Context, arg InsertFinanceReversalParams) (FinanceEntry, error)
 	InsertImportChange(ctx context.Context, arg InsertImportChangeParams) (ImportChange, error)
 	InsertKVKKNotice(ctx context.Context, arg InsertKVKKNoticeParams) (KvkkNotice, error)
 	InsertLegalText(ctx context.Context, arg InsertLegalTextParams) (LegalText, error)
@@ -343,6 +381,9 @@ type Querier interface {
 	ListCarBrands(ctx context.Context, arg ListCarBrandsParams) ([]ListCarBrandsRow, error)
 	// Search matches the model name, "brand model" and the external id.
 	ListCarModels(ctx context.Context, arg ListCarModelsParams) ([]ListCarModelsRow, error)
+	ListCariAccounts(ctx context.Context, arg ListCariAccountsParams) ([]CariAccount, error)
+	ListCariBalances(ctx context.Context, organizationID int64) ([]CariAccountBalance, error)
+	ListCariEntries(ctx context.Context, arg ListCariEntriesParams) ([]FinanceEntry, error)
 	// TEC-84: countries > provinces > districts, territories, plate formats.
 	ListCountries(ctx context.Context, activeOnly bool) ([]ListCountriesRow, error)
 	// TEC-84: currencies and daily exchange rates. Rates travel as text so no
@@ -361,6 +402,13 @@ type Querier interface {
 	ListExchangeRatesByDate(ctx context.Context, arg ListExchangeRatesByDateParams) ([]ListExchangeRatesByDateRow, error)
 	ListExportJobsForActor(ctx context.Context, arg ListExportJobsForActorParams) ([]ExportJob, error)
 	ListExportJobsForOrganization(ctx context.Context, arg ListExportJobsForOrganizationParams) ([]ExportJob, error)
+	ListFinanceAccountBalances(ctx context.Context, organizationID int64) ([]FinanceAccountBalance, error)
+	ListFinanceAccounts(ctx context.Context, arg ListFinanceAccountsParams) ([]FinanceAccount, error)
+	ListFinanceEntries(ctx context.Context, arg ListFinanceEntriesParams) ([]FinanceEntry, error)
+	// ListFinanceEntriesBySource lists every row of one source in every
+	// organization (seller and buyer side, originals and reversals), so
+	// VoidBySource can reverse what is still open.
+	ListFinanceEntriesBySource(ctx context.Context, arg ListFinanceEntriesBySourceParams) ([]FinanceEntry, error)
 	ListFixedBarcodeHoldingsByHolder(ctx context.Context, holderOrgID int64) ([]FixedBarcodeHolding, error)
 	ListFixedBarcodeHoldingsByUnit(ctx context.Context, unitID int64) ([]FixedBarcodeHolding, error)
 	// Grants of global roles (user_roles / JWT roles claim).
@@ -387,6 +435,9 @@ type Querier interface {
 	ListOAuthAccountsByUserID(ctx context.Context, userID int64) ([]ListOAuthAccountsByUserIDRow, error)
 	ListOAuthAccountsForUserIDs(ctx context.Context, userIds []int64) ([]ListOAuthAccountsForUserIDsRow, error)
 	ListOAuthProviderSettings(ctx context.Context) ([]OauthProviderSetting, error)
+	// ListOpenFinanceEntriesBySource lists the original rows of one source that
+	// have not been reversed yet, locked for the reversing transaction.
+	ListOpenFinanceEntriesBySource(ctx context.Context, arg ListOpenFinanceEntriesBySourceParams) ([]FinanceEntry, error)
 	ListOrganizationChildren(ctx context.Context, parentID pgtype.Int8) ([]ListOrganizationChildrenRow, error)
 	ListOrganizationMemberOptions(ctx context.Context, organizationID int64) ([]ListOrganizationMemberOptionsRow, error)
 	ListOrganizationMembers(ctx context.Context, organizationID int64) ([]ListOrganizationMembersRow, error)
@@ -540,6 +591,7 @@ type Querier interface {
 	SetCarBrandHero(ctx context.Context, arg SetCarBrandHeroParams) (CarBrand, error)
 	SetCarBrandLogo(ctx context.Context, arg SetCarBrandLogoParams) (CarBrand, error)
 	SetCarModelHero(ctx context.Context, arg SetCarModelHeroParams) (CarModel, error)
+	SetCariAccountActive(ctx context.Context, arg SetCariAccountActiveParams) (CariAccount, error)
 	SetCountryActive(ctx context.Context, arg SetCountryActiveParams) (Country, error)
 	SetNotificationChannelEnabled(ctx context.Context, arg SetNotificationChannelEnabledParams) (NotificationChannelSetting, error)
 	SetOrganizationLogo(ctx context.Context, arg SetOrganizationLogoParams) (Organization, error)
@@ -562,6 +614,7 @@ type Querier interface {
 	UpdateCarBrand(ctx context.Context, arg UpdateCarBrandParams) (CarBrand, error)
 	UpdateCarModel(ctx context.Context, arg UpdateCarModelParams) (CarModel, error)
 	UpdateDocumentTemplateDraft(ctx context.Context, arg UpdateDocumentTemplateDraftParams) (DocumentTemplate, error)
+	UpdateFinanceAccount(ctx context.Context, arg UpdateFinanceAccountParams) (FinanceAccount, error)
 	UpdateGitHubAppSettings(ctx context.Context, arg UpdateGitHubAppSettingsParams) (GithubAppSetting, error)
 	UpdateImportJobFileKey(ctx context.Context, arg UpdateImportJobFileKeyParams) (ImportJob, error)
 	UpdateImportJobMapping(ctx context.Context, arg UpdateImportJobMappingParams) (ImportJob, error)

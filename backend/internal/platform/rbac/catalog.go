@@ -255,6 +255,14 @@ var Permissions = []PermissionDef{
 		Slug: PermStockImport, Name: "Import stock", Module: "stock", Scopes: scopesSupplier,
 		Description: "Bulk stock import with dry run and undo (center only, K14).",
 	},
+
+	// TEC-171: accounting disputes (K24). Appended last; migration 000047
+	// seeds it. Dealer roles read their ledger and dispute entries posted by
+	// the parent; they hold no accounting.write (TEC-99 decision 7).
+	{
+		Slug: PermAccountingDispute, Name: "Dispute accounting entries", Module: "accounting", Scopes: scopesTree,
+		Description: "Open a dispute on an entry posted by the parent organization (K24).",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -392,6 +400,7 @@ var Roles = []RoleDef{
 			PermPricingRecommendedRead: ScopeManaged,
 			PermAccountingRead:         ScopeManaged,
 			PermAccountingWrite:        ScopeManaged,
+			PermAccountingDispute:      ScopeManaged,
 			PermWarehouseRead:          ScopeManaged,
 			PermWarehouseWrite:         ScopeManaged,
 			PermStockRead:              ScopeManaged,
@@ -435,6 +444,7 @@ var Roles = []RoleDef{
 			PermCatalogRead:            ScopeManaged,
 			PermAccountingRead:         ScopeManaged,
 			PermAccountingWrite:        ScopeManaged,
+			PermAccountingDispute:      ScopeManaged,
 			PermPricingPurchaseRead:    ScopeManaged,
 			PermPricingSaleRead:        ScopeManaged,
 			PermPricingSaleWrite:       ScopeManaged,
@@ -458,11 +468,12 @@ var Roles = []RoleDef{
 			PermPricingSaleRead:        ScopeManaged,
 			PermPricingSaleWrite:       ScopeManaged,
 			PermPricingRecommendedRead: ScopeManaged,
-			PermAccountingRead:         ScopeManaged,
-			PermAccountingWrite:        ScopeManaged,
-			PermWarehouseRead:          ScopeManaged,
-			PermStockRead:              ScopeManaged,
-			PermModulesRead:            ScopeManaged,
+			// TEC-171: read and dispute only (TEC-99 decision 7).
+			PermAccountingRead:    ScopeManaged,
+			PermAccountingDispute: ScopeManaged,
+			PermWarehouseRead:     ScopeManaged,
+			PermStockRead:         ScopeManaged,
+			PermModulesRead:       ScopeManaged,
 		}),
 	},
 	{
@@ -481,10 +492,11 @@ var Roles = []RoleDef{
 		Slug: RoleDealerAccounting, Name: "Dealer accounting", OrgType: OrgTypeDealer,
 		Description: "Dealer accounting",
 		Grants: grants(baseGrants, map[string]Scope{
-			PermVehicleCatalogRead:     ScopeManaged,
-			PermCatalogRead:            ScopeManaged,
+			PermVehicleCatalogRead: ScopeManaged,
+			PermCatalogRead:        ScopeManaged,
+			// TEC-171: read and dispute only (TEC-99 decision 7).
 			PermAccountingRead:         ScopeManaged,
-			PermAccountingWrite:        ScopeManaged,
+			PermAccountingDispute:      ScopeManaged,
 			PermPricingPurchaseRead:    ScopeManaged,
 			PermPricingSaleRead:        ScopeManaged,
 			PermPricingRecommendedRead: ScopeManaged,

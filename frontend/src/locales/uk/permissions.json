@@ -87,6 +87,7 @@
   "labels.pricing.recommended.write": "Публікація рекомендованих цін",
   "labels.accounting.read": "Перегляд бухгалтерії",
   "labels.accounting.write": "Керування бухгалтерією",
+  "labels.accounting.dispute": "Оскарження бухгалтерських записів",
   "labels.warehouse.read": "Перегляд складу",
   "labels.warehouse.write": "Керування складом",
   "labels.campaigns.read": "Перегляд кампаній",

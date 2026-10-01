@@ -87,6 +87,7 @@
   "labels.pricing.recommended.write": "Tövsiyə olunan qiymətləri dərc etmək",
   "labels.accounting.read": "Mühasibatlığa baxmaq",
   "labels.accounting.write": "Mühasibatlığı idarə etmək",
+  "labels.accounting.dispute": "Mühasibat qeydlərinə etiraz etmək",
   "labels.warehouse.read": "Anbara baxmaq",
   "labels.warehouse.write": "Anbarı idarə etmək",
   "labels.campaigns.read": "Kampaniyalara baxmaq",

@@ -148,6 +148,30 @@ type CarModel struct {
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 }
 
+type CariAccount struct {
+	ID                 int64              `json:"id"`
+	Uuid               uuid.UUID          `json:"uuid"`
+	OrganizationID     int64              `json:"organization_id"`
+	BrandID            int64              `json:"brand_id"`
+	CounterpartyType   string             `json:"counterparty_type"`
+	CounterpartyOrgID  pgtype.Int8        `json:"counterparty_org_id"`
+	CounterpartyUserID pgtype.Int8        `json:"counterparty_user_id"`
+	Currency           string             `json:"currency"`
+	Active             bool               `json:"active"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+}
+
+type CariAccountBalance struct {
+	CariID         int64              `json:"cari_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Currency       string             `json:"currency"`
+	Balance        pgtype.Numeric     `json:"balance"`
+	EntryCount     int64              `json:"entry_count"`
+	LastEntryAt    pgtype.Timestamptz `json:"last_entry_at"`
+}
+
 type Consent struct {
 	ID          int64              `json:"id"`
 	Uuid        uuid.UUID          `json:"uuid"`
@@ -319,6 +343,55 @@ type ExportJob struct {
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 	OrganizationID pgtype.Int8        `json:"organization_id"`
+}
+
+type FinanceAccount struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Type           string             `json:"type"`
+	Name           string             `json:"name"`
+	Currency       string             `json:"currency"`
+	Iban           pgtype.Text        `json:"iban"`
+	Active         bool               `json:"active"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type FinanceAccountBalance struct {
+	AccountID      int64              `json:"account_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Currency       string             `json:"currency"`
+	Balance        pgtype.Numeric     `json:"balance"`
+	EntryCount     int64              `json:"entry_count"`
+	LastEntryAt    pgtype.Timestamptz `json:"last_entry_at"`
+}
+
+type FinanceEntry struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	AccountID      pgtype.Int8        `json:"account_id"`
+	CariID         pgtype.Int8        `json:"cari_id"`
+	Direction      string             `json:"direction"`
+	Category       string             `json:"category"`
+	OrigCurrency   string             `json:"orig_currency"`
+	OrigAmount     pgtype.Numeric     `json:"orig_amount"`
+	Currency       string             `json:"currency"`
+	Amount         pgtype.Numeric     `json:"amount"`
+	Rate           pgtype.Numeric     `json:"rate"`
+	RateDate       pgtype.Date        `json:"rate_date"`
+	SourceType     pgtype.Text        `json:"source_type"`
+	SourceUuid     pgtype.UUID        `json:"source_uuid"`
+	Role           string             `json:"role"`
+	Revision       int32              `json:"revision"`
+	ReversalOfID   pgtype.Int8        `json:"reversal_of_id"`
+	Description    pgtype.Text        `json:"description"`
+	ActorUserID    pgtype.Int8        `json:"actor_user_id"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
 type FixedBarcodeHolding struct {

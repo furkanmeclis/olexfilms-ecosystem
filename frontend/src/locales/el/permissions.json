@@ -87,6 +87,7 @@
   "labels.pricing.recommended.write": "Δημοσίευση προτεινόμενων τιμών",
   "labels.accounting.read": "Προβολή λογιστηρίου",
   "labels.accounting.write": "Διαχείριση λογιστηρίου",
+  "labels.accounting.dispute": "Αμφισβήτηση λογιστικών εγγραφών",
   "labels.warehouse.read": "Προβολή αποθήκης",
   "labels.warehouse.write": "Διαχείριση αποθήκης",
   "labels.campaigns.read": "Προβολή καμπανιών",

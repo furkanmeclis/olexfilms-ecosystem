@@ -87,6 +87,7 @@
   "labels.pricing.recommended.write": "Publier les prix conseillés",
   "labels.accounting.read": "Voir la comptabilité",
   "labels.accounting.write": "Gérer la comptabilité",
+  "labels.accounting.dispute": "Contester des écritures comptables",
   "labels.warehouse.read": "Voir l'entrepôt",
   "labels.warehouse.write": "Gérer l'entrepôt",
   "labels.campaigns.read": "Voir les campagnes",

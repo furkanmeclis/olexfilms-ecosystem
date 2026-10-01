@@ -87,6 +87,7 @@
   "labels.pricing.recommended.write": "Tavsiye fiyat yayınla",
   "labels.accounting.read": "Muhasebeyi görüntüle",
   "labels.accounting.write": "Muhasebeyi yönet",
+  "labels.accounting.dispute": "Muhasebe kaydına itiraz et",
   "labels.warehouse.read": "Depoyu görüntüle",
   "labels.warehouse.write": "Depoyu yönet",
   "labels.campaigns.read": "Kampanyaları görüntüle",

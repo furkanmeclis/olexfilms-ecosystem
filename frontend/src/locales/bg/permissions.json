@@ -87,6 +87,7 @@
   "labels.pricing.recommended.write": "Публикуване на препоръчителни цени",
   "labels.accounting.read": "Преглед на счетоводството",
   "labels.accounting.write": "Управление на счетоводството",
+  "labels.accounting.dispute": "Оспорване на счетоводни записи",
   "labels.warehouse.read": "Преглед на склада",
   "labels.warehouse.write": "Управление на склада",
   "labels.campaigns.read": "Преглед на кампании",
