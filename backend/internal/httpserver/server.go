@@ -65,6 +65,9 @@ import (
 	notifusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/usecase"
 	orgmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations"
 	orgusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
+	pricingmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/pricing"
+	pricinghandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/pricing/handler"
+	pricingusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/pricing/usecase"
 	ratesmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/rates"
 	rateshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/rates/handler"
 	searchmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search"
@@ -305,6 +308,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	featuremodule.RegisterRoutes(mux, featurehandler.New(featureSvc, deps.Queries, notifSvc, activityRec, log), featureSvc, tokens, loader, deps.Queries)
 	geomodule.RegisterRoutes(mux, geohandler.New(geoSvc, deps.Queries, activityRec), tokens, loader)
 	ratesmodule.RegisterRoutes(mux, rateshandler.New(ratesSvc, activityRec), tokens, loader)
+	// TEC-146: price list and effective price views (K8).
+	pricingmodule.RegisterRoutes(mux, pricinghandler.New(pricingusecase.New(deps.Queries), activityRec),
+		tokens, loader, deps.Queries, stepUpSvc, featureSvc)
 	pdfClient := pdfrender.NewWithOptions(cfg.Gotenberg.URL, pdfrender.Options{MaxConnsPerHost: cfg.Queue.Concurrency})
 	realtime.RegisterRoutes(mux, realtime.NewHandler(rtIssuer, uc), tokens, loader)
 

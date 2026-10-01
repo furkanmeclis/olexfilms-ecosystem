@@ -43,6 +43,7 @@ type Querier interface {
 	CountPermissions(ctx context.Context, q_ pgtype.Text) (int64, error)
 	CountPhoneOTPsSince(ctx context.Context, arg CountPhoneOTPsSinceParams) (int64, error)
 	CountPlatformNotifications(ctx context.Context, arg CountPlatformNotificationsParams) (int64, error)
+	CountPricedProducts(ctx context.Context, arg CountPricedProductsParams) (int64, error)
 	CountProductCategories(ctx context.Context, arg CountProductCategoriesParams) (int64, error)
 	CountProducts(ctx context.Context, arg CountProductsParams) (int64, error)
 	CountRoles(ctx context.Context, q_ pgtype.Text) (int64, error)
@@ -82,6 +83,7 @@ type Querier interface {
 	DeleteAppLogByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	DeleteAppLogsByUUIDs(ctx context.Context, uuids []uuid.UUID) (int64, error)
 	DeleteAppLogsMatching(ctx context.Context, arg DeleteAppLogsMatchingParams) (int64, error)
+	DeleteDistributorDealerPrice(ctx context.Context, arg DeleteDistributorDealerPriceParams) (int64, error)
 	DeleteDistributorPriceOverride(ctx context.Context, arg DeleteDistributorPriceOverrideParams) (int64, error)
 	DeleteDistrict(ctx context.Context, id int64) (int64, error)
 	DeleteLogPurgeRule(ctx context.Context, argUuid uuid.UUID) (int64, error)
@@ -188,7 +190,7 @@ type Querier interface {
 	// TEC-145: catalog API helpers.
 	GetProductCategoryByName(ctx context.Context, arg GetProductCategoryByNameParams) (ProductCategory, error)
 	GetProductCategoryByUUID(ctx context.Context, arg GetProductCategoryByUUIDParams) (ProductCategory, error)
-	GetProductPrice(ctx context.Context, arg GetProductPriceParams) (GetProductPriceRow, error)
+	GetProductPrice(ctx context.Context, arg GetProductPriceParams) (ProductPrice, error)
 	GetProvinceByID(ctx context.Context, id int64) (Province, error)
 	GetQRLoginChallengeByCode(ctx context.Context, code string) (QrLoginChallenge, error)
 	GetRefreshTokenByHashAny(ctx context.Context, tokenHash string) (RefreshToken, error)
@@ -262,6 +264,11 @@ type Querier interface {
 	// TEC-84: currencies and daily exchange rates. Rates travel as text so no
 	// precision is lost between NUMERIC and Go.
 	ListCurrencies(ctx context.Context, activeOnly bool) ([]Currency, error)
+	ListDealerPricesForProducts(ctx context.Context, arg ListDealerPricesForProductsParams) ([]ListDealerPricesForProductsRow, error)
+	// Center view of the distributor-specific prices with product and
+	// distributor identities.
+	ListDistributorOverrideDetails(ctx context.Context, arg ListDistributorOverrideDetailsParams) ([]ListDistributorOverrideDetailsRow, error)
+	ListDistributorOverridesForProducts(ctx context.Context, arg ListDistributorOverridesForProductsParams) ([]ListDistributorOverridesForProductsRow, error)
 	ListDistributorPriceOverrides(ctx context.Context, arg ListDistributorPriceOverridesParams) ([]ListDistributorPriceOverridesRow, error)
 	ListDistrictsByProvince(ctx context.Context, provinceID int64) ([]District, error)
 	ListDocumentTemplateVersions(ctx context.Context, arg ListDocumentTemplateVersionsParams) ([]DocumentTemplate, error)
@@ -312,8 +319,13 @@ type Querier interface {
 	ListPlateFormats(ctx context.Context, activeOnly bool) ([]ListPlateFormatsRow, error)
 	ListPlatformNotifications(ctx context.Context, arg ListPlatformNotificationsParams) ([]Notification, error)
 	ListPlatformNotificationsForExport(ctx context.Context, arg ListPlatformNotificationsForExportParams) ([]Notification, error)
+	// TEC-146: batch reads for the effective price views and the distributor's
+	// dealer prices (000041).
+	// Products of the brand for the price list view.
+	ListPricedProducts(ctx context.Context, arg ListPricedProductsParams) ([]ListPricedProductsRow, error)
 	ListProductCategories(ctx context.Context, arg ListProductCategoriesParams) ([]ProductCategory, error)
-	ListProductPrices(ctx context.Context, arg ListProductPricesParams) ([]ListProductPricesRow, error)
+	ListProductPrices(ctx context.Context, arg ListProductPricesParams) ([]ProductPrice, error)
+	ListProductPricesForProducts(ctx context.Context, arg ListProductPricesForProductsParams) ([]ListProductPricesForProductsRow, error)
 	ListProducts(ctx context.Context, arg ListProductsParams) ([]Product, error)
 	// Search indexer only (full reindex across brands).
 	ListProductsForIndex(ctx context.Context) ([]Product, error)
@@ -461,6 +473,8 @@ type Querier interface {
 	UpdateWhatsAppStatus(ctx context.Context, arg UpdateWhatsAppStatusParams) (WhatsappSetting, error)
 	UpsertConversation(ctx context.Context, arg UpsertConversationParams) (Conversation, error)
 	UpsertDevicePushToken(ctx context.Context, arg UpsertDevicePushTokenParams) (DevicePushToken, error)
+	// The database refuses an owner that is not a distributor of the brand.
+	UpsertDistributorDealerPrice(ctx context.Context, arg UpsertDistributorDealerPriceParams) (UpsertDistributorDealerPriceRow, error)
 	// The database refuses a target that is not a distributor of the brand.
 	UpsertDistributorPriceOverride(ctx context.Context, arg UpsertDistributorPriceOverrideParams) (UpsertDistributorPriceOverrideRow, error)
 	// One row per cache key: a repeated request returns the existing row.
@@ -475,9 +489,11 @@ type Querier interface {
 	UpsertOrgModuleFlag(ctx context.Context, arg UpsertOrgModuleFlagParams) (ModuleFlag, error)
 	UpsertPermission(ctx context.Context, arg UpsertPermissionParams) error
 	// TEC-144: product price list and distributor-specific prices (K8). Prices
-	// travel as text so no precision is lost between NUMERIC and Go. Field
-	// masking by pricing.* permission happens in the use case layer.
-	UpsertProductPrice(ctx context.Context, arg UpsertProductPriceParams) (UpsertProductPriceRow, error)
+	// go in as text so no precision is lost between NUMERIC and Go. Nullable
+	// price columns come back as NUMERIC (a NULL cannot scan into a text cast's
+	// string); NOT NULL prices come back as text. Field masking by pricing.*
+	// permission happens in the use case layer (TEC-146).
+	UpsertProductPrice(ctx context.Context, arg UpsertProductPriceParams) (ProductPrice, error)
 	UpsertPushSubscription(ctx context.Context, arg UpsertPushSubscriptionParams) (PushSubscription, error)
 	UpsertSystemModuleFlag(ctx context.Context, arg UpsertSystemModuleFlagParams) (ModuleFlag, error)
 	UpsertSystemRole(ctx context.Context, arg UpsertSystemRoleParams) (Role, error)

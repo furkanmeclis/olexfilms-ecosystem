@@ -8,6 +8,7 @@ package db
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -29,6 +30,53 @@ func (q *Queries) CountDistributorPriceOverrides(ctx context.Context, arg CountD
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
+}
+
+const countPricedProducts = `-- name: CountPricedProducts :one
+SELECT COUNT(*)::bigint FROM products
+WHERE brand_id = $1
+  AND ($2::bool IS NULL OR active = $2::bool)
+  AND ($3::text IS NULL OR name ILIKE '%' || $3::text || '%'
+       OR sku ILIKE '%' || $3::text || '%')
+`
+
+type CountPricedProductsParams struct {
+	BrandID int64       `json:"brand_id"`
+	Active  pgtype.Bool `json:"active"`
+	Q       pgtype.Text `json:"q"`
+}
+
+func (q *Queries) CountPricedProducts(ctx context.Context, arg CountPricedProductsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countPricedProducts, arg.BrandID, arg.Active, arg.Q)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const deleteDistributorDealerPrice = `-- name: DeleteDistributorDealerPrice :execrows
+DELETE FROM distributor_dealer_prices
+WHERE product_id = $1 AND brand_id = $2
+  AND distributor_org_id = $3 AND currency = $4
+`
+
+type DeleteDistributorDealerPriceParams struct {
+	ProductID        int64  `json:"product_id"`
+	BrandID          int64  `json:"brand_id"`
+	DistributorOrgID int64  `json:"distributor_org_id"`
+	Currency         string `json:"currency"`
+}
+
+func (q *Queries) DeleteDistributorDealerPrice(ctx context.Context, arg DeleteDistributorDealerPriceParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteDistributorDealerPrice,
+		arg.ProductID,
+		arg.BrandID,
+		arg.DistributorOrgID,
+		arg.Currency,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const deleteDistributorPriceOverride = `-- name: DeleteDistributorPriceOverride :execrows
@@ -126,9 +174,9 @@ func (q *Queries) GetDistributorPriceOverride(ctx context.Context, arg GetDistri
 
 const getProductPrice = `-- name: GetProductPrice :one
 SELECT id, product_id, brand_id, currency,
-    purchase_price::text AS purchase_price,
-    sale_to_distributor_price::text AS sale_to_distributor_price,
-    recommended_sale_price::text AS recommended_sale_price,
+    purchase_price,
+    sale_to_distributor_price,
+    recommended_sale_price,
     created_at, updated_at
 FROM product_prices
 WHERE product_id = $1 AND brand_id = $2
@@ -141,21 +189,9 @@ type GetProductPriceParams struct {
 	Currency  string `json:"currency"`
 }
 
-type GetProductPriceRow struct {
-	ID                     int64              `json:"id"`
-	ProductID              int64              `json:"product_id"`
-	BrandID                int64              `json:"brand_id"`
-	Currency               string             `json:"currency"`
-	PurchasePrice          string             `json:"purchase_price"`
-	SaleToDistributorPrice string             `json:"sale_to_distributor_price"`
-	RecommendedSalePrice   string             `json:"recommended_sale_price"`
-	CreatedAt              pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
-}
-
-func (q *Queries) GetProductPrice(ctx context.Context, arg GetProductPriceParams) (GetProductPriceRow, error) {
+func (q *Queries) GetProductPrice(ctx context.Context, arg GetProductPriceParams) (ProductPrice, error) {
 	row := q.db.QueryRow(ctx, getProductPrice, arg.ProductID, arg.BrandID, arg.Currency)
-	var i GetProductPriceRow
+	var i ProductPrice
 	err := row.Scan(
 		&i.ID,
 		&i.ProductID,
@@ -168,6 +204,156 @@ func (q *Queries) GetProductPrice(ctx context.Context, arg GetProductPriceParams
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const listDealerPricesForProducts = `-- name: ListDealerPricesForProducts :many
+SELECT product_id, currency, price::text AS price
+FROM distributor_dealer_prices
+WHERE brand_id = $1 AND distributor_org_id = $2
+  AND product_id = ANY($3::bigint[])
+ORDER BY product_id ASC, currency ASC
+`
+
+type ListDealerPricesForProductsParams struct {
+	BrandID          int64   `json:"brand_id"`
+	DistributorOrgID int64   `json:"distributor_org_id"`
+	ProductIds       []int64 `json:"product_ids"`
+}
+
+type ListDealerPricesForProductsRow struct {
+	ProductID int64  `json:"product_id"`
+	Currency  string `json:"currency"`
+	Price     string `json:"price"`
+}
+
+func (q *Queries) ListDealerPricesForProducts(ctx context.Context, arg ListDealerPricesForProductsParams) ([]ListDealerPricesForProductsRow, error) {
+	rows, err := q.db.Query(ctx, listDealerPricesForProducts, arg.BrandID, arg.DistributorOrgID, arg.ProductIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListDealerPricesForProductsRow{}
+	for rows.Next() {
+		var i ListDealerPricesForProductsRow
+		if err := rows.Scan(&i.ProductID, &i.Currency, &i.Price); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listDistributorOverrideDetails = `-- name: ListDistributorOverrideDetails :many
+SELECT o.currency, o.price::text AS price, o.updated_at,
+    p.uuid AS product_uuid, p.sku AS product_sku, p.name AS product_name,
+    d.uuid AS distributor_uuid, d.name AS distributor_name
+FROM distributor_price_overrides o
+JOIN products p ON p.id = o.product_id
+JOIN organizations d ON d.id = o.distributor_org_id
+WHERE o.brand_id = $1
+  AND ($2::bigint IS NULL OR o.product_id = $2::bigint)
+  AND ($3::bigint IS NULL OR o.distributor_org_id = $3::bigint)
+ORDER BY p.sku ASC, d.name ASC, o.currency ASC
+LIMIT $5 OFFSET $4
+`
+
+type ListDistributorOverrideDetailsParams struct {
+	BrandID          int64       `json:"brand_id"`
+	ProductID        pgtype.Int8 `json:"product_id"`
+	DistributorOrgID pgtype.Int8 `json:"distributor_org_id"`
+	OffsetCount      int32       `json:"offset_count"`
+	LimitCount       int32       `json:"limit_count"`
+}
+
+type ListDistributorOverrideDetailsRow struct {
+	Currency        string             `json:"currency"`
+	Price           string             `json:"price"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	ProductUuid     uuid.UUID          `json:"product_uuid"`
+	ProductSku      string             `json:"product_sku"`
+	ProductName     string             `json:"product_name"`
+	DistributorUuid uuid.UUID          `json:"distributor_uuid"`
+	DistributorName string             `json:"distributor_name"`
+}
+
+// Center view of the distributor-specific prices with product and
+// distributor identities.
+func (q *Queries) ListDistributorOverrideDetails(ctx context.Context, arg ListDistributorOverrideDetailsParams) ([]ListDistributorOverrideDetailsRow, error) {
+	rows, err := q.db.Query(ctx, listDistributorOverrideDetails,
+		arg.BrandID,
+		arg.ProductID,
+		arg.DistributorOrgID,
+		arg.OffsetCount,
+		arg.LimitCount,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListDistributorOverrideDetailsRow{}
+	for rows.Next() {
+		var i ListDistributorOverrideDetailsRow
+		if err := rows.Scan(
+			&i.Currency,
+			&i.Price,
+			&i.UpdatedAt,
+			&i.ProductUuid,
+			&i.ProductSku,
+			&i.ProductName,
+			&i.DistributorUuid,
+			&i.DistributorName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listDistributorOverridesForProducts = `-- name: ListDistributorOverridesForProducts :many
+SELECT product_id, currency, price::text AS price
+FROM distributor_price_overrides
+WHERE brand_id = $1 AND distributor_org_id = $2
+  AND product_id = ANY($3::bigint[])
+ORDER BY product_id ASC, currency ASC
+`
+
+type ListDistributorOverridesForProductsParams struct {
+	BrandID          int64   `json:"brand_id"`
+	DistributorOrgID int64   `json:"distributor_org_id"`
+	ProductIds       []int64 `json:"product_ids"`
+}
+
+type ListDistributorOverridesForProductsRow struct {
+	ProductID int64  `json:"product_id"`
+	Currency  string `json:"currency"`
+	Price     string `json:"price"`
+}
+
+func (q *Queries) ListDistributorOverridesForProducts(ctx context.Context, arg ListDistributorOverridesForProductsParams) ([]ListDistributorOverridesForProductsRow, error) {
+	rows, err := q.db.Query(ctx, listDistributorOverridesForProducts, arg.BrandID, arg.DistributorOrgID, arg.ProductIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListDistributorOverridesForProductsRow{}
+	for rows.Next() {
+		var i ListDistributorOverridesForProductsRow
+		if err := rows.Scan(&i.ProductID, &i.Currency, &i.Price); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listDistributorPriceOverrides = `-- name: ListDistributorPriceOverrides :many
@@ -235,11 +421,74 @@ func (q *Queries) ListDistributorPriceOverrides(ctx context.Context, arg ListDis
 	return items, nil
 }
 
+const listPricedProducts = `-- name: ListPricedProducts :many
+
+SELECT id, uuid, sku, name, active
+FROM products
+WHERE brand_id = $1
+  AND ($2::bool IS NULL OR active = $2::bool)
+  AND ($3::text IS NULL OR name ILIKE '%' || $3::text || '%'
+       OR sku ILIKE '%' || $3::text || '%')
+ORDER BY sku ASC, id ASC
+LIMIT $5 OFFSET $4
+`
+
+type ListPricedProductsParams struct {
+	BrandID     int64       `json:"brand_id"`
+	Active      pgtype.Bool `json:"active"`
+	Q           pgtype.Text `json:"q"`
+	OffsetCount int32       `json:"offset_count"`
+	LimitCount  int32       `json:"limit_count"`
+}
+
+type ListPricedProductsRow struct {
+	ID     int64     `json:"id"`
+	Uuid   uuid.UUID `json:"uuid"`
+	Sku    string    `json:"sku"`
+	Name   string    `json:"name"`
+	Active bool      `json:"active"`
+}
+
+// TEC-146: batch reads for the effective price views and the distributor's
+// dealer prices (000041).
+// Products of the brand for the price list view.
+func (q *Queries) ListPricedProducts(ctx context.Context, arg ListPricedProductsParams) ([]ListPricedProductsRow, error) {
+	rows, err := q.db.Query(ctx, listPricedProducts,
+		arg.BrandID,
+		arg.Active,
+		arg.Q,
+		arg.OffsetCount,
+		arg.LimitCount,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPricedProductsRow{}
+	for rows.Next() {
+		var i ListPricedProductsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.Sku,
+			&i.Name,
+			&i.Active,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listProductPrices = `-- name: ListProductPrices :many
 SELECT id, product_id, brand_id, currency,
-    purchase_price::text AS purchase_price,
-    sale_to_distributor_price::text AS sale_to_distributor_price,
-    recommended_sale_price::text AS recommended_sale_price,
+    purchase_price,
+    sale_to_distributor_price,
+    recommended_sale_price,
     created_at, updated_at
 FROM product_prices
 WHERE product_id = $1 AND brand_id = $2
@@ -251,27 +500,15 @@ type ListProductPricesParams struct {
 	BrandID   int64 `json:"brand_id"`
 }
 
-type ListProductPricesRow struct {
-	ID                     int64              `json:"id"`
-	ProductID              int64              `json:"product_id"`
-	BrandID                int64              `json:"brand_id"`
-	Currency               string             `json:"currency"`
-	PurchasePrice          string             `json:"purchase_price"`
-	SaleToDistributorPrice string             `json:"sale_to_distributor_price"`
-	RecommendedSalePrice   string             `json:"recommended_sale_price"`
-	CreatedAt              pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
-}
-
-func (q *Queries) ListProductPrices(ctx context.Context, arg ListProductPricesParams) ([]ListProductPricesRow, error) {
+func (q *Queries) ListProductPrices(ctx context.Context, arg ListProductPricesParams) ([]ProductPrice, error) {
 	rows, err := q.db.Query(ctx, listProductPrices, arg.ProductID, arg.BrandID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ListProductPricesRow{}
+	items := []ProductPrice{}
 	for rows.Next() {
-		var i ListProductPricesRow
+		var i ProductPrice
 		if err := rows.Scan(
 			&i.ID,
 			&i.ProductID,
@@ -291,6 +528,109 @@ func (q *Queries) ListProductPrices(ctx context.Context, arg ListProductPricesPa
 		return nil, err
 	}
 	return items, nil
+}
+
+const listProductPricesForProducts = `-- name: ListProductPricesForProducts :many
+SELECT product_id, currency,
+    purchase_price,
+    sale_to_distributor_price,
+    recommended_sale_price
+FROM product_prices
+WHERE brand_id = $1 AND product_id = ANY($2::bigint[])
+ORDER BY product_id ASC, currency ASC
+`
+
+type ListProductPricesForProductsParams struct {
+	BrandID    int64   `json:"brand_id"`
+	ProductIds []int64 `json:"product_ids"`
+}
+
+type ListProductPricesForProductsRow struct {
+	ProductID              int64          `json:"product_id"`
+	Currency               string         `json:"currency"`
+	PurchasePrice          pgtype.Numeric `json:"purchase_price"`
+	SaleToDistributorPrice pgtype.Numeric `json:"sale_to_distributor_price"`
+	RecommendedSalePrice   pgtype.Numeric `json:"recommended_sale_price"`
+}
+
+func (q *Queries) ListProductPricesForProducts(ctx context.Context, arg ListProductPricesForProductsParams) ([]ListProductPricesForProductsRow, error) {
+	rows, err := q.db.Query(ctx, listProductPricesForProducts, arg.BrandID, arg.ProductIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListProductPricesForProductsRow{}
+	for rows.Next() {
+		var i ListProductPricesForProductsRow
+		if err := rows.Scan(
+			&i.ProductID,
+			&i.Currency,
+			&i.PurchasePrice,
+			&i.SaleToDistributorPrice,
+			&i.RecommendedSalePrice,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const upsertDistributorDealerPrice = `-- name: UpsertDistributorDealerPrice :one
+INSERT INTO distributor_dealer_prices (product_id, brand_id, distributor_org_id, currency, price)
+VALUES (
+    $1, $2, $3,
+    $4, $5::text::numeric
+)
+ON CONFLICT (product_id, distributor_org_id, currency) DO UPDATE SET
+    price = EXCLUDED.price
+RETURNING id, product_id, brand_id, distributor_org_id, currency, price::text AS price,
+    created_at, updated_at
+`
+
+type UpsertDistributorDealerPriceParams struct {
+	ProductID        int64  `json:"product_id"`
+	BrandID          int64  `json:"brand_id"`
+	DistributorOrgID int64  `json:"distributor_org_id"`
+	Currency         string `json:"currency"`
+	Price            string `json:"price"`
+}
+
+type UpsertDistributorDealerPriceRow struct {
+	ID               int64              `json:"id"`
+	ProductID        int64              `json:"product_id"`
+	BrandID          int64              `json:"brand_id"`
+	DistributorOrgID int64              `json:"distributor_org_id"`
+	Currency         string             `json:"currency"`
+	Price            string             `json:"price"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+// The database refuses an owner that is not a distributor of the brand.
+func (q *Queries) UpsertDistributorDealerPrice(ctx context.Context, arg UpsertDistributorDealerPriceParams) (UpsertDistributorDealerPriceRow, error) {
+	row := q.db.QueryRow(ctx, upsertDistributorDealerPrice,
+		arg.ProductID,
+		arg.BrandID,
+		arg.DistributorOrgID,
+		arg.Currency,
+		arg.Price,
+	)
+	var i UpsertDistributorDealerPriceRow
+	err := row.Scan(
+		&i.ID,
+		&i.ProductID,
+		&i.BrandID,
+		&i.DistributorOrgID,
+		&i.Currency,
+		&i.Price,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const upsertDistributorPriceOverride = `-- name: UpsertDistributorPriceOverride :one
@@ -363,9 +703,9 @@ ON CONFLICT (product_id, currency) DO UPDATE SET
     sale_to_distributor_price = EXCLUDED.sale_to_distributor_price,
     recommended_sale_price = EXCLUDED.recommended_sale_price
 RETURNING id, product_id, brand_id, currency,
-    purchase_price::text AS purchase_price,
-    sale_to_distributor_price::text AS sale_to_distributor_price,
-    recommended_sale_price::text AS recommended_sale_price,
+    purchase_price,
+    sale_to_distributor_price,
+    recommended_sale_price,
     created_at, updated_at
 `
 
@@ -378,22 +718,12 @@ type UpsertProductPriceParams struct {
 	RecommendedSalePrice   pgtype.Text `json:"recommended_sale_price"`
 }
 
-type UpsertProductPriceRow struct {
-	ID                     int64              `json:"id"`
-	ProductID              int64              `json:"product_id"`
-	BrandID                int64              `json:"brand_id"`
-	Currency               string             `json:"currency"`
-	PurchasePrice          string             `json:"purchase_price"`
-	SaleToDistributorPrice string             `json:"sale_to_distributor_price"`
-	RecommendedSalePrice   string             `json:"recommended_sale_price"`
-	CreatedAt              pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
-}
-
 // TEC-144: product price list and distributor-specific prices (K8). Prices
-// travel as text so no precision is lost between NUMERIC and Go. Field
-// masking by pricing.* permission happens in the use case layer.
-func (q *Queries) UpsertProductPrice(ctx context.Context, arg UpsertProductPriceParams) (UpsertProductPriceRow, error) {
+// go in as text so no precision is lost between NUMERIC and Go. Nullable
+// price columns come back as NUMERIC (a NULL cannot scan into a text cast's
+// string); NOT NULL prices come back as text. Field masking by pricing.*
+// permission happens in the use case layer (TEC-146).
+func (q *Queries) UpsertProductPrice(ctx context.Context, arg UpsertProductPriceParams) (ProductPrice, error) {
 	row := q.db.QueryRow(ctx, upsertProductPrice,
 		arg.ProductID,
 		arg.BrandID,
@@ -402,7 +732,7 @@ func (q *Queries) UpsertProductPrice(ctx context.Context, arg UpsertProductPrice
 		arg.SaleToDistributorPrice,
 		arg.RecommendedSalePrice,
 	)
-	var i UpsertProductPriceRow
+	var i ProductPrice
 	err := row.Scan(
 		&i.ID,
 		&i.ProductID,
