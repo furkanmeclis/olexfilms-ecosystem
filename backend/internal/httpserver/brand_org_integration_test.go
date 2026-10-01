@@ -64,6 +64,13 @@ func newIntegration(t *testing.T) *itest {
 // newIntegrationWith lets a test adjust the config (e.g. a mock gateway).
 func newIntegrationWith(t *testing.T, mutate func(*config.Config)) *itest {
 	t.Helper()
+	return newIntegrationWithDeps(t, mutate, nil)
+}
+
+// newIntegrationWithDeps also lets a test adjust the server deps (e.g. a
+// fake realtime publisher).
+func newIntegrationWithDeps(t *testing.T, mutate func(*config.Config), mutateDeps func(*Deps)) *itest {
+	t.Helper()
 	dsn := os.Getenv("TEST_DATABASE_URL")
 	if dsn == "" {
 		t.Skip("TEST_DATABASE_URL not set; skipping integration test")
@@ -91,7 +98,11 @@ func newIntegrationWith(t *testing.T, mutate func(*config.Config)) *itest {
 	mr := miniredis.RunT(t)
 	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
 	t.Cleanup(func() { _ = rdb.Close() })
-	srv, err := New(cfg, log, Deps{DB: pool, Queries: q, Redis: rdb})
+	deps := Deps{DB: pool, Queries: q, Redis: rdb}
+	if mutateDeps != nil {
+		mutateDeps(&deps)
+	}
+	srv, err := New(cfg, log, deps)
 	if err != nil {
 		t.Fatalf("server: %v", err)
 	}

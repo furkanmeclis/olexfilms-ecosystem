@@ -32,6 +32,13 @@
       "name": "tenant",
       "allow_subscribe_for_client": false,
       "allow_publish_for_client": false
+    },
+    {
+      "name": "qr",
+      "allow_subscribe_for_client": false,
+      "allow_publish_for_client": false,
+      "allow_presence_for_subscriber": false,
+      "allow_history_for_subscriber": false
     }
   ]
 }
