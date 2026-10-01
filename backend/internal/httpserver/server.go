@@ -50,6 +50,9 @@ import (
 	oauthprovidermodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/integrations/oauthprovider"
 	oauthproviderhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/integrations/oauthprovider/handler"
 	oauthproviderusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/integrations/oauthprovider/usecase"
+	legalmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/legal"
+	legalhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/legal/handler"
+	legalusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/legal/usecase"
 	logsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/logs"
 	logshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/logs/handler"
 	logsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/logs/usecase"
@@ -342,6 +345,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	authsettingsmodule.RegisterRoutes(mux, authsettingshandler.New(authSettingsSvc, activityRec), tokens, loader)
 	githubmodule.RegisterRoutes(mux, githubhandler.New(githubSvc, activityRec), tokens, loader)
 	whatsappmodule.RegisterRoutes(mux, whatsapphandler.New(waSvc, activityRec, log), tokens, loader)
+	legalmodule.RegisterRoutes(mux, legalhandler.New(legalusecase.New(deps.Queries), activityRec), tokens, loader)
 	oauthprovidermodule.RegisterRoutes(mux, oauthproviderhandler.New(oauthProvSvc, activityRec), tokens, loader)
 	activitymodule.RegisterRoutes(mux, activityhandler.New(activityusecase.New(deps.Queries)), tokens, loader)
 	logsmodule.RegisterRoutes(mux, logshandler.New(logsSvc), tokens, loader)

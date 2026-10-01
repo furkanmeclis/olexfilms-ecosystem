@@ -110,6 +110,7 @@ type Querier interface {
 	GetBrandCenter(ctx context.Context, brandID int64) (Organization, error)
 	GetBulkJobByID(ctx context.Context, id int64) (BulkJob, error)
 	GetBulkJobByUUID(ctx context.Context, argUuid uuid.UUID) (BulkJob, error)
+	GetConsentForText(ctx context.Context, arg GetConsentForTextParams) (Consent, error)
 	GetCountryByID(ctx context.Context, id int64) (Country, error)
 	GetCountryByISO2(ctx context.Context, iso2 string) (Country, error)
 	GetDistrictByID(ctx context.Context, id int64) (District, error)
@@ -123,7 +124,10 @@ type Querier interface {
 	GetGitHubAppSettings(ctx context.Context) (GithubAppSetting, error)
 	GetImportJobByID(ctx context.Context, id int64) (ImportJob, error)
 	GetImportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ImportJob, error)
+	GetLatestConsent(ctx context.Context, arg GetLatestConsentParams) (Consent, error)
 	GetLatestKVKKNotice(ctx context.Context, locale string) (KvkkNotice, error)
+	// Portal legal texts and consents (TEC-90).
+	GetLatestLegalText(ctx context.Context, arg GetLatestLegalTextParams) (LegalText, error)
 	GetLatestPhoneOTP(ctx context.Context, arg GetLatestPhoneOTPParams) (OtpCode, error)
 	// Stored locale/timezone preferences for i18n.Resolve: the user, the active
 	// organization (when given) and the center of its brand, or of the request
@@ -179,8 +183,10 @@ type Querier interface {
 	InsertActivityEvent(ctx context.Context, arg InsertActivityEventParams) (ActivityEvent, error)
 	InsertAppLog(ctx context.Context, arg InsertAppLogParams) error
 	InsertBulkChange(ctx context.Context, arg InsertBulkChangeParams) (BulkChange, error)
+	InsertConsent(ctx context.Context, arg InsertConsentParams) (Consent, error)
 	InsertImportChange(ctx context.Context, arg InsertImportChangeParams) (ImportChange, error)
 	InsertKVKKNotice(ctx context.Context, arg InsertKVKKNoticeParams) (KvkkNotice, error)
+	InsertLegalText(ctx context.Context, arg InsertLegalTextParams) (LegalText, error)
 	InsertMessage(ctx context.Context, arg InsertMessageParams) (Message, error)
 	// Idempotent on (event_id, user_id, channel): a replayed event returns no row.
 	InsertNotificationDelivery(ctx context.Context, arg InsertNotificationDeliveryParams) (NotificationDelivery, error)
@@ -234,6 +240,8 @@ type Querier interface {
 	ListImportJobsForActor(ctx context.Context, arg ListImportJobsForActorParams) ([]ImportJob, error)
 	ListImportJobsForOrganization(ctx context.Context, arg ListImportJobsForOrganizationParams) ([]ImportJob, error)
 	ListLatestKVKKNotices(ctx context.Context) ([]KvkkNotice, error)
+	ListLatestLegalTexts(ctx context.Context, kind string) ([]LegalText, error)
+	ListLegalTextVersions(ctx context.Context, arg ListLegalTextVersionsParams) ([]LegalText, error)
 	ListLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
 	// Grants of the user's roles in one organization (active org context).
 	ListMemberGrants(ctx context.Context, arg ListMemberGrantsParams) ([]ListMemberGrantsRow, error)

@@ -132,6 +132,9 @@ const (
 	PermPlatformTerritoriesWrite = "platform.territories.write"
 	PermPlatformRatesRead        = "platform.rates.read"
 	PermPlatformRatesWrite       = "platform.rates.write"
+
+	// Portal legal texts (TEC-90): AI guidelines Markdown, per language.
+	PermPlatformLegalTextsWrite = "platform.legal_texts.write"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

@@ -63,6 +63,12 @@ func (u *AuthUseCase) LoginWithVerifiedPhone(ctx context.Context, e164, locale s
 	if user.Status != "active" {
 		return model.Tokens{}, false, ErrUserDisabled
 	}
+	// Portal realm: customer / fleet accounts only (staff use the panel).
+	if !created {
+		if err := u.ensurePortalCustomer(ctx, user); err != nil {
+			return model.Tokens{}, false, err
+		}
+	}
 	if err := u.phoneRepo.MarkPhoneVerified(ctx, user.ID); err != nil {
 		return model.Tokens{}, false, err
 	}
@@ -75,6 +81,25 @@ func (u *AuthUseCase) LoginWithVerifiedPhone(ctx context.Context, e164, locale s
 		return model.Tokens{}, false, err
 	}
 	return tokens, created, nil
+}
+
+// ensurePortalCustomer applies the portal realm rule to the owner of a
+// verified phone. An account without any role is an unverified (migrated)
+// customer being claimed (K26) and receives the customer role; an account
+// with staff roles only cannot use the portal.
+func (u *AuthUseCase) ensurePortalCustomer(ctx context.Context, user model.User) error {
+	roles, err := u.repo.ListUserRoleSlugs(ctx, user.ID)
+	if err != nil {
+		return err
+	}
+	if len(roles) == 0 {
+		roleID, err := u.repo.GetRoleIDBySlug(ctx, rbac.RoleCustomer)
+		if err != nil {
+			return err
+		}
+		return u.repo.ReplaceUserRoles(ctx, user.ID, []int64{roleID})
+	}
+	return u.checkRealmAccess(ctx, user, jwt.AudiencePortal)
 }
 
 // supportedLocale maps a request locale to a supported code (K10); an

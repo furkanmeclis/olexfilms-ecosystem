@@ -41,6 +41,11 @@ const (
 	CodeTerritoryConflict         = "TERRITORY_CONFLICT"
 	CodeInvalidPlate              = "INVALID_PLATE"
 	CodeRateNotFound              = "RATE_NOT_FOUND"
+
+	// Session realms (TEC-90): panel vs customer portal.
+	CodeNoPortalAccess = "NO_PORTAL_ACCESS"
+	CodeNoPanelAccess  = "NO_PANEL_ACCESS"
+	CodeRealmForbidden = "REALM_FORBIDDEN"
 )
 
 // RequestIDFunc resolves the correlation id from request context.

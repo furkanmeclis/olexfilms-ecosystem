@@ -2,46 +2,29 @@ import { decode, encode } from "next-auth/jwt";
 import { cookies } from "next/headers";
 
 import { authConfig } from "@/config/auth";
+import {
+  baseCookieOptions,
+  sessionCookieBases,
+  sessionCookieName,
+  type AuthRealm,
+} from "@/lib/server/auth-cookies";
 
-const SESSION_COOKIE_BASES = [
-  "authjs.session-token",
-  "__Secure-authjs.session-token",
-] as const;
+export {
+  AUTH_BASE_PATHS,
+  AUTH_REALMS,
+  authCookies,
+  secureCookies,
+  sessionCookieName,
+  type AuthRealm,
+} from "@/lib/server/auth-cookies";
 
 const SESSION_COOKIE_CHUNKS = 12;
 
-/**
- * Auth.js picks `__Secure-` cookies from the site URL scheme, not NODE_ENV.
- * Follow the same rule so a production build served over plain http (local
- * prod compose, LAN preview) and an https dev tunnel both read and write the
- * cookie Auth.js actually set.
- */
-export function secureCookies() {
-  const url = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL;
-  if (url) return url.startsWith("https://");
-  return process.env.NODE_ENV === "production";
-}
-
-export function sessionCookieName() {
-  return secureCookies()
-    ? "__Secure-authjs.session-token"
-    : "authjs.session-token";
-}
-
-function sessionCookieOptions() {
-  return {
-    httpOnly: true,
-    secure: secureCookies(),
-    sameSite: "lax" as const,
-    path: "/",
-  };
-}
-
-/** Expire the Auth.js session cookie and any chunked variants Auth.js may create. */
-async function expireSessionCookies() {
+/** Expire a realm's session cookie and any chunked variants Auth.js may create. */
+async function expireSessionCookies(realm: AuthRealm) {
   const jar = await cookies();
-  const opts = { ...sessionCookieOptions(), maxAge: 0 };
-  for (const base of SESSION_COOKIE_BASES) {
+  const opts = { ...baseCookieOptions(), maxAge: 0 };
+  for (const base of sessionCookieBases(realm)) {
     jar.set(base, "", opts);
     for (let i = 0; i < SESSION_COOKIE_CHUNKS; i += 1) {
       jar.set(`${base}.${i}`, "", opts);
@@ -49,11 +32,12 @@ async function expireSessionCookies() {
   }
 }
 
-async function readSessionToken() {
+async function readSessionToken(realm: AuthRealm) {
   const jar = await cookies();
-  const name = sessionCookieName();
+  const name = sessionCookieName(realm);
   const raw = jar.get(name)?.value;
-  if (!raw || !process.env.AUTH_SECRET) {
+  if (!process.env.AUTH_SECRET) return null;
+  if (!raw) {
     // Auth.js may have split a large JWT across numbered chunk cookies.
     const chunks: string[] = [];
     for (let i = 0; i < SESSION_COOKIE_CHUNKS; i += 1) {
@@ -64,7 +48,7 @@ async function readSessionToken() {
     if (chunks.length === 0) return null;
     return decode({
       token: chunks.join(""),
-      secret: process.env.AUTH_SECRET!,
+      secret: process.env.AUTH_SECRET,
       salt: name,
     });
   }
@@ -75,37 +59,63 @@ async function readSessionToken() {
   });
 }
 
-/** Read the Go access JWT `oid` claim without verifying (cookie already trusted). */
-export function organizationUuidFromAccessToken(
+function accessTokenPayload(
   accessToken: string | null | undefined,
-): string | null {
+): Record<string, unknown> | null {
   if (!accessToken) return null;
   try {
     const parts = accessToken.split(".");
     if (parts.length < 2 || !parts[1]) return null;
     const json = Buffer.from(parts[1], "base64url").toString("utf8");
-    const payload = JSON.parse(json) as { oid?: unknown };
-    return typeof payload.oid === "string" && payload.oid.length > 0
-      ? payload.oid
-      : null;
+    return JSON.parse(json) as Record<string, unknown>;
   } catch {
     return null;
   }
 }
 
-export async function getApiTokens() {
-  const token = await readSessionToken();
-  if (!token) {
-    return {
-      accessToken: null as string | null,
-      refreshToken: null as string | null,
-      userId: null as string | null,
-      email: null as string | null,
-      impersonatorUuid: null as string | null,
-      organizationUuid: null as string | null,
-    };
-  }
+/** Read the Go access JWT `oid` claim without verifying (cookie already trusted). */
+export function organizationUuidFromAccessToken(
+  accessToken: string | null | undefined,
+): string | null {
+  const oid = accessTokenPayload(accessToken)?.oid;
+  return typeof oid === "string" && oid.length > 0 ? oid : null;
+}
+
+/** Realm (JWT `aud`) of a Go access token; tokens without aud are panel. */
+export function realmFromAccessToken(
+  accessToken: string | null | undefined,
+): AuthRealm {
+  const aud = accessTokenPayload(accessToken)?.aud;
+  const values = Array.isArray(aud) ? aud : [aud];
+  return values.includes("portal") ? "portal" : "panel";
+}
+
+export type ApiTokens = {
+  accessToken: string | null;
+  refreshToken: string | null;
+  userId: string | null;
+  email: string | null;
+  impersonatorUuid: string | null;
+  organizationUuid: string | null;
+};
+
+const EMPTY_TOKENS: ApiTokens = {
+  accessToken: null,
+  refreshToken: null,
+  userId: null,
+  email: null,
+  impersonatorUuid: null,
+  organizationUuid: null,
+};
+
+export async function getApiTokens(realm: AuthRealm): Promise<ApiTokens> {
+  const token = await readSessionToken(realm);
+  if (!token) return { ...EMPTY_TOKENS };
   const accessToken = (token.accessToken as string | undefined) ?? null;
+  // Defence in depth: a cookie holding the other realm's pair is ignored.
+  if (accessToken && realmFromAccessToken(accessToken) !== realm) {
+    return { ...EMPTY_TOKENS };
+  }
   return {
     accessToken,
     refreshToken: (token.refreshToken as string | undefined) ?? null,
@@ -138,23 +148,29 @@ function resolveSessionMaxAge(input: {
   return authConfig.refreshMaxAgeSec;
 }
 
-export async function persistApiTokens(input: {
-  accessToken: string;
-  refreshToken: string;
-  userId: string;
-  email?: string | null;
-  impersonatorUuid?: string | null;
-  expiresIn?: number;
-  refreshExpiresAt?: string | null;
-}) {
+export async function persistApiTokens(
+  realm: AuthRealm,
+  input: {
+    accessToken: string;
+    refreshToken: string;
+    userId: string;
+    email?: string | null;
+    impersonatorUuid?: string | null;
+    expiresIn?: number;
+    refreshExpiresAt?: string | null;
+  },
+) {
   if (!process.env.AUTH_SECRET) {
     throw new Error("AUTH_SECRET is not configured");
   }
+  if (realmFromAccessToken(input.accessToken) !== realm) {
+    throw new Error(`refusing to store a non-${realm} token pair`);
+  }
 
-  const existing = await readSessionToken();
+  const existing = await readSessionToken(realm);
   const maxAge = resolveSessionMaxAge(input);
   const organizationUuid = organizationUuidFromAccessToken(input.accessToken);
-  const name = sessionCookieName();
+  const name = sessionCookieName(realm);
   const payload = await encode({
     token: {
       ...existing,
@@ -172,16 +188,16 @@ export async function persistApiTokens(input: {
     maxAge,
   });
 
-  // Drop any leftover Auth.js chunks before writing a single cookie.
-  await expireSessionCookies();
+  // Drop any leftover Auth.js chunks of this realm before writing a single cookie.
+  await expireSessionCookies(realm);
 
   const jar = await cookies();
   jar.set(name, payload, {
-    ...sessionCookieOptions(),
+    ...baseCookieOptions(),
     maxAge,
   });
 }
 
-export async function clearAuthSessionCookie() {
-  await expireSessionCookies();
+export async function clearAuthSessionCookie(realm: AuthRealm) {
+  await expireSessionCookies(realm);
 }

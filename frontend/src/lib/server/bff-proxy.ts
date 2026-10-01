@@ -2,6 +2,7 @@ import {
   clearAuthSessionCookie,
   getApiTokens,
   persistApiTokens,
+  type AuthRealm,
 } from "@/lib/server/auth-tokens";
 import {
   sharedRefresh,
@@ -37,8 +38,10 @@ type SessionSwitchData = {
 };
 
 /** Paths whose successful response updates the NextAuth JWT token pair. */
-function isAuthTokenPath(path: string) {
+function isAuthTokenPath(realm: AuthRealm, path: string) {
   if (path === "auth/refresh") return true;
+  // Organization context and impersonation are panel only (TEC-90).
+  if (realm === "portal") return false;
   if (path === "auth/organization-context") return true;
   if (path === "auth/impersonation/stop") return true;
   return path.startsWith("platform/users/") && path.endsWith("/impersonate");
@@ -119,14 +122,17 @@ function resolveAccessMaxAge(data: TokensData | undefined): number | undefined {
   return undefined;
 }
 
-async function persistTokensFromEnvelope(envelope: Envelope | null) {
+async function persistTokensFromEnvelope(
+  realm: AuthRealm,
+  envelope: Envelope | null,
+) {
   const access = envelope?.data?.access_token;
   const refresh = envelope?.data?.refresh_token;
   if (!access || !refresh) return false;
 
   const sessionPayload = envelope?.data?.session as
     SessionSwitchData | undefined;
-  const existing = await getApiTokens();
+  const existing = await getApiTokens(realm);
   const userId = sessionPayload?.user_uuid ?? existing.userId;
   if (!userId) return false;
 
@@ -135,7 +141,7 @@ async function persistTokensFromEnvelope(envelope: Envelope | null) {
       ? (sessionPayload.impersonator_uuid ?? null)
       : existing.impersonatorUuid;
 
-  await persistApiTokens({
+  await persistApiTokens(realm, {
     accessToken: access,
     refreshToken: refresh,
     userId,
@@ -188,10 +194,11 @@ export function isRefreshUnavailableStatus(status: number): boolean {
 }
 
 async function refreshViaUpstream(
+  realm: AuthRealm,
   forwardedFor: string | null,
   forwardedHost: string | null = null,
 ): Promise<RefreshOutcome> {
-  const { refreshToken, userId } = await getApiTokens();
+  const { refreshToken, userId } = await getApiTokens(realm);
   if (!refreshToken || !userId) return "rejected";
 
   // Do not clear the session cookie on failure: a concurrent response may
@@ -209,7 +216,7 @@ async function refreshViaUpstream(
   }
   if (isRefreshUnavailableStatus(result.status)) return "unavailable";
   if (result.status >= 400) return "rejected";
-  return (await persistTokensFromEnvelope(parseJson(result.body)))
+  return (await persistTokensFromEnvelope(realm, parseJson(result.body)))
     ? "ok"
     : "rejected";
 }
@@ -309,6 +316,7 @@ function streamPassthroughHeaders(upstream: Headers): Headers {
 }
 
 async function proxyBuffered(
+  realm: AuthRealm,
   path: string,
   pathWithQuery: string,
   request: Request,
@@ -351,12 +359,13 @@ async function proxyBuffered(
     !isLogoutPath(path)
   ) {
     const refreshed = await refreshViaUpstream(
+      realm,
       headers.get("X-Forwarded-For"),
       headers.get("X-Forwarded-Host"),
     );
     if (refreshed === "unavailable") return unavailableResponse();
     if (refreshed === "ok") {
-      const { accessToken: nextAccess } = await getApiTokens();
+      const { accessToken: nextAccess } = await getApiTokens(realm);
       if (nextAccess) headers.set("Authorization", `Bearer ${nextAccess}`);
       result = await fetchUpstream(pathWithQuery, {
         method: request.method,
@@ -370,14 +379,14 @@ async function proxyBuffered(
     isLogoutPath(path) ||
     (result.status < 400 && isSessionInvalidatePath(path))
   ) {
-    await clearAuthSessionCookie();
+    await clearAuthSessionCookie(realm);
   }
 
   let responseBody: ArrayBuffer | string = result.body;
   const envelope = parseJson(result.body);
 
-  if (result.status < 400 && isAuthTokenPath(path)) {
-    await persistTokensFromEnvelope(envelope);
+  if (result.status < 400 && isAuthTokenPath(realm, path)) {
+    await persistTokensFromEnvelope(realm, envelope);
     if (envelope) {
       responseBody = JSON.stringify(stripTokens(envelope));
     }
@@ -390,6 +399,7 @@ async function proxyBuffered(
 }
 
 async function proxyStream(
+  realm: AuthRealm,
   path: string,
   pathWithQuery: string,
   request: Request,
@@ -416,12 +426,13 @@ async function proxyStream(
   ) {
     await result.body?.cancel().catch(() => undefined);
     const refreshed = await refreshViaUpstream(
+      realm,
       headers.get("X-Forwarded-For"),
       headers.get("X-Forwarded-Host"),
     );
     if (refreshed === "unavailable") return unavailableResponse();
     if (refreshed === "ok") {
-      const { accessToken: nextAccess } = await getApiTokens();
+      const { accessToken: nextAccess } = await getApiTokens(realm);
       if (nextAccess) headers.set("Authorization", `Bearer ${nextAccess}`);
       result = await fetchUpstreamStream(pathWithQuery, {
         method: request.method,
@@ -488,6 +499,32 @@ export function isForbiddenProxyPath(segments: string[]): boolean {
   return segments[0] === "internal";
 }
 
+/**
+ * Portal BFF allowlist (TEC-90): the customer / fleet portal reaches only
+ * these upstream paths; everything else answers 404. OTP verify and login
+ * are not here: Auth.js calls them server side, so tokens never reach the
+ * browser.
+ */
+const PORTAL_PATHS: readonly RegExp[] = [
+  /^auth\/(refresh|logout|me|profile)$/,
+  /^auth\/password\/(forgot|reset|change)$/,
+  /^auth\/otp\/request$/,
+  /^auth\/sessions(\/[^/]+)?$/,
+  /^portal\/.+$/,
+  /^public\/.+$/,
+];
+
+/** Whether a realm's BFF may forward path (segments already validated). */
+export function isRealmPathAllowed(realm: AuthRealm, path: string): boolean {
+  if (realm === "portal") return PORTAL_PATHS.some((re) => re.test(path));
+  // The panel BFF never forwards portal routes or the phone OTP flow.
+  return !(
+    path === "portal" ||
+    path.startsWith("portal/") ||
+    path.startsWith("auth/otp/")
+  );
+}
+
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 /**
@@ -511,16 +548,20 @@ export function isCrossSiteMutation(request: Request): boolean {
 }
 
 export async function proxyToUpstream(
+  realm: AuthRealm,
   pathSegments: string[],
   request: Request,
 ): Promise<Response> {
   if (isForbiddenProxyPath(pathSegments)) {
     return jsonError(404, "not_found");
   }
+  const path = pathSegments.join("/");
+  if (!isRealmPathAllowed(realm, path)) {
+    return jsonError(404, "not_found");
+  }
   if (isCrossSiteMutation(request)) {
     return jsonError(403, "cross_site_request_blocked");
   }
-  const path = pathSegments.join("/");
   const url = new URL(request.url);
   const pathWithQuery = `${path}${url.search}`;
 
@@ -529,7 +570,7 @@ export async function proxyToUpstream(
       ? new ArrayBuffer(0)
       : await request.arrayBuffer();
 
-  const { accessToken, refreshToken } = await getApiTokens();
+  const { accessToken, refreshToken } = await getApiTokens(realm);
 
   const headers = new Headers();
   const accept = request.headers.get("accept");
@@ -558,6 +599,7 @@ export async function proxyToUpstream(
 
   if (wantsEventStream(request) || wantsBinaryStream(path)) {
     return proxyStream(
+      realm,
       path,
       pathWithQuery,
       request,
@@ -568,6 +610,7 @@ export async function proxyToUpstream(
   }
 
   return proxyBuffered(
+    realm,
     path,
     pathWithQuery,
     request,

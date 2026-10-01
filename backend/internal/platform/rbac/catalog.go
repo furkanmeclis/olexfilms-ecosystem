@@ -200,6 +200,13 @@ var Permissions = []PermissionDef{
 		Slug: PermNotificationDeliveriesRead, Name: "Read notification deliveries", Module: "notifications",
 		Scopes: scopesAll, Description: "Read the notification delivery log.",
 	},
+
+	// TEC-90: portal legal texts (AI guidelines). Appended last; migration
+	// 000037 seeds it.
+	{
+		Slug: PermPlatformLegalTextsWrite, Name: "Write legal texts", Module: "platform", Scopes: scopesAll,
+		Description: "Edit the portal legal texts (AI guidelines) in Markdown, per language.",
+	},
 }
 
 func withDesc(p PermissionDef, desc string) PermissionDef {

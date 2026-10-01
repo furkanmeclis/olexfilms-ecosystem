@@ -182,5 +182,7 @@
   "resources.geo": "Coğrafya",
   "resources.territories": "Bölgeler",
   "resources.plate_formats": "Plaka formatları",
-  "resources.exchange_rates": "Döviz kurları"
+  "resources.exchange_rates": "Döviz kurları",
+  "resources.platform.legal_texts": "Yasal metinler",
+  "actions.legal_texts.published": "Yasal metin sürümü yayımlandı"
 }

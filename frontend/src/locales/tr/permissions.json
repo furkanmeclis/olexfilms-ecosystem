@@ -132,5 +132,6 @@
   "labels.platform.territories.read": "Bölgeleri görüntüle",
   "labels.platform.territories.write": "Bölgeleri yönet",
   "labels.platform.rates.read": "Döviz kurlarını görüntüle",
-  "labels.platform.rates.write": "Döviz kurlarını yönet"
+  "labels.platform.rates.write": "Döviz kurlarını yönet",
+  "labels.platform.legal_texts.write": "Yasal metinleri düzenle"
 }

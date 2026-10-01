@@ -300,10 +300,20 @@ func (u *AuthUseCase) RegisterOAuthUser(ctx context.Context, email, name, surnam
 	return toAdapterUser(user), nil
 }
 
-// Login authenticates and issues tokens for any active user.
+// Login authenticates and issues tokens for an active user. meta.Realm picks
+// the session realm: panel (default) or portal (fleet / customer accounts
+// with a password, TEC-90).
 // totpCode is required when the user has authenticator 2FA enabled, or when
 // admin policy requires 2FA for password login.
 func (u *AuthUseCase) Login(ctx context.Context, email, rawPassword, totpCode, organizationSlug string, meta model.SessionMeta) (model.Tokens, error) {
+	realm, err := ParseRealm(meta.Realm)
+	if err != nil {
+		return model.Tokens{}, err
+	}
+	meta.Realm = realm
+	if realm == jwt.AudiencePortal && strings.TrimSpace(organizationSlug) != "" {
+		return model.Tokens{}, fmt.Errorf("%w: organization_slug is not used in the portal", ErrInvalidRequest)
+	}
 	if u.authSettings != nil {
 		ok, err := u.authSettings.CanPasswordLogin(ctx)
 		if err != nil {
@@ -363,6 +373,10 @@ func (u *AuthUseCase) Login(ctx context.Context, email, rawPassword, totpCode, o
 		}
 	}
 
+	// Realm rule after the credential check, so roles cannot be probed.
+	if err := u.checkRealmAccess(ctx, user, realm); err != nil {
+		return model.Tokens{}, err
+	}
 	if err := u.repo.UpdateLastLogin(ctx, user.ID); err != nil {
 		return model.Tokens{}, err
 	}

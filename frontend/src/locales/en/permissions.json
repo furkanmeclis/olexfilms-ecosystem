@@ -132,5 +132,6 @@
   "labels.platform.territories.read": "View territories",
   "labels.platform.territories.write": "Manage territories",
   "labels.platform.rates.read": "View exchange rates",
-  "labels.platform.rates.write": "Manage exchange rates"
+  "labels.platform.rates.write": "Manage exchange rates",
+  "labels.platform.legal_texts.write": "Write legal texts"
 }

@@ -182,5 +182,7 @@
   "resources.geo": "Geography",
   "resources.territories": "Territories",
   "resources.plate_formats": "Plate formats",
-  "resources.exchange_rates": "Exchange rates"
+  "resources.exchange_rates": "Exchange rates",
+  "resources.platform.legal_texts": "Legal texts",
+  "actions.legal_texts.published": "Legal text version published"
 }

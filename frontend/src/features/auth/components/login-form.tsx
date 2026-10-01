@@ -135,6 +135,9 @@ export function LoginForm() {
     if (code.includes("NO_TENANT_MEMBERSHIP")) {
       return t("auth.login.no_tenant_membership");
     }
+    if (code === CREDENTIAL_ERROR_CODES.NO_PANEL_ACCESS) {
+      return t("auth.login.no_panel_access");
+    }
     if (code === CREDENTIAL_ERROR_CODES.MFA_REQUIRED) {
       return t("auth.totp.login_required");
     }
