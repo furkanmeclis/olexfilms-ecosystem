@@ -62,6 +62,11 @@ export type NavOrgType = "center" | "distributor" | "dealer";
 export type NavOrgContext = {
   type?: string;
   role?: string;
+  /**
+   * Module keys that are on for the organization (GET /v1/features). Entries
+   * with `feature` stay hidden until this is known.
+   */
+  features?: readonly string[] | null;
 };
 
 export type NavItemDef = {
@@ -75,6 +80,8 @@ export type NavItemDef = {
   orgTypes?: NavOrgType[];
   /** Shown only for these member roles in the active organization. */
   orgRoles?: string[];
+  /** Module key (backend catalog); hidden while the module is off. */
+  feature?: string;
   soon?: boolean;
   /** Command palette icon key (see resolveSearchIcon). */
   searchIcon?: string;
@@ -95,6 +102,7 @@ export type NavGroupDef = {
   anyPermission?: string[];
   orgTypes?: NavOrgType[];
   orgRoles?: string[];
+  feature?: string;
   items: NavItemDef[];
 };
 
