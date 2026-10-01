@@ -136,5 +136,8 @@
   "labels.platform.legal_texts.write": "Hüquqi mətnləri yazmaq",
   "labels.catalog.read": "Kataloqa bax",
   "labels.catalog.write": "Kataloqu idarə et",
-  "groups.catalog": "Kataloq"
+  "groups.catalog": "Kataloq",
+  "labels.vehicle_catalog.read": "Avtomobil kataloquna bax",
+  "labels.vehicle_catalog.write": "Avtomobil kataloqunu idarə et",
+  "groups.vehicle_catalog": "Avtomobil kataloqu"
 }

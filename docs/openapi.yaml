@@ -76,6 +76,11 @@ tags:
     description: Currencies and daily exchange rates (TCMB, ECB, manual override)
   - name: Catalog
     description: Product categories and products of the active brand (center writes, K4)
+  - name: VehicleCatalog
+    description: >-
+      Car brands and models (TEC-149): global reference data, read by every
+      organization role and portal customers, written by super_admin only.
+      Logos and hero images are public, unsigned and cacheable.
   - name: Pricing
     description: >-
       Price list and effective price views (TEC-146, K8). The center writes the
@@ -4715,6 +4720,619 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/public/brand-logos/{uuid}:
+    get:
+      tags: [VehicleCatalog]
+      operationId: getPublicBrandLogo
+      summary: Car brand logo (public, cacheable)
+      description: >-
+        No auth, no signed URL. The frontend serves it at the fixed URL
+        `/brand-logos/{uuid}`. Answers the stored logo (JPEG/PNG/WebP) with a
+        strong `ETag` and `Cache-Control: public, max-age=86400`; a matching
+        `If-None-Match` gets 304. The ETag changes with every upload. A brand
+        without a logo gets an SVG placeholder (`max-age=3600`).
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/VehicleCatalogUUID"
+        - name: If-None-Match
+          in: header
+          schema: { type: string }
+      responses:
+        "200":
+          description: Logo bytes (or the placeholder)
+          headers:
+            ETag: { schema: { type: string } }
+            Cache-Control: { schema: { type: string } }
+          content:
+            image/png: { schema: { type: string, format: binary } }
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+            image/svg+xml: { schema: { type: string, format: binary } }
+        "304":
+          description: Not modified (If-None-Match matched the ETag)
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/public/vehicle-heroes/default:
+    get:
+      tags: [VehicleCatalog]
+      operationId: getPublicDefaultVehicleHero
+      summary: Default vehicle hero image (public)
+      security: []
+      responses:
+        "200":
+          description: Default hero (SVG)
+          content:
+            image/svg+xml: { schema: { type: string, format: binary } }
+        "304":
+          description: Not modified
+
+  /v1/public/vehicle-heroes/brands/{uuid}:
+    get:
+      tags: [VehicleCatalog]
+      operationId: getPublicBrandHero
+      summary: Car brand hero image (public, cacheable)
+      description: Brand hero → default image. Same cache rules as the brand logo.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/VehicleCatalogUUID"
+      responses:
+        "200":
+          description: Hero bytes (or the default image)
+          content:
+            image/png: { schema: { type: string, format: binary } }
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+            image/svg+xml: { schema: { type: string, format: binary } }
+        "304":
+          description: Not modified
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/public/vehicle-heroes/models/{uuid}:
+    get:
+      tags: [VehicleCatalog]
+      operationId: getPublicModelHero
+      summary: Car model hero image (public, cacheable)
+      description: Model hero → brand hero → default image. Same cache rules as the brand logo.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/VehicleCatalogUUID"
+      responses:
+        "200":
+          description: Hero bytes (or the fallback)
+          content:
+            image/png: { schema: { type: string, format: binary } }
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+            image/svg+xml: { schema: { type: string, format: binary } }
+        "304":
+          description: Not modified
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/vehicle-catalog/brands:
+    get:
+      tags: [VehicleCatalog]
+      operationId: listVehicleBrands
+      summary: Car brands (paged, searchable)
+      description: >-
+        Needs `vehicle_catalog.read`. Global reference data, no organization
+        context. Readers without `vehicle_catalog.write` see active brands
+        only and `active` is ignored for them.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - name: active
+          in: query
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Brands
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicleBrandPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/vehicle-catalog/brands/{uuid}:
+    get:
+      tags: [VehicleCatalog]
+      operationId: getVehicleBrand
+      summary: One car brand
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/VehicleCatalogUUID"
+      responses:
+        "200":
+          description: Brand
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicleBrand"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/vehicle-catalog/models:
+    get:
+      tags: [VehicleCatalog]
+      operationId: listVehicleModels
+      summary: Car models (paged; search "brand model" or external id)
+      description: >-
+        Needs `vehicle_catalog.read`. `q` matches "brand model" text or the
+        exact external id; `brand_uuid` limits to one brand. Readers without
+        `vehicle_catalog.write` see active models of active brands only.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - name: brand_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - name: active
+          in: query
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Models
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicleModelPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/vehicle-catalog/models/{uuid}:
+    get:
+      tags: [VehicleCatalog]
+      operationId: getVehicleModel
+      summary: One car model
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/VehicleCatalogUUID"
+      responses:
+        "200":
+          description: Model
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicleModel"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/portal/vehicle-catalog/brands:
+    get:
+      tags: [VehicleCatalog]
+      operationId: listPortalVehicleBrands
+      summary: Car brands for portal sessions (active only)
+      description: Same as `GET /v1/vehicle-catalog/brands` for portal (customer/fleet) tokens.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+      responses:
+        "200":
+          description: Brands
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicleBrandPage"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/portal/vehicle-catalog/models:
+    get:
+      tags: [VehicleCatalog]
+      operationId: listPortalVehicleModels
+      summary: Car models for portal sessions (active only)
+      description: Same as `GET /v1/vehicle-catalog/models` for portal (customer/fleet) tokens.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - name: brand_uuid
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Models
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicleModelPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/platform/vehicle-catalog/brands:
+    post:
+      tags: [VehicleCatalog]
+      operationId: createVehicleBrand
+      summary: Create a car brand (super_admin)
+      description: Needs `vehicle_catalog.write` (super_admin only); everyone else gets 403.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VehicleBrandInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicleBrand"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/platform/vehicle-catalog/brands/{uuid}:
+    patch:
+      tags: [VehicleCatalog]
+      operationId: updateVehicleBrand
+      summary: Patch a car brand (super_admin)
+      description: Changes only the named fields; `null` clears external_id / logo_height.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/VehicleCatalogUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VehicleBrandInput" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicleBrand"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+    delete:
+      tags: [VehicleCatalog]
+      operationId: deleteVehicleBrand
+      summary: Delete a car brand without models (super_admin)
+      description: A brand that still has models answers 409; deactivate it instead.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/VehicleCatalogUUID"
+      responses:
+        "200":
+          $ref: "#/components/responses/Deleted"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/platform/vehicle-catalog/brands/{uuid}/logo:
+    put:
+      tags: [VehicleCatalog]
+      operationId: uploadVehicleBrandLogo
+      summary: Upload a car brand logo (super_admin)
+      description: >-
+        multipart field `logo`, JPEG/PNG/WebP up to 2 MiB, detected from the
+        bytes. SVG (or anything else) is refused with 400.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/VehicleCatalogUUID"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [logo]
+              properties:
+                logo: { type: string, format: binary }
+      responses:
+        "200":
+          description: Brand with the new logo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicleBrand"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [VehicleCatalog]
+      operationId: deleteVehicleBrandLogo
+      summary: Remove a car brand logo (super_admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/VehicleCatalogUUID"
+      responses:
+        "200":
+          description: Brand without logo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicleBrand"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/platform/vehicle-catalog/brands/{uuid}/hero:
+    put:
+      tags: [VehicleCatalog]
+      operationId: uploadVehicleBrandHero
+      summary: Upload a car brand hero image (super_admin)
+      description: multipart field `hero`, JPEG/PNG/WebP up to 5 MiB; SVG is refused with 400.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/VehicleCatalogUUID"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [hero]
+              properties:
+                hero: { type: string, format: binary }
+      responses:
+        "200":
+          description: Brand with the new hero
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicleBrand"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [VehicleCatalog]
+      operationId: deleteVehicleBrandHero
+      summary: Remove a car brand hero image (super_admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/VehicleCatalogUUID"
+      responses:
+        "200":
+          description: Brand without hero
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicleBrand"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/platform/vehicle-catalog/models:
+    post:
+      tags: [VehicleCatalog]
+      operationId: createVehicleModel
+      summary: Create a car model (super_admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VehicleModelInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicleModel"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/platform/vehicle-catalog/models/{uuid}:
+    patch:
+      tags: [VehicleCatalog]
+      operationId: updateVehicleModel
+      summary: Patch a car model (super_admin)
+      description: >-
+        Changes only the named fields; `null` clears an optional field. The
+        brand of a model cannot change (`brand_uuid` → 422).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/VehicleCatalogUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VehicleModelInput" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicleModel"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+    delete:
+      tags: [VehicleCatalog]
+      operationId: deleteVehicleModel
+      summary: Delete a car model (super_admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/VehicleCatalogUUID"
+      responses:
+        "200":
+          $ref: "#/components/responses/Deleted"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/platform/vehicle-catalog/models/{uuid}/hero:
+    put:
+      tags: [VehicleCatalog]
+      operationId: uploadVehicleModelHero
+      summary: Upload a car model hero image (super_admin)
+      description: multipart field `hero`, JPEG/PNG/WebP up to 5 MiB; SVG is refused with 400.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/VehicleCatalogUUID"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [hero]
+              properties:
+                hero: { type: string, format: binary }
+      responses:
+        "200":
+          description: Model with the new hero
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicleModel"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [VehicleCatalog]
+      operationId: deleteVehicleModelHero
+      summary: Remove a car model hero image (super_admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/VehicleCatalogUUID"
+      responses:
+        "200":
+          description: Model without hero (falls back to the brand hero)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicleModel"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/geo/countries:
     get:
       tags: [Geo]
@@ -6242,6 +6860,11 @@ components:
       bearerFormat: JWT
 
   parameters:
+    VehicleCatalogUUID:
+      name: uuid
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
     ProductUUID:
       name: uuid
       in: path
@@ -9326,6 +9949,154 @@ components:
               type: array
               description: Products whose state changed
               items: { type: string, format: uuid }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    VehicleBrand:
+      type: object
+      required:
+        - uuid
+        - external_id
+        - name
+        - show_name
+        - logo_height
+        - active
+        - has_logo
+        - logo_url
+        - has_hero
+        - hero_url
+        - model_count
+        - created_at
+        - updated_at
+      properties:
+        uuid: { type: string, format: uuid }
+        external_id: { type: [string, "null"], maxLength: 64, description: Legacy hub id (F2 import) }
+        name: { type: string, maxLength: 150 }
+        show_name: { type: boolean, description: Show the name next to the logo }
+        logo_height: { type: [integer, "null"], minimum: 8, maximum: 512, description: Display height in px }
+        active: { type: boolean }
+        has_logo: { type: boolean }
+        logo_url:
+          type: string
+          description: >-
+            Fixed public URL `/brand-logos/{uuid}` (placeholder while there is
+            no logo); `?v=` changes with every upload.
+        has_hero: { type: boolean }
+        hero_url: { type: string, description: Brand hero → `/vehicle-heroes/default` }
+        model_count: { type: integer, format: int64 }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    VehicleBrandInput:
+      type: object
+      additionalProperties: false
+      description: POST needs name; PATCH changes only the fields it names.
+      properties:
+        external_id: { type: [string, "null"], maxLength: 64 }
+        name: { type: string, minLength: 1, maxLength: 150 }
+        show_name: { type: boolean }
+        logo_height: { type: [integer, "null"], minimum: 8, maximum: 512 }
+        active: { type: boolean }
+
+    VehicleModel:
+      type: object
+      required:
+        - uuid
+        - brand
+        - external_id
+        - name
+        - body_type
+        - powertrain
+        - year_start
+        - year_stop
+        - active
+        - has_hero
+        - hero_url
+        - created_at
+        - updated_at
+      properties:
+        uuid: { type: string, format: uuid }
+        brand:
+          type: object
+          required: [uuid, name]
+          properties:
+            uuid: { type: string, format: uuid }
+            name: { type: string }
+        external_id: { type: [string, "null"], maxLength: 64 }
+        name: { type: string, maxLength: 200 }
+        body_type: { type: [string, "null"], maxLength: 64 }
+        powertrain: { type: [string, "null"], maxLength: 64 }
+        year_start: { type: [integer, "null"], minimum: 1900, maximum: 2100 }
+        year_stop: { type: [integer, "null"], minimum: 1900, maximum: 2100, description: Not before year_start }
+        active: { type: boolean }
+        has_hero: { type: boolean, description: The model has its own hero image }
+        hero_url: { type: string, description: Model hero → brand hero → `/vehicle-heroes/default` }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    VehicleModelInput:
+      type: object
+      additionalProperties: false
+      description: >-
+        POST needs brand_uuid and name; PATCH changes only the fields it names
+        (brand_uuid is not accepted on PATCH).
+      properties:
+        brand_uuid: { type: string, format: uuid }
+        external_id: { type: [string, "null"], maxLength: 64 }
+        name: { type: string, minLength: 1, maxLength: 200 }
+        body_type: { type: [string, "null"], maxLength: 64 }
+        powertrain: { type: [string, "null"], maxLength: 64 }
+        year_start: { type: [integer, "null"], minimum: 1900, maximum: 2100 }
+        year_stop: { type: [integer, "null"], minimum: 1900, maximum: 2100 }
+        active: { type: boolean }
+
+    EnvelopeVehicleBrand:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/VehicleBrand" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeVehicleBrandPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/VehicleBrand" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeVehicleModel:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/VehicleModel" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeVehicleModelPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/VehicleModel" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeCountryList:

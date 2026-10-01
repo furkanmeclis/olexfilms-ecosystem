@@ -82,6 +82,21 @@ func ValidateLogoSize(size int64) error {
 	return nil
 }
 
+// MaxHeroBytes is the maximum accepted vehicle hero image size (5 MiB).
+// Hero images use the same raster-only MIME rules as logos (TEC-149).
+const MaxHeroBytes = 5 << 20
+
+// ValidateHeroSize rejects empty or oversized hero image uploads.
+func ValidateHeroSize(size int64) error {
+	if size <= 0 {
+		return fmt.Errorf("hero image file is required")
+	}
+	if size > MaxHeroBytes {
+		return fmt.Errorf("hero image must be at most 5 MiB")
+	}
+	return nil
+}
+
 // TenantLogoObjectKey builds tenants/{uuid}/logo.{ext}.
 func TenantLogoObjectKey(tenantUUID uuid.UUID, ext string) string {
 	return fmt.Sprintf("tenants/%s/logo.%s", tenantUUID.String(), strings.TrimPrefix(ext, "."))

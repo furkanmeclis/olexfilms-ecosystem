@@ -108,6 +108,36 @@ type BulkJob struct {
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 }
 
+type CarBrand struct {
+	ID            int64              `json:"id"`
+	Uuid          uuid.UUID          `json:"uuid"`
+	ExternalID    pgtype.Text        `json:"external_id"`
+	Name          string             `json:"name"`
+	LogoObjectKey pgtype.Text        `json:"logo_object_key"`
+	HeroObjectKey pgtype.Text        `json:"hero_object_key"`
+	ShowName      bool               `json:"show_name"`
+	LogoHeight    pgtype.Int2        `json:"logo_height"`
+	Active        bool               `json:"active"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+}
+
+type CarModel struct {
+	ID            int64              `json:"id"`
+	Uuid          uuid.UUID          `json:"uuid"`
+	CarBrandID    int64              `json:"car_brand_id"`
+	ExternalID    pgtype.Text        `json:"external_id"`
+	Name          string             `json:"name"`
+	BodyType      pgtype.Text        `json:"body_type"`
+	Powertrain    pgtype.Text        `json:"powertrain"`
+	YearStart     pgtype.Int2        `json:"year_start"`
+	YearStop      pgtype.Int2        `json:"year_stop"`
+	HeroObjectKey pgtype.Text        `json:"hero_object_key"`
+	Active        bool               `json:"active"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Consent struct {
 	ID          int64              `json:"id"`
 	Uuid        uuid.UUID          `json:"uuid"`

@@ -136,5 +136,8 @@
   "labels.platform.legal_texts.write": "Yasal metinleri düzenle",
   "labels.catalog.read": "Kataloğu görüntüle",
   "labels.catalog.write": "Kataloğu yönet",
-  "groups.catalog": "Katalog"
+  "groups.catalog": "Katalog",
+  "labels.vehicle_catalog.read": "Araç kataloğunu görüntüle",
+  "labels.vehicle_catalog.write": "Araç kataloğunu yönet",
+  "groups.vehicle_catalog": "Araç kataloğu"
 }

@@ -136,5 +136,8 @@
   "labels.platform.legal_texts.write": "Εγγραφή νομικών κειμένων",
   "labels.catalog.read": "Προβολή καταλόγου",
   "labels.catalog.write": "Διαχείριση καταλόγου",
-  "groups.catalog": "Κατάλογος"
+  "groups.catalog": "Κατάλογος",
+  "labels.vehicle_catalog.read": "Προβολή καταλόγου οχημάτων",
+  "labels.vehicle_catalog.write": "Διαχείριση καταλόγου οχημάτων",
+  "groups.vehicle_catalog": "Κατάλογος οχημάτων"
 }

@@ -136,5 +136,8 @@
   "labels.platform.legal_texts.write": "写入法律文本",
   "labels.catalog.read": "查看目录",
   "labels.catalog.write": "管理目录",
-  "groups.catalog": "目录"
+  "groups.catalog": "目录",
+  "labels.vehicle_catalog.read": "查看车辆目录",
+  "labels.vehicle_catalog.write": "管理车辆目录",
+  "groups.vehicle_catalog": "车辆目录"
 }
