@@ -131,8 +131,15 @@ export function createProfileSchema(t: Translate) {
   return z.object({
     name: z.string().min(1, t("auth.validation.name_required")),
     surname: z.string().min(1, t("auth.validation.surname_required")),
+    /** PROFILE_INHERIT = use the organization's language. */
+    locale: z.string(),
+    /** "" = use the organization's time zone. */
+    timezone: z.string(),
   });
 }
+
+/** Select sentinel: Radix Select items cannot have an empty value. */
+export const PROFILE_INHERIT = "inherit";
 
 export type ProfileFormValues = z.infer<ReturnType<typeof createProfileSchema>>;
 

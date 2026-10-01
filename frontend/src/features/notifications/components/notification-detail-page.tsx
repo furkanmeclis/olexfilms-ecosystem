@@ -26,7 +26,6 @@ import { useNotificationRealtimeInvalidate } from "@/features/notifications/hook
 import { useNotification } from "@/features/notifications/hooks/use-notifications-query";
 import { formatNotificationText } from "@/features/notifications/lib/notification-display";
 import type { Notification } from "@/features/notifications/services/notifications.service";
-import { datetime } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 
@@ -83,7 +82,7 @@ function NotificationDetailActions({
 
 /** Own inbox notification detail (`GET /v1/notifications/{uuid}`). */
 export function NotificationDetailPage({ uuid }: NotificationDetailPageProps) {
-  const { t, locale } = useLocale();
+  const { t, format } = useLocale();
   const { can } = usePermission();
   const autoMarkedIdRef = useRef<string | null>(null);
   const markReadSilent = useMarkNotificationRead({ silent: true });
@@ -211,7 +210,7 @@ export function NotificationDetailPage({ uuid }: NotificationDetailPageProps) {
               />
               <DetailField
                 label={t("notifications.fields.created_at")}
-                value={datetime(notification.created_at, undefined, locale)}
+                value={format.dateTime(notification.created_at)}
               />
             </dl>
           </EntityHeader>
@@ -246,14 +245,14 @@ export function NotificationDetailPage({ uuid }: NotificationDetailPageProps) {
                         key: "sent_at",
                         label: t("notifications.fields.sent_at"),
                         value: notification.sent_at
-                          ? datetime(notification.sent_at, undefined, locale)
+                          ? format.dateTime(notification.sent_at)
                           : "—",
                       },
                       {
                         key: "read_at",
                         label: t("notifications.fields.read_at"),
                         value: notification.read_at
-                          ? datetime(notification.read_at, undefined, locale)
+                          ? format.dateTime(notification.read_at)
                           : "—",
                       },
                     ],

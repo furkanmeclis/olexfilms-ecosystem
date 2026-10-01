@@ -35,6 +35,7 @@ import {
   unknownPlaceholders,
 } from "@/features/document-templates/lib/variables";
 import {
+  documentLanguage,
   documentTemplatesService,
   type DocumentKind,
   type DocumentTemplate,
@@ -75,7 +76,7 @@ export function DocumentTemplateEditor(props: DocumentTemplateEditorProps) {
       (r) => r.status === "active",
     );
     return (
-      rows.find((r) => r.language === props.language) ??
+      rows.find((r) => documentLanguage(r.language) === props.language) ??
       rows.find((r) => r.language === "en") ??
       rows[0]
     );
@@ -272,7 +273,7 @@ function EditorBody({ initial }: { initial: Draft }) {
             {t(`documents.kinds.${initial.kind}`)}
           </Badge>
           <Badge variant="outline">
-            {t(`documents.languages.${initial.language}`)}
+            {t(`documents.languages.${documentLanguage(initial.language)}`)}
           </Badge>
           <Badge variant="outline">
             {initial.brandSlug || t("documents.brand_default")}

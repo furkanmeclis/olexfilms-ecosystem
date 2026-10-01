@@ -36,7 +36,7 @@ export function useImportsColumns({
   rollbackPending,
   detailHref,
 }: UseImportsColumnsOptions) {
-  const { t } = useLocale();
+  const { t, format } = useLocale();
   const [nowMs] = useState(() => Date.now());
 
   return useMemo<ColumnDef<ImportJob>[]>(
@@ -74,7 +74,7 @@ export function useImportsColumns({
         accessorKey: "created_at",
         labelKey: "imports.columns.created_at",
         enableColumnFilter: false,
-        cell: ({ row }) => new Date(row.original.created_at).toLocaleString(),
+        cell: ({ row }) => format.dateTime(row.original.created_at),
       }),
       createColumn<ImportJob>({
         id: "actions",
@@ -116,6 +116,6 @@ export function useImportsColumns({
         },
       }),
     ],
-    [nowMs, onRollback, rollbackPending, detailHref, t],
+    [nowMs, onRollback, rollbackPending, detailHref, t, format],
   );
 }

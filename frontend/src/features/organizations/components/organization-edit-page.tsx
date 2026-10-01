@@ -37,6 +37,8 @@ export function OrganizationEditPage({ uuid }: OrganizationEditPageProps) {
         ...addressIds(values),
         status: values.status,
         plan_code: values.plan_code?.trim() || undefined,
+        locale: values.locale || undefined,
+        timezone: values.timezone || undefined,
         ...(values.clear_access_ends_at
           ? { clear_access_ends_at: true }
           : values.access_ends_at

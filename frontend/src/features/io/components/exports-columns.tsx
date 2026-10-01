@@ -32,7 +32,7 @@ type ExportsColumnsOptions = {
 };
 
 export function useExportsColumns(options: ExportsColumnsOptions = {}) {
-  const { t } = useLocale();
+  const { t, format } = useLocale();
   const scope = options.scope ?? "platform";
   const customDetailHref = options.detailHref;
   const detailHref = useMemo(
@@ -83,7 +83,7 @@ export function useExportsColumns(options: ExportsColumnsOptions = {}) {
         accessorKey: "created_at",
         labelKey: "exports.columns.created_at",
         enableColumnFilter: false,
-        cell: ({ row }) => new Date(row.original.created_at).toLocaleString(),
+        cell: ({ row }) => format.dateTime(row.original.created_at),
       }),
       createColumn<ExportJob>({
         id: "actions",
@@ -119,6 +119,6 @@ export function useExportsColumns(options: ExportsColumnsOptions = {}) {
         },
       }),
     ],
-    [t, scope, detailHref],
+    [t, scope, detailHref, format],
   );
 }

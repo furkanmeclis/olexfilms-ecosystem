@@ -23,7 +23,6 @@ import {
 } from "@/features/storage/hooks/use-storage-sharing";
 import { storageService } from "@/features/storage/services/storage.service";
 import type { StorageLink, StorageObject } from "@/features/storage/types";
-import { datetime } from "@/lib/utils/format";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
 
@@ -273,7 +272,7 @@ function ExistingLinksPanel({
   canWrite: boolean;
   onQr: (url: string) => void;
 }) {
-  const { t, locale } = useLocale();
+  const { t, format } = useLocale();
   const linksQuery = useStorageLinks(object.key);
   const revoke = useRevokeLink();
 
@@ -340,8 +339,7 @@ function ExistingLinksPanel({
             </p>
           )}
           <p className="text-muted-foreground text-xs">
-            {t("storage.created_at")}:{" "}
-            {datetime(link.created_at, "dd.MM.yyyy HH:mm", locale)}
+            {t("storage.created_at")}: {format.dateTime(link.created_at)}
           </p>
           <div className="flex flex-wrap gap-2">
             {link.url ? (

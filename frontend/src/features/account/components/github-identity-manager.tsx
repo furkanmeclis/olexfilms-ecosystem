@@ -15,7 +15,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isApiError } from "@/lib/api";
-import { datetime } from "@/lib/utils/format";
 import { useLocale } from "@/providers/locale-provider";
 import { authService } from "@/services/auth.service";
 
@@ -55,7 +54,7 @@ const providerMeta: Record<
 };
 
 export function OAuthIdentityManager({ providers }: OAuthIdentityManagerProps) {
-  const { t, locale } = useLocale();
+  const { t, format } = useLocale();
   const [pendingProvider, setPendingProvider] = useState<ProviderId | null>(
     null,
   );
@@ -184,7 +183,7 @@ export function OAuthIdentityManager({ providers }: OAuthIdentityManagerProps) {
                 ) : null}
                 <p className="text-muted-foreground text-xs">
                   {t("auth.oauth.linked_at", {
-                    date: datetime(identity.linked_at, undefined, locale),
+                    date: format.dateTime(identity.linked_at),
                   })}
                 </p>
               </div>

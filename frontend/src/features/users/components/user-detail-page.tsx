@@ -35,7 +35,6 @@ import type {
   PlatformUserDetail,
   UserStatus,
 } from "@/features/users/services/users.service";
-import { datetime } from "@/lib/utils/format";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 
@@ -128,7 +127,7 @@ function UserDetailActions({
 }
 
 export function UserDetailPage({ uuid }: UserDetailPageProps) {
-  const { t } = useLocale();
+  const { t, format } = useLocale();
   const userQuery = useUser(uuid);
   const [passwordOpen, setPasswordOpen] = useState(false);
 
@@ -328,7 +327,7 @@ export function UserDetailPage({ uuid }: UserDetailPageProps) {
                         </p>
                         <p className="text-muted-foreground text-xs">
                           {t("users.auth_methods.linked_at", {
-                            date: datetime(method.linked_at),
+                            date: format.dateTime(method.linked_at),
                           })}
                         </p>
                       </div>

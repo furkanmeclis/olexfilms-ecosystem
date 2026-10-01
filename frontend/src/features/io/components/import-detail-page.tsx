@@ -49,7 +49,7 @@ export function ImportDetailPage({
   scope = "platform",
   slug,
 }: ImportDetailPageProps) {
-  const { t } = useLocale();
+  const { t, format } = useLocale();
   const queryClient = useQueryClient();
   const [nowMs] = useState(() => Date.now());
   const jobQuery = useImportJob(uuid, true, scope);
@@ -182,20 +182,20 @@ export function ImportDetailPage({
                     {
                       key: "created_at",
                       label: t("imports.columns.created_at"),
-                      value: new Date(job.created_at).toLocaleString(),
+                      value: format.dateTime(job.created_at),
                     },
                     {
                       key: "applied_at",
                       label: t("imports.detail.fields.applied_at"),
                       value: job.applied_at
-                        ? new Date(job.applied_at).toLocaleString()
+                        ? format.dateTime(job.applied_at)
                         : "—",
                     },
                     {
                       key: "rollback_until",
                       label: t("imports.detail.fields.rollback_until"),
                       value: job.rollback_until
-                        ? new Date(job.rollback_until).toLocaleString()
+                        ? format.dateTime(job.rollback_until)
                         : "—",
                     },
                   ],

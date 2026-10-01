@@ -119,5 +119,10 @@
   "fields.city_hint": "Boş bırakılırsa ilden doldurulur.",
   "fields.district_hint": "Boş bırakılırsa ilçeden doldurulur.",
   "form.section_address": "Adres",
-  "form.section_address_desc": "Ülke, il ve ilçe. Bayi, bölgesinin distribütörüne bağlanır."
+  "form.section_address_desc": "Ülke, il ve ilçe. Bayi, bölgesinin distribütörüne bağlanır.",
+  "fields.locale": "Dil",
+  "fields.timezone": "Saat dilimi",
+  "fields.timezone_hint": "Kullanıcı kendi dilimini seçmediyse tarih ve saatler bu dilimde gösterilir.",
+  "form.section_regional": "Dil ve bölge",
+  "form.section_regional_desc": "Kullanıcılar, belgeler ve bildirimler için varsayılan dil ve saat dilimi."
 }

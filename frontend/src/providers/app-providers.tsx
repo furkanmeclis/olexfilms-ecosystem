@@ -2,6 +2,8 @@
 
 import type { ReactNode } from "react";
 
+import type { AppLocale } from "@/config/i18n";
+import type { LocaleCatalog } from "@/lib/i18n/types";
 import { StepUpProvider } from "@/features/step-up-engine";
 import { AuthProvider } from "@/providers/auth-provider";
 import { LocaleHydrator } from "@/components/layout/locale-hydrator";
@@ -13,9 +15,25 @@ import { RealtimeProvider } from "@/providers/realtime-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { ToastProvider } from "@/providers/toast-provider";
 
-export function AppProviders({ children }: { children: ReactNode }) {
+type AppProvidersProps = {
+  children: ReactNode;
+  locale?: AppLocale;
+  messages?: LocaleCatalog | null;
+  timeZone?: string;
+};
+
+export function AppProviders({
+  children,
+  locale,
+  messages,
+  timeZone,
+}: AppProvidersProps) {
   return (
-    <LocaleProvider>
+    <LocaleProvider
+      initialLocale={locale}
+      initialMessages={messages}
+      initialTimeZone={timeZone}
+    >
       <ThemeProvider>
         <QueryProvider>
           <AuthProvider>

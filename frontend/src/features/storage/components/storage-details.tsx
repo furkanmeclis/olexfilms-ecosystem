@@ -31,7 +31,6 @@ import {
 import { formatBytes } from "@/features/storage/lib/format";
 import { storageService } from "@/features/storage/services/storage.service";
 import type { StorageObject } from "@/features/storage/types";
-import { datetime } from "@/lib/utils/format";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
 
@@ -59,7 +58,7 @@ export function StorageDetailsPanel({
   onShare?: (object: StorageObject) => void;
   onPreview?: (object: StorageObject) => void;
 }) {
-  const { t, locale } = useLocale();
+  const { t, format } = useLocale();
   const [restoreVersionId, setRestoreVersionId] = useState<string | null>(null);
   const versionsQuery = useStorageVersions(
     object?.kind === "file" ? object.key : null,
@@ -80,7 +79,7 @@ export function StorageDetailsPanel({
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="right" className="w-full sm:max-w-lg">
+        <SheetContent side="end" className="w-full sm:max-w-lg">
           <SheetHeader>
             <SheetTitle>{object.name}</SheetTitle>
           </SheetHeader>
@@ -127,19 +126,11 @@ export function StorageDetailsPanel({
                 />
                 <DetailRow
                   label={t("storage.field_created")}
-                  value={datetime(
-                    object.created_at,
-                    "dd.MM.yyyy HH:mm",
-                    locale,
-                  )}
+                  value={format.dateTime(object.created_at)}
                 />
                 <DetailRow
                   label={t("storage.field_updated")}
-                  value={datetime(
-                    object.updated_at,
-                    "dd.MM.yyyy HH:mm",
-                    locale,
-                  )}
+                  value={format.dateTime(object.updated_at)}
                 />
                 <DetailRow
                   label={t("storage.field_owner")}
@@ -257,11 +248,7 @@ export function StorageDetailsPanel({
                             </p>
                             <p className="text-muted-foreground text-xs">
                               {formatBytes(version.size)} ·{" "}
-                              {datetime(
-                                version.created_at,
-                                "dd.MM.yyyy HH:mm",
-                                locale,
-                              )}
+                              {format.dateTime(version.created_at)}
                             </p>
                           </div>
                           {canWrite && !version.is_latest ? (
@@ -382,7 +369,12 @@ export function StorageDetailsPanel({
                       id: item.uuid,
                       title: item.action,
                       description: item.actor,
-                      meta: datetime(item.created_at, "dd.MM HH:mm", locale),
+                      meta: format.dateParts(item.created_at, {
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }),
                     }))}
                   />
                 </div>

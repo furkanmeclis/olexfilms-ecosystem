@@ -1,81 +1,83 @@
+import { formatISO, type Locale as DateFnsLocale } from "date-fns";
 import {
-  format as formatDateFns,
-  formatDistanceToNow,
-  formatISO,
-  parseISO,
-  type Locale as DateFnsLocale,
-} from "date-fns";
-import { enUS as dateFnsEnUS, tr as dateFnsTr } from "date-fns/locale";
+  ar as dfAr,
+  az as dfAz,
+  bg as dfBg,
+  de as dfDe,
+  el as dfEl,
+  enUS as dfEnUS,
+  es as dfEs,
+  fr as dfFr,
+  it as dfIt,
+  ru as dfRu,
+  tr as dfTr,
+  uk as dfUk,
+  zhCN as dfZhCN,
+} from "date-fns/locale";
 import {
-  enUS as dayPickerEnUS,
-  tr as dayPickerTr,
+  ar as dpAr,
+  az as dpAz,
+  bg as dpBg,
+  de as dpDe,
+  el as dpEl,
+  enUS as dpEnUS,
+  es as dpEs,
+  fr as dpFr,
+  it as dpIt,
+  ru as dpRu,
+  tr as dpTr,
+  uk as dpUk,
+  zhCN as dpZhCN,
 } from "react-day-picker/locale";
 
 import { i18nConfig, type AppLocale } from "@/config/i18n";
 
+/*
+ * date-fns locales are used by the calendar / date picker only. Dates and
+ * numbers shown to the user go through Intl: `useLocale().format` and
+ * `@/lib/i18n/format` (TEC-137).
+ */
+const DATE_FNS_LOCALES: Record<AppLocale, DateFnsLocale> = {
+  tr: dfTr,
+  en: dfEnUS,
+  bg: dfBg,
+  de: dfDe,
+  el: dfEl,
+  uk: dfUk,
+  ru: dfRu,
+  fr: dfFr,
+  es: dfEs,
+  it: dfIt,
+  "zh-CN": dfZhCN,
+  az: dfAz,
+  ar: dfAr,
+};
+
+const DAY_PICKER_LOCALES = {
+  tr: dpTr,
+  en: dpEnUS,
+  bg: dpBg,
+  de: dpDe,
+  el: dpEl,
+  uk: dpUk,
+  ru: dpRu,
+  fr: dpFr,
+  es: dpEs,
+  it: dpIt,
+  "zh-CN": dpZhCN,
+  az: dpAz,
+  ar: dpAr,
+} satisfies Record<AppLocale, unknown>;
+
 export function dateFnsLocale(
   locale: AppLocale = i18nConfig.defaultLocale,
 ): DateFnsLocale {
-  return locale === "tr" ? dateFnsTr : dateFnsEnUS;
+  return DATE_FNS_LOCALES[locale] ?? dfEnUS;
 }
 
 /** DayPicker locale (`react-day-picker/locale`) for calendar UI. */
 export function dayPickerLocale(locale: AppLocale = i18nConfig.defaultLocale) {
-  return locale === "tr" ? dayPickerTr : dayPickerEnUS;
-}
-
-function dateLocale(locale: AppLocale = i18nConfig.defaultLocale) {
-  return dateFnsLocale(locale);
-}
-
-export function currency(
-  value: number,
-  currencyCode = "TRY",
-  locale: AppLocale = i18nConfig.defaultLocale,
-) {
-  return new Intl.NumberFormat(locale === "tr" ? "tr-TR" : "en-US", {
-    style: "currency",
-    currency: currencyCode,
-  }).format(value);
-}
-
-export function money(
-  value: number,
-  locale: AppLocale = i18nConfig.defaultLocale,
-) {
-  return new Intl.NumberFormat(locale === "tr" ? "tr-TR" : "en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-export function date(
-  value: Date | string,
-  pattern = "dd.MM.yyyy",
-  locale: AppLocale = i18nConfig.defaultLocale,
-) {
-  const d = typeof value === "string" ? parseISO(value) : value;
-  return formatDateFns(d, pattern, { locale: dateLocale(locale) });
-}
-
-export function datetime(
-  value: Date | string,
-  pattern = "dd.MM.yyyy HH:mm",
-  locale: AppLocale = i18nConfig.defaultLocale,
-) {
-  const d = typeof value === "string" ? parseISO(value) : value;
-  return formatDateFns(d, pattern, { locale: dateLocale(locale) });
-}
-
-export function relativeDatetime(
-  value: Date | string,
-  locale: AppLocale = i18nConfig.defaultLocale,
-) {
-  const d = typeof value === "string" ? parseISO(value) : value;
-  return formatDistanceToNow(d, {
-    addSuffix: true,
-    locale: dateLocale(locale),
-  });
+  return DAY_PICKER_LOCALES[locale] ?? dpEnUS;
 }
 
 export function phone(value: string) {

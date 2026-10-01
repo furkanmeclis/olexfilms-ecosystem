@@ -26,7 +26,7 @@ import type { ActivityEvent } from "@/features/io/types";
 import { useLocale } from "@/providers/locale-provider";
 
 export function ActivityPage() {
-  const { t } = useLocale();
+  const { t, format } = useLocale();
   const listState = useServerListState({
     initialSort: "-created_at",
     initialPageSize: 20,
@@ -84,10 +84,10 @@ export function ActivityPage() {
       createColumn<ActivityEvent>({
         accessorKey: "created_at",
         labelKey: "activity.columns.created_at",
-        cell: ({ row }) => new Date(row.original.created_at).toLocaleString(),
+        cell: ({ row }) => format.dateTime(row.original.created_at),
       }),
     ],
-    [t],
+    [t, format],
   );
 
   const pageCount = useMemo(() => {
