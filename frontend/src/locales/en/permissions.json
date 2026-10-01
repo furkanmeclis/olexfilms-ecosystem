@@ -151,5 +151,15 @@
   "labels.vehicles.write": "Manage vehicles",
   "labels.customers.anonymize": "Anonymize customers",
   "labels.customers.merge": "Merge customers",
-  "groups.vehicles": "Vehicles"
+  "groups.vehicles": "Vehicles",
+  "labels.orders.read": "View orders",
+  "labels.orders.write": "Manage orders",
+  "labels.orders.approve": "Approve orders",
+  "labels.orders.ship": "Ship orders",
+  "labels.orders.receive": "Receive orders",
+  "labels.orders.cancel": "Cancel orders",
+  "labels.transfers.request": "Request stock transfers",
+  "labels.transfers.approve": "Approve stock transfers",
+  "groups.orders": "Orders",
+  "groups.transfers": "Transfers"
 }

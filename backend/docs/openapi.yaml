@@ -76,6 +76,8 @@ tags:
     description: Currencies and daily exchange rates (TCMB, ECB, manual override)
   - name: Catalog
     description: Product categories and products of the active brand (center writes, K4)
+  - name: Stock
+    description: Stock ledger reads (barcode history, organization and bin stock), scoped on the holding organization
   - name: VehicleCatalog
     description: >-
       Car brands and models (TEC-149): global reference data, read by every
@@ -4843,6 +4845,123 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /v1/stock/units/by-barcode/{barcode}:
+    parameters:
+      - name: barcode
+        in: path
+        required: true
+        schema: { type: string, minLength: 1, maxLength: 64 }
+    get:
+      tags: [Stock]
+      operationId: getStockUnitHistory
+      summary: Current state and movement history of a barcode
+      description: >-
+        Needs `stock.read`, filtered on the holding organization
+        (`holder_org_id`, TEC-94 decision 4). Scope `all` (center warehouse,
+        K20) sees every unit and every name. A restricted viewer (managed,
+        subtree, brand) sees a unit only while it is held inside its reach
+        (404 otherwise). It then gets the whole history: rows of its own
+        organizations and of its supplier chain are named; rows of any other
+        organization are masked (`organization_masked`, owner `masked`, no
+        location, reference or reason). Movements are in ledger order
+        (oldest first) and paged with `limit`/`offset`. Fixed barcodes list
+        the quantity per owner in `holdings` instead of `current`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Unit and its history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockUnitHistory"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/stock/organizations/{uuid}/products:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    get:
+      tags: [Stock]
+      operationId: listStockOrganizationProducts
+      summary: Product stock of an organization
+      description: >-
+        Needs `stock.read`; the organization must be inside the viewer's
+        reach (404 otherwise). Rows come from the
+        `organization_product_stocks` projection: available and placed
+        units only (in transit, used and void are not counted). `quantity`
+        counts pieces and fixed barcode quantities, `meters` the remaining
+        roll meters; `fixed_barcodes` lists the fixed barcode quantities on
+        hand. `q` matches product name or SKU.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/StockProductUUIDFilter"
+        - $ref: "#/components/parameters/StockCategoryUUIDFilter"
+        - $ref: "#/components/parameters/StockStatusFilter"
+      responses:
+        "200":
+          description: Product stock
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockProductPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/stock/locations/{uuid}/products:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    get:
+      tags: [Stock]
+      operationId: listStockLocationProducts
+      summary: Product stock of a warehouse location (bin)
+      description: >-
+        Needs `stock.read`; the location's organization must be inside the
+        viewer's reach (404 otherwise). Rows come from the
+        `bin_product_stocks` projection; same shape and filters as the
+        organization stock.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/StockProductUUIDFilter"
+        - $ref: "#/components/parameters/StockCategoryUUIDFilter"
+        - $ref: "#/components/parameters/StockStatusFilter"
+      responses:
+        "200":
+          description: Bin product stock
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockProductPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/public/product-images/{key}:
     get:
       tags: [Catalog]
@@ -7783,6 +7902,195 @@ paths:
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
+  /v1/accounting/cari/{uuid}/statement:
+    get:
+      tags: [Accounting]
+      operationId: getAccountingCariStatement
+      summary: Cari statement (ekstre) of a period with opening, running and closing balance
+      description: >-
+        Rows before `from` make up the opening balance; each period row shows
+        debit (raises what the counterparty owes the book owner) or credit and
+        the running balance. A reversal row is shown in the opposite column.
+        `from`/`to` are calendar days (UTC, inclusive). Read scope as in
+        TEC-172: the active organization's book or one below it; a dealer
+        reads its own cari only. Labels follow the user language (K10) or
+        `locale`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - $ref: "#/components/parameters/AccountingOrganizationUUID"
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+        - name: locale
+          in: query
+          description: Label language override (one of the 13 app languages)
+          schema: { type: string, example: tr }
+      responses:
+        "200":
+          description: Statement
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCariStatement"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/accounting/cari/{uuid}/statement/export:
+    post:
+      tags: [Accounting]
+      operationId: exportAccountingCariStatement
+      summary: Queue a statement export job (PDF, XLSX or CSV)
+      description: >-
+        The job runs on worker-docs (exports queue). PDF is rendered by
+        Gotenberg on the organization letterhead, in the user language
+        (RTL for ar); XLSX/CSV headers are in the same language. Poll and
+        download through /v1/accounting/exports/{uuid}.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountingExportInput"
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/accounting/reports/balances:
+    get:
+      tags: [Accounting]
+      operationId: getAccountingBalanceReport
+      summary: Every cari and cash/bank balance of a book as of a day
+      description: >-
+        `as_of` is a calendar day (UTC, end of day inclusive); without it the
+        report covers every row. Receivable sums the positive cari balances,
+        payable the negative ones.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AccountingOrganizationUUID"
+        - name: as_of
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Balance report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAccountingBalanceReport"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/accounting/reports/balances/export:
+    post:
+      tags: [Accounting]
+      operationId: exportAccountingBalanceReport
+      summary: Queue a balance report export job (PDF, XLSX or CSV)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountingExportInput"
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/accounting/exports/{uuid}:
+    get:
+      tags: [Accounting]
+      operationId: getAccountingExport
+      summary: An accounting export job of the active organization
+      description: download_url points at /v1/accounting/exports/{uuid}/download once completed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Export job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/accounting/exports/{uuid}/download:
+    get:
+      tags: [Accounting]
+      operationId: downloadAccountingExport
+      summary: Download a completed accounting export file
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: File bytes (application/pdf, xlsx or text/csv)
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -7803,6 +8111,19 @@ components:
       in: path
       required: true
       schema: { type: string, format: uuid }
+    StockProductUUIDFilter:
+      name: product_uuid
+      in: query
+      schema: { type: string, format: uuid }
+    StockCategoryUUIDFilter:
+      name: category_uuid
+      in: query
+      schema: { type: string, format: uuid }
+    StockStatusFilter:
+      name: status
+      in: query
+      description: "`in_stock`: quantity or meters above zero; `out_of_stock`: both zero."
+      schema: { type: string, enum: [in_stock, out_of_stock] }
     ProductUUID:
       name: uuid
       in: path
@@ -11168,6 +11489,206 @@ components:
             offset: { type: integer }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
+    StockOwnerType:
+      type: string
+      enum: [warehouse_location, organization, service, trash]
+
+    StockUnitStatus:
+      type: string
+      enum: [reserved, printed, available, placed, in_transit, used, void]
+
+    StockOrgRef:
+      type: object
+      required: [uuid, name, type]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        type: { type: string, enum: [center, distributor, dealer] }
+
+    StockLocationRef:
+      type: object
+      required: [uuid, code, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+
+    StockOwner:
+      type: object
+      description: Masked owners belong to an organization the viewer may not name.
+      required: [type, organization, location, masked]
+      properties:
+        type: { $ref: "#/components/schemas/StockOwnerType" }
+        organization:
+          oneOf:
+            - $ref: "#/components/schemas/StockOrgRef"
+            - type: "null"
+        location:
+          oneOf:
+            - $ref: "#/components/schemas/StockLocationRef"
+            - type: "null"
+        masked: { type: boolean }
+
+    StockUnit:
+      type: object
+      required: [uuid, barcode, unit_kind, source, status, initial_meters, remaining_meters, product, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        barcode: { type: string }
+        unit_kind: { type: string, enum: [serial, fixed] }
+        source: { type: string, enum: [generated, imported, external] }
+        status: { $ref: "#/components/schemas/StockUnitStatus" }
+        initial_meters: { type: [string, "null"], description: "Roll length (decimal string, 2 places)" }
+        remaining_meters: { type: [string, "null"] }
+        product:
+          type: object
+          required: [uuid, sku, name, unit_type, uses_fixed_barcode]
+          properties:
+            uuid: { type: string, format: uuid }
+            sku: { type: string }
+            name: { type: string }
+            unit_type: { $ref: "#/components/schemas/CatalogUnitType" }
+            uses_fixed_barcode: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+    StockCurrentState:
+      type: object
+      required: [owner, holder, status, updated_at]
+      properties:
+        owner: { $ref: "#/components/schemas/StockOwner" }
+        holder: { $ref: "#/components/schemas/StockOrgRef" }
+        status: { $ref: "#/components/schemas/StockUnitStatus" }
+        updated_at: { type: string, format: date-time }
+
+    StockHolding:
+      type: object
+      required: [owner, holder, quantity]
+      properties:
+        owner: { $ref: "#/components/schemas/StockOwner" }
+        holder: { $ref: "#/components/schemas/StockOrgRef" }
+        quantity: { type: integer }
+
+    StockMovement:
+      type: object
+      required: [uuid, type, quantity_delta, meters_delta, from_status, to_status, from_owner, to_owner,
+        organization, organization_masked, reference_type, reason, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        type:
+          type: string
+          enum: [entry, placement, transfer_out, transfer_in, transfer_cancel_restore, order_out,
+            order_cancel_restore, received, consumption, partial_consumption, return,
+            reclassification, count_adjustment, void, external_outbound]
+        quantity_delta: { type: integer }
+        meters_delta: { type: string, description: "Decimal string, 2 places" }
+        from_status:
+          oneOf:
+            - $ref: "#/components/schemas/StockUnitStatus"
+            - type: "null"
+        to_status:
+          oneOf:
+            - $ref: "#/components/schemas/StockUnitStatus"
+            - type: "null"
+        from_owner:
+          oneOf:
+            - $ref: "#/components/schemas/StockOwner"
+            - type: "null"
+        to_owner:
+          oneOf:
+            - $ref: "#/components/schemas/StockOwner"
+            - type: "null"
+        organization:
+          description: Holding organization of the row; null when masked.
+          oneOf:
+            - $ref: "#/components/schemas/StockOrgRef"
+            - type: "null"
+        organization_masked: { type: boolean }
+        reference_type: { type: [string, "null"] }
+        reason: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+
+    StockUnitHistory:
+      type: object
+      required: [unit, current, holdings, movements]
+      properties:
+        unit: { $ref: "#/components/schemas/StockUnit" }
+        current:
+          description: Single active owner of a serial unit; null for fixed barcodes and labels not in stock yet.
+          oneOf:
+            - $ref: "#/components/schemas/StockCurrentState"
+            - type: "null"
+        holdings:
+          type: array
+          items: { $ref: "#/components/schemas/StockHolding" }
+        movements:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/StockMovement" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+
+    StockProduct:
+      type: object
+      required: [product, quantity, meters, fixed_barcodes, updated_at]
+      properties:
+        product:
+          type: object
+          required: [uuid, sku, name, unit_type, uses_fixed_barcode, active, category]
+          properties:
+            uuid: { type: string, format: uuid }
+            sku: { type: string }
+            name: { type: string }
+            unit_type: { $ref: "#/components/schemas/CatalogUnitType" }
+            uses_fixed_barcode: { type: boolean }
+            active: { type: boolean }
+            category:
+              type: object
+              required: [uuid, name]
+              properties:
+                uuid: { type: string, format: uuid }
+                name: { type: string }
+        quantity: { type: integer }
+        meters: { type: string, description: "Decimal string, 2 places" }
+        fixed_barcodes:
+          type: array
+          items:
+            type: object
+            required: [unit_uuid, barcode, quantity]
+            properties:
+              unit_uuid: { type: string, format: uuid }
+              barcode: { type: string }
+              quantity: { type: integer }
+        updated_at: { type: string, format: date-time }
+
+    EnvelopeStockUnitHistory:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/StockUnitHistory" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeStockProductPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/StockProduct" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
     EnvelopeCatalogBulkActive:
       type: object
       required: [success, data, meta]
@@ -12258,4 +12779,147 @@ components:
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    CariStatementLine:
+      type: object
+      required:
+        - uuid
+        - date
+        - direction
+        - category
+        - category_label
+        - description
+        - source_type
+        - source_uuid
+        - source_label
+        - reversal_of_uuid
+        - orig_currency
+        - orig_amount
+        - debit
+        - credit
+        - balance
+      properties:
+        uuid: { type: string, format: uuid }
+        date: { type: string, format: date-time }
+        direction: { $ref: "#/components/schemas/AccountingDirection" }
+        category: { type: string }
+        category_label: { type: string, description: Category in the report language }
+        description: { type: string, description: "Entry description, or the category label when empty" }
+        source_type: { type: [string, "null"], example: manual }
+        source_uuid: { type: [string, "null"], format: uuid }
+        source_label: { type: string, example: Manual entry }
+        reversal_of_uuid: { type: [string, "null"], format: uuid }
+        orig_currency: { type: string, minLength: 3, maxLength: 3 }
+        orig_amount: { $ref: "#/components/schemas/AccountingAmount" }
+        debit: { $ref: "#/components/schemas/AccountingAmount" }
+        credit: { $ref: "#/components/schemas/AccountingAmount" }
+        balance: { $ref: "#/components/schemas/AccountingAmount" }
+
+    CariStatement:
+      type: object
+      required:
+        - organization
+        - cari
+        - currency
+        - from
+        - to
+        - opening_balance
+        - total_debit
+        - total_credit
+        - closing_balance
+        - lines
+        - generated_at
+      properties:
+        organization: { $ref: "#/components/schemas/AccountingRef" }
+        cari: { $ref: "#/components/schemas/CariAccount" }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        from: { type: [string, "null"], format: date }
+        to: { type: [string, "null"], format: date }
+        opening_balance: { $ref: "#/components/schemas/AccountingAmount" }
+        total_debit: { $ref: "#/components/schemas/AccountingAmount" }
+        total_credit: { $ref: "#/components/schemas/AccountingAmount" }
+        closing_balance: { $ref: "#/components/schemas/AccountingAmount" }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/CariStatementLine" }
+        generated_at: { type: string, format: date-time }
+
+    AccountingCariBalance:
+      type: object
+      required: [uuid, counterparty, currency, active, balance, entry_count]
+      properties:
+        uuid: { type: string, format: uuid }
+        counterparty: { $ref: "#/components/schemas/CariCounterparty" }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        active: { type: boolean }
+        balance: { $ref: "#/components/schemas/AccountingAmount" }
+        entry_count: { type: integer, format: int64 }
+
+    AccountingAccountBalance:
+      type: object
+      required: [uuid, type, name, currency, active, balance, entry_count]
+      properties:
+        uuid: { type: string, format: uuid }
+        type: { type: string, enum: [cash, bank] }
+        name: { type: string }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        active: { type: boolean }
+        balance: { $ref: "#/components/schemas/AccountingAmount" }
+        entry_count: { type: integer, format: int64 }
+
+    AccountingBalanceReport:
+      type: object
+      required: [organization, currency, as_of, cari, accounts, totals, generated_at]
+      properties:
+        organization: { $ref: "#/components/schemas/AccountingRef" }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        as_of: { type: [string, "null"], format: date }
+        cari:
+          type: array
+          items: { $ref: "#/components/schemas/AccountingCariBalance" }
+        accounts:
+          type: array
+          items: { $ref: "#/components/schemas/AccountingAccountBalance" }
+        totals:
+          type: object
+          required: [receivable, payable, cari_net, cash, bank, accounts]
+          properties:
+            receivable: { $ref: "#/components/schemas/AccountingAmount" }
+            payable: { $ref: "#/components/schemas/AccountingAmount" }
+            cari_net: { $ref: "#/components/schemas/AccountingAmount" }
+            cash: { $ref: "#/components/schemas/AccountingAmount" }
+            bank: { $ref: "#/components/schemas/AccountingAmount" }
+            accounts: { $ref: "#/components/schemas/AccountingAmount" }
+        generated_at: { type: string, format: date-time }
+
+    AccountingExportInput:
+      type: object
+      required: [format]
+      additionalProperties: false
+      properties:
+        format: { type: string, enum: [pdf, xlsx, csv] }
+        organization_uuid:
+          type: [string, "null"]
+          format: uuid
+          description: Book (default the active organization; one below it inside the read scope)
+        from: { type: string, format: date, description: Statement only }
+        to: { type: string, format: date, description: Statement only }
+        as_of: { type: string, format: date, description: Balance report only }
+        locale: { type: string, description: Report language override (default the user language), example: tr }
+
+    EnvelopeCariStatement:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/CariStatement" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAccountingBalanceReport:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/AccountingBalanceReport" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }

@@ -12,6 +12,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/errtrack"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/logging"
+	accountingusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting/usecase"
 	bulkusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/bulk/usecase"
 	catalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/catalog/usecase"
 	docusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/usecase"
@@ -110,12 +111,17 @@ func main() {
 	searchIndexer := searchengine.NewIndexer(searchClient, searchReg, nil, log)
 	// TEC-145: product import/export runs here; the import reindexes products.
 	catalogSvc := catalogusecase.New(queries, searchIndexer)
+	// Exports only read the ledger: no poster, no feature checker.
+	accountingSvc := accountingusecase.New(pool, queries, nil, nil)
 	ioReg := ioengine.NewRegistry(
 		catalogusecase.NewIOAdapter(catalogSvc, queries),
 		ioadapters.NewUsers(queries),
 		ioadapters.NewRoles(queries),
 		ioadapters.NewNotifications(queries),
 		ioadapters.NewActivity(queries),
+		// TEC-175: cari statement and balance report exports (read only).
+		accountingusecase.NewStatementAdapter(accountingSvc),
+		accountingusecase.NewBalancesAdapter(accountingSvc),
 	)
 	exportSvc := exportusecase.New(queries, store, ioReg, nil, notifSvc, activityRec, log)
 	pdfClient := pdfrender.NewWithOptions(cfg.Gotenberg.URL, pdfrender.Options{MaxConnsPerHost: cfg.Queue.Concurrency})

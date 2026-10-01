@@ -22,22 +22,30 @@ type Querier interface {
 	// Atomically appends one image while the product holds fewer than
 	// max_images; no row means the product is gone or already full.
 	AppendProductImage(ctx context.Context, arg AppendProductImageParams) (Product, error)
+	// Seller approval: freezes the rate (decision 2).
+	ApproveOrder(ctx context.Context, arg ApproveOrderParams) (Order, error)
+	// Approval freezes A's purchase price (K13).
+	ApproveStockTransferRequest(ctx context.Context, arg ApproveStockTransferRequestParams) (StockTransferRequest, error)
 	AssignMemberRoleBySlug(ctx context.Context, arg AssignMemberRoleBySlugParams) error
 	AssignUserRoleBySlug(ctx context.Context, arg AssignUserRoleBySlugParams) error
 	AttachNotificationDelivery(ctx context.Context, arg AttachNotificationDeliveryParams) error
+	CancelStockTransferRequest(ctx context.Context, id int64) (StockTransferRequest, error)
 	ClaimOutboxEvents(ctx context.Context, arg ClaimOutboxEventsParams) ([]OutboxEvent, error)
 	ClearAppSettingsLogo(ctx context.Context) (AppSetting, error)
 	ClearOrganizationLogo(ctx context.Context, argUuid uuid.UUID) (Organization, error)
+	CompleteStockTransferRequest(ctx context.Context, id int64) (StockTransferRequest, error)
 	ConfirmUserTOTP(ctx context.Context, arg ConfirmUserTOTPParams) (UserTotp, error)
 	ConsumeOTP(ctx context.Context, id int64) error
 	ConsumeOTPAt(ctx context.Context, arg ConsumeOTPAtParams) error
 	ConsumeQRLoginChallenge(ctx context.Context, code string) (QrLoginChallenge, error)
+	ConsumeStockReservation(ctx context.Context, id int64) (StockReservation, error)
 	CountActivityEvents(ctx context.Context, arg CountActivityEventsParams) (int64, error)
 	CountAllBulkJobs(ctx context.Context) (int64, error)
 	CountAllExportJobs(ctx context.Context) (int64, error)
 	CountAllImportJobs(ctx context.Context) (int64, error)
 	CountAppLogs(ctx context.Context, arg CountAppLogsParams) (int64, error)
 	CountAppLogsByLevel(ctx context.Context) ([]CountAppLogsByLevelRow, error)
+	CountBinProductStockRows(ctx context.Context, arg CountBinProductStockRowsParams) (int64, error)
 	CountBulkJobsForActor(ctx context.Context, actorID int64) (int64, error)
 	CountCarBrands(ctx context.Context, arg CountCarBrandsParams) (int64, error)
 	CountCarModels(ctx context.Context, arg CountCarModelsParams) (int64, error)
@@ -53,8 +61,12 @@ type Querier interface {
 	CountMessagesByExternalID(ctx context.Context, arg CountMessagesByExternalIDParams) (int64, error)
 	CountNotificationDeliveries(ctx context.Context, arg CountNotificationDeliveriesParams) (int64, error)
 	CountNotificationsForUser(ctx context.Context, arg CountNotificationsForUserParams) (int64, error)
+	CountOrdersByBuyer(ctx context.Context, arg CountOrdersByBuyerParams) (int64, error)
+	CountOrdersBySeller(ctx context.Context, arg CountOrdersBySellerParams) (int64, error)
+	CountOrdersInScope(ctx context.Context, arg CountOrdersInScopeParams) (int64, error)
 	CountOrganizationCustomers(ctx context.Context, arg CountOrganizationCustomersParams) (int64, error)
 	CountOrganizationMembershipsByUser(ctx context.Context, userID int64) (int64, error)
+	CountOrganizationProductStockRows(ctx context.Context, arg CountOrganizationProductStockRowsParams) (int64, error)
 	CountOrganizations(ctx context.Context, arg CountOrganizationsParams) (int64, error)
 	CountOutboxByStatus(ctx context.Context, status string) (int64, error)
 	CountPermissions(ctx context.Context, q_ pgtype.Text) (int64, error)
@@ -66,6 +78,7 @@ type Querier interface {
 	CountRoles(ctx context.Context, q_ pgtype.Text) (int64, error)
 	CountScopedVehicles(ctx context.Context, arg CountScopedVehiclesParams) (int64, error)
 	CountSearchFinanceEntries(ctx context.Context, arg CountSearchFinanceEntriesParams) (int64, error)
+	CountStockMovementsByUnit(ctx context.Context, unitID int64) (int64, error)
 	CountStorageActivity(ctx context.Context, objectKey string) (int64, error)
 	CountStorageTrash(ctx context.Context) (int64, error)
 	CountUnreadInappForUser(ctx context.Context, userID pgtype.Int8) (int64, error)
@@ -102,6 +115,20 @@ type Querier interface {
 	CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error)
 	CreateOAuthAccount(ctx context.Context, arg CreateOAuthAccountParams) (OauthAccount, error)
 	CreateOTPCode(ctx context.Context, arg CreateOTPCodeParams) (OtpCode, error)
+	// TEC-165 (F1-04a): orders, order lines, assigned units, status history,
+	// stock reservations and sibling transfer requests (migration 000049).
+	// Every read is brand-bound (K20); seller-side reads filter organization_id,
+	// buyer-side reads filter buyer_org_id. Transitions lock the row first
+	// (Lock* ... FOR UPDATE) in the use case transaction.
+	// ---------------------------------------------------------------------------
+	// Orders.
+	CreateOrder(ctx context.Context, arg CreateOrderParams) (Order, error)
+	// ---------------------------------------------------------------------------
+	// Order lines.
+	CreateOrderItem(ctx context.Context, arg CreateOrderItemParams) (OrderItem, error)
+	// ---------------------------------------------------------------------------
+	// Units assigned to order lines.
+	CreateOrderItemUnit(ctx context.Context, arg CreateOrderItemUnitParams) (OrderItemUnit, error)
 	CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error)
 	CreateOrganizationMember(ctx context.Context, arg CreateOrganizationMemberParams) (OrganizationMember, error)
 	CreatePhoneOTP(ctx context.Context, arg CreatePhoneOTPParams) (OtpCode, error)
@@ -122,6 +149,12 @@ type Querier interface {
 	// ---------------------------------------------------------------------------
 	// Reclassification requests.
 	CreateStockReclassification(ctx context.Context, arg CreateStockReclassificationParams) (StockReclassification, error)
+	// ---------------------------------------------------------------------------
+	// Stock reservations (TEC-94 decision 2).
+	CreateStockReservation(ctx context.Context, arg CreateStockReservationParams) (StockReservation, error)
+	// ---------------------------------------------------------------------------
+	// Sibling dealer transfer requests (K13).
+	CreateStockTransferRequest(ctx context.Context, arg CreateStockTransferRequestParams) (StockTransferRequest, error)
 	CreateTerritory(ctx context.Context, arg CreateTerritoryParams) (Territory, error)
 	// ---------------------------------------------------------------------------
 	// Units.
@@ -165,6 +198,8 @@ type Querier interface {
 	DeleteNotificationPreferenceRow(ctx context.Context, arg DeleteNotificationPreferenceRowParams) error
 	DeleteOAuthAccountByProviderAccount(ctx context.Context, arg DeleteOAuthAccountByProviderAccountParams) error
 	DeleteOAuthAccountByUserProvider(ctx context.Context, arg DeleteOAuthAccountByUserProviderParams) error
+	DeleteOrderItem(ctx context.Context, id int64) (int64, error)
+	DeleteOrderItemUnit(ctx context.Context, id int64) (int64, error)
 	DeleteOrgModuleFlag(ctx context.Context, arg DeleteOrgModuleFlagParams) (int64, error)
 	DeletePermissionBySlug(ctx context.Context, slug string) error
 	DeletePlateFormat(ctx context.Context, countryID int64) (int64, error)
@@ -233,6 +268,15 @@ type Querier interface {
 	// ---------------------------------------------------------------------------
 	// Balances (views over the ledger).
 	GetCariBalance(ctx context.Context, arg GetCariBalanceParams) (CariAccountBalance, error)
+	// TEC-175 (F1-07e): cari statement and balance report. Read only; the caller
+	// resolves the book (one organization inside the request scope) and passes
+	// its id. Signs follow 000047: cari balance = income + charge + payment -
+	// expense - collection (receivable positive); cash/bank balance = income +
+	// collection - expense - payment. Reversal rows carry negated amounts, so a
+	// plain sum nets them out.
+	// GetCariStatementOpening is the cari balance before created_before (the
+	// opening balance of a statement period).
+	GetCariStatementOpening(ctx context.Context, arg GetCariStatementOpeningParams) (pgtype.Numeric, error)
 	GetConsentForText(ctx context.Context, arg GetConsentForTextParams) (Consent, error)
 	GetCountryByID(ctx context.Context, id int64) (Country, error)
 	GetCountryByISO2(ctx context.Context, iso2 string) (Country, error)
@@ -285,6 +329,12 @@ type Querier interface {
 	GetOAuthAccountByUserProvider(ctx context.Context, arg GetOAuthAccountByUserProviderParams) (GetOAuthAccountByUserProviderRow, error)
 	GetOAuthProviderSettings(ctx context.Context, provider string) (OauthProviderSetting, error)
 	GetOTPByUUID(ctx context.Context, argUuid uuid.UUID) (OtpCode, error)
+	GetOrder(ctx context.Context, arg GetOrderParams) (Order, error)
+	GetOrderByExternalReference(ctx context.Context, arg GetOrderByExternalReferenceParams) (Order, error)
+	GetOrderByUUID(ctx context.Context, arg GetOrderByUUIDParams) (Order, error)
+	GetOrderItem(ctx context.Context, arg GetOrderItemParams) (OrderItem, error)
+	GetOrderItemByUUID(ctx context.Context, arg GetOrderItemByUUIDParams) (OrderItem, error)
+	GetOrderItemUnit(ctx context.Context, arg GetOrderItemUnitParams) (OrderItemUnit, error)
 	GetOrgModuleFlag(ctx context.Context, arg GetOrgModuleFlagParams) (ModuleFlag, error)
 	GetOrganizationByID(ctx context.Context, id int64) (Organization, error)
 	GetOrganizationBySlug(ctx context.Context, slug string) (Organization, error)
@@ -308,6 +358,10 @@ type Querier interface {
 	// TEC-145: catalog API helpers.
 	GetProductCategoryByName(ctx context.Context, arg GetProductCategoryByNameParams) (ProductCategory, error)
 	GetProductCategoryByUUID(ctx context.Context, arg GetProductCategoryByUUIDParams) (ProductCategory, error)
+	GetProductCategoryIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
+	// Brand-independent product lookup for the bin stock filter (K20); the
+	// projection rows are already narrowed by scope.
+	GetProductIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	GetProductPrice(ctx context.Context, arg GetProductPriceParams) (ProductPrice, error)
 	GetProvinceByID(ctx context.Context, id int64) (Province, error)
 	GetQRLoginChallengeByCode(ctx context.Context, code string) (QrLoginChallenge, error)
@@ -321,6 +375,9 @@ type Querier interface {
 	GetStockMovement(ctx context.Context, id int64) (StockMovement, error)
 	GetStockMovementByIdempotencyKey(ctx context.Context, idempotencyKey string) (StockMovement, error)
 	GetStockReclassification(ctx context.Context, arg GetStockReclassificationParams) (StockReclassification, error)
+	GetStockReservation(ctx context.Context, id int64) (StockReservation, error)
+	GetStockTransferRequest(ctx context.Context, arg GetStockTransferRequestParams) (StockTransferRequest, error)
+	GetStockTransferRequestByUUID(ctx context.Context, arg GetStockTransferRequestByUUIDParams) (StockTransferRequest, error)
 	GetStorageLinkBySlug(ctx context.Context, slug pgtype.Text) (StorageLink, error)
 	GetStorageLinkByTokenHash(ctx context.Context, tokenHash pgtype.Text) (StorageLink, error)
 	GetStorageLinkByUUID(ctx context.Context, argUuid uuid.UUID) (StorageLink, error)
@@ -370,6 +427,9 @@ type Querier interface {
 	// Idempotent on (event_id, user_id, channel): a replayed event returns no row.
 	InsertNotificationDelivery(ctx context.Context, arg InsertNotificationDeliveryParams) (NotificationDelivery, error)
 	InsertNotificationHistory(ctx context.Context, arg InsertNotificationHistoryParams) (NotificationHistory, error)
+	// ---------------------------------------------------------------------------
+	// Status history (append-only).
+	InsertOrderStatusHistory(ctx context.Context, arg InsertOrderStatusHistoryParams) (OrderStatusHistory, error)
 	InsertOutboxEvent(ctx context.Context, arg InsertOutboxEventParams) (OutboxEvent, error)
 	InsertRolePermission(ctx context.Context, arg InsertRolePermissionParams) error
 	InsertStockImportRow(ctx context.Context, arg InsertStockImportRowParams) (StockImportRow, error)
@@ -400,6 +460,7 @@ type Querier interface {
 	ListActivePublicLinks(ctx context.Context) ([]StorageLink, error)
 	ListActiveRefreshTokenUUIDsByFamily(ctx context.Context, familyID pgtype.UUID) ([]uuid.UUID, error)
 	ListActiveRefreshTokensByUserID(ctx context.Context, userID int64) ([]RefreshToken, error)
+	ListActiveReservationsByItem(ctx context.Context, orderItemID int64) ([]StockReservation, error)
 	// Candidates for one event x channel; the usecase picks role/language/brand.
 	ListActiveTemplatesForEvent(ctx context.Context, arg ListActiveTemplatesForEventParams) ([]NotificationTemplate, error)
 	ListActivityEvents(ctx context.Context, arg ListActivityEventsParams) ([]ActivityEvent, error)
@@ -411,6 +472,7 @@ type Querier interface {
 	ListAllRoles(ctx context.Context) ([]Role, error)
 	ListAppLogSources(ctx context.Context) ([]string, error)
 	ListAppLogs(ctx context.Context, arg ListAppLogsParams) ([]AppLog, error)
+	ListBinProductStockRows(ctx context.Context, arg ListBinProductStockRowsParams) ([]ListBinProductStockRowsRow, error)
 	ListBinProductStocksByLocation(ctx context.Context, locationID int64) ([]BinProductStock, error)
 	ListBinProductStocksByOrganization(ctx context.Context, organizationID int64) ([]BinProductStock, error)
 	ListBrandDomains(ctx context.Context) ([]ListBrandDomainsRow, error)
@@ -423,7 +485,13 @@ type Querier interface {
 	ListCariAccounts(ctx context.Context, arg ListCariAccountsParams) ([]CariAccount, error)
 	ListCariAccountsWithBalance(ctx context.Context, arg ListCariAccountsWithBalanceParams) ([]ListCariAccountsWithBalanceRow, error)
 	ListCariBalances(ctx context.Context, organizationID int64) ([]CariAccountBalance, error)
+	// ListCariBalancesAsOf is every cari of the book with its balance over the
+	// rows written before created_to (NULL = all rows).
+	ListCariBalancesAsOf(ctx context.Context, arg ListCariBalancesAsOfParams) ([]ListCariBalancesAsOfRow, error)
 	ListCariEntries(ctx context.Context, arg ListCariEntriesParams) ([]FinanceEntry, error)
+	// ListCariStatementLines returns the period rows of a cari in ledger order
+	// with their signed cari effect (signed_amount).
+	ListCariStatementLines(ctx context.Context, arg ListCariStatementLinesParams) ([]ListCariStatementLinesRow, error)
 	// TEC-84: countries > provinces > districts, territories, plate formats.
 	ListCountries(ctx context.Context, activeOnly bool) ([]ListCountriesRow, error)
 	// TEC-84: currencies and daily exchange rates. Rates travel as text so no
@@ -445,6 +513,9 @@ type Querier interface {
 	ListExportJobsForActor(ctx context.Context, arg ListExportJobsForActorParams) ([]ExportJob, error)
 	ListExportJobsForOrganization(ctx context.Context, arg ListExportJobsForOrganizationParams) ([]ExportJob, error)
 	ListFinanceAccountBalances(ctx context.Context, organizationID int64) ([]FinanceAccountBalance, error)
+	// ListFinanceAccountBalancesAsOf is every cash/bank account of the book with
+	// its balance over the rows written before created_to (NULL = all rows).
+	ListFinanceAccountBalancesAsOf(ctx context.Context, arg ListFinanceAccountBalancesAsOfParams) ([]ListFinanceAccountBalancesAsOfRow, error)
 	ListFinanceAccounts(ctx context.Context, arg ListFinanceAccountsParams) ([]FinanceAccount, error)
 	// TEC-172 (F1-07b): read models of the /v1/accounting endpoints. The caller
 	// resolves the book (one organization inside the request scope) and passes
@@ -457,6 +528,10 @@ type Querier interface {
 	ListFinanceEntriesBySource(ctx context.Context, arg ListFinanceEntriesBySourceParams) ([]FinanceEntry, error)
 	ListFixedBarcodeHoldingsByHolder(ctx context.Context, holderOrgID int64) ([]FixedBarcodeHolding, error)
 	ListFixedBarcodeHoldingsByUnit(ctx context.Context, unitID int64) ([]FixedBarcodeHolding, error)
+	// Fixed barcode quantities on hand at an organization (its locations and
+	// the organization owner itself), per barcode, for the listed products.
+	ListFixedBarcodeQuantitiesByHolder(ctx context.Context, arg ListFixedBarcodeQuantitiesByHolderParams) ([]ListFixedBarcodeQuantitiesByHolderRow, error)
+	ListFixedBarcodeQuantitiesByLocation(ctx context.Context, arg ListFixedBarcodeQuantitiesByLocationParams) ([]ListFixedBarcodeQuantitiesByLocationRow, error)
 	// Grants of global roles (user_roles / JWT roles claim).
 	ListGrantsByRoleSlugs(ctx context.Context, roleSlugs []string) ([]ListGrantsByRoleSlugsRow, error)
 	ListImportChangesForJob(ctx context.Context, jobID int64) ([]ImportChange, error)
@@ -484,6 +559,17 @@ type Querier interface {
 	// ListOpenFinanceEntriesBySource lists the original rows of one source that
 	// have not been reversed yet, locked for the reversing transaction.
 	ListOpenFinanceEntriesBySource(ctx context.Context, arg ListOpenFinanceEntriesBySourceParams) ([]FinanceEntry, error)
+	ListOrderItemUnitsByItem(ctx context.Context, orderItemID int64) ([]OrderItemUnit, error)
+	ListOrderItemUnitsByOrder(ctx context.Context, orderID int64) ([]ListOrderItemUnitsByOrderRow, error)
+	ListOrderItems(ctx context.Context, orderID int64) ([]OrderItem, error)
+	ListOrderStatusHistory(ctx context.Context, orderID int64) ([]OrderStatusHistory, error)
+	// Buyer side: orders the organization buys.
+	ListOrdersByBuyer(ctx context.Context, arg ListOrdersByBuyerParams) ([]Order, error)
+	// Seller side: orders the organization sells.
+	ListOrdersBySeller(ctx context.Context, arg ListOrdersBySellerParams) ([]Order, error)
+	// Scope list: orders where any of org_ids is the seller or the buyer
+	// (org_ids NULL = whole brand, for brand/all scopes).
+	ListOrdersInScope(ctx context.Context, arg ListOrdersInScopeParams) ([]Order, error)
 	ListOrganizationChildren(ctx context.Context, parentID pgtype.Int8) ([]ListOrganizationChildrenRow, error)
 	// Customers of the organizations in scope; one row per user.
 	ListOrganizationCustomers(ctx context.Context, arg ListOrganizationCustomersParams) ([]ListOrganizationCustomersRow, error)
@@ -491,7 +577,11 @@ type Querier interface {
 	ListOrganizationMembers(ctx context.Context, organizationID int64) ([]ListOrganizationMembersRow, error)
 	ListOrganizationMembersByUserID(ctx context.Context, arg ListOrganizationMembersByUserIDParams) ([]ListOrganizationMembersByUserIDRow, error)
 	ListOrganizationOwnerUserIDs(ctx context.Context, organizationID int64) ([]int64, error)
+	// organization_product_stocks with product and category. in_stock: true =
+	// quantity or meters above zero, false = both zero.
+	ListOrganizationProductStockRows(ctx context.Context, arg ListOrganizationProductStockRowsParams) ([]ListOrganizationProductStockRowsRow, error)
 	ListOrganizationProductStocks(ctx context.Context, arg ListOrganizationProductStocksParams) ([]OrganizationProductStock, error)
+	ListOrganizationsByIDs(ctx context.Context, ids []int64) ([]Organization, error)
 	ListOrganizationsFiltered(ctx context.Context, arg ListOrganizationsFilteredParams) ([]ListOrganizationsFilteredRow, error)
 	// Organizations reachable by a scope filter: an explicit id set
 	// (managed/subtree) or a whole brand (brand), or every brand (all, both NULL).
@@ -520,6 +610,7 @@ type Querier interface {
 	ListProductsForIndex(ctx context.Context) ([]Product, error)
 	ListProvincesByCountry(ctx context.Context, countryID int64) ([]ListProvincesByCountryRow, error)
 	ListPushSubscriptionsByUser(ctx context.Context, userID int64) ([]PushSubscription, error)
+	ListReservationsByOrder(ctx context.Context, orderID int64) ([]StockReservation, error)
 	ListRoleGrantsByRoleID(ctx context.Context, roleID int64) ([]ListRoleGrantsByRoleIDRow, error)
 	ListRoleGrantsByRoleUUID(ctx context.Context, argUuid uuid.UUID) ([]ListRoleGrantsByRoleUUIDRow, error)
 	ListRolePermissionSlugsByRoleUUID(ctx context.Context, argUuid uuid.UUID) ([]string, error)
@@ -537,7 +628,15 @@ type Querier interface {
 	ListStockMovementsByReference(ctx context.Context, arg ListStockMovementsByReferenceParams) ([]StockMovement, error)
 	// Barcode history in ledger order.
 	ListStockMovementsByUnit(ctx context.Context, unitID int64) ([]StockMovement, error)
+	// TEC-155 (F1-02c): stock read API. Read-only queries over the ledger and
+	// its projections; scope narrowing happens in modules/stock/usecase on
+	// holder_org_id (TEC-94 decision 4).
+	// Barcode history page in ledger order (oldest first).
+	ListStockMovementsByUnitPage(ctx context.Context, arg ListStockMovementsByUnitPageParams) ([]StockMovement, error)
 	ListStockReclassifications(ctx context.Context, arg ListStockReclassificationsParams) ([]StockReclassification, error)
+	// Scope list: requests where any of org_ids is the giver, the receiver or
+	// the approver (org_ids NULL = whole brand).
+	ListStockTransferRequestsInScope(ctx context.Context, arg ListStockTransferRequestsInScopeParams) ([]StockTransferRequest, error)
 	ListStorageActivity(ctx context.Context, arg ListStorageActivityParams) ([]ListStorageActivityRow, error)
 	ListStorageLinksByKey(ctx context.Context, objectKey string) ([]StorageLink, error)
 	ListStorageSharesByKey(ctx context.Context, objectKey string) ([]ListStorageSharesByKeyRow, error)
@@ -562,10 +661,13 @@ type Querier interface {
 	// Vehicles of customers linked to the organizations in scope.
 	ListVehiclesInScope(ctx context.Context, arg ListVehiclesInScopeParams) ([]ListVehiclesInScopeRow, error)
 	ListWarehouseLocations(ctx context.Context, arg ListWarehouseLocationsParams) ([]WarehouseLocation, error)
+	ListWarehouseLocationsByIDs(ctx context.Context, ids []int64) ([]WarehouseLocation, error)
 	ListWebAuthnCredentialsByUserID(ctx context.Context, userID int64) ([]WebauthnCredential, error)
 	ListWebAuthnCredentialsForUserIDs(ctx context.Context, userIds []int64) ([]WebauthnCredential, error)
 	ListWhatsAppAlarmRecipients(ctx context.Context) ([]ListWhatsAppAlarmRecipientsRow, error)
 	ListWhatsAppConnectionEvents(ctx context.Context, limit int32) ([]WhatsappConnectionEvent, error)
+	// Active reservations of a unit (at most one for a serial unit).
+	LockActiveReservationsByUnit(ctx context.Context, unitID int64) ([]StockReservation, error)
 	LockBinProductStock(ctx context.Context, arg LockBinProductStockParams) (BinProductStock, error)
 	// ---------------------------------------------------------------------------
 	// Fixed barcode holdings (quantity per unit and owner).
@@ -573,9 +675,15 @@ type Querier interface {
 	LockFixedBarcodeHoldingsByUnit(ctx context.Context, unitID int64) ([]FixedBarcodeHolding, error)
 	// Phone OTP (TEC-92). Timestamps are passed in so tests can drive the clock.
 	LockOTPSubject(ctx context.Context, subject string) error
+	LockOrder(ctx context.Context, arg LockOrderParams) (Order, error)
+	LockOrderByUUID(ctx context.Context, arg LockOrderByUUIDParams) (Order, error)
+	LockOrderItem(ctx context.Context, arg LockOrderItemParams) (OrderItem, error)
+	LockOrderItems(ctx context.Context, orderID int64) ([]OrderItem, error)
 	LockOrganizationProductStock(ctx context.Context, arg LockOrganizationProductStockParams) (OrganizationProductStock, error)
 	LockStockImportBatch(ctx context.Context, id int64) (StockImportBatch, error)
 	LockStockReclassification(ctx context.Context, arg LockStockReclassificationParams) (StockReclassification, error)
+	LockStockReservation(ctx context.Context, id int64) (StockReservation, error)
+	LockStockTransferRequest(ctx context.Context, arg LockStockTransferRequestParams) (StockTransferRequest, error)
 	// Serializes territory writes of one (brand, country) inside a transaction.
 	LockTerritoryArea(ctx context.Context, arg LockTerritoryAreaParams) error
 	// Locks the unit row for meters/status/product changes in ledger.Post.
@@ -622,6 +730,12 @@ type Querier interface {
 	PurgeNotificationDeliveriesBefore(ctx context.Context, arg PurgeNotificationDeliveriesBeforeParams) (int64, error)
 	PurgeNotificationsBefore(ctx context.Context, arg PurgeNotificationsBeforeParams) (int64, error)
 	QueueImportJob(ctx context.Context, argUuid uuid.UUID) (ImportJob, error)
+	// Recomputes the subtotal from the lines (total = subtotal + tax_total).
+	RecalculateOrderTotals(ctx context.Context, id int64) (Order, error)
+	RejectStockTransferRequest(ctx context.Context, arg RejectStockTransferRequestParams) (StockTransferRequest, error)
+	// Cancel: releases every active reservation of the order.
+	ReleaseReservationsByOrder(ctx context.Context, orderID int64) (int64, error)
+	ReleaseStockReservation(ctx context.Context, id int64) (StockReservation, error)
 	RemoveUserRoleBySlug(ctx context.Context, arg RemoveUserRoleBySlugParams) error
 	// Optimistic replacement of the image list: no row when another request
 	// changed the list since it was read (expected).
@@ -664,6 +778,11 @@ type Querier interface {
 	SetCustomerNationalID(ctx context.Context, arg SetCustomerNationalIDParams) (CustomerProfile, error)
 	SetCustomerTaxNo(ctx context.Context, arg SetCustomerTaxNoParams) (CustomerProfile, error)
 	SetNotificationChannelEnabled(ctx context.Context, arg SetNotificationChannelEnabledParams) (NotificationChannelSetting, error)
+	SetOrderCancelReason(ctx context.Context, arg SetOrderCancelReasonParams) (Order, error)
+	SetOrderExternalReference(ctx context.Context, arg SetOrderExternalReferenceParams) (Order, error)
+	SetOrderItemUnitMovement(ctx context.Context, arg SetOrderItemUnitMovementParams) (OrderItemUnit, error)
+	SetOrderReceiptDocument(ctx context.Context, arg SetOrderReceiptDocumentParams) (Order, error)
+	SetOrderShipping(ctx context.Context, arg SetOrderShippingParams) (Order, error)
 	SetOrganizationLogo(ctx context.Context, arg SetOrganizationLogoParams) (Organization, error)
 	// Bulk activate/deactivate within one brand.
 	SetProductsActive(ctx context.Context, arg SetProductsActiveParams) (int64, error)
@@ -676,6 +795,9 @@ type Querier interface {
 	SetWhatsAppSMSFallback(ctx context.Context, smsFallbackEnabled bool) (WhatsappSetting, error)
 	SlugExists(ctx context.Context, slug string) (bool, error)
 	SoftDeleteVehicle(ctx context.Context, id int64) (int64, error)
+	// Fixed barcodes: total actively reserved quantity, checked against the
+	// holding by the use case (sum <= on hand).
+	SumActiveReservedQuantityByUnit(ctx context.Context, unitID int64) (int64, error)
 	// The supplier of an organization is its parent in the tree (K9).
 	// Returns no rows for a center.
 	SupplierOf(ctx context.Context, id int64) (Organization, error)
@@ -695,6 +817,12 @@ type Querier interface {
 	UpdateMessageStatusByExternalIDs(ctx context.Context, arg UpdateMessageStatusByExternalIDsParams) (int64, error)
 	UpdateModuleDefaults(ctx context.Context, arg UpdateModuleDefaultsParams) (Module, error)
 	UpdateOAuthProviderSettings(ctx context.Context, arg UpdateOAuthProviderSettingsParams) (OauthProviderSetting, error)
+	UpdateOrderDraft(ctx context.Context, arg UpdateOrderDraftParams) (Order, error)
+	UpdateOrderItem(ctx context.Context, arg UpdateOrderItemParams) (OrderItem, error)
+	// Moves the order to status and stamps the matching timestamp once. The
+	// caller has locked the row and validated the transition.
+	UpdateOrderStatus(ctx context.Context, arg UpdateOrderStatusParams) (Order, error)
+	UpdateOrderTotals(ctx context.Context, arg UpdateOrderTotalsParams) (Order, error)
 	UpdateOrganizationLetterhead(ctx context.Context, arg UpdateOrganizationLetterheadParams) (Organization, error)
 	UpdateOrganizationParent(ctx context.Context, arg UpdateOrganizationParentParams) (Organization, error)
 	UpdateOrganizationPlatform(ctx context.Context, arg UpdateOrganizationPlatformParams) (Organization, error)

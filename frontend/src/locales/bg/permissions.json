@@ -151,5 +151,15 @@
   "labels.vehicles.write": "Управление на автомобили",
   "labels.customers.anonymize": "Анонимизиране на клиенти",
   "labels.customers.merge": "Обединяване на клиенти",
-  "groups.vehicles": "Автомобили"
+  "groups.vehicles": "Автомобили",
+  "labels.orders.read": "Преглед на поръчките",
+  "labels.orders.write": "Управление на поръчките",
+  "labels.orders.approve": "Одобряване на поръчки",
+  "labels.orders.ship": "Изпращане на поръчки",
+  "labels.orders.receive": "Приемане на поръчки",
+  "labels.orders.cancel": "Отказ на поръчки",
+  "labels.transfers.request": "Заявка за прехвърляне на наличност",
+  "labels.transfers.approve": "Одобряване на прехвърляния на наличност",
+  "groups.orders": "Поръчки",
+  "groups.transfers": "Прехвърляния"
 }

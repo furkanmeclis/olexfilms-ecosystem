@@ -151,5 +151,15 @@
   "labels.vehicles.write": "Gestire i veicoli",
   "labels.customers.anonymize": "Anonimizzare i clienti",
   "labels.customers.merge": "Unire i clienti",
-  "groups.vehicles": "Veicoli"
+  "groups.vehicles": "Veicoli",
+  "labels.orders.read": "Visualizza ordini",
+  "labels.orders.write": "Gestisci ordini",
+  "labels.orders.approve": "Approva ordini",
+  "labels.orders.ship": "Spedisci ordini",
+  "labels.orders.receive": "Ricevi ordini",
+  "labels.orders.cancel": "Annulla ordini",
+  "labels.transfers.request": "Richiedi trasferimento di giacenza",
+  "labels.transfers.approve": "Approva trasferimenti di giacenza",
+  "groups.orders": "Ordini",
+  "groups.transfers": "Trasferimenti"
 }

@@ -193,3 +193,43 @@ func TestDefaultMemberRole(t *testing.T) {
 		}
 	}
 }
+
+// TEC-165 (K6/K13/K20): the seller approves and ships, the buyer receives;
+// dealers never approve or ship orders, only distributors approve sibling
+// transfers, and no non-super_admin role reaches orders at scope all.
+func TestOrderGrants(t *testing.T) {
+	staff, _ := RoleBySlug(RoleCenterStaff)
+	if staff.Grants[PermOrdersApprove] != ScopeBrand {
+		t.Fatalf("center_staff orders.approve = %q", staff.Grants[PermOrdersApprove])
+	}
+	dist, _ := RoleBySlug(RoleDistributorOwner)
+	for _, slug := range []string{PermOrdersApprove, PermOrdersShip, PermOrdersReceive, PermTransfersApprove} {
+		if dist.Grants[slug] != ScopeManaged {
+			t.Fatalf("distributor_owner %s = %q", slug, dist.Grants[slug])
+		}
+	}
+	dealer, _ := RoleBySlug(RoleDealerOwner)
+	if dealer.Grants[PermOrdersReceive] != ScopeManaged || dealer.Grants[PermTransfersRequest] != ScopeManaged {
+		t.Fatalf("dealer_owner order grants = %v", dealer.Grants)
+	}
+	for _, r := range Roles {
+		if r.Slug == RoleSuperAdmin {
+			continue
+		}
+		for slug, scope := range r.Grants {
+			if (strings.HasPrefix(slug, "orders.") || strings.HasPrefix(slug, "transfers.")) && scope == ScopeAll {
+				t.Fatalf("%s holds %s at scope all", r.Slug, slug)
+			}
+		}
+		if r.OrgType == OrgTypeDealer {
+			for _, slug := range []string{PermOrdersApprove, PermOrdersShip, PermTransfersApprove} {
+				if _, ok := r.Grants[slug]; ok {
+					t.Fatalf("%s must not hold %s", r.Slug, slug)
+				}
+			}
+		}
+		if _, ok := r.Grants[PermTransfersApprove]; ok && r.OrgType != OrgTypeDistributor {
+			t.Fatalf("%s must not hold transfers.approve", r.Slug)
+		}
+	}
+}

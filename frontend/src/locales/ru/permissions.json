@@ -151,5 +151,15 @@
   "labels.vehicles.write": "Управление автомобилями",
   "labels.customers.anonymize": "Анонимизация клиентов",
   "labels.customers.merge": "Объединение клиентов",
-  "groups.vehicles": "Автомобили"
+  "groups.vehicles": "Автомобили",
+  "labels.orders.read": "Просмотр заказов",
+  "labels.orders.write": "Управление заказами",
+  "labels.orders.approve": "Утверждение заказов",
+  "labels.orders.ship": "Отгрузка заказов",
+  "labels.orders.receive": "Приёмка заказов",
+  "labels.orders.cancel": "Отмена заказов",
+  "labels.transfers.request": "Запрос перемещения остатков",
+  "labels.transfers.approve": "Утверждение перемещений остатков",
+  "groups.orders": "Заказы",
+  "groups.transfers": "Перемещения"
 }
