@@ -48,8 +48,32 @@ type Worker struct {
 	purgeLogs            PurgeLogsFunc
 }
 
-// NewWorker builds a worker that handles known task types.
+// NewWorker builds a worker that handles known task types on every queue.
 func NewWorker(cfg config.Config, log *slog.Logger, deliver DeliverNotificationFunc) *Worker {
+	return NewWorkerWithQueues(cfg, log, deliver, DefaultQueues())
+}
+
+// DefaultQueues lists every queue with its priority weight (single worker
+// process: local dev, in-process worker).
+func DefaultQueues() map[string]int {
+	return map[string]int{
+		"default":          1,
+		QueueNotifications: 2,
+		QueueExports:       2,
+		QueueImports:       2,
+		QueueBulk:          2,
+		QueueSearch:        2,
+		QueueMaintenance:   1,
+	}
+}
+
+// NewWorkerWithQueues builds a worker that consumes only the given queues
+// (queue name → priority weight). Production splits queues across
+// worker-core and worker-docs (WORKER_QUEUES).
+func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNotificationFunc, queues map[string]int) *Worker {
+	if len(queues) == 0 {
+		queues = DefaultQueues()
+	}
 	if log == nil {
 		log = slog.Default()
 	}
@@ -59,15 +83,7 @@ func NewWorker(cfg config.Config, log *slog.Logger, deliver DeliverNotificationF
 	}
 	server := asynq.NewServer(RedisOpt(cfg.Redis), asynq.Config{
 		Concurrency: concurrency,
-		Queues: map[string]int{
-			"default":          1,
-			QueueNotifications: 2,
-			QueueExports:       2,
-			QueueImports:       2,
-			QueueBulk:          2,
-			QueueSearch:        2,
-			QueueMaintenance:   1,
-		},
+		Queues:      queues,
 		ErrorHandler: asynq.ErrorHandlerFunc(func(_ context.Context, task *asynq.Task, err error) {
 			log.Error("queue_task_failed", "type", task.Type(), "error", err)
 		}),
