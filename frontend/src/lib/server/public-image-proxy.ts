@@ -32,6 +32,14 @@ export function brandLogoUpstreamPath(uuid: string): string | null {
   return UUID_RE.test(uuid) ? `public/brand-logos/${uuid.toLowerCase()}` : null;
 }
 
+/** Uploaded product image key (TEC-152): 32 hex + raster extension. */
+const PRODUCT_IMAGE_KEY_RE = /^[0-9a-f]{32}\.(jpg|png|webp)$/;
+
+/** Upstream path for a product image key, or null for a malformed key. */
+export function productImageUpstreamPath(key: string): string | null {
+  return PRODUCT_IMAGE_KEY_RE.test(key) ? `public/product-images/${key}` : null;
+}
+
 /** Upstream path for a hero URL's segments, or null when not allowed. */
 export function vehicleHeroUpstreamPath(segments: string[]): string | null {
   if (segments.length === 1 && segments[0] === "default") {
