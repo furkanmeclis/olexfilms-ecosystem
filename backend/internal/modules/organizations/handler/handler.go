@@ -12,6 +12,7 @@ import (
 	authmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/model"
 	authusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/usecase"
 	orgusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ratelimit"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/resourcemeta"
@@ -134,8 +135,20 @@ func (h *Handler) PlatformList(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, err)
 		return
 	}
-	status := strings.TrimSpace(r.URL.Query().Get("status"))
-	items, total, err := h.svc.List(r.Context(), q.Limit, q.Offset, q.Q, status)
+	filter := orgusecase.ListFilter{
+		Q:      q.Q,
+		Status: strings.TrimSpace(r.URL.Query().Get("status")),
+		Type:   strings.TrimSpace(r.URL.Query().Get("type")),
+	}
+	if raw := strings.TrimSpace(r.URL.Query().Get("parent_uuid")); raw != "" {
+		parent, err := uuid.Parse(raw)
+		if err != nil {
+			response.BadRequest(w, r, response.CodeValidationError, "parent_uuid is invalid")
+			return
+		}
+		filter.ParentUUID = &parent
+	}
+	items, total, err := h.svc.List(r.Context(), q.Limit, q.Offset, filter)
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -151,6 +164,14 @@ func (h *Handler) PlatformCreate(w http.ResponseWriter, r *http.Request) {
 		Phone         string `json:"phone"`
 		Address       string `json:"address"`
 		OwnerUserUUID string `json:"owner_user_uuid"`
+		// Type is distributor or dealer (default dealer).
+		Type string `json:"type"`
+		// ParentUUID defaults to the brand center.
+		ParentUUID          *string `json:"parent_uuid"`
+		RegisterAsWarehouse bool    `json:"register_as_warehouse"`
+		Currency            string  `json:"currency"`
+		Locale              string  `json:"locale"`
+		Timezone            string  `json:"timezone"`
 	}
 	if err := decodeJSON(w, r, &in); err != nil {
 		return
@@ -160,17 +181,27 @@ func (h *Handler) PlatformCreate(w http.ResponseWriter, r *http.Request) {
 		response.BadRequest(w, r, response.CodeValidationError, "owner_user_uuid is invalid")
 		return
 	}
+	parentUUID, ok := optionalUUID(w, r, in.ParentUUID, "parent_uuid")
+	if !ok {
+		return
+	}
 	owner, err := h.auth.LoadUserByUUID(r.Context(), ownerUUID)
 	if err != nil {
 		writeError(w, r, err)
 		return
 	}
 	result, err := h.svc.RegisterOrganization(r.Context(), orgusecase.RegisterInput{
-		OrganizationName: in.Name,
-		City:             in.City,
-		District:         in.District,
-		Phone:            in.Phone,
-		Address:          in.Address,
+		OrganizationName:    in.Name,
+		City:                in.City,
+		District:            in.District,
+		Phone:               in.Phone,
+		Address:             in.Address,
+		Type:                in.Type,
+		ParentUUID:          parentUUID,
+		RegisterAsWarehouse: in.RegisterAsWarehouse,
+		Currency:            in.Currency,
+		Locale:              in.Locale,
+		Timezone:            in.Timezone,
 	}, owner.ID)
 	if err != nil {
 		writeError(w, r, err)
@@ -218,13 +249,24 @@ func (h *Handler) PlatformPatch(w http.ResponseWriter, r *http.Request) {
 		AccessStartsAt *string `json:"access_starts_at"`
 		AccessEndsAt   *string `json:"access_ends_at"`
 		ClearAccessEnd *bool   `json:"clear_access_ends_at"`
+		Currency       *string `json:"currency"`
+		Locale         *string `json:"locale"`
+		Timezone       *string `json:"timezone"`
+		// ParentUUID moves the organization (platform only, K25).
+		ParentUUID *string `json:"parent_uuid"`
 	}
 	if err := decodeJSON(w, r, &in); err != nil {
+		return
+	}
+	parentUUID, ok := optionalUUID(w, r, in.ParentUUID, "parent_uuid")
+	if !ok {
 		return
 	}
 	patch := orgusecase.PatchInput{
 		Name: in.Name, City: in.City, District: in.District, Phone: in.Phone,
 		Address: in.Address, Status: in.Status, PlanCode: in.PlanCode,
+		Currency: in.Currency, Locale: in.Locale, Timezone: in.Timezone,
+		ParentUUID: parentUUID,
 	}
 	if in.AccessStartsAt != nil {
 		t, err := time.Parse(time.RFC3339, strings.TrimSpace(*in.AccessStartsAt))
@@ -256,6 +298,10 @@ func (h *Handler) PlatformUploadLogo(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(r.PathValue("uuid"))
 	if err != nil {
 		response.BadRequest(w, r, response.CodeValidationError, "organization uuid is invalid")
+		return
+	}
+	if err := h.svc.EnsureInBrand(r.Context(), id); err != nil {
+		writeError(w, r, err)
 		return
 	}
 	// Cap the whole body: ParseMultipartForm only bounds memory and spills
@@ -307,6 +353,10 @@ func (h *Handler) PlatformDeleteLogo(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(r.PathValue("uuid"))
 	if err != nil {
 		response.BadRequest(w, r, response.CodeValidationError, "organization uuid is invalid")
+		return
+	}
+	if err := h.svc.EnsureInBrand(r.Context(), id); err != nil {
+		writeError(w, r, err)
 		return
 	}
 	if key, err := h.svc.LogoObjectKey(r.Context(), id); err == nil {
@@ -443,6 +493,54 @@ func (h *Handler) PlatformAddMember(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusCreated, map[string]string{"status": "ok"})
 }
 
+// PlatformChildren lists direct children of an organization in the tree.
+func (h *Handler) PlatformChildren(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(r.PathValue("uuid"))
+	if err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, "organization uuid is invalid")
+		return
+	}
+	items, err := h.svc.Children(r.Context(), id)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, map[string]any{"items": items})
+}
+
+// MeOrganizations lists the caller's memberships within the request brand.
+func (h *Handler) MeOrganizations(w http.ResponseWriter, r *http.Request) {
+	p := authctx.MustPrincipal(r.Context())
+	items, err := h.svc.ListMembershipsForUser(r.Context(), p.UserInternal)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, map[string]any{"items": items})
+}
+
+// PublicBrand returns the brand resolved from Host / X-Forwarded-Host.
+func (h *Handler) PublicBrand(w http.ResponseWriter, r *http.Request) {
+	b, err := orgusecase.PublicBrandFromContext(r.Context())
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, b)
+}
+
+func optionalUUID(w http.ResponseWriter, r *http.Request, raw *string, field string) (*uuid.UUID, bool) {
+	if raw == nil || strings.TrimSpace(*raw) == "" {
+		return nil, true
+	}
+	v, err := uuid.Parse(strings.TrimSpace(*raw))
+	if err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, field+" is invalid")
+		return nil, false
+	}
+	return &v, true
+}
+
 func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
@@ -467,6 +565,12 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Error(w, r, http.StatusForbidden, response.CodeOrganizationAccessExpired, "Organization access has expired")
 	case errors.Is(err, orgusecase.ErrOrganizationSuspended):
 		response.Forbidden(w, r, "Organization is suspended")
+	case errors.Is(err, orgusecase.ErrBrandMismatch):
+		response.Error(w, r, http.StatusForbidden, response.CodeBrandMismatch, "Organization does not belong to this domain's brand")
+	case errors.Is(err, orgusecase.ErrBrandInactive):
+		response.Forbidden(w, r, "Brand is not active")
+	case errors.Is(err, orgusecase.ErrBrandUnresolved):
+		response.InternalErr(w, r, err, "Request brand could not be resolved")
 	default:
 		response.InternalErr(w, r, err, "Unexpected server error")
 	}

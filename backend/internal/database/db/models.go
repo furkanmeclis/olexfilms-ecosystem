@@ -62,6 +62,23 @@ type AuthSetting struct {
 	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
 }
 
+type Brand struct {
+	ID        int64              `json:"id"`
+	Uuid      uuid.UUID          `json:"uuid"`
+	Slug      string             `json:"slug"`
+	Name      string             `json:"name"`
+	Status    string             `json:"status"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+type BrandDomain struct {
+	ID        int64              `json:"id"`
+	BrandID   int64              `json:"brand_id"`
+	Host      string             `json:"host"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 type BulkChange struct {
 	ID           int64              `json:"id"`
 	Uuid         uuid.UUID          `json:"uuid"`
@@ -261,28 +278,38 @@ type OauthProviderSetting struct {
 }
 
 type Organization struct {
-	ID             int64              `json:"id"`
-	Uuid           uuid.UUID          `json:"uuid"`
-	Slug           string             `json:"slug"`
-	Name           string             `json:"name"`
-	City           string             `json:"city"`
-	District       string             `json:"district"`
-	Phone          string             `json:"phone"`
-	Address        string             `json:"address"`
-	LogoObjectKey  pgtype.Text        `json:"logo_object_key"`
-	Status         string             `json:"status"`
-	PlanCode       pgtype.Text        `json:"plan_code"`
-	AccessStartsAt pgtype.Timestamptz `json:"access_starts_at"`
-	AccessEndsAt   pgtype.Timestamptz `json:"access_ends_at"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt      pgtype.Timestamptz `json:"deleted_at"`
-	Email          string             `json:"email"`
-	Website        string             `json:"website"`
-	Tagline        string             `json:"tagline"`
-	FooterText     string             `json:"footer_text"`
-	PaperSize      string             `json:"paper_size"`
-	PrimaryColor   string             `json:"primary_color"`
+	ID                 int64              `json:"id"`
+	Uuid               uuid.UUID          `json:"uuid"`
+	Slug               string             `json:"slug"`
+	Name               string             `json:"name"`
+	City               string             `json:"city"`
+	District           string             `json:"district"`
+	Phone              string             `json:"phone"`
+	Address            string             `json:"address"`
+	LogoObjectKey      pgtype.Text        `json:"logo_object_key"`
+	Status             string             `json:"status"`
+	PlanCode           pgtype.Text        `json:"plan_code"`
+	AccessStartsAt     pgtype.Timestamptz `json:"access_starts_at"`
+	AccessEndsAt       pgtype.Timestamptz `json:"access_ends_at"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt          pgtype.Timestamptz `json:"deleted_at"`
+	Email              string             `json:"email"`
+	Website            string             `json:"website"`
+	Tagline            string             `json:"tagline"`
+	FooterText         string             `json:"footer_text"`
+	PaperSize          string             `json:"paper_size"`
+	PrimaryColor       string             `json:"primary_color"`
+	Type               string             `json:"type"`
+	ParentID           pgtype.Int8        `json:"parent_id"`
+	BrandID            int64              `json:"brand_id"`
+	Currency           string             `json:"currency"`
+	Locale             string             `json:"locale"`
+	Timezone           string             `json:"timezone"`
+	CountryID          pgtype.Int8        `json:"country_id"`
+	ContractPdfKey     pgtype.Text        `json:"contract_pdf_key"`
+	ContractValidUntil pgtype.Date        `json:"contract_valid_until"`
+	Settings           []byte             `json:"settings"`
 }
 
 type OrganizationMember struct {

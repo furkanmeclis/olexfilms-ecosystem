@@ -35,6 +35,8 @@ func RegisterRoutes(
 	mux.HandleFunc("POST /v1/public/organizations/register", h.PublicRegister)
 	mux.HandleFunc("GET /v1/public/organizations/by-slug/{slug}", h.PublicBySlug)
 	mux.HandleFunc("GET /v1/public/organizations/logo/{uuid}", h.PublicStreamLogo)
+	mux.HandleFunc("GET /v1/public/brand", h.PublicBrand)
+	mux.Handle("GET /v1/me/organizations", middleware.Chain(http.HandlerFunc(h.MeOrganizations), authn))
 
 	mux.Handle("GET /v1/platform/organizations/meta", middleware.Chain(
 		http.HandlerFunc(h.PlatformMeta), authn, require(rbac.PermPlatformOrganizationsRead),
@@ -47,6 +49,9 @@ func RegisterRoutes(
 	))
 	mux.Handle("GET /v1/platform/organizations/{uuid}", middleware.Chain(
 		http.HandlerFunc(h.PlatformGet), authn, require(rbac.PermPlatformOrganizationsRead),
+	))
+	mux.Handle("GET /v1/platform/organizations/{uuid}/children", middleware.Chain(
+		http.HandlerFunc(h.PlatformChildren), authn, require(rbac.PermPlatformOrganizationsRead),
 	))
 	mux.Handle("PATCH /v1/platform/organizations/{uuid}", middleware.Chain(
 		http.HandlerFunc(h.PlatformPatch), authn, require(rbac.PermPlatformOrganizationsWrite),

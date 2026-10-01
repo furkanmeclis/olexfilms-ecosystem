@@ -25,6 +25,8 @@ const (
 	CodePasswordResetFailed       = "PASSWORD_RESET_FAILED"
 	CodeNoTenantMembership        = "NO_TENANT_MEMBERSHIP"
 	CodeOrganizationAccessExpired = "ORGANIZATION_ACCESS_EXPIRED"
+	CodeOrganizationReadOnly      = "ORGANIZATION_READ_ONLY"
+	CodeBrandMismatch             = "BRAND_MISMATCH"
 	CodeSubscriptionReadOnly      = "SUBSCRIPTION_READ_ONLY"
 	CodeRealtimeDisabled          = "REALTIME_DISABLED"
 	CodeStepUpRequired            = "STEP_UP_REQUIRED"

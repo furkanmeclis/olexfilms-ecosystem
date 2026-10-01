@@ -17,6 +17,12 @@ type Scope struct {
 	Slug       string
 	Name       string
 	MemberRole string
+	// Status is the organization status (active, read_only, ...).
+	Status string
+	// OrgType is center, distributor or dealer.
+	OrgType   string
+	BrandID   int64
+	BrandSlug string
 }
 
 // WithScope stores organization scope on the context.

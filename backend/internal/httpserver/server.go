@@ -62,6 +62,7 @@ import (
 	storageusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/storage/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authrevoke"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine"
 	bulkadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine/adapters"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/crypto"
@@ -294,13 +295,18 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		loader,
 	)
 
+	var brandResolver *brandctx.Resolver
+	if deps.Queries != nil {
+		brandResolver = brandctx.NewResolver(brandctx.DBLoader(deps.Queries), cfg.App.DefaultBrandSlug, time.Minute)
+	}
+
 	outboxStore := outbox.NewStore(deps.DB, deps.Queries)
 	outboxPub := outbox.NewPublisher(outboxStore, eventBus, log)
 	s.outboxPub = outboxPub
 
 	s.http = &http.Server{
 		Addr:         cfg.HTTP.Addr,
-		Handler:      middleware.ServerErrors(log)(middleware.RequestID(mux)),
+		Handler:      middleware.ServerErrors(log)(middleware.RequestID(middleware.ResolveBrand(brandResolver)(mux))),
 		ReadTimeout:  cfg.HTTP.ReadTimeout,
 		WriteTimeout: cfg.HTTP.WriteTimeout,
 		IdleTimeout:  cfg.HTTP.IdleTimeout,

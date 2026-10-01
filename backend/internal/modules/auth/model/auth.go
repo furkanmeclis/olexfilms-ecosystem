@@ -104,6 +104,23 @@ type OrganizationSummary struct {
 	LogoURL      *string    `json:"logo_url,omitempty"`
 	Status       string     `json:"status"`
 	AccessEndsAt *time.Time `json:"access_ends_at,omitempty"`
+	// Type is center, distributor or dealer.
+	Type   string                     `json:"type"`
+	Brand  OrganizationSummaryBrand   `json:"brand"`
+	Parent *OrganizationSummaryParent `json:"parent,omitempty"`
+}
+
+// OrganizationSummaryBrand is the brand of a membership.
+type OrganizationSummaryBrand struct {
+	Slug string `json:"slug"`
+	Name string `json:"name,omitempty"`
+}
+
+// OrganizationSummaryParent is the parent (supplier) of a membership.
+type OrganizationSummaryParent struct {
+	UUID uuid.UUID `json:"uuid"`
+	Slug string    `json:"slug,omitempty"`
+	Name string    `json:"name"`
 }
 
 // PublicUser is the safe user projection.

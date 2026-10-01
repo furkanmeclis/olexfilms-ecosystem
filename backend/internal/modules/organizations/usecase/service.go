@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/password"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/slug"
@@ -58,8 +59,18 @@ type Organization struct {
 	AccessStartsAt time.Time  `json:"access_starts_at"`
 	AccessEndsAt   *time.Time `json:"access_ends_at,omitempty"`
 	LogoURL        *string    `json:"logo_url,omitempty"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
+	// Type is center, distributor or dealer.
+	Type     string     `json:"type"`
+	Brand    BrandRef   `json:"brand"`
+	Parent   *ParentRef `json:"parent,omitempty"`
+	Currency string     `json:"currency"`
+	Locale   string     `json:"locale"`
+	Timezone string     `json:"timezone"`
+	// ContractValidUntil is a calendar date (YYYY-MM-DD).
+	ContractValidUntil *string        `json:"contract_valid_until,omitempty"`
+	Settings           map[string]any `json:"settings"`
+	CreatedAt          time.Time      `json:"created_at"`
+	UpdatedAt          time.Time      `json:"updated_at"`
 }
 
 // PublicOrganization is branding-safe subset for login pages.
@@ -81,6 +92,9 @@ type MembershipSummary struct {
 	LogoURL      *string    `json:"logo_url,omitempty"`
 	Status       string     `json:"status"`
 	AccessEndsAt *time.Time `json:"access_ends_at,omitempty"`
+	Type         string     `json:"type"`
+	Brand        BrandRef   `json:"brand"`
+	Parent       *ParentRef `json:"parent,omitempty"`
 }
 
 // RegisterInput is public business self-registration.
@@ -94,6 +108,14 @@ type RegisterInput struct {
 	District         string
 	Phone            string
 	Address          string
+	// Platform create only. Type defaults to dealer; ParentUUID defaults to
+	// the brand center.
+	Type                string
+	ParentUUID          *uuid.UUID
+	RegisterAsWarehouse bool
+	Currency            string
+	Locale              string
+	Timezone            string
 }
 
 // RegisterResult is created org + owner user id after signup.
@@ -115,6 +137,11 @@ type PatchInput struct {
 	AccessStartsAt *time.Time
 	AccessEndsAt   *time.Time
 	ClearAccessEnd bool
+	Currency       *string
+	Locale         *string
+	Timezone       *string
+	// ParentUUID moves the organization in the tree (platform only, K25).
+	ParentUUID *uuid.UUID
 }
 
 // AddMemberInput assigns an existing user to an organization.
@@ -141,8 +168,20 @@ func mapOrganization(row db.Organization) Organization {
 		AccessStartsAt: row.AccessStartsAt.Time,
 		AccessEndsAt:   accessEnds,
 		LogoURL:        logoURL(row.Uuid, row.LogoObjectKey),
-		CreatedAt:      row.CreatedAt.Time, UpdatedAt: row.UpdatedAt.Time,
+		Type:           row.Type,
+		Currency:       row.Currency, Locale: row.Locale, Timezone: row.Timezone,
+		ContractValidUntil: contractDate(row.ContractValidUntil),
+		Settings:           decodeSettings(row.Settings),
+		CreatedAt:          row.CreatedAt.Time, UpdatedAt: row.UpdatedAt.Time,
 	}
+}
+
+func contractDate(d pgtype.Date) *string {
+	if !d.Valid {
+		return nil
+	}
+	v := d.Time.Format("2006-01-02")
+	return &v
 }
 
 func logoURL(orgUUID uuid.UUID, key pgtype.Text) *string {
@@ -192,6 +231,17 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (RegisterResul
 	if strings.TrimSpace(in.Password) == "" {
 		return RegisterResult{}, fmt.Errorf("%w: password is required", ErrInvalidRequest)
 	}
+	brand, err := RequestBrand(ctx)
+	if err != nil {
+		return RegisterResult{}, err
+	}
+	if !brand.Active() {
+		return RegisterResult{}, ErrBrandInactive
+	}
+	center, err := s.q.GetBrandCenter(ctx, brand.ID)
+	if err != nil {
+		return RegisterResult{}, fmt.Errorf("brand center: %w", err)
+	}
 	if _, err := s.q.GetUserByEmail(ctx, in.Email); err == nil {
 		return RegisterResult{}, fmt.Errorf("%w: email already registered", ErrConflict)
 	} else if !errors.Is(err, pgx.ErrNoRows) {
@@ -227,6 +277,11 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (RegisterResul
 		Status: "active", PlanCode: pgtype.Text{String: "trial", Valid: true},
 		AccessStartsAt: pgtype.Timestamptz{Time: now, Valid: true},
 		AccessEndsAt:   pgtype.Timestamptz{Time: trialEnd, Valid: true},
+		Type:           TypeDealer,
+		ParentID:       pgtype.Int8{Int64: center.ID, Valid: true},
+		BrandID:        brand.ID,
+		Currency:       center.Currency, Locale: center.Locale, Timezone: center.Timezone,
+		Settings: []byte("{}"),
 	})
 	if err != nil {
 		return RegisterResult{}, err
@@ -250,7 +305,7 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (RegisterResul
 		return RegisterResult{}, err
 	}
 	return RegisterResult{
-		Organization: mapOrganization(org),
+		Organization: withBrandParent(mapOrganization(org), brand.Slug, center),
 		OwnerUserID:  user.ID,
 		OwnerUUID:    user.Uuid,
 	}, nil
@@ -261,6 +316,10 @@ func (s *Service) RegisterOrganization(ctx context.Context, in RegisterInput, ow
 	in.OrganizationName = strings.TrimSpace(in.OrganizationName)
 	if in.OrganizationName == "" {
 		return RegisterResult{}, fmt.Errorf("%w: organization_name is required", ErrInvalidRequest)
+	}
+	place, err := s.placement(ctx, in)
+	if err != nil {
+		return RegisterResult{}, err
 	}
 	orgSlug, err := s.allocateSlug(ctx, in.OrganizationName)
 	if err != nil {
@@ -281,6 +340,11 @@ func (s *Service) RegisterOrganization(ctx context.Context, in RegisterInput, ow
 		Status: "active", PlanCode: pgtype.Text{String: "trial", Valid: true},
 		AccessStartsAt: pgtype.Timestamptz{Time: now, Valid: true},
 		AccessEndsAt:   pgtype.Timestamptz{Time: trialEnd, Valid: true},
+		Type:           place.Type,
+		ParentID:       pgtype.Int8{Int64: place.Parent.ID, Valid: true},
+		BrandID:        place.Parent.BrandID,
+		Currency:       place.Currency, Locale: place.Locale, Timezone: place.Timezone,
+		Settings: place.Settings,
 	})
 	if err != nil {
 		return RegisterResult{}, err
@@ -303,7 +367,7 @@ func (s *Service) RegisterOrganization(ctx context.Context, in RegisterInput, ow
 	if err := tx.Commit(ctx); err != nil {
 		return RegisterResult{}, err
 	}
-	return RegisterResult{Organization: mapOrganization(org)}, nil
+	return RegisterResult{Organization: withBrandParent(mapOrganization(org), place.BrandSlug, place.Parent)}, nil
 }
 
 // GetPublicBySlug returns branding info for tenant login.
@@ -315,26 +379,61 @@ func (s *Service) GetPublicBySlug(ctx context.Context, slugValue string) (Public
 		}
 		return PublicOrganization{}, err
 	}
+	if brand, ok := brandctx.From(ctx); !ok || brand.ID != row.BrandID {
+		return PublicOrganization{}, ErrNotFound
+	}
 	return PublicOrganization{
 		UUID: row.Uuid, Slug: row.Slug, Name: row.Name, Status: row.Status,
 		LogoURL: logoURL(row.Uuid, row.LogoObjectKey), AccessOK: accessAllowed(row),
 	}, nil
 }
 
-// GetByUUID returns organization detail.
+// GetByUUID returns organization detail within the request brand.
 func (s *Service) GetByUUID(ctx context.Context, id uuid.UUID) (Organization, error) {
-	row, err := s.q.GetOrganizationByUUID(ctx, id)
+	row, err := s.brandOrg(ctx, id)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return Organization{}, ErrNotFound
-		}
 		return Organization{}, err
 	}
-	return mapOrganization(row), nil
+	return mapTree(row.Organization, row.BrandSlug, row.ParentUuid, row.ParentName), nil
 }
 
-// List returns paginated organizations for platform admin.
-func (s *Service) List(ctx context.Context, limit, offset int32, q, status string) ([]Organization, int64, error) {
+// EnsureInBrand returns ErrNotFound when the organization is outside the request brand.
+func (s *Service) EnsureInBrand(ctx context.Context, id uuid.UUID) error {
+	_, err := s.brandOrg(ctx, id)
+	return err
+}
+
+// ListFilter narrows the platform organization list.
+type ListFilter struct {
+	Q          string
+	Status     string
+	Type       string
+	ParentUUID *uuid.UUID
+}
+
+// List returns paginated organizations of the request brand for platform admin.
+func (s *Service) List(ctx context.Context, limit, offset int32, f ListFilter) ([]Organization, int64, error) {
+	brand, err := RequestBrand(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	q, status := f.Q, f.Status
+	brandArg := pgtype.Int8{Int64: brand.ID, Valid: true}
+	var typeArg pgtype.Text
+	if f.Type != "" {
+		typeArg = pgtype.Text{String: f.Type, Valid: true}
+	}
+	var parentArg pgtype.Int8
+	if f.ParentUUID != nil {
+		parent, err := s.brandOrg(ctx, *f.ParentUUID)
+		if err != nil {
+			if errors.Is(err, ErrNotFound) {
+				return []Organization{}, 0, nil
+			}
+			return nil, 0, err
+		}
+		parentArg = pgtype.Int8{Int64: parent.Organization.ID, Valid: true}
+	}
 	var statusArg pgtype.Text
 	if status != "" {
 		statusArg = pgtype.Text{String: status, Valid: true}
@@ -344,25 +443,53 @@ func (s *Service) List(ctx context.Context, limit, offset int32, q, status strin
 		qArg = pgtype.Text{String: q, Valid: true}
 	}
 	rows, err := s.q.ListOrganizationsFiltered(ctx, db.ListOrganizationsFilteredParams{
-		Status: statusArg, Q: qArg, LimitCount: limit, OffsetCount: offset,
+		Status: statusArg, BrandID: brandArg, Type: typeArg, ParentID: parentArg,
+		Q: qArg, LimitCount: limit, OffsetCount: offset,
 	})
 	if err != nil {
 		return nil, 0, err
 	}
-	total, err := s.q.CountOrganizations(ctx, db.CountOrganizationsParams{Status: statusArg, Q: qArg})
+	total, err := s.q.CountOrganizations(ctx, db.CountOrganizationsParams{
+		Status: statusArg, BrandID: brandArg, Type: typeArg, ParentID: parentArg, Q: qArg,
+	})
 	if err != nil {
 		return nil, 0, err
 	}
 	out := make([]Organization, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, mapOrganization(row))
+		out = append(out, mapTree(row.Organization, row.BrandSlug, row.ParentUuid, row.ParentName))
 	}
 	return out, total, nil
 }
 
 // Patch updates organization from platform admin.
 func (s *Service) Patch(ctx context.Context, id uuid.UUID, in PatchInput) (Organization, error) {
+	if err := s.EnsureInBrand(ctx, id); err != nil {
+		return Organization{}, err
+	}
+	if in.Status != nil {
+		if _, ok := validStatuses[strings.TrimSpace(*in.Status)]; !ok {
+			return Organization{}, fmt.Errorf("%w: invalid status", ErrInvalidRequest)
+		}
+	}
 	params := db.UpdateOrganizationPlatformParams{Uuid: id}
+	if in.Currency != nil {
+		c := strings.ToUpper(strings.TrimSpace(*in.Currency))
+		if !validCurrency(c) {
+			return Organization{}, fmt.Errorf("%w: currency must be an ISO 4217 code", ErrInvalidRequest)
+		}
+		params.Currency = pgtype.Text{String: c, Valid: true}
+	}
+	if in.Locale != nil && strings.TrimSpace(*in.Locale) != "" {
+		params.Locale = pgtype.Text{String: strings.TrimSpace(*in.Locale), Valid: true}
+	}
+	if in.Timezone != nil && strings.TrimSpace(*in.Timezone) != "" {
+		tz := strings.TrimSpace(*in.Timezone)
+		if _, err := time.LoadLocation(tz); err != nil {
+			return Organization{}, fmt.Errorf("%w: invalid timezone", ErrInvalidRequest)
+		}
+		params.Timezone = pgtype.Text{String: tz, Valid: true}
+	}
 	if in.Name != nil {
 		params.Name = pgtype.Text{String: strings.TrimSpace(*in.Name), Valid: true}
 	}
@@ -392,14 +519,18 @@ func (s *Service) Patch(ctx context.Context, id uuid.UUID, in PatchInput) (Organ
 	} else if in.AccessEndsAt != nil {
 		params.AccessEndsAt = pgtype.Timestamptz{Time: *in.AccessEndsAt, Valid: true}
 	}
-	row, err := s.q.UpdateOrganizationPlatform(ctx, params)
-	if err != nil {
+	if in.ParentUUID != nil {
+		if err := s.ChangeParent(ctx, id, *in.ParentUUID); err != nil {
+			return Organization{}, err
+		}
+	}
+	if _, err := s.q.UpdateOrganizationPlatform(ctx, params); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return Organization{}, ErrNotFound
 		}
 		return Organization{}, err
 	}
-	return mapOrganization(row), nil
+	return s.GetByUUID(ctx, id)
 }
 
 // SetLogo stores logo object key.
@@ -445,7 +576,15 @@ func (s *Service) LogoObjectKey(ctx context.Context, id uuid.UUID) (string, erro
 
 // ListMembershipsForUser lists organizations for session hydration.
 func (s *Service) ListMembershipsForUser(ctx context.Context, userID int64) ([]MembershipSummary, error) {
-	rows, err := s.q.ListOrganizationMembersByUserID(ctx, userID)
+	// Only memberships of the request brand are visible (K1). Without a
+	// resolved brand nothing is listed (fail closed).
+	brand, ok := brandctx.From(ctx)
+	if !ok {
+		return []MembershipSummary{}, nil
+	}
+	rows, err := s.q.ListOrganizationMembersByUserID(ctx, db.ListOrganizationMembersByUserIDParams{
+		UserID: userID, BrandID: pgtype.Int8{Int64: brand.ID, Valid: true},
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -456,10 +595,17 @@ func (s *Service) ListMembershipsForUser(ctx context.Context, userID int64) ([]M
 			t := row.AccessEndsAt.Time
 			accessEnds = &t
 		}
+		var parent *ParentRef
+		if row.ParentUuid.Valid {
+			parent = &ParentRef{UUID: uuid.UUID(row.ParentUuid.Bytes), Slug: row.ParentSlug.String, Name: row.ParentName.String}
+		}
 		out = append(out, MembershipSummary{
 			UUID: row.Uuid, Slug: row.Slug, Name: row.Name, Role: row.Role,
 			LogoURL: logoURL(row.Uuid, row.LogoObjectKey), Status: row.Status,
 			AccessEndsAt: accessEnds,
+			Type:         row.Type,
+			Brand:        BrandRef{Slug: row.BrandSlug, Name: row.BrandName},
+			Parent:       parent,
 		})
 	}
 	return out, nil
@@ -474,6 +620,9 @@ func (s *Service) ResolveLoginOrganization(ctx context.Context, userID int64, sl
 		if errors.Is(err, pgx.ErrNoRows) {
 			return uuid.Nil, ErrNoTenantMembership
 		}
+		return uuid.Nil, err
+	}
+	if err := checkBrand(ctx, row.OrganizationBrandID); err != nil {
 		return uuid.Nil, err
 	}
 	org := db.Organization{
@@ -500,6 +649,9 @@ func (s *Service) ResolveOrganizationUUID(ctx context.Context, userID int64, org
 		}
 		return uuid.Nil, err
 	}
+	if err := checkBrand(ctx, row.OrganizationBrandID); err != nil {
+		return uuid.Nil, err
+	}
 	org := db.Organization{
 		Status: row.OrganizationStatus, AccessStartsAt: row.AccessStartsAt, AccessEndsAt: row.AccessEndsAt,
 	}
@@ -514,13 +666,11 @@ func (s *Service) ResolveOrganizationUUID(ctx context.Context, userID int64, org
 
 // AddMember assigns a user to an organization (platform only).
 func (s *Service) AddMember(ctx context.Context, orgUUID uuid.UUID, in AddMemberInput) error {
-	org, err := s.q.GetOrganizationByUUID(ctx, orgUUID)
+	tree, err := s.brandOrg(ctx, orgUUID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrNotFound
-		}
 		return err
 	}
+	org := tree.Organization
 	user, err := s.q.GetUserByUUID(ctx, in.UserUUID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

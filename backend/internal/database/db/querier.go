@@ -67,11 +67,16 @@ type Querier interface {
 	DeleteUserTOTP(ctx context.Context, userID int64) error
 	DeleteWebAuthnCredentialByCredentialID(ctx context.Context, credentialID string) error
 	DeleteWebAuthnCredentialByUUID(ctx context.Context, arg DeleteWebAuthnCredentialByUUIDParams) error
+	// Every organization below the given one (not including itself).
+	Descendants(ctx context.Context, id int64) ([]Organization, error)
 	ExtensionExists(ctx context.Context, extname string) (bool, error)
 	GetActiveOTPByEmailType(ctx context.Context, arg GetActiveOTPByEmailTypeParams) (OtpCode, error)
 	GetAppLogByUUID(ctx context.Context, argUuid uuid.UUID) (AppLog, error)
 	GetAppSettings(ctx context.Context) (AppSetting, error)
 	GetAuthSettings(ctx context.Context) (GetAuthSettingsRow, error)
+	GetBrandByID(ctx context.Context, id int64) (Brand, error)
+	GetBrandBySlug(ctx context.Context, slug string) (Brand, error)
+	GetBrandCenter(ctx context.Context, brandID int64) (Organization, error)
 	GetBulkJobByID(ctx context.Context, id int64) (BulkJob, error)
 	GetBulkJobByUUID(ctx context.Context, argUuid uuid.UUID) (BulkJob, error)
 	GetExportJobByID(ctx context.Context, id int64) (ExportJob, error)
@@ -93,6 +98,7 @@ type Querier interface {
 	GetOrganizationMemberByUserAndOrgUUID(ctx context.Context, arg GetOrganizationMemberByUserAndOrgUUIDParams) (GetOrganizationMemberByUserAndOrgUUIDRow, error)
 	GetOrganizationMemberByUserAndSlug(ctx context.Context, arg GetOrganizationMemberByUserAndSlugParams) (GetOrganizationMemberByUserAndSlugRow, error)
 	GetOrganizationMemberByUserUUID(ctx context.Context, arg GetOrganizationMemberByUserUUIDParams) (GetOrganizationMemberByUserUUIDRow, error)
+	GetOrganizationTreeByUUID(ctx context.Context, argUuid uuid.UUID) (GetOrganizationTreeByUUIDRow, error)
 	GetPermissionBySlug(ctx context.Context, slug string) (Permission, error)
 	GetRoleByID(ctx context.Context, id int64) (Role, error)
 	GetRoleBySlug(ctx context.Context, slug string) (Role, error)
@@ -136,6 +142,8 @@ type Querier interface {
 	ListAllPermissionSlugs(ctx context.Context) ([]string, error)
 	ListAppLogSources(ctx context.Context) ([]string, error)
 	ListAppLogs(ctx context.Context, arg ListAppLogsParams) ([]AppLog, error)
+	ListBrandDomains(ctx context.Context) ([]ListBrandDomainsRow, error)
+	ListBrands(ctx context.Context) ([]Brand, error)
 	ListBulkChangesForJob(ctx context.Context, jobID int64) ([]BulkChange, error)
 	ListBulkJobsForActor(ctx context.Context, arg ListBulkJobsForActorParams) ([]BulkJob, error)
 	ListEnabledLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
@@ -149,10 +157,11 @@ type Querier interface {
 	ListOAuthAccountsByUserID(ctx context.Context, userID int64) ([]ListOAuthAccountsByUserIDRow, error)
 	ListOAuthAccountsForUserIDs(ctx context.Context, userIds []int64) ([]ListOAuthAccountsForUserIDsRow, error)
 	ListOAuthProviderSettings(ctx context.Context) ([]OauthProviderSetting, error)
+	ListOrganizationChildren(ctx context.Context, parentID pgtype.Int8) ([]ListOrganizationChildrenRow, error)
 	ListOrganizationMemberOptions(ctx context.Context, organizationID int64) ([]ListOrganizationMemberOptionsRow, error)
 	ListOrganizationMembers(ctx context.Context, organizationID int64) ([]ListOrganizationMembersRow, error)
-	ListOrganizationMembersByUserID(ctx context.Context, userID int64) ([]ListOrganizationMembersByUserIDRow, error)
-	ListOrganizationsFiltered(ctx context.Context, arg ListOrganizationsFilteredParams) ([]Organization, error)
+	ListOrganizationMembersByUserID(ctx context.Context, arg ListOrganizationMembersByUserIDParams) ([]ListOrganizationMembersByUserIDRow, error)
+	ListOrganizationsFiltered(ctx context.Context, arg ListOrganizationsFilteredParams) ([]ListOrganizationsFilteredRow, error)
 	ListPermissionSlugsByRoleID(ctx context.Context, roleID int64) ([]string, error)
 	ListPermissionSlugsByRoleSlug(ctx context.Context, slug string) ([]string, error)
 	ListPermissionsFiltered(ctx context.Context, arg ListPermissionsFilteredParams) ([]Permission, error)
@@ -218,6 +227,9 @@ type Querier interface {
 	SetRolePermissions(ctx context.Context, roleID int64) error
 	SetUserEmailVerified(ctx context.Context, id int64) (User, error)
 	SlugExists(ctx context.Context, slug string) (bool, error)
+	// The supplier of an organization is its parent in the tree (K9).
+	// Returns no rows for a center.
+	SupplierOf(ctx context.Context, id int64) (Organization, error)
 	UpdateAppSettings(ctx context.Context, arg UpdateAppSettingsParams) (AppSetting, error)
 	UpdateAuthSettings(ctx context.Context, arg UpdateAuthSettingsParams) (AuthSetting, error)
 	UpdateGitHubAppSettings(ctx context.Context, arg UpdateGitHubAppSettingsParams) (GithubAppSetting, error)
@@ -227,6 +239,7 @@ type Querier interface {
 	UpdateLogPurgeRule(ctx context.Context, arg UpdateLogPurgeRuleParams) (LogPurgeRule, error)
 	UpdateOAuthProviderSettings(ctx context.Context, arg UpdateOAuthProviderSettingsParams) (OauthProviderSetting, error)
 	UpdateOrganizationLetterhead(ctx context.Context, arg UpdateOrganizationLetterheadParams) (Organization, error)
+	UpdateOrganizationParent(ctx context.Context, arg UpdateOrganizationParentParams) (Organization, error)
 	UpdateOrganizationPlatform(ctx context.Context, arg UpdateOrganizationPlatformParams) (Organization, error)
 	UpdateRole(ctx context.Context, arg UpdateRoleParams) (Role, error)
 	UpdateStepupSettings(ctx context.Context, arg UpdateStepupSettingsParams) (StepupSetting, error)

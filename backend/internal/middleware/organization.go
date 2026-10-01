@@ -2,11 +2,13 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
@@ -17,6 +19,7 @@ import (
 
 const (
 	CodeOrganizationContextRequired = "ORGANIZATION_CONTEXT_REQUIRED"
+	CodeOrganizationReadOnly        = response.CodeOrganizationReadOnly
 )
 
 // OrganizationResolver loads membership for the JWT organization claim.
@@ -86,12 +89,32 @@ func RequireOrganizationResolver(tokens *jwt.Manager, resolver OrganizationResol
 					"Organization access has expired")
 				return
 			}
+			brand, ok := brandctx.From(r.Context())
+			if !ok {
+				response.InternalErr(w, r, errBrandUnresolved, "failed to resolve request brand")
+				return
+			}
+			if row.OrganizationBrandID != brand.ID {
+				response.Error(w, r, http.StatusForbidden, CodeBrandMismatch,
+					"Organization does not belong to this domain's brand")
+				return
+			}
+			// K23: read_only organizations keep read access only.
+			if row.OrganizationStatus == "read_only" && !isSafeMethod(r.Method) {
+				response.Error(w, r, http.StatusForbidden, CodeOrganizationReadOnly,
+					"Organization is read-only")
+				return
+			}
 			scope := orgctx.Scope{
 				InternalID: row.OrganizationID,
 				UUID:       row.OrganizationUuid,
 				Slug:       row.OrganizationSlug,
 				Name:       row.OrganizationName,
 				MemberRole: row.Role,
+				Status:     row.OrganizationStatus,
+				OrgType:    row.OrganizationType,
+				BrandID:    row.OrganizationBrandID,
+				BrandSlug:  row.BrandSlug,
 			}
 			next.ServeHTTP(w, r.WithContext(orgctx.WithScope(r.Context(), scope)))
 		})
@@ -119,6 +142,12 @@ func RequireOrgRole(roles ...string) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+var errBrandUnresolved = errors.New("request brand is not resolved")
+
+func isSafeMethod(m string) bool {
+	return m == http.MethodGet || m == http.MethodHead || m == http.MethodOptions
 }
 
 func orgAccessAllowed(status string, accessStarts, accessEnds pgtype.Timestamptz) bool {

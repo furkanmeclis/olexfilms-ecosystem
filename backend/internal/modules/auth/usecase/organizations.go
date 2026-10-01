@@ -14,6 +14,7 @@ var (
 	ErrNoTenantMembership        = errors.New("no tenant membership")
 	ErrOrganizationAccessExpired = errors.New("organization access expired")
 	ErrOrganizationSuspended     = errors.New("organization suspended")
+	ErrBrandMismatch             = errors.New("organization brand does not match request brand")
 )
 
 // OrganizationResolver resolves tenant membership for auth flows.
@@ -76,9 +77,16 @@ func (u *AuthUseCase) IssueSessionForOrganization(ctx context.Context, userUUID,
 func mapOrganizationSummaries(items []orgusecase.MembershipSummary) []model.OrganizationSummary {
 	out := make([]model.OrganizationSummary, 0, len(items))
 	for _, item := range items {
+		var parent *model.OrganizationSummaryParent
+		if item.Parent != nil {
+			parent = &model.OrganizationSummaryParent{UUID: item.Parent.UUID, Slug: item.Parent.Slug, Name: item.Parent.Name}
+		}
 		out = append(out, model.OrganizationSummary{
 			UUID: item.UUID, Slug: item.Slug, Name: item.Name, Role: item.Role,
 			LogoURL: item.LogoURL, Status: item.Status, AccessEndsAt: item.AccessEndsAt,
+			Type:   item.Type,
+			Brand:  model.OrganizationSummaryBrand{Slug: item.Brand.Slug, Name: item.Brand.Name},
+			Parent: parent,
 		})
 	}
 	return out
@@ -92,6 +100,8 @@ func mapOrganizationError(err error) error {
 		return ErrOrganizationAccessExpired
 	case errors.Is(err, orgusecase.ErrOrganizationSuspended):
 		return ErrOrganizationSuspended
+	case errors.Is(err, orgusecase.ErrBrandMismatch):
+		return ErrBrandMismatch
 	default:
 		return err
 	}
