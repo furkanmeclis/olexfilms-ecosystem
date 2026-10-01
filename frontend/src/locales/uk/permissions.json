@@ -151,5 +151,15 @@
   "labels.vehicles.write": "Керування автомобілями",
   "labels.customers.anonymize": "Анонімізація клієнтів",
   "labels.customers.merge": "Об'єднання клієнтів",
-  "groups.vehicles": "Автомобілі"
+  "groups.vehicles": "Автомобілі",
+  "labels.orders.read": "Перегляд замовлень",
+  "labels.orders.write": "Керування замовленнями",
+  "labels.orders.approve": "Затвердження замовлень",
+  "labels.orders.ship": "Відвантаження замовлень",
+  "labels.orders.receive": "Приймання замовлень",
+  "labels.orders.cancel": "Скасування замовлень",
+  "labels.transfers.request": "Запит на переміщення залишків",
+  "labels.transfers.approve": "Затвердження переміщень залишків",
+  "groups.orders": "Замовлення",
+  "groups.transfers": "Переміщення"
 }

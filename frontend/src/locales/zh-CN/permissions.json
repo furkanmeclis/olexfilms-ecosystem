@@ -151,5 +151,15 @@
   "labels.vehicles.write": "管理车辆",
   "labels.customers.anonymize": "匿名化客户",
   "labels.customers.merge": "合并客户",
-  "groups.vehicles": "车辆"
+  "groups.vehicles": "车辆",
+  "labels.orders.read": "查看订单",
+  "labels.orders.write": "管理订单",
+  "labels.orders.approve": "审批订单",
+  "labels.orders.ship": "发货订单",
+  "labels.orders.receive": "签收订单",
+  "labels.orders.cancel": "取消订单",
+  "labels.transfers.request": "申请库存调拨",
+  "labels.transfers.approve": "审批库存调拨",
+  "groups.orders": "订单",
+  "groups.transfers": "调拨"
 }

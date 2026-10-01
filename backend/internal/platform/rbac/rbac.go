@@ -162,6 +162,18 @@ const (
 	PermVehiclesWrite      = "vehicles.write"
 	PermCustomersAnonymize = "customers.anonymize"
 	PermCustomersMerge     = "customers.merge"
+
+	// Orders and sibling transfers (TEC-165, K6/K7/K13). The seller approves
+	// and ships, the buyer receives; transfers are requested by the giving
+	// dealer and approved by the common distributor.
+	PermOrdersRead       = "orders.read"
+	PermOrdersWrite      = "orders.write"
+	PermOrdersApprove    = "orders.approve"
+	PermOrdersShip       = "orders.ship"
+	PermOrdersReceive    = "orders.receive"
+	PermOrdersCancel     = "orders.cancel"
+	PermTransfersRequest = "transfers.request"
+	PermTransfersApprove = "transfers.approve"
 )
 
 // IsSystemRole reports whether slug is a protected system role.
