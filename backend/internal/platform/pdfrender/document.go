@@ -85,10 +85,10 @@ func (d Document) HTML() string {
 func FooterHTML(locale, text string) string {
 	lang := html.EscapeString(strings.ReplaceAll(strings.TrimSpace(locale), "_", "-"))
 	return "<!DOCTYPE html><html lang=\"" + lang + "\" dir=\"" + Dir(locale) + "\"><head><meta charset=\"utf-8\">" +
-		"<style>body{margin:0 0.4in;font-family:'Noto Sans','Noto Sans Arabic',sans-serif;font-size:7pt;color:#6b7280;" +
-		"display:flex;justify-content:space-between;width:100%}</style></head><body>" +
-		"<span>" + html.EscapeString(text) + "</span>" +
-		"<span><span class=\"pageNumber\"></span> / <span class=\"totalPages\"></span></span></body></html>"
+		"<style>html,body{margin:0;width:100%}body{font-family:'Noto Sans','Noto Sans Arabic',sans-serif;font-size:7pt;color:#6b7280}" +
+		"table{width:100%;border-collapse:collapse;padding:0 0.4in;box-sizing:border-box}td{padding:0 0.4in}.n{text-align:end}</style></head><body>" +
+		"<table><tr><td>" + html.EscapeString(text) + "</td>" +
+		"<td class=\"n\"><span class=\"pageNumber\"></span> / <span class=\"totalPages\"></span></td></tr></table></body></html>"
 }
 
 const baseCSS = `@page{size:A4}
