@@ -29,6 +29,12 @@ func Authenticate(tokens *jwt.Manager, loader IdentityLoader) func(http.Handler)
 				response.Unauthorized(w, r, "Invalid or expired access token")
 				return
 			}
+			// Session realm (aud): portal and panel tokens never cross.
+			if !RealmAllows(claims.Realm(), r.URL.Path) {
+				response.Error(w, r, http.StatusForbidden, response.CodeRealmForbidden,
+					"This session cannot access this resource")
+				return
+			}
 			principal, err := loader.LoadPrincipal(r, claims)
 			if err != nil {
 				response.Unauthorized(w, r, "Session is no longer valid")

@@ -65,5 +65,6 @@ func (l Loader) LoadPrincipal(r *http.Request, claims jwt.Claims) (authctx.Princ
 		ImpersonatorUserID: impersonatorUUID,
 		SessionID:          claims.SessionUUID(),
 		OrganizationUUID:   orgUUID,
+		Realm:              claims.Realm(),
 	}, nil
 }

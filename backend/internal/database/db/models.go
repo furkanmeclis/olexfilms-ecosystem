@@ -107,6 +107,20 @@ type BulkJob struct {
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 }
 
+type Consent struct {
+	ID          int64              `json:"id"`
+	Uuid        uuid.UUID          `json:"uuid"`
+	UserID      int64              `json:"user_id"`
+	LegalTextID int64              `json:"legal_text_id"`
+	Kind        string             `json:"kind"`
+	Locale      string             `json:"locale"`
+	TextVersion int32              `json:"text_version"`
+	Accepted    bool               `json:"accepted"`
+	DecidedAt   pgtype.Timestamptz `json:"decided_at"`
+	Ip          pgtype.Text        `json:"ip"`
+	UserAgent   pgtype.Text        `json:"user_agent"`
+}
+
 type Conversation struct {
 	ID             int64              `json:"id"`
 	Uuid           uuid.UUID          `json:"uuid"`
@@ -242,6 +256,17 @@ type ImportJob struct {
 
 type KvkkNotice struct {
 	ID        int64              `json:"id"`
+	Locale    string             `json:"locale"`
+	Version   int32              `json:"version"`
+	Body      string             `json:"body"`
+	CreatedBy pgtype.Int8        `json:"created_by"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type LegalText struct {
+	ID        int64              `json:"id"`
+	Uuid      uuid.UUID          `json:"uuid"`
+	Kind      string             `json:"kind"`
 	Locale    string             `json:"locale"`
 	Version   int32              `json:"version"`
 	Body      string             `json:"body"`

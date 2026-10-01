@@ -28,7 +28,7 @@ func (h *Handler) ImpersonatePlatformUser(w http.ResponseWriter, r *http.Request
 		p.IsSuperAdmin,
 		p.ImpersonatorUserID != nil,
 		targetUUID,
-		sessionMeta(r),
+		principalMeta(r, p),
 	)
 	if err != nil {
 		writeUsecaseError(w, r, err)
@@ -51,7 +51,7 @@ func (h *Handler) StopImpersonation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.uc.StopImpersonation(r.Context(), *p.ImpersonatorUserID, sessionMeta(r))
+	result, err := h.uc.StopImpersonation(r.Context(), *p.ImpersonatorUserID, principalMeta(r, p))
 	if err != nil {
 		writeUsecaseError(w, r, err)
 		return

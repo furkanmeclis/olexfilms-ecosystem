@@ -125,6 +125,9 @@ const (
 	// Notification center (TEC-87).
 	PermNotificationTemplatesManage = "notifications.templates.manage"
 	PermNotificationDeliveriesRead  = "notification_deliveries.read"
+
+	// Portal legal texts (TEC-90): AI guidelines Markdown, per language.
+	PermPlatformLegalTextsWrite = "platform.legal_texts.write"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

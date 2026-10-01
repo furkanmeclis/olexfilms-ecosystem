@@ -99,17 +99,21 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		Password         string `json:"password"`
 		TOTPCode         string `json:"totp_code"`
 		OrganizationSlug string `json:"organization_slug"`
+		// Realm: "panel" (default) or "portal" (TEC-90).
+		Realm string `json:"realm"`
 	}
 	if err := decodeJSON(w, r, &in); err != nil {
 		return
 	}
+	meta := sessionMeta(r)
+	meta.Realm = in.Realm
 	if h.limiter != nil {
 		ok, retry := h.limiter.AllowLogin(r.Context(), sessionMeta(r).IP, in.Email)
 		if h.writeRateLimited(w, r, ok, retry) {
 			return
 		}
 	}
-	tokens, err := h.uc.Login(r.Context(), in.Email, in.Password, in.TOTPCode, in.OrganizationSlug, sessionMeta(r))
+	tokens, err := h.uc.Login(r.Context(), in.Email, in.Password, in.TOTPCode, in.OrganizationSlug, meta)
 	if err != nil {
 		writeUsecaseError(w, r, err)
 		return
@@ -149,7 +153,7 @@ func (h *Handler) SwitchOrganizationContext(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	p := authctx.MustPrincipal(r.Context())
-	tokens, err := h.uc.SwitchOrganizationContext(r.Context(), p.UserID, slug, sessionMeta(r))
+	tokens, err := h.uc.SwitchOrganizationContext(r.Context(), p.UserID, slug, principalMeta(r, p))
 	if err != nil {
 		writeUsecaseError(w, r, err)
 		return
@@ -571,6 +575,14 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
 	return nil
 }
 
+// principalMeta is sessionMeta plus the realm of the calling session, so
+// token issuing use cases can refuse panel-only operations from the portal.
+func principalMeta(r *http.Request, p authctx.Principal) model.SessionMeta {
+	meta := sessionMeta(r)
+	meta.Realm = p.Realm
+	return meta
+}
+
 func sessionMeta(r *http.Request) model.SessionMeta {
 	ip := r.Header.Get("X-Forwarded-For")
 	if ip != "" {
@@ -620,6 +632,12 @@ func writeUsecaseError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Error(w, r, http.StatusInternalServerError, response.CodePasswordResetFailed, "Password reset failed")
 	case errors.Is(err, usecase.ErrUserDisabled):
 		response.Forbidden(w, r, "User is disabled")
+	case errors.Is(err, usecase.ErrNoPortalAccess):
+		response.Error(w, r, http.StatusForbidden, response.CodeNoPortalAccess, "This account cannot sign in to the portal")
+	case errors.Is(err, usecase.ErrNoPanelAccess):
+		response.Error(w, r, http.StatusForbidden, response.CodeNoPanelAccess, "This account signs in to the customer portal")
+	case errors.Is(err, usecase.ErrRealmNotAllowed):
+		response.Error(w, r, http.StatusForbidden, response.CodeRealmForbidden, "This session cannot do this")
 	case errors.Is(err, usecase.ErrLastSuperAdmin):
 		response.Conflict(w, r, response.CodeConflict, "Cannot demote the last super admin")
 	case errors.Is(err, usecase.ErrSystemRole):

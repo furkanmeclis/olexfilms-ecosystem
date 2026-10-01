@@ -20,6 +20,9 @@ func (u *AuthUseCase) ImpersonatePlatformUser(
 	targetUUID uuid.UUID,
 	meta model.SessionMeta,
 ) (model.ImpersonationResult, error) {
+	if err := requirePanelRealm(&meta); err != nil {
+		return model.ImpersonationResult{}, err
+	}
 	if actor.UUID == targetUUID {
 		return model.ImpersonationResult{}, fmt.Errorf("%w: cannot impersonate yourself", ErrInvalidRequest)
 	}
@@ -68,6 +71,9 @@ func (u *AuthUseCase) StopImpersonation(
 	impersonatorUUID uuid.UUID,
 	meta model.SessionMeta,
 ) (model.ImpersonationResult, error) {
+	if err := requirePanelRealm(&meta); err != nil {
+		return model.ImpersonationResult{}, err
+	}
 	actor, err := u.repo.FindUserByUUID(ctx, impersonatorUUID)
 	if err != nil {
 		if errors.Is(err, repository.ErrNotFound) {

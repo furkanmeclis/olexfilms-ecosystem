@@ -36,6 +36,10 @@ func (u *AuthUseCase) SwitchOrganizationContext(
 	organizationSlug string,
 	meta model.SessionMeta,
 ) (model.Tokens, error) {
+	// A portal session never turns into a panel (organization) session.
+	if err := requirePanelRealm(&meta); err != nil {
+		return model.Tokens{}, err
+	}
 	user, err := u.repo.FindUserByUUID(ctx, userUUID)
 	if err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
@@ -58,6 +62,9 @@ func (u *AuthUseCase) SwitchOrganizationContext(
 
 // IssueSessionForOrganization issues tokens scoped to an organization.
 func (u *AuthUseCase) IssueSessionForOrganization(ctx context.Context, userUUID, orgUUID uuid.UUID, meta model.SessionMeta) (model.Tokens, error) {
+	if err := requirePanelRealm(&meta); err != nil {
+		return model.Tokens{}, err
+	}
 	user, err := u.repo.FindUserByUUID(ctx, userUUID)
 	if err != nil {
 		if errors.Is(err, repository.ErrNotFound) {

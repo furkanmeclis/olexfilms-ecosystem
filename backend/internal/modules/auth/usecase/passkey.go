@@ -9,6 +9,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/repository"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
 	"github.com/google/uuid"
 )
 
@@ -36,6 +37,11 @@ func (u *AuthUseCase) IssueSessionForUser(ctx context.Context, userUUID uuid.UUI
 	}
 	if user.Status != "active" {
 		return model.Tokens{}, ErrUserDisabled
+	}
+	// Passkey and OAuth sign in to the panel only (TEC-90).
+	meta.Realm = jwt.AudiencePanel
+	if err := u.checkRealmAccess(ctx, user, meta.Realm); err != nil {
+		return model.Tokens{}, err
 	}
 	if err := u.repo.UpdateLastLogin(ctx, user.ID); err != nil {
 		return model.Tokens{}, err

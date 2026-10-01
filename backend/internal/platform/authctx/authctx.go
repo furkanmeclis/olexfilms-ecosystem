@@ -28,6 +28,9 @@ type Principal struct {
 	ImpersonatorUserID *uuid.UUID
 	SessionID          uuid.UUID
 	OrganizationUUID   *uuid.UUID
+	// Realm is the session realm of the access token (jwt aud): "panel" or
+	// "portal" (TEC-90).
+	Realm string
 }
 
 // WithPrincipal stores the principal on the context.
