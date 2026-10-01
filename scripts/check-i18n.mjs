@@ -629,6 +629,20 @@ function checkPartialLocales(catalogs, enNs) {
 }
 
 /** Every translation keeps exactly the {{params}} of the en text. */
+/**
+ * A plural form other than _other may spell the number out and drop {{count}}
+ * (ar items_two "سجلان" = two records); every other param must stay.
+ */
+function spellsOutCount(key, enKeys, want, got) {
+  const m = PLURAL_SUFFIX_RE.exec(key);
+  if (!m || m[1] === "other" || !(`${key.slice(0, m.index)}_other` in enKeys)) return false;
+  const withoutCount = want
+    .split(",")
+    .filter((p) => p && p !== "count")
+    .join(",");
+  return got === withoutCount;
+}
+
 function checkParams(catalogs) {
   for (const locale of LOCALES) {
     if (locale === "en") continue;
@@ -639,7 +653,7 @@ function checkParams(catalogs) {
         if (!enKey || !String(v).trim()) continue;
         const want = paramSet(enKeys[enKey]);
         const got = paramSet(v);
-        if (want !== got) {
+        if (want !== got && !spellsOutCount(k, enKeys, want, got)) {
           add(
             "error",
             "param-mismatch",

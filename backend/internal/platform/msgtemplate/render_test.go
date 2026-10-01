@@ -58,8 +58,11 @@ func TestRegistry(t *testing.T) {
 	if v := todo.SampleVars("ru-RU")["todo_link"]; v != "https://olexfilms.app/t/tech-oto/todos" {
 		t.Fatalf("ru link sample should fall back to en, got %q", v)
 	}
-	if v := todo.SampleVars("bg")["due_in"]; v != "in 15 minutes" {
-		t.Fatalf("bg sample should fall back to en, got %q", v)
+	if v := todo.SampleVars("bg")["due_in"]; v != "след 15 минути" {
+		t.Fatalf("bg sample %q", v)
+	}
+	if v := todo.SampleVars("ar")["todo_link"]; v != "https://olexfilms.app/t/tech-oto/todos" {
+		t.Fatalf("ar link sample should fall back to en, got %q", v)
 	}
 	if len(UserPreferenceTypes()) == 0 {
 		t.Fatal("no preference types")

@@ -80,8 +80,8 @@ describe("LocaleProvider RTL", () => {
     expect(probe?.radixDir).toBe("rtl");
     // The server reads this cookie on reload (see request-locale.test.ts).
     expect(document.cookie).toContain("NEXT_LOCALE=ar");
-    // ar has no translations yet: en text, never a raw key.
-    expect(container.textContent).toBe("Save");
+    // ar catalog is loaded lazily on switch (TEC-138): Arabic text, never a raw key.
+    expect(container.textContent).toBe("حفظ");
   });
 
   it("starts RTL when the server resolved Arabic from the cookie", async () => {

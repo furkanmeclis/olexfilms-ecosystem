@@ -1,1 +1,22 @@
-{}
+{
+  "title": "تسجيل منشأة",
+  "description": "أنشئ منشأتك على Olexfilms في دقائق.",
+  "submit": "إكمال التسجيل",
+  "submitting": "جارٍ إنشاء الحساب…",
+  "error": "تعذّر إكمال التسجيل. تحقّق من بياناتك وأعد المحاولة.",
+  "error_sign_in": "تم التسجيل بنجاح لكن تسجيل الدخول فشل. حاول من صفحة تسجيل الدخول.",
+  "fields.name": "الاسم الأول لمسؤول التواصل",
+  "fields.surname": "اسم العائلة لمسؤول التواصل",
+  "fields.organization_name": "اسم المنشأة",
+  "fields.city": "المدينة",
+  "fields.district": "المنطقة",
+  "fields.phone": "الهاتف",
+  "fields.email": "البريد الإلكتروني",
+  "fields.address": "العنوان",
+  "fields.password": "كلمة المرور",
+  "validation.organization_name_required": "اسم المنشأة مطلوب",
+  "validation.city_required": "المدينة مطلوبة",
+  "validation.district_required": "المنطقة مطلوبة",
+  "validation.phone_required": "الهاتف مطلوب",
+  "validation.address_required": "العنوان مطلوب"
+}

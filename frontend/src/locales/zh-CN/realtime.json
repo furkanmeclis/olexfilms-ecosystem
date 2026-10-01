@@ -1,1 +1,17 @@
-{}
+{
+  "reconnected": "实时连接已恢复",
+  "offline": "您已离线——实时更新已暂停",
+  "event_fallback": "更新：{{type}}",
+  "event_notifications_sent": "通知已发送",
+  "event_notifications_delivered": "通知已送达",
+  "event_notifications_failed": "通知发送失败",
+  "event_jobs_completed": "任务已完成",
+  "event_jobs_failed": "任务失败",
+  "event_imports_completed": "导入已完成",
+  "event_imports_failed": "导入失败",
+  "event_exports_completed": "导出已完成",
+  "event_exports_failed": "导出失败",
+  "event_exports_cancelled": "导出已取消",
+  "event_reports_export_completed": "报表导出已就绪",
+  "event_reports_export_failed": "报表导出失败"
+}

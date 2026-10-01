@@ -1,1 +1,14 @@
-{}
+{
+  "create": "Създай",
+  "refresh": "Обнови",
+  "filters": "Филтри",
+  "filters_active": "Филтри ({{count}})",
+  "filters_description": "Стеснете списъка с филтри.",
+  "filter_any": "Всички",
+  "filter_unsupported": "API параметърът за този филтър все още не е наличен.",
+  "reset_filters": "Нулирай",
+  "apply_filters": "Приложи",
+  "delete_title": "Изтриване: {{name}}",
+  "delete_description": "Наистина ли искате да изтриете {{name}}?",
+  "delete_soft_description": "{{name}} ще бъде изтрит меко. Записът се архивира, а не се премахва окончателно."
+}

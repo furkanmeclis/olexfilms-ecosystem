@@ -1,1 +1,17 @@
-{}
+{
+  "reconnected": "Η σύνδεση πραγματικού χρόνου αποκαταστάθηκε",
+  "offline": "Είστε εκτός σύνδεσης — οι ενημερώσεις πραγματικού χρόνου σταμάτησαν",
+  "event_fallback": "Ενημέρωση: {{type}}",
+  "event_notifications_sent": "Η ειδοποίηση στάλθηκε",
+  "event_notifications_delivered": "Η ειδοποίηση παραδόθηκε",
+  "event_notifications_failed": "Η ειδοποίηση απέτυχε",
+  "event_jobs_completed": "Η εργασία ολοκληρώθηκε",
+  "event_jobs_failed": "Η εργασία απέτυχε",
+  "event_imports_completed": "Η εισαγωγή ολοκληρώθηκε",
+  "event_imports_failed": "Η εισαγωγή απέτυχε",
+  "event_exports_completed": "Η εξαγωγή ολοκληρώθηκε",
+  "event_exports_failed": "Η εξαγωγή απέτυχε",
+  "event_exports_cancelled": "Η εξαγωγή ακυρώθηκε",
+  "event_reports_export_completed": "Η εξαγωγή αναφοράς είναι έτοιμη",
+  "event_reports_export_failed": "Η εξαγωγή αναφοράς απέτυχε"
+}

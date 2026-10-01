@@ -1,1 +1,24 @@
-{}
+{
+  "dialog.title": "Şəxsiyyətinizi təsdiqləyin",
+  "dialog.description": "Bu əməliyyat üçün yaxın vaxtda şifrə, passkey və ya autentifikator ilə təsdiq tələb olunur.",
+  "dialog.password": "Şifrə",
+  "dialog.password_placeholder": "Şifrənizi daxil edin",
+  "dialog.totp": "Autentifikator kodu",
+  "dialog.totp_placeholder": "6 rəqəmli kod və ya bərpa kodu",
+  "dialog.verify": "Təsdiqlə",
+  "dialog.verify_pending": "Təsdiqlənir…",
+  "dialog.passkey": "Passkey istifadə et",
+  "dialog.passkey_pending": "Passkey gözlənilir…",
+  "dialog.or_password": "və ya şifrə",
+  "dialog.no_methods": "Heç bir təsdiqləmə üsulu aktiv deyil. Administratorla əlaqə saxlayın.",
+  "gate.title": "Qorunan məzmun",
+  "gate.description": "Bu bölməyə baxmaq üçün şəxsiyyətinizi təsdiqləyin.",
+  "gate.purpose.users.detail.roles": "Bu istifadəçiyə təyin olunmuş rollara baxmaq üçün təsdiqləyin.",
+  "gate.unlock": "Kilidi aç",
+  "gate.unlocking": "Kilid açılır…",
+  "validation.password_required": "Şifrə məcburidir",
+  "validation.totp_required": "Autentifikator kodu məcburidir",
+  "error.verification_failed": "Təsdiqləmə uğursuz oldu",
+  "error.passkey_failed": "Passkey ilə təsdiqləmə uğursuz oldu",
+  "error.totp_failed": "Autentifikator ilə təsdiqləmə uğursuz oldu"
+}

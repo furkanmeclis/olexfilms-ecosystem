@@ -1,1 +1,22 @@
-{}
+{
+  "description": "Platformanın ümumi göstəriciləri və rollar, istifadəçilər, bildirişlər üçün qısayollar.",
+  "forbidden_description": "İcmala yalnız platforma istifadəçiləri baxa bilər.",
+  "error_description": "İcmal məlumatlarını yükləmək mümkün olmadı.",
+  "kpi_roles_total": "Rollar",
+  "kpi_users_total": "İstifadəçilər",
+  "kpi_notifications": "Bildirişlər",
+  "quick_links_title": "Sürətli keçidlər",
+  "quick_links_description": "Platformanın tez-tez istifadə olunan bölmələrinə keçin.",
+  "link_roles_description": "Rollara baxın və onları idarə edin.",
+  "link_users_description": "Platforma istifadəçilərinə baxın və onları idarə edin.",
+  "link_notifications_description": "Platformanın bildiriş jurnalı.",
+  "link_profile_description": "Hesab, şifrə və seçimlər.",
+  "pipeline.follow_up": "İzlənəcək potensial müştərilər",
+  "pipeline.overdue": "Gecikmiş izləmələr: {{count}}",
+  "pipeline.open_leads": "Açıq potensial müştərilər: {{count}}",
+  "pipeline.open_quotes": "Cavab gözləyən təkliflər",
+  "pipeline.expiring": "3 gün ərzində bitən təkliflər: {{count}}",
+  "pipeline.awaiting": "Cavab gözləyən təkliflər: {{count}}",
+  "tenant.welcome_title": "Xoş gəlmisiniz",
+  "tenant.welcome_description": "Təşkilat paneli. Modullar əlavə olunduqca burada görünəcək."
+}

@@ -8,12 +8,16 @@ import (
 )
 
 // translatedLocales are the locales whose label catalog must match enCatalog
-// key for key (TEC-138 batch A).
-var translatedLocales = []Locale{LocaleDE, LocaleFR, LocaleES, LocaleIT, LocaleRU, LocaleUK}
+// key for key (TEC-138 batch A and batch B).
+var translatedLocales = []Locale{
+	LocaleDE, LocaleFR, LocaleES, LocaleIT, LocaleRU, LocaleUK,
+	LocaleBG, LocaleEL, LocaleZhCN, LocaleAZ, LocaleAR,
+}
 
 // universalLabels may stay equal to en in every language.
 var universalLabels = map[string]bool{
 	"UUID": true, "PDF": true, "CSV": true, "JSON": true, "Excel": true, "IBAN": true,
+	"Slug": true, "SKU": true,
 }
 
 // sameAsEN lists real cognates that are correct translations in a locale.
@@ -21,6 +25,7 @@ var sameAsEN = map[Locale]map[string]bool{
 	LocaleFR: {"Active": true},
 	LocaleES: {"No": true},
 	LocaleIT: {"No": true},
+	LocaleEL: {"Email": true, "Barcode": true},
 }
 
 var paramRE = regexp.MustCompile(`{{\s*([a-zA-Z0-9_]+)\s*}}`)

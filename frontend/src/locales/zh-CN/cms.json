@@ -1,1 +1,7 @@
-{}
+{
+  "home.title": "首页",
+  "home.subtitle": "内容管理框架——在此添加模块。",
+  "home.welcome": "欢迎",
+  "home.greeting": "当前登录身份：{{name}}。",
+  "home.placeholder": "您的 CMS 工作区已就绪。"
+}

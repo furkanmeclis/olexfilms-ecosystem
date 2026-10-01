@@ -1,1 +1,21 @@
-{}
+{
+  "title": "访问与验证",
+  "description": "设置重新验证的有效时长以及用户可使用的验证方式。",
+  "form.section_verification": "验证策略",
+  "form.section_verification_hint": "控制导出、受保护字段等敏感操作的二次验证提示。",
+  "form.ttl_hours": "验证有效期（小时）",
+  "form.ttl_hours_hint": "通过密码或通行密钥验证后，用户可在此时长内执行受保护操作（1–168）。",
+  "form.password_enabled": "允许密码验证",
+  "form.password_enabled_hint": "用户可使用账户密码确认敏感操作。",
+  "form.passkey_enabled": "允许通行密钥验证",
+  "form.passkey_enabled_hint": "已注册通行密钥的用户无需输入密码即可确认操作。",
+  "form.totp_enabled": "允许身份验证器验证",
+  "form.totp_enabled_hint": "已启用双重验证的用户可使用身份验证器代码确认敏感操作。",
+  "form.password_login_totp_required": "密码登录需启用双重验证",
+  "form.password_login_totp_required_hint": "启用后，用户必须先设置身份验证器，才能使用邮箱和密码登录。通行密钥和 OAuth 登录不受影响。",
+  "form.save": "保存设置",
+  "toast.saved": "访问设置已保存",
+  "toast.failed": "无法保存访问设置",
+  "error.title": "无法加载设置",
+  "error.description": "请重试或联系管理员。"
+}

@@ -1,1 +1,22 @@
-{}
+{
+  "description": "Σύνολα της πλατφόρμας και συντομεύσεις για ρόλους, χρήστες και ειδοποιήσεις.",
+  "forbidden_description": "Μόνο οι χρήστες της πλατφόρμας μπορούν να δουν την επισκόπηση.",
+  "error_description": "Δεν ήταν δυνατή η φόρτωση των δεδομένων επισκόπησης.",
+  "kpi_roles_total": "Ρόλοι",
+  "kpi_users_total": "Χρήστες",
+  "kpi_notifications": "Ειδοποιήσεις",
+  "quick_links_title": "Γρήγοροι σύνδεσμοι",
+  "quick_links_description": "Μεταβείτε σε συχνές περιοχές της πλατφόρμας.",
+  "link_roles_description": "Προβολή και διαχείριση ρόλων.",
+  "link_users_description": "Προβολή και διαχείριση χρηστών της πλατφόρμας.",
+  "link_notifications_description": "Αρχείο ειδοποιήσεων της πλατφόρμας.",
+  "link_profile_description": "Λογαριασμός, κωδικός και προτιμήσεις.",
+  "pipeline.follow_up": "Υποψήφιοι πελάτες για παρακολούθηση",
+  "pipeline.overdue": "Εκπρόθεσμες παρακολουθήσεις: {{count}}",
+  "pipeline.open_leads": "Ανοιχτοί υποψήφιοι πελάτες: {{count}}",
+  "pipeline.open_quotes": "Προσφορές σε αναμονή απάντησης",
+  "pipeline.expiring": "Προσφορές που λήγουν σε 3 ημέρες: {{count}}",
+  "pipeline.awaiting": "Προσφορές σε αναμονή απάντησης: {{count}}",
+  "tenant.welcome_title": "Καλώς ήρθατε",
+  "tenant.welcome_description": "Πίνακας οργανισμού. Οι ενότητες θα εμφανίζονται εδώ καθώς προστίθενται."
+}

@@ -1,1 +1,17 @@
-{}
+{
+  "pick_date": "Επιλέξτε ημερομηνία",
+  "show_password": "Εμφάνιση κωδικού",
+  "hide_password": "Απόκρυψη κωδικού",
+  "cancel": "Ακύρωση",
+  "clear": "Εκκαθάριση",
+  "save": "Αποθήκευση",
+  "required": "Υποχρεωτικό πεδίο",
+  "on_this_page": "Σε αυτή τη σελίδα",
+  "combobox_placeholder": "Επιλογή…",
+  "combobox_search": "Αναζήτηση…",
+  "combobox_empty": "Δεν βρέθηκαν αποτελέσματα",
+  "combobox_selected": "Επιλεγμένο",
+  "command_title": "Εντολή / επιλογή",
+  "command_description": "Αναζητήστε και επιλέξτε ένα στοιχείο",
+  "command_group_default": "Αποτελέσματα"
+}

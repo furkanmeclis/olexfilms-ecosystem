@@ -1,1 +1,22 @@
-{}
+{
+  "description": "إجماليات المنصة واختصارات للأدوار والمستخدمين والإشعارات.",
+  "forbidden_description": "يمكن لمستخدمي المنصة فقط عرض النظرة العامة.",
+  "error_description": "تعذّر تحميل بيانات النظرة العامة.",
+  "kpi_roles_total": "الأدوار",
+  "kpi_users_total": "المستخدمون",
+  "kpi_notifications": "الإشعارات",
+  "quick_links_title": "روابط سريعة",
+  "quick_links_description": "انتقل إلى أقسام المنصة الشائعة.",
+  "link_roles_description": "استعراض الأدوار وإدارتها.",
+  "link_users_description": "استعراض مستخدمي المنصة وإدارتهم.",
+  "link_notifications_description": "سجل إشعارات المنصة.",
+  "link_profile_description": "الحساب وكلمة المرور والتفضيلات.",
+  "pipeline.follow_up": "عملاء محتملون للمتابعة",
+  "pipeline.overdue": "متابعات متأخرة: {{count}}",
+  "pipeline.open_leads": "عملاء محتملون مفتوحون: {{count}}",
+  "pipeline.open_quotes": "عروض أسعار بانتظار الرد",
+  "pipeline.expiring": "عروض أسعار تنتهي خلال 3 أيام: {{count}}",
+  "pipeline.awaiting": "عروض أسعار بانتظار الرد: {{count}}",
+  "tenant.welcome_title": "مرحبًا",
+  "tenant.welcome_description": "لوحة المنشأة. ستظهر الوحدات هنا عند إضافتها."
+}

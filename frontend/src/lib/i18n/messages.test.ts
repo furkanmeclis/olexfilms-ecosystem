@@ -29,9 +29,14 @@ describe("messages", () => {
     );
   });
 
-  it("falls back to en for a language without translations yet", async () => {
+  it("falls back to en key by key", async () => {
     await loadMessages("ar");
-    expect(translate("ar", "common.save")).toBe(translate("en", "common.save"));
+    expect(translate("ar", "common.save")).toBe("حفظ");
+    // A key the language does not have: the fallback language's text.
+    registerMessages("az", { test: { only_fallback: "Only in fallback" } });
+    expect(translate("ar", "test.only_fallback", undefined, "az")).toBe(
+      "Only in fallback",
+    );
     // Not loaded at all: still en, never the raw key.
     expect(translate("ru", "common.save")).toBe(translate("en", "common.save"));
   });

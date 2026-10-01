@@ -1,1 +1,8 @@
-{}
+{
+  "logo.upload": "Μεταφόρτωση λογότυπου",
+  "logo.replace": "Αντικατάσταση λογότυπου",
+  "logo.clear": "Αφαίρεση λογότυπου",
+  "logo.uploading": "Μεταφόρτωση…",
+  "logo.too_large": "Το λογότυπο πρέπει να είναι έως 2 MB.",
+  "logo.invalid_type": "Χρησιμοποιήστε εικόνα JPEG, PNG ή WebP."
+}

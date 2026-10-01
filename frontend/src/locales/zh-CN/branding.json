@@ -1,1 +1,8 @@
-{}
+{
+  "logo.upload": "上传徽标",
+  "logo.replace": "更换徽标",
+  "logo.clear": "移除徽标",
+  "logo.uploading": "正在上传…",
+  "logo.too_large": "徽标不能超过 2 MB。",
+  "logo.invalid_type": "请使用 JPEG、PNG 或 WebP 图片。"
+}

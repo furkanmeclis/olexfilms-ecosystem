@@ -1,13 +1,7 @@
 package i18n
 
-// Label catalogs for the locales beyond tr/en (K10) that are not translated
-// yet: every key falls back to en. A translated locale moves to its own
-// catalog_<locale>.go file (TEC-138: de, fr, es, it, ru, uk), which
-// check-i18n also reads.
-var (
-	bgCatalog   = map[string]string{}
-	elCatalog   = map[string]string{}
-	zhCNCatalog = map[string]string{}
-	azCatalog   = map[string]string{}
-	arCatalog   = map[string]string{}
-)
+// Label catalogs for the locales beyond tr/en (K10). Every translated locale
+// has its own catalog_<locale>.go file (TEC-138: de, fr, es, it, ru, uk, bg,
+// el, zh-CN in catalog_zhcn.go, az, ar), which check-i18n also reads. A new
+// locale starts here as an empty map (every key falls back to en) and moves
+// to its own file once translated.
