@@ -11,12 +11,13 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/actionlink"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/catalog"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/providers"
-	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/templates"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/msgtemplate"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
@@ -48,12 +49,21 @@ type Querier interface {
 	MarkNotificationRead(ctx context.Context, arg db.MarkNotificationReadParams) (db.Notification, error)
 	MarkAllNotificationsReadForUser(ctx context.Context, userID pgtype.Int8) (int64, error)
 	InsertNotificationHistory(ctx context.Context, arg db.InsertNotificationHistoryParams) (db.NotificationHistory, error)
-	GetTemplateByCodeChannelLang(ctx context.Context, arg db.GetTemplateByCodeChannelLangParams) (db.NotificationTemplate, error)
-	GetNotificationPreferences(ctx context.Context, userID int64) (db.NotificationPreference, error)
-	UpsertNotificationPreferences(ctx context.Context, arg db.UpsertNotificationPreferencesParams) (db.NotificationPreference, error)
 	GetUserByID(ctx context.Context, id int64) (db.User, error)
 	GetUserByUUID(ctx context.Context, id uuid.UUID) (db.User, error)
 	GetLocaleSources(ctx context.Context, arg db.GetLocaleSourcesParams) (db.GetLocaleSourcesRow, error)
+
+	// Notification center (TEC-87).
+	GetNotificationRecipient(ctx context.Context, arg db.GetNotificationRecipientParams) (db.GetNotificationRecipientRow, error)
+	ListActiveTemplatesForEvent(ctx context.Context, arg db.ListActiveTemplatesForEventParams) ([]db.NotificationTemplate, error)
+	ListNotificationPreferenceRows(ctx context.Context, userID int64) ([]db.NotificationPreference, error)
+	UpsertNotificationPreferenceRow(ctx context.Context, arg db.UpsertNotificationPreferenceRowParams) (db.NotificationPreference, error)
+	DeleteNotificationPreferenceRow(ctx context.Context, arg db.DeleteNotificationPreferenceRowParams) error
+	ListNotificationChannelSettings(ctx context.Context) ([]db.NotificationChannelSetting, error)
+	InsertNotificationDelivery(ctx context.Context, arg db.InsertNotificationDeliveryParams) (db.NotificationDelivery, error)
+	AttachNotificationDelivery(ctx context.Context, arg db.AttachNotificationDeliveryParams) error
+	MarkDeliveryProcessing(ctx context.Context, id int64) error
+	MarkDeliveryResult(ctx context.Context, arg db.MarkDeliveryResultParams) error
 }
 
 // Enqueuer schedules background delivery tasks.
@@ -136,41 +146,44 @@ func (s *Service) Enqueue(ctx context.Context, in model.EnqueueInput) ([]model.N
 		priority = model.PriorityNormal
 	}
 
-	prefs := model.Preferences{EmailEnabled: true, InappEnabled: true, RealtimeEnabled: true, PushEnabled: false}
+	var prefs preferenceSet
 	if in.UserID != nil {
-		if p, err := s.q.GetNotificationPreferences(ctx, *in.UserID); err == nil {
-			prefs = model.Preferences{
-				EmailEnabled: p.EmailEnabled, InappEnabled: p.InappEnabled, RealtimeEnabled: p.RealtimeEnabled,
-				PushEnabled: p.PushEnabled,
-			}
-		}
+		prefs = s.loadPreferences(ctx, *in.UserID)
+	}
+	switches := s.channelSwitches(ctx)
+	code := in.TemplateCode
+	if code == "" {
+		code = in.SourceEvent
 	}
 
 	var out []model.Notification
-	for _, ch := range in.Channels {
-		ch = strings.TrimSpace(ch)
-		if ch == "" {
+	seen := map[string]bool{}
+	for _, raw := range in.Channels {
+		ch, ok := normalizeChannel(raw)
+		if !ok || seen[ch] {
 			continue
 		}
-		if !channelAllowed(ch, prefs, in.SecurityEmail) {
+		seen[ch] = true
+		if !switches[ch] {
+			s.log.Debug("notification_channel_disabled", "channel", ch, "template", in.TemplateCode)
+			continue
+		}
+		if (ch != model.ChannelEmail || !in.SecurityEmail) && !prefs.allowed(code, ch, defaultLegacyChannel(ch)) {
 			s.log.Debug("notification_channel_skipped_by_preference", "channel", ch, "template", in.TemplateCode)
 			continue
 		}
 		title, body := in.Title, in.Body
+		rowLang := lang
 		if in.TemplateCode != "" {
-			tpl, err := s.q.GetTemplateByCodeChannelLang(ctx, db.GetTemplateByCodeChannelLangParams{
-				Code: in.TemplateCode, Channel: ch, Language: lang,
-			})
-			if errors.Is(err, pgx.ErrNoRows) && lang != "en" {
-				tpl, err = s.q.GetTemplateByCodeChannelLang(ctx, db.GetTemplateByCodeChannelLangParams{
-					Code: in.TemplateCode, Channel: ch, Language: "en",
-				})
-			}
-			if err == nil {
-				title = templates.Render(tpl.Subject, in.TemplateVars)
-				body = templates.Render(tpl.Body, in.TemplateVars)
-			} else if !errors.Is(err, pgx.ErrNoRows) {
+			tpl, ok, err := s.pickTemplate(ctx, in.TemplateCode, ch, catalog.RoleGeneric, nil,
+				msgtemplate.LocaleChain(lang, "", ""))
+			if err != nil {
 				return nil, err
+			}
+			if ok {
+				title = msgtemplate.Render(tpl.Subject, in.TemplateVars)
+				body = msgtemplate.Render(tpl.Body, in.TemplateVars)
+				rowLang = tpl.Language
 			} else if title == "" {
 				title = in.TemplateCode
 			}
@@ -180,25 +193,31 @@ func (s *Service) Enqueue(ctx context.Context, in model.EnqueueInput) ([]model.N
 			payload = []byte("{}")
 		}
 		recipient := textPtr(in.Recipient)
-		if ch == model.ChannelEmail && !recipient.Valid && in.UserID != nil {
-			if u, err := s.q.GetUserByID(ctx, *in.UserID); err == nil && u.Email.Valid {
-				recipient = pgtype.Text{String: u.Email.String, Valid: true}
+		if !recipient.Valid && in.UserID != nil && needsAddress(ch) {
+			if u, err := s.q.GetUserByID(ctx, *in.UserID); err == nil {
+				switch {
+				case ch == model.ChannelEmail && u.Email.Valid:
+					recipient = pgtype.Text{String: u.Email.String, Valid: true}
+				case ch != model.ChannelEmail && u.PhoneE164.Valid:
+					recipient = u.PhoneE164
+				}
 			}
 		}
 		row, err := s.q.CreateNotification(ctx, db.CreateNotificationParams{
-			UserID:       int8Ptr(in.UserID),
-			Channel:      ch,
-			Status:       model.StatusQueued,
-			Priority:     priority,
-			Title:        title,
-			Body:         body,
-			Payload:      payload,
-			ActionUrl:    textPtr(in.ActionURL),
-			Recipient:    recipient,
-			TemplateCode: pgtype.Text{String: in.TemplateCode, Valid: in.TemplateCode != ""},
-			SourceEvent:  pgtype.Text{String: in.SourceEvent, Valid: in.SourceEvent != ""},
-			ScheduledAt:  pgtype.Timestamptz{},
-			MaxAttempts:  5,
+			UserID:         int8Ptr(in.UserID),
+			Channel:        ch,
+			Status:         model.StatusQueued,
+			Priority:       priority,
+			Title:          title,
+			Body:           body,
+			Payload:        payload,
+			ActionUrl:      textPtr(in.ActionURL),
+			Recipient:      recipient,
+			TemplateCode:   pgtype.Text{String: in.TemplateCode, Valid: in.TemplateCode != ""},
+			SourceEvent:    pgtype.Text{String: in.SourceEvent, Valid: in.SourceEvent != ""},
+			MaxAttempts:    5,
+			OrganizationID: int8Ptr(in.TenantID),
+			Language:       pgtype.Text{String: rowLang, Valid: true},
 		})
 		if err != nil {
 			return nil, fmt.Errorf("create notification: %w", err)
@@ -216,6 +235,29 @@ func (s *Service) Enqueue(ctx context.Context, in model.EnqueueInput) ([]model.N
 	return out, nil
 }
 
+// needsAddress reports channels that send to notifications.recipient.
+func needsAddress(ch string) bool {
+	return ch == model.ChannelEmail || ch == model.ChannelSMS || ch == model.ChannelWhatsApp
+}
+
+// normalizeChannel maps legacy channel names: push -> webpush; realtime is
+// part of inapp now and is dropped (ok=false).
+func normalizeChannel(raw string) (string, bool) {
+	ch := strings.TrimSpace(raw)
+	switch ch {
+	case "push":
+		return model.ChannelWebPush, true
+	case "realtime", "":
+		return "", false
+	}
+	return ch, catalog.IsChannel(ch)
+}
+
+// defaultLegacyChannel is the default of a channel without a preference row
+// on the legacy Enqueue path: on for every channel the caller named, except
+// webpush, which stays opt-in like the old push_enabled flag.
+func defaultLegacyChannel(ch string) bool { return ch != model.ChannelWebPush }
+
 func (s *Service) scheduleDeliver(ctx context.Context, id int64) error {
 	if s.syncMode || s.queue == nil {
 		return s.Deliver(ctx, id)
@@ -224,7 +266,12 @@ func (s *Service) scheduleDeliver(ctx context.Context, id int64) error {
 	if err != nil {
 		return err
 	}
-	_, err = s.queue.Enqueue(task, asynq.Queue(queue.QueueNotifications))
+	// TaskID = notification id: a retried dispatch never enqueues twice.
+	_, err = s.queue.Enqueue(task, asynq.Queue(queue.QueueNotifications),
+		asynq.TaskID(fmt.Sprintf("notification:%d", id)))
+	if errors.Is(err, asynq.ErrTaskIDConflict) {
+		return nil
+	}
 	return err
 }
 
@@ -260,6 +307,9 @@ func (s *Service) Deliver(ctx context.Context, id int64) error {
 			NotificationID: row.ID, Event: "processing", Metadata: []byte("{}"),
 		})
 	}
+	if row.DeliveryID.Valid {
+		_ = s.q.MarkDeliveryProcessing(ctx, row.DeliveryID.Int64)
+	}
 	p, ok := s.providers[row.Channel]
 	if !ok {
 		p = providers.NoopProvider{Name: row.Channel, Log: s.log}
@@ -272,6 +322,14 @@ func (s *Service) Deliver(ctx context.Context, id int64) error {
 		}
 	}
 	res, err := p.Deliver(ctx, row, userUUID)
+	if errors.Is(err, providers.ErrNoRecipient) {
+		// Nothing to send to (no address, subscription or token): no retry.
+		_, _ = s.q.MarkNotificationFailed(ctx, db.MarkNotificationFailedParams{
+			ID: id, LastError: pgtype.Text{String: err.Error(), Valid: true},
+		})
+		s.markDelivery(ctx, row, model.DeliverySkippedNoRecipient, providers.DeliveryResult{}, err)
+		return nil
+	}
 	if err != nil {
 		_, _ = s.q.MarkNotificationFailed(ctx, db.MarkNotificationFailedParams{
 			ID: id, LastError: pgtype.Text{String: err.Error(), Valid: true},
@@ -280,6 +338,7 @@ func (s *Service) Deliver(ctx context.Context, id int64) error {
 			NotificationID: id, Event: "failed",
 			Metadata: mustJSON(map[string]string{"error": err.Error()}),
 		})
+		s.markDelivery(ctx, row, model.StatusFailed, providers.DeliveryResult{}, err)
 		return err
 	}
 	status := res.Status
@@ -289,7 +348,7 @@ func (s *Service) Deliver(ctx context.Context, id int64) error {
 	_, err = s.q.MarkNotificationSent(ctx, db.MarkNotificationSentParams{
 		ID: id, Status: status,
 		Provider:          pgtype.Text{String: res.Provider, Valid: res.Provider != ""},
-		ProviderReference: pgtype.Text{String: res.ProviderReference, Valid: res.ProviderReference != ""},
+		ProviderReference: pgtype.Text{String: truncate(res.ProviderReference, 255), Valid: res.ProviderReference != ""},
 	})
 	if err != nil {
 		return err
@@ -297,23 +356,32 @@ func (s *Service) Deliver(ctx context.Context, id int64) error {
 	_, _ = s.q.InsertNotificationHistory(ctx, db.InsertNotificationHistoryParams{
 		NotificationID: id, Event: status, Metadata: []byte("{}"),
 	})
-
-	// Fan-out realtime mirror for inapp deliveries.
-	if row.Channel == model.ChannelInapp {
-		if rp, ok := s.providers[model.ChannelRealtime]; ok && userUUID != nil {
-			_, _ = rp.Deliver(ctx, row, userUUID)
-		}
-		if row.UserID.Valid {
-			data := map[string]any{
-				"notification_uuid": row.Uuid.String(),
-			}
-			if row.ActionUrl.Valid && row.ActionUrl.String != "" {
-				data["action_url"] = row.ActionUrl.String
-			}
-			s.pushBestEffort(ctx, row.UserID.Int64, row.Title, row.Body, data)
-		}
-	}
+	s.markDelivery(ctx, row, status, res, nil)
 	return nil
+}
+
+func (s *Service) markDelivery(ctx context.Context, row db.Notification, status string, res providers.DeliveryResult, cause error) {
+	if !row.DeliveryID.Valid {
+		return
+	}
+	params := db.MarkDeliveryResultParams{
+		ID: row.DeliveryID.Int64, Status: status,
+		Provider:    pgtype.Text{String: res.Provider, Valid: res.Provider != ""},
+		ProviderRef: pgtype.Text{String: truncate(res.ProviderReference, 255), Valid: res.ProviderReference != ""},
+	}
+	if cause != nil {
+		params.Error = pgtype.Text{String: cause.Error(), Valid: true}
+	}
+	if err := s.q.MarkDeliveryResult(ctx, params); err != nil {
+		s.log.Warn("notification_delivery_update_failed", "delivery_id", row.DeliveryID.Int64, "error", err)
+	}
+}
+
+func truncate(v string, n int) string {
+	if len(v) <= n {
+		return v
+	}
+	return v[:n]
 }
 
 // ReclaimStuck re-runs delivery for rows left in processing after a worker
@@ -440,36 +508,6 @@ func (s *Service) MarkAllRead(ctx context.Context, userID int64) error {
 	return err
 }
 
-// GetPreferences returns preferences with defaults.
-func (s *Service) GetPreferences(ctx context.Context, userID int64) (model.Preferences, error) {
-	row, err := s.q.GetNotificationPreferences(ctx, userID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return model.Preferences{EmailEnabled: true, InappEnabled: true, RealtimeEnabled: true, PushEnabled: false}, nil
-	}
-	if err != nil {
-		return model.Preferences{}, err
-	}
-	return model.Preferences{
-		EmailEnabled: row.EmailEnabled, InappEnabled: row.InappEnabled, RealtimeEnabled: row.RealtimeEnabled,
-		PushEnabled: row.PushEnabled,
-	}, nil
-}
-
-// UpsertPreferences stores preferences.
-func (s *Service) UpsertPreferences(ctx context.Context, userID int64, p model.Preferences) (model.Preferences, error) {
-	row, err := s.q.UpsertNotificationPreferences(ctx, db.UpsertNotificationPreferencesParams{
-		UserID: userID, EmailEnabled: p.EmailEnabled, InappEnabled: p.InappEnabled, RealtimeEnabled: p.RealtimeEnabled,
-		PushEnabled: p.PushEnabled,
-	})
-	if err != nil {
-		return model.Preferences{}, err
-	}
-	return model.Preferences{
-		EmailEnabled: row.EmailEnabled, InappEnabled: row.InappEnabled, RealtimeEnabled: row.RealtimeEnabled,
-		PushEnabled: row.PushEnabled,
-	}, nil
-}
-
 // ListPlatform returns notifications for platform operators.
 // Without platform.notifications.read_all the page is always the caller's own rows.
 func (s *Service) ListPlatform(
@@ -532,19 +570,6 @@ func (s *Service) ResolveUserID(ctx context.Context, id uuid.UUID) (int64, error
 		return 0, err
 	}
 	return u.ID, nil
-}
-
-func channelAllowed(ch string, prefs model.Preferences, securityEmail bool) bool {
-	switch ch {
-	case model.ChannelEmail:
-		return prefs.EmailEnabled || securityEmail
-	case model.ChannelInapp:
-		return prefs.InappEnabled
-	case model.ChannelRealtime:
-		return prefs.RealtimeEnabled
-	default:
-		return true
-	}
 }
 
 func (s *Service) project(row db.Notification) model.Notification {
@@ -620,6 +645,3 @@ func mustJSON(v any) []byte {
 	}
 	return b
 }
-
-// Ensure time import used (CreatedAt mapping).
-var _ = time.Time{}

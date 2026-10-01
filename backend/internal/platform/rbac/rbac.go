@@ -122,6 +122,10 @@ const (
 
 	PermWhatsAppManage = "whatsapp.manage"
 
+	// Notification center (TEC-87).
+	PermNotificationTemplatesManage = "notifications.templates.manage"
+	PermNotificationDeliveriesRead  = "notification_deliveries.read"
+
 	// Geography, territories and exchange rates (TEC-84).
 	PermPlatformGeoWrite         = "platform.geo.write"
 	PermPlatformTerritoriesRead  = "platform.territories.read"

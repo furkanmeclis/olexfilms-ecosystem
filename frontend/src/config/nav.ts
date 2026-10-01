@@ -1,6 +1,7 @@
 import {
   Activity,
   Bell,
+  BellRing,
   Building2,
   Blocks,
   Coins,
@@ -73,6 +74,13 @@ export const platformNav = defineNav({
           href: routes.platform.notifications.root,
           icon: Bell,
           permission: permissions.notifications.platformRead,
+        },
+        {
+          id: "notification-center",
+          titleKey: "layout.nav_notification_center",
+          href: routes.platform.notifications.center,
+          icon: BellRing,
+          permission: permissions.notifications.templatesManage,
         },
         {
           id: "activity",

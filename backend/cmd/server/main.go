@@ -16,10 +16,11 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/httpserver"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/logging"
 	logsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/logs/usecase"
-	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/providers"
+	notifmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications"
 	notifusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/mail"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/sms"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/realtime"
@@ -84,23 +85,18 @@ func main() {
 	defer persist.Close()
 
 	eventBus := events.NewBus(log)
-	mailer := mail.NewSMTPSender(cfg.SMTP)
-	provs := []providers.Provider{
-		providers.InappProvider{},
-		providers.EmailProvider{Mail: mailer},
-		providers.RealtimeProvider{Pub: publisher},
-		providers.NoopProvider{Name: "sms", Log: log},
-		providers.NoopProvider{Name: "push", Log: log},
-	}
-
 	var queueClient *queue.Client
 	var worker *queue.Worker
 	if cfg.Queue.Enabled {
 		queueClient = queue.NewClient(cfg.Redis)
-		notifSvc := notifusecase.New(queries, queueClient, provs, log)
+		notifSvc := notifmodule.NewService(notifmodule.Deps{
+			Config: cfg, Queries: queries, Queue: queueClient, Realtime: publisher,
+			Mail: mail.NewSMTPSender(cfg.SMTP), SMS: sms.Noop{Log: log}, Log: log,
+		})
 		if cfg.Queue.WorkerInProcess {
 			worker = queue.NewWorker(cfg, log, notifSvc.Deliver).
-				WithLogPurge(logsSvc.ApplyDueRules)
+				WithLogPurge(logsSvc.ApplyDueRules).
+				WithNotificationPurge(notifSvc.PurgeExpired)
 			if n, err := notifSvc.ReclaimStuck(ctx, notifusecase.DefaultStuckProcessingMinutes); err != nil {
 				log.Error("notification_reclaim_failed", "error", err)
 			} else if n > 0 {

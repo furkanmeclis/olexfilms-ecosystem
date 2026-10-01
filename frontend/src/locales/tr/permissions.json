@@ -126,6 +126,8 @@
   "labels.platform.documents.templates.write": "Belge şablonlarını düzenle",
   "labels.whatsapp.manage": "WhatsApp entegrasyonunu yönet",
   "groups.whatsapp": "WhatsApp",
+  "labels.notifications.templates.manage": "Bildirim şablonlarını ve kanallarını yönet",
+  "labels.notification_deliveries.read": "Bildirim teslim günlüğünü görüntüle",
   "labels.platform.geo.write": "Coğrafyayı yönet",
   "labels.platform.territories.read": "Bölgeleri görüntüle",
   "labels.platform.territories.write": "Bölgeleri yönet",

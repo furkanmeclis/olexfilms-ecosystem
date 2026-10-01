@@ -176,27 +176,17 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		return nil, fmt.Errorf("httpserver: jwt: %w", err)
 	}
 
-	mailer := mail.NewSMTPSender(cfg.SMTP)
-	provs := []providers.Provider{
-		providers.InappProvider{},
-		providers.EmailProvider{Mail: mailer},
-		providers.RealtimeProvider{Pub: deps.Realtime},
-		providers.NoopProvider{Name: "sms", Log: log},
-		providers.NoopProvider{Name: "push", Log: log},
-	}
 	// Pass a nil interface (not a typed-nil *queue.Client) when the queue is
 	// disabled so notifications are delivered inline.
 	var notifQueue notifusecase.Enqueuer
 	if deps.Queue != nil {
 		notifQueue = deps.Queue
 	}
-	notifSvc := notifusecase.New(deps.Queries, notifQueue, provs, log)
-	notifSvc.WithActionSigner(cfg.JWT.AccessSecret, 0)
-	notifSvc.WithVAPID(notifusecase.VAPIDConfig{
-		PublicKey:  cfg.VAPID.PublicKey,
-		PrivateKey: cfg.VAPID.PrivateKey,
-		Subject:    cfg.VAPID.Subject,
+	notifSvc := notifmodule.NewService(notifmodule.Deps{
+		Config: cfg, Queries: deps.Queries, Queue: notifQueue, Realtime: deps.Realtime,
+		Mail: mail.NewSMTPSender(cfg.SMTP), SMS: sms.Noop{Log: log}, Log: log,
 	})
+	notifSvc.WithActionSigner(cfg.JWT.AccessSecret, 0)
 
 	repo := authrepo.NewPostgres(deps.DB, deps.Queries)
 	uc := authusecase.New(repo, tokens)
@@ -266,6 +256,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// WhatsApp gateway (wuzapi) + phone OTP (TEC-92). The OTP message is
 	// critical: it is sent synchronously through the provider, not queued.
 	waSvc := whatsappmodule.NewService(cfg.Wuzapi, deps.DB, deps.Queries, secretBox, notifSvc, log)
+	notifSvc.RegisterProvider(providers.WhatsAppProvider{WA: waSvc.Provider()})
 	otpSvc := otp.New(
 		otp.NewPGStore(deps.DB, deps.Queries),
 		&whatsapp.Sender{WhatsApp: waSvc.Provider(), SMS: sms.Noop{Log: log}, SMSFallback: waSvc.SMSFallbackEnabled},
@@ -323,6 +314,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 			WithBulk(bulkSvc.ProcessBulk).
 			WithLogPurge(logsSvc.ApplyDueRules).
 			WithRatesFetch(ratesSvc.FetchTask).
+			WithNotificationPurge(notifSvc.PurgeExpired).
 			WithWhatsAppPoll(waSvc.PollStatus)
 		if searchIndexer != nil {
 			s.worker.WithSearch(
@@ -403,6 +395,9 @@ func (s *Server) Start() error {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		if err := s.features.SyncCatalog(ctx); err != nil {
 			s.log.Warn("feature_catalog_sync_failed", "error", err)
+		}
+		if err := notifusecase.SyncCatalog(ctx, s.queries); err != nil {
+			s.log.Warn("notification_catalog_sync_failed", "error", err)
 		}
 		cancel()
 	}

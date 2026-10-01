@@ -152,11 +152,6 @@ export function NotificationPreferencesForm() {
         description={t("auth.preferences.inapp_hint")}
       />
       <AppSwitch
-        name="realtime_enabled"
-        label={t("auth.preferences.realtime")}
-        description={t("auth.preferences.realtime_hint")}
-      />
-      <AppSwitch
         name="push_enabled"
         label={t("auth.preferences.push")}
         description={pushHint}

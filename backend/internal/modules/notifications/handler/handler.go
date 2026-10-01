@@ -265,6 +265,9 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
 }
 
 func writeErr(w http.ResponseWriter, r *http.Request, err error) {
+	if writeCenterErr(w, r, err) {
+		return
+	}
 	var ve *apiquery.ValidationError
 	if errors.As(err, &ve) {
 		details := make([]response.Detail, 0, len(ve.Details))

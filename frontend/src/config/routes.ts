@@ -64,6 +64,7 @@ export const routes = {
     notifications: {
       root: "/platform/notifications",
       detail: (uuid: string) => `/platform/notifications/${uuid}`,
+      center: "/platform/notification-center",
     },
     imports: {
       root: "/platform/imports",
