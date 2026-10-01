@@ -5,7 +5,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sort"
+	"strings"
 	"sync"
+	"time"
 )
 
 // Memory is an in-process object store for tests.
@@ -104,3 +107,94 @@ func (m *Memory) GetMeta(objectPath string) (contentType, filename string, ok bo
 	}
 	return obj.ContentType, obj.Filename, true
 }
+
+// The methods below complete the Driver interface for tests; versioning and
+// presigning are not modelled (single version, no URLs).
+
+var _ Driver = (*Memory)(nil)
+
+// DownloadVersion ignores the version and returns the current object.
+func (m *Memory) DownloadVersion(ctx context.Context, objectPath, _ string) (io.ReadCloser, int64, error) {
+	return m.Download(ctx, objectPath)
+}
+
+// DeleteVersion ignores the version and deletes the object.
+func (m *Memory) DeleteVersion(ctx context.Context, objectPath, _ string) error {
+	return m.Delete(ctx, objectPath)
+}
+
+// List returns every object under the prefix (no delimiter or paging).
+func (m *Memory) List(_ context.Context, input ListObjectsInput) (ListObjectsResult, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	var out ListObjectsResult
+	for key, obj := range m.data {
+		if strings.HasPrefix(key, input.Prefix) {
+			out.Objects = append(out.Objects, ObjectInfo{Key: key, Size: int64(len(obj.Body)), ContentType: obj.ContentType})
+		}
+	}
+	sort.Slice(out.Objects, func(i, j int) bool { return out.Objects[i].Key < out.Objects[j].Key })
+	return out, nil
+}
+
+// Head returns size and content type of an object.
+func (m *Memory) Head(_ context.Context, objectPath string) (ObjectInfo, error) {
+	key, err := sanitizePath(objectPath)
+	if err != nil {
+		return ObjectInfo{}, err
+	}
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	obj, ok := m.data[key]
+	if !ok {
+		return ObjectInfo{}, fmt.Errorf("storage: object not found")
+	}
+	return ObjectInfo{Key: key, Size: int64(len(obj.Body)), ContentType: obj.ContentType}, nil
+}
+
+// Copy duplicates an object.
+func (m *Memory) Copy(_ context.Context, sourcePath, destPath string) error {
+	src, err := sanitizePath(sourcePath)
+	if err != nil {
+		return err
+	}
+	dst, err := sanitizePath(destPath)
+	if err != nil {
+		return err
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	obj, ok := m.data[src]
+	if !ok {
+		return fmt.Errorf("storage: object not found")
+	}
+	m.data[dst] = obj
+	return nil
+}
+
+// CopyVersion ignores the version and copies the object.
+func (m *Memory) CopyVersion(ctx context.Context, sourcePath, destPath, _ string) error {
+	return m.Copy(ctx, sourcePath, destPath)
+}
+
+// ListVersions reports the single current version.
+func (m *Memory) ListVersions(ctx context.Context, objectPath string) ([]VersionInfo, error) {
+	info, err := m.Head(ctx, objectPath)
+	if err != nil {
+		return nil, err
+	}
+	return []VersionInfo{{VersionID: "memory", Size: info.Size, IsLatest: true}}, nil
+}
+
+// PresignGet is not supported by the memory driver.
+func (m *Memory) PresignGet(context.Context, string, time.Duration) (string, error) {
+	return "", fmt.Errorf("storage: memory driver cannot presign")
+}
+
+// PresignPut is not supported by the memory driver.
+func (m *Memory) PresignPut(context.Context, string, string, time.Duration) (string, error) {
+	return "", fmt.Errorf("storage: memory driver cannot presign")
+}
+
+// Bucket names the in-memory store.
+func (m *Memory) Bucket() string { return "memory" }

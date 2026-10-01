@@ -14,7 +14,7 @@ import (
 //	critical  user-facing delivery (notifications: OTP, WhatsApp, e-mail)
 //	default   imports, bulk actions, search indexing, untagged tasks
 //	low       maintenance sweeps (log purge)
-//	docs      PDF / export rendering (Gotenberg), run by worker-docs
+//	docs      PDF documents (Gotenberg) and exports, run by worker-docs
 var queueGroups = map[string]map[string]int{
 	"critical": {queue.QueueNotifications: 6},
 	"default": {
@@ -24,7 +24,7 @@ var queueGroups = map[string]map[string]int{
 		queue.QueueSearch:  3,
 	},
 	"low":  {queue.QueueMaintenance: 1},
-	"docs": {queue.QueueExports: 2},
+	"docs": {queue.QueueDocs: 4, queue.QueueExports: 2},
 }
 
 // parseWorkerQueues turns WORKER_QUEUES ("critical,default,low") into the

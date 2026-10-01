@@ -19,12 +19,14 @@ const (
 	TaskSearchUpsert        = "app:search:upsert"
 	TaskSearchDelete        = "app:search:delete"
 	TaskSearchReindex       = "app:search:reindex"
+	TaskDocsRender          = "app:docs:render"
 	QueueNotifications      = "notifications"
 	QueueExports            = "exports"
 	QueueImports            = "imports"
 	QueueBulk               = "bulk"
 	QueueSearch             = "search"
 	QueueMaintenance        = "maintenance"
+	QueueDocs               = "docs"
 )
 
 // PingPayload is the body for the sample ping job.
@@ -221,6 +223,37 @@ func ParseSearchReindexPayload(data []byte) (SearchReindexPayload, error) {
 	var payload SearchReindexPayload
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return SearchReindexPayload{}, fmt.Errorf("queue: unmarshal search reindex: %w", err)
+	}
+	return payload, nil
+}
+
+// DocsRenderPayload identifies a document_renders row to render.
+type DocsRenderPayload struct {
+	RenderID int64 `json:"render_id"`
+}
+
+// NewDocsRenderTask builds a PDF render task. The task id is derived from
+// the render cache key and attempt, so enqueuing the same document twice
+// yields a single task (asynq.ErrTaskIDConflict on the second call).
+func NewDocsRenderTask(renderID int64, cacheKey string, attempt int32) (*asynq.Task, []asynq.Option, error) {
+	body, err := json.Marshal(DocsRenderPayload{RenderID: renderID})
+	if err != nil {
+		return nil, nil, fmt.Errorf("queue: marshal docs render: %w", err)
+	}
+	opts := []asynq.Option{
+		asynq.Queue(QueueDocs),
+		asynq.TaskID(fmt.Sprintf("docs:%s:%d", cacheKey, attempt)),
+		asynq.MaxRetry(5),
+		asynq.Timeout(2 * time.Minute),
+	}
+	return asynq.NewTask(TaskDocsRender, body), opts, nil
+}
+
+// ParseDocsRenderPayload decodes a docs render payload.
+func ParseDocsRenderPayload(data []byte) (DocsRenderPayload, error) {
+	var payload DocsRenderPayload
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return DocsRenderPayload{}, fmt.Errorf("queue: unmarshal docs render: %w", err)
 	}
 	return payload, nil
 }
