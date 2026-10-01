@@ -29,6 +29,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	ioadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine/adapters"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/mail"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/sms"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
@@ -82,20 +83,13 @@ func main() {
 	}
 
 	queries := database.NewQueries(pool)
-	mailer := mail.NewSMTPSender(cfg.SMTP)
-	provs := []providers.Provider{
-		providers.InappProvider{},
-		providers.EmailProvider{Mail: mailer},
-		providers.RealtimeProvider{Pub: publisher},
-		providers.NoopProvider{Name: "sms", Log: log},
-		providers.NoopProvider{Name: "push", Log: log},
-	}
-	notifSvc := notifusecase.New(queries, nil, provs, log)
-	notifSvc.WithVAPID(notifusecase.VAPIDConfig{
-		PublicKey:  cfg.VAPID.PublicKey,
-		PrivateKey: cfg.VAPID.PrivateKey,
-		Subject:    cfg.VAPID.Subject,
+	notifSvc := notifmodule.NewService(notifmodule.Deps{
+		Config: cfg, Queries: queries, Realtime: publisher,
+		Mail: mail.NewSMTPSender(cfg.SMTP), SMS: sms.Noop{Log: log}, Log: log,
 	})
+	if err := notifusecase.SyncCatalog(ctx, queries); err != nil {
+		log.Warn("notification_catalog_sync_failed", "error", err)
+	}
 
 	eventBus := events.NewBus(log)
 	notifmodule.RegisterEventHandlers(eventBus, notifSvc, log)
@@ -145,6 +139,7 @@ func main() {
 		os.Exit(1)
 	}
 	waSvc := whatsappmodule.NewService(cfg.Wuzapi, pool, queries, secretBox, notifSvc, log)
+	notifSvc.RegisterProvider(providers.WhatsAppProvider{WA: waSvc.Provider()})
 
 	worker := queue.NewWorkerWithQueues(cfg, log, notifSvc.Deliver, queues).
 		WithWhatsAppPoll(waSvc.PollStatus).
@@ -152,6 +147,7 @@ func main() {
 		WithImport(importSvc.ProcessImport).
 		WithBulk(bulkSvc.ProcessBulk).
 		WithLogPurge(logsSvc.ApplyDueRules).
+		WithNotificationPurge(notifSvc.PurgeExpired).
 		WithDocsRender(docSvc.ProcessRender).
 		WithSearch(
 			searchIndexer.ProcessUpsert,
@@ -189,6 +185,9 @@ func main() {
 				scheduler, err := queue.StartLogPurgeScheduler(cfg, log)
 				if err == nil {
 					err = queue.RegisterWhatsAppPoll(scheduler)
+				}
+				if err == nil {
+					err = queue.RegisterNotificationPurge(scheduler)
 				}
 				if err == nil {
 					err = scheduler.Start()

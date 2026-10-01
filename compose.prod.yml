@@ -81,6 +81,10 @@ x-backend-environment: &backend-environment
   VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
   VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
   VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:noreply@example.com}
+  EXPO_PUSH_URL: ${EXPO_PUSH_URL:-https://exp.host/--/api/v2/push/send}
+  EXPO_ACCESS_TOKEN: ${EXPO_ACCESS_TOKEN:-}
+  NOTIFY_EMAIL_LOGO_URL: ${NOTIFY_EMAIL_LOGO_URL:-}
+  NOTIFY_EMAIL_COLOR: ${NOTIFY_EMAIL_COLOR:-#111827}
   SEARCH_ENABLED: ${SEARCH_ENABLED:-true}
   SEARCH_DRIVER: ${SEARCH_DRIVER:-meilisearch}
   MEILI_HOST: http://meilisearch.${APP_NETWORK_NAME:-${NAME_PREFIX:-app}-app}:7700

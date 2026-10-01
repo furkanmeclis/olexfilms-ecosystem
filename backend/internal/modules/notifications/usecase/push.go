@@ -2,10 +2,13 @@ package usecase
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
+	"strings"
 
-	webpush "github.com/SherClockHolmes/webpush-go"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/model"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/providers"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // VAPIDConfig holds Web Push VAPID keys.
@@ -15,10 +18,26 @@ type VAPIDConfig struct {
 	Subject    string
 }
 
-// WithVAPID enables web push when both keys are set.
+// WithVAPID enables the webpush channel when both keys are set.
 func (s *Service) WithVAPID(cfg VAPIDConfig) *Service {
-	if cfg.PublicKey != "" && cfg.PrivateKey != "" {
-		s.vapid = &cfg
+	if cfg.PublicKey == "" || cfg.PrivateKey == "" {
+		return s
+	}
+	s.vapid = &cfg
+	if store, ok := s.q.(providers.WebPushStore); ok {
+		s.RegisterProvider(providers.WebPushProvider{
+			Store: store,
+			VAPID: providers.VAPID{PublicKey: cfg.PublicKey, PrivateKey: cfg.PrivateKey, Subject: cfg.Subject},
+		})
+	}
+	return s
+}
+
+// RegisterProvider adds or replaces the driver of a channel (used for
+// drivers built after the service, such as the WhatsApp provider).
+func (s *Service) RegisterProvider(p providers.Provider) *Service {
+	if p != nil {
+		s.providers[p.Channel()] = p
 	}
 	return s
 }
@@ -61,50 +80,65 @@ func (s *Service) DeletePushSubscription(ctx context.Context, userID int64, endp
 	})
 }
 
-func (s *Service) pushBestEffort(ctx context.Context, userID int64, title, body string, data map[string]any) {
-	if s.vapid == nil || userID == 0 {
-		return
-	}
-	q, ok := s.q.(interface {
-		GetNotificationPreferences(context.Context, int64) (db.NotificationPreference, error)
-		ListPushSubscriptionsByUser(context.Context, int64) ([]db.PushSubscription, error)
-	})
+// PushDeviceInput registers an Expo push token of a mobile device.
+type PushDeviceInput struct {
+	DeviceID   string `json:"device_id"`
+	Platform   string `json:"platform"`
+	ExpoToken  string `json:"expo_token"`
+	AppVersion string `json:"app_version"`
+}
+
+type deviceStore interface {
+	UpsertDevicePushToken(ctx context.Context, arg db.UpsertDevicePushTokenParams) (db.DevicePushToken, error)
+	RevokeDevicePushToken(ctx context.Context, arg db.RevokeDevicePushTokenParams) (int64, error)
+}
+
+func validExpoToken(t string) bool {
+	return (strings.HasPrefix(t, "ExponentPushToken[") || strings.HasPrefix(t, "ExpoPushToken[")) &&
+		strings.HasSuffix(t, "]") && len(t) <= 255
+}
+
+// RegisterPushDevice upserts the caller's Expo token (a token moves to the
+// latest user that registers it and is un-revoked).
+func (s *Service) RegisterPushDevice(ctx context.Context, userID int64, in PushDeviceInput) (model.PushDevice, error) {
+	q, ok := s.q.(deviceStore)
 	if !ok {
-		return
+		return model.PushDevice{}, ErrInvalidRequest
 	}
-	prefs, err := q.GetNotificationPreferences(ctx, userID)
-	if err != nil || !prefs.PushEnabled {
-		return
+	in.ExpoToken = strings.TrimSpace(in.ExpoToken)
+	in.DeviceID = strings.TrimSpace(in.DeviceID)
+	in.Platform = strings.ToLower(strings.TrimSpace(in.Platform))
+	switch {
+	case !validExpoToken(in.ExpoToken):
+		return model.PushDevice{}, fmt.Errorf("%w: expo_token is invalid", ErrInvalidRequest)
+	case in.DeviceID == "" || len(in.DeviceID) > 128:
+		return model.PushDevice{}, fmt.Errorf("%w: device_id is required", ErrInvalidRequest)
+	case in.Platform != "ios" && in.Platform != "android":
+		return model.PushDevice{}, fmt.Errorf("%w: platform must be ios or android", ErrInvalidRequest)
+	case len(in.AppVersion) > 32:
+		return model.PushDevice{}, fmt.Errorf("%w: app_version is too long", ErrInvalidRequest)
 	}
-	subs, err := q.ListPushSubscriptionsByUser(ctx, userID)
-	if err != nil || len(subs) == 0 {
-		return
-	}
-	if data == nil {
-		data = map[string]any{}
-	}
-	payload, _ := json.Marshal(map[string]any{
-		"title": title,
-		"body":  body,
-		"data":  data,
+	row, err := q.UpsertDevicePushToken(ctx, db.UpsertDevicePushTokenParams{
+		UserID: userID, DeviceID: in.DeviceID, Platform: in.Platform, ExpoToken: in.ExpoToken,
+		AppVersion: optionalText(in.AppVersion),
 	})
-	for _, sub := range subs {
-		resp, pushErr := webpush.SendNotification(payload, &webpush.Subscription{
-			Endpoint: sub.Endpoint,
-			Keys: webpush.Keys{
-				P256dh: sub.KeyP256dh,
-				Auth:   sub.KeyAuth,
-			},
-		}, &webpush.Options{
-			VAPIDPublicKey:  s.vapid.PublicKey,
-			VAPIDPrivateKey: s.vapid.PrivateKey,
-			Subscriber:      s.vapid.Subject,
-			TTL:             60,
-		})
-		if pushErr != nil {
-			s.log.Error("webpush_failed", "endpoint", sub.Endpoint, "error", pushErr)
-			continue
-		}
-		_ = resp.Body.Close()
+	if err != nil {
+		return model.PushDevice{}, err
 	}
+	return model.PushDevice{
+		UUID: row.Uuid, DeviceID: row.DeviceID, Platform: row.Platform,
+		AppVersion: row.AppVersion.String, LastSeenAt: row.LastSeenAt.Time,
+	}, nil
+}
+
+// RevokePushDevice revokes the caller's Expo token.
+func (s *Service) RevokePushDevice(ctx context.Context, userID int64, token string) error {
+	q, ok := s.q.(deviceStore)
+	if !ok {
+		return ErrInvalidRequest
+	}
+	_, err := q.RevokeDevicePushToken(ctx, db.RevokeDevicePushTokenParams{
+		ExpoToken: strings.TrimSpace(token), UserID: pgtype.Int8{Int64: userID, Valid: true},
+	})
+	return err
 }

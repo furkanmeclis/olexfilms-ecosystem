@@ -7,11 +7,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	notifcatalog "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/catalog"
 	notifmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
@@ -24,9 +24,10 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Notifier delivers the "request a module" notification.
+// Notifier dispatches the "request a module" notification center event
+// (catalog event features.module_requested, templates per role/language).
 type Notifier interface {
-	Enqueue(ctx context.Context, in notifmodel.EnqueueInput) ([]notifmodel.Notification, error)
+	Dispatch(ctx context.Context, in notifmodel.DispatchInput) (notifmodel.DispatchResult, error)
 }
 
 // Handler serves module endpoints.
@@ -161,24 +162,20 @@ func (h *Handler) Request(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, err)
 		return
 	}
-	if h.notifier != nil {
-		title := "Module request"
-		bodyText := fmt.Sprintf("%s requested the module %q.", scope.Name, key)
-		if body.Note != "" {
-			bodyText += " " + body.Note
-		}
-		for _, uid := range recipients {
-			id := uid
-			if _, err := h.notifier.Enqueue(r.Context(), notifmodel.EnqueueInput{
-				UserID: &id, Channels: []string{notifmodel.ChannelInapp},
-				Title: title, Body: bodyText, SourceEvent: "features.module_requested",
-				Payload: map[string]any{
-					"module_key": key, "organization_uuid": scope.UUID.String(),
-					"organization_name": scope.Name, "note": body.Note,
-				},
-			}); err != nil {
-				h.log.Warn("feature_request_notify_failed", "user_id", id, "error", err)
-			}
+	if h.notifier != nil && len(recipients) > 0 {
+		orgID, brandID := scope.InternalID, scope.BrandID
+		if _, err := h.notifier.Dispatch(r.Context(), notifmodel.DispatchInput{
+			EventID: uuid.New(), EventCode: notifcatalog.EventFeaturesModuleRequest,
+			OrganizationID: &orgID, BrandID: &brandID, UserIDs: recipients,
+			Vars: map[string]string{
+				"organization_name": scope.Name, "module_key": key, "note": body.Note,
+			},
+			Payload: map[string]any{
+				"module_key": key, "organization_uuid": scope.UUID.String(),
+				"organization_name": scope.Name, "note": body.Note,
+			},
+		}); err != nil {
+			h.log.Warn("feature_request_notify_failed", "recipients", len(recipients), "error", err)
 		}
 	}
 	orgUUID := scope.UUID

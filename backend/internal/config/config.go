@@ -28,6 +28,7 @@ type Config struct {
 	JWT        JWTConfig
 	Log        LogConfig
 	VAPID      VAPIDConfig
+	Notify     NotifyConfig
 	Search     SearchConfig
 	Gotenberg  GotenbergConfig
 	Wuzapi     WuzapiConfig
@@ -64,6 +65,16 @@ type VAPIDConfig struct {
 	PublicKey  string
 	PrivateKey string
 	Subject    string
+}
+
+// NotifyConfig configures notification center drivers (TEC-87).
+type NotifyConfig struct {
+	// ExpoPushURL is the Expo push send endpoint; ExpoAccessToken is optional.
+	ExpoPushURL     string
+	ExpoAccessToken string
+	// Email frame: logo URL and brand color of the HTML layout.
+	EmailLogoURL string
+	EmailColor   string
 }
 
 // JWTConfig holds access JWT and opaque refresh token settings.
@@ -275,6 +286,12 @@ func Load() (Config, error) {
 			PublicKey:  getEnv("VAPID_PUBLIC_KEY", ""),
 			PrivateKey: getEnv("VAPID_PRIVATE_KEY", ""),
 			Subject:    getEnv("VAPID_SUBJECT", "mailto:noreply@example.com"),
+		},
+		Notify: NotifyConfig{
+			ExpoPushURL:     getEnv("EXPO_PUSH_URL", "https://exp.host/--/api/v2/push/send"),
+			ExpoAccessToken: getEnv("EXPO_ACCESS_TOKEN", ""),
+			EmailLogoURL:    getEnv("NOTIFY_EMAIL_LOGO_URL", ""),
+			EmailColor:      getEnv("NOTIFY_EMAIL_COLOR", "#111827"),
 		},
 		Search: SearchConfig{
 			Enabled:     getBool("SEARCH_ENABLED", true),

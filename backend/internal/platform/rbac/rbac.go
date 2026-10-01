@@ -121,6 +121,10 @@ const (
 	PermPlatformModulesWrite = "platform.modules.write"
 
 	PermWhatsAppManage = "whatsapp.manage"
+
+	// Notification center (TEC-87).
+	PermNotificationTemplatesManage = "notifications.templates.manage"
+	PermNotificationDeliveriesRead  = "notification_deliveries.read"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

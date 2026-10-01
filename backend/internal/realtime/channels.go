@@ -14,6 +14,9 @@ type ChannelAuthorizer interface {
 	CanSubscribeChannel(ctx context.Context, userUUID uuid.UUID, isSuperAdmin bool, channel string) (bool, error)
 }
 
+// UserChannel is the personal channel "user:{uuid}" (notifications).
+func UserChannel(id uuid.UUID) string { return "user:" + id.String() }
+
 // ParseUserChannel returns the user UUID from "user:{uuid}".
 func ParseUserChannel(channel string) (uuid.UUID, bool) {
 	raw, ok := stripPrefix(channel, "user:")

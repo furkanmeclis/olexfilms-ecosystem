@@ -232,7 +232,7 @@ func (s *Service) notifyAlarm(ctx context.Context, state, reason string) {
 		uid := r.ID
 		if _, err := s.notifier.Enqueue(ctx, notifmodel.EnqueueInput{
 			UserID:      &uid,
-			Channels:    []string{notifmodel.ChannelInapp, notifmodel.ChannelRealtime, notifmodel.ChannelEmail},
+			Channels:    []string{notifmodel.ChannelInapp, notifmodel.ChannelEmail},
 			Priority:    notifmodel.PriorityCritical,
 			Title:       t[0],
 			Body:        fmt.Sprintf(t[1], reason),

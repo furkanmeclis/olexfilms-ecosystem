@@ -121,6 +121,20 @@ type Conversation struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
+type DevicePushToken struct {
+	ID         int64              `json:"id"`
+	Uuid       uuid.UUID          `json:"uuid"`
+	UserID     int64              `json:"user_id"`
+	DeviceID   string             `json:"device_id"`
+	Platform   string             `json:"platform"`
+	ExpoToken  string             `json:"expo_token"`
+	AppVersion pgtype.Text        `json:"app_version"`
+	LastSeenAt pgtype.Timestamptz `json:"last_seen_at"`
+	RevokedAt  pgtype.Timestamptz `json:"revoked_at"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
+}
+
 type DocumentRender struct {
 	ID              int64              `json:"id"`
 	Uuid            uuid.UUID          `json:"uuid"`
@@ -323,6 +337,51 @@ type Notification struct {
 	ProviderReference pgtype.Text        `json:"provider_reference"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	OrganizationID    pgtype.Int8        `json:"organization_id"`
+	BrandID           pgtype.Int8        `json:"brand_id"`
+	EventID           pgtype.UUID        `json:"event_id"`
+	Language          pgtype.Text        `json:"language"`
+	DeliveryID        pgtype.Int8        `json:"delivery_id"`
+}
+
+type NotificationChannelSetting struct {
+	Channel         string             `json:"channel"`
+	Enabled         bool               `json:"enabled"`
+	UpdatedByUserID pgtype.Int8        `json:"updated_by_user_id"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type NotificationDelivery struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	EventID        uuid.UUID          `json:"event_id"`
+	EventCode      string             `json:"event_code"`
+	UserID         int64              `json:"user_id"`
+	OrganizationID pgtype.Int8        `json:"organization_id"`
+	BrandID        pgtype.Int8        `json:"brand_id"`
+	Channel        string             `json:"channel"`
+	Role           pgtype.Text        `json:"role"`
+	Language       pgtype.Text        `json:"language"`
+	TemplateID     pgtype.Int8        `json:"template_id"`
+	Status         string             `json:"status"`
+	Provider       pgtype.Text        `json:"provider"`
+	ProviderRef    pgtype.Text        `json:"provider_ref"`
+	Error          pgtype.Text        `json:"error"`
+	Attempts       int32              `json:"attempts"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type NotificationEvent struct {
+	Code             string             `json:"code"`
+	Module           string             `json:"module"`
+	DefaultChannels  []string           `json:"default_channels"`
+	Critical         bool               `json:"critical"`
+	AudienceRoles    []string           `json:"audience_roles"`
+	Placeholders     []byte             `json:"placeholders"`
+	UserConfigurable bool               `json:"user_configurable"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
 type NotificationHistory struct {
@@ -335,28 +394,30 @@ type NotificationHistory struct {
 }
 
 type NotificationPreference struct {
-	ID              int64              `json:"id"`
-	Uuid            uuid.UUID          `json:"uuid"`
-	UserID          int64              `json:"user_id"`
-	EmailEnabled    bool               `json:"email_enabled"`
-	InappEnabled    bool               `json:"inapp_enabled"`
-	RealtimeEnabled bool               `json:"realtime_enabled"`
-	PushEnabled     bool               `json:"push_enabled"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	ID        int64              `json:"id"`
+	UserID    int64              `json:"user_id"`
+	EventCode pgtype.Text        `json:"event_code"`
+	Channel   string             `json:"channel"`
+	Enabled   bool               `json:"enabled"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
 type NotificationTemplate struct {
-	ID        int64              `json:"id"`
-	Uuid      uuid.UUID          `json:"uuid"`
-	Code      string             `json:"code"`
-	Channel   string             `json:"channel"`
-	Language  string             `json:"language"`
-	Subject   string             `json:"subject"`
-	Body      string             `json:"body"`
-	Active    bool               `json:"active"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	Code            string             `json:"code"`
+	Channel         string             `json:"channel"`
+	Language        string             `json:"language"`
+	Subject         string             `json:"subject"`
+	Body            string             `json:"body"`
+	Active          bool               `json:"active"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	Role            string             `json:"role"`
+	BrandID         pgtype.Int8        `json:"brand_id"`
+	Format          string             `json:"format"`
+	UpdatedByUserID pgtype.Int8        `json:"updated_by_user_id"`
 }
 
 type OauthAccount struct {

@@ -175,6 +175,17 @@ var Permissions = []PermissionDef{
 		Slug: PermWhatsAppManage, Name: "Manage WhatsApp integration", Module: "whatsapp", Scopes: scopesAll,
 		Description: "Connect the WhatsApp number, send test messages, edit OTP/KVKK texts.",
 	},
+
+	// TEC-87: notification center admin (template editor, channel switches,
+	// delivery log). Appended last; migration 000036 seeds them.
+	{
+		Slug: PermNotificationTemplatesManage, Name: "Manage notification templates", Module: "notifications",
+		Scopes: scopesAll, Description: "Edit notification templates and switch notification channels (SMS).",
+	},
+	{
+		Slug: PermNotificationDeliveriesRead, Name: "Read notification deliveries", Module: "notifications",
+		Scopes: scopesAll, Description: "Read the notification delivery log.",
+	},
 }
 
 func grants(base map[string]Scope, extra map[string]Scope) map[string]Scope {
