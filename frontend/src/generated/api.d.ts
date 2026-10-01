@@ -1005,7 +1005,8 @@ export interface paths {
         /**
          * Issue Centrifugo connection JWT
          * @description Returns `{ token, expires_at, ws_url }`. JWT `sub` is the user UUID string.
-         *     Requires `auth.session`. Disabled Centrifugo → `503 REALTIME_DISABLED`.
+         *     Any authenticated panel session; no active organization (`oid`) is needed
+         *     since the token grants no channel. Disabled Centrifugo → `503 REALTIME_DISABLED`.
          */
         post: operations["postRealtimeConnectionToken"];
         delete?: never;
@@ -1027,6 +1028,8 @@ export interface paths {
          * Issue Centrifugo subscription JWT
          * @description Body `{ channel }`. Allowlist `user:{own_uuid}`, member `workspace:{uuid}`,
          *     and `conversation:{uuid}` (authenticated session; HTTP inbox ACL is the hard boundary).
+         *     `user:{own_uuid}` needs no active organization; every other channel requires
+         *     `auth.session` from the active organization, otherwise `403`.
          */
         post: operations["postRealtimeSubscriptionToken"];
         delete?: never;

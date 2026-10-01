@@ -74,7 +74,10 @@ vi.mock("@/lib/server/upstream", () => ({
       });
     }
     if (path.endsWith("/rate-limited")) {
-      const res = json(429, { success: false, error: { code: "RATE_LIMITED" } });
+      const res = json(429, {
+        success: false,
+        error: { code: "RATE_LIMITED" },
+      });
       res.headers.set("Retry-After", "59");
       return res;
     }
