@@ -139,5 +139,11 @@
   "groups.catalog": "الكتالوج",
   "labels.vehicle_catalog.read": "عرض كتالوج المركبات",
   "labels.vehicle_catalog.write": "إدارة كتالوج المركبات",
-  "groups.vehicle_catalog": "كتالوج المركبات"
+  "groups.vehicle_catalog": "كتالوج المركبات",
+  "labels.stock.read": "عرض المخزون",
+  "labels.stock.write": "إدارة المخزون",
+  "labels.stock.adjust": "تعديل المخزون",
+  "labels.stock.reclassify": "إعادة تصنيف المخزون",
+  "labels.stock.import": "استيراد المخزون",
+  "groups.stock": "المخزون"
 }

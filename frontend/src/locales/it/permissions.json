@@ -139,5 +139,11 @@
   "groups.catalog": "Catalogo",
   "labels.vehicle_catalog.read": "Visualizza catalogo veicoli",
   "labels.vehicle_catalog.write": "Gestisci catalogo veicoli",
-  "groups.vehicle_catalog": "Catalogo veicoli"
+  "groups.vehicle_catalog": "Catalogo veicoli",
+  "labels.stock.read": "Visualizza giacenze",
+  "labels.stock.write": "Gestisci giacenze",
+  "labels.stock.adjust": "Rettifica giacenze",
+  "labels.stock.reclassify": "Riclassifica giacenze",
+  "labels.stock.import": "Importa giacenze",
+  "groups.stock": "Giacenze"
 }

@@ -139,5 +139,11 @@
   "groups.catalog": "Katalog",
   "labels.vehicle_catalog.read": "Araç kataloğunu görüntüle",
   "labels.vehicle_catalog.write": "Araç kataloğunu yönet",
-  "groups.vehicle_catalog": "Araç kataloğu"
+  "groups.vehicle_catalog": "Araç kataloğu",
+  "labels.stock.read": "Stoku görüntüle",
+  "labels.stock.write": "Stoku yönet",
+  "labels.stock.adjust": "Stok düzeltmesi yap",
+  "labels.stock.reclassify": "Stoku yeniden sınıflandır",
+  "labels.stock.import": "Stok içe aktar",
+  "groups.stock": "Stok"
 }

@@ -139,5 +139,11 @@
   "groups.catalog": "Каталог",
   "labels.vehicle_catalog.read": "Преглед на каталога с автомобили",
   "labels.vehicle_catalog.write": "Управление на каталога с автомобили",
-  "groups.vehicle_catalog": "Каталог с автомобили"
+  "groups.vehicle_catalog": "Каталог с автомобили",
+  "labels.stock.read": "Преглед на наличностите",
+  "labels.stock.write": "Управление на наличностите",
+  "labels.stock.adjust": "Корекция на наличностите",
+  "labels.stock.reclassify": "Прекласифициране на наличности",
+  "labels.stock.import": "Импорт на наличности",
+  "groups.stock": "Наличности"
 }

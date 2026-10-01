@@ -139,5 +139,11 @@
   "groups.catalog": "Каталог",
   "labels.vehicle_catalog.read": "Перегляд каталогу автомобілів",
   "labels.vehicle_catalog.write": "Керування каталогом автомобілів",
-  "groups.vehicle_catalog": "Каталог автомобілів"
+  "groups.vehicle_catalog": "Каталог автомобілів",
+  "labels.stock.read": "Перегляд залишків",
+  "labels.stock.write": "Керування залишками",
+  "labels.stock.adjust": "Коригування залишків",
+  "labels.stock.reclassify": "Перекласифікація залишків",
+  "labels.stock.import": "Імпорт залишків",
+  "groups.stock": "Залишки"
 }

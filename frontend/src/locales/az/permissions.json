@@ -139,5 +139,11 @@
   "groups.catalog": "Kataloq",
   "labels.vehicle_catalog.read": "Avtomobil kataloquna bax",
   "labels.vehicle_catalog.write": "Avtomobil kataloqunu idarə et",
-  "groups.vehicle_catalog": "Avtomobil kataloqu"
+  "groups.vehicle_catalog": "Avtomobil kataloqu",
+  "labels.stock.read": "Stoka bax",
+  "labels.stock.write": "Stoku idarə et",
+  "labels.stock.adjust": "Stoku düzəlt",
+  "labels.stock.reclassify": "Stoku yenidən təsnif et",
+  "labels.stock.import": "Stoku idxal et",
+  "groups.stock": "Stok"
 }
