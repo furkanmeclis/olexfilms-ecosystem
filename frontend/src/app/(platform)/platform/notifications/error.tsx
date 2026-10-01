@@ -1,6 +1,7 @@
 "use client";
 
 import { ErrorState } from "@/components/common/error-state";
+import { useReportError } from "@/lib/errtrack/use-report-error";
 import { useLocale } from "@/providers/locale-provider";
 
 export default function NotificationsError({
@@ -11,6 +12,7 @@ export default function NotificationsError({
   reset: () => void;
 }) {
   const { t } = useLocale();
+  useReportError(error, "notification");
 
   return (
     <ErrorState

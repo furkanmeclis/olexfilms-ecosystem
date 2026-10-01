@@ -1,9 +1,13 @@
+import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
 /**
  * Baseline security headers for every route. A full script CSP is not set
  * here (Next inline bootstrap scripts would need nonces); `frame-ancestors`
- * and `base-uri` restrictions are safe to enforce globally.
+ * and `base-uri` restrictions are safe to enforce globally. There is no
+ * `connect-src` either: the browser error-tracking SDK posts to the
+ * same-origin /api/monitoring tunnel, so a future `connect-src 'self'`
+ * already covers it (never the DSN host).
  */
 const securityHeaders = [
   {
@@ -34,4 +38,15 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+/**
+ * Error tracking (TEC-82): the technowide receiver has no source map
+ * support, so nothing is uploaded and the Sentry CLI never runs; no build
+ * telemetry. The SDK stays a no-op without a DSN.
+ */
+export default withSentryConfig(nextConfig, {
+  silent: true,
+  telemetry: false,
+  sourcemaps: { disable: true },
+  release: { create: false, finalize: false },
+  widenClientFileUpload: false,
+});
