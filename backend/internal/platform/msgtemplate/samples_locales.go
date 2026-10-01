@@ -26,7 +26,7 @@ var localeSamples = map[string]map[string]string{
 	},
 	"total_amount": {
 		"bg": "12 500,00 TRY", "el": "12.500,00 TRY", "zh-CN": "TRY 12,500.00",
-		"az": "12 500,00 TRY", "ar": "⁨TRY 12,500.00⁩",
+		"az": "12 500,00 TRY", "ar": "\u2068TRY 12,500.00\u2069",
 	},
 	"valid_until": {
 		"bg": "30.09.2026 г.", "el": "30/09/2026", "zh-CN": "2026年9月30日",
@@ -49,7 +49,7 @@ var localeSamples = map[string]map[string]string{
 		"el":    "Έλεγχος κεραμικής επικάλυψης 34 ABC 123",
 		"zh-CN": "34 ABC 123 陶瓷镀膜检查",
 		"az":    "34 ABC 123 keramik örtük yoxlanışı",
-		"ar":    "فحص الطلاء السيراميكي للمركبة ⁨34 ABC 123⁩",
+		"ar":    "فحص الطلاء السيراميكي للمركبة \u206834 ABC 123\u2069",
 	},
 	"todo_notes": {
 		"bg": "Обадете се на клиента.", "el": "Καλέστε τον πελάτη.", "zh-CN": "请致电客户。",

@@ -1,1 +1,8 @@
-{}
+{
+  "logo.upload": "رفع الشعار",
+  "logo.replace": "استبدال الشعار",
+  "logo.clear": "إزالة الشعار",
+  "logo.uploading": "جارٍ الرفع…",
+  "logo.too_large": "يجب ألا يتجاوز حجم الشعار 2 ميغابايت.",
+  "logo.invalid_type": "استخدم صورة بصيغة JPEG أو PNG أو WebP."
+}

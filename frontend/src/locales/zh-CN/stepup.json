@@ -1,1 +1,24 @@
-{}
+{
+  "dialog.title": "确认您的身份",
+  "dialog.description": "此操作需要近期通过密码、通行密钥或身份验证器验证。",
+  "dialog.password": "密码",
+  "dialog.password_placeholder": "请输入密码",
+  "dialog.totp": "身份验证器代码",
+  "dialog.totp_placeholder": "6 位代码或恢复码",
+  "dialog.verify": "验证",
+  "dialog.verify_pending": "正在验证…",
+  "dialog.passkey": "使用通行密钥",
+  "dialog.passkey_pending": "正在等待通行密钥…",
+  "dialog.or_password": "或使用密码",
+  "dialog.no_methods": "未启用任何验证方式。请联系管理员。",
+  "gate.title": "受保护的内容",
+  "gate.description": "请验证身份以查看此部分。",
+  "gate.purpose.users.detail.roles": "验证后可查看此用户被分配的角色。",
+  "gate.unlock": "解锁",
+  "gate.unlocking": "正在解锁…",
+  "validation.password_required": "密码为必填项",
+  "validation.totp_required": "身份验证器代码为必填项",
+  "error.verification_failed": "验证失败",
+  "error.passkey_failed": "通行密钥验证失败",
+  "error.totp_failed": "身份验证器验证失败"
+}

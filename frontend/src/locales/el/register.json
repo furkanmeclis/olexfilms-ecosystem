@@ -1,1 +1,22 @@
-{}
+{
+  "title": "Εγγραφή επιχείρησης",
+  "description": "Δημιουργήστε τον οργανισμό σας στο Olexfilms σε λίγα λεπτά.",
+  "submit": "Ολοκλήρωση εγγραφής",
+  "submitting": "Δημιουργία λογαριασμού…",
+  "error": "Η εγγραφή δεν ολοκληρώθηκε. Ελέγξτε τα στοιχεία σας και δοκιμάστε ξανά.",
+  "error_sign_in": "Η εγγραφή ολοκληρώθηκε, αλλά η σύνδεση απέτυχε. Δοκιμάστε από τη σελίδα σύνδεσης.",
+  "fields.name": "Όνομα υπευθύνου επικοινωνίας",
+  "fields.surname": "Επώνυμο υπευθύνου επικοινωνίας",
+  "fields.organization_name": "Επωνυμία επιχείρησης",
+  "fields.city": "Πόλη",
+  "fields.district": "Δήμος",
+  "fields.phone": "Τηλέφωνο",
+  "fields.email": "Email",
+  "fields.address": "Διεύθυνση",
+  "fields.password": "Κωδικός πρόσβασης",
+  "validation.organization_name_required": "Η επωνυμία επιχείρησης είναι υποχρεωτική",
+  "validation.city_required": "Η πόλη είναι υποχρεωτική",
+  "validation.district_required": "Ο δήμος είναι υποχρεωτικός",
+  "validation.phone_required": "Το τηλέφωνο είναι υποχρεωτικό",
+  "validation.address_required": "Η διεύθυνση είναι υποχρεωτική"
+}

@@ -1,1 +1,14 @@
-{}
+{
+  "create": "Δημιουργία",
+  "refresh": "Ανανέωση",
+  "filters": "Φίλτρα",
+  "filters_active": "Φίλτρα ({{count}})",
+  "filters_description": "Περιορίστε τη λίστα με φίλτρα.",
+  "filter_any": "Όλα",
+  "filter_unsupported": "Η παράμετρος API για αυτό το φίλτρο δεν είναι ακόμη διαθέσιμη.",
+  "reset_filters": "Επαναφορά",
+  "apply_filters": "Εφαρμογή",
+  "delete_title": "Διαγραφή: {{name}}",
+  "delete_description": "Θέλετε σίγουρα να διαγράψετε το {{name}};",
+  "delete_soft_description": "Το {{name}} θα διαγραφεί ήπια. Η εγγραφή αρχειοθετείται, δεν αφαιρείται οριστικά."
+}

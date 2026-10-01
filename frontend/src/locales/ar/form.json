@@ -1,1 +1,17 @@
-{}
+{
+  "pick_date": "اختر تاريخًا",
+  "show_password": "إظهار كلمة المرور",
+  "hide_password": "إخفاء كلمة المرور",
+  "cancel": "إلغاء",
+  "clear": "مسح",
+  "save": "حفظ",
+  "required": "حقل مطلوب",
+  "on_this_page": "في هذه الصفحة",
+  "combobox_placeholder": "اختر…",
+  "combobox_search": "بحث…",
+  "combobox_empty": "لا توجد نتائج",
+  "combobox_selected": "محدد",
+  "command_title": "أمر / اختيار",
+  "command_description": "ابحث عن عنصر واختره",
+  "command_group_default": "النتائج"
+}

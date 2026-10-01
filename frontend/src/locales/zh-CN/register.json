@@ -1,1 +1,22 @@
-{}
+{
+  "title": "企业注册",
+  "description": "几分钟内即可在 Olexfilms 创建您的组织。",
+  "submit": "完成注册",
+  "submitting": "正在创建账户…",
+  "error": "无法完成注册。请检查您的信息后重试。",
+  "error_sign_in": "注册成功，但登录失败。请从登录页面重试。",
+  "fields.name": "联系人名",
+  "fields.surname": "联系人姓",
+  "fields.organization_name": "企业名称",
+  "fields.city": "城市",
+  "fields.district": "区县",
+  "fields.phone": "电话",
+  "fields.email": "电子邮箱",
+  "fields.address": "地址",
+  "fields.password": "密码",
+  "validation.organization_name_required": "企业名称为必填项",
+  "validation.city_required": "城市为必填项",
+  "validation.district_required": "区县为必填项",
+  "validation.phone_required": "电话为必填项",
+  "validation.address_required": "地址为必填项"
+}

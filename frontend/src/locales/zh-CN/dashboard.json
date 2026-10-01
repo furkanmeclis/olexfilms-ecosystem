@@ -1,1 +1,22 @@
-{}
+{
+  "description": "平台汇总数据以及角色、用户和通知的快捷入口。",
+  "forbidden_description": "只有平台用户可以查看概览。",
+  "error_description": "无法加载概览数据。",
+  "kpi_roles_total": "角色",
+  "kpi_users_total": "用户",
+  "kpi_notifications": "通知",
+  "quick_links_title": "快捷链接",
+  "quick_links_description": "快速前往常用的平台区域。",
+  "link_roles_description": "浏览和管理角色。",
+  "link_users_description": "浏览和管理平台用户。",
+  "link_notifications_description": "平台通知记录。",
+  "link_profile_description": "账户、密码和偏好设置。",
+  "pipeline.follow_up": "待跟进的潜在客户",
+  "pipeline.overdue": "{{count}} 项跟进已逾期",
+  "pipeline.open_leads": "{{count}} 个未结潜在客户",
+  "pipeline.open_quotes": "等待回复的报价",
+  "pipeline.expiring": "{{count}} 份报价将在 3 天内到期",
+  "pipeline.awaiting": "{{count}} 份报价等待回复",
+  "tenant.welcome_title": "欢迎",
+  "tenant.welcome_description": "组织面板。新增的模块将显示在这里。"
+}

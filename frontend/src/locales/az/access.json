@@ -1,1 +1,21 @@
-{}
+{
+  "title": "Giriş və təsdiqləmə",
+  "description": "Təkrar autentifikasiyanın nə qədər etibarlı qaldığını və istifadəçilərin hansı üsullardan istifadə edə biləcəyini ayarlayın.",
+  "form.section_verification": "Təsdiqləmə siyasəti",
+  "form.section_verification_hint": "İxrac və qorunan sahələr kimi həssas əməliyyatlar üçün əlavə təsdiq sorğularını idarə edir.",
+  "form.ttl_hours": "Təsdiqin etibarlılıq müddəti (saat)",
+  "form.ttl_hours_hint": "Şifrə və ya passkey yoxlaması uğurlu olduqdan sonra istifadəçilər bu qədər saat qorunan əməliyyatlar edə bilər (1–168).",
+  "form.password_enabled": "Şifrə ilə təsdiqə icazə ver",
+  "form.password_enabled_hint": "İstifadəçilər həssas əməliyyatları hesab şifrələri ilə təsdiqləyə bilər.",
+  "form.passkey_enabled": "Passkey ilə təsdiqə icazə ver",
+  "form.passkey_enabled_hint": "Qeydiyyatlı passkey olan istifadəçilər şifrə yazmadan əməliyyatları təsdiqləyə bilər.",
+  "form.totp_enabled": "Autentifikator ilə təsdiqə icazə ver",
+  "form.totp_enabled_hint": "2FA aktiv olan istifadəçilər həssas əməliyyatları autentifikator kodu ilə təsdiqləyə bilər.",
+  "form.password_login_totp_required": "Şifrə ilə giriş üçün 2FA tələb et",
+  "form.password_login_totp_required_hint": "Aktiv olduqda istifadəçilər e-poçt və şifrə ilə daxil olmazdan əvvəl autentifikator qurmalıdır. Passkey və OAuth ilə girişə təsir etmir.",
+  "form.save": "Ayarları yadda saxla",
+  "toast.saved": "Giriş ayarları yadda saxlanıldı",
+  "toast.failed": "Giriş ayarlarını yadda saxlamaq mümkün olmadı",
+  "error.title": "Ayarları yükləmək mümkün olmadı",
+  "error.description": "Yenidən cəhd edin və ya administratorla əlaqə saxlayın."
+}

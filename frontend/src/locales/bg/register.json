@@ -1,1 +1,22 @@
-{}
+{
+  "title": "Регистрация на фирма",
+  "description": "Създайте организацията си в Olexfilms за минути.",
+  "submit": "Завърши регистрацията",
+  "submitting": "Създаване на акаунт…",
+  "error": "Регистрацията не можа да бъде завършена. Проверете данните си и опитайте отново.",
+  "error_sign_in": "Регистрацията е успешна, но входът не бе успешен. Опитайте от страницата за вход.",
+  "fields.name": "Име на лицето за контакт",
+  "fields.surname": "Фамилия на лицето за контакт",
+  "fields.organization_name": "Име на фирмата",
+  "fields.city": "Град",
+  "fields.district": "Община",
+  "fields.phone": "Телефон",
+  "fields.email": "Имейл",
+  "fields.address": "Адрес",
+  "fields.password": "Парола",
+  "validation.organization_name_required": "Името на фирмата е задължително",
+  "validation.city_required": "Градът е задължителен",
+  "validation.district_required": "Общината е задължителна",
+  "validation.phone_required": "Телефонът е задължителен",
+  "validation.address_required": "Адресът е задължителен"
+}

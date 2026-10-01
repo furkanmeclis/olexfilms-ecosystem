@@ -1,1 +1,24 @@
-{}
+{
+  "dialog.title": "تأكيد هويتك",
+  "dialog.description": "يتطلب هذا الإجراء تحققًا حديثًا بكلمة المرور أو مفتاح المرور أو تطبيق المصادقة.",
+  "dialog.password": "كلمة المرور",
+  "dialog.password_placeholder": "أدخل كلمة المرور",
+  "dialog.totp": "رمز تطبيق المصادقة",
+  "dialog.totp_placeholder": "رمز من 6 أرقام أو رمز استرداد",
+  "dialog.verify": "تحقق",
+  "dialog.verify_pending": "جارٍ التحقق…",
+  "dialog.passkey": "استخدام مفتاح المرور",
+  "dialog.passkey_pending": "بانتظار مفتاح المرور…",
+  "dialog.or_password": "أو كلمة المرور",
+  "dialog.no_methods": "لا توجد طرق تحقق مفعّلة. تواصل مع المسؤول.",
+  "gate.title": "محتوى محمي",
+  "gate.description": "تحقّق من هويتك لعرض هذا القسم.",
+  "gate.purpose.users.detail.roles": "تحقّق لعرض الأدوار المسندة إلى هذا المستخدم.",
+  "gate.unlock": "فتح",
+  "gate.unlocking": "جارٍ الفتح…",
+  "validation.password_required": "كلمة المرور مطلوبة",
+  "validation.totp_required": "رمز تطبيق المصادقة مطلوب",
+  "error.verification_failed": "فشل التحقق",
+  "error.passkey_failed": "فشل التحقق بمفتاح المرور",
+  "error.totp_failed": "فشل التحقق بتطبيق المصادقة"
+}

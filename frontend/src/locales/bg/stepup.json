@@ -1,1 +1,24 @@
-{}
+{
+  "dialog.title": "Потвърдете самоличността си",
+  "dialog.description": "Това действие изисква скорошна проверка с парола, passkey или приложение за удостоверяване.",
+  "dialog.password": "Парола",
+  "dialog.password_placeholder": "Въведете паролата си",
+  "dialog.totp": "Код от приложението за удостоверяване",
+  "dialog.totp_placeholder": "6-цифрен код или код за възстановяване",
+  "dialog.verify": "Потвърди",
+  "dialog.verify_pending": "Проверка…",
+  "dialog.passkey": "Използвай passkey",
+  "dialog.passkey_pending": "Изчакване на passkey…",
+  "dialog.or_password": "или парола",
+  "dialog.no_methods": "Няма включени методи за проверка. Свържете се с администратор.",
+  "gate.title": "Защитено съдържание",
+  "gate.description": "Потвърдете самоличността си, за да видите този раздел.",
+  "gate.purpose.users.detail.roles": "Потвърдете, за да видите ролите, присвоени на този потребител.",
+  "gate.unlock": "Отключи",
+  "gate.unlocking": "Отключване…",
+  "validation.password_required": "Паролата е задължителна",
+  "validation.totp_required": "Кодът от приложението за удостоверяване е задължителен",
+  "error.verification_failed": "Проверката е неуспешна",
+  "error.passkey_failed": "Проверката с passkey е неуспешна",
+  "error.totp_failed": "Проверката с приложението за удостоверяване е неуспешна"
+}

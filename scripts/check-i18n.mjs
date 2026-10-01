@@ -634,7 +634,16 @@ function checkParams(catalogs) {
         if (!enKey || !(enKey in enKeys) || !String(v).trim()) continue;
         const wantParams = paramSet(enKeys[enKey]);
         const got = paramSet(v);
-        if (wantParams !== got) {
+        // A plural form other than _other may spell the number out
+        // (ar "سجلان" = two records) and drop {{count}}, nothing else.
+        const pluralSubset =
+          want !== null &&
+          PLURAL_SUFFIX_RE.test(k) &&
+          !k.endsWith("_other") &&
+          `${k.match(PLURAL_SUFFIX_RE)[1]}_other` in enKeys &&
+          got.split(",").every((p) => !p || wantParams.split(",").includes(p)) &&
+          wantParams.split(",").filter((p) => p !== "count").every((p) => got.split(",").includes(p));
+        if (wantParams !== got && !pluralSubset) {
           add(
             "error",
             "param-mismatch",

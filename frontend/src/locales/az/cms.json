@@ -1,1 +1,7 @@
-{}
+{
+  "home.title": "Ana səhifə",
+  "home.subtitle": "Məzmun idarəetməsi əsası — modulları buraya əlavə edin.",
+  "home.welcome": "Xoş gəlmisiniz",
+  "home.greeting": "{{name}} kimi daxil olmusunuz.",
+  "home.placeholder": "CMS iş sahəniz hazırdır."
+}

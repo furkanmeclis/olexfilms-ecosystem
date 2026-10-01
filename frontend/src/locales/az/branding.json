@@ -1,1 +1,8 @@
-{}
+{
+  "logo.upload": "Loqo yüklə",
+  "logo.replace": "Loqonu dəyiş",
+  "logo.clear": "Loqonu sil",
+  "logo.uploading": "Yüklənir…",
+  "logo.too_large": "Loqo 2 MB-dan böyük olmamalıdır.",
+  "logo.invalid_type": "JPEG, PNG və ya WebP şəkli istifadə edin."
+}
