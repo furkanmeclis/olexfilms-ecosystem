@@ -51,6 +51,13 @@ func RegisterRoutes(
 
 	mux.Handle("GET /v1/accounting/cari", read(h.ListCari))
 	mux.Handle("GET /v1/accounting/cari/{uuid}", read(h.GetCari))
+	// TEC-175: statement, balance report and their export jobs (read scope).
+	mux.Handle("GET /v1/accounting/cari/{uuid}/statement", read(h.GetStatement))
+	mux.Handle("POST /v1/accounting/cari/{uuid}/statement/export", read(h.ExportStatement))
+	mux.Handle("GET /v1/accounting/reports/balances", read(h.GetBalances))
+	mux.Handle("POST /v1/accounting/reports/balances/export", read(h.ExportBalances))
+	mux.Handle("GET /v1/accounting/exports/{uuid}", read(h.GetExport))
+	mux.Handle("GET /v1/accounting/exports/{uuid}/download", read(h.DownloadExport))
 
 	mux.Handle("GET /v1/accounting/entries", read(h.ListEntries))
 	mux.Handle("POST /v1/accounting/entries", write(h.CreateEntry))

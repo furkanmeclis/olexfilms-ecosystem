@@ -283,6 +283,15 @@ type Querier interface {
 	// ---------------------------------------------------------------------------
 	// Balances (views over the ledger).
 	GetCariBalance(ctx context.Context, arg GetCariBalanceParams) (CariAccountBalance, error)
+	// TEC-175 (F1-07e): cari statement and balance report. Read only; the caller
+	// resolves the book (one organization inside the request scope) and passes
+	// its id. Signs follow 000047: cari balance = income + charge + payment -
+	// expense - collection (receivable positive); cash/bank balance = income +
+	// collection - expense - payment. Reversal rows carry negated amounts, so a
+	// plain sum nets them out.
+	// GetCariStatementOpening is the cari balance before created_before (the
+	// opening balance of a statement period).
+	GetCariStatementOpening(ctx context.Context, arg GetCariStatementOpeningParams) (pgtype.Numeric, error)
 	GetConsentForText(ctx context.Context, arg GetConsentForTextParams) (Consent, error)
 	GetCountryByID(ctx context.Context, id int64) (Country, error)
 	GetCountryByISO2(ctx context.Context, iso2 string) (Country, error)
@@ -499,7 +508,13 @@ type Querier interface {
 	ListCariAccounts(ctx context.Context, arg ListCariAccountsParams) ([]CariAccount, error)
 	ListCariAccountsWithBalance(ctx context.Context, arg ListCariAccountsWithBalanceParams) ([]ListCariAccountsWithBalanceRow, error)
 	ListCariBalances(ctx context.Context, organizationID int64) ([]CariAccountBalance, error)
+	// ListCariBalancesAsOf is every cari of the book with its balance over the
+	// rows written before created_to (NULL = all rows).
+	ListCariBalancesAsOf(ctx context.Context, arg ListCariBalancesAsOfParams) ([]ListCariBalancesAsOfRow, error)
 	ListCariEntries(ctx context.Context, arg ListCariEntriesParams) ([]FinanceEntry, error)
+	// ListCariStatementLines returns the period rows of a cari in ledger order
+	// with their signed cari effect (signed_amount).
+	ListCariStatementLines(ctx context.Context, arg ListCariStatementLinesParams) ([]ListCariStatementLinesRow, error)
 	// TEC-84: countries > provinces > districts, territories, plate formats.
 	ListCountries(ctx context.Context, activeOnly bool) ([]ListCountriesRow, error)
 	// TEC-84: currencies and daily exchange rates. Rates travel as text so no
@@ -521,6 +536,9 @@ type Querier interface {
 	ListExportJobsForActor(ctx context.Context, arg ListExportJobsForActorParams) ([]ExportJob, error)
 	ListExportJobsForOrganization(ctx context.Context, arg ListExportJobsForOrganizationParams) ([]ExportJob, error)
 	ListFinanceAccountBalances(ctx context.Context, organizationID int64) ([]FinanceAccountBalance, error)
+	// ListFinanceAccountBalancesAsOf is every cash/bank account of the book with
+	// its balance over the rows written before created_to (NULL = all rows).
+	ListFinanceAccountBalancesAsOf(ctx context.Context, arg ListFinanceAccountBalancesAsOfParams) ([]ListFinanceAccountBalancesAsOfRow, error)
 	ListFinanceAccounts(ctx context.Context, arg ListFinanceAccountsParams) ([]FinanceAccount, error)
 	// TEC-172 (F1-07b): read models of the /v1/accounting endpoints. The caller
 	// resolves the book (one organization inside the request scope) and passes
