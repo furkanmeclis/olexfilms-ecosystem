@@ -87,6 +87,7 @@
   "labels.pricing.recommended.write": "Publicar precios recomendados",
   "labels.accounting.read": "Ver contabilidad",
   "labels.accounting.write": "Gestionar contabilidad",
+  "labels.accounting.dispute": "Impugnar asientos contables",
   "labels.warehouse.read": "Ver almacén",
   "labels.warehouse.write": "Gestionar almacén",
   "labels.campaigns.read": "Ver campañas",

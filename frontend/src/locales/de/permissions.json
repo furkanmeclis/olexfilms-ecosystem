@@ -87,6 +87,7 @@
   "labels.pricing.recommended.write": "Preisempfehlungen veröffentlichen",
   "labels.accounting.read": "Buchhaltung ansehen",
   "labels.accounting.write": "Buchhaltung verwalten",
+  "labels.accounting.dispute": "Buchungen beanstanden",
   "labels.warehouse.read": "Lager ansehen",
   "labels.warehouse.write": "Lager verwalten",
   "labels.campaigns.read": "Kampagnen ansehen",

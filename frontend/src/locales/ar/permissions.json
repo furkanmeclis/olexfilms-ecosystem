@@ -87,6 +87,7 @@
   "labels.pricing.recommended.write": "نشر الأسعار الموصى بها",
   "labels.accounting.read": "عرض المحاسبة",
   "labels.accounting.write": "إدارة المحاسبة",
+  "labels.accounting.dispute": "الاعتراض على القيود المحاسبية",
   "labels.warehouse.read": "عرض المستودع",
   "labels.warehouse.write": "إدارة المستودع",
   "labels.campaigns.read": "عرض الحملات",

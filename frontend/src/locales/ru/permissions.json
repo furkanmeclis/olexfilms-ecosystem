@@ -87,6 +87,7 @@
   "labels.pricing.recommended.write": "Публикация рекомендованных цен",
   "labels.accounting.read": "Просмотр бухгалтерии",
   "labels.accounting.write": "Управление бухгалтерией",
+  "labels.accounting.dispute": "Оспаривание бухгалтерских записей",
   "labels.warehouse.read": "Просмотр склада",
   "labels.warehouse.write": "Управление складом",
   "labels.campaigns.read": "Просмотр кампаний",

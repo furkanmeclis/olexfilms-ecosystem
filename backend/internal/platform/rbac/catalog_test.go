@@ -131,6 +131,31 @@ func TestStockGrants(t *testing.T) {
 	}
 }
 
+// TEC-171 (TEC-99 decision 7, K9/K24): dealer roles read their ledger and
+// dispute entries posted by the parent; no dealer role writes accounting.
+func TestAccountingGrants(t *testing.T) {
+	for _, r := range Roles {
+		if r.OrgType != OrgTypeDealer {
+			continue
+		}
+		if _, ok := r.Grants[PermAccountingWrite]; ok {
+			t.Fatalf("%s must not hold accounting.write", r.Slug)
+		}
+	}
+	for _, slug := range []string{RoleDealerOwner, RoleDealerAccounting, RoleDistributorOwner, RoleDistributorAccounting} {
+		r, _ := RoleBySlug(slug)
+		if r.Grants[PermAccountingRead] != ScopeManaged || r.Grants[PermAccountingDispute] != ScopeManaged {
+			t.Fatalf("%s accounting grants = %v", slug, r.Grants)
+		}
+	}
+	for _, slug := range []string{RoleCenterAccounting, RoleDistributorOwner, RoleDistributorAccounting} {
+		r, _ := RoleBySlug(slug)
+		if _, ok := r.Grants[PermAccountingWrite]; !ok {
+			t.Fatalf("%s must keep accounting.write", slug)
+		}
+	}
+}
+
 func TestDefaultMemberRole(t *testing.T) {
 	cases := map[[2]string]string{
 		{OrgTypeCenter, "owner"}:      RoleCenterStaff,
