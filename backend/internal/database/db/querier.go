@@ -45,6 +45,7 @@ type Querier interface {
 	CountAllImportJobs(ctx context.Context) (int64, error)
 	CountAppLogs(ctx context.Context, arg CountAppLogsParams) (int64, error)
 	CountAppLogsByLevel(ctx context.Context) ([]CountAppLogsByLevelRow, error)
+	CountBinProductStockRows(ctx context.Context, arg CountBinProductStockRowsParams) (int64, error)
 	CountBulkJobsForActor(ctx context.Context, actorID int64) (int64, error)
 	CountCarBrands(ctx context.Context, arg CountCarBrandsParams) (int64, error)
 	CountCarModels(ctx context.Context, arg CountCarModelsParams) (int64, error)
@@ -63,6 +64,7 @@ type Querier interface {
 	CountOrdersBySeller(ctx context.Context, arg CountOrdersBySellerParams) (int64, error)
 	CountOrdersInScope(ctx context.Context, arg CountOrdersInScopeParams) (int64, error)
 	CountOrganizationCustomers(ctx context.Context, arg CountOrganizationCustomersParams) (int64, error)
+	CountOrganizationProductStockRows(ctx context.Context, arg CountOrganizationProductStockRowsParams) (int64, error)
 	CountOrganizations(ctx context.Context, arg CountOrganizationsParams) (int64, error)
 	CountOutboxByStatus(ctx context.Context, status string) (int64, error)
 	CountPermissions(ctx context.Context, q_ pgtype.Text) (int64, error)
@@ -73,6 +75,7 @@ type Querier interface {
 	CountProducts(ctx context.Context, arg CountProductsParams) (int64, error)
 	CountRoles(ctx context.Context, q_ pgtype.Text) (int64, error)
 	CountSearchFinanceEntries(ctx context.Context, arg CountSearchFinanceEntriesParams) (int64, error)
+	CountStockMovementsByUnit(ctx context.Context, unitID int64) (int64, error)
 	CountStorageActivity(ctx context.Context, objectKey string) (int64, error)
 	CountStorageTrash(ctx context.Context) (int64, error)
 	CountUnreadInappForUser(ctx context.Context, userID pgtype.Int8) (int64, error)
@@ -339,6 +342,10 @@ type Querier interface {
 	// TEC-145: catalog API helpers.
 	GetProductCategoryByName(ctx context.Context, arg GetProductCategoryByNameParams) (ProductCategory, error)
 	GetProductCategoryByUUID(ctx context.Context, arg GetProductCategoryByUUIDParams) (ProductCategory, error)
+	GetProductCategoryIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
+	// Brand-independent product lookup for the bin stock filter (K20); the
+	// projection rows are already narrowed by scope.
+	GetProductIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	GetProductPrice(ctx context.Context, arg GetProductPriceParams) (ProductPrice, error)
 	GetProvinceByID(ctx context.Context, id int64) (Province, error)
 	GetQRLoginChallengeByCode(ctx context.Context, code string) (QrLoginChallenge, error)
@@ -447,6 +454,7 @@ type Querier interface {
 	ListAllRoles(ctx context.Context) ([]Role, error)
 	ListAppLogSources(ctx context.Context) ([]string, error)
 	ListAppLogs(ctx context.Context, arg ListAppLogsParams) ([]AppLog, error)
+	ListBinProductStockRows(ctx context.Context, arg ListBinProductStockRowsParams) ([]ListBinProductStockRowsRow, error)
 	ListBinProductStocksByLocation(ctx context.Context, locationID int64) ([]BinProductStock, error)
 	ListBinProductStocksByOrganization(ctx context.Context, organizationID int64) ([]BinProductStock, error)
 	ListBrandDomains(ctx context.Context) ([]ListBrandDomainsRow, error)
@@ -493,6 +501,10 @@ type Querier interface {
 	ListFinanceEntriesBySource(ctx context.Context, arg ListFinanceEntriesBySourceParams) ([]FinanceEntry, error)
 	ListFixedBarcodeHoldingsByHolder(ctx context.Context, holderOrgID int64) ([]FixedBarcodeHolding, error)
 	ListFixedBarcodeHoldingsByUnit(ctx context.Context, unitID int64) ([]FixedBarcodeHolding, error)
+	// Fixed barcode quantities on hand at an organization (its locations and
+	// the organization owner itself), per barcode, for the listed products.
+	ListFixedBarcodeQuantitiesByHolder(ctx context.Context, arg ListFixedBarcodeQuantitiesByHolderParams) ([]ListFixedBarcodeQuantitiesByHolderRow, error)
+	ListFixedBarcodeQuantitiesByLocation(ctx context.Context, arg ListFixedBarcodeQuantitiesByLocationParams) ([]ListFixedBarcodeQuantitiesByLocationRow, error)
 	// Grants of global roles (user_roles / JWT roles claim).
 	ListGrantsByRoleSlugs(ctx context.Context, roleSlugs []string) ([]ListGrantsByRoleSlugsRow, error)
 	ListImportChangesForJob(ctx context.Context, jobID int64) ([]ImportChange, error)
@@ -538,7 +550,11 @@ type Querier interface {
 	ListOrganizationMembers(ctx context.Context, organizationID int64) ([]ListOrganizationMembersRow, error)
 	ListOrganizationMembersByUserID(ctx context.Context, arg ListOrganizationMembersByUserIDParams) ([]ListOrganizationMembersByUserIDRow, error)
 	ListOrganizationOwnerUserIDs(ctx context.Context, organizationID int64) ([]int64, error)
+	// organization_product_stocks with product and category. in_stock: true =
+	// quantity or meters above zero, false = both zero.
+	ListOrganizationProductStockRows(ctx context.Context, arg ListOrganizationProductStockRowsParams) ([]ListOrganizationProductStockRowsRow, error)
 	ListOrganizationProductStocks(ctx context.Context, arg ListOrganizationProductStocksParams) ([]OrganizationProductStock, error)
+	ListOrganizationsByIDs(ctx context.Context, ids []int64) ([]Organization, error)
 	ListOrganizationsFiltered(ctx context.Context, arg ListOrganizationsFilteredParams) ([]ListOrganizationsFilteredRow, error)
 	// Organizations reachable by a scope filter: an explicit id set
 	// (managed/subtree) or a whole brand (brand), or every brand (all, both NULL).
@@ -582,6 +598,11 @@ type Querier interface {
 	ListStockMovementsByReference(ctx context.Context, arg ListStockMovementsByReferenceParams) ([]StockMovement, error)
 	// Barcode history in ledger order.
 	ListStockMovementsByUnit(ctx context.Context, unitID int64) ([]StockMovement, error)
+	// TEC-155 (F1-02c): stock read API. Read-only queries over the ledger and
+	// its projections; scope narrowing happens in modules/stock/usecase on
+	// holder_org_id (TEC-94 decision 4).
+	// Barcode history page in ledger order (oldest first).
+	ListStockMovementsByUnitPage(ctx context.Context, arg ListStockMovementsByUnitPageParams) ([]StockMovement, error)
 	ListStockReclassifications(ctx context.Context, arg ListStockReclassificationsParams) ([]StockReclassification, error)
 	// Scope list: requests where any of org_ids is the giver, the receiver or
 	// the approver (org_ids NULL = whole brand).
@@ -610,6 +631,7 @@ type Querier interface {
 	// Vehicles of customers linked to the organizations in scope.
 	ListVehiclesInScope(ctx context.Context, arg ListVehiclesInScopeParams) ([]ListVehiclesInScopeRow, error)
 	ListWarehouseLocations(ctx context.Context, arg ListWarehouseLocationsParams) ([]WarehouseLocation, error)
+	ListWarehouseLocationsByIDs(ctx context.Context, ids []int64) ([]WarehouseLocation, error)
 	ListWebAuthnCredentialsByUserID(ctx context.Context, userID int64) ([]WebauthnCredential, error)
 	ListWebAuthnCredentialsForUserIDs(ctx context.Context, userIds []int64) ([]WebauthnCredential, error)
 	ListWhatsAppAlarmRecipients(ctx context.Context) ([]ListWhatsAppAlarmRecipientsRow, error)

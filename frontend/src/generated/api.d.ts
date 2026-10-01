@@ -2661,6 +2661,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/stock/units/by-barcode/{barcode}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                barcode: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Current state and movement history of a barcode
+         * @description Needs `stock.read`, filtered on the holding organization (`holder_org_id`, TEC-94 decision 4). Scope `all` (center warehouse, K20) sees every unit and every name. A restricted viewer (managed, subtree, brand) sees a unit only while it is held inside its reach (404 otherwise). It then gets the whole history: rows of its own organizations and of its supplier chain are named; rows of any other organization are masked (`organization_masked`, owner `masked`, no location, reference or reason). Movements are in ledger order (oldest first) and paged with `limit`/`offset`. Fixed barcodes list the quantity per owner in `holdings` instead of `current`.
+         */
+        get: operations["getStockUnitHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock/organizations/{uuid}/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Product stock of an organization
+         * @description Needs `stock.read`; the organization must be inside the viewer's reach (404 otherwise). Rows come from the `organization_product_stocks` projection: available and placed units only (in transit, used and void are not counted). `quantity` counts pieces and fixed barcode quantities, `meters` the remaining roll meters; `fixed_barcodes` lists the fixed barcode quantities on hand. `q` matches product name or SKU.
+         */
+        get: operations["listStockOrganizationProducts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock/locations/{uuid}/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Product stock of a warehouse location (bin)
+         * @description Needs `stock.read`; the location's organization must be inside the viewer's reach (404 otherwise). Rows come from the `bin_product_stocks` projection; same shape and filters as the organization stock.
+         */
+        get: operations["listStockLocationProducts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/product-images/{key}": {
         parameters: {
             query?: never;
@@ -6199,6 +6267,143 @@ export interface components {
             };
             meta: components["schemas"]["ResponseMeta"];
         };
+        /** @enum {string} */
+        StockOwnerType: "warehouse_location" | "organization" | "service" | "trash";
+        /** @enum {string} */
+        StockUnitStatus: "reserved" | "printed" | "available" | "placed" | "in_transit" | "used" | "void";
+        StockOrgRef: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            /** @enum {string} */
+            type: "center" | "distributor" | "dealer";
+        };
+        StockLocationRef: {
+            /** Format: uuid */
+            uuid: string;
+            code: string;
+            name: string;
+        };
+        /** @description Masked owners belong to an organization the viewer may not name. */
+        StockOwner: {
+            type: components["schemas"]["StockOwnerType"];
+            organization: components["schemas"]["StockOrgRef"] | null;
+            location: components["schemas"]["StockLocationRef"] | null;
+            masked: boolean;
+        };
+        StockUnit: {
+            /** Format: uuid */
+            uuid: string;
+            barcode: string;
+            /** @enum {string} */
+            unit_kind: "serial" | "fixed";
+            /** @enum {string} */
+            source: "generated" | "imported" | "external";
+            status: components["schemas"]["StockUnitStatus"];
+            /** @description Roll length (decimal string, 2 places) */
+            initial_meters: string | null;
+            remaining_meters: string | null;
+            product: {
+                /** Format: uuid */
+                uuid: string;
+                sku: string;
+                name: string;
+                unit_type: components["schemas"]["CatalogUnitType"];
+                uses_fixed_barcode: boolean;
+            };
+            /** Format: date-time */
+            created_at: string;
+        };
+        StockCurrentState: {
+            owner: components["schemas"]["StockOwner"];
+            holder: components["schemas"]["StockOrgRef"];
+            status: components["schemas"]["StockUnitStatus"];
+            /** Format: date-time */
+            updated_at: string;
+        };
+        StockHolding: {
+            owner: components["schemas"]["StockOwner"];
+            holder: components["schemas"]["StockOrgRef"];
+            quantity: number;
+        };
+        StockMovement: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            type: "entry" | "placement" | "transfer_out" | "transfer_in" | "transfer_cancel_restore" | "order_out" | "order_cancel_restore" | "received" | "consumption" | "partial_consumption" | "return" | "reclassification" | "count_adjustment" | "void" | "external_outbound";
+            quantity_delta: number;
+            /** @description Decimal string, 2 places */
+            meters_delta: string;
+            from_status: components["schemas"]["StockUnitStatus"] | null;
+            to_status: components["schemas"]["StockUnitStatus"] | null;
+            from_owner: components["schemas"]["StockOwner"] | null;
+            to_owner: components["schemas"]["StockOwner"] | null;
+            /** @description Holding organization of the row; null when masked. */
+            organization: components["schemas"]["StockOrgRef"] | null;
+            organization_masked: boolean;
+            reference_type: string | null;
+            reason: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        StockUnitHistory: {
+            unit: components["schemas"]["StockUnit"];
+            /** @description Single active owner of a serial unit; null for fixed barcodes and labels not in stock yet. */
+            current: components["schemas"]["StockCurrentState"] | null;
+            holdings: components["schemas"]["StockHolding"][];
+            movements: {
+                items: components["schemas"]["StockMovement"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+        };
+        StockProduct: {
+            product: {
+                /** Format: uuid */
+                uuid: string;
+                sku: string;
+                name: string;
+                unit_type: components["schemas"]["CatalogUnitType"];
+                uses_fixed_barcode: boolean;
+                active: boolean;
+                category: {
+                    /** Format: uuid */
+                    uuid: string;
+                    name: string;
+                };
+            };
+            quantity: number;
+            /** @description Decimal string, 2 places */
+            meters: string;
+            fixed_barcodes: {
+                /** Format: uuid */
+                unit_uuid: string;
+                barcode: string;
+                quantity: number;
+            }[];
+            /** Format: date-time */
+            updated_at: string;
+        };
+        EnvelopeStockUnitHistory: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["StockUnitHistory"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeStockProductPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["StockProduct"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
         EnvelopeCatalogBulkActive: {
             /** @enum {boolean} */
             success: true;
@@ -7131,6 +7336,10 @@ export interface components {
         /** @description Book to read: the active organization (default) or an organization below it inside the accounting.read scope. */
         AccountingOrganizationUUID: string;
         VehicleCatalogUUID: string;
+        StockProductUUIDFilter: string;
+        StockCategoryUUIDFilter: string;
+        /** @description `in_stock`: quantity or meters above zero; `out_of_stock`: both zero. */
+        StockStatusFilter: "in_stock" | "out_of_stock";
         ProductUUID: string;
         /** @description ISO-4217 code (case-insensitive) */
         PriceCurrency: string;
@@ -11912,6 +12121,104 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    getStockUnitHistory: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path: {
+                barcode: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Unit and its history */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockUnitHistory"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listStockOrganizationProducts: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                product_uuid?: components["parameters"]["StockProductUUIDFilter"];
+                category_uuid?: components["parameters"]["StockCategoryUUIDFilter"];
+                /** @description `in_stock`: quantity or meters above zero; `out_of_stock`: both zero. */
+                status?: components["parameters"]["StockStatusFilter"];
+            };
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Product stock */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockProductPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listStockLocationProducts: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                product_uuid?: components["parameters"]["StockProductUUIDFilter"];
+                category_uuid?: components["parameters"]["StockCategoryUUIDFilter"];
+                /** @description `in_stock`: quantity or meters above zero; `out_of_stock`: both zero. */
+                status?: components["parameters"]["StockStatusFilter"];
+            };
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bin product stock */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockProductPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getPublicProductImage: {
