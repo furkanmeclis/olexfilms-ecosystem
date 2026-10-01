@@ -48,7 +48,7 @@ func (u *AuthUseCase) LoginWithVerifiedPhone(ctx context.Context, e164, locale s
 		if err != nil {
 			// A concurrent verify may have created it first.
 			if existing, ferr := u.phoneRepo.FindUserByPhone(ctx, e164); ferr == nil {
-				user, err = existing, nil
+				user = existing
 			} else {
 				return model.Tokens{}, false, err
 			}

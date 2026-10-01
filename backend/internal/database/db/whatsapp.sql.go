@@ -79,9 +79,9 @@ func (q *Queries) GetWhatsAppSettings(ctx context.Context) (WhatsappSetting, err
 
 const insertKVKKNotice = `-- name: InsertKVKKNotice :one
 INSERT INTO kvkk_notices (locale, version, body, created_by)
-SELECT $1, COALESCE(MAX(version), 0) + 1, $2, $3
+SELECT $1::text, COALESCE(MAX(version), 0) + 1, $2::text, $3::bigint
 FROM kvkk_notices
-WHERE locale = $1
+WHERE locale = $1::text
 RETURNING id, locale, version, body, created_by, created_at
 `
 
@@ -396,7 +396,7 @@ func (q *Queries) UpdateMessageStatusByExternalIDs(ctx context.Context, arg Upda
 
 const updateWhatsAppStatus = `-- name: UpdateWhatsAppStatus :one
 UPDATE whatsapp_settings
-SET status = $1,
+SET status = $1::text,
     jid = COALESCE($2, jid),
     phone_e164 = COALESCE($3, phone_e164),
     last_seen_at = CASE WHEN $1::text = 'connected' THEN $4::timestamptz ELSE last_seen_at END,

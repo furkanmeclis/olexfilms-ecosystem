@@ -13,7 +13,7 @@ RETURNING *;
 
 -- name: UpdateWhatsAppStatus :one
 UPDATE whatsapp_settings
-SET status = sqlc.arg(status),
+SET status = sqlc.arg(status)::text,
     jid = COALESCE(sqlc.narg(jid), jid),
     phone_e164 = COALESCE(sqlc.narg(phone_e164), phone_e164),
     last_seen_at = CASE WHEN sqlc.arg(status)::text = 'connected' THEN sqlc.arg(at)::timestamptz ELSE last_seen_at END,
@@ -51,9 +51,9 @@ ORDER BY locale, version DESC;
 
 -- name: InsertKVKKNotice :one
 INSERT INTO kvkk_notices (locale, version, body, created_by)
-SELECT sqlc.arg(locale), COALESCE(MAX(version), 0) + 1, sqlc.arg(body), sqlc.narg(created_by)
+SELECT sqlc.arg(locale)::text, COALESCE(MAX(version), 0) + 1, sqlc.arg(body)::text, sqlc.narg(created_by)::bigint
 FROM kvkk_notices
-WHERE locale = sqlc.arg(locale)
+WHERE locale = sqlc.arg(locale)::text
 RETURNING *;
 
 -- name: UpsertConversation :one

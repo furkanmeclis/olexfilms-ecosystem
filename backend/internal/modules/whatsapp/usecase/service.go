@@ -21,6 +21,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/phone"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/whatsapp"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/whatsapp/wuzapi"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -351,7 +352,8 @@ func (s *Service) SendTestMessage(ctx context.Context, rawPhone, body string) (T
 	if err := s.EnsureReady(ctx); err != nil {
 		return TestMessageResult{}, err
 	}
-	ref, err := s.gw.SendText(ctx, n.E164, body, whatsapp.SendOptions{})
+	msgID := strings.ToUpper(strings.ReplaceAll(uuid.NewString(), "-", ""))
+	ref, err := s.gw.SendText(ctx, n.E164, body, whatsapp.SendOptions{ID: msgID})
 	if err != nil {
 		return TestMessageResult{}, err
 	}

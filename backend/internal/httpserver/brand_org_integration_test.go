@@ -58,6 +58,12 @@ type itest struct {
 
 func newIntegration(t *testing.T) *itest {
 	t.Helper()
+	return newIntegrationWith(t, nil)
+}
+
+// newIntegrationWith lets a test adjust the config (e.g. a mock gateway).
+func newIntegrationWith(t *testing.T, mutate func(*config.Config)) *itest {
+	t.Helper()
 	dsn := os.Getenv("TEST_DATABASE_URL")
 	if dsn == "" {
 		t.Skip("TEST_DATABASE_URL not set; skipping integration test")
@@ -76,6 +82,9 @@ func newIntegration(t *testing.T) *itest {
 	cfg.Encryption.Key = "app-dev-encryption-key-32bytes!!"
 	cfg.Auth.AdapterSecret = strings.Repeat("s", 40)
 	cfg.Auth.FrontendURL = "http://localhost:3000"
+	if mutate != nil {
+		mutate(&cfg)
+	}
 
 	q := db.New(pool)
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
