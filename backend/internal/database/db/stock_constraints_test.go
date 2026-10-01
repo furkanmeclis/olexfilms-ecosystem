@@ -57,14 +57,14 @@ func newStockFixture(t *testing.T) *stockFixture {
 	if err != nil {
 		t.Fatalf("olex center: %v", err)
 	}
+	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
 	cat, err := q.CreateProductCategory(ctx, db.CreateProductCategoryParams{
-		OrganizationID: center.ID, BrandID: brand.ID, Name: "t153-cat",
+		OrganizationID: center.ID, BrandID: brand.ID, Name: "t153-cat-" + suffix,
 		AvailableParts: []byte("[]"), Active: true,
 	})
 	if err != nil {
 		t.Fatalf("category: %v", err)
 	}
-	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
 	product := func(sku, unitType string, fixed bool) db.Product {
 		p, err := q.CreateProduct(ctx, db.CreateProductParams{
 			OrganizationID: center.ID, BrandID: brand.ID, CategoryID: cat.ID,
