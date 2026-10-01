@@ -1313,7 +1313,8 @@ export interface paths {
         /**
          * Update own preferences
          * @description Security emails (password reset / email verification) ignore `email_enabled`.
-         *     Web push requires `push_enabled` and an active browser subscription; it follows in-app delivery.
+         *     Web push is its own channel (`webpush`): it needs `push_enabled` (or a rule)
+         *     and an active browser subscription.
          */
         put: operations["putNotificationPreferences"];
         post?: never;
@@ -1353,6 +1354,156 @@ export interface paths {
         };
         /** Platform notifications meta */
         get: operations["getPlatformNotificationsMeta"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notification-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Notification event catalog
+         * @description Every event the notification center sends: default channels, audience
+         *     roles, allowed template placeholders and whether users can mute it.
+         */
+        get: operations["getNotificationEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notifications/push-devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register an Expo push token
+         * @description Stores the caller's Expo push token (`device_push_tokens`). A token
+         *     moves to the latest user that registers it and is un-revoked.
+         */
+        post: operations["registerPushDevice"];
+        /** Revoke an Expo push token */
+        delete: operations["revokePushDevice"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/notification-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List notification templates
+         * @description Requires `notifications.templates.manage`.
+         */
+        get: operations["getNotificationTemplates"];
+        /**
+         * Create or update a notification template
+         * @description One template per event x role x channel x language. Placeholders the
+         *     event does not allow are rejected (400 VALIDATION_ERROR). Requires
+         *     `notifications.templates.manage`.
+         */
+        put: operations["putNotificationTemplate"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/notification-templates/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview a notification template
+         * @description Renders a draft with the event's sample values; e-mail adds the HTML frame (dir from the language).
+         */
+        post: operations["previewNotificationTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/notification-channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Notification channel switches
+         * @description SMS is off until an admin switches it on (K21). Requires `notifications.templates.manage`.
+         */
+        get: operations["getNotificationChannels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/notification-channels/{channel}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Switch a notification channel on or off
+         * @description A disabled channel records deliveries as `skipped_disabled`.
+         */
+        put: operations["putNotificationChannel"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/notification-deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Notification delivery log
+         * @description One row per event x user x channel (the idempotency key), newest
+         *     first. Rows are swept after 90 days. Requires `notification_deliveries.read`.
+         */
+        get: operations["getNotificationDeliveries"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2793,11 +2944,190 @@ export interface components {
             limit: number;
             offset: number;
         };
+        /**
+         * @description The bools are the global (every event) rows of email, inapp and webpush
+         *     (`push_enabled`). `realtime_enabled` mirrors inapp (Centrifugo is part of
+         *     the in-app channel) and is ignored on write. `rules` holds every row,
+         *     event specific ones included; a rule overrides the bool of its channel.
+         */
         NotificationPreferences: {
             email_enabled: boolean;
             inapp_enabled: boolean;
+            /** @deprecated */
             realtime_enabled: boolean;
             push_enabled: boolean;
+            rules?: components["schemas"]["NotificationPreferenceRule"][] | null;
+        };
+        NotificationPreferenceRule: {
+            /** @description Event code, or null for every event. */
+            event_code: string | null;
+            channel: components["schemas"]["NotificationChannel"];
+            enabled: boolean;
+        };
+        /** @enum {string} */
+        NotificationChannel: "inapp" | "email" | "webpush" | "expo_push" | "sms" | "whatsapp";
+        /** @enum {string} */
+        NotificationTemplateRole: "generic" | "customer" | "dealer" | "distributor" | "center";
+        /** @enum {string} */
+        NotificationDeliveryStatus: "queued" | "processing" | "sent" | "delivered" | "failed" | "skipped_disabled" | "skipped_preference" | "skipped_no_template" | "skipped_no_recipient";
+        NotificationPlaceholder: {
+            key: string;
+            sample_tr: string;
+            sample_en: string;
+        };
+        NotificationEvent: {
+            /** @example features.module_requested */
+            code: string;
+            module: string;
+            default_channels: components["schemas"]["NotificationChannel"][];
+            critical: boolean;
+            audience_roles: components["schemas"]["NotificationTemplateRole"][];
+            placeholders: components["schemas"]["NotificationPlaceholder"][] | null;
+            user_configurable: boolean;
+        };
+        NotificationTemplate: {
+            /** Format: uuid */
+            uuid: string;
+            code: string;
+            role: components["schemas"]["NotificationTemplateRole"];
+            channel: components["schemas"]["NotificationChannel"];
+            /** @example tr */
+            language: string;
+            /** Format: int64 */
+            brand_id: number | null;
+            subject: string;
+            body: string;
+            /** @enum {string} */
+            format: "markdown" | "text";
+            active: boolean;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        NotificationTemplateInput: {
+            code: string;
+            role?: components["schemas"]["NotificationTemplateRole"];
+            channel: components["schemas"]["NotificationChannel"];
+            language: string;
+            subject?: string;
+            body: string;
+            /** @enum {string} */
+            format?: "markdown" | "text";
+            active?: boolean;
+        };
+        NotificationRendered: {
+            subject: string;
+            body: string;
+            html?: string;
+            language: string;
+            /** @enum {string} */
+            dir: "ltr" | "rtl";
+        };
+        NotificationChannelSetting: {
+            channel: components["schemas"]["NotificationChannel"];
+            enabled: boolean;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        NotificationDelivery: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            event_id: string;
+            event_code: string;
+            /** Format: uuid */
+            user_uuid: string;
+            user_email: string;
+            channel: components["schemas"]["NotificationChannel"];
+            role: string;
+            language: string;
+            status: components["schemas"]["NotificationDeliveryStatus"];
+            provider: string;
+            provider_ref: string;
+            error: string;
+            attempts: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        NotificationDeliveryPage: {
+            items: components["schemas"]["NotificationDelivery"][];
+            /** Format: int64 */
+            total: number;
+            limit: number;
+            offset: number;
+        };
+        PushDeviceInput: {
+            device_id: string;
+            /** @enum {string} */
+            platform: "ios" | "android";
+            /** @example ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx] */
+            expo_token: string;
+            app_version?: string;
+        };
+        PushDevice: {
+            /** Format: uuid */
+            uuid: string;
+            device_id: string;
+            /** @enum {string} */
+            platform: "ios" | "android";
+            app_version?: string;
+            /** Format: date-time */
+            last_seen_at: string;
+        };
+        EnvelopeNotificationEventList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["NotificationEvent"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeNotificationTemplateList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["NotificationTemplate"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeNotificationTemplate: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["NotificationTemplate"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeNotificationRendered: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["NotificationRendered"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeNotificationChannelList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["NotificationChannelSetting"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeNotificationChannelSetting: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["NotificationChannelSetting"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeNotificationDeliveryPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["NotificationDeliveryPage"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePushDevice: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PushDevice"];
+            meta: components["schemas"]["ResponseMeta"];
         };
         ResourceMeta: {
             resource: string;
@@ -6236,6 +6566,244 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeResourceMeta"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getNotificationEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Catalog */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeNotificationEventList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    registerPushDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PushDeviceInput"];
+            };
+        };
+        responses: {
+            /** @description Device */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePushDevice"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    revokePushDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expo_token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Revoked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStatus"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getNotificationTemplates: {
+        parameters: {
+            query?: {
+                code?: string;
+                channel?: components["schemas"]["NotificationChannel"];
+                language?: string;
+                role?: components["schemas"]["NotificationTemplateRole"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Templates */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeNotificationTemplateList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    putNotificationTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationTemplateInput"];
+            };
+        };
+        responses: {
+            /** @description Template */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeNotificationTemplate"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    previewNotificationTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationTemplateInput"];
+            };
+        };
+        responses: {
+            /** @description Rendered */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeNotificationRendered"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getNotificationChannels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Channels */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeNotificationChannelList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    putNotificationChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                channel: components["schemas"]["NotificationChannel"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    enabled: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Channel */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeNotificationChannelSetting"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getNotificationDeliveries: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                status?: components["schemas"]["NotificationDeliveryStatus"];
+                channel?: components["schemas"]["NotificationChannel"];
+                event_code?: string;
+                event_id?: string;
+                user_uuid?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeNotificationDeliveryPage"];
                 };
             };
             401: components["responses"]["Unauthenticated"];

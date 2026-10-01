@@ -2252,7 +2252,8 @@ paths:
       summary: Update own preferences
       description: |
         Security emails (password reset / email verification) ignore `email_enabled`.
-        Web push requires `push_enabled` and an active browser subscription; it follows in-app delivery.
+        Web push is its own channel (`webpush`): it needs `push_enabled` (or a rule)
+        and an active browser subscription.
       security:
         - bearerAuth: []
       requestBody:
@@ -2328,6 +2329,246 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeResourceMeta"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/notification-events:
+    get:
+      tags: [Notifications]
+      operationId: getNotificationEvents
+      summary: Notification event catalog
+      description: |
+        Every event the notification center sends: default channels, audience
+        roles, allowed template placeholders and whether users can mute it.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Catalog
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNotificationEventList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+
+  /v1/notifications/push-devices:
+    post:
+      tags: [Notifications]
+      operationId: registerPushDevice
+      summary: Register an Expo push token
+      description: |
+        Stores the caller's Expo push token (`device_push_tokens`). A token
+        moves to the latest user that registers it and is un-revoked.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushDeviceInput"
+      responses:
+        "200":
+          description: Device
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePushDevice"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+    delete:
+      tags: [Notifications]
+      operationId: revokePushDevice
+      summary: Revoke an Expo push token
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expo_token]
+              properties:
+                expo_token: { type: string }
+      responses:
+        "200":
+          description: Revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStatus"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+
+  /v1/platform/notification-templates:
+    get:
+      tags: [Platform]
+      operationId: getNotificationTemplates
+      summary: List notification templates
+      description: Requires `notifications.templates.manage`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: code, in: query, schema: { type: string } }
+        - { name: channel, in: query, schema: { $ref: "#/components/schemas/NotificationChannel" } }
+        - { name: language, in: query, schema: { type: string } }
+        - { name: role, in: query, schema: { $ref: "#/components/schemas/NotificationTemplateRole" } }
+      responses:
+        "200":
+          description: Templates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNotificationTemplateList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    put:
+      tags: [Platform]
+      operationId: putNotificationTemplate
+      summary: Create or update a notification template
+      description: |
+        One template per event x role x channel x language. Placeholders the
+        event does not allow are rejected (400 VALIDATION_ERROR). Requires
+        `notifications.templates.manage`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotificationTemplateInput"
+      responses:
+        "200":
+          description: Template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNotificationTemplate"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /v1/platform/notification-templates/preview:
+    post:
+      tags: [Platform]
+      operationId: previewNotificationTemplate
+      summary: Preview a notification template
+      description: Renders a draft with the event's sample values; e-mail adds the HTML frame (dir from the language).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotificationTemplateInput"
+      responses:
+        "200":
+          description: Rendered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNotificationRendered"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /v1/platform/notification-channels:
+    get:
+      tags: [Platform]
+      operationId: getNotificationChannels
+      summary: Notification channel switches
+      description: SMS is off until an admin switches it on (K21). Requires `notifications.templates.manage`.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Channels
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNotificationChannelList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/notification-channels/{channel}:
+    put:
+      tags: [Platform]
+      operationId: putNotificationChannel
+      summary: Switch a notification channel on or off
+      description: A disabled channel records deliveries as `skipped_disabled`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: channel
+          in: path
+          required: true
+          schema: { $ref: "#/components/schemas/NotificationChannel" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled: { type: boolean }
+      responses:
+        "200":
+          description: Channel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNotificationChannelSetting"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/notification-deliveries:
+    get:
+      tags: [Platform]
+      operationId: getNotificationDeliveries
+      summary: Notification delivery log
+      description: |
+        One row per event x user x channel (the idempotency key), newest
+        first. Rows are swept after 90 days. Requires `notification_deliveries.read`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - { name: status, in: query, schema: { $ref: "#/components/schemas/NotificationDeliveryStatus" } }
+        - { name: channel, in: query, schema: { $ref: "#/components/schemas/NotificationChannel" } }
+        - { name: event_code, in: query, schema: { type: string } }
+        - { name: event_id, in: query, schema: { type: string, format: uuid } }
+        - { name: user_uuid, in: query, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNotificationDeliveryPage"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "403":
@@ -4974,12 +5215,248 @@ components:
 
     NotificationPreferences:
       type: object
+      description: |
+        The bools are the global (every event) rows of email, inapp and webpush
+        (`push_enabled`). `realtime_enabled` mirrors inapp (Centrifugo is part of
+        the in-app channel) and is ignored on write. `rules` holds every row,
+        event specific ones included; a rule overrides the bool of its channel.
       required: [email_enabled, inapp_enabled, realtime_enabled, push_enabled]
       properties:
         email_enabled: { type: boolean }
         inapp_enabled: { type: boolean }
-        realtime_enabled: { type: boolean }
+        realtime_enabled: { type: boolean, deprecated: true }
         push_enabled: { type: boolean }
+        rules:
+          type: [array, "null"]
+          items: { $ref: "#/components/schemas/NotificationPreferenceRule" }
+
+    NotificationPreferenceRule:
+      type: object
+      required: [event_code, channel, enabled]
+      properties:
+        event_code:
+          description: Event code, or null for every event.
+          type: [string, "null"]
+        channel: { $ref: "#/components/schemas/NotificationChannel" }
+        enabled: { type: boolean }
+
+    NotificationChannel:
+      type: string
+      enum: [inapp, email, webpush, expo_push, sms, whatsapp]
+
+    NotificationTemplateRole:
+      type: string
+      enum: [generic, customer, dealer, distributor, center]
+
+    NotificationDeliveryStatus:
+      type: string
+      enum: [queued, processing, sent, delivered, failed, skipped_disabled, skipped_preference, skipped_no_template, skipped_no_recipient]
+
+    NotificationPlaceholder:
+      type: object
+      required: [key, sample_tr, sample_en]
+      properties:
+        key: { type: string }
+        sample_tr: { type: string }
+        sample_en: { type: string }
+
+    NotificationEvent:
+      type: object
+      required: [code, module, default_channels, critical, audience_roles, placeholders, user_configurable]
+      properties:
+        code: { type: string, examples: ["features.module_requested"] }
+        module: { type: string }
+        default_channels:
+          type: array
+          items: { $ref: "#/components/schemas/NotificationChannel" }
+        critical: { type: boolean }
+        audience_roles:
+          type: array
+          items: { $ref: "#/components/schemas/NotificationTemplateRole" }
+        placeholders:
+          type: [array, "null"]
+          items: { $ref: "#/components/schemas/NotificationPlaceholder" }
+        user_configurable: { type: boolean }
+
+    NotificationTemplate:
+      type: object
+      required: [uuid, code, role, channel, language, brand_id, subject, body, format, active, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        code: { type: string }
+        role: { $ref: "#/components/schemas/NotificationTemplateRole" }
+        channel: { $ref: "#/components/schemas/NotificationChannel" }
+        language: { type: string, examples: ["tr"] }
+        brand_id: { type: [integer, "null"], format: int64 }
+        subject: { type: string }
+        body: { type: string }
+        format: { type: string, enum: [markdown, text] }
+        active: { type: boolean }
+        updated_at: { type: string, format: date-time }
+
+    NotificationTemplateInput:
+      type: object
+      required: [code, channel, language, body]
+      properties:
+        code: { type: string }
+        role: { $ref: "#/components/schemas/NotificationTemplateRole" }
+        channel: { $ref: "#/components/schemas/NotificationChannel" }
+        language: { type: string }
+        subject: { type: string }
+        body: { type: string }
+        format: { type: string, enum: [markdown, text] }
+        active: { type: boolean }
+
+    NotificationRendered:
+      type: object
+      required: [subject, body, language, dir]
+      properties:
+        subject: { type: string }
+        body: { type: string }
+        html: { type: string }
+        language: { type: string }
+        dir: { type: string, enum: [ltr, rtl] }
+
+    NotificationChannelSetting:
+      type: object
+      required: [channel, enabled, updated_at]
+      properties:
+        channel: { $ref: "#/components/schemas/NotificationChannel" }
+        enabled: { type: boolean }
+        updated_at: { type: string, format: date-time }
+
+    NotificationDelivery:
+      type: object
+      required: [uuid, event_id, event_code, user_uuid, user_email, channel, role, language, status, provider, provider_ref, error, attempts, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        event_id: { type: string, format: uuid }
+        event_code: { type: string }
+        user_uuid: { type: string, format: uuid }
+        user_email: { type: string }
+        channel: { $ref: "#/components/schemas/NotificationChannel" }
+        role: { type: string }
+        language: { type: string }
+        status: { $ref: "#/components/schemas/NotificationDeliveryStatus" }
+        provider: { type: string }
+        provider_ref: { type: string }
+        error: { type: string }
+        attempts: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    NotificationDeliveryPage:
+      type: object
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/NotificationDelivery" }
+        total: { type: integer, format: int64 }
+        limit: { type: integer }
+        offset: { type: integer }
+
+    PushDeviceInput:
+      type: object
+      required: [device_id, platform, expo_token]
+      properties:
+        device_id: { type: string, maxLength: 128 }
+        platform: { type: string, enum: [ios, android] }
+        expo_token: { type: string, examples: ["ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]"] }
+        app_version: { type: string, maxLength: 32 }
+
+    PushDevice:
+      type: object
+      required: [uuid, device_id, platform, last_seen_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        device_id: { type: string }
+        platform: { type: string, enum: [ios, android] }
+        app_version: { type: string }
+        last_seen_at: { type: string, format: date-time }
+
+    EnvelopeNotificationEventList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/NotificationEvent" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeNotificationTemplateList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/NotificationTemplate" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeNotificationTemplate:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/NotificationTemplate" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeNotificationRendered:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/NotificationRendered" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeNotificationChannelList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/NotificationChannelSetting" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeNotificationChannelSetting:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/NotificationChannelSetting" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeNotificationDeliveryPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/NotificationDeliveryPage" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePushDevice:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PushDevice" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
 
     ResourceMeta:
       type: object

@@ -17,6 +17,9 @@ type Message struct {
 	To      []string
 	Subject string
 	Body    string
+	// HTMLBody, when set, is sent as the text/html part of a
+	// multipart/alternative message next to the plain-text Body.
+	HTMLBody string
 }
 
 // Sender delivers email messages.
@@ -86,13 +89,33 @@ func (s *SMTPSender) Send(_ context.Context, msg Message) error {
 	payload.WriteString(subject)
 	payload.WriteString("\r\n")
 	payload.WriteString("MIME-Version: 1.0\r\n")
-	payload.WriteString("Content-Type: text/plain; charset=UTF-8\r\n")
-	payload.WriteString("\r\n")
-	payload.WriteString(msg.Body)
+	writeBody(&payload, msg)
 	if err := smtp.SendMail(addr, auth, from, msg.To, []byte(payload.String())); err != nil {
 		return fmt.Errorf("mail: send: %w", err)
 	}
 	return nil
+}
+
+// writeBody writes the content headers and body: plain text, or
+// multipart/alternative (text + HTML) when HTMLBody is set.
+func writeBody(b *strings.Builder, msg Message) {
+	if msg.HTMLBody == "" {
+		b.WriteString("Content-Type: text/plain; charset=UTF-8\r\n\r\n")
+		b.WriteString(msg.Body)
+		return
+	}
+	boundary := "olex-alt-" + strconv.FormatInt(int64(len(msg.Body))*7919+int64(len(msg.HTMLBody)), 36)
+	for strings.Contains(msg.Body, boundary) || strings.Contains(msg.HTMLBody, boundary) {
+		boundary += "x"
+	}
+	b.WriteString("Content-Type: multipart/alternative; boundary=\"" + boundary + "\"\r\n\r\n")
+	b.WriteString("--" + boundary + "\r\n")
+	b.WriteString("Content-Type: text/plain; charset=UTF-8\r\n\r\n")
+	b.WriteString(msg.Body)
+	b.WriteString("\r\n--" + boundary + "\r\n")
+	b.WriteString("Content-Type: text/html; charset=UTF-8\r\n\r\n")
+	b.WriteString(msg.HTMLBody)
+	b.WriteString("\r\n--" + boundary + "--\r\n")
 }
 
 func stripHeaderBreaks(v string) string {

@@ -125,5 +125,7 @@
   "labels.platform.documents.templates.read": "Belge şablonlarını görüntüle",
   "labels.platform.documents.templates.write": "Belge şablonlarını düzenle",
   "labels.whatsapp.manage": "WhatsApp entegrasyonunu yönet",
-  "groups.whatsapp": "WhatsApp"
+  "groups.whatsapp": "WhatsApp",
+  "labels.notifications.templates.manage": "Bildirim şablonlarını ve kanallarını yönet",
+  "labels.notification_deliveries.read": "Bildirim teslim günlüğünü görüntüle"
 }

@@ -76,5 +76,6 @@
   "nav_features": "Features",
   "nav_modules": "Modules",
   "nav_document_templates": "PDF templates",
-  "nav_whatsapp_integration": "WhatsApp"
+  "nav_whatsapp_integration": "WhatsApp",
+  "nav_notification_center": "Notification center"
 }

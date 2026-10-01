@@ -125,5 +125,7 @@
   "labels.platform.documents.templates.read": "Read document templates",
   "labels.platform.documents.templates.write": "Write document templates",
   "labels.whatsapp.manage": "Manage WhatsApp integration",
-  "groups.whatsapp": "WhatsApp"
+  "groups.whatsapp": "WhatsApp",
+  "labels.notifications.templates.manage": "Manage notification templates and channels",
+  "labels.notification_deliveries.read": "Read notification delivery log"
 }

@@ -4,14 +4,18 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/catalog"
 	notifmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/model"
 	notifusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/google/uuid"
 )
 
-// RegisterEventHandlers attaches Notification Center listeners to the platform bus.
-// Handlers enqueue via Service.Enqueue only — never SMTP.
+// RegisterEventHandlers attaches Notification Center listeners to the
+// platform bus. Each outbox event maps to a catalog event; the outbox event
+// id is the delivery idempotency key, so a redelivered event sends nothing
+// twice. Titles and bodies come from notification_templates (event x role x
+// channel x language); nothing is hard-coded here.
 func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.Logger) {
 	if bus == nil {
 		return
@@ -32,169 +36,82 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	if svc == nil {
 		return
 	}
-	bus.Subscribe(events.CustomersAssigned, func(ctx context.Context, event events.Event) error {
-		return enqueueAssigned(ctx, svc, event, log)
-	})
-	bus.Subscribe(events.CustomersStatusChanged, func(ctx context.Context, event events.Event) error {
-		return enqueueStatusBlocked(ctx, svc, event, log)
-	})
-	bus.Subscribe(events.ConversationsAssigned, func(ctx context.Context, event events.Event) error {
-		return enqueueConversationAssigned(ctx, svc, event, log)
-	})
-	bus.Subscribe(events.AIPipelineEscalated, func(ctx context.Context, event events.Event) error {
-		return enqueueAIEscalated(ctx, svc, event, log)
-	})
-	bus.Subscribe(events.AIDraftCreated, func(ctx context.Context, event events.Event) error {
-		return enqueueAIDraftPending(ctx, svc, event, log)
-	})
-}
-
-func enqueueAssigned(ctx context.Context, svc *notifusecase.Service, event events.Event, log *slog.Logger) error {
-	userID, ok := int64FromPayload(event.Payload, "assigned_user_id")
-	if !ok || userID <= 0 {
-		return nil
+	on := func(name string, build func(events.Event) (notifmodel.DispatchInput, bool)) {
+		bus.Subscribe(name, func(ctx context.Context, event events.Event) error {
+			in, ok := build(event)
+			if !ok {
+				return nil
+			}
+			in.EventID = event.EventID
+			in.OrganizationID = event.TenantID
+			if _, err := svc.Dispatch(ctx, in); err != nil {
+				log.Error("notifications_dispatch_failed", "event", event.Name, "event_id", event.EventID, "error", err)
+			}
+			return nil // fail-soft: the bus must not block on a notification
+		})
 	}
-	customerName := customerLabel(event)
-	tid := event.TenantID
-	_, err := svc.Enqueue(ctx, notifmodel.EnqueueInput{
-		TenantID:     tid,
-		UserID:       &userID,
-		Channels:     []string{notifmodel.ChannelInapp},
-		Priority:     notifmodel.PriorityNormal,
-		Title:        "Müşteri atandı",
-		Body:         customerName + " size atandı.",
-		TemplateCode: "customers.assigned",
-		TemplateVars: map[string]string{"customer_name": customerName},
-		SourceEvent:  events.CustomersAssigned,
-		Payload: map[string]any{
-			"customer_event_uuid": event.Payload["customer_event_uuid"],
-			"customer_uuid":       entityUUIDString(event.EntityUUID),
-		},
+	on(events.CustomersAssigned, func(event events.Event) (notifmodel.DispatchInput, bool) {
+		userID, ok := int64FromPayload(event.Payload, "assigned_user_id")
+		if !ok || userID <= 0 {
+			return notifmodel.DispatchInput{}, false
+		}
+		return notifmodel.DispatchInput{
+			EventCode: catalog.EventCustomersAssigned, UserIDs: []int64{userID},
+			Vars: map[string]string{"customer_name": customerLabel(event)},
+			Payload: map[string]any{
+				"customer_event_uuid": event.Payload["customer_event_uuid"],
+				"customer_uuid":       entityUUIDString(event.EntityUUID),
+			},
+		}, true
 	})
-	if err != nil {
-		log.Error("notifications_enqueue_assigned_failed", "error", err)
-	}
-	return nil // fail-soft
-}
-
-func enqueueConversationAssigned(ctx context.Context, svc *notifusecase.Service, event events.Event, log *slog.Logger) error {
-	userID, ok := int64FromPayload(event.Payload, "assigned_user_id")
-	if !ok || userID <= 0 {
-		return nil // unassign — no inapp
-	}
-	tid := event.TenantID
-	_, err := svc.Enqueue(ctx, notifmodel.EnqueueInput{
-		TenantID:     tid,
-		UserID:       &userID,
-		Channels:     []string{notifmodel.ChannelInapp},
-		Priority:     notifmodel.PriorityNormal,
-		Title:        "Konuşma atandı",
-		Body:         "Bir konuşma size atandı.",
-		TemplateCode: "conversations.assigned",
-		TemplateVars: map[string]string{},
-		SourceEvent:  events.ConversationsAssigned,
-		Payload: map[string]any{
-			"conversation_uuid": entityUUIDString(event.EntityUUID),
-			"assigned_user_id":  userID,
-		},
+	on(events.CustomersStatusChanged, func(event events.Event) (notifmodel.DispatchInput, bool) {
+		to, _ := event.Payload["to"].(string)
+		userID, ok := int64FromPayload(event.Payload, "assigned_user_id")
+		if to != "blocked" || !ok || userID <= 0 {
+			return notifmodel.DispatchInput{}, false
+		}
+		return notifmodel.DispatchInput{
+			EventCode: catalog.EventCustomersStatusBlocked, UserIDs: []int64{userID},
+			Priority: notifmodel.PriorityHigh,
+			Vars:     map[string]string{"customer_name": customerLabel(event)},
+			Payload: map[string]any{
+				"customer_event_uuid": event.Payload["customer_event_uuid"],
+				"customer_uuid":       entityUUIDString(event.EntityUUID),
+				"to":                  to,
+			},
+		}, true
 	})
-	if err != nil {
-		log.Error("notifications_enqueue_conversation_assigned_failed", "error", err)
-	}
-	return nil // fail-soft
-}
-
-func enqueueStatusBlocked(ctx context.Context, svc *notifusecase.Service, event events.Event, log *slog.Logger) error {
-	to, _ := event.Payload["to"].(string)
-	if to != "blocked" {
-		return nil
-	}
-	userID, ok := int64FromPayload(event.Payload, "assigned_user_id")
-	if !ok || userID <= 0 {
-		return nil
-	}
-	customerName := customerLabel(event)
-	tid := event.TenantID
-	_, err := svc.Enqueue(ctx, notifmodel.EnqueueInput{
-		TenantID:     tid,
-		UserID:       &userID,
-		Channels:     []string{notifmodel.ChannelInapp},
-		Priority:     notifmodel.PriorityHigh,
-		Title:        "Müşteri engellendi",
-		Body:         customerName + " durumu blocked olarak güncellendi.",
-		TemplateCode: "customers.status_blocked",
-		TemplateVars: map[string]string{"customer_name": customerName},
-		SourceEvent:  events.CustomersStatusChanged,
-		Payload: map[string]any{
-			"customer_event_uuid": event.Payload["customer_event_uuid"],
-			"customer_uuid":       entityUUIDString(event.EntityUUID),
-			"to":                  to,
-		},
+	on(events.ConversationsAssigned, func(event events.Event) (notifmodel.DispatchInput, bool) {
+		userID, ok := int64FromPayload(event.Payload, "assigned_user_id")
+		if !ok || userID <= 0 {
+			return notifmodel.DispatchInput{}, false // unassign
+		}
+		return notifmodel.DispatchInput{
+			EventCode: catalog.EventConversationsAssigned, UserIDs: []int64{userID},
+			Payload: map[string]any{"conversation_uuid": entityUUIDString(event.EntityUUID), "assigned_user_id": userID},
+		}, true
 	})
-	if err != nil {
-		log.Error("notifications_enqueue_blocked_failed", "error", err)
-	}
-	return nil
-}
-
-func enqueueAIEscalated(ctx context.Context, svc *notifusecase.Service, event events.Event, log *slog.Logger) error {
-	userIDs := userIDsFromAIEvent(event)
-	if len(userIDs) == 0 {
-		return nil
-	}
-	tid := event.TenantID
-	for _, userID := range userIDs {
-		uid := userID
-		_, err := svc.Enqueue(ctx, notifmodel.EnqueueInput{
-			TenantID:     tid,
-			UserID:       &uid,
-			Channels:     []string{notifmodel.ChannelInapp},
-			Priority:     notifmodel.PriorityHigh,
-			Title:        "AI escalate",
-			Body:         "Bir konuşma AI tarafından ekibe iletildi.",
-			TemplateCode: "ai.pipeline.escalated",
-			TemplateVars: map[string]string{},
-			SourceEvent:  events.AIPipelineEscalated,
+	on(events.AIPipelineEscalated, func(event events.Event) (notifmodel.DispatchInput, bool) {
+		ids := userIDsFromAIEvent(event)
+		return notifmodel.DispatchInput{
+			EventCode: catalog.EventAIPipelineEscalated, UserIDs: ids, Priority: notifmodel.PriorityHigh,
+			Vars: map[string]string{"intent": stringFromPayload(event.Payload, "intent")},
 			Payload: map[string]any{
 				"conversation_uuid": entityUUIDString(event.EntityUUID),
 				"intent":            stringFromPayload(event.Payload, "intent"),
 			},
-		})
-		if err != nil {
-			log.Error("notifications_enqueue_ai_escalated_failed", "error", err)
-		}
-	}
-	return nil
-}
-
-func enqueueAIDraftPending(ctx context.Context, svc *notifusecase.Service, event events.Event, log *slog.Logger) error {
-	userIDs := userIDsFromAIEvent(event)
-	if len(userIDs) == 0 {
-		return nil
-	}
-	tid := event.TenantID
-	for _, userID := range userIDs {
-		uid := userID
-		_, err := svc.Enqueue(ctx, notifmodel.EnqueueInput{
-			TenantID:     tid,
-			UserID:       &uid,
-			Channels:     []string{notifmodel.ChannelInapp},
-			Priority:     notifmodel.PriorityNormal,
-			Title:        "AI draft bekliyor",
-			Body:         "İncelemeniz için yeni bir AI yanıt taslağı oluşturuldu.",
-			TemplateCode: "ai.draft.pending",
-			TemplateVars: map[string]string{},
-			SourceEvent:  events.AIDraftCreated,
+		}, len(ids) > 0
+	})
+	on(events.AIDraftCreated, func(event events.Event) (notifmodel.DispatchInput, bool) {
+		ids := userIDsFromAIEvent(event)
+		return notifmodel.DispatchInput{
+			EventCode: catalog.EventAIDraftPending, UserIDs: ids,
 			Payload: map[string]any{
 				"conversation_uuid": entityUUIDString(event.EntityUUID),
 				"draft_uuid":        stringFromPayload(event.Payload, "draft_uuid"),
 			},
-		})
-		if err != nil {
-			log.Error("notifications_enqueue_ai_draft_failed", "error", err)
-		}
-	}
-	return nil
+		}, len(ids) > 0
+	})
 }
 
 // userIDsFromAIEvent prefers assigned_user_id, else notify_user_ids slice in payload.

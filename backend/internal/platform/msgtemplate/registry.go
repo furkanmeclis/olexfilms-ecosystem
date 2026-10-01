@@ -21,7 +21,7 @@ const (
 )
 
 // Locales a template may be written in (K10, i18n.Supported). Defaults are
-// seeded for tr and en; a missing locale falls back to en at send time.
+// seeded for tr and en; a missing locale follows LocaleChain at send time.
 var Locales = func() []string {
 	out := make([]string, len(i18n.Supported))
 	for i, l := range i18n.Supported {

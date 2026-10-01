@@ -2,11 +2,13 @@
 INSERT INTO notifications (
     user_id, channel, status, priority,
     title, body, payload, action_url, recipient, template_code, source_event,
-    scheduled_at, max_attempts
+    scheduled_at, max_attempts, organization_id, brand_id, event_id, language
 ) VALUES (
-    $1, $2, $3, $4,
-    $5, $6, $7, $8, $9, $10, $11,
-    $12, $13
+    sqlc.narg(user_id), sqlc.arg(channel), sqlc.arg(status), sqlc.arg(priority),
+    sqlc.arg(title), sqlc.arg(body), sqlc.arg(payload), sqlc.narg(action_url), sqlc.narg(recipient),
+    sqlc.narg(template_code), sqlc.narg(source_event),
+    sqlc.narg(scheduled_at), sqlc.arg(max_attempts), sqlc.narg(organization_id), sqlc.narg(brand_id),
+    sqlc.narg(event_id), sqlc.narg(language)
 )
 RETURNING *;
 
@@ -157,27 +159,6 @@ WHERE user_id = $1
 -- name: InsertNotificationHistory :one
 INSERT INTO notification_history (notification_id, event, metadata)
 VALUES ($1, $2, $3)
-RETURNING *;
-
--- name: GetTemplateByCodeChannelLang :one
-SELECT * FROM notification_templates
-WHERE code = $1
-  AND channel = $2
-  AND language = $3
-  AND active = TRUE;
-
--- name: GetNotificationPreferences :one
-SELECT * FROM notification_preferences
-WHERE user_id = $1;
-
--- name: UpsertNotificationPreferences :one
-INSERT INTO notification_preferences (user_id, email_enabled, inapp_enabled, realtime_enabled, push_enabled)
-VALUES ($1, $2, $3, $4, $5)
-ON CONFLICT (user_id) DO UPDATE
-SET email_enabled = EXCLUDED.email_enabled,
-    inapp_enabled = EXCLUDED.inapp_enabled,
-    realtime_enabled = EXCLUDED.realtime_enabled,
-    push_enabled = EXCLUDED.push_enabled
 RETURNING *;
 
 -- name: UpdateUserProfile :one
