@@ -3,15 +3,10 @@ import localFont from "next/font/local";
 import { cookies } from "next/headers";
 
 import { brand } from "@/config/brand";
-import {
-  i18nConfig,
-  localeDir,
-  normalizeLocale,
-  type AppLocale,
-} from "@/config/i18n";
+import { i18nConfig } from "@/config/i18n";
 import { site } from "@/config/site";
-import { isValidTimeZone } from "@/lib/i18n/format";
 import { loadMessages } from "@/lib/i18n/messages";
+import { resolveRequestLocale } from "@/lib/i18n/request-locale";
 import { AppProviders } from "@/providers/app-providers";
 
 import "./globals.css";
@@ -63,43 +58,25 @@ export const viewport: Viewport = {
   ],
 };
 
-/**
- * Language and time zone come from cookies (TEC-137) so the server writes
- * the right <html lang dir> and text on the first paint: no LTR flash for
- * Arabic, and the choice survives a reload before Me is fetched.
- */
-async function resolveLocaleCookies(): Promise<{
-  locale: AppLocale;
-  timeZone: string;
-}> {
-  const store = await cookies();
-  const locale =
-    normalizeLocale(store.get(i18nConfig.cookieName)?.value) ??
-    i18nConfig.defaultLocale;
-  const zone = store.get(i18nConfig.timeZoneCookieName)?.value;
-  const timeZone =
-    zone && isValidTimeZone(zone) ? zone : i18nConfig.defaultTimeZone;
-  return { locale, timeZone };
-}
-
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { locale, timeZone } = await resolveLocaleCookies();
+  // Language, direction and zone come from cookies (TEC-137) so the server
+  // writes the right <html lang dir> and text on the first paint: no LTR
+  // flash for Arabic, and the choice survives a reload before Me loads.
+  const store = await cookies();
+  const { locale, dir, timeZone } = resolveRequestLocale(
+    (name) => store.get(name)?.value,
+  );
   // en is bundled on the client; any other language is handed over so the
   // hydration render matches the server render.
   const messages =
     locale === i18nConfig.fallbackLocale ? null : await loadMessages(locale);
 
   return (
-    <html
-      lang={locale}
-      dir={localeDir(locale)}
-      suppressHydrationWarning
-      className="h-full"
-    >
+    <html lang={locale} dir={dir} suppressHydrationWarning className="h-full">
       <body
         className={`${plusJakarta.variable} ${outfit.variable} ${jetbrainsMono.variable} min-h-full font-sans antialiased`}
       >
