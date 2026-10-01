@@ -11,6 +11,7 @@ import {
   clientIpFromHeaders,
   fetchUpstream,
   fetchUpstreamStream,
+  type UpstreamResult,
 } from "@/lib/server/upstream";
 
 type TokensData = {
@@ -166,18 +167,60 @@ function rotateRefreshToken(
   });
 }
 
+/**
+ * `"rejected"`: the API refused the refresh token (the session is over).
+ * `"unavailable"`: the API could not be reached, failed (5xx) or rate-limited
+ * the refresh (429). The session cookie is kept so a short outage or a
+ * restart does not sign everyone out; the caller answers 503 instead of 401.
+ */
+export type RefreshOutcome = "ok" | "rejected" | "unavailable";
+
+/** Whether an upstream refresh status means "try again later", not "signed out". */
+export function isRefreshUnavailableStatus(status: number): boolean {
+  return status >= 500 || status === 429;
+}
+
 async function refreshViaUpstream(
   forwardedFor: string | null,
-): Promise<boolean> {
+): Promise<RefreshOutcome> {
   const { refreshToken, userId } = await getApiTokens();
-  if (!refreshToken || !userId) return false;
+  if (!refreshToken || !userId) return "rejected";
 
   // Do not clear the session cookie on failure: a concurrent response may
   // already have written a valid rotated pair, and the browser's own refresh
   // flow signs out when the session is really gone.
-  const result = await rotateRefreshToken(refreshToken, forwardedFor);
-  if (result.status >= 400) return false;
-  return persistTokensFromEnvelope(parseJson(result.body));
+  let result: RefreshResult;
+  try {
+    result = await rotateRefreshToken(refreshToken, forwardedFor);
+  } catch {
+    return "unavailable";
+  }
+  if (isRefreshUnavailableStatus(result.status)) return "unavailable";
+  if (result.status >= 400) return "rejected";
+  return (await persistTokensFromEnvelope(parseJson(result.body)))
+    ? "ok"
+    : "rejected";
+}
+
+/** JSON error envelope for a backend that is down or restarting. */
+export function unavailableResponse(): Response {
+  return new Response(
+    JSON.stringify({
+      success: false,
+      error: {
+        code: "SERVICE_UNAVAILABLE",
+        message: "The service is temporarily unavailable. Try again shortly.",
+      },
+    }),
+    {
+      status: 503,
+      headers: {
+        "Content-Type": "application/json",
+        "Retry-After": "5",
+        "Cache-Control": "no-store",
+      },
+    },
+  );
 }
 
 function buildUpstreamBody(
@@ -261,20 +304,32 @@ async function proxyBuffered(
   body: BodyInit | null,
   refreshToken: string | null,
 ): Promise<Response> {
-  let result =
-    isRefreshPath(path) && refreshToken
-      ? {
-          ...(await rotateRefreshToken(
-            refreshToken,
-            headers.get("X-Forwarded-For"),
-          )),
-          headers: new Headers({ "Content-Type": "application/json" }),
-        }
-      : await fetchUpstream(pathWithQuery, {
-          method: request.method,
-          headers,
-          body,
-        });
+  let result: UpstreamResult;
+  if (isRefreshPath(path) && refreshToken) {
+    let rotated: RefreshResult;
+    try {
+      rotated = await rotateRefreshToken(
+        refreshToken,
+        headers.get("X-Forwarded-For"),
+      );
+    } catch {
+      return unavailableResponse();
+    }
+    // API down or restarting: keep the session, let the browser retry.
+    if (isRefreshUnavailableStatus(rotated.status)) {
+      return unavailableResponse();
+    }
+    result = {
+      ...rotated,
+      headers: new Headers({ "Content-Type": "application/json" }),
+    };
+  } else {
+    result = await fetchUpstream(pathWithQuery, {
+      method: request.method,
+      headers,
+      body,
+    });
+  }
 
   if (
     result.status === 401 &&
@@ -283,7 +338,8 @@ async function proxyBuffered(
     !isLogoutPath(path)
   ) {
     const refreshed = await refreshViaUpstream(headers.get("X-Forwarded-For"));
-    if (refreshed) {
+    if (refreshed === "unavailable") return unavailableResponse();
+    if (refreshed === "ok") {
       const { accessToken: nextAccess } = await getApiTokens();
       if (nextAccess) headers.set("Authorization", `Bearer ${nextAccess}`);
       result = await fetchUpstream(pathWithQuery, {
@@ -344,7 +400,8 @@ async function proxyStream(
   ) {
     await result.body?.cancel().catch(() => undefined);
     const refreshed = await refreshViaUpstream(headers.get("X-Forwarded-For"));
-    if (refreshed) {
+    if (refreshed === "unavailable") return unavailableResponse();
+    if (refreshed === "ok") {
       const { accessToken: nextAccess } = await getApiTokens();
       if (nextAccess) headers.set("Authorization", `Bearer ${nextAccess}`);
       result = await fetchUpstreamStream(pathWithQuery, {
