@@ -1,1 +1,7 @@
-{}
+{
+  "home.title": "Pagina iniziale",
+  "home.subtitle": "Struttura di gestione dei contenuti: aggiungi qui i moduli.",
+  "home.welcome": "Benvenuto",
+  "home.greeting": "Accesso effettuato come {{name}}.",
+  "home.placeholder": "Lo spazio di lavoro CMS è pronto."
+}

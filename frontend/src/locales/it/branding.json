@@ -1,1 +1,8 @@
-{}
+{
+  "logo.upload": "Carica logo",
+  "logo.replace": "Sostituisci logo",
+  "logo.clear": "Rimuovi logo",
+  "logo.uploading": "Caricamento…",
+  "logo.too_large": "Il logo non deve superare 2 MB.",
+  "logo.invalid_type": "Usa un'immagine JPEG, PNG o WebP."
+}

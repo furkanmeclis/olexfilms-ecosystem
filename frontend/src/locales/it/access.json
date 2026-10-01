@@ -1,1 +1,21 @@
-{}
+{
+  "title": "Accesso e verifica",
+  "description": "Configura per quanto tempo resta valida la riautenticazione e quali metodi possono usare gli utenti.",
+  "form.section_verification": "Criteri di verifica",
+  "form.section_verification_hint": "Gestisce le richieste di verifica per azioni sensibili come esportazioni e campi protetti.",
+  "form.ttl_hours": "Validità della verifica (ore)",
+  "form.ttl_hours_hint": "Dopo una verifica riuscita con password o passkey, gli utenti possono eseguire azioni protette per questo numero di ore (1–168).",
+  "form.password_enabled": "Consenti la verifica con password",
+  "form.password_enabled_hint": "Gli utenti possono confermare le azioni sensibili con la password dell'account.",
+  "form.passkey_enabled": "Consenti la verifica con passkey",
+  "form.passkey_enabled_hint": "Gli utenti con passkey registrate possono confermare le azioni senza digitare la password.",
+  "form.totp_enabled": "Consenti la verifica con app di autenticazione",
+  "form.totp_enabled_hint": "Gli utenti con 2FA attiva possono confermare le azioni sensibili con un codice di autenticazione.",
+  "form.password_login_totp_required": "Richiedi la 2FA per l'accesso con password",
+  "form.password_login_totp_required_hint": "Se attivo, gli utenti devono configurare un'app di autenticazione prima di accedere con e-mail e password. L'accesso con passkey e OAuth non cambia.",
+  "form.save": "Salva impostazioni",
+  "toast.saved": "Impostazioni di accesso salvate",
+  "toast.failed": "Impossibile salvare le impostazioni di accesso",
+  "error.title": "Impossibile caricare le impostazioni",
+  "error.description": "Riprova o contatta un amministratore."
+}
