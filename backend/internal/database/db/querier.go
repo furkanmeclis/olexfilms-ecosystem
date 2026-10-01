@@ -29,6 +29,9 @@ type Querier interface {
 	CountAppLogs(ctx context.Context, arg CountAppLogsParams) (int64, error)
 	CountAppLogsByLevel(ctx context.Context) ([]CountAppLogsByLevelRow, error)
 	CountBulkJobsForActor(ctx context.Context, actorID int64) (int64, error)
+	CountCarBrands(ctx context.Context, arg CountCarBrandsParams) (int64, error)
+	CountCarModels(ctx context.Context, arg CountCarModelsParams) (int64, error)
+	CountCarModelsByBrand(ctx context.Context, carBrandID int64) (int64, error)
 	CountDistributorPriceOverrides(ctx context.Context, arg CountDistributorPriceOverridesParams) (int64, error)
 	CountDocumentTemplates(ctx context.Context, arg CountDocumentTemplatesParams) (int64, error)
 	CountExportJobsForActor(ctx context.Context, actorID int64) (int64, error)
@@ -53,6 +56,10 @@ type Querier interface {
 	CountUsers(ctx context.Context, arg CountUsersParams) (int64, error)
 	CountUsersWithRole(ctx context.Context, roleSlug string) (int64, error)
 	CreateBulkJob(ctx context.Context, arg CreateBulkJobParams) (BulkJob, error)
+	// TEC-149: vehicle catalog (car brands and models). Global reference data:
+	// no organization/brand filter; only super_admin writes (use case + route).
+	CreateCarBrand(ctx context.Context, arg CreateCarBrandParams) (CarBrand, error)
+	CreateCarModel(ctx context.Context, arg CreateCarModelParams) (CarModel, error)
 	CreateDistrict(ctx context.Context, arg CreateDistrictParams) (District, error)
 	CreateDocumentTemplate(ctx context.Context, arg CreateDocumentTemplateParams) (DocumentTemplate, error)
 	CreateExportJob(ctx context.Context, arg CreateExportJobParams) (ExportJob, error)
@@ -83,6 +90,9 @@ type Querier interface {
 	DeleteAppLogByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	DeleteAppLogsByUUIDs(ctx context.Context, uuids []uuid.UUID) (int64, error)
 	DeleteAppLogsMatching(ctx context.Context, arg DeleteAppLogsMatchingParams) (int64, error)
+	// Fails with a restrict/foreign key violation while models still use the brand.
+	DeleteCarBrand(ctx context.Context, id int64) (int64, error)
+	DeleteCarModel(ctx context.Context, id int64) (int64, error)
 	DeleteDistributorDealerPrice(ctx context.Context, arg DeleteDistributorDealerPriceParams) (int64, error)
 	DeleteDistributorPriceOverride(ctx context.Context, arg DeleteDistributorPriceOverrideParams) (int64, error)
 	DeleteDistrict(ctx context.Context, id int64) (int64, error)
@@ -130,6 +140,9 @@ type Querier interface {
 	GetBrandCenter(ctx context.Context, brandID int64) (Organization, error)
 	GetBulkJobByID(ctx context.Context, id int64) (BulkJob, error)
 	GetBulkJobByUUID(ctx context.Context, argUuid uuid.UUID) (BulkJob, error)
+	GetCarBrandByID(ctx context.Context, id int64) (CarBrand, error)
+	GetCarBrandByUUID(ctx context.Context, argUuid uuid.UUID) (CarBrand, error)
+	GetCarModelByUUID(ctx context.Context, argUuid uuid.UUID) (CarModel, error)
 	GetConsentForText(ctx context.Context, arg GetConsentForTextParams) (Consent, error)
 	GetCountryByID(ctx context.Context, id int64) (Country, error)
 	GetCountryByISO2(ctx context.Context, iso2 string) (Country, error)
@@ -259,6 +272,9 @@ type Querier interface {
 	ListBrands(ctx context.Context) ([]Brand, error)
 	ListBulkChangesForJob(ctx context.Context, jobID int64) ([]BulkChange, error)
 	ListBulkJobsForActor(ctx context.Context, arg ListBulkJobsForActorParams) ([]BulkJob, error)
+	ListCarBrands(ctx context.Context, arg ListCarBrandsParams) ([]ListCarBrandsRow, error)
+	// Search matches the model name, "brand model" and the external id.
+	ListCarModels(ctx context.Context, arg ListCarModelsParams) ([]ListCarModelsRow, error)
 	// TEC-84: countries > provinces > districts, territories, plate formats.
 	ListCountries(ctx context.Context, activeOnly bool) ([]ListCountriesRow, error)
 	// TEC-84: currencies and daily exchange rates. Rates travel as text so no
@@ -422,6 +438,9 @@ type Querier interface {
 	// TEC-91: mobile refresh chains (rotation, reuse detection, device sign-out).
 	RotateRefreshTokenByHash(ctx context.Context, tokenHash string) (int64, error)
 	SetAppSettingsLogo(ctx context.Context, logoObjectKey pgtype.Text) (AppSetting, error)
+	SetCarBrandHero(ctx context.Context, arg SetCarBrandHeroParams) (CarBrand, error)
+	SetCarBrandLogo(ctx context.Context, arg SetCarBrandLogoParams) (CarBrand, error)
+	SetCarModelHero(ctx context.Context, arg SetCarModelHeroParams) (CarModel, error)
 	SetCountryActive(ctx context.Context, arg SetCountryActiveParams) (Country, error)
 	SetNotificationChannelEnabled(ctx context.Context, arg SetNotificationChannelEnabledParams) (NotificationChannelSetting, error)
 	SetOrganizationLogo(ctx context.Context, arg SetOrganizationLogoParams) (Organization, error)
@@ -440,6 +459,9 @@ type Querier interface {
 	SupplierOf(ctx context.Context, id int64) (Organization, error)
 	UpdateAppSettings(ctx context.Context, arg UpdateAppSettingsParams) (AppSetting, error)
 	UpdateAuthSettings(ctx context.Context, arg UpdateAuthSettingsParams) (AuthSetting, error)
+	// Full replacement of the editable fields (read-modify-write in the use case).
+	UpdateCarBrand(ctx context.Context, arg UpdateCarBrandParams) (CarBrand, error)
+	UpdateCarModel(ctx context.Context, arg UpdateCarModelParams) (CarModel, error)
 	UpdateDocumentTemplateDraft(ctx context.Context, arg UpdateDocumentTemplateDraftParams) (DocumentTemplate, error)
 	UpdateGitHubAppSettings(ctx context.Context, arg UpdateGitHubAppSettingsParams) (GithubAppSetting, error)
 	UpdateImportJobFileKey(ctx context.Context, arg UpdateImportJobFileKeyParams) (ImportJob, error)

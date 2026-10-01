@@ -21,9 +21,21 @@ func ImportSourceObjectKey(jobUUID, ext string) string {
 	return fmt.Sprintf("imports/%s/source.%s", jobUUID, trimExt(ext))
 }
 
-// VehicleBrandLogoObjectKey builds vehicle-brands/{uuid}/logo.{ext}.
-func VehicleBrandLogoObjectKey(brandUUID uuid.UUID, ext string) string {
-	return fmt.Sprintf("vehicle-brands/%s/logo.%s", brandUUID.String(), trimExt(ext))
+// VehicleBrandLogoObjectKey builds vehicle-brands/{uuid}/logo-{version}.{ext}.
+// The version changes on every upload, so the key (and the ETag derived from
+// it) changes whenever the logo changes (TEC-149).
+func VehicleBrandLogoObjectKey(brandUUID uuid.UUID, version, ext string) string {
+	return fmt.Sprintf("vehicle-brands/%s/logo-%s.%s", brandUUID.String(), version, trimExt(ext))
+}
+
+// VehicleBrandHeroObjectKey builds vehicle-brands/{uuid}/hero-{version}.{ext}.
+func VehicleBrandHeroObjectKey(brandUUID uuid.UUID, version, ext string) string {
+	return fmt.Sprintf("vehicle-brands/%s/hero-%s.%s", brandUUID.String(), version, trimExt(ext))
+}
+
+// VehicleModelHeroObjectKey builds vehicle-models/{uuid}/hero-{version}.{ext}.
+func VehicleModelHeroObjectKey(modelUUID uuid.UUID, version, ext string) string {
+	return fmt.Sprintf("vehicle-models/%s/hero-%s.%s", modelUUID.String(), version, trimExt(ext))
 }
 
 // DocumentObjectKey builds documents/{org}/{kind}/{render}.pdf (TEC-88).
