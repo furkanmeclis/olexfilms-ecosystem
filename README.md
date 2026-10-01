@@ -5,7 +5,7 @@ Olex Films'in garanti hub'ı, depo, AI katmanı ve müşteri portalını tek bir
 - Tasarım ve karar dokümanı: [docs/design.md](docs/design.md)
 - Ajan çalışma kuralları: [AGENTS.md](AGENTS.md)
 - İş takibi: Linear projesi **Olexfilms Tek App** (P-TEC-4), kilometre taşları F0–F5
-- Domainler: `olexfilms.app`, `wss.olexfilms.app`
+- Domainler: `olexfilms.app` → `frontend:3000`, `wss.olexfilms.app` → `centrifugo:8000` (Traefik/Dokploy, ayrıntı: [docs/deploy.md](docs/deploy.md))
 
 ## Repo düzeni (hedef)
 
@@ -36,3 +36,12 @@ make create-super-admin SA_EMAIL=admin@olexfilms.app SA_PASSWORD=...
   (backend'in gömdüğü kopyayı senkronlar ve frontend tiplerini üretir).
 - Backend: `cd backend && go vet ./... && go test ./...`
 - Frontend: `cd frontend && pnpm lint && pnpm typecheck && pnpm build`
+
+## Prod
+
+```bash
+scripts/gen-env-server.sh --app olexfilms.app --realtime wss.olexfilms.app   # .env.server
+make prod-config && make prod-up
+```
+
+Container listesi, Traefik eşlemesi, yedek/geri yükleme: [docs/deploy.md](docs/deploy.md).

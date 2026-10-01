@@ -20,6 +20,7 @@ FRONTEND_PORT ?= 3000
 
 .PHONY: infra infra-down infra-logs infra-ps migrate-up backend-dev frontend-dev local-dev \
 	free-dev-ports prod-config prod-up prod-down prod-create-super-admin tools create-super-admin \
+	gen-env-server backup restore dr-drill \
 	search-reindex check-i18n openapi-sync openapi-lint api-generate
 
 infra:
@@ -112,6 +113,24 @@ local-dev: infra
 
 prod-config:
 	docker compose --env-file $(PROD_ENV_FILE) -f compose.prod.yml config
+
+# make gen-env-server APP_DOMAIN=olexfilms.app RT_DOMAIN=wss.olexfilms.app [ARGS=--rotate]
+APP_DOMAIN ?= olexfilms.app
+RT_DOMAIN  ?= wss.olexfilms.app
+gen-env-server:
+	scripts/gen-env-server.sh --app $(APP_DOMAIN) --realtime $(RT_DOMAIN) --out $(PROD_ENV_FILE) $(ARGS)
+
+# Run on the Docker host. NAME_PREFIX defaults to olexfilms.
+backup:
+	NAME_PREFIX=$${NAME_PREFIX:-olexfilms} scripts/backup.sh
+
+# make restore BACKUP=/srv/backups/20260101-030000  (destructive, asks first)
+restore:
+	@if [ -z "$(BACKUP)" ]; then echo "usage: make restore BACKUP=<backup directory>"; exit 1; fi
+	NAME_PREFIX=$${NAME_PREFIX:-olexfilms} scripts/restore.sh "$(BACKUP)"
+
+dr-drill:
+	scripts/dr-drill.sh
 
 prod-up:
 	docker compose --env-file $(PROD_ENV_FILE) -f compose.prod.yml up -d --build
