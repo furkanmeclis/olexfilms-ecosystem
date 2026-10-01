@@ -14,7 +14,7 @@ export type NavAccess = {
 export function isNavEntryVisible(
   entry: Pick<
     NavItemDef,
-    "permission" | "anyPermission" | "orgTypes" | "orgRoles"
+    "permission" | "anyPermission" | "orgTypes" | "orgRoles" | "feature"
   >,
   access: NavAccess,
 ): boolean {
@@ -29,6 +29,10 @@ export function isNavEntryVisible(
   if (entry.orgRoles?.length) {
     const role = access.org?.role;
     if (!role || !entry.orgRoles.includes(role)) return false;
+  }
+  if (entry.feature) {
+    const features = access.org?.features;
+    if (!features || !features.includes(entry.feature)) return false;
   }
   return true;
 }

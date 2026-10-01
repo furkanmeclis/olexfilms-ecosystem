@@ -17,6 +17,7 @@ import {
   fetchSearchSpecs,
 } from "@/features/search-engine/services/search.service";
 import type { PaletteItem } from "@/features/search-engine/types";
+import { useEnabledFeatures } from "@/features/modules/hooks/use-features";
 import { useActiveOrganization } from "@/hooks/use-active-organization";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
@@ -43,13 +44,16 @@ export function useCommandPaletteData(
   const activeOrg = useActiveOrganization(
     variant === "tenant" ? tenantSlug : null,
   );
+  const features = useEnabledFeatures(variant === "tenant" ? tenantSlug : null);
   const access = useMemo(
     () => ({
       can,
       canAny,
-      org: activeOrg ? { type: activeOrg.type, role: activeOrg.role } : null,
+      org: activeOrg
+        ? { type: activeOrg.type, role: activeOrg.role, features }
+        : null,
     }),
-    [activeOrg, can, canAny],
+    [activeOrg, can, canAny, features],
   );
 
   const specsQuery = useQuery({

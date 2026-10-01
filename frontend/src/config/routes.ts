@@ -26,6 +26,9 @@ export const routes = {
     settings: {
       root: (slug: string) => `/t/${slug}/settings`,
     },
+    features: {
+      root: (slug: string) => `/t/${slug}/features`,
+    },
   },
   guest: {
     login: "/platform/login",
@@ -103,6 +106,9 @@ export const routes = {
     },
     storage: {
       root: "/platform/storage",
+    },
+    modules: {
+      root: "/platform/modules",
     },
     profile: {
       root: "/platform/profile",

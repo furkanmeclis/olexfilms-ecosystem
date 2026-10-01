@@ -151,5 +151,13 @@
   "resources.billing.subscription": "Abonelik",
   "resources.billing.invoice": "Fatura",
   "resources.billing.discount_code": "İndirim kodu",
-  "resources.billing": "Abonelik"
+  "resources.billing": "Abonelik",
+  "actions.modules.requested": "Modül talep edildi",
+  "actions.modules.dealers.updated": "Bayi modülleri güncellendi",
+  "actions.modules.dealer_standard.updated": "Bayi standardı güncellendi",
+  "actions.modules.dealer_standard.cleared": "Bayi standardı varsayılana döndü",
+  "actions.modules.platform.updated": "Modül sistem ayarı güncellendi",
+  "actions.modules.organization.updated": "Organizasyon modülü güncellendi",
+  "actions.modules.organization.cleared": "Organizasyon modülü varsayılana döndü",
+  "resources.modules": "Modüller"
 }
