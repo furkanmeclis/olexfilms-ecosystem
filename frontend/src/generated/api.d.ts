@@ -3156,6 +3156,126 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/tenant/pricing/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Effective price view of the brand's products (masked per caller)
+         * @description One page of products of the request brand with the caller's effective prices (see EffectivePrice). Needs any pricing.*.read grant; fields the caller may not see are absent from the JSON.
+         */
+        get: operations["listTenantProductPrices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/pricing/products/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Effective price view of one product (masked per caller) */
+        get: operations["getTenantProductPrice"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/pricing/products/{uuid}/prices/{currency}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Center writes the list price of one currency (step-up)
+         * @description Center organizations only; needs pricing.sale.write (brand scope) and a recent step-up. Absent fields keep the stored value, null clears it. recommended_sale_price also needs pricing.recommended.write.
+         */
+        put: operations["setTenantListPrice"];
+        post?: never;
+        /** Center removes the list price of one currency (step-up) */
+        delete: operations["deleteTenantListPrice"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/pricing/distributor-prices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Center lists distributor-specific prices of the brand
+         * @description Center organizations with pricing.sale.read (brand scope).
+         */
+        get: operations["listTenantDistributorPrices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/pricing/products/{uuid}/distributor-prices/{distributor_uuid}/{currency}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Center gives a distributor a specific price (step-up)
+         * @description Center organizations only; needs pricing.sale.write and a recent step-up. The target must be a distributor of the request brand (404 otherwise). This price replaces sale_to_distributor_price as that distributor's purchase price.
+         */
+        put: operations["setTenantDistributorPrice"];
+        post?: never;
+        /** Center removes a distributor-specific price (step-up) */
+        delete: operations["deleteTenantDistributorPrice"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/pricing/products/{uuid}/dealer-prices/{currency}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Distributor writes its price to its dealers (step-up)
+         * @description Distributor organizations only; needs pricing.sale.write and a recent step-up. This price is the purchase price the distributor's dealers see (K8).
+         */
+        put: operations["setTenantDealerPrice"];
+        post?: never;
+        /** Distributor removes its dealer price (step-up) */
+        delete: operations["deleteTenantDealerPrice"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5544,6 +5664,88 @@ export interface components {
             data: components["schemas"]["QRComplete"];
             meta: components["schemas"]["ResponseMeta"];
         };
+        /**
+         * @description Non-negative decimal (NUMERIC(14,4)) as a string.
+         * @example 1250.50
+         */
+        PriceAmount: string;
+        /** @description One currency of a product as the caller may see it. A field the caller may not see is absent. center: purchase_price (its own, source own, pricing.purchase.read), sale_price (to distributors, pricing.sale.read), recommended_sale_price (pricing.recommended.read). distributor: purchase_price (its distributor-specific price, else the center's sale price to distributors; source override or list) and sale_price (its own price to dealers). dealer: purchase_price only (its parent distributor's dealer price, source distributor). */
+        EffectivePrice: {
+            /** @example TRY */
+            currency: string;
+            purchase_price?: components["schemas"]["PriceAmount"];
+            /** @enum {string} */
+            purchase_price_source?: "own" | "list" | "override" | "distributor";
+            sale_price?: components["schemas"]["PriceAmount"];
+            recommended_sale_price?: components["schemas"]["PriceAmount"];
+        };
+        ProductPriceView: {
+            /** Format: uuid */
+            product_uuid: string;
+            sku: string;
+            name: string;
+            /** @enum {string} */
+            viewer: "center" | "distributor" | "dealer";
+            prices: components["schemas"]["EffectivePrice"][];
+        };
+        /** @description Absent keeps the stored value; null clears it. */
+        ListPriceInput: {
+            purchase_price?: components["schemas"]["PriceAmount"] | null;
+            sale_to_distributor_price?: components["schemas"]["PriceAmount"] | null;
+            recommended_sale_price?: components["schemas"]["PriceAmount"] | null;
+        };
+        PriceInput: {
+            price: components["schemas"]["PriceAmount"];
+        };
+        DistributorPrice: {
+            /** Format: uuid */
+            product_uuid: string;
+            product_sku: string;
+            product_name: string;
+            /** Format: uuid */
+            distributor_uuid: string;
+            distributor_name: string;
+            currency: string;
+            price: components["schemas"]["PriceAmount"];
+            /** Format: date-time */
+            updated_at: string;
+        };
+        EnvelopeProductPriceView: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ProductPriceView"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeProductPriceViewPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ProductPriceView"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeDistributorPrice: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["DistributorPrice"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeDistributorPricePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["DistributorPrice"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
     };
     responses: {
         /** @description 426 MOBILE_API_VERSION_UNSUPPORTED (missing or unsupported X-Mobile-Api-Version; update the app) */
@@ -5674,6 +5876,9 @@ export interface components {
         };
     };
     parameters: {
+        ProductUUID: string;
+        /** @description ISO-4217 code (case-insensitive) */
+        PriceCurrency: string;
         /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
         MobileApiVersion: string;
         /** @description QR sign-in challenge code */
@@ -11114,6 +11319,271 @@ export interface operations {
             410: components["responses"]["QRLoginExpired"];
             422: components["responses"]["UnprocessableEntity"];
             429: components["responses"]["TooManyRequests"];
+        };
+    };
+    listTenantProductPrices: {
+        parameters: {
+            query?: {
+                /** @description Name or SKU contains */
+                q?: string;
+                active?: boolean;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Product price views */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeProductPriceViewPage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getTenantProductPrice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: components["parameters"]["ProductUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Product price view */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeProductPriceView"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    setTenantListPrice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: components["parameters"]["ProductUUID"];
+                /** @description ISO-4217 code (case-insensitive) */
+                currency: components["parameters"]["PriceCurrency"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ListPriceInput"];
+            };
+        };
+        responses: {
+            /** @description Updated center price view */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeProductPriceView"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteTenantListPrice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: components["parameters"]["ProductUUID"];
+                /** @description ISO-4217 code (case-insensitive) */
+                currency: components["parameters"]["PriceCurrency"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDeleted"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listTenantDistributorPrices: {
+        parameters: {
+            query?: {
+                product_uuid?: string;
+                distributor_uuid?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Distributor-specific prices */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDistributorPricePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    setTenantDistributorPrice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: components["parameters"]["ProductUUID"];
+                distributor_uuid: string;
+                /** @description ISO-4217 code (case-insensitive) */
+                currency: components["parameters"]["PriceCurrency"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PriceInput"];
+            };
+        };
+        responses: {
+            /** @description Stored distributor price */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDistributorPrice"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteTenantDistributorPrice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: components["parameters"]["ProductUUID"];
+                distributor_uuid: string;
+                /** @description ISO-4217 code (case-insensitive) */
+                currency: components["parameters"]["PriceCurrency"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDeleted"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    setTenantDealerPrice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: components["parameters"]["ProductUUID"];
+                /** @description ISO-4217 code (case-insensitive) */
+                currency: components["parameters"]["PriceCurrency"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PriceInput"];
+            };
+        };
+        responses: {
+            /** @description Updated distributor price view */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeProductPriceView"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteTenantDealerPrice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: components["parameters"]["ProductUUID"];
+                /** @description ISO-4217 code (case-insensitive) */
+                currency: components["parameters"]["PriceCurrency"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDeleted"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
 }
