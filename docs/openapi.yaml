@@ -2436,7 +2436,7 @@ paths:
       summary: Create or update a notification template
       description: |
         One template per event x role x channel x language. Placeholders the
-        event does not allow are rejected (422). Requires
+        event does not allow are rejected (400 VALIDATION_ERROR). Requires
         `notifications.templates.manage`.
       security:
         - bearerAuth: []
@@ -2457,8 +2457,8 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           $ref: "#/components/responses/Forbidden"
-        "422":
-          $ref: "#/components/responses/UnprocessableEntity"
+        "400":
+          $ref: "#/components/responses/BadRequest"
 
   /v1/platform/notification-templates/preview:
     post:
@@ -2485,8 +2485,8 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           $ref: "#/components/responses/Forbidden"
-        "422":
-          $ref: "#/components/responses/UnprocessableEntity"
+        "400":
+          $ref: "#/components/responses/BadRequest"
 
   /v1/platform/notification-channels:
     get:

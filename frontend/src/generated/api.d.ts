@@ -1420,7 +1420,7 @@ export interface paths {
         /**
          * Create or update a notification template
          * @description One template per event x role x channel x language. Placeholders the
-         *     event does not allow are rejected (422). Requires
+         *     event does not allow are rejected (400 VALIDATION_ERROR). Requires
          *     `notifications.templates.manage`.
          */
         put: operations["putNotificationTemplate"];
@@ -6695,9 +6695,9 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeNotificationTemplate"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
-            422: components["responses"]["UnprocessableEntity"];
         };
     };
     previewNotificationTemplate: {
@@ -6722,9 +6722,9 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeNotificationRendered"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
-            422: components["responses"]["UnprocessableEntity"];
         };
     };
     getNotificationChannels: {
