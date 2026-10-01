@@ -139,5 +139,11 @@
   "groups.catalog": "Katalog",
   "labels.vehicle_catalog.read": "Fahrzeugkatalog anzeigen",
   "labels.vehicle_catalog.write": "Fahrzeugkatalog verwalten",
-  "groups.vehicle_catalog": "Fahrzeugkatalog"
+  "groups.vehicle_catalog": "Fahrzeugkatalog",
+  "labels.stock.read": "Bestand ansehen",
+  "labels.stock.write": "Bestand verwalten",
+  "labels.stock.adjust": "Bestand korrigieren",
+  "labels.stock.reclassify": "Bestand umklassifizieren",
+  "labels.stock.import": "Bestand importieren",
+  "groups.stock": "Bestand"
 }

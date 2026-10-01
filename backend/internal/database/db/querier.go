@@ -12,6 +12,12 @@ import (
 )
 
 type Querier interface {
+	// Signed deltas; the CHECK rejects negative stock.
+	AddBinProductStock(ctx context.Context, arg AddBinProductStockParams) (BinProductStock, error)
+	// The CHECK rejects a negative result.
+	AddFixedBarcodeHolding(ctx context.Context, arg AddFixedBarcodeHoldingParams) (FixedBarcodeHolding, error)
+	// Signed deltas; the CHECK rejects negative stock.
+	AddOrganizationProductStock(ctx context.Context, arg AddOrganizationProductStockParams) (OrganizationProductStock, error)
 	// TEC-152: product image uploads.
 	// Atomically appends one image while the product holds fewer than
 	// max_images; no row means the product is gone or already full.
@@ -86,11 +92,37 @@ type Querier interface {
 	CreateQRLoginChallenge(ctx context.Context, arg CreateQRLoginChallengeParams) (QrLoginChallenge, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
 	CreateRole(ctx context.Context, arg CreateRoleParams) (Role, error)
+	// ---------------------------------------------------------------------------
+	// Stock import staging.
+	CreateStockImportBatch(ctx context.Context, arg CreateStockImportBatchParams) (StockImportBatch, error)
+	// ---------------------------------------------------------------------------
+	// Reclassification requests.
+	CreateStockReclassification(ctx context.Context, arg CreateStockReclassificationParams) (StockReclassification, error)
 	CreateTerritory(ctx context.Context, arg CreateTerritoryParams) (Territory, error)
+	// ---------------------------------------------------------------------------
+	// Units.
+	CreateUnit(ctx context.Context, arg CreateUnitParams) (Unit, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	// TEC-153: stock ledger primitives for ledger.Post (TEC-154) and the stock
+	// API. Every write goes through ledger.Post inside one transaction: lock the
+	// state row (FOR UPDATE), append the movement, update the projections.
+	// Brand filters follow K1; the warehouse side is brand-independent (K20), so
+	// holder/organization filters are applied by the use case scope.
+	// ---------------------------------------------------------------------------
+	// Warehouse locations (minimal; TEC-95 extends).
+	CreateWarehouseLocation(ctx context.Context, arg CreateWarehouseLocationParams) (WarehouseLocation, error)
 	CreateWebAuthnCredential(ctx context.Context, arg CreateWebAuthnCredentialParams) (WebauthnCredential, error)
 	DeactivateDocumentTemplates(ctx context.Context, arg DeactivateDocumentTemplatesParams) error
 	DecideQRLoginChallenge(ctx context.Context, arg DecideQRLoginChallengeParams) (QrLoginChallenge, error)
+	DecideStockReclassification(ctx context.Context, arg DecideStockReclassificationParams) (StockReclassification, error)
+	// Rebuild only (TEC-94d).
+	DeleteAllBinProductStocks(ctx context.Context) (int64, error)
+	// Rebuild only (TEC-94d).
+	DeleteAllFixedBarcodeHoldings(ctx context.Context) (int64, error)
+	// Rebuild only (TEC-94d).
+	DeleteAllOrganizationProductStocks(ctx context.Context) (int64, error)
+	// Rebuild only (TEC-94d): the projection is regenerated from the ledger.
+	DeleteAllUnitCurrentStates(ctx context.Context) (int64, error)
 	DeleteAppLogByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	DeleteAppLogsByUUIDs(ctx context.Context, uuids []uuid.UUID) (int64, error)
 	DeleteAppLogsMatching(ctx context.Context, arg DeleteAppLogsMatchingParams) (int64, error)
@@ -129,6 +161,15 @@ type Querier interface {
 	DeleteWebAuthnCredentialByUUID(ctx context.Context, arg DeleteWebAuthnCredentialByUUIDParams) error
 	// Every organization below the given one (not including itself).
 	Descendants(ctx context.Context, id int64) ([]Organization, error)
+	// ---------------------------------------------------------------------------
+	// Product stock projections.
+	EnsureBinProductStock(ctx context.Context, arg EnsureBinProductStockParams) error
+	// Projection deltas are two steps: Ensure* creates a zero row on first use
+	// (no-op otherwise), Add* applies the signed delta. A plain UPDATE keeps the
+	// CHECK (>= 0) on the result only; an INSERT ... ON CONFLICT DO UPDATE would
+	// check the proposed row and reject every negative delta.
+	EnsureFixedBarcodeHolding(ctx context.Context, arg EnsureFixedBarcodeHoldingParams) error
+	EnsureOrganizationProductStock(ctx context.Context, arg EnsureOrganizationProductStockParams) error
 	ExtensionExists(ctx context.Context, extname string) (bool, error)
 	// The rate of a pair (either direction) on the latest day within
 	// [min_date, on_date]; on that day manual > tcmb > ecb, direct before inverse.
@@ -218,17 +259,27 @@ type Querier interface {
 	GetRoleBySlug(ctx context.Context, slug string) (Role, error)
 	GetRoleByUUID(ctx context.Context, argUuid uuid.UUID) (Role, error)
 	GetStepupSettings(ctx context.Context) (StepupSetting, error)
+	GetStockImportBatch(ctx context.Context, arg GetStockImportBatchParams) (StockImportBatch, error)
+	GetStockMovement(ctx context.Context, id int64) (StockMovement, error)
+	GetStockMovementByIdempotencyKey(ctx context.Context, idempotencyKey string) (StockMovement, error)
+	GetStockReclassification(ctx context.Context, arg GetStockReclassificationParams) (StockReclassification, error)
 	GetStorageLinkBySlug(ctx context.Context, slug pgtype.Text) (StorageLink, error)
 	GetStorageLinkByTokenHash(ctx context.Context, tokenHash pgtype.Text) (StorageLink, error)
 	GetStorageLinkByUUID(ctx context.Context, argUuid uuid.UUID) (StorageLink, error)
 	GetStorageTrashByOriginalKey(ctx context.Context, originalKey string) (StorageTrash, error)
 	GetStorageTrashByUUID(ctx context.Context, argUuid uuid.UUID) (StorageTrash, error)
+	GetUnit(ctx context.Context, id int64) (Unit, error)
+	GetUnitByBarcode(ctx context.Context, arg GetUnitByBarcodeParams) (Unit, error)
+	GetUnitByUUID(ctx context.Context, argUuid uuid.UUID) (Unit, error)
+	GetUnitCurrentState(ctx context.Context, unitID int64) (UnitCurrentState, error)
 	GetUserByEmail(ctx context.Context, email pgtype.Text) (User, error)
 	GetUserByID(ctx context.Context, id int64) (User, error)
 	GetUserByPhone(ctx context.Context, phoneE164 pgtype.Text) (User, error)
 	GetUserByUUID(ctx context.Context, argUuid uuid.UUID) (User, error)
 	GetUserTOTPByUserID(ctx context.Context, userID int64) (UserTotp, error)
 	GetValidRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
+	GetWarehouseLocation(ctx context.Context, arg GetWarehouseLocationParams) (WarehouseLocation, error)
+	GetWarehouseLocationByUUID(ctx context.Context, argUuid uuid.UUID) (WarehouseLocation, error)
 	GetWebAuthnCredentialByCredentialID(ctx context.Context, credentialID string) (WebauthnCredential, error)
 	GetWebAuthnCredentialByUUID(ctx context.Context, arg GetWebAuthnCredentialByUUIDParams) (WebauthnCredential, error)
 	// WhatsApp gateway, KVKK notices, conversations and messages (TEC-92).
@@ -247,11 +298,20 @@ type Querier interface {
 	InsertNotificationHistory(ctx context.Context, arg InsertNotificationHistoryParams) (NotificationHistory, error)
 	InsertOutboxEvent(ctx context.Context, arg InsertOutboxEventParams) (OutboxEvent, error)
 	InsertRolePermission(ctx context.Context, arg InsertRolePermissionParams) error
+	InsertStockImportRow(ctx context.Context, arg InsertStockImportRowParams) (StockImportRow, error)
+	// ---------------------------------------------------------------------------
+	// Stock movements (append-only: insert and read only).
+	// Idempotent append: a repeated idempotency_key inserts nothing and returns
+	// no row (pgx.ErrNoRows); the caller then reads GetStockMovementByIdempotencyKey.
+	InsertStockMovement(ctx context.Context, arg InsertStockMovementParams) (StockMovement, error)
 	InsertStorageActivity(ctx context.Context, arg InsertStorageActivityParams) (StorageActivity, error)
 	InsertStorageLink(ctx context.Context, arg InsertStorageLinkParams) (StorageLink, error)
 	InsertStorageShare(ctx context.Context, arg InsertStorageShareParams) (StorageShare, error)
 	InsertStorageStar(ctx context.Context, arg InsertStorageStarParams) (StorageStar, error)
 	InsertStorageTrash(ctx context.Context, arg InsertStorageTrashParams) (StorageTrash, error)
+	// ---------------------------------------------------------------------------
+	// Unit current state (serial units; one active owner).
+	InsertUnitCurrentState(ctx context.Context, arg InsertUnitCurrentStateParams) (UnitCurrentState, error)
 	InsertUserRole(ctx context.Context, arg InsertUserRoleParams) error
 	InsertWhatsAppConnectionEvent(ctx context.Context, arg InsertWhatsAppConnectionEventParams) (WhatsappConnectionEvent, error)
 	InvalidateActiveOTPs(ctx context.Context, arg InvalidateActiveOTPsParams) error
@@ -274,6 +334,8 @@ type Querier interface {
 	ListAllRoles(ctx context.Context) ([]Role, error)
 	ListAppLogSources(ctx context.Context) ([]string, error)
 	ListAppLogs(ctx context.Context, arg ListAppLogsParams) ([]AppLog, error)
+	ListBinProductStocksByLocation(ctx context.Context, locationID int64) ([]BinProductStock, error)
+	ListBinProductStocksByOrganization(ctx context.Context, organizationID int64) ([]BinProductStock, error)
 	ListBrandDomains(ctx context.Context) ([]ListBrandDomainsRow, error)
 	ListBrands(ctx context.Context) ([]Brand, error)
 	ListBulkChangesForJob(ctx context.Context, jobID int64) ([]BulkChange, error)
@@ -299,6 +361,8 @@ type Querier interface {
 	ListExchangeRatesByDate(ctx context.Context, arg ListExchangeRatesByDateParams) ([]ListExchangeRatesByDateRow, error)
 	ListExportJobsForActor(ctx context.Context, arg ListExportJobsForActorParams) ([]ExportJob, error)
 	ListExportJobsForOrganization(ctx context.Context, arg ListExportJobsForOrganizationParams) ([]ExportJob, error)
+	ListFixedBarcodeHoldingsByHolder(ctx context.Context, holderOrgID int64) ([]FixedBarcodeHolding, error)
+	ListFixedBarcodeHoldingsByUnit(ctx context.Context, unitID int64) ([]FixedBarcodeHolding, error)
 	// Grants of global roles (user_roles / JWT roles claim).
 	ListGrantsByRoleSlugs(ctx context.Context, roleSlugs []string) ([]ListGrantsByRoleSlugsRow, error)
 	ListImportChangesForJob(ctx context.Context, jobID int64) ([]ImportChange, error)
@@ -328,6 +392,7 @@ type Querier interface {
 	ListOrganizationMembers(ctx context.Context, organizationID int64) ([]ListOrganizationMembersRow, error)
 	ListOrganizationMembersByUserID(ctx context.Context, arg ListOrganizationMembersByUserIDParams) ([]ListOrganizationMembersByUserIDRow, error)
 	ListOrganizationOwnerUserIDs(ctx context.Context, organizationID int64) ([]int64, error)
+	ListOrganizationProductStocks(ctx context.Context, arg ListOrganizationProductStocksParams) ([]OrganizationProductStock, error)
 	ListOrganizationsFiltered(ctx context.Context, arg ListOrganizationsFilteredParams) ([]ListOrganizationsFilteredRow, error)
 	// Organizations reachable by a scope filter: an explicit id set
 	// (managed/subtree) or a whole brand (brand), or every brand (all, both NULL).
@@ -361,6 +426,13 @@ type Querier interface {
 	ListRolesForExport(ctx context.Context, q_ pgtype.Text) ([]Role, error)
 	ListRolesForUserIDs(ctx context.Context, userIds []int64) ([]ListRolesForUserIDsRow, error)
 	ListSharedKeys(ctx context.Context, keys []string) ([]string, error)
+	ListStockImportBatches(ctx context.Context, organizationID int64) ([]StockImportBatch, error)
+	ListStockImportRows(ctx context.Context, arg ListStockImportRowsParams) ([]StockImportRow, error)
+	ListStockMovementsByOrganization(ctx context.Context, arg ListStockMovementsByOrganizationParams) ([]StockMovement, error)
+	ListStockMovementsByReference(ctx context.Context, arg ListStockMovementsByReferenceParams) ([]StockMovement, error)
+	// Barcode history in ledger order.
+	ListStockMovementsByUnit(ctx context.Context, unitID int64) ([]StockMovement, error)
+	ListStockReclassifications(ctx context.Context, arg ListStockReclassificationsParams) ([]StockReclassification, error)
 	ListStorageActivity(ctx context.Context, arg ListStorageActivityParams) ([]ListStorageActivityRow, error)
 	ListStorageLinksByKey(ctx context.Context, objectKey string) ([]StorageLink, error)
 	ListStorageSharesByKey(ctx context.Context, objectKey string) ([]ListStorageSharesByKeyRow, error)
@@ -370,6 +442,10 @@ type Querier interface {
 	ListStorageTrash(ctx context.Context, arg ListStorageTrashParams) ([]StorageTrash, error)
 	ListStuckProcessingNotificationIDs(ctx context.Context, staleMinutes int32) ([]int64, error)
 	ListTerritories(ctx context.Context, arg ListTerritoriesParams) ([]ListTerritoriesRow, error)
+	ListUnitCurrentStatesByHolder(ctx context.Context, arg ListUnitCurrentStatesByHolderParams) ([]ListUnitCurrentStatesByHolderRow, error)
+	// Brand-independent barcode lookup for the warehouse scanner (K20): the
+	// caller narrows the result by scope.
+	ListUnitsByBarcode(ctx context.Context, barcode string) ([]Unit, error)
 	ListUserIDsByRoleSlug(ctx context.Context, slug string) ([]int64, error)
 	ListUserRoleSlugs(ctx context.Context, userID int64) ([]string, error)
 	ListUserRolesByUserID(ctx context.Context, userID int64) ([]Role, error)
@@ -377,14 +453,28 @@ type Querier interface {
 	ListUserUUIDsForBulk(ctx context.Context, arg ListUserUUIDsForBulkParams) ([]uuid.UUID, error)
 	ListUsersFiltered(ctx context.Context, arg ListUsersFilteredParams) ([]User, error)
 	ListUsersForExport(ctx context.Context, arg ListUsersForExportParams) ([]User, error)
+	ListWarehouseLocations(ctx context.Context, arg ListWarehouseLocationsParams) ([]WarehouseLocation, error)
 	ListWebAuthnCredentialsByUserID(ctx context.Context, userID int64) ([]WebauthnCredential, error)
 	ListWebAuthnCredentialsForUserIDs(ctx context.Context, userIds []int64) ([]WebauthnCredential, error)
 	ListWhatsAppAlarmRecipients(ctx context.Context) ([]ListWhatsAppAlarmRecipientsRow, error)
 	ListWhatsAppConnectionEvents(ctx context.Context, limit int32) ([]WhatsappConnectionEvent, error)
+	LockBinProductStock(ctx context.Context, arg LockBinProductStockParams) (BinProductStock, error)
+	// ---------------------------------------------------------------------------
+	// Fixed barcode holdings (quantity per unit and owner).
+	LockFixedBarcodeHolding(ctx context.Context, arg LockFixedBarcodeHoldingParams) (FixedBarcodeHolding, error)
+	LockFixedBarcodeHoldingsByUnit(ctx context.Context, unitID int64) ([]FixedBarcodeHolding, error)
 	// Phone OTP (TEC-92). Timestamps are passed in so tests can drive the clock.
 	LockOTPSubject(ctx context.Context, subject string) error
+	LockOrganizationProductStock(ctx context.Context, arg LockOrganizationProductStockParams) (OrganizationProductStock, error)
+	LockStockImportBatch(ctx context.Context, id int64) (StockImportBatch, error)
+	LockStockReclassification(ctx context.Context, arg LockStockReclassificationParams) (StockReclassification, error)
 	// Serializes territory writes of one (brand, country) inside a transaction.
 	LockTerritoryArea(ctx context.Context, arg LockTerritoryAreaParams) error
+	// Locks the unit row for meters/status/product changes in ledger.Post.
+	LockUnit(ctx context.Context, id int64) (Unit, error)
+	// Serialises every ledger write on one unit (double owner / double
+	// consumption guard).
+	LockUnitCurrentState(ctx context.Context, unitID int64) (UnitCurrentState, error)
 	MarkAllNotificationsReadForUser(ctx context.Context, userID pgtype.Int8) (int64, error)
 	MarkBulkJobCompleted(ctx context.Context, arg MarkBulkJobCompletedParams) (BulkJob, error)
 	MarkBulkJobFailed(ctx context.Context, arg MarkBulkJobFailedParams) (BulkJob, error)
@@ -491,6 +581,16 @@ type Querier interface {
 	UpdateProductCategory(ctx context.Context, arg UpdateProductCategoryParams) (ProductCategory, error)
 	UpdateRole(ctx context.Context, arg UpdateRoleParams) (Role, error)
 	UpdateStepupSettings(ctx context.Context, arg UpdateStepupSettingsParams) (StepupSetting, error)
+	UpdateStockImportBatchStatus(ctx context.Context, arg UpdateStockImportBatchStatusParams) (StockImportBatch, error)
+	UpdateStockImportRowResult(ctx context.Context, arg UpdateStockImportRowResultParams) (StockImportRow, error)
+	// Optimistic check on version in addition to the row lock.
+	UpdateUnitCurrentState(ctx context.Context, arg UpdateUnitCurrentStateParams) (UnitCurrentState, error)
+	UpdateUnitExternal(ctx context.Context, arg UpdateUnitExternalParams) (Unit, error)
+	// Reclassification only (stock_reclassifications approval).
+	UpdateUnitProduct(ctx context.Context, arg UpdateUnitProductParams) (Unit, error)
+	// The CHECK constraint rejects a negative or above-initial value.
+	UpdateUnitRemainingMeters(ctx context.Context, arg UpdateUnitRemainingMetersParams) (Unit, error)
+	UpdateUnitStatus(ctx context.Context, arg UpdateUnitStatusParams) (Unit, error)
 	UpdateUserLastLogin(ctx context.Context, id int64) error
 	UpdateUserLocale(ctx context.Context, arg UpdateUserLocaleParams) error
 	UpdateUserPasswordByID(ctx context.Context, arg UpdateUserPasswordByIDParams) error
@@ -499,6 +599,7 @@ type Querier interface {
 	UpdateUserProfileBasics(ctx context.Context, arg UpdateUserProfileBasicsParams) error
 	UpdateUserProfileByUUID(ctx context.Context, arg UpdateUserProfileByUUIDParams) (User, error)
 	UpdateUserTOTPRecoveryHashes(ctx context.Context, arg UpdateUserTOTPRecoveryHashesParams) error
+	UpdateWarehouseLocation(ctx context.Context, arg UpdateWarehouseLocationParams) (WarehouseLocation, error)
 	UpdateWebAuthnCredentialCounter(ctx context.Context, arg UpdateWebAuthnCredentialCounterParams) error
 	UpdateWebAuthnCredentialName(ctx context.Context, arg UpdateWebAuthnCredentialNameParams) (WebauthnCredential, error)
 	UpdateWhatsAppStatus(ctx context.Context, arg UpdateWhatsAppStatusParams) (WhatsappSetting, error)

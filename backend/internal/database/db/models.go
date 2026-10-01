@@ -62,6 +62,16 @@ type AuthSetting struct {
 	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
 }
 
+type BinProductStock struct {
+	LocationID     int64              `json:"location_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	ProductID      int64              `json:"product_id"`
+	Quantity       int32              `json:"quantity"`
+	Meters         pgtype.Numeric     `json:"meters"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Brand struct {
 	ID        int64              `json:"id"`
 	Uuid      uuid.UUID          `json:"uuid"`
@@ -309,6 +319,23 @@ type ExportJob struct {
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 	OrganizationID pgtype.Int8        `json:"organization_id"`
+}
+
+type FixedBarcodeHolding struct {
+	ID                  int64              `json:"id"`
+	UnitID              int64              `json:"unit_id"`
+	BrandID             int64              `json:"brand_id"`
+	UnitKind            string             `json:"unit_kind"`
+	OwnerType           string             `json:"owner_type"`
+	OwnerID             int64              `json:"owner_id"`
+	HolderOrgID         int64              `json:"holder_org_id"`
+	QuantityOnHand      int32              `json:"quantity_on_hand"`
+	LastMovementID      pgtype.Int8        `json:"last_movement_id"`
+	Version             int64              `json:"version"`
+	OwnerLocationID     pgtype.Int8        `json:"owner_location_id"`
+	OwnerOrganizationID pgtype.Int8        `json:"owner_organization_id"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 }
 
 type GithubAppSetting struct {
@@ -623,6 +650,15 @@ type OrganizationMemberRole struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
+type OrganizationProductStock struct {
+	OrganizationID int64              `json:"organization_id"`
+	ProductID      int64              `json:"product_id"`
+	BrandID        int64              `json:"brand_id"`
+	Quantity       int32              `json:"quantity"`
+	Meters         pgtype.Numeric     `json:"meters"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
 type OtpCode struct {
 	ID            int64              `json:"id"`
 	Uuid          uuid.UUID          `json:"uuid"`
@@ -831,6 +867,92 @@ type StepupSetting struct {
 	UpdatedAt                 pgtype.Timestamptz `json:"updated_at"`
 }
 
+type StockImportBatch struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	Status          string             `json:"status"`
+	SourceFilename  pgtype.Text        `json:"source_filename"`
+	TargetOwnerType pgtype.Text        `json:"target_owner_type"`
+	TargetOwnerID   pgtype.Int8        `json:"target_owner_id"`
+	RowsTotal       int32              `json:"rows_total"`
+	RowsNew         int32              `json:"rows_new"`
+	RowsDuplicate   int32              `json:"rows_duplicate"`
+	RowsInvalid     int32              `json:"rows_invalid"`
+	RowsConflict    int32              `json:"rows_conflict"`
+	Error           pgtype.Text        `json:"error"`
+	AppliedAt       pgtype.Timestamptz `json:"applied_at"`
+	UndoneAt        pgtype.Timestamptz `json:"undone_at"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type StockImportRow struct {
+	ID              int64              `json:"id"`
+	BatchID         int64              `json:"batch_id"`
+	RowNumber       int32              `json:"row_number"`
+	Barcode         pgtype.Text        `json:"barcode"`
+	ProductSku      pgtype.Text        `json:"product_sku"`
+	ProductID       pgtype.Int8        `json:"product_id"`
+	Quantity        pgtype.Int4        `json:"quantity"`
+	Meters          pgtype.Numeric     `json:"meters"`
+	TargetOwnerType pgtype.Text        `json:"target_owner_type"`
+	TargetOwnerID   pgtype.Int8        `json:"target_owner_id"`
+	Raw             []byte             `json:"raw"`
+	RowStatus       string             `json:"row_status"`
+	Errors          []byte             `json:"errors"`
+	UnitID          pgtype.Int8        `json:"unit_id"`
+	MovementID      pgtype.Int8        `json:"movement_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type StockMovement struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	UnitID         int64              `json:"unit_id"`
+	ProductID      int64              `json:"product_id"`
+	Type           string             `json:"type"`
+	QuantityDelta  int32              `json:"quantity_delta"`
+	MetersDelta    pgtype.Numeric     `json:"meters_delta"`
+	FromOwnerType  pgtype.Text        `json:"from_owner_type"`
+	FromOwnerID    pgtype.Int8        `json:"from_owner_id"`
+	ToOwnerType    pgtype.Text        `json:"to_owner_type"`
+	ToOwnerID      pgtype.Int8        `json:"to_owner_id"`
+	FromStatus     pgtype.Text        `json:"from_status"`
+	ToStatus       pgtype.Text        `json:"to_status"`
+	ReferenceType  pgtype.Text        `json:"reference_type"`
+	ReferenceID    pgtype.Int8        `json:"reference_id"`
+	ActorUserID    pgtype.Int8        `json:"actor_user_id"`
+	Reason         pgtype.Text        `json:"reason"`
+	Metadata       []byte             `json:"metadata"`
+	IdempotencyKey string             `json:"idempotency_key"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
+type StockReclassification struct {
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	UnitID            int64              `json:"unit_id"`
+	FromProductID     int64              `json:"from_product_id"`
+	ToProductID       int64              `json:"to_product_id"`
+	Reason            string             `json:"reason"`
+	Status            string             `json:"status"`
+	RequestedByUserID pgtype.Int8        `json:"requested_by_user_id"`
+	DecidedByUserID   pgtype.Int8        `json:"decided_by_user_id"`
+	DecidedAt         pgtype.Timestamptz `json:"decided_at"`
+	DecisionNote      pgtype.Text        `json:"decision_note"`
+	MovementID        pgtype.Int8        `json:"movement_id"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
 type StorageActivity struct {
 	ID          int64              `json:"id"`
 	Uuid        uuid.UUID          `json:"uuid"`
@@ -901,6 +1023,40 @@ type Territory struct {
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 }
 
+type Unit struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	ProductID       int64              `json:"product_id"`
+	Barcode         string             `json:"barcode"`
+	UnitKind        string             `json:"unit_kind"`
+	Source          string             `json:"source"`
+	Status          string             `json:"status"`
+	InitialMeters   pgtype.Numeric     `json:"initial_meters"`
+	RemainingMeters pgtype.Numeric     `json:"remaining_meters"`
+	ConnectionID    pgtype.Int8        `json:"connection_id"`
+	ExternalID      pgtype.Text        `json:"external_id"`
+	ExternalStatus  pgtype.Text        `json:"external_status"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type UnitCurrentState struct {
+	UnitID              int64              `json:"unit_id"`
+	BrandID             int64              `json:"brand_id"`
+	UnitKind            string             `json:"unit_kind"`
+	OwnerType           string             `json:"owner_type"`
+	OwnerID             int64              `json:"owner_id"`
+	HolderOrgID         int64              `json:"holder_org_id"`
+	Status              string             `json:"status"`
+	LastMovementID      pgtype.Int8        `json:"last_movement_id"`
+	Version             int64              `json:"version"`
+	OwnerLocationID     pgtype.Int8        `json:"owner_location_id"`
+	OwnerOrganizationID pgtype.Int8        `json:"owner_organization_id"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+}
+
 type User struct {
 	ID              int64              `json:"id"`
 	Uuid            uuid.UUID          `json:"uuid"`
@@ -932,6 +1088,18 @@ type UserTotp struct {
 	Enabled        bool               `json:"enabled"`
 	ConfirmedAt    pgtype.Timestamptz `json:"confirmed_at"`
 	RecoveryHashes []string           `json:"recovery_hashes"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type WarehouseLocation struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	ParentID       pgtype.Int8        `json:"parent_id"`
+	Code           string             `json:"code"`
+	Name           string             `json:"name"`
+	Active         bool               `json:"active"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }

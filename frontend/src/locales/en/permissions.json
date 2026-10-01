@@ -139,5 +139,11 @@
   "groups.catalog": "Catalog",
   "labels.vehicle_catalog.read": "View vehicle catalog",
   "labels.vehicle_catalog.write": "Manage vehicle catalog",
-  "groups.vehicle_catalog": "Vehicle catalog"
+  "groups.vehicle_catalog": "Vehicle catalog",
+  "labels.stock.read": "View stock",
+  "labels.stock.write": "Manage stock",
+  "labels.stock.adjust": "Adjust stock",
+  "labels.stock.reclassify": "Reclassify stock",
+  "labels.stock.import": "Import stock",
+  "groups.stock": "Stock"
 }

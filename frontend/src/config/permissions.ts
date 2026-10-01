@@ -105,6 +105,12 @@ export const Permission = {
 
   VehicleCatalogRead: "vehicle_catalog.read",
   VehicleCatalogWrite: "vehicle_catalog.write",
+
+  StockRead: "stock.read",
+  StockWrite: "stock.write",
+  StockAdjust: "stock.adjust",
+  StockReclassify: "stock.reclassify",
+  StockImport: "stock.import",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];

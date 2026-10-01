@@ -70,7 +70,7 @@ func TestCatalogConsistent(t *testing.T) {
 			if def.SuperAdminOnly && r.Slug != RoleSuperAdmin {
 				t.Fatalf("role %s must not hold %s", r.Slug, slug)
 			}
-			if scope == ScopeAll && r.Slug != RoleSuperAdmin {
+			if scope == ScopeAll && r.Slug != RoleSuperAdmin && !BrandIndependentGrants[r.Slug][slug] {
 				t.Fatalf("only super_admin reaches all; %s has %s:all", r.Slug, slug)
 			}
 		}
@@ -100,6 +100,34 @@ func TestCenterRoles(t *testing.T) {
 	}
 	if !SuperAdminOnly(PermPlatformUsersImpersonate) {
 		t.Fatal("impersonation is super_admin-only")
+	}
+}
+
+// TEC-153: the center warehouse holds stock.* at scope all (K20); the
+// dealer owner only reads its stock (K12); import is center-only (K14).
+func TestStockGrants(t *testing.T) {
+	wh, _ := RoleBySlug(RoleCenterWarehouse)
+	for _, slug := range []string{PermStockRead, PermStockWrite, PermStockAdjust, PermStockReclassify, PermStockImport} {
+		if wh.Grants[slug] != ScopeAll {
+			t.Fatalf("center_warehouse %s = %q, want all", slug, wh.Grants[slug])
+		}
+	}
+	dealer, _ := RoleBySlug(RoleDealerOwner)
+	if dealer.Grants[PermStockRead] != ScopeManaged {
+		t.Fatalf("dealer_owner stock.read = %q", dealer.Grants[PermStockRead])
+	}
+	for _, r := range Roles {
+		if r.OrgType == OrgTypeCenter || r.Slug == RoleSuperAdmin {
+			continue
+		}
+		for _, slug := range []string{PermStockImport, PermStockReclassify} {
+			if _, ok := r.Grants[slug]; ok {
+				t.Fatalf("%s must not hold %s", r.Slug, slug)
+			}
+		}
+	}
+	if _, ok := dealer.Grants[PermStockWrite]; ok {
+		t.Fatal("dealer_owner must not hold stock.write")
 	}
 }
 

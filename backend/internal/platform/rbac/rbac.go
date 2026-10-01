@@ -143,6 +143,14 @@ const (
 	// Vehicle catalog (TEC-149): global car brands/models; super_admin writes.
 	PermVehicleCatalogRead  = "vehicle_catalog.read"
 	PermVehicleCatalogWrite = "vehicle_catalog.write"
+
+	// Stock ledger (TEC-153): units, movements and projections. The
+	// warehouse is brand-independent (K20); barcodes are center-only (K14).
+	PermStockRead       = "stock.read"
+	PermStockWrite      = "stock.write"
+	PermStockAdjust     = "stock.adjust"
+	PermStockReclassify = "stock.reclassify"
+	PermStockImport     = "stock.import"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

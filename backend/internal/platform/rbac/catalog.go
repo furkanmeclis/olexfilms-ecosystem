@@ -231,6 +231,41 @@ var Permissions = []PermissionDef{
 		Slug: PermVehicleCatalogWrite, Name: "Write vehicle catalog", Module: "vehicle_catalog", Scopes: scopesAll,
 		Description: "Create and edit car brands, models, logos and hero images (super_admin only).",
 	},
+
+	// TEC-153: stock ledger. Appended last; migration 000046 seeds them.
+	// center_warehouse holds them at scope all (K20, see
+	// brandIndependentGrants); import and reclassification are center-only.
+	{
+		Slug: PermStockRead, Name: "Read stock", Module: "stock", Scopes: scopesTree,
+		Description: "Units, barcode history and stock summaries of the organization.",
+	},
+	{
+		Slug: PermStockWrite, Name: "Write stock", Module: "stock", Scopes: scopesTree,
+		Description: "Stock entry, placement, transfers and receipts.",
+	},
+	{
+		Slug: PermStockAdjust, Name: "Adjust stock", Module: "stock", Scopes: scopesTree, Sensitive: true,
+		Description: "Count adjustments, voids and ledger repairs. Requires step-up.",
+	},
+	{
+		Slug: PermStockReclassify, Name: "Reclassify stock", Module: "stock", Scopes: scopesSupplier, Sensitive: true,
+		Description: "Approve moving a unit to another product (center only). Requires step-up.",
+	},
+	{
+		Slug: PermStockImport, Name: "Import stock", Module: "stock", Scopes: scopesSupplier,
+		Description: "Bulk stock import with dry run and undo (center only, K14).",
+	},
+}
+
+// BrandIndependentGrants lists the grants a non-super_admin role may hold at
+// scope all. The warehouse is brand-independent (K20): the center warehouse
+// manages every brand that enters its depot, so its stock grants are not
+// bounded by the active brand.
+var BrandIndependentGrants = map[string]map[string]bool{
+	RoleCenterWarehouse: {
+		PermStockRead: true, PermStockWrite: true, PermStockAdjust: true,
+		PermStockReclassify: true, PermStockImport: true,
+	},
 }
 
 func withDesc(p PermissionDef, desc string) PermissionDef {
@@ -297,6 +332,12 @@ var Roles = []RoleDef{
 			PermOrganizationsRead:  ScopeBrand,
 			PermWarehouseRead:      ScopeBrand,
 			PermWarehouseWrite:     ScopeBrand,
+			// TEC-153 (000046): brand-independent stock (K20).
+			PermStockRead:       ScopeAll,
+			PermStockWrite:      ScopeAll,
+			PermStockAdjust:     ScopeAll,
+			PermStockReclassify: ScopeAll,
+			PermStockImport:     ScopeAll,
 		}),
 	},
 	{
@@ -353,6 +394,9 @@ var Roles = []RoleDef{
 			PermAccountingWrite:        ScopeManaged,
 			PermWarehouseRead:          ScopeManaged,
 			PermWarehouseWrite:         ScopeManaged,
+			PermStockRead:              ScopeManaged,
+			PermStockWrite:             ScopeManaged,
+			PermStockAdjust:            ScopeManaged,
 			PermModulesRead:            ScopeSubtree,
 			PermModulesManage:          ScopeSubtree,
 		}),
@@ -378,6 +422,9 @@ var Roles = []RoleDef{
 			PermCatalogRead:        ScopeManaged,
 			PermWarehouseRead:      ScopeManaged,
 			PermWarehouseWrite:     ScopeManaged,
+			PermStockRead:          ScopeManaged,
+			PermStockWrite:         ScopeManaged,
+			PermStockAdjust:        ScopeManaged,
 		}),
 	},
 	{
@@ -414,6 +461,7 @@ var Roles = []RoleDef{
 			PermAccountingRead:         ScopeManaged,
 			PermAccountingWrite:        ScopeManaged,
 			PermWarehouseRead:          ScopeManaged,
+			PermStockRead:              ScopeManaged,
 			PermModulesRead:            ScopeManaged,
 		}),
 	},

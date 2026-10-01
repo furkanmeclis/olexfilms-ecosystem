@@ -139,5 +139,11 @@
   "groups.catalog": "Catalogue",
   "labels.vehicle_catalog.read": "Voir le catalogue des véhicules",
   "labels.vehicle_catalog.write": "Gérer le catalogue des véhicules",
-  "groups.vehicle_catalog": "Catalogue des véhicules"
+  "groups.vehicle_catalog": "Catalogue des véhicules",
+  "labels.stock.read": "Voir le stock",
+  "labels.stock.write": "Gérer le stock",
+  "labels.stock.adjust": "Ajuster le stock",
+  "labels.stock.reclassify": "Reclasser le stock",
+  "labels.stock.import": "Importer le stock",
+  "groups.stock": "Stock"
 }
