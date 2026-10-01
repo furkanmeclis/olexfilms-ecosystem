@@ -37,6 +37,8 @@ import (
 	catalogmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/catalog"
 	cataloghandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/catalog/handler"
 	catalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/catalog/usecase"
+	customershandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/customers/handler"
+	customersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/customers/usecase"
 	documentsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents"
 	dochandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/handler"
 	docusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/usecase"
@@ -316,6 +318,17 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	orgmodule.RegisterRoutes(mux, orgSvc, uc, deps.Storage, tokens, loader, deps.Queries, ratelimit.New(deps.Redis, cfg.App.Env), stepUpSvc, featureSvc)
 	featuremodule.RegisterRoutes(mux, featurehandler.New(featureSvc, deps.Queries, notifSvc, activityRec, log), featureSvc, tokens, loader, deps.Queries)
 	geomodule.RegisterRoutes(mux, geohandler.New(geoSvc, deps.Queries, activityRec), tokens, loader)
+	// TEC-160: customers (one phone = one user), vehicles, upgrade to dealer.
+	// Without CUSTOMER_PII_KEY (development only, config enforces it
+	// elsewhere) identity numbers are refused instead of stored in clear.
+	customerPII, piiErr := crypto.NewPIIBox(cfg.Encryption.CustomerPIIKey)
+	if piiErr != nil {
+		customerPII = nil
+		log.Warn("customer_pii_disabled", "error", piiErr)
+	}
+	customershandler.RegisterRoutes(mux,
+		customershandler.New(customersusecase.New(deps.DB, deps.Queries, customerPII, geoSvc), activityRec),
+		tokens, loader, deps.Queries, featureSvc)
 	ratesmodule.RegisterRoutes(mux, rateshandler.New(ratesSvc, activityRec), tokens, loader)
 	// TEC-146: price list and effective price views (K8).
 	pricingmodule.RegisterRoutes(mux, pricinghandler.New(pricingusecase.New(deps.Queries), activityRec),

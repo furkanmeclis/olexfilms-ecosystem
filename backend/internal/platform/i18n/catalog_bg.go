@@ -49,6 +49,8 @@ var bgCatalog = map[string]string{
 	"common.status":                            "Статус",
 	"common.active":                            "Активен",
 	"common.passive":                           "Неактивен",
+	"customers.anonymized_name":                "Анонимен клиент",
+	"users.status.anonymized":                  "Анонимизиран",
 	"users.status.active":                      "Активен",
 	"users.status.disabled":                    "Деактивиран",
 	"users.status.pending":                     "В очакване",

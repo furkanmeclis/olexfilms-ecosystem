@@ -49,6 +49,8 @@ var esCatalog = map[string]string{
 	"common.status":                            "Estado",
 	"common.active":                            "Activo",
 	"common.passive":                           "Inactivo",
+	"customers.anonymized_name":                "Cliente anónimo",
+	"users.status.anonymized":                  "Anonimizado",
 	"users.status.active":                      "Activo",
 	"users.status.disabled":                    "Desactivado",
 	"users.status.pending":                     "Pendiente",
