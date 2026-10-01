@@ -221,10 +221,11 @@ function FloatingLinkEditor({
   return (
     <div
       ref={editorRef}
+      // eslint-disable-next-line local/no-physical-classes -- positioned by JS from physical coordinates
       className="absolute top-0 left-0 w-full max-w-sm opacity-0"
     >
       {!isLink ? null : isLinkEditMode ? (
-        <div className="bg-popover text-popover-foreground flex items-center gap-2 rounded-md border p-1 pl-2 shadow-md">
+        <div className="bg-popover text-popover-foreground flex items-center gap-2 rounded-md border p-1 ps-2 shadow-md">
           <Input
             ref={inputRef}
             value={editedLinkUrl}
@@ -254,7 +255,7 @@ function FloatingLinkEditor({
           </Button>
         </div>
       ) : (
-        <div className="bg-popover text-popover-foreground flex items-center justify-between gap-2 rounded-md border p-1 pl-2 shadow-md">
+        <div className="bg-popover text-popover-foreground flex items-center justify-between gap-2 rounded-md border p-1 ps-2 shadow-md">
           <a
             href={sanitizeUrl(linkUrl)}
             target="_blank"

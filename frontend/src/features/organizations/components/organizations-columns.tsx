@@ -19,7 +19,6 @@ import type {
   Organization,
   OrganizationStatus,
 } from "@/features/organizations/services/organizations.service";
-import { datetime } from "@/lib/utils/format";
 import { useLocale } from "@/providers/locale-provider";
 
 function statusTone(status: string) {
@@ -36,7 +35,7 @@ export type OrganizationsColumnsOptions = {
 export function useOrganizationsColumns({
   handlers,
 }: OrganizationsColumnsOptions) {
-  const { t } = useLocale();
+  const { t, format } = useLocale();
 
   return useMemo(
     () =>
@@ -126,7 +125,7 @@ export function useOrganizationsColumns({
           enableColumnFilter: false,
           cell: ({ row }) =>
             row.original.access_ends_at
-              ? datetime(row.original.access_ends_at)
+              ? format.dateTime(row.original.access_ends_at)
               : "—",
         }),
         createColumn<Organization>({
@@ -155,6 +154,6 @@ export function useOrganizationsColumns({
           ),
         }),
       ] as ColumnDef<Organization, unknown>[],
-    [handlers, t],
+    [handlers, t, format],
   );
 }

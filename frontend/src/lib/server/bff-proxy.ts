@@ -15,6 +15,7 @@ import {
   fetchUpstreamStream,
   type UpstreamResult,
 } from "@/lib/server/upstream";
+import { acceptLanguageFor } from "@/lib/server/accept-language";
 
 type TokensData = {
   access_token?: string;
@@ -591,6 +592,7 @@ export async function proxyToUpstream(
   // Go resolves the brand from the browser-facing host (K3).
   const forwardedHost = forwardedHostFromHeaders(request.headers);
   if (forwardedHost) headers.set("X-Forwarded-Host", forwardedHost);
+  headers.set("Accept-Language", acceptLanguageFor(request)); // TEC-137
 
   if (accessToken && !isAuthPublicTokenPath(path)) {
     headers.set("Authorization", `Bearer ${accessToken}`);

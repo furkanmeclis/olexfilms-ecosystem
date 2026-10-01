@@ -90,7 +90,7 @@ export function DataTablePagination<TData>({
               disabled={!table.getCanPreviousPage()}
               aria-label={t("table.go_first")}
             >
-              <ChevronsLeft className="size-4" />
+              <ChevronsLeft className="size-4 rtl:rotate-180" />
             </Button>
           ) : null}
           <Button
@@ -102,7 +102,7 @@ export function DataTablePagination<TData>({
             disabled={!table.getCanPreviousPage()}
             aria-label={t("table.go_prev")}
           >
-            <ChevronLeft className="size-4" />
+            <ChevronLeft className="size-4 rtl:rotate-180" />
           </Button>
           <Button
             type="button"
@@ -113,7 +113,7 @@ export function DataTablePagination<TData>({
             disabled={!table.getCanNextPage()}
             aria-label={t("table.go_next")}
           >
-            <ChevronRight className="size-4" />
+            <ChevronRight className="size-4 rtl:rotate-180" />
           </Button>
           {!compact ? (
             <Button
@@ -125,7 +125,7 @@ export function DataTablePagination<TData>({
               disabled={!table.getCanNextPage()}
               aria-label={t("table.go_last")}
             >
-              <ChevronsRight className="size-4" />
+              <ChevronsRight className="size-4 rtl:rotate-180" />
             </Button>
           ) : null}
         </div>

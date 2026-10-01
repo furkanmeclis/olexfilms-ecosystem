@@ -457,7 +457,7 @@ export function LoginForm() {
                       labelAction={
                         <Link
                           href={routes.guest.forgotPassword}
-                          className="ml-auto text-sm underline-offset-4 hover:underline"
+                          className="ms-auto text-sm underline-offset-4 hover:underline"
                         >
                           {t("auth.login.forgot_link")}
                         </Link>

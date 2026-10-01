@@ -1,10 +1,11 @@
 "use client";
 
-import { Building2, CalendarClock, MapPin } from "lucide-react";
+import { Building2, CalendarClock, Languages, MapPin } from "lucide-react";
 import { useMemo } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 
 import {
+  AppCombobox,
   AppForm,
   AppInput,
   AppSelect,
@@ -20,6 +21,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { apiConfig } from "@/config/api";
+import {
+  LOCALE_NAMES,
+  SUPPORTED_LOCALES,
+  normalizeLocale,
+} from "@/config/i18n";
 import { AddressFields } from "@/features/geo";
 import { ORGANIZATION_STATUS_VALUES } from "@/features/organizations/constants";
 import {
@@ -32,6 +38,7 @@ import {
 } from "@/features/organizations/schemas/organization-form";
 import type { Organization } from "@/features/organizations/services/organizations.service";
 import { FilePickButton } from "@/components/common/file-pick-button";
+import { useTimeZoneOptions } from "@/hooks/use-time-zone-options";
 import { useLocale } from "@/providers/locale-provider";
 
 type OrganizationEditFormProps = {
@@ -139,6 +146,11 @@ export function OrganizationEditForm({
 }: OrganizationEditFormProps) {
   const { t } = useLocale();
   const schema = updateOrganizationFormSchema(t);
+  const timeZoneOptions = useTimeZoneOptions(organization.timezone);
+  const localeOptions = SUPPORTED_LOCALES.map((value) => ({
+    value,
+    label: LOCALE_NAMES[value],
+  }));
 
   const sections = useMemo(
     () =>
@@ -148,6 +160,12 @@ export function OrganizationEditForm({
           label: t("organizations.form.section_business"),
           description: t("organizations.form.section_business_desc"),
           icon: Building2,
+        },
+        {
+          key: "regional",
+          label: t("organizations.form.section_regional"),
+          description: t("organizations.form.section_regional_desc"),
+          icon: Languages,
         },
         {
           key: "subscription",
@@ -187,6 +205,8 @@ export function OrganizationEditForm({
         plan_code: organization.plan_code ?? "",
         access_ends_at: organization.access_ends_at ?? "",
         clear_access_ends_at: false,
+        locale: normalizeLocale(organization.locale) ?? "",
+        timezone: organization.timezone ?? "",
       }}
       onSubmit={onSubmit}
     >
@@ -241,6 +261,27 @@ export function OrganizationEditForm({
           <div className="sm:col-span-2">
             <LogoField organization={organization} />
           </div>
+        </FormSection>
+
+        <FormSection
+          id={sections.id("regional")}
+          title={t("organizations.form.section_regional")}
+          description={t("organizations.form.section_regional_desc")}
+          columns={2}
+        >
+          <AppSelect
+            name="locale"
+            label={t("organizations.fields.locale")}
+            options={localeOptions}
+          />
+          <AppCombobox
+            name="timezone"
+            label={t("organizations.fields.timezone")}
+            description={t("organizations.fields.timezone_hint")}
+            options={timeZoneOptions}
+            searchPlaceholder={t("auth.profile.timezone_search")}
+            emptyText={t("auth.profile.timezone_empty")}
+          />
         </FormSection>
 
         <FormSection

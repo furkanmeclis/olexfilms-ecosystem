@@ -32,7 +32,6 @@ import {
   type AppLog,
   type ListLogsParams,
 } from "@/features/logs/services/logs.service";
-import { datetime } from "@/lib/utils";
 import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
@@ -85,7 +84,7 @@ function StatsCards() {
 }
 
 function LogsListPanel() {
-  const { t, locale } = useLocale();
+  const { t, format } = useLocale();
   const { can } = usePermission();
   const { confirmDelete } = useDialogs();
   const deleteLog = useDeleteLog();
@@ -222,7 +221,7 @@ function LogsListPanel() {
         accessorKey: "created_at",
         labelKey: "logs.columns.created_at",
         cell: ({ row }) =>
-          datetime(row.original.created_at, "dd.MM.yyyy HH:mm:ss", locale),
+          format.dateTime(row.original.created_at, { seconds: true }),
       }),
       createColumn<AppLog>({
         id: "actions",
@@ -253,7 +252,7 @@ function LogsListPanel() {
         ),
       }),
     ],
-    [can, handleDelete, locale, t],
+    [can, handleDelete, t, format],
   );
 
   const pageCount = useMemo(() => {

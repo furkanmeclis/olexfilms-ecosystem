@@ -2,7 +2,6 @@
 
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
-import type { AppLocale } from "@/config/i18n";
 import { DashboardStatCard } from "@/features/platform-overview/components/dashboard-stat-card";
 import type { PlatformOverviewStats } from "@/features/platform-overview/services/overview.service";
 import { useLocale } from "@/providers/locale-provider";
@@ -21,7 +20,7 @@ type KpiDef = {
 };
 
 export function DashboardKpiGrid({ data, loading }: DashboardKpiGridProps) {
-  const { t, locale } = useLocale();
+  const { t, format } = useLocale();
   const { can } = usePermission();
 
   const cards: KpiDef[] = [
@@ -59,19 +58,12 @@ export function DashboardKpiGrid({ data, loading }: DashboardKpiGridProps) {
           <DashboardStatCard
             key={card.key}
             label={t(card.labelKey)}
-            value={formatKpi(raw, locale)}
+            value={format.number(raw)}
             href={card.href}
             loading={loading}
           />
         );
       })}
     </div>
-  );
-}
-
-function formatKpi(value: number | undefined, locale: AppLocale) {
-  if (value === undefined) return "—";
-  return new Intl.NumberFormat(locale === "tr" ? "tr-TR" : "en-US").format(
-    value,
   );
 }

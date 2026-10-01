@@ -1,4 +1,4 @@
-import { i18nConfig, type AppLocale } from "@/config/i18n";
+import { i18nConfig, normalizeLocale, type AppLocale } from "@/config/i18n";
 import { translate } from "@/lib/i18n/messages";
 
 import {
@@ -106,9 +106,8 @@ const TURKISH_CHARS = /[çğıöşüÇĞİÖŞÜ]/;
 
 function activeLocale(): AppLocale {
   if (typeof document !== "undefined") {
-    const lang = document.documentElement.lang;
-    if (i18nConfig.supportedLocales.includes(lang as AppLocale))
-      return lang as AppLocale;
+    const lang = normalizeLocale(document.documentElement.lang);
+    if (lang) return lang;
   }
   return i18nConfig.defaultLocale;
 }
@@ -126,7 +125,11 @@ function localizedMessage(
   const locale = activeLocale();
   const server = serverMessage?.trim();
   const serverIsTurkish = server ? TURKISH_CHARS.test(server) : false;
-  if (server && (locale === "tr") === serverIsTurkish) return server;
+  // Go answers in tr or en; any other language uses the error-code text.
+  const serverMatches =
+    (locale === "tr" && serverIsTurkish) ||
+    (locale === "en" && !serverIsTurkish);
+  if (server && serverMatches) return server;
   const key = `errors.codes.${code}`;
   const byCode = translate(locale, key);
   if (byCode !== key) return byCode;

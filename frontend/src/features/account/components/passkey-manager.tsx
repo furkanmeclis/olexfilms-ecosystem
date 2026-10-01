@@ -33,7 +33,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isApiError } from "@/lib/api";
-import { datetime } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
 import { authService, type PasskeySummary } from "@/services/auth.service";
@@ -68,7 +67,7 @@ type PasskeyRowProps = {
 };
 
 function PasskeyRow({ item, deleting, onRename, onDelete }: PasskeyRowProps) {
-  const { t, locale } = useLocale();
+  const { t, format } = useLocale();
   const [name, setName] = useState(item.name ?? "");
   const [saving, setSaving] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -171,7 +170,7 @@ function PasskeyRow({ item, deleting, onRename, onDelete }: PasskeyRowProps) {
                 <dt className="sr-only">{t("auth.passkey.created_at")}</dt>
                 <dd>
                   {t("auth.passkey.created_at")}:{" "}
-                  {datetime(item.created_at, "dd MMM yyyy HH:mm", locale)}
+                  {format.dateTime(item.created_at, { style: "medium" })}
                 </dd>
               </div>
             </div>
@@ -182,7 +181,7 @@ function PasskeyRow({ item, deleting, onRename, onDelete }: PasskeyRowProps) {
                 <dd>
                   {t("auth.passkey.last_used_at")}:{" "}
                   {item.last_used_at
-                    ? datetime(item.last_used_at, "dd MMM yyyy HH:mm", locale)
+                    ? format.dateTime(item.last_used_at, { style: "medium" })
                     : t("auth.passkey.never_used")}
                 </dd>
               </div>

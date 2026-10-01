@@ -13,7 +13,6 @@ import { StorageFileThumbnail } from "@/features/storage/components/storage-file
 import { formatBytes } from "@/features/storage/lib/format";
 import type { StorageObject } from "@/features/storage/types";
 import { cn } from "@/lib/utils";
-import { datetime } from "@/lib/utils/format";
 import { useLocale } from "@/providers/locale-provider";
 
 export function StorageFileGrid({
@@ -35,7 +34,7 @@ export function StorageFileGrid({
   onOpen: (item: StorageObject) => void;
   onAction: (action: StorageAction, item: StorageObject) => void;
 }) {
-  const { t, locale } = useLocale();
+  const { t, format } = useLocale();
 
   if (loading) {
     return (
@@ -99,7 +98,7 @@ export function StorageFileGrid({
                     : formatBytes(item.size)}
                 </span>
                 <span className="text-muted-foreground text-xs">
-                  {datetime(item.updated_at, "dd.MM.yyyy", locale)}
+                  {format.date(item.updated_at)}
                 </span>
               </button>
               <div className="mt-2 flex justify-center">

@@ -3,6 +3,46 @@ import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 import eslintConfigPrettier from "eslint-config-prettier";
 
+import {
+  PHYSICAL_CLASS_IGNORES,
+  findPhysicalClasses,
+} from "./scripts/physical-classes.mjs";
+
+/**
+ * local/no-physical-classes (TEC-137, K10): RTL needs logical utilities.
+ * Reports ml-/pr-/left-/border-l/rounded-r/text-left... in string and
+ * template literals; `pnpm codemod:logical` rewrites them.
+ */
+const noPhysicalClasses = {
+  meta: {
+    type: "problem",
+    messages: {
+      physical:
+        'Physical utility "{{token}}" breaks RTL; use "{{logical}}" (pnpm codemod:logical).',
+    },
+    schema: [],
+  },
+  create(context) {
+    const check = (node, raw) => {
+      for (const hit of findPhysicalClasses(raw)) {
+        context.report({
+          node,
+          messageId: "physical",
+          data: { token: hit.token, logical: hit.logical },
+        });
+      }
+    };
+    return {
+      Literal(node) {
+        if (typeof node.value === "string") check(node, node.value);
+      },
+      TemplateElement(node) {
+        check(node, node.value.raw);
+      },
+    };
+  },
+};
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -29,6 +69,12 @@ const eslintConfig = defineConfig([
         },
       ],
     },
+  },
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: PHYSICAL_CLASS_IGNORES.map((dir) => `${dir}**`),
+    plugins: { local: { rules: { "no-physical-classes": noPhysicalClasses } } },
+    rules: { "local/no-physical-classes": "error" },
   },
   // Editor X (Lexical / shadcn-editor) uses ref-during-render and effect
   // patterns that conflict with React Compiler eslint rules.

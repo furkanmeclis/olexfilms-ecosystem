@@ -262,6 +262,7 @@ export function DraggableBlockPlugin({
         menuComponent={
           <div
             ref={menuRef}
+            // eslint-disable-next-line local/no-physical-classes -- positioned by JS from physical coordinates
             className="draggable-block-menu absolute top-0 left-0 flex items-center opacity-0 will-change-transform"
           >
             <Button
@@ -286,6 +287,7 @@ export function DraggableBlockPlugin({
         targetLineComponent={
           <div
             ref={targetLineRef}
+            // eslint-disable-next-line local/no-physical-classes -- positioned by JS from physical coordinates
             className="bg-primary pointer-events-none absolute top-0 left-0 h-0.5 opacity-0 will-change-transform"
           />
         }

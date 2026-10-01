@@ -13,7 +13,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { UserAuthMethod } from "@/features/users/services/users.service";
-import { datetime } from "@/lib/utils/format";
 import { useLocale } from "@/providers/locale-provider";
 import { cn } from "@/lib/utils/index";
 
@@ -73,7 +72,7 @@ export function UserAuthMethodsIcons({
   className,
   empty,
 }: UserAuthMethodsIconsProps) {
-  const { t, locale } = useLocale();
+  const { t, format } = useLocale();
 
   if (methods.length === 0) {
     return (
@@ -89,7 +88,7 @@ export function UserAuthMethodsIcons({
     <div className={cn("flex flex-wrap items-center gap-1", className)}>
       {methods.map((method, index) => {
         const label = methodLabel(method, t);
-        const linked = datetime(method.linked_at, undefined, locale);
+        const linked = format.dateTime(method.linked_at);
         return (
           <Tooltip
             key={`${method.kind}-${method.provider ?? method.label ?? index}-${method.linked_at}`}

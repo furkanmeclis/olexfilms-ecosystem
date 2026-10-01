@@ -150,11 +150,11 @@ export function TableView<TData>({
                     pinned === "right" && "bg-muted/95 sticky end-0 z-20",
                   )}
                   style={{
-                    left:
+                    insetInlineStart:
                       pinned === "left"
                         ? `${header.column.getStart("left")}px`
                         : undefined,
-                    right:
+                    insetInlineEnd:
                       pinned === "right"
                         ? `${header.column.getAfter("right")}px`
                         : undefined,
@@ -203,11 +203,11 @@ export function TableView<TData>({
                       pinned === "right" && "bg-background sticky end-0 z-20",
                     )}
                     style={{
-                      left:
+                      insetInlineStart:
                         pinned === "left"
                           ? `${header.column.getStart("left")}px`
                           : undefined,
-                      right:
+                      insetInlineEnd:
                         pinned === "right"
                           ? `${header.column.getAfter("right")}px`
                           : undefined,
@@ -429,9 +429,9 @@ function TableCell<TData>({
         pinned === "right" && "bg-background sticky end-0 z-10",
       )}
       style={{
-        left:
+        insetInlineStart:
           pinned === "left" ? `${cell.column.getStart("left")}px` : undefined,
-        right:
+        insetInlineEnd:
           pinned === "right" ? `${cell.column.getAfter("right")}px` : undefined,
       }}
     >

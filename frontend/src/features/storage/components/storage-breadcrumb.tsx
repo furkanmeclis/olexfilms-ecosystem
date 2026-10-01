@@ -29,7 +29,7 @@ export function StorageBreadcrumb({
       </Button>
       {segments.map((segment) => (
         <span key={segment.prefix} className="flex items-center gap-1">
-          <ChevronRight className="text-muted-foreground size-3.5" />
+          <ChevronRight className="text-muted-foreground size-3.5 rtl:rotate-180" />
           <Button
             type="button"
             variant="ghost"

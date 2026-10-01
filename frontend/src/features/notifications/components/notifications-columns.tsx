@@ -15,14 +15,13 @@ import {
   type NotificationRowActionHandlers,
 } from "@/features/notifications/components/notification-row-actions";
 import type { Notification } from "@/features/notifications/services/notifications.service";
-import { datetime } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
 
 export function useNotificationsColumns(
   handlers: NotificationRowActionHandlers,
   options?: { showUserColumn?: boolean },
 ) {
-  const { t, locale } = useLocale();
+  const { t, format } = useLocale();
   const showUserColumn = options?.showUserColumn ?? false;
 
   return useMemo(
@@ -132,8 +131,7 @@ export function useNotificationsColumns(
           labelKey: "notifications.columns.created_at",
           enableSorting: true,
           enableColumnFilter: false,
-          cell: ({ row }) =>
-            datetime(row.original.created_at, undefined, locale),
+          cell: ({ row }) => format.dateTime(row.original.created_at),
         }),
         createColumn<Notification>({
           id: "actions",
@@ -150,6 +148,6 @@ export function useNotificationsColumns(
           ),
         }),
       ] as ColumnDef<Notification, unknown>[],
-    [handlers, locale, showUserColumn, t],
+    [handlers, showUserColumn, t, format],
   );
 }

@@ -112,7 +112,7 @@ function WhatsAppPanels({ overview }: { overview: WhatsAppOverview }) {
 }
 
 function StatusCard({ overview }: { overview: WhatsAppOverview }) {
-  const { t } = useLocale();
+  const { t, format } = useLocale();
   const queryClient = useQueryClient();
   const onError = useToastError();
   const [confirm, setConfirm] = useState(false);
@@ -124,7 +124,7 @@ function StatusCard({ overview }: { overview: WhatsAppOverview }) {
     },
     onError,
   });
-  const fmt = (v?: string) => (v ? new Date(v).toLocaleString() : "—");
+  const fmt = (v?: string) => (v ? format.dateTime(v) : "—");
 
   return (
     <Card>
@@ -455,7 +455,7 @@ function SettingsCard({ overview }: { overview: WhatsAppOverview }) {
 }
 
 function EventsCard({ overview }: { overview: WhatsAppOverview }) {
-  const { t } = useLocale();
+  const { t, format } = useLocale();
   return (
     <Card>
       <CardHeader>
@@ -474,7 +474,7 @@ function EventsCard({ overview }: { overview: WhatsAppOverview }) {
                 className="flex flex-wrap items-center gap-2 py-2"
               >
                 <span className="text-muted-foreground">
-                  {new Date(e.created_at).toLocaleString()}
+                  {format.dateTime(e.created_at)}
                 </span>
                 <span className="font-medium">{e.type}</span>
                 {e.reason ? (

@@ -25,7 +25,6 @@ import { OrganizationAddMemberDialog } from "@/features/organizations/components
 import { useOrganization } from "@/features/organizations/hooks/use-organizations-query";
 import type { OrganizationStatus } from "@/features/organizations/services/organizations.service";
 import { userFullName } from "@/features/users/lib/user-display";
-import { datetime } from "@/lib/utils/format";
 import { useLocale } from "@/providers/locale-provider";
 
 type OrganizationDetailPageProps = {
@@ -49,7 +48,7 @@ function statusTone(status: string) {
 }
 
 export function OrganizationDetailPage({ uuid }: OrganizationDetailPageProps) {
-  const { t } = useLocale();
+  const { t, format } = useLocale();
   const router = useRouter();
   const query = useOrganization(uuid);
   const [memberDialogOpen, setMemberDialogOpen] = useState(false);
@@ -234,19 +233,19 @@ export function OrganizationDetailPage({ uuid }: OrganizationDetailPageProps) {
                     {
                       key: "access_starts_at",
                       label: t("organizations.fields.access_starts_at"),
-                      value: datetime(organization.access_starts_at),
+                      value: format.dateTime(organization.access_starts_at),
                     },
                     {
                       key: "access_ends_at",
                       label: t("organizations.fields.access_ends_at"),
                       value: organization.access_ends_at
-                        ? datetime(organization.access_ends_at)
+                        ? format.dateTime(organization.access_ends_at)
                         : t("organizations.unlimited_access"),
                     },
                     {
                       key: "created_at",
                       label: t("organizations.fields.created_at"),
-                      value: datetime(organization.created_at),
+                      value: format.dateTime(organization.created_at),
                     },
                   ],
                 },

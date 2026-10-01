@@ -38,7 +38,14 @@ export type AuthUser = {
   surname: string;
   fullName: string;
   status: string;
+  /** Effective language (Me.effective_locale): user -> org -> center. */
   locale: string;
+  /** The user's own choice; null inherits from the organization. */
+  ownLocale: string | null;
+  /** Effective IANA time zone (Me.effective_timezone). */
+  timeZone: string;
+  /** The user's own time zone; null inherits from the organization. */
+  ownTimeZone: string | null;
   isSuperAdmin: boolean;
   emailVerified: boolean;
   permissions: string[];
@@ -68,8 +75,12 @@ export function mapMeToAuthUser(me: Me): AuthUser {
       grants[slug] = scope;
     }
   }
-  const locale =
-    typeof user.locale === "string" && user.locale ? user.locale : "tr";
+  const ownLocale =
+    typeof user.locale === "string" && user.locale ? user.locale : null;
+  const ownTimeZone =
+    typeof user.timezone === "string" && user.timezone ? user.timezone : null;
+  const locale = me.effective_locale || ownLocale || "tr";
+  const timeZone = me.effective_timezone || ownTimeZone || "Europe/Istanbul";
   const mapped: AuthUser = {
     uuid: user.uuid,
     email: user.email,
@@ -78,6 +89,9 @@ export function mapMeToAuthUser(me: Me): AuthUser {
     fullName: `${user.name} ${user.surname}`.trim(),
     status: user.status,
     locale,
+    ownLocale,
+    timeZone,
+    ownTimeZone,
     isSuperAdmin: Boolean(user.is_super_admin),
     emailVerified: Boolean(user.email_verified),
     permissions: permissions ?? [],

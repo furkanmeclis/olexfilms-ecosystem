@@ -36,13 +36,13 @@ import { formatNotificationText } from "@/features/notifications/lib/notificatio
 import { runNotificationAction } from "@/features/notifications/lib/run-notification-action";
 import type { Notification } from "@/features/notifications/services/notifications.service";
 import { useOptionalTenant } from "@/features/organizations/providers/tenant-provider";
-import { cn, relativeDatetime } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { appToast } from "@/providers/toast-provider";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 
 export function NotificationInbox() {
-  const { t, locale } = useLocale();
+  const { t, format } = useLocale();
   const router = useRouter();
   const { can } = usePermission();
   const tenant = useOptionalTenant();
@@ -200,7 +200,7 @@ export function NotificationInbox() {
                               {item.title}
                             </span>
                             <span className="text-muted-foreground shrink-0 text-[11px]">
-                              {relativeDatetime(item.created_at, locale)}
+                              {format.relative(item.created_at)}
                             </span>
                           </div>
                           {item.body ? (

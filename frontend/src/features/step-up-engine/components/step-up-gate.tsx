@@ -26,7 +26,7 @@ export function StepUpGate({ children, purpose, className }: StepUpGateProps) {
   return (
     <div
       className={cn(
-        "bg-muted/40 flex flex-col items-center gap-4 rounded-lg border p-5 text-center sm:flex-row sm:items-center sm:text-left",
+        "bg-muted/40 flex flex-col items-center gap-4 rounded-lg border p-5 text-center sm:flex-row sm:items-center sm:text-start",
         className,
       )}
     >

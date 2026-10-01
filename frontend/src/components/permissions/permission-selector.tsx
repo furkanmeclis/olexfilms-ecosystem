@@ -123,12 +123,12 @@ export function PermissionSelector({
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <div className="relative min-w-0 flex-1">
-          <Search className="text-muted-foreground absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+          <Search className="text-muted-foreground absolute start-2.5 top-1/2 size-4 -translate-y-1/2" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("permissions.search_placeholder")}
-            className="pl-8"
+            className="ps-8"
             aria-label={t("permissions.search_placeholder")}
             disabled={disabled}
           />

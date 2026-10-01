@@ -119,5 +119,10 @@
   "fields.city_hint": "Filled from the province when left empty.",
   "fields.district_hint": "Filled from the district when left empty.",
   "form.section_address": "Address",
-  "form.section_address_desc": "Country, province and district. A dealer is attached to the distributor of its territory."
+  "form.section_address_desc": "Country, province and district. A dealer is attached to the distributor of its territory.",
+  "fields.locale": "Language",
+  "fields.timezone": "Time zone",
+  "fields.timezone_hint": "Dates and times are shown in this zone unless a user picks their own.",
+  "form.section_regional": "Language and region",
+  "form.section_regional_desc": "Default language and time zone for users, documents and notifications."
 }

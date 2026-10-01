@@ -54,7 +54,7 @@ export function ExportDetailPage({
   scope = "platform",
   slug,
 }: ExportDetailPageProps) {
-  const { t } = useLocale();
+  const { t, format } = useLocale();
   const jobQuery = useExportJob(uuid, true, scope);
   const job = jobQuery.data;
   const tenant = scope === "tenant";
@@ -171,7 +171,7 @@ export function ExportDetailPage({
                     {
                       key: "created_at",
                       label: t("exports.columns.created_at"),
-                      value: new Date(job.created_at).toLocaleString(),
+                      value: format.dateTime(job.created_at),
                     },
                     {
                       key: "filename",

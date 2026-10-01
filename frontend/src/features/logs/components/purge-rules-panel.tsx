@@ -29,7 +29,6 @@ import {
   logsService,
   type PurgeRule,
 } from "@/features/logs/services/logs.service";
-import { datetime } from "@/lib/utils";
 import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
 
@@ -40,7 +39,7 @@ function intervalLabel(t: (key: string) => string, minutes: number) {
 }
 
 export function PurgeRulesPanel() {
-  const { t, locale } = useLocale();
+  const { t, format } = useLocale();
   const { confirmDelete } = useDialogs();
   const listState = useServerListState({ initialPageSize: 50 });
   const [editorOpen, setEditorOpen] = useState(false);
@@ -134,7 +133,7 @@ export function PurgeRulesPanel() {
         labelKey: "logs.rules.columns.last_run",
         cell: ({ row }) =>
           row.original.last_run_at
-            ? datetime(row.original.last_run_at, "dd.MM.yyyy HH:mm", locale)
+            ? format.dateTime(row.original.last_run_at)
             : "—",
       }),
       createColumn<PurgeRule>({
@@ -174,7 +173,7 @@ export function PurgeRulesPanel() {
         ),
       }),
     ],
-    [handleDelete, locale, openEdit, runRule, t],
+    [handleDelete, openEdit, runRule, t, format],
   );
 
   const pageCount = Math.max(

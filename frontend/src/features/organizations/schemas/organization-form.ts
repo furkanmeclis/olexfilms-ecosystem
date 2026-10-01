@@ -58,6 +58,9 @@ export function updateOrganizationFormSchema(t: Translate) {
     plan_code: z.string().trim().optional(),
     access_ends_at: z.string().optional(),
     clear_access_ends_at: z.boolean().optional(),
+    /** Default language and time zone of the organization's users (K10). */
+    locale: z.string().optional(),
+    timezone: z.string().optional(),
   });
 }
 
