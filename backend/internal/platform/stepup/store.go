@@ -56,6 +56,10 @@ func (s *Store) SetGrant(ctx context.Context, userUUID uuid.UUID, method string,
 
 // GetGrant returns whether a grant exists and when it expires.
 func (s *Store) GetGrant(ctx context.Context, userUUID uuid.UUID) (bool, time.Time, error) {
+	if s.rdb == nil {
+		// No Redis: no grant can exist, sensitive endpoints fail closed.
+		return false, time.Time{}, nil
+	}
 	val, err := s.rdb.Get(ctx, s.grantKey(userUUID)).Result()
 	if err == redis.Nil {
 		return false, time.Time{}, nil

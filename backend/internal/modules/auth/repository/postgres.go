@@ -147,18 +147,31 @@ func (r *Postgres) GetRoleIDBySlug(ctx context.Context, slug string) (int64, err
 	return role.ID, nil
 }
 
-func (r *Postgres) ListPermissionsByRoleSlug(ctx context.Context, slug string) ([]string, error) {
-	if slug == rbac.RoleSuperAdmin {
-		return r.q.ListAllPermissionSlugs(ctx)
+func (r *Postgres) ListGrantsByRoleSlugs(ctx context.Context, slugs []string) ([]model.Grant, error) {
+	if len(slugs) == 0 {
+		return []model.Grant{}, nil
 	}
-	perms, err := r.q.ListPermissionSlugsByRoleSlug(ctx, slug)
+	rows, err := r.q.ListGrantsByRoleSlugs(ctx, slugs)
 	if err != nil {
 		return nil, err
 	}
-	if perms == nil {
-		return []string{}, nil
+	out := make([]model.Grant, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, model.Grant{Role: row.RoleSlug, Permission: row.PermissionSlug, Scope: row.Scope})
 	}
-	return perms, nil
+	return out, nil
+}
+
+func (r *Postgres) ListMemberGrants(ctx context.Context, userID int64, orgUUID uuid.UUID) ([]model.Grant, error) {
+	rows, err := r.q.ListMemberGrants(ctx, db.ListMemberGrantsParams{UserID: userID, OrganizationUuid: orgUUID})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]model.Grant, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, model.Grant{Role: row.RoleSlug, Permission: row.PermissionSlug, Scope: row.Scope})
+	}
+	return out, nil
 }
 
 func (r *Postgres) ListUserRoleSlugs(ctx context.Context, userID int64) ([]string, error) {
@@ -603,12 +616,12 @@ func (r *Postgres) DeleteRole(ctx context.Context, roleUUID uuid.UUID) error {
 	return nil
 }
 
-func (r *Postgres) SetRolePermissions(ctx context.Context, roleID int64, permissionSlugs []string) error {
+func (r *Postgres) SetRolePermissions(ctx context.Context, roleID int64, grants map[string]string) error {
 	return r.withTx(ctx, func(q *db.Queries) error {
 		if err := q.SetRolePermissions(ctx, roleID); err != nil {
 			return err
 		}
-		for _, slug := range permissionSlugs {
+		for _, slug := range rbac.SortedGrantSlugs(scopeMap(grants)) {
 			perm, err := q.GetPermissionBySlug(ctx, slug)
 			if err != nil {
 				if errors.Is(err, pgx.ErrNoRows) {
@@ -616,12 +629,34 @@ func (r *Postgres) SetRolePermissions(ctx context.Context, roleID int64, permiss
 				}
 				return err
 			}
-			if err := q.InsertRolePermission(ctx, db.InsertRolePermissionParams{RoleID: roleID, PermissionID: perm.ID}); err != nil {
+			if err := q.InsertRolePermission(ctx, db.InsertRolePermissionParams{
+				RoleID: roleID, PermissionID: perm.ID, Scope: grants[slug],
+			}); err != nil {
 				return err
 			}
 		}
 		return nil
 	})
+}
+
+func scopeMap(in map[string]string) map[string]rbac.Scope {
+	out := make(map[string]rbac.Scope, len(in))
+	for k, v := range in {
+		out[k] = rbac.Scope(v)
+	}
+	return out
+}
+
+func (r *Postgres) ListRoleGrants(ctx context.Context, roleUUID uuid.UUID) ([]model.RoleGrant, error) {
+	rows, err := r.q.ListRoleGrantsByRoleUUID(ctx, roleUUID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]model.RoleGrant, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, model.RoleGrant{Permission: row.Slug, Scope: row.Scope})
+	}
+	return out, nil
 }
 
 func (r *Postgres) ListPermissionsFiltered(ctx context.Context, limit, offset int32, q string) ([]model.PermissionSummary, int64, error) {
@@ -639,7 +674,19 @@ func (r *Postgres) ListPermissionsFiltered(ctx context.Context, limit, offset in
 	}
 	out := make([]model.PermissionSummary, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, model.PermissionSummary{UUID: row.Uuid, Name: row.Name, Slug: row.Slug})
+		var desc *string
+		if row.Description.Valid {
+			v := row.Description.String
+			desc = &v
+		}
+		scopes := row.Scopes
+		if scopes == nil {
+			scopes = []string{}
+		}
+		out = append(out, model.PermissionSummary{
+			UUID: row.Uuid, Name: row.Name, Slug: row.Slug, Module: row.Module, Scopes: scopes,
+			IsSensitive: row.IsSensitive, SuperAdminOnly: row.SuperAdminOnly, Description: desc,
+		})
 	}
 	return out, total, nil
 }
@@ -662,8 +709,14 @@ func mapRole(row db.Role) model.RoleSummary {
 		v := row.Description.String
 		desc = &v
 	}
+	var orgType *string
+	if row.OrgType.Valid {
+		v := row.OrgType.String
+		orgType = &v
+	}
 	return model.RoleSummary{
 		UUID: row.Uuid, Name: row.Name, Slug: row.Slug, Description: desc, IsSystem: row.IsSystem,
+		OrgType: orgType,
 	}
 }
 

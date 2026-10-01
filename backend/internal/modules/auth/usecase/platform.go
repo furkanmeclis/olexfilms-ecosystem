@@ -340,11 +340,64 @@ func (u *AuthUseCase) GetPlatformRole(ctx context.Context, roleUUID uuid.UUID) (
 		}
 		return model.RoleDetail{}, err
 	}
-	perms, err := u.repo.ListRolePermissionSlugs(ctx, roleUUID)
+	return u.roleDetail(ctx, role)
+}
+
+func (u *AuthUseCase) roleDetail(ctx context.Context, role model.RoleSummary) (model.RoleDetail, error) {
+	perms, err := u.repo.ListRolePermissionSlugs(ctx, role.UUID)
 	if err != nil {
 		return model.RoleDetail{}, err
 	}
-	return model.RoleDetail{RoleSummary: role, PermissionSlugs: perms}, nil
+	grants, err := u.repo.ListRoleGrants(ctx, role.UUID)
+	if err != nil {
+		return model.RoleDetail{}, err
+	}
+	return model.RoleDetail{RoleSummary: role, PermissionSlugs: perms, Grants: grants}, nil
+}
+
+// buildRoleGrants validates a custom role's permission set against the
+// catalog: unknown permissions and scopes a permission does not allow are
+// rejected, and super_admin-only permissions (impersonation) can never be
+// granted to another role.
+func buildRoleGrants(slugs []string, grants map[string]string) (map[string]string, error) {
+	out := map[string]string{}
+	add := func(slug, rawScope string) error {
+		slug = strings.TrimSpace(slug)
+		if slug == "" {
+			return nil
+		}
+		def, ok := rbac.PermissionBySlug(slug)
+		if !ok {
+			return fmt.Errorf("%w: unknown permission %s", ErrInvalidRequest, slug)
+		}
+		if def.SuperAdminOnly {
+			return fmt.Errorf("%w: %s may only be granted to super_admin", ErrInvalidRequest, slug)
+		}
+		scope := rbac.Broadest(def.Scopes)
+		if rawScope = strings.TrimSpace(rawScope); rawScope != "" {
+			sc, ok := rbac.ParseScope(rawScope)
+			if !ok || !def.Allows(sc) {
+				return fmt.Errorf("%w: scope %q is not allowed for %s", ErrInvalidRequest, rawScope, slug)
+			}
+			scope = sc
+		}
+		if prev, ok := out[slug]; ok && rawScope == "" {
+			scope = rbac.Scope(prev)
+		}
+		out[slug] = string(scope)
+		return nil
+	}
+	for _, slug := range slugs {
+		if err := add(slug, ""); err != nil {
+			return nil, err
+		}
+	}
+	for slug, scope := range grants {
+		if err := add(slug, scope); err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
 }
 
 // CreatePlatformRole creates a custom role.
@@ -356,6 +409,10 @@ func (u *AuthUseCase) CreatePlatformRole(ctx context.Context, in model.CreateRol
 	}
 	if rbac.IsSystemRole(in.Slug) {
 		return model.RoleDetail{}, fmt.Errorf("%w: slug is reserved", ErrConflict)
+	}
+	grants, err := buildRoleGrants(in.PermissionSlugs, in.Grants)
+	if err != nil {
+		return model.RoleDetail{}, err
 	}
 	normalized := slug.FromName(in.Slug)
 	if normalized == "" {
@@ -369,14 +426,13 @@ func (u *AuthUseCase) CreatePlatformRole(ctx context.Context, in model.CreateRol
 	if err != nil {
 		return model.RoleDetail{}, err
 	}
-	if err := u.repo.SetRolePermissions(ctx, roleID, uniqueStrings(in.PermissionSlugs)); err != nil {
+	if err := u.repo.SetRolePermissions(ctx, roleID, grants); err != nil {
 		return model.RoleDetail{}, err
 	}
-	perms, err := u.repo.ListRolePermissionSlugs(ctx, role.UUID)
+	out, err := u.roleDetail(ctx, role)
 	if err != nil {
 		return model.RoleDetail{}, err
 	}
-	out := model.RoleDetail{RoleSummary: role, PermissionSlugs: perms}
 	u.indexRoleSearch(ctx, role.UUID.String())
 	return out, nil
 }
@@ -400,27 +456,41 @@ func (u *AuthUseCase) PatchPlatformRole(ctx context.Context, roleUUID uuid.UUID,
 		}
 		in.Name = &v
 	}
-	if in.Name == nil && in.Description == nil && in.PermissionSlugs == nil {
+	if in.Name == nil && in.Description == nil && in.PermissionSlugs == nil && in.Grants == nil {
 		return model.RoleDetail{}, fmt.Errorf("%w: at least one field is required", ErrInvalidRequest)
+	}
+	var grants map[string]string
+	if in.PermissionSlugs != nil || in.Grants != nil {
+		var slugs []string
+		if in.PermissionSlugs != nil {
+			slugs = *in.PermissionSlugs
+		}
+		var scoped map[string]string
+		if in.Grants != nil {
+			scoped = *in.Grants
+		}
+		grants, err = buildRoleGrants(slugs, scoped)
+		if err != nil {
+			return model.RoleDetail{}, err
+		}
 	}
 	updated, err := u.repo.UpdateRole(ctx, roleUUID, in.Name, in.Description)
 	if err != nil {
 		return model.RoleDetail{}, err
 	}
-	if in.PermissionSlugs != nil {
+	if grants != nil {
 		roleID, err := u.repo.GetRoleIDBySlug(ctx, updated.Slug)
 		if err != nil {
 			return model.RoleDetail{}, err
 		}
-		if err := u.repo.SetRolePermissions(ctx, roleID, uniqueStrings(*in.PermissionSlugs)); err != nil {
+		if err := u.repo.SetRolePermissions(ctx, roleID, grants); err != nil {
 			return model.RoleDetail{}, err
 		}
 	}
-	perms, err := u.repo.ListRolePermissionSlugs(ctx, roleUUID)
+	out, err := u.roleDetail(ctx, updated)
 	if err != nil {
 		return model.RoleDetail{}, err
 	}
-	out := model.RoleDetail{RoleSummary: updated, PermissionSlugs: perms}
 	u.indexRoleSearch(ctx, roleUUID.String())
 	return out, nil
 }
@@ -507,10 +577,11 @@ func actorIsSuperAdmin(ctx context.Context) bool {
 // guardSuperAdminRoleGrant stops holders of platform.users.write from
 // granting the super_admin role (to themselves or others) unless they are
 // super admins already.
+//
+// Organization roles (center/distributor/dealer) are granted through a
+// membership, never globally, so they are rejected here.
 func (u *AuthUseCase) guardSuperAdminRoleGrant(ctx context.Context, roleUUIDs []uuid.UUID) error {
-	if actorIsSuperAdmin(ctx) {
-		return nil
-	}
+	isSA := actorIsSuperAdmin(ctx)
 	for _, roleUUID := range roleUUIDs {
 		role, err := u.repo.GetRoleByUUID(ctx, roleUUID)
 		if err != nil {
@@ -519,7 +590,10 @@ func (u *AuthUseCase) guardSuperAdminRoleGrant(ctx context.Context, roleUUIDs []
 			}
 			return err
 		}
-		if role.Slug == rbac.RoleSuperAdmin {
+		if role.OrgType != nil && rbac.IsOrganizationRoleType(*role.OrgType) {
+			return fmt.Errorf("%w: %s is an organization role; grant it through a membership", ErrInvalidRequest, role.Slug)
+		}
+		if !isSA && role.Slug == rbac.RoleSuperAdmin {
 			return fmt.Errorf("%w: only a super admin can grant the super_admin role", ErrForbidden)
 		}
 	}

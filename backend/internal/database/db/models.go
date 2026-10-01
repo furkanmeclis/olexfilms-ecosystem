@@ -364,6 +364,12 @@ type OrganizationMember struct {
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
+type OrganizationMemberRole struct {
+	MemberID  int64              `json:"member_id"`
+	RoleID    int64              `json:"role_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 type OtpCode struct {
 	ID           int64              `json:"id"`
 	Uuid         uuid.UUID          `json:"uuid"`
@@ -392,11 +398,17 @@ type OutboxEvent struct {
 }
 
 type Permission struct {
-	ID        int64              `json:"id"`
-	Uuid      uuid.UUID          `json:"uuid"`
-	Name      string             `json:"name"`
-	Slug      string             `json:"slug"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	Name           string             `json:"name"`
+	Slug           string             `json:"slug"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	Module         string             `json:"module"`
+	Scopes         []string           `json:"scopes"`
+	IsSensitive    bool               `json:"is_sensitive"`
+	SuperAdminOnly bool               `json:"super_admin_only"`
+	Description    pgtype.Text        `json:"description"`
+	SortOrder      int32              `json:"sort_order"`
 }
 
 type PgExtension struct {
@@ -437,11 +449,13 @@ type Role struct {
 	IsSystem    bool               `json:"is_system"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	OrgType     pgtype.Text        `json:"org_type"`
 }
 
 type RolePermission struct {
-	RoleID       int64 `json:"role_id"`
-	PermissionID int64 `json:"permission_id"`
+	RoleID       int64  `json:"role_id"`
+	PermissionID int64  `json:"permission_id"`
+	Scope        string `json:"scope"`
 }
 
 type StepupSetting struct {

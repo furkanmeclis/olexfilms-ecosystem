@@ -2,15 +2,58 @@
 
 Users are global. Permissions come from assigned roles (union). **Organizations** (tenants) add a second access layer: membership in `organization_members` and organization `status` / `access_ends_at` for business screens under `/t/{slug}`.
 
-## Roles
+## Roles and scopes (TEC-85)
 
-| Role | Type | Notes |
-|------|------|-------|
-| `super_admin` | system (`is_system=true`) | All permissions; cannot delete slug or demote last member |
-| `organization_user` | system (`is_system=true`) | `auth.session`, `notifications.read` — assigned to organization owners/staff |
-| Custom roles | platform-managed | Created via `/v1/platform/roles`; permissions from DB catalog only |
+The Go catalog `internal/platform/rbac/catalog.go` is the single source of
+truth for permissions and system role packages. Migration `000029` seeds it and
+`make roles-sync` (`cmd/roles-sync`, `-dry-run`, `-prune`) reconciles a
+database with it; a second run reports `0 change(s)`.
 
-`users.is_super_admin` column is removed. JWT and `/me` still expose `is_super_admin` when the user has the `super_admin` role.
+Every grant (`role_permissions.scope`) carries a scope the permission allows
+(`permissions.scopes`); a DB trigger enforces it.
+
+| Scope | Reach |
+|-------|-------|
+| `all` | every record, cross-brand (super_admin only by default) |
+| `brand` | every organization of the active brand (center roles) |
+| `subtree` | active organization and every organization below it (distributor + its dealers) |
+| `managed` | records of the active organization |
+| `assigned` | records assigned to the user |
+| `own` | records the user created |
+| `customer` | the customer user's own records (portal); covers only itself |
+
+Global roles live in `user_roles` (`super_admin`, `customer`, `fleet`, custom
+roles). Organization roles are granted per membership in
+`organization_member_roles`; `organization_members.role` (owner|staff) stays as
+the membership kind and picks the default role
+(`rbac.DefaultMemberRole`). The principal's grants are the union (broadest
+scope wins) of the global roles and the roles of the **active** organization
+(JWT `oid`); `/v1/auth/me` returns them as `grants`.
+
+| Role | Org type | Package (default scope) |
+|------|----------|-------------------------|
+| `super_admin` | platform | everything at its broadest scope; only role allowed `platform.users.impersonate` |
+| `center_staff` | center | services, customers, organizations/members read, recommended prices (brand) |
+| `center_warehouse` | center | warehouse (brand) |
+| `center_accounting` | center | accounting, all price permissions (brand) |
+| `center_social` | center | campaigns, leads, social, customers read (brand) |
+| `distributor_owner` | distributor | services/customers/organizations/members (subtree); prices, accounting, warehouse, tenant settings (managed) |
+| `distributor_staff` | distributor | services/customers/organizations read (subtree) |
+| `distributor_warehouse_staff` | distributor | warehouse (managed) |
+| `distributor_accounting` | distributor | accounting, prices (managed) |
+| `dealer_owner` | dealer | services, customers, prices incl. final sale price (K8), accounting, members, tenant settings (managed) |
+| `dealer_staff` | dealer | services/customers read (managed), write (own); **no pricing or accounting** |
+| `dealer_accounting` | dealer | accounting, price read (managed) |
+| `customer` | customer | services/customers read (customer) |
+| `fleet` | fleet | services/customers read (customer), read-only |
+
+Route guards: `RequirePermission(slug)`, `RequirePermissionScope(slug, min)`
+and `RequireScope(q, slug)`, which stores a `scopefilter.Filter` for the
+repository (`OrgIDsArg`/`BrandIDArg`/`AllowsOrg`). There is no RLS: every tenant
+query must apply the filter. Sensitive writes (price changes, supplier change
+`organizations.supplier.write`, anonymization `privacy.anonymize`) also need
+`RequireStepUp` (403 `STEP_UP_REQUIRED`). K23 read-only organizations stay a
+`RequireOrganization` status gate (writes 403), separate from RBAC.
 
 ## Permissions (seed)
 

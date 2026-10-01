@@ -12,6 +12,7 @@ import (
 )
 
 type Querier interface {
+	AssignMemberRoleBySlug(ctx context.Context, arg AssignMemberRoleBySlugParams) error
 	AssignUserRoleBySlug(ctx context.Context, arg AssignUserRoleBySlugParams) error
 	ClaimOutboxEvents(ctx context.Context, arg ClaimOutboxEventsParams) ([]OutboxEvent, error)
 	ClearAppSettingsLogo(ctx context.Context) (AppSetting, error)
@@ -60,10 +61,13 @@ type Querier interface {
 	DeleteAppLogsByUUIDs(ctx context.Context, uuids []uuid.UUID) (int64, error)
 	DeleteAppLogsMatching(ctx context.Context, arg DeleteAppLogsMatchingParams) (int64, error)
 	DeleteLogPurgeRule(ctx context.Context, argUuid uuid.UUID) (int64, error)
+	DeleteMemberRoles(ctx context.Context, memberID int64) error
 	DeleteOAuthAccountByProviderAccount(ctx context.Context, arg DeleteOAuthAccountByProviderAccountParams) error
 	DeleteOAuthAccountByUserProvider(ctx context.Context, arg DeleteOAuthAccountByUserProviderParams) error
+	DeletePermissionBySlug(ctx context.Context, slug string) error
 	DeletePushSubscription(ctx context.Context, arg DeletePushSubscriptionParams) error
 	DeleteRole(ctx context.Context, argUuid uuid.UUID) error
+	DeleteRolePermission(ctx context.Context, arg DeleteRolePermissionParams) error
 	DeleteStorageShare(ctx context.Context, argUuid uuid.UUID) error
 	DeleteStorageStar(ctx context.Context, arg DeleteStorageStarParams) error
 	DeleteStorageTrashByUUID(ctx context.Context, argUuid uuid.UUID) error
@@ -149,6 +153,8 @@ type Querier interface {
 	ListAllExportJobs(ctx context.Context, arg ListAllExportJobsParams) ([]ExportJob, error)
 	ListAllImportJobs(ctx context.Context, arg ListAllImportJobsParams) ([]ImportJob, error)
 	ListAllPermissionSlugs(ctx context.Context) ([]string, error)
+	ListAllPermissions(ctx context.Context) ([]Permission, error)
+	ListAllRoles(ctx context.Context) ([]Role, error)
 	ListAppLogSources(ctx context.Context) ([]string, error)
 	ListAppLogs(ctx context.Context, arg ListAppLogsParams) ([]AppLog, error)
 	ListBrandDomains(ctx context.Context) ([]ListBrandDomainsRow, error)
@@ -160,10 +166,16 @@ type Querier interface {
 	ListEnabledLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
 	ListExportJobsForActor(ctx context.Context, arg ListExportJobsForActorParams) ([]ExportJob, error)
 	ListExportJobsForOrganization(ctx context.Context, arg ListExportJobsForOrganizationParams) ([]ExportJob, error)
+	// Grants of global roles (user_roles / JWT roles claim).
+	ListGrantsByRoleSlugs(ctx context.Context, roleSlugs []string) ([]ListGrantsByRoleSlugsRow, error)
 	ListImportChangesForJob(ctx context.Context, jobID int64) ([]ImportChange, error)
 	ListImportJobsForActor(ctx context.Context, arg ListImportJobsForActorParams) ([]ImportJob, error)
 	ListImportJobsForOrganization(ctx context.Context, arg ListImportJobsForOrganizationParams) ([]ImportJob, error)
 	ListLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
+	// Grants of the user's roles in one organization (active org context).
+	ListMemberGrants(ctx context.Context, arg ListMemberGrantsParams) ([]ListMemberGrantsRow, error)
+	ListMemberRoleSlugs(ctx context.Context, arg ListMemberRoleSlugsParams) ([]string, error)
+	ListMemberRolesByOrganization(ctx context.Context, organizationID int64) ([]ListMemberRolesByOrganizationRow, error)
 	ListNotificationsForUser(ctx context.Context, arg ListNotificationsForUserParams) ([]Notification, error)
 	ListOAuthAccountsByUserID(ctx context.Context, userID int64) ([]ListOAuthAccountsByUserIDRow, error)
 	ListOAuthAccountsForUserIDs(ctx context.Context, userIds []int64) ([]ListOAuthAccountsForUserIDsRow, error)
@@ -173,12 +185,17 @@ type Querier interface {
 	ListOrganizationMembers(ctx context.Context, organizationID int64) ([]ListOrganizationMembersRow, error)
 	ListOrganizationMembersByUserID(ctx context.Context, arg ListOrganizationMembersByUserIDParams) ([]ListOrganizationMembersByUserIDRow, error)
 	ListOrganizationsFiltered(ctx context.Context, arg ListOrganizationsFilteredParams) ([]ListOrganizationsFilteredRow, error)
+	// Organizations reachable by a scope filter: an explicit id set
+	// (managed/subtree) or a whole brand (brand), or every brand (all, both NULL).
+	ListOrganizationsInScope(ctx context.Context, arg ListOrganizationsInScopeParams) ([]ListOrganizationsInScopeRow, error)
 	ListPermissionSlugsByRoleID(ctx context.Context, roleID int64) ([]string, error)
 	ListPermissionSlugsByRoleSlug(ctx context.Context, slug string) ([]string, error)
 	ListPermissionsFiltered(ctx context.Context, arg ListPermissionsFilteredParams) ([]Permission, error)
 	ListPlatformNotifications(ctx context.Context, arg ListPlatformNotificationsParams) ([]Notification, error)
 	ListPlatformNotificationsForExport(ctx context.Context, arg ListPlatformNotificationsForExportParams) ([]Notification, error)
 	ListPushSubscriptionsByUser(ctx context.Context, userID int64) ([]PushSubscription, error)
+	ListRoleGrantsByRoleID(ctx context.Context, roleID int64) ([]ListRoleGrantsByRoleIDRow, error)
+	ListRoleGrantsByRoleUUID(ctx context.Context, argUuid uuid.UUID) ([]ListRoleGrantsByRoleUUIDRow, error)
 	ListRolePermissionSlugsByRoleUUID(ctx context.Context, argUuid uuid.UUID) ([]string, error)
 	ListRoleUUIDsForBulk(ctx context.Context, q_ pgtype.Text) ([]uuid.UUID, error)
 	ListRolesFiltered(ctx context.Context, arg ListRolesFilteredParams) ([]Role, error)
@@ -275,7 +292,9 @@ type Querier interface {
 	// One row per cache key: a repeated request returns the existing row.
 	UpsertDocumentRender(ctx context.Context, arg UpsertDocumentRenderParams) (DocumentRender, error)
 	UpsertNotificationPreferences(ctx context.Context, arg UpsertNotificationPreferencesParams) (NotificationPreference, error)
+	UpsertPermission(ctx context.Context, arg UpsertPermissionParams) error
 	UpsertPushSubscription(ctx context.Context, arg UpsertPushSubscriptionParams) (PushSubscription, error)
+	UpsertSystemRole(ctx context.Context, arg UpsertSystemRoleParams) (Role, error)
 	UpsertUserTOTPSetup(ctx context.Context, arg UpsertUserTOTPSetupParams) (UserTotp, error)
 	UserHasRoleSlug(ctx context.Context, arg UserHasRoleSlugParams) (bool, error)
 }

@@ -24,9 +24,11 @@ func RegisterRoutes(
 	loader middleware.IdentityLoader,
 	q *db.Queries,
 	limiter *ratelimit.Limiter,
+	stepUp orghandler.StepUpChecker,
 ) {
 	h := orghandler.New(svc, auth, store)
 	h.SetRateLimiter(limiter)
+	h.SetStepUp(stepUp)
 	authn := middleware.Authenticate(tokens, loader)
 	require := func(slug string) func(http.Handler) http.Handler {
 		return middleware.RequirePermission(slug)
@@ -67,13 +69,20 @@ func RegisterRoutes(
 	))
 
 	requireOrg := middleware.RequireOrganization(tokens, q)
-	requireOwner := middleware.RequireOrgRole("owner")
 	tenantSettingsRead := func(handler http.HandlerFunc) http.Handler {
-		return middleware.Chain(http.HandlerFunc(handler), authn, requireOrg, requireOwner, require(rbac.PermTenantSettingsRead))
+		return middleware.Chain(http.HandlerFunc(handler), authn, requireOrg, require(rbac.PermTenantSettingsRead))
 	}
 	tenantSettingsWrite := func(handler http.HandlerFunc) http.Handler {
-		return middleware.Chain(http.HandlerFunc(handler), authn, requireOrg, requireOwner, require(rbac.PermTenantSettingsWrite))
+		return middleware.Chain(http.HandlerFunc(handler), authn, requireOrg, require(rbac.PermTenantSettingsWrite))
 	}
+	// Organization tree inside the caller's organizations.read scope
+	// (managed: itself; subtree: a distributor and its dealers; brand: center).
+	orgsInScope := func(handler http.HandlerFunc) http.Handler {
+		return middleware.Chain(http.HandlerFunc(handler), authn, requireOrg,
+			middleware.RequireScope(q, rbac.PermOrganizationsRead))
+	}
+	mux.Handle("GET /v1/tenant/organizations", orgsInScope(h.TenantListOrganizations))
+	mux.Handle("GET /v1/tenant/organizations/{uuid}", orgsInScope(h.TenantGetOrganization))
 	mux.Handle("GET /v1/tenant/settings", tenantSettingsRead(h.TenantGetSettings))
 	mux.Handle("PATCH /v1/tenant/settings", tenantSettingsWrite(h.TenantPatchSettings))
 	mux.Handle("PUT /v1/tenant/settings/logo", tenantSettingsWrite(h.TenantUploadLogo))

@@ -281,11 +281,18 @@ func (a *RolesAdapter) RevertItem(ctx context.Context, action, entityUUID string
 	}
 	perms := stringSlice(previous["permission_slugs"])
 	for _, p := range perms {
-		perm, err := a.q.GetPermissionBySlug(ctx, p)
+		slug, want := rbac.ParseGrant(p)
+		perm, err := a.q.GetPermissionBySlug(ctx, slug)
 		if err != nil {
 			continue
 		}
-		_ = a.q.InsertRolePermission(ctx, db.InsertRolePermissionParams{RoleID: created.ID, PermissionID: perm.ID})
+		scope, ok := rbac.GrantScope(perm.Scopes, perm.SuperAdminOnly, want)
+		if !ok {
+			continue
+		}
+		_ = a.q.InsertRolePermission(ctx, db.InsertRolePermissionParams{
+			RoleID: created.ID, PermissionID: perm.ID, Scope: string(scope),
+		})
 	}
 	_ = entityUUID
 	return nil

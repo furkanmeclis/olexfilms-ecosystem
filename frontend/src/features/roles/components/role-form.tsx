@@ -16,6 +16,7 @@ import {
   createFormSections,
 } from "@/components/forms";
 import { PermissionSelector } from "@/components/permissions";
+import type { Permission } from "@/components/permissions/permission-groups";
 import { Button } from "@/components/ui/button";
 import { rolesKeys } from "@/features/roles/hooks/query-keys";
 import {
@@ -57,7 +58,7 @@ function RoleFormFields({
   mode: "create" | "edit";
   isSubmitting?: boolean;
   onCancel: () => void;
-  permissionItems: { slug: string; name: string }[];
+  permissionItems: Permission[];
   permissionsLoading: boolean;
 }) {
   const { t } = useLocale();
@@ -127,6 +128,10 @@ function RoleFormFields({
             onChange={(next) =>
               form.setValue("permission_slugs", next, { shouldDirty: true })
             }
+            scopes={form.watch("grants") ?? {}}
+            onScopesChange={(next) =>
+              form.setValue("grants", next, { shouldDirty: true })
+            }
           />
         )}
       </FormSection>
@@ -169,6 +174,11 @@ export function RoleForm({
       (permissionsQuery.data?.items ?? []).map((p) => ({
         slug: p.slug,
         name: p.name,
+        module: p.module,
+        scopes: p.scopes,
+        is_sensitive: p.is_sensitive,
+        super_admin_only: p.super_admin_only,
+        description: p.description ?? undefined,
       })),
     [permissionsQuery.data],
   );
@@ -178,6 +188,7 @@ export function RoleForm({
     slug: "",
     description: "",
     permission_slugs: [],
+    grants: {},
   };
 
   return (

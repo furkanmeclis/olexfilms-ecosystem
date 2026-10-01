@@ -23,6 +23,8 @@ type memRepo struct {
 	nextID    int64
 	perms     map[string][]string
 	roles     map[string]int64
+	// Membership grants per organization (organization_member_roles).
+	memberGrants map[uuid.UUID][]model.Grant
 	// Refresh sessions revoked through RevokeSession.
 	revokedSessions []uuid.UUID
 }
@@ -39,9 +41,9 @@ func newMemRepo() *memRepo {
 				rbac.PermPlatformRolesRead, rbac.PermPlatformRolesWrite,
 				rbac.PermAuthSession,
 			},
-			rbac.RoleOrganizationUser: {rbac.PermAuthSession, rbac.PermNotificationsRead},
+			rbac.RoleCustomer: {rbac.PermAuthSession, rbac.PermNotificationsRead},
 		},
-		roles: map[string]int64{rbac.RoleSuperAdmin: 1, rbac.RoleOrganizationUser: 2},
+		roles: map[string]int64{rbac.RoleSuperAdmin: 1, rbac.RoleCustomer: 2},
 	}
 	return r
 }
@@ -187,8 +189,22 @@ func (r *memRepo) GetRoleIDBySlug(_ context.Context, slug string) (int64, error)
 	return id, nil
 }
 
-func (r *memRepo) ListPermissionsByRoleSlug(_ context.Context, slug string) ([]string, error) {
-	return r.perms[slug], nil
+func (r *memRepo) ListGrantsByRoleSlugs(_ context.Context, slugs []string) ([]model.Grant, error) {
+	out := []model.Grant{}
+	for _, slug := range slugs {
+		for _, perm := range r.perms[slug] {
+			scope := rbac.ScopeAll
+			if def, ok := rbac.PermissionBySlug(perm); ok {
+				scope = rbac.Broadest(def.Scopes)
+			}
+			out = append(out, model.Grant{Role: slug, Permission: perm, Scope: string(scope)})
+		}
+	}
+	return out, nil
+}
+
+func (r *memRepo) ListMemberGrants(_ context.Context, userID int64, orgUUID uuid.UUID) ([]model.Grant, error) {
+	return r.memberGrants[orgUUID], nil
 }
 
 func (r *memRepo) ListUserRoleSlugs(_ context.Context, userID int64) ([]string, error) {
@@ -382,11 +398,11 @@ func (r *memRepo) UpdateUserTOTPRecoveryHashes(context.Context, int64, []string)
 func (r *memRepo) DeleteUserTOTP(context.Context, int64) error { return nil }
 
 func (r *memRepo) ListRolesFiltered(context.Context, int32, int32, string) ([]model.RoleSummary, int64, error) {
-	return []model.RoleSummary{{UUID: uuid.New(), Name: "Organization", Slug: rbac.RoleOrganizationUser}}, 1, nil
+	return []model.RoleSummary{{UUID: uuid.New(), Name: "Organization", Slug: rbac.RoleCustomer}}, 1, nil
 }
 
 func (r *memRepo) GetRoleByUUID(context.Context, uuid.UUID) (model.RoleSummary, error) {
-	return model.RoleSummary{UUID: uuid.New(), Slug: rbac.RoleOrganizationUser}, nil
+	return model.RoleSummary{UUID: uuid.New(), Slug: rbac.RoleCustomer}, nil
 }
 
 func (r *memRepo) ListRolePermissionSlugs(context.Context, uuid.UUID) ([]string, error) {
@@ -400,8 +416,11 @@ func (r *memRepo) CreateRole(_ context.Context, name, slug string, description *
 func (r *memRepo) UpdateRole(context.Context, uuid.UUID, *string, *string) (model.RoleSummary, error) {
 	return model.RoleSummary{}, nil
 }
-func (r *memRepo) DeleteRole(context.Context, uuid.UUID) error               { return nil }
-func (r *memRepo) SetRolePermissions(context.Context, int64, []string) error { return nil }
+func (r *memRepo) DeleteRole(context.Context, uuid.UUID) error                        { return nil }
+func (r *memRepo) SetRolePermissions(context.Context, int64, map[string]string) error { return nil }
+func (r *memRepo) ListRoleGrants(context.Context, uuid.UUID) ([]model.RoleGrant, error) {
+	return []model.RoleGrant{}, nil
+}
 func (r *memRepo) ListPermissionsFiltered(context.Context, int32, int32, string) ([]model.PermissionSummary, int64, error) {
 	return []model.PermissionSummary{{Slug: rbac.PermAuthSession, Name: "Auth session"}}, 1, nil
 }
@@ -432,7 +451,7 @@ func TestRegisterLoginMeWithoutRoles(t *testing.T) {
 		t.Fatalf("login: %v", err)
 	}
 
-	me, err := uc.Me(context.Background(), user.UUID, nil)
+	me, err := uc.Me(context.Background(), user.UUID, nil, nil)
 	if err != nil {
 		t.Fatalf("me: %v", err)
 	}
@@ -488,7 +507,7 @@ func TestSuperAdminLogin(t *testing.T) {
 	if tok.AccessToken == "" {
 		t.Fatal("expected access token")
 	}
-	me, err := uc.Me(context.Background(), user.UUID, nil)
+	me, err := uc.Me(context.Background(), user.UUID, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

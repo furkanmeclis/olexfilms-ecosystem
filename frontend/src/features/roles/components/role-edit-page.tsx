@@ -34,6 +34,9 @@ export function RoleEditPage({ uuid }: { uuid: string }) {
             slug: roleQuery.data.slug,
             description: roleQuery.data.description ?? "",
             permission_slugs: roleQuery.data.permission_slugs ?? [],
+            grants: Object.fromEntries(
+              (roleQuery.data.grants ?? []).map((g) => [g.permission, g.scope]),
+            ),
           }
         : undefined,
     [roleQuery.data],
@@ -89,6 +92,7 @@ export function RoleEditPage({ uuid }: { uuid: string }) {
                   name: values.name,
                   description: values.description,
                   permission_slugs: values.permission_slugs,
+                  grants: values.grants,
                 },
               });
               router.push(routes.platform.roles.detail(uuid));

@@ -55,9 +55,8 @@ func RegisterRoutes(
 	))
 
 	requireOrg := middleware.RequireOrganization(tokens, q)
-	requireOwner := middleware.RequireOrgRole("owner")
 	tenantJobs := func(handler http.HandlerFunc) http.Handler {
-		return middleware.Chain(http.HandlerFunc(handler), authn, requireOrg, requireOwner, require(rbac.PermTenantImportsRead))
+		return middleware.Chain(http.HandlerFunc(handler), authn, requireOrg, require(rbac.PermTenantImportsRead))
 	}
 	mux.Handle("GET /v1/tenant/imports", tenantJobs(h.ListTenant))
 	mux.Handle("GET /v1/tenant/imports/{uuid}", tenantJobs(h.GetTenant))

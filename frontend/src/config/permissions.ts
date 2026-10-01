@@ -1,15 +1,27 @@
 /**
- * Permission catalog aligned with platform RBAC seed permissions.
+ * Permission catalog — mirrors the backend catalog
+ * (`backend/internal/platform/rbac/catalog.go`, TEC-85). Business modules that
+ * have no routes yet (pricing, accounting, services, warehouse, campaigns…)
+ * are listed so role packages and guards can reference them.
  */
 export const Permission = {
+  AuthSession: "auth.session",
+  NotificationsRead: "notifications.read",
+  NotificationsManage: "notifications.manage",
+
   PlatformUsersRead: "platform.users.read",
   PlatformUsersWrite: "platform.users.write",
   PlatformUsersExport: "platform.users.export",
   PlatformUsersImport: "platform.users.import",
+  PlatformUsersBulkDisable: "platform.users.bulk.disable",
+  PlatformUsersBulkEnable: "platform.users.bulk.enable",
+  PlatformUsersImpersonate: "platform.users.impersonate",
   PlatformRolesRead: "platform.roles.read",
   PlatformRolesWrite: "platform.roles.write",
   PlatformRolesExport: "platform.roles.export",
   PlatformRolesImport: "platform.roles.import",
+  PlatformRolesBulkDelete: "platform.roles.bulk.delete",
+  PlatformBulkRead: "platform.bulk.read",
   PlatformNotificationsRead: "platform.notifications.read",
   PlatformNotificationsReadAll: "platform.notifications.read_all",
   PlatformNotificationsExport: "platform.notifications.export",
@@ -22,11 +34,6 @@ export const Permission = {
   PlatformStorageWrite: "platform.storage.write",
   PlatformLogsRead: "platform.logs.read",
   PlatformLogsWrite: "platform.logs.write",
-  PlatformUsersBulkDisable: "platform.users.bulk.disable",
-  PlatformUsersBulkEnable: "platform.users.bulk.enable",
-  PlatformUsersImpersonate: "platform.users.impersonate",
-  PlatformRolesBulkDelete: "platform.roles.bulk.delete",
-  PlatformBulkRead: "platform.bulk.read",
   PlatformAccessRead: "platform.access.read",
   PlatformAccessWrite: "platform.access.write",
   PlatformIntegrationsGitHubRead: "platform.integrations.github.read",
@@ -41,85 +48,38 @@ export const Permission = {
   PlatformAuthSettingsWrite: "platform.auth.settings.write",
   PlatformOrganizationsRead: "platform.organizations.read",
   PlatformOrganizationsWrite: "platform.organizations.write",
-  PlatformVehicleBrandsRead: "platform.vehicle_brands.read",
-  PlatformVehicleBrandsWrite: "platform.vehicle_brands.write",
-  PlatformContractPresetsRead: "platform.contract_presets.read",
-  PlatformContractPresetsWrite: "platform.contract_presets.write",
-  PlatformAIRead: "platform.ai.read",
-  PlatformAIWrite: "platform.ai.write",
 
-  TenantFinanceRead: "tenant.finance.read",
-  TenantFinanceWrite: "tenant.finance.write",
-  TenantFinanceExport: "tenant.finance.export",
-  TenantFinanceImport: "tenant.finance.import",
   TenantSettingsRead: "tenant.settings.read",
   TenantSettingsWrite: "tenant.settings.write",
   TenantImportsRead: "tenant.imports.read",
+  TenantExportsRead: "tenant.exports.read",
 
-  TenantCustomersRead: "tenant.customers.read",
-  TenantCustomersWrite: "tenant.customers.write",
+  OrganizationsRead: "organizations.read",
+  OrganizationsWrite: "organizations.write",
+  OrganizationsSupplierWrite: "organizations.supplier.write",
+  MembersRead: "members.read",
+  MembersWrite: "members.write",
 
-  TenantCariRead: "tenant.cari.read",
-  TenantCariWrite: "tenant.cari.write",
-  TenantCariExport: "tenant.cari.export",
-  TenantJobsRead: "tenant.jobs.read",
-  TenantJobsWrite: "tenant.jobs.write",
-  TenantJobsExport: "tenant.jobs.export",
-  TenantStaffRead: "tenant.staff.read",
-  TenantStaffWrite: "tenant.staff.write",
-  TenantSalesRead: "tenant.sales.read",
-  TenantSalesWrite: "tenant.sales.write",
-  TenantSalesExport: "tenant.sales.export",
-  TenantSuppliersRead: "tenant.suppliers.read",
-  TenantSuppliersWrite: "tenant.suppliers.write",
-  TenantSuppliersExport: "tenant.suppliers.export",
-  TenantPurchasesRead: "tenant.purchases.read",
-  TenantPurchasesWrite: "tenant.purchases.write",
-  TenantPurchasesExport: "tenant.purchases.export",
-  TenantReportsRead: "tenant.reports.read",
-  TenantReportsExport: "tenant.reports.export",
-  TenantContractsRead: "tenant.contracts.read",
-  TenantContractsWrite: "tenant.contracts.write",
-  TenantAIUse: "tenant.ai.use",
-  TenantTodosRead: "tenant.todos.read",
-  TenantTodosWrite: "tenant.todos.write",
-  TenantMessagingRead: "tenant.messaging.read",
-  TenantMessagingWrite: "tenant.messaging.write",
-  TenantLeadsRead: "tenant.leads.read",
-  TenantLeadsWrite: "tenant.leads.write",
-  TenantQuotesRead: "tenant.quotes.read",
-  TenantQuotesWrite: "tenant.quotes.write",
-  TenantBillingRead: "tenant.billing.read",
-  TenantBillingWrite: "tenant.billing.write",
-  PlatformBillingRead: "platform.billing.read",
-  PlatformBillingWrite: "platform.billing.write",
-  PlatformBillingSettings: "platform.billing.settings",
-
-  TenantCatalogRead: "tenant.catalog.read",
-  TenantCatalogWrite: "tenant.catalog.write",
-  TenantCatalogExport: "tenant.catalog.export",
-  TenantCatalogImport: "tenant.catalog.import",
-  TenantCatalogProductsBulkActivate: "tenant.catalog.products.bulk.activate",
-  TenantCatalogProductsBulkDeactivate:
-    "tenant.catalog.products.bulk.deactivate",
-  TenantCatalogProductsBulkDelete: "tenant.catalog.products.bulk.delete",
-  TenantCatalogProductsBulkRaiseSalePrice:
-    "tenant.catalog.products.bulk.raise_sale_price",
-  TenantCatalogProductsBulkRaiseCostPrice:
-    "tenant.catalog.products.bulk.raise_cost_price",
-  TenantCatalogProductsBulkAdjustStock:
-    "tenant.catalog.products.bulk.adjust_stock",
-  TenantCatalogServicesBulkActivate: "tenant.catalog.services.bulk.activate",
-  TenantCatalogServicesBulkDeactivate:
-    "tenant.catalog.services.bulk.deactivate",
-  TenantCatalogServicesBulkDelete: "tenant.catalog.services.bulk.delete",
-  TenantCatalogServicesBulkRaisePrice:
-    "tenant.catalog.services.bulk.raise_price",
-
-  AuthSession: "auth.session",
-
-  NotificationsRead: "notifications.read",
-  NotificationsManage: "notifications.manage",
+  ServicesRead: "services.read",
+  ServicesWrite: "services.write",
+  CustomersRead: "customers.read",
+  CustomersWrite: "customers.write",
+  PricingPurchaseRead: "pricing.purchase.read",
+  PricingSaleRead: "pricing.sale.read",
+  PricingSaleWrite: "pricing.sale.write",
+  PricingRecommendedRead: "pricing.recommended.read",
+  PricingRecommendedWrite: "pricing.recommended.write",
+  AccountingRead: "accounting.read",
+  AccountingWrite: "accounting.write",
+  WarehouseRead: "warehouse.read",
+  WarehouseWrite: "warehouse.write",
+  CampaignsRead: "campaigns.read",
+  CampaignsWrite: "campaigns.write",
+  LeadsRead: "leads.read",
+  LeadsWrite: "leads.write",
+  SocialRead: "social.read",
+  SocialWrite: "social.write",
+  PrivacyAnonymize: "privacy.anonymize",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];
@@ -133,6 +93,72 @@ const knownPermissionSet = new Set<string>(ALL_PERMISSIONS);
 export function isKnownPermission(slug: string): slug is PermissionSlug {
   return knownPermissionSet.has(slug);
 }
+
+/**
+ * Grant scopes, broadest internal scope first. `customer` (portal) only
+ * covers itself.
+ */
+export const PERMISSION_SCOPES = [
+  "all",
+  "brand",
+  "subtree",
+  "managed",
+  "assigned",
+  "own",
+  "customer",
+] as const;
+
+export type PermissionScope = (typeof PERMISSION_SCOPES)[number];
+
+const SCOPE_RANK: Record<PermissionScope, number> = {
+  all: 6,
+  brand: 5,
+  subtree: 4,
+  managed: 3,
+  assigned: 2,
+  own: 1,
+  customer: 0,
+};
+
+export function isPermissionScope(value: string): value is PermissionScope {
+  return (PERMISSION_SCOPES as readonly string[]).includes(value);
+}
+
+/** Whether a grant with scope `have` satisfies a check needing `need`. */
+export function scopeCovers(have: PermissionScope, need: PermissionScope) {
+  if (have === "customer" || need === "customer") return have === need;
+  return SCOPE_RANK[need] > 0 && SCOPE_RANK[have] >= SCOPE_RANK[need];
+}
+
+/** Broadest scope of a list (default grant scope for a permission). */
+export function broadestScope(
+  scopes: readonly string[],
+): PermissionScope | undefined {
+  let best: PermissionScope | undefined;
+  for (const raw of scopes) {
+    if (!isPermissionScope(raw)) continue;
+    if (!best || SCOPE_RANK[raw] > SCOPE_RANK[best]) best = raw;
+  }
+  return best;
+}
+
+/** System role slugs (backend `rbac.Roles`). */
+export const Role = {
+  SuperAdmin: "super_admin",
+  CenterStaff: "center_staff",
+  CenterWarehouse: "center_warehouse",
+  CenterAccounting: "center_accounting",
+  CenterSocial: "center_social",
+  DistributorOwner: "distributor_owner",
+  DistributorStaff: "distributor_staff",
+  DistributorWarehouseStaff: "distributor_warehouse_staff",
+  DistributorAccounting: "distributor_accounting",
+  DealerOwner: "dealer_owner",
+  DealerStaff: "dealer_staff",
+  DealerAccounting: "dealer_accounting",
+  Customer: "customer",
+  Fleet: "fleet",
+} as const;
 
 export const permissions = {
   users: {
@@ -173,6 +199,7 @@ export const permissions = {
   },
   exports: {
     read: Permission.PlatformExportsRead,
+    tenantRead: Permission.TenantExportsRead,
   },
   storage: {
     read: Permission.PlatformStorageRead,
@@ -214,109 +241,51 @@ export const permissions = {
   organizations: {
     read: Permission.PlatformOrganizationsRead,
     write: Permission.PlatformOrganizationsWrite,
+    tenantRead: Permission.OrganizationsRead,
+    tenantWrite: Permission.OrganizationsWrite,
+    supplierWrite: Permission.OrganizationsSupplierWrite,
   },
-  vehicleBrands: {
-    read: Permission.PlatformVehicleBrandsRead,
-    write: Permission.PlatformVehicleBrandsWrite,
+  members: {
+    read: Permission.MembersRead,
+    write: Permission.MembersWrite,
   },
-  contractPresets: {
-    read: Permission.PlatformContractPresetsRead,
-    write: Permission.PlatformContractPresetsWrite,
+  services: {
+    read: Permission.ServicesRead,
+    write: Permission.ServicesWrite,
   },
   customers: {
-    read: Permission.TenantCustomersRead,
-    write: Permission.TenantCustomersWrite,
+    read: Permission.CustomersRead,
+    write: Permission.CustomersWrite,
   },
-  cari: {
-    read: Permission.TenantCariRead,
-    write: Permission.TenantCariWrite,
-    export: Permission.TenantCariExport,
+  pricing: {
+    purchaseRead: Permission.PricingPurchaseRead,
+    saleRead: Permission.PricingSaleRead,
+    saleWrite: Permission.PricingSaleWrite,
+    recommendedRead: Permission.PricingRecommendedRead,
+    recommendedWrite: Permission.PricingRecommendedWrite,
   },
-  jobs: {
-    read: Permission.TenantJobsRead,
-    write: Permission.TenantJobsWrite,
-    export: Permission.TenantJobsExport,
+  accounting: {
+    read: Permission.AccountingRead,
+    write: Permission.AccountingWrite,
   },
-  staff: {
-    read: Permission.TenantStaffRead,
-    write: Permission.TenantStaffWrite,
+  warehouse: {
+    read: Permission.WarehouseRead,
+    write: Permission.WarehouseWrite,
   },
-  sales: {
-    read: Permission.TenantSalesRead,
-    write: Permission.TenantSalesWrite,
-    export: Permission.TenantSalesExport,
-  },
-  suppliers: {
-    read: Permission.TenantSuppliersRead,
-    write: Permission.TenantSuppliersWrite,
-    export: Permission.TenantSuppliersExport,
-  },
-  purchases: {
-    read: Permission.TenantPurchasesRead,
-    write: Permission.TenantPurchasesWrite,
-    export: Permission.TenantPurchasesExport,
-  },
-  reports: {
-    read: Permission.TenantReportsRead,
-    export: Permission.TenantReportsExport,
-  },
-  contracts: {
-    read: Permission.TenantContractsRead,
-    write: Permission.TenantContractsWrite,
-  },
-  finance: {
-    read: Permission.TenantFinanceRead,
-    write: Permission.TenantFinanceWrite,
-    export: Permission.TenantFinanceExport,
-    import: Permission.TenantFinanceImport,
-  },
-  catalog: {
-    read: Permission.TenantCatalogRead,
-    write: Permission.TenantCatalogWrite,
-    export: Permission.TenantCatalogExport,
-    import: Permission.TenantCatalogImport,
-    productsBulkActivate: Permission.TenantCatalogProductsBulkActivate,
-    productsBulkDeactivate: Permission.TenantCatalogProductsBulkDeactivate,
-    productsBulkDelete: Permission.TenantCatalogProductsBulkDelete,
-    productsBulkRaiseSalePrice:
-      Permission.TenantCatalogProductsBulkRaiseSalePrice,
-    productsBulkRaiseCostPrice:
-      Permission.TenantCatalogProductsBulkRaiseCostPrice,
-    productsBulkAdjustStock: Permission.TenantCatalogProductsBulkAdjustStock,
-    servicesBulkActivate: Permission.TenantCatalogServicesBulkActivate,
-    servicesBulkDeactivate: Permission.TenantCatalogServicesBulkDeactivate,
-    servicesBulkDelete: Permission.TenantCatalogServicesBulkDelete,
-    servicesBulkRaisePrice: Permission.TenantCatalogServicesBulkRaisePrice,
-  },
-  ai: {
-    read: Permission.PlatformAIRead,
-    write: Permission.PlatformAIWrite,
-    use: Permission.TenantAIUse,
+  campaigns: {
+    read: Permission.CampaignsRead,
+    write: Permission.CampaignsWrite,
   },
   leads: {
-    read: Permission.TenantLeadsRead,
-    write: Permission.TenantLeadsWrite,
+    read: Permission.LeadsRead,
+    write: Permission.LeadsWrite,
   },
-  quotes: {
-    read: Permission.TenantQuotesRead,
-    write: Permission.TenantQuotesWrite,
+  social: {
+    read: Permission.SocialRead,
+    write: Permission.SocialWrite,
   },
-  billing: {
-    read: Permission.TenantBillingRead,
-    write: Permission.TenantBillingWrite,
-  },
-  platformBilling: {
-    read: Permission.PlatformBillingRead,
-    write: Permission.PlatformBillingWrite,
-    settings: Permission.PlatformBillingSettings,
-  },
-  todos: {
-    read: Permission.TenantTodosRead,
-    write: Permission.TenantTodosWrite,
-  },
-  messaging: {
-    read: Permission.TenantMessagingRead,
-    write: Permission.TenantMessagingWrite,
+  privacy: {
+    anonymize: Permission.PrivacyAnonymize,
   },
   auth: {
     session: Permission.AuthSession,

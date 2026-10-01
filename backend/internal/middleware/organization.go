@@ -121,29 +121,6 @@ func RequireOrganizationResolver(tokens *jwt.Manager, resolver OrganizationResol
 	}
 }
 
-// RequireOrgRole allows only members with one of the given roles (owner, staff).
-func RequireOrgRole(roles ...string) func(http.Handler) http.Handler {
-	allowed := make(map[string]struct{}, len(roles))
-	for _, role := range roles {
-		allowed[role] = struct{}{}
-	}
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			scope, ok := orgctx.ScopeFrom(r.Context())
-			if !ok {
-				response.Error(w, r, http.StatusForbidden, CodeOrganizationContextRequired,
-					"Organization context is required")
-				return
-			}
-			if _, ok := allowed[scope.MemberRole]; !ok {
-				response.Forbidden(w, r, "Insufficient organization role")
-				return
-			}
-			next.ServeHTTP(w, r)
-		})
-	}
-}
-
 var errBrandUnresolved = errors.New("request brand is not resolved")
 
 func isSafeMethod(m string) bool {
