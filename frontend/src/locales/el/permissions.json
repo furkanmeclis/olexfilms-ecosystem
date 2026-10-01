@@ -146,5 +146,10 @@
   "labels.stock.adjust": "Διόρθωση αποθέματος",
   "labels.stock.reclassify": "Επαναταξινόμηση αποθέματος",
   "labels.stock.import": "Εισαγωγή αποθέματος",
-  "groups.stock": "Απόθεμα"
+  "groups.stock": "Απόθεμα",
+  "labels.vehicles.read": "Προβολή οχημάτων",
+  "labels.vehicles.write": "Διαχείριση οχημάτων",
+  "labels.customers.anonymize": "Ανωνυμοποίηση πελατών",
+  "labels.customers.merge": "Συγχώνευση πελατών",
+  "groups.vehicles": "Οχήματα"
 }

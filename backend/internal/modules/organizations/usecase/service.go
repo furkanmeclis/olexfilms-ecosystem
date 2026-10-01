@@ -261,6 +261,10 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (RegisterResul
 	if err != nil {
 		return RegisterResult{}, err
 	}
+	orgPhone, err := normalizePhone(in.Phone, addressISO2(addr))
+	if err != nil {
+		return RegisterResult{}, err
+	}
 	parent := center
 	if dist, err := s.territoryParent(ctx, brand.ID, addr); err != nil {
 		return RegisterResult{}, err
@@ -300,7 +304,7 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (RegisterResul
 	org, err := qtx.CreateOrganization(ctx, db.CreateOrganizationParams{
 		Slug: orgSlug, Name: in.OrganizationName,
 		City: city, District: district,
-		Phone: strings.TrimSpace(in.Phone), Address: strings.TrimSpace(in.Address),
+		Phone: orgPhone, Address: strings.TrimSpace(in.Address),
 		Status: "active", PlanCode: pgtype.Text{String: "trial", Valid: true},
 		AccessStartsAt: pgtype.Timestamptz{Time: now, Valid: true},
 		AccessEndsAt:   pgtype.Timestamptz{Time: trialEnd, Valid: true},
@@ -337,6 +341,10 @@ func (s *Service) RegisterOrganization(ctx context.Context, in RegisterInput, ow
 	if err != nil {
 		return RegisterResult{}, err
 	}
+	orgPhone, err := normalizePhone(in.Phone, addressISO2(place.Address))
+	if err != nil {
+		return RegisterResult{}, err
+	}
 	orgSlug, err := s.allocateSlug(ctx, in.OrganizationName)
 	if err != nil {
 		return RegisterResult{}, err
@@ -355,7 +363,7 @@ func (s *Service) RegisterOrganization(ctx context.Context, in RegisterInput, ow
 		Slug: orgSlug, Name: in.OrganizationName,
 		City: city, District: district,
 		CountryID: countryID, ProvinceID: provinceID, DistrictID: districtID,
-		Phone: strings.TrimSpace(in.Phone), Address: strings.TrimSpace(in.Address),
+		Phone: orgPhone, Address: strings.TrimSpace(in.Address),
 		Status: "active", PlanCode: pgtype.Text{String: "trial", Valid: true},
 		AccessStartsAt: pgtype.Timestamptz{Time: now, Valid: true},
 		AccessEndsAt:   pgtype.Timestamptz{Time: trialEnd, Valid: true},
@@ -471,7 +479,8 @@ func (s *Service) List(ctx context.Context, limit, offset int32, f ListFilter) (
 
 // Patch updates organization from platform admin.
 func (s *Service) Patch(ctx context.Context, id uuid.UUID, in PatchInput) (Organization, error) {
-	if err := s.EnsureInBrand(ctx, id); err != nil {
+	current, err := s.brandOrg(ctx, id)
+	if err != nil {
 		return Organization{}, err
 	}
 	if in.Status != nil {
@@ -510,9 +519,6 @@ func (s *Service) Patch(ctx context.Context, id uuid.UUID, in PatchInput) (Organ
 	if in.District != nil {
 		params.District = pgtype.Text{String: strings.TrimSpace(*in.District), Valid: true}
 	}
-	if in.Phone != nil {
-		params.Phone = pgtype.Text{String: strings.TrimSpace(*in.Phone), Valid: true}
-	}
 	if in.Address != nil {
 		params.Address = pgtype.Text{String: strings.TrimSpace(*in.Address), Valid: true}
 	}
@@ -530,6 +536,8 @@ func (s *Service) Patch(ctx context.Context, id uuid.UUID, in PatchInput) (Organ
 	} else if in.AccessEndsAt != nil {
 		params.AccessEndsAt = pgtype.Timestamptz{Time: *in.AccessEndsAt, Valid: true}
 	}
+	var phoneISO2 string
+	var phoneISO2Set bool
 	if in.Location != nil {
 		addr, err := s.address(ctx, *in.Location)
 		if err != nil {
@@ -537,6 +545,20 @@ func (s *Service) Patch(ctx context.Context, id uuid.UUID, in PatchInput) (Organ
 		}
 		params.SetAddress = true
 		params.CountryID, params.ProvinceID, params.DistrictID = addressIDs(addr)
+		phoneISO2, phoneISO2Set = addressISO2(addr), true
+	}
+	if in.Phone != nil {
+		// K29: parsed with the new country when the address changes too.
+		if !phoneISO2Set {
+			if phoneISO2, err = s.orgCountryISO2(ctx, current.Organization.ID); err != nil {
+				return Organization{}, err
+			}
+		}
+		p, err := normalizePhone(*in.Phone, phoneISO2)
+		if err != nil {
+			return Organization{}, err
+		}
+		params.Phone = pgtype.Text{String: p, Valid: true}
 	}
 	if in.ParentUUID != nil {
 		if err := s.ChangeParent(ctx, id, *in.ParentUUID); err != nil {

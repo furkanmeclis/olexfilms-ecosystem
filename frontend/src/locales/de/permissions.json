@@ -146,5 +146,10 @@
   "labels.stock.adjust": "Bestand korrigieren",
   "labels.stock.reclassify": "Bestand umklassifizieren",
   "labels.stock.import": "Bestand importieren",
-  "groups.stock": "Bestand"
+  "groups.stock": "Bestand",
+  "labels.vehicles.read": "Fahrzeuge ansehen",
+  "labels.vehicles.write": "Fahrzeuge verwalten",
+  "labels.customers.anonymize": "Kunden anonymisieren",
+  "labels.customers.merge": "Kunden zusammenführen",
+  "groups.vehicles": "Fahrzeuge"
 }

@@ -71,6 +71,10 @@ export const Permission = {
   ServicesWrite: "services.write",
   CustomersRead: "customers.read",
   CustomersWrite: "customers.write",
+  CustomersAnonymize: "customers.anonymize",
+  CustomersMerge: "customers.merge",
+  VehiclesRead: "vehicles.read",
+  VehiclesWrite: "vehicles.write",
   PricingPurchaseRead: "pricing.purchase.read",
   PricingSaleRead: "pricing.sale.read",
   PricingSaleWrite: "pricing.sale.write",
@@ -300,6 +304,12 @@ export const permissions = {
   customers: {
     read: Permission.CustomersRead,
     write: Permission.CustomersWrite,
+    anonymize: Permission.CustomersAnonymize,
+    merge: Permission.CustomersMerge,
+  },
+  vehicles: {
+    read: Permission.VehiclesRead,
+    write: Permission.VehiclesWrite,
   },
   catalog: {
     read: Permission.CatalogRead,

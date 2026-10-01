@@ -146,5 +146,10 @@
   "labels.stock.adjust": "تعديل المخزون",
   "labels.stock.reclassify": "إعادة تصنيف المخزون",
   "labels.stock.import": "استيراد المخزون",
-  "groups.stock": "المخزون"
+  "groups.stock": "المخزون",
+  "labels.vehicles.read": "عرض المركبات",
+  "labels.vehicles.write": "إدارة المركبات",
+  "labels.customers.anonymize": "إخفاء هوية العملاء",
+  "labels.customers.merge": "دمج العملاء",
+  "groups.vehicles": "المركبات"
 }

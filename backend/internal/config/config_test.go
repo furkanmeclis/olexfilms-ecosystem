@@ -18,6 +18,7 @@ func validProdConfig() Config {
 	c.JWT.AccessSecret = strings.Repeat("a", 40)
 	c.JWT.RefreshSecret = strings.Repeat("b", 40)
 	c.Encryption.Key = strings.Repeat("k", 32)
+	c.Encryption.CustomerPIIKey = "AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA="
 	c.Auth.AdapterSecret = strings.Repeat("s", 40)
 	c.Centrifugo.Enabled = true
 	c.Centrifugo.APIKey = "real-api-key"
@@ -35,6 +36,9 @@ func TestValidateRejectsDefaultSecretsInProduction(t *testing.T) {
 		"default adapter secret": func(c *Config) { c.Auth.AdapterSecret = defaultAdapterSecret },
 		"default centrifugo":     func(c *Config) { c.Centrifugo.TokenHMAC = defaultCentrifugoTokenHMAC },
 		"short jwt secret":       func(c *Config) { c.JWT.AccessSecret = "short" },
+		"missing pii key":        func(c *Config) { c.Encryption.CustomerPIIKey = "" },
+		"raw pii key":            func(c *Config) { c.Encryption.CustomerPIIKey = strings.Repeat("p", 32) },
+		"pii key equals app key": func(c *Config) { c.Encryption.Key = c.Encryption.CustomerPIIKey },
 	}
 	for name, mut := range mutations {
 		c := validProdConfig()

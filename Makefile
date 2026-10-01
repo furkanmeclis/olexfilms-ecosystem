@@ -21,7 +21,7 @@ FRONTEND_PORT ?= 3000
 .PHONY: infra infra-down infra-logs infra-ps migrate-up backend-dev frontend-dev local-dev \
 	free-dev-ports prod-config prod-up prod-down prod-create-super-admin tools create-super-admin \
 	gen-env-server backup restore dr-drill \
-	search-reindex check-i18n check-i18n-translations openapi-sync openapi-lint api-generate
+	search-reindex normalize-org-phones dev-pii-key check-i18n check-i18n-translations openapi-sync openapi-lint api-generate
 
 infra:
 	@if [ -n "$(ENV_FILE)" ]; then \
@@ -178,6 +178,20 @@ create-super-admin:
 
 search-reindex:
 	@$(load_env) $(MAKE) -C backend search-reindex
+
+# K29 (TEC-159): organization phones to E.164. ARGS=--dry-run to preview.
+normalize-org-phones:
+	@$(load_env) $(MAKE) -C backend normalize-org-phones ARGS="$(ARGS)"
+
+# Local dev: writes a random CUSTOMER_PII_KEY into .env when it is empty
+# (TEC-159). Production keys come from scripts/gen-env-server.sh.
+dev-pii-key:
+	@test -f .env || cp .env.example .env
+	@if grep -qE '^CUSTOMER_PII_KEY=.+' .env; then echo "CUSTOMER_PII_KEY already set in .env"; \
+	else key="$$(openssl rand -base64 32)"; \
+		if grep -q '^CUSTOMER_PII_KEY=' .env; then sed -i.bak "s|^CUSTOMER_PII_KEY=.*|CUSTOMER_PII_KEY=$$key|" .env && rm -f .env.bak; \
+		else printf 'CUSTOMER_PII_KEY=%s\n' "$$key" >> .env; fi; \
+		echo "CUSTOMER_PII_KEY written to .env"; fi
 
 check-i18n:
 	node scripts/check-i18n.mjs

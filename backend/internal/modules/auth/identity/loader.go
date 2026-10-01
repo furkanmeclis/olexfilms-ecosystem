@@ -33,7 +33,7 @@ func (l Loader) LoadPrincipal(r *http.Request, claims jwt.Claims) (authctx.Princ
 	if err != nil {
 		return authctx.Principal{}, err
 	}
-	if user.Status == "disabled" {
+	if user.Status == "disabled" || user.Status == "anonymized" {
 		return authctx.Principal{}, usecase.ErrUserDisabled
 	}
 	impersonatorUUID, err := claims.ImpersonatorUUID()

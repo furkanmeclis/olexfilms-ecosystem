@@ -146,5 +146,10 @@
   "labels.stock.adjust": "Stok düzeltmesi yap",
   "labels.stock.reclassify": "Stoku yeniden sınıflandır",
   "labels.stock.import": "Stok içe aktar",
-  "groups.stock": "Stok"
+  "groups.stock": "Stok",
+  "labels.vehicles.read": "Araçları görüntüle",
+  "labels.vehicles.write": "Araçları yönet",
+  "labels.customers.anonymize": "Müşterileri anonimleştir",
+  "labels.customers.merge": "Müşterileri birleştir",
+  "groups.vehicles": "Araçlar"
 }

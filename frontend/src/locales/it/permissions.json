@@ -146,5 +146,10 @@
   "labels.stock.adjust": "Rettifica giacenze",
   "labels.stock.reclassify": "Riclassifica giacenze",
   "labels.stock.import": "Importa giacenze",
-  "groups.stock": "Giacenze"
+  "groups.stock": "Giacenze",
+  "labels.vehicles.read": "Vedere i veicoli",
+  "labels.vehicles.write": "Gestire i veicoli",
+  "labels.customers.anonymize": "Anonimizzare i clienti",
+  "labels.customers.merge": "Unire i clienti",
+  "groups.vehicles": "Veicoli"
 }

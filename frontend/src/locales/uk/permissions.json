@@ -146,5 +146,10 @@
   "labels.stock.adjust": "Коригування залишків",
   "labels.stock.reclassify": "Перекласифікація залишків",
   "labels.stock.import": "Імпорт залишків",
-  "groups.stock": "Залишки"
+  "groups.stock": "Залишки",
+  "labels.vehicles.read": "Перегляд автомобілів",
+  "labels.vehicles.write": "Керування автомобілями",
+  "labels.customers.anonymize": "Анонімізація клієнтів",
+  "labels.customers.merge": "Об'єднання клієнтів",
+  "groups.vehicles": "Автомобілі"
 }

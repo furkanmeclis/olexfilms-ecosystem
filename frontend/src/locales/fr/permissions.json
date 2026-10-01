@@ -146,5 +146,10 @@
   "labels.stock.adjust": "Ajuster le stock",
   "labels.stock.reclassify": "Reclasser le stock",
   "labels.stock.import": "Importer le stock",
-  "groups.stock": "Stock"
+  "groups.stock": "Stock",
+  "labels.vehicles.read": "Voir les véhicules",
+  "labels.vehicles.write": "Gérer les véhicules",
+  "labels.customers.anonymize": "Anonymiser les clients",
+  "labels.customers.merge": "Fusionner les clients",
+  "groups.vehicles": "Véhicules"
 }
