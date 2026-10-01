@@ -46,13 +46,14 @@ jobs:
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
 
-      - name: Frontend lint, typecheck, build
+      - name: Frontend lint, typecheck, test, build
         if: steps.detect.outputs.frontend == 'true'
         working-directory: frontend
         run: |
           pnpm install --frozen-lockfile
           pnpm lint
           pnpm typecheck
+          pnpm test
           pnpm build
 
       - name: Nothing to build yet

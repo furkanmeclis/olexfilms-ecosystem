@@ -2,7 +2,10 @@
 
 import { useEffect, useRef } from "react";
 
-import { registerWebPush } from "@/lib/web-push/register";
+import {
+  hasBrowserPushSupport,
+  registerWebPush,
+} from "@/lib/web-push/register";
 import { notificationPreferencesService } from "@/services/notification-preferences.service";
 
 /**
@@ -14,11 +17,9 @@ export function useWebPushSync(enabled = true) {
 
   useEffect(() => {
     if (!enabled || syncedRef.current) return;
-    if (
-      typeof window === "undefined" ||
-      typeof Notification === "undefined" ||
-      Notification.permission !== "granted"
-    ) {
+    // iOS Safari (not added to the home screen) has no Notification at all;
+    // reading it unguarded crashes every page behind the app layout.
+    if (!hasBrowserPushSupport() || Notification.permission !== "granted") {
       return;
     }
 

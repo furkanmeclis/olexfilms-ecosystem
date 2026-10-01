@@ -2,6 +2,7 @@ packages:
   - "."
 
 allowBuilds:
+  esbuild: false
   protobufjs: false
   sharp: true
   unrs-resolver: true
