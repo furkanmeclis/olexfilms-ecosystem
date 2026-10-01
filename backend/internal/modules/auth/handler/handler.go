@@ -34,6 +34,7 @@ type Handler struct {
 	stepUp         *stepup.Service
 	activity       *activity.Recorder
 	limiter        *ratelimit.Limiter
+	otp            OTPService
 }
 
 // New creates an auth handler.

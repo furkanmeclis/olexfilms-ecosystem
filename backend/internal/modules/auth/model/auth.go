@@ -224,6 +224,8 @@ type RefreshSession struct {
 	ImpersonatorUserID *int64
 	// OrganizationUUID is the tenant scope stamped on the prior access token, if any.
 	OrganizationUUID *uuid.UUID
+	// Realm is the stored session realm (panel | portal).
+	Realm string
 }
 
 // DeviceSession is a user-visible refresh session (token never included).
@@ -244,6 +246,8 @@ type SessionMeta struct {
 	ImpersonatorUserID *int64
 	// OrganizationID is the internal organizations.id to persist on the refresh row.
 	OrganizationID *int64
+	// Realm is the session realm: "panel" (default) or "portal" (OTP).
+	Realm string
 }
 
 // SessionSwitch tells clients which identity the issued tokens represent.

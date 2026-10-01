@@ -30,11 +30,23 @@ type Config struct {
 	VAPID      VAPIDConfig
 	Search     SearchConfig
 	Gotenberg  GotenbergConfig
+	Wuzapi     WuzapiConfig
 }
 
 // GotenbergConfig controls HTML→PDF rendering via Gotenberg Chromium.
 type GotenbergConfig struct {
 	URL string
+}
+
+// WuzapiConfig is the WhatsApp gateway (design K16/K21). An empty URL or
+// admin token disables the gateway (OTP requests then fail closed).
+type WuzapiConfig struct {
+	URL        string
+	AdminToken string
+	// WebhookSecret verifies x-hmac-signature (wuzapi WUZAPI_GLOBAL_HMAC_KEY).
+	WebhookSecret string
+	// WebhookURL is registered on the instance user (backend /hooks/wuzapi).
+	WebhookURL string
 }
 
 // AuthConfig holds NextAuth adapter integration settings.
@@ -270,6 +282,12 @@ func Load() (Config, error) {
 		},
 		Gotenberg: GotenbergConfig{
 			URL: getEnv("GOTENBERG_URL", "http://127.0.0.1:3001"),
+		},
+		Wuzapi: WuzapiConfig{
+			URL:           getEnv("WUZAPI_URL", ""),
+			AdminToken:    getEnv("WUZAPI_ADMIN_TOKEN", ""),
+			WebhookSecret: getEnv("WUZAPI_WEBHOOK_SECRET", ""),
+			WebhookURL:    getEnv("WUZAPI_WEBHOOK_URL", ""),
 		},
 	}
 

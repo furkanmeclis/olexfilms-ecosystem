@@ -120,6 +120,8 @@ type AuthUseCase struct {
 	orgResolver  OrganizationResolver
 	// Optional: rejects access tokens of signed-out sessions before expiry.
 	revocations *authrevoke.Store
+	// Optional: phone (WhatsApp OTP) login, see phone.go.
+	phoneRepo PhoneRepository
 }
 
 // SecretBox encrypts at-rest secrets (TOTP).
@@ -397,6 +399,7 @@ func (u *AuthUseCase) Refresh(ctx context.Context, rawToken string, meta model.S
 		return model.Tokens{}, ErrUserDisabled
 	}
 	meta.ImpersonatorUserID = session.ImpersonatorUserID
+	meta.Realm = session.Realm
 
 	var orgUUID *uuid.UUID
 	if session.OrganizationUUID != nil && u.orgResolver != nil {
@@ -626,6 +629,7 @@ func (u *AuthUseCase) issueTokensForUser(ctx context.Context, user model.User, m
 	access, accessExp, err := u.tokens.IssueAccess(jwt.AccessInput{
 		UserID: user.UUID, Roles: roles, IsSuperAdmin: isSuperAdmin,
 		ImpersonatorID: impersonatorUUID, SessionID: sessionID, OrganizationID: organizationID,
+		Audience: jwt.NormalizeAudience(meta.Realm),
 	})
 	if err != nil {
 		return model.Tokens{}, err

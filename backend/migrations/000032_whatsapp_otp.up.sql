@@ -13,6 +13,13 @@ CREATE UNIQUE INDEX uq_users_phone_e164_active
     ON users (phone_e164)
     WHERE deleted_at IS NULL AND phone_e164 IS NOT NULL;
 
+-- 1b. Session realm (portal contract for TEC-90): panel logins and
+-- customer OTP logins get separate realms. The access JWT carries it as
+-- "aud"; refresh keeps the realm of the session it rotates.
+ALTER TABLE refresh_tokens
+    ADD COLUMN realm VARCHAR(16) NOT NULL DEFAULT 'panel',
+    ADD CONSTRAINT chk_refresh_tokens_realm CHECK (realm IN ('panel', 'portal'));
+
 -- 2. otp_codes: phone-keyed codes with delivery evidence (channel,
 -- provider_ref, message hash, ip, user agent, KVKK notice version).
 ALTER TABLE otp_codes

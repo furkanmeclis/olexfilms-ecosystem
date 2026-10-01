@@ -10,6 +10,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/model"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -307,6 +308,7 @@ func (r *Postgres) SaveRefresh(ctx context.Context, userID int64, hash string, e
 		UserAgent: ua, IpAddress: ip,
 		ImpersonatorUserID: impersonator,
 		OrganizationID:     organizationID,
+		Realm:              jwt.NormalizeAudience(meta.Realm),
 	})
 	if err != nil {
 		return uuid.Nil, err
@@ -322,7 +324,7 @@ func (r *Postgres) GetRefreshSession(ctx context.Context, hash string) (model.Re
 		}
 		return model.RefreshSession{}, err
 	}
-	out := model.RefreshSession{UUID: row.Uuid, UserID: row.UserID}
+	out := model.RefreshSession{UUID: row.Uuid, UserID: row.UserID, Realm: row.Realm}
 	if row.ImpersonatorUserID.Valid {
 		id := row.ImpersonatorUserID.Int64
 		out.ImpersonatorUserID = &id

@@ -1,6 +1,6 @@
 -- name: CreateRefreshToken :one
-INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip_address, impersonator_user_id, organization_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip_address, impersonator_user_id, organization_id, realm)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING *;
 
 -- name: GetValidRefreshTokenByHash :one

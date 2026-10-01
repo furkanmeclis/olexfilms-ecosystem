@@ -445,6 +445,7 @@ type RefreshToken struct {
 	ImpersonatorUserID pgtype.Int8        `json:"impersonator_user_id"`
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
 	OrganizationID     pgtype.Int8        `json:"organization_id"`
+	Realm              string             `json:"realm"`
 }
 
 type Role struct {

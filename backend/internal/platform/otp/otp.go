@@ -82,8 +82,8 @@ type Config struct {
 	// PhoneBurstMax bounds request attempts per phone per hour in Redis,
 	// including ones the DB cooldown rejects (default 2 x HourlyMax).
 	PhoneBurstMax int
-	MaxAttempts int32         // 5
-	VerifyMax   int           // 20 verify calls per phone+IP per 15 min
+	MaxAttempts   int32 // 5
+	VerifyMax     int   // 20 verify calls per phone+IP per 15 min
 	// Key is the server secret for code hashes (HMAC-SHA256).
 	Key     []byte
 	AppName string
@@ -322,6 +322,14 @@ func (s *Service) allow(ctx context.Context, action, subject string, limit int, 
 		return &LimitError{Reason: reason, RetryAt: now.Add(retry)}
 	}
 	return nil
+}
+
+// DeriveKey derives the code-hash key from the app encryption key so the
+// OTP hashes do not reuse the encryption key directly.
+func DeriveKey(appSecret string) []byte {
+	mac := hmac.New(sha256.New, []byte(appSecret))
+	mac.Write([]byte("otp-code-hash-v1"))
+	return mac.Sum(nil)
 }
 
 // hash is HMAC-SHA256(server key, "<otp uuid>:<code>") in hex.

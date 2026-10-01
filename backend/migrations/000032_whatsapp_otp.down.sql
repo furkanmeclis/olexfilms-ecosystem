@@ -32,6 +32,10 @@ ALTER TABLE otp_codes
     DROP COLUMN phone_e164,
     ALTER COLUMN email SET NOT NULL;
 
+ALTER TABLE refresh_tokens
+    DROP CONSTRAINT IF EXISTS chk_refresh_tokens_realm,
+    DROP COLUMN realm;
+
 DELETE FROM users WHERE email IS NULL;
 DROP INDEX IF EXISTS uq_users_phone_e164_active;
 ALTER TABLE users
