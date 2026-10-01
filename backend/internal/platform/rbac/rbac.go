@@ -126,6 +126,13 @@ const (
 	PermNotificationTemplatesManage = "notifications.templates.manage"
 	PermNotificationDeliveriesRead  = "notification_deliveries.read"
 
+	// Geography, territories and exchange rates (TEC-84).
+	PermPlatformGeoWrite         = "platform.geo.write"
+	PermPlatformTerritoriesRead  = "platform.territories.read"
+	PermPlatformTerritoriesWrite = "platform.territories.write"
+	PermPlatformRatesRead        = "platform.rates.read"
+	PermPlatformRatesWrite       = "platform.rates.write"
+
 	// Portal legal texts (TEC-90): AI guidelines Markdown, per language.
 	PermPlatformLegalTextsWrite = "platform.legal_texts.write"
 )

@@ -20,6 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { apiConfig } from "@/config/api";
+import { AddressFields } from "@/features/geo";
 import { ORGANIZATION_STATUS_VALUES } from "@/features/organizations/constants";
 import {
   useDeleteOrganizationLogo,
@@ -169,6 +170,15 @@ export function OrganizationEditForm({
       schema={schema}
       defaultValues={{
         name: organization.name,
+        country_id: organization.country_id
+          ? String(organization.country_id)
+          : "",
+        province_id: organization.province_id
+          ? String(organization.province_id)
+          : "",
+        district_id: organization.district_id
+          ? String(organization.district_id)
+          : "",
         city: organization.city,
         district: organization.district,
         phone: organization.phone,
@@ -201,15 +211,18 @@ export function OrganizationEditForm({
           >
             <Input value={organization.slug} disabled readOnly />
           </FormFieldShell>
+          <AddressFields />
           <AppInput
             name="city"
             label={t("organizations.fields.city")}
             placeholder={t("organizations.placeholders.city")}
+            description={t("organizations.fields.city_hint")}
           />
           <AppInput
             name="district"
             label={t("organizations.fields.district")}
             placeholder={t("organizations.placeholders.district")}
+            description={t("organizations.fields.district_hint")}
           />
           <AppInput
             name="phone"

@@ -48,6 +48,7 @@ type Querier interface {
 	CountUsers(ctx context.Context, arg CountUsersParams) (int64, error)
 	CountUsersWithRole(ctx context.Context, roleSlug string) (int64, error)
 	CreateBulkJob(ctx context.Context, arg CreateBulkJobParams) (BulkJob, error)
+	CreateDistrict(ctx context.Context, arg CreateDistrictParams) (District, error)
 	CreateDocumentTemplate(ctx context.Context, arg CreateDocumentTemplateParams) (DocumentTemplate, error)
 	CreateExportJob(ctx context.Context, arg CreateExportJobParams) (ExportJob, error)
 	CreateImportJob(ctx context.Context, arg CreateImportJobParams) (ImportJob, error)
@@ -58,21 +59,28 @@ type Querier interface {
 	CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error)
 	CreateOrganizationMember(ctx context.Context, arg CreateOrganizationMemberParams) (OrganizationMember, error)
 	CreatePhoneOTP(ctx context.Context, arg CreatePhoneOTPParams) (OtpCode, error)
+	CreatePlateFormat(ctx context.Context, arg CreatePlateFormatParams) (PlateFormat, error)
+	CreateProvince(ctx context.Context, arg CreateProvinceParams) (Province, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
 	CreateRole(ctx context.Context, arg CreateRoleParams) (Role, error)
+	CreateTerritory(ctx context.Context, arg CreateTerritoryParams) (Territory, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateWebAuthnCredential(ctx context.Context, arg CreateWebAuthnCredentialParams) (WebauthnCredential, error)
 	DeactivateDocumentTemplates(ctx context.Context, arg DeactivateDocumentTemplatesParams) error
 	DeleteAppLogByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	DeleteAppLogsByUUIDs(ctx context.Context, uuids []uuid.UUID) (int64, error)
 	DeleteAppLogsMatching(ctx context.Context, arg DeleteAppLogsMatchingParams) (int64, error)
+	DeleteDistrict(ctx context.Context, id int64) (int64, error)
 	DeleteLogPurgeRule(ctx context.Context, argUuid uuid.UUID) (int64, error)
+	DeleteManualExchangeRate(ctx context.Context, arg DeleteManualExchangeRateParams) (int64, error)
 	DeleteMemberRoles(ctx context.Context, memberID int64) error
 	DeleteNotificationPreferenceRow(ctx context.Context, arg DeleteNotificationPreferenceRowParams) error
 	DeleteOAuthAccountByProviderAccount(ctx context.Context, arg DeleteOAuthAccountByProviderAccountParams) error
 	DeleteOAuthAccountByUserProvider(ctx context.Context, arg DeleteOAuthAccountByUserProviderParams) error
 	DeleteOrgModuleFlag(ctx context.Context, arg DeleteOrgModuleFlagParams) (int64, error)
 	DeletePermissionBySlug(ctx context.Context, slug string) error
+	DeletePlateFormat(ctx context.Context, countryID int64) (int64, error)
+	DeleteProvince(ctx context.Context, id int64) (int64, error)
 	DeletePushSubscription(ctx context.Context, arg DeletePushSubscriptionParams) error
 	DeletePushSubscriptionByEndpoint(ctx context.Context, endpoint string) error
 	DeleteRole(ctx context.Context, argUuid uuid.UUID) error
@@ -81,12 +89,16 @@ type Querier interface {
 	DeleteStorageStar(ctx context.Context, arg DeleteStorageStarParams) error
 	DeleteStorageTrashByUUID(ctx context.Context, argUuid uuid.UUID) error
 	DeleteSystemModuleFlag(ctx context.Context, moduleKey string) (int64, error)
+	DeleteTerritory(ctx context.Context, arg DeleteTerritoryParams) (int64, error)
 	DeleteUserTOTP(ctx context.Context, userID int64) error
 	DeleteWebAuthnCredentialByCredentialID(ctx context.Context, credentialID string) error
 	DeleteWebAuthnCredentialByUUID(ctx context.Context, arg DeleteWebAuthnCredentialByUUIDParams) error
 	// Every organization below the given one (not including itself).
 	Descendants(ctx context.Context, id int64) ([]Organization, error)
 	ExtensionExists(ctx context.Context, extname string) (bool, error)
+	// The rate of a pair (either direction) on the latest day within
+	// [min_date, on_date]; on that day manual > tcmb > ecb, direct before inverse.
+	FindPairRate(ctx context.Context, arg FindPairRateParams) (FindPairRateRow, error)
 	GetActiveDocumentTemplate(ctx context.Context, arg GetActiveDocumentTemplateParams) (DocumentTemplate, error)
 	GetActiveOTPByEmailType(ctx context.Context, arg GetActiveOTPByEmailTypeParams) (OtpCode, error)
 	GetActivePhoneOTP(ctx context.Context, arg GetActivePhoneOTPParams) (OtpCode, error)
@@ -99,6 +111,9 @@ type Querier interface {
 	GetBulkJobByID(ctx context.Context, id int64) (BulkJob, error)
 	GetBulkJobByUUID(ctx context.Context, argUuid uuid.UUID) (BulkJob, error)
 	GetConsentForText(ctx context.Context, arg GetConsentForTextParams) (Consent, error)
+	GetCountryByID(ctx context.Context, id int64) (Country, error)
+	GetCountryByISO2(ctx context.Context, iso2 string) (Country, error)
+	GetDistrictByID(ctx context.Context, id int64) (District, error)
 	GetDocumentRenderByID(ctx context.Context, id int64) (DocumentRender, error)
 	GetDocumentRenderByUUID(ctx context.Context, argUuid uuid.UUID) (DocumentRender, error)
 	GetDocumentTemplateByID(ctx context.Context, id int64) (DocumentTemplate, error)
@@ -143,6 +158,8 @@ type Querier interface {
 	GetOrganizationMemberByUserUUID(ctx context.Context, arg GetOrganizationMemberByUserUUIDParams) (GetOrganizationMemberByUserUUIDRow, error)
 	GetOrganizationTreeByUUID(ctx context.Context, argUuid uuid.UUID) (GetOrganizationTreeByUUIDRow, error)
 	GetPermissionBySlug(ctx context.Context, slug string) (Permission, error)
+	GetPlateFormatByCountry(ctx context.Context, iso2 string) (GetPlateFormatByCountryRow, error)
+	GetProvinceByID(ctx context.Context, id int64) (Province, error)
 	GetRoleByID(ctx context.Context, id int64) (Role, error)
 	GetRoleBySlug(ctx context.Context, slug string) (Role, error)
 	GetRoleByUUID(ctx context.Context, argUuid uuid.UUID) (Role, error)
@@ -185,6 +202,7 @@ type Querier interface {
 	InsertWhatsAppConnectionEvent(ctx context.Context, arg InsertWhatsAppConnectionEventParams) (WhatsappConnectionEvent, error)
 	InvalidateActiveOTPs(ctx context.Context, arg InvalidateActiveOTPsParams) error
 	InvalidateActivePhoneOTPs(ctx context.Context, arg InvalidateActivePhoneOTPsParams) error
+	LatestExchangeRateDate(ctx context.Context, onDate pgtype.Date) (pgtype.Date, error)
 	ListActiveDevicePushTokens(ctx context.Context, userID int64) ([]DevicePushToken, error)
 	ListActivePublicKeys(ctx context.Context, keys []string) ([]string, error)
 	ListActivePublicLinks(ctx context.Context) ([]StorageLink, error)
@@ -204,9 +222,16 @@ type Querier interface {
 	ListBrands(ctx context.Context) ([]Brand, error)
 	ListBulkChangesForJob(ctx context.Context, jobID int64) ([]BulkChange, error)
 	ListBulkJobsForActor(ctx context.Context, arg ListBulkJobsForActorParams) ([]BulkJob, error)
+	// TEC-84: countries > provinces > districts, territories, plate formats.
+	ListCountries(ctx context.Context, activeOnly bool) ([]ListCountriesRow, error)
+	// TEC-84: currencies and daily exchange rates. Rates travel as text so no
+	// precision is lost between NUMERIC and Go.
+	ListCurrencies(ctx context.Context, activeOnly bool) ([]Currency, error)
+	ListDistrictsByProvince(ctx context.Context, provinceID int64) ([]District, error)
 	ListDocumentTemplateVersions(ctx context.Context, arg ListDocumentTemplateVersionsParams) ([]DocumentTemplate, error)
 	ListDocumentTemplates(ctx context.Context, arg ListDocumentTemplatesParams) ([]ListDocumentTemplatesRow, error)
 	ListEnabledLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
+	ListExchangeRatesByDate(ctx context.Context, arg ListExchangeRatesByDateParams) ([]ListExchangeRatesByDateRow, error)
 	ListExportJobsForActor(ctx context.Context, arg ListExportJobsForActorParams) ([]ExportJob, error)
 	ListExportJobsForOrganization(ctx context.Context, arg ListExportJobsForOrganizationParams) ([]ExportJob, error)
 	// Grants of global roles (user_roles / JWT roles claim).
@@ -242,11 +267,16 @@ type Querier interface {
 	// Organizations reachable by a scope filter: an explicit id set
 	// (managed/subtree) or a whole brand (brand), or every brand (all, both NULL).
 	ListOrganizationsInScope(ctx context.Context, arg ListOrganizationsInScopeParams) ([]ListOrganizationsInScopeRow, error)
+	// Territories of the brand that overlap an area: the same area, an ancestor
+	// (the country or the province of a district) or a descendant.
+	ListOverlappingTerritories(ctx context.Context, arg ListOverlappingTerritoriesParams) ([]ListOverlappingTerritoriesRow, error)
 	ListPermissionSlugsByRoleID(ctx context.Context, roleID int64) ([]string, error)
 	ListPermissionSlugsByRoleSlug(ctx context.Context, slug string) ([]string, error)
 	ListPermissionsFiltered(ctx context.Context, arg ListPermissionsFilteredParams) ([]Permission, error)
+	ListPlateFormats(ctx context.Context, activeOnly bool) ([]ListPlateFormatsRow, error)
 	ListPlatformNotifications(ctx context.Context, arg ListPlatformNotificationsParams) ([]Notification, error)
 	ListPlatformNotificationsForExport(ctx context.Context, arg ListPlatformNotificationsForExportParams) ([]Notification, error)
+	ListProvincesByCountry(ctx context.Context, countryID int64) ([]ListProvincesByCountryRow, error)
 	ListPushSubscriptionsByUser(ctx context.Context, userID int64) ([]PushSubscription, error)
 	ListRoleGrantsByRoleID(ctx context.Context, roleID int64) ([]ListRoleGrantsByRoleIDRow, error)
 	ListRoleGrantsByRoleUUID(ctx context.Context, argUuid uuid.UUID) ([]ListRoleGrantsByRoleUUIDRow, error)
@@ -264,6 +294,7 @@ type Querier interface {
 	ListStorageStarsByUser(ctx context.Context, userID int64) ([]StorageStar, error)
 	ListStorageTrash(ctx context.Context, arg ListStorageTrashParams) ([]StorageTrash, error)
 	ListStuckProcessingNotificationIDs(ctx context.Context, staleMinutes int32) ([]int64, error)
+	ListTerritories(ctx context.Context, arg ListTerritoriesParams) ([]ListTerritoriesRow, error)
 	ListUserIDsByRoleSlug(ctx context.Context, slug string) ([]int64, error)
 	ListUserRoleSlugs(ctx context.Context, userID int64) ([]string, error)
 	ListUserRolesByUserID(ctx context.Context, userID int64) ([]Role, error)
@@ -277,6 +308,8 @@ type Querier interface {
 	ListWhatsAppConnectionEvents(ctx context.Context, limit int32) ([]WhatsappConnectionEvent, error)
 	// Phone OTP (TEC-92). Timestamps are passed in so tests can drive the clock.
 	LockOTPSubject(ctx context.Context, subject string) error
+	// Serializes territory writes of one (brand, country) inside a transaction.
+	LockTerritoryArea(ctx context.Context, arg LockTerritoryAreaParams) error
 	MarkAllNotificationsReadForUser(ctx context.Context, userID pgtype.Int8) (int64, error)
 	MarkBulkJobCompleted(ctx context.Context, arg MarkBulkJobCompletedParams) (BulkJob, error)
 	MarkBulkJobFailed(ctx context.Context, arg MarkBulkJobFailedParams) (BulkJob, error)
@@ -316,6 +349,9 @@ type Querier interface {
 	QueueImportJob(ctx context.Context, argUuid uuid.UUID) (ImportJob, error)
 	RemoveUserRoleBySlug(ctx context.Context, arg RemoveUserRoleBySlugParams) error
 	ReplaceUserRoles(ctx context.Context, userID int64) error
+	// The most specific territory covering an address (district > province >
+	// country) whose distributor is live.
+	ResolveTerritory(ctx context.Context, arg ResolveTerritoryParams) (ResolveTerritoryRow, error)
 	// A failed render is re-queued with a new attempt number (new task id).
 	RetryDocumentRender(ctx context.Context, id int64) (DocumentRender, error)
 	RevokeAllRefreshTokensForUser(ctx context.Context, userID int64) error
@@ -325,6 +361,7 @@ type Querier interface {
 	RevokeRefreshTokenByUUIDForUser(ctx context.Context, arg RevokeRefreshTokenByUUIDForUserParams) (int64, error)
 	RevokeStorageLink(ctx context.Context, argUuid uuid.UUID) (StorageLink, error)
 	SetAppSettingsLogo(ctx context.Context, logoObjectKey pgtype.Text) (AppSetting, error)
+	SetCountryActive(ctx context.Context, arg SetCountryActiveParams) (Country, error)
 	SetNotificationChannelEnabled(ctx context.Context, arg SetNotificationChannelEnabledParams) (NotificationChannelSetting, error)
 	SetOrganizationLogo(ctx context.Context, arg SetOrganizationLogoParams) (Organization, error)
 	SetRolePermissions(ctx context.Context, roleID int64) error
@@ -349,6 +386,7 @@ type Querier interface {
 	UpdateOrganizationLetterhead(ctx context.Context, arg UpdateOrganizationLetterheadParams) (Organization, error)
 	UpdateOrganizationParent(ctx context.Context, arg UpdateOrganizationParentParams) (Organization, error)
 	UpdateOrganizationPlatform(ctx context.Context, arg UpdateOrganizationPlatformParams) (Organization, error)
+	UpdatePlateFormat(ctx context.Context, arg UpdatePlateFormatParams) (PlateFormat, error)
 	UpdateRole(ctx context.Context, arg UpdateRoleParams) (Role, error)
 	UpdateStepupSettings(ctx context.Context, arg UpdateStepupSettingsParams) (StepupSetting, error)
 	UpdateUserLastLogin(ctx context.Context, id int64) error
@@ -366,6 +404,7 @@ type Querier interface {
 	UpsertDevicePushToken(ctx context.Context, arg UpsertDevicePushTokenParams) (DevicePushToken, error)
 	// One row per cache key: a repeated request returns the existing row.
 	UpsertDocumentRender(ctx context.Context, arg UpsertDocumentRenderParams) (DocumentRender, error)
+	UpsertExchangeRate(ctx context.Context, arg UpsertExchangeRateParams) error
 	// Catalog sync: level and sort order follow the Go catalog; admin-edited
 	// default_enabled / is_paid survive (a core module is always on).
 	UpsertModuleCatalog(ctx context.Context, arg UpsertModuleCatalogParams) error

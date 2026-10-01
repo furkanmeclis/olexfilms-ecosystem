@@ -7,6 +7,7 @@ import { Loading } from "@/components/common/loading";
 import { EntityForm, EntityPage } from "@/components/entity";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import { addressIds } from "@/features/geo";
 import { OrganizationEditForm } from "@/features/organizations/components/organization-edit-form";
 import { useUpdateOrganization } from "@/features/organizations/hooks/use-organization-mutations";
 import { useOrganization } from "@/features/organizations/hooks/use-organizations-query";
@@ -32,6 +33,8 @@ export function OrganizationEditPage({ uuid }: OrganizationEditPageProps) {
         district: values.district,
         phone: values.phone,
         address: values.address,
+        // The parent does not follow the address (K25: admin moves dealers).
+        ...addressIds(values),
         status: values.status,
         plan_code: values.plan_code?.trim() || undefined,
         ...(values.clear_access_ends_at

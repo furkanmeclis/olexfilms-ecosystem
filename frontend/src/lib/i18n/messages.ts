@@ -2,6 +2,8 @@ import type { AppLocale } from "@/config/i18n";
 
 import enAccess from "@/locales/en/access.json";
 import enModules from "@/locales/en/modules.json";
+import enGeo from "@/locales/en/geo.json";
+import enRates from "@/locales/en/rates.json";
 import enActivity from "@/locales/en/activity.json";
 import enAuth from "@/locales/en/auth.json";
 import enBranding from "@/locales/en/branding.json";
@@ -35,6 +37,8 @@ import enRegister from "@/locales/en/register.json";
 import enPortal from "@/locales/en/portal.json";
 import trAccess from "@/locales/tr/access.json";
 import trModules from "@/locales/tr/modules.json";
+import trGeo from "@/locales/tr/geo.json";
+import trRates from "@/locales/tr/rates.json";
 import trActivity from "@/locales/tr/activity.json";
 import trAuth from "@/locales/tr/auth.json";
 import trBranding from "@/locales/tr/branding.json";
@@ -99,6 +103,8 @@ const catalogs: Record<AppLocale, Record<string, MessageDictionary>> = {
     storage: trStorage,
     access: trAccess,
     modules: trModules,
+    geo: trGeo,
+    rates: trRates,
     integrations: trIntegrations,
     organizations: trOrganizations,
     register: trRegister,
@@ -134,6 +140,8 @@ const catalogs: Record<AppLocale, Record<string, MessageDictionary>> = {
     storage: enStorage,
     access: enAccess,
     modules: enModules,
+    geo: enGeo,
+    rates: enRates,
     integrations: enIntegrations,
     organizations: enOrganizations,
     register: enRegister,

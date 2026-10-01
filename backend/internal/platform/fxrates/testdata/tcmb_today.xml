@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="isokur.xsl"?>
+<Tarih_Date Tarih="30.09.2026" Date="09/30/2026"  Bulten_No="2026/185" >
+	<Currency CrossOrder="0" Kod="USD" CurrencyCode="USD">
+			<Unit>1</Unit>
+			<Isim>ABD DOLARI</Isim>
+			<CurrencyName>US DOLLAR</CurrencyName>
+			<ForexBuying>41.5021</ForexBuying>
+			<ForexSelling>41.5769</ForexSelling>
+			<BanknoteBuying>41.4730</BanknoteBuying>
+			<BanknoteSelling>41.6393</BanknoteSelling>
+			<CrossRateUSD/>
+			<CrossRateOther/>
+	</Currency>
+	<Currency CrossOrder="9" Kod="EUR" CurrencyCode="EUR">
+			<Unit>1</Unit>
+			<Isim>EURO</Isim>
+			<CurrencyName>EURO</CurrencyName>
+			<ForexBuying>48.7110</ForexBuying>
+			<ForexSelling>48.7988</ForexSelling>
+			<BanknoteBuying>48.6769</BanknoteBuying>
+			<BanknoteSelling>48.8720</BanknoteSelling>
+			<CrossRateUSD/>
+			<CrossRateOther>1.1737</CrossRateOther>
+	</Currency>
+	<Currency CrossOrder="12" Kod="JPY" CurrencyCode="JPY">
+			<Unit>100</Unit>
+			<Isim>JAPON YENİ</Isim>
+			<CurrencyName>JAPENESE YEN</CurrencyName>
+			<ForexBuying>27.9473</ForexBuying>
+			<ForexSelling>28.1323</ForexSelling>
+			<BanknoteBuying>27.8410</BanknoteBuying>
+			<BanknoteSelling>28.2378</BanknoteSelling>
+			<CrossRateUSD>148.62</CrossRateUSD>
+			<CrossRateOther/>
+	</Currency>
+	<Currency CrossOrder="17" Kod="AZN" CurrencyCode="AZN">
+			<Unit>1</Unit>
+			<Isim>AZERBAYCAN YENİ MANATI</Isim>
+			<CurrencyName>NEW AZERBAIJANI MANAT</CurrencyName>
+			<ForexBuying>24.3946</ForexBuying>
+			<ForexSelling>24.5569</ForexSelling>
+			<BanknoteBuying/>
+			<BanknoteSelling/>
+			<CrossRateUSD>1.7013</CrossRateUSD>
+			<CrossRateOther/>
+	</Currency>
+	<Currency CrossOrder="20" Kod="XDR" CurrencyCode="XDR">
+			<Unit>1</Unit>
+			<Isim>ÖZEL ÇEKME HAKKI (SDR)                            </Isim>
+			<CurrencyName>SPECIAL DRAWING RIGHT (SDR)                       </CurrencyName>
+			<ForexBuying>56.8751</ForexBuying>
+			<ForexSelling/>
+			<BanknoteBuying/>
+			<BanknoteSelling/>
+			<CrossRateUSD/>
+			<CrossRateOther/>
+	</Currency>
+</Tarih_Date>

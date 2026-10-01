@@ -176,6 +176,20 @@ var Permissions = []PermissionDef{
 		Description: "Connect the WhatsApp number, send test messages, edit OTP/KVKK texts.",
 	},
 
+	// TEC-84: geography, territories (K5) and exchange rates (K7). Migration
+	// 000035 runs before 000036, so on a fresh database these rows land
+	// before TEC-87's; the catalog keeps the same order (sort = index * 10).
+	withDesc(platformPerm(PermPlatformGeoWrite, "Write geography"),
+		"Add or remove provinces and districts; activate countries."),
+	withDesc(platformPerm(PermPlatformTerritoriesRead, "Read territories"),
+		"Distributor territories (country, province, district)."),
+	withDesc(platformPerm(PermPlatformTerritoriesWrite, "Write territories"),
+		"Assign or remove distributor territories (K5)."),
+	withDesc(platformPerm(PermPlatformRatesRead, "Read exchange rates"),
+		"Daily TCMB/ECB rates and manual overrides."),
+	withDesc(platformPerm(PermPlatformRatesWrite, "Write exchange rates"),
+		"Manual rate overrides and on-demand fetch."),
+
 	// TEC-87: notification center admin (template editor, channel switches,
 	// delivery log). Appended last; migration 000036 seeds them.
 	{
@@ -193,6 +207,11 @@ var Permissions = []PermissionDef{
 		Slug: PermPlatformLegalTextsWrite, Name: "Write legal texts", Module: "platform", Scopes: scopesAll,
 		Description: "Edit the portal legal texts (AI guidelines) in Markdown, per language.",
 	},
+}
+
+func withDesc(p PermissionDef, desc string) PermissionDef {
+	p.Description = desc
+	return p
 }
 
 func grants(base map[string]Scope, extra map[string]Scope) map[string]Scope {

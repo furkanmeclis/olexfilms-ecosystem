@@ -38,6 +38,10 @@ const (
 	CodeMFANotEnrolled            = "MFA_NOT_ENROLLED"
 	CodeRateLimited               = "RATE_LIMITED"
 	CodeInvalidMFACode            = "INVALID_MFA_CODE"
+	CodeTerritoryConflict         = "TERRITORY_CONFLICT"
+	CodeInvalidPlate              = "INVALID_PLATE"
+	CodeRateNotFound              = "RATE_NOT_FOUND"
+
 	// Session realms (TEC-90): panel vs customer portal.
 	CodeNoPortalAccess = "NO_PORTAL_ACCESS"
 	CodeNoPanelAccess  = "NO_PANEL_ACCESS"

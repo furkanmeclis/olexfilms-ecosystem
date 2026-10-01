@@ -78,5 +78,8 @@
   "nav_document_templates": "PDF templates",
   "nav_whatsapp_integration": "WhatsApp",
   "nav_notification_center": "Notification center",
+  "nav_territories": "Territories",
+  "nav_plate_formats": "Plate formats",
+  "nav_exchange_rates": "Exchange rates",
   "nav_legal_texts": "Legal texts"
 }

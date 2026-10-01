@@ -135,6 +135,31 @@ type Conversation struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
+type Country struct {
+	ID              int64              `json:"id"`
+	Iso2            string             `json:"iso2"`
+	Iso3            string             `json:"iso3"`
+	NumericCode     string             `json:"numeric_code"`
+	NameEn          string             `json:"name_en"`
+	NameTr          string             `json:"name_tr"`
+	PhoneCode       pgtype.Text        `json:"phone_code"`
+	DefaultCurrency pgtype.Text        `json:"default_currency"`
+	DefaultLocale   pgtype.Text        `json:"default_locale"`
+	Timezone        pgtype.Text        `json:"timezone"`
+	IsActive        bool               `json:"is_active"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Currency struct {
+	Code      string `json:"code"`
+	Name      string `json:"name"`
+	Symbol    string `json:"symbol"`
+	Decimals  int16  `json:"decimals"`
+	IsActive  bool   `json:"is_active"`
+	SortOrder int32  `json:"sort_order"`
+}
+
 type DevicePushToken struct {
 	ID         int64              `json:"id"`
 	Uuid       uuid.UUID          `json:"uuid"`
@@ -147,6 +172,14 @@ type DevicePushToken struct {
 	RevokedAt  pgtype.Timestamptz `json:"revoked_at"`
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
+}
+
+type District struct {
+	ID         int64              `json:"id"`
+	ProvinceID int64              `json:"province_id"`
+	Code       pgtype.Text        `json:"code"`
+	Name       string             `json:"name"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 }
 
 type DocumentRender struct {
@@ -191,6 +224,20 @@ type DocumentTemplate struct {
 	PublishedAt pgtype.Timestamptz `json:"published_at"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ExchangeRate struct {
+	ID              int64              `json:"id"`
+	RateDate        pgtype.Date        `json:"rate_date"`
+	Base            string             `json:"base"`
+	Quote           string             `json:"quote"`
+	Rate            pgtype.Numeric     `json:"rate"`
+	Source          string             `json:"source"`
+	Note            pgtype.Text        `json:"note"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	FetchedAt       pgtype.Timestamptz `json:"fetched_at"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
 type ExportJob struct {
@@ -505,6 +552,8 @@ type Organization struct {
 	ContractPdfKey     pgtype.Text        `json:"contract_pdf_key"`
 	ContractValidUntil pgtype.Date        `json:"contract_valid_until"`
 	Settings           []byte             `json:"settings"`
+	ProvinceID         pgtype.Int8        `json:"province_id"`
+	DistrictID         pgtype.Int8        `json:"district_id"`
 }
 
 type OrganizationMember struct {
@@ -574,6 +623,30 @@ type Permission struct {
 
 type PgExtension struct {
 	Extname string `json:"extname"`
+}
+
+type PlateFormat struct {
+	ID              int64              `json:"id"`
+	CountryID       int64              `json:"country_id"`
+	Regex           string             `json:"regex"`
+	InputMask       string             `json:"input_mask"`
+	Example         string             `json:"example"`
+	CountryLabel    string             `json:"country_label"`
+	StripColor      string             `json:"strip_color"`
+	BackgroundColor string             `json:"background_color"`
+	TextColor       string             `json:"text_color"`
+	IsActive        bool               `json:"is_active"`
+	SortOrder       int32              `json:"sort_order"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Province struct {
+	ID        int64              `json:"id"`
+	CountryID int64              `json:"country_id"`
+	Code      string             `json:"code"`
+	Name      string             `json:"name"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type PushSubscription struct {
@@ -686,6 +759,19 @@ type StorageTrash struct {
 	DeletedBy   pgtype.Int8        `json:"deleted_by"`
 	DeletedAt   pgtype.Timestamptz `json:"deleted_at"`
 	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
+}
+
+type Territory struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	BrandID         int64              `json:"brand_id"`
+	OrganizationID  int64              `json:"organization_id"`
+	CountryID       int64              `json:"country_id"`
+	ProvinceID      pgtype.Int8        `json:"province_id"`
+	DistrictID      pgtype.Int8        `json:"district_id"`
+	Level           pgtype.Text        `json:"level"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 }
 
 type User struct {

@@ -102,6 +102,12 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
       - name: Install
         run: pnpm install --frozen-lockfile
+      # Fonts are self-hosted (TEC-141); next/font/google fetches from
+      # fonts.googleapis.com at build time and flakes main. grep instead of
+      # rg: ripgrep is not guaranteed on the runner image.
+      - name: No next/font/google
+        working-directory: .
+        run: "! grep -rn 'next/font/google' frontend/src"
       - name: Lint
         run: pnpm lint
       - name: Format

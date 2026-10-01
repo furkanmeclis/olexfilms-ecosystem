@@ -2,10 +2,12 @@
 INSERT INTO organizations (
     slug, name, city, district, phone, address, status, plan_code,
     access_starts_at, access_ends_at,
-    type, parent_id, brand_id, currency, locale, timezone, settings
+    type, parent_id, brand_id, currency, locale, timezone, settings,
+    country_id, province_id, district_id
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-    $11, $12, $13, $14, $15, $16, $17
+    $11, $12, $13, $14, $15, $16, $17,
+    $18, $19, $20
 )
 RETURNING *;
 
@@ -75,7 +77,10 @@ SET name = COALESCE(sqlc.narg(name), name),
     access_ends_at = sqlc.narg(access_ends_at),
     currency = COALESCE(sqlc.narg(currency), currency),
     locale = COALESCE(sqlc.narg(locale), locale),
-    timezone = COALESCE(sqlc.narg(timezone), timezone)
+    timezone = COALESCE(sqlc.narg(timezone), timezone),
+    country_id = CASE WHEN sqlc.arg(set_address)::bool THEN sqlc.narg(country_id)::bigint ELSE country_id END,
+    province_id = CASE WHEN sqlc.arg(set_address)::bool THEN sqlc.narg(province_id)::bigint ELSE province_id END,
+    district_id = CASE WHEN sqlc.arg(set_address)::bool THEN sqlc.narg(district_id)::bigint ELSE district_id END
 WHERE uuid = sqlc.arg(uuid) AND deleted_at IS NULL
 RETURNING *;
 
