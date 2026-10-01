@@ -2,6 +2,8 @@ packages:
   - "."
 
 allowBuilds:
+  # Source maps are not uploaded (receiver has no source map support): no CLI binary.
+  "@sentry/cli": false
   esbuild: false
   protobufjs: false
   sharp: true

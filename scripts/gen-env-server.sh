@@ -210,6 +210,14 @@ set_kv AUTH_ADAPTER_SECRET "$(secret AUTH_ADAPTER_SECRET hex 32)"
 set_kv AUTH_WEBAUTHN_RP_ID "$APP_DOMAIN"
 # --- Frontend public ---
 set_kv NEXT_PUBLIC_CENTRIFUGO_URL "$WS_URL"
+# --- Error tracking (technowide errortracking; DSNs are not secrets) ---
+# Empty until the technowide source exists; a hand-entered DSN is kept.
+set_kv SENTRY_DSN "$(keep SENTRY_DSN "")"
+set_kv SENTRY_ENVIRONMENT "$(keep SENTRY_ENVIRONMENT production)"
+set_kv SENTRY_RELEASE "$(keep SENTRY_RELEASE "")"
+set_kv NEXT_PUBLIC_SENTRY_DSN "$(keep NEXT_PUBLIC_SENTRY_DSN "")"
+set_kv NEXT_PUBLIC_SENTRY_ENVIRONMENT "$(keep NEXT_PUBLIC_SENTRY_ENVIRONMENT production)"
+set_kv NEXT_PUBLIC_SENTRY_RELEASE "$(keep NEXT_PUBLIC_SENTRY_RELEASE "")"
 # --- Web Push ---
 set_kv VAPID_PUBLIC_KEY "$VAPID_PUB"
 set_kv VAPID_PRIVATE_KEY "$VAPID_PRIV"

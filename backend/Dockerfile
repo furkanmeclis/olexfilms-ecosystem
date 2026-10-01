@@ -11,10 +11,14 @@ RUN go mod download
 
 COPY . .
 
+# Error-tracking release (e.g. v0.12); SENTRY_RELEASE at runtime overrides it.
+ARG SENTRY_RELEASE=""
+ARG RELEASE_LDFLAG="-X github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/errtrack.Release=${SENTRY_RELEASE}"
+
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -trimpath -ldflags="-s -w" -o /out/server ./cmd/server && \
+    go build -trimpath -ldflags="-s -w ${RELEASE_LDFLAG}" -o /out/server ./cmd/server && \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -trimpath -ldflags="-s -w" -o /out/worker ./cmd/worker && \
+    go build -trimpath -ldflags="-s -w ${RELEASE_LDFLAG}" -o /out/worker ./cmd/worker && \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build -trimpath -ldflags="-s -w" -o /out/create-super-admin ./cmd/create-super-admin
 
