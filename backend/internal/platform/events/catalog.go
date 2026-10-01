@@ -168,6 +168,26 @@ const (
 	TicketsAIAssistGuardFailed          = "tickets.ai.assist_guard_failed"
 )
 
+// Stock ledger domain events (TEC-154): one per movement type, written to
+// the outbox by ledger.Post in the movement's transaction.
+const (
+	StockEntry                 = "stock.entry"
+	StockPlacement             = "stock.placement"
+	StockTransferOut           = "stock.transfer_out"
+	StockTransferIn            = "stock.transfer_in"
+	StockTransferCancelRestore = "stock.transfer_cancel_restore"
+	StockOrderOut              = "stock.order_out"
+	StockReceived              = "stock.received"
+	StockOrderCancelRestore    = "stock.order_cancel_restore"
+	StockConsumption           = "stock.consumption"
+	StockPartialConsumption    = "stock.partial_consumption"
+	StockReturn                = "stock.return"
+	StockReclassification      = "stock.reclassification"
+	StockCountAdjustment       = "stock.count_adjustment"
+	StockVoid                  = "stock.void"
+	StockExternalOutbound      = "stock.external_outbound"
+)
+
 // Contracts domain events.
 const (
 	ContractsInstanceSigned = "contracts.instance_signed"
@@ -363,6 +383,21 @@ func catalogConstants() []string {
 		TicketsAISuggestionCreated,
 		TicketsAIAssistEscalated,
 		TicketsAIAssistGuardFailed,
+		StockEntry,
+		StockPlacement,
+		StockTransferOut,
+		StockTransferIn,
+		StockTransferCancelRestore,
+		StockOrderOut,
+		StockReceived,
+		StockOrderCancelRestore,
+		StockConsumption,
+		StockPartialConsumption,
+		StockReturn,
+		StockReclassification,
+		StockCountAdjustment,
+		StockVoid,
+		StockExternalOutbound,
 		ContractsInstanceSigned,
 		AuthWelcome,
 		AuthEmailVerification,
