@@ -3877,6 +3877,200 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/accounting/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** F1 category catalog (code-defined) with labels in the request language */
+        get: operations["listAccountingCategories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cash and bank accounts of a book with balances
+         * @description The book is the active organization, or organization_uuid when it is below the active organization and inside the accounting.read scope (otherwise 404).
+         */
+        get: operations["listAccountingAccounts"];
+        put?: never;
+        /**
+         * Open a cash or bank account in the active organization (its currency)
+         * @description Needs accounting.write; dealer roles hold none (403). The IBAN (bank only) is normalised and checked (country length, mod-97).
+         */
+        post: operations["createAccountingAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/accounts/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One cash or bank account with its balance */
+        get: operations["getAccountingAccount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Rename, change the IBAN of, or (de)activate an account
+         * @description Accounts are never deleted; `active: false` deactivates one (it then takes no new entries). Absent fields keep the stored value; `iban: null` clears it.
+         */
+        patch: operations["updateAccountingAccount"];
+        trace?: never;
+    };
+    "/v1/accounting/cari": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cari accounts of a book with balances (positive = receivable) */
+        get: operations["listAccountingCari"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/cari/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One cari account with its balance */
+        get: operations["getAccountingCari"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ledger rows of a book, newest first */
+        get: operations["listAccountingEntries"];
+        put?: never;
+        /**
+         * Manual income, expense or cari charge (source_type manual)
+         * @description Written to the active organization's book through the posting API. Income/expense need an account and/or a cari; a charge needs a cari only. The cari is named by cari_uuid or by the counterparty organization (the parent or a direct child of the same brand; opened when missing). System categories (sale, purchase) are refused. A repeated idempotency_key answers 200 with the earlier entry.
+         */
+        post: operations["createAccountingEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/entries/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One ledger row */
+        get: operations["getAccountingEntry"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/entries/{uuid}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reverse a manual entry (step-up)
+         * @description Appends the mirror row (reversal_of_uuid, negated amounts); the ledger is append-only. Only open manual entries of the active organization (409 ENTRY_NOT_VOIDABLE otherwise). Needs a recent step-up (403 STEP_UP_REQUIRED).
+         */
+        post: operations["voidAccountingEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Collection from a counterparty into a cash/bank account
+         * @description Lowers the cari receivable and raises the account; never writes income (TEC-99 decision 2). A repeated idempotency_key answers 200.
+         */
+        post: operations["createAccountingCollection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Payment to a counterparty from a cash/bank account
+         * @description Lowers the cari debt and the account; never writes an expense. A repeated idempotency_key answers 200.
+         */
+        post: operations["createAccountingPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -6578,6 +6772,223 @@ export interface components {
             };
             meta: components["schemas"]["ResponseMeta"];
         };
+        /** @enum {string} */
+        AccountingDirection: "income" | "expense" | "charge" | "collection" | "payment";
+        /**
+         * @description Signed decimal (NUMERIC(18,2)) as a string; reversal rows are negative.
+         * @example 1500.00
+         */
+        AccountingAmount: string;
+        /**
+         * @description Positive decimal with at most two fraction digits.
+         * @example 1500.00
+         */
+        AccountingAmountInput: string;
+        AccountingCategory: {
+            /** @example rent */
+            key: string;
+            direction: components["schemas"]["AccountingDirection"];
+            /** @example accounting.category.rent */
+            label_key: string;
+            /**
+             * @description label_key in the request language
+             * @example Rent
+             */
+            label: string;
+            /** @description false for system categories written by the source API only (sale, purchase) */
+            manual: boolean;
+        };
+        FinanceAccount: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            type: "cash" | "bank";
+            name: string;
+            currency: string;
+            /** @example TR330006100519786457841326 */
+            iban: string | null;
+            active: boolean;
+            balance: components["schemas"]["AccountingAmount"];
+            /** Format: int64 */
+            entry_count: number;
+            /** Format: date-time */
+            last_entry_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        FinanceAccountCreateInput: {
+            /** @enum {string} */
+            type: "cash" | "bank";
+            name: string;
+            /** @description Bank accounts only; spaces allowed */
+            iban?: string | null;
+        };
+        FinanceAccountUpdateInput: {
+            name?: string;
+            /** @description null clears it */
+            iban?: string | null;
+            active?: boolean;
+        };
+        CariCounterparty: {
+            /** @enum {string} */
+            type: "organization" | "user";
+            /** Format: uuid */
+            uuid: string | null;
+            name: string;
+            /** @enum {string} */
+            org_type?: "center" | "distributor" | "dealer";
+        };
+        CariAccount: {
+            /** Format: uuid */
+            uuid: string;
+            counterparty: components["schemas"]["CariCounterparty"];
+            currency: string;
+            active: boolean;
+            balance: components["schemas"]["AccountingAmount"];
+            /** Format: int64 */
+            entry_count: number;
+            /** Format: date-time */
+            last_entry_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        AccountingRef: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+        };
+        FinanceEntry: {
+            /** Format: uuid */
+            uuid: string;
+            direction: components["schemas"]["AccountingDirection"];
+            category: string;
+            /** @example accounting.category.rent */
+            category_label_key: string;
+            account: components["schemas"]["AccountingRef"] | null;
+            /** Format: uuid */
+            cari_uuid: string | null;
+            counterparty_organization: components["schemas"]["AccountingRef"] | null;
+            orig_currency: string;
+            orig_amount: components["schemas"]["AccountingAmount"];
+            /** @description The organization's ledger currency (K7) */
+            currency: string;
+            amount: components["schemas"]["AccountingAmount"];
+            /**
+             * @description Frozen rate orig_currency→currency (NUMERIC(18,8))
+             * @example 1.00000000
+             */
+            rate: string;
+            /** Format: date */
+            rate_date: string;
+            /** @example manual */
+            source_type: string | null;
+            /** Format: uuid */
+            source_uuid: string | null;
+            revision: number;
+            /** Format: uuid */
+            reversal_of_uuid: string | null;
+            /** Format: uuid */
+            reversed_by_uuid: string | null;
+            /** @description The row has been reversed */
+            voided: boolean;
+            description: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        FinanceEntryInput: {
+            /** @enum {string} */
+            direction: "income" | "expense" | "charge";
+            /** @description A manual category of the direction (GET /v1/accounting/categories) */
+            category: string;
+            amount: components["schemas"]["AccountingAmountInput"];
+            /** @description Defaults to the organization's currency; others convert at today's rate */
+            currency?: string;
+            /** Format: uuid */
+            account_uuid?: string | null;
+            /** Format: uuid */
+            cari_uuid?: string | null;
+            /** Format: uuid */
+            counterparty_organization_uuid?: string | null;
+            description?: string;
+            /** Format: uuid */
+            idempotency_key?: string | null;
+        };
+        FinanceSettlementInput: {
+            /** Format: uuid */
+            account_uuid: string;
+            /** Format: uuid */
+            cari_uuid?: string | null;
+            /** Format: uuid */
+            counterparty_organization_uuid?: string | null;
+            amount: components["schemas"]["AccountingAmountInput"];
+            currency?: string;
+            description?: string;
+            /** Format: uuid */
+            idempotency_key?: string | null;
+        };
+        FinanceEntryVoidInput: {
+            reason: string;
+        };
+        EnvelopeAccountingCategoryList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["AccountingCategory"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFinanceAccount: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FinanceAccount"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFinanceAccountList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["FinanceAccount"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeCariAccount: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["CariAccount"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeCariAccountPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["CariAccount"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFinanceEntry: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FinanceEntry"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFinanceEntryPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["FinanceEntry"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
     };
     responses: {
         /** @description 426 MOBILE_API_VERSION_UNSUPPORTED (missing or unsupported X-Mobile-Api-Version; update the app) */
@@ -6717,6 +7128,8 @@ export interface components {
         };
     };
     parameters: {
+        /** @description Book to read: the active organization (default) or an organization below it inside the accounting.read scope. */
+        AccountingOrganizationUUID: string;
         VehicleCatalogUUID: string;
         ProductUUID: string;
         /** @description ISO-4217 code (case-insensitive) */
@@ -13602,6 +14015,423 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    listAccountingCategories: {
+        parameters: {
+            query?: {
+                direction?: components["schemas"]["AccountingDirection"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Categories */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAccountingCategoryList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listAccountingAccounts: {
+        parameters: {
+            query?: {
+                /** @description Book to read: the active organization (default) or an organization below it inside the accounting.read scope. */
+                organization_uuid?: components["parameters"]["AccountingOrganizationUUID"];
+                active?: boolean;
+                type?: "cash" | "bank";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accounts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFinanceAccountList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createAccountingAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FinanceAccountCreateInput"];
+            };
+        };
+        responses: {
+            /** @description Created account */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFinanceAccount"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getAccountingAccount: {
+        parameters: {
+            query?: {
+                /** @description Book to read: the active organization (default) or an organization below it inside the accounting.read scope. */
+                organization_uuid?: components["parameters"]["AccountingOrganizationUUID"];
+            };
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Account */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFinanceAccount"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateAccountingAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FinanceAccountUpdateInput"];
+            };
+        };
+        responses: {
+            /** @description Updated account */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFinanceAccount"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listAccountingCari: {
+        parameters: {
+            query?: {
+                /** @description Book to read: the active organization (default) or an organization below it inside the accounting.read scope. */
+                organization_uuid?: components["parameters"]["AccountingOrganizationUUID"];
+                active?: boolean;
+                q?: components["parameters"]["Q"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cari accounts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCariAccountPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getAccountingCari: {
+        parameters: {
+            query?: {
+                /** @description Book to read: the active organization (default) or an organization below it inside the accounting.read scope. */
+                organization_uuid?: components["parameters"]["AccountingOrganizationUUID"];
+            };
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cari account */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCariAccount"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listAccountingEntries: {
+        parameters: {
+            query?: {
+                /** @description Book to read: the active organization (default) or an organization below it inside the accounting.read scope. */
+                organization_uuid?: components["parameters"]["AccountingOrganizationUUID"];
+                account_uuid?: string;
+                cari_uuid?: string;
+                direction?: components["schemas"]["AccountingDirection"];
+                category?: string;
+                /** @description manual, order, ... */
+                source_type?: string;
+                /** @description First day (UTC, inclusive) of created_at */
+                date_from?: string;
+                /** @description Last day (UTC, inclusive) of created_at */
+                date_to?: string;
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Entries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFinanceEntryPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createAccountingEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FinanceEntryInput"];
+            };
+        };
+        responses: {
+            /** @description Replayed (same idempotency_key) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFinanceEntry"];
+                };
+            };
+            /** @description Created entry */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFinanceEntry"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getAccountingEntry: {
+        parameters: {
+            query?: {
+                /** @description Book to read: the active organization (default) or an organization below it inside the accounting.read scope. */
+                organization_uuid?: components["parameters"]["AccountingOrganizationUUID"];
+            };
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Entry */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFinanceEntry"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    voidAccountingEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FinanceEntryVoidInput"];
+            };
+        };
+        responses: {
+            /** @description Reversal row */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFinanceEntry"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    createAccountingCollection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FinanceSettlementInput"];
+            };
+        };
+        responses: {
+            /** @description Replayed (same idempotency_key) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFinanceEntry"];
+                };
+            };
+            /** @description Created collection */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFinanceEntry"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    createAccountingPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FinanceSettlementInput"];
+            };
+        };
+        responses: {
+            /** @description Replayed (same idempotency_key) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFinanceEntry"];
+                };
+            };
+            /** @description Created payment */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFinanceEntry"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
 }
