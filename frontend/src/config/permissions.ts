@@ -102,6 +102,9 @@ export const Permission = {
 
   CatalogRead: "catalog.read",
   CatalogWrite: "catalog.write",
+
+  VehicleCatalogRead: "vehicle_catalog.read",
+  VehicleCatalogWrite: "vehicle_catalog.write",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];

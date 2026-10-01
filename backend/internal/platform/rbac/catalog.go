@@ -219,6 +219,18 @@ var Permissions = []PermissionDef{
 		Slug: PermCatalogWrite, Name: "Write catalog", Module: "catalog", Scopes: scopesSupplier,
 		Description: "Create and edit product categories and products (center only, K4).",
 	},
+
+	// TEC-149: vehicle catalog (global reference data). Appended last;
+	// migration 000044 seeds them. Only super_admin writes (scope all);
+	// every organization role and the portal roles read.
+	{
+		Slug: PermVehicleCatalogRead, Name: "Read vehicle catalog", Module: "vehicle_catalog", Scopes: scopesRecords,
+		Description: "Car brands and models (global reference data).",
+	},
+	{
+		Slug: PermVehicleCatalogWrite, Name: "Write vehicle catalog", Module: "vehicle_catalog", Scopes: scopesAll,
+		Description: "Create and edit car brands, models, logos and hero images (super_admin only).",
+	},
 }
 
 func withDesc(p PermissionDef, desc string) PermissionDef {
@@ -261,8 +273,9 @@ var Roles = []RoleDef{
 		Slug: RoleCenterStaff, Name: "Center staff", OrgType: OrgTypeCenter,
 		Description: "Center staff: services, customers and the organization tree of the brand",
 		Grants: grants(baseGrants, map[string]Scope{
-			PermCatalogRead:  ScopeBrand,
-			PermCatalogWrite: ScopeBrand,
+			PermVehicleCatalogRead: ScopeBrand,
+			PermCatalogRead:        ScopeBrand,
+			PermCatalogWrite:       ScopeBrand,
 			// TEC-145 (000043): catalog import/export jobs of the center.
 			PermTenantImportsRead:      ScopeManaged,
 			PermTenantExportsRead:      ScopeManaged,
@@ -279,16 +292,18 @@ var Roles = []RoleDef{
 		Slug: RoleCenterWarehouse, Name: "Center warehouse", OrgType: OrgTypeCenter,
 		Description: "Center warehouse operator",
 		Grants: grants(baseGrants, map[string]Scope{
-			PermCatalogRead:       ScopeBrand,
-			PermOrganizationsRead: ScopeBrand,
-			PermWarehouseRead:     ScopeBrand,
-			PermWarehouseWrite:    ScopeBrand,
+			PermVehicleCatalogRead: ScopeBrand,
+			PermCatalogRead:        ScopeBrand,
+			PermOrganizationsRead:  ScopeBrand,
+			PermWarehouseRead:      ScopeBrand,
+			PermWarehouseWrite:     ScopeBrand,
 		}),
 	},
 	{
 		Slug: RoleCenterAccounting, Name: "Center accounting", OrgType: OrgTypeCenter,
 		Description: "Center accounting and price management",
 		Grants: grants(baseGrants, map[string]Scope{
+			PermVehicleCatalogRead:      ScopeBrand,
 			PermCatalogRead:             ScopeBrand,
 			PermOrganizationsRead:       ScopeBrand,
 			PermAccountingRead:          ScopeBrand,
@@ -304,21 +319,23 @@ var Roles = []RoleDef{
 		Slug: RoleCenterSocial, Name: "Center social", OrgType: OrgTypeCenter,
 		Description: "Leads, campaigns and social media for the brand",
 		Grants: grants(baseGrants, map[string]Scope{
-			PermCatalogRead:       ScopeBrand,
-			PermOrganizationsRead: ScopeBrand,
-			PermCustomersRead:     ScopeBrand,
-			PermCampaignsRead:     ScopeBrand,
-			PermCampaignsWrite:    ScopeBrand,
-			PermLeadsRead:         ScopeBrand,
-			PermLeadsWrite:        ScopeBrand,
-			PermSocialRead:        ScopeBrand,
-			PermSocialWrite:       ScopeBrand,
+			PermVehicleCatalogRead: ScopeBrand,
+			PermCatalogRead:        ScopeBrand,
+			PermOrganizationsRead:  ScopeBrand,
+			PermCustomersRead:      ScopeBrand,
+			PermCampaignsRead:      ScopeBrand,
+			PermCampaignsWrite:     ScopeBrand,
+			PermLeadsRead:          ScopeBrand,
+			PermLeadsWrite:         ScopeBrand,
+			PermSocialRead:         ScopeBrand,
+			PermSocialWrite:        ScopeBrand,
 		}),
 	},
 	{
 		Slug: RoleDistributorOwner, Name: "Distributor owner", OrgType: OrgTypeDistributor,
 		Description: "Distributor owner: own prices, accounting and warehouse; services and dealers of the subtree",
 		Grants: grants(grants(baseGrants, ownerTenantGrants), map[string]Scope{
+			PermVehicleCatalogRead:     ScopeManaged,
 			PermCatalogRead:            ScopeManaged,
 			PermOrganizationsRead:      ScopeSubtree,
 			PermOrganizationsWrite:     ScopeSubtree,
@@ -344,27 +361,30 @@ var Roles = []RoleDef{
 		Slug: RoleDistributorStaff, Name: "Distributor staff", OrgType: OrgTypeDistributor,
 		Description: "Distributor staff: services of the subtree",
 		Grants: grants(baseGrants, map[string]Scope{
-			PermCatalogRead:       ScopeManaged,
-			PermOrganizationsRead: ScopeSubtree,
-			PermServicesRead:      ScopeSubtree,
-			PermServicesWrite:     ScopeSubtree,
-			PermCustomersRead:     ScopeSubtree,
-			PermCustomersWrite:    ScopeSubtree,
+			PermVehicleCatalogRead: ScopeManaged,
+			PermCatalogRead:        ScopeManaged,
+			PermOrganizationsRead:  ScopeSubtree,
+			PermServicesRead:       ScopeSubtree,
+			PermServicesWrite:      ScopeSubtree,
+			PermCustomersRead:      ScopeSubtree,
+			PermCustomersWrite:     ScopeSubtree,
 		}),
 	},
 	{
 		Slug: RoleDistributorWarehouseStaff, Name: "Distributor warehouse staff", OrgType: OrgTypeDistributor,
 		Description: "Distributor warehouse operator",
 		Grants: grants(baseGrants, map[string]Scope{
-			PermCatalogRead:    ScopeManaged,
-			PermWarehouseRead:  ScopeManaged,
-			PermWarehouseWrite: ScopeManaged,
+			PermVehicleCatalogRead: ScopeManaged,
+			PermCatalogRead:        ScopeManaged,
+			PermWarehouseRead:      ScopeManaged,
+			PermWarehouseWrite:     ScopeManaged,
 		}),
 	},
 	{
 		Slug: RoleDistributorAccounting, Name: "Distributor accounting", OrgType: OrgTypeDistributor,
 		Description: "Distributor accounting and prices",
 		Grants: grants(baseGrants, map[string]Scope{
+			PermVehicleCatalogRead:     ScopeManaged,
 			PermCatalogRead:            ScopeManaged,
 			PermAccountingRead:         ScopeManaged,
 			PermAccountingWrite:        ScopeManaged,
@@ -378,6 +398,7 @@ var Roles = []RoleDef{
 		Slug: RoleDealerOwner, Name: "Dealer owner", OrgType: OrgTypeDealer,
 		Description: "Dealer owner: sets final prices (K8), sees accounting and dealer stock",
 		Grants: grants(grants(baseGrants, ownerTenantGrants), map[string]Scope{
+			PermVehicleCatalogRead:     ScopeManaged,
 			PermCatalogRead:            ScopeManaged,
 			PermOrganizationsRead:      ScopeManaged,
 			PermMembersRead:            ScopeManaged,
@@ -400,17 +421,19 @@ var Roles = []RoleDef{
 		Slug: RoleDealerStaff, Name: "Dealer staff", OrgType: OrgTypeDealer,
 		Description: "Dealer staff: reads the dealer's services, writes own records; no prices or accounting",
 		Grants: grants(baseGrants, map[string]Scope{
-			PermCatalogRead:    ScopeManaged,
-			PermServicesRead:   ScopeManaged,
-			PermServicesWrite:  ScopeOwn,
-			PermCustomersRead:  ScopeManaged,
-			PermCustomersWrite: ScopeOwn,
+			PermVehicleCatalogRead: ScopeManaged,
+			PermCatalogRead:        ScopeManaged,
+			PermServicesRead:       ScopeManaged,
+			PermServicesWrite:      ScopeOwn,
+			PermCustomersRead:      ScopeManaged,
+			PermCustomersWrite:     ScopeOwn,
 		}),
 	},
 	{
 		Slug: RoleDealerAccounting, Name: "Dealer accounting", OrgType: OrgTypeDealer,
 		Description: "Dealer accounting",
 		Grants: grants(baseGrants, map[string]Scope{
+			PermVehicleCatalogRead:     ScopeManaged,
 			PermCatalogRead:            ScopeManaged,
 			PermAccountingRead:         ScopeManaged,
 			PermAccountingWrite:        ScopeManaged,
@@ -423,16 +446,18 @@ var Roles = []RoleDef{
 		Slug: RoleCustomer, Name: "Customer", OrgType: OrgTypeCustomer,
 		Description: "Portal customer: own services and warranties",
 		Grants: grants(baseGrants, map[string]Scope{
-			PermServicesRead:  ScopeCustomer,
-			PermCustomersRead: ScopeCustomer,
+			PermVehicleCatalogRead: ScopeCustomer,
+			PermServicesRead:       ScopeCustomer,
+			PermCustomersRead:      ScopeCustomer,
 		}),
 	},
 	{
 		Slug: RoleFleet, Name: "Fleet", OrgType: OrgTypeFleet,
 		Description: "Fleet account (read-only)",
 		Grants: grants(baseGrants, map[string]Scope{
-			PermServicesRead:  ScopeCustomer,
-			PermCustomersRead: ScopeCustomer,
+			PermVehicleCatalogRead: ScopeCustomer,
+			PermServicesRead:       ScopeCustomer,
+			PermCustomersRead:      ScopeCustomer,
 		}),
 	},
 }

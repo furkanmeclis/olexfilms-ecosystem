@@ -136,5 +136,8 @@
   "labels.platform.legal_texts.write": "تعديل النصوص القانونية",
   "labels.catalog.read": "عرض الكتالوج",
   "labels.catalog.write": "إدارة الكتالوج",
-  "groups.catalog": "الكتالوج"
+  "groups.catalog": "الكتالوج",
+  "labels.vehicle_catalog.read": "عرض كتالوج المركبات",
+  "labels.vehicle_catalog.write": "إدارة كتالوج المركبات",
+  "groups.vehicle_catalog": "كتالوج المركبات"
 }

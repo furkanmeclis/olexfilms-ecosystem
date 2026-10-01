@@ -136,5 +136,8 @@
   "labels.platform.legal_texts.write": "Rechtstexte bearbeiten",
   "labels.catalog.read": "Katalog anzeigen",
   "labels.catalog.write": "Katalog verwalten",
-  "groups.catalog": "Katalog"
+  "groups.catalog": "Katalog",
+  "labels.vehicle_catalog.read": "Fahrzeugkatalog anzeigen",
+  "labels.vehicle_catalog.write": "Fahrzeugkatalog verwalten",
+  "groups.vehicle_catalog": "Fahrzeugkatalog"
 }

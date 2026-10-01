@@ -136,5 +136,8 @@
   "labels.platform.legal_texts.write": "Изменение юридических текстов",
   "labels.catalog.read": "Просмотр каталога",
   "labels.catalog.write": "Управление каталогом",
-  "groups.catalog": "Каталог"
+  "groups.catalog": "Каталог",
+  "labels.vehicle_catalog.read": "Просмотр каталога автомобилей",
+  "labels.vehicle_catalog.write": "Управление каталогом автомобилей",
+  "groups.vehicle_catalog": "Каталог автомобилей"
 }

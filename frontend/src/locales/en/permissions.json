@@ -136,5 +136,8 @@
   "labels.platform.legal_texts.write": "Write legal texts",
   "labels.catalog.read": "View catalog",
   "labels.catalog.write": "Manage catalog",
-  "groups.catalog": "Catalog"
+  "groups.catalog": "Catalog",
+  "labels.vehicle_catalog.read": "View vehicle catalog",
+  "labels.vehicle_catalog.write": "Manage vehicle catalog",
+  "groups.vehicle_catalog": "Vehicle catalog"
 }

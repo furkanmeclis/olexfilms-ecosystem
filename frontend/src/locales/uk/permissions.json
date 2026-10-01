@@ -136,5 +136,8 @@
   "labels.platform.legal_texts.write": "Зміна юридичних текстів",
   "labels.catalog.read": "Перегляд каталогу",
   "labels.catalog.write": "Керування каталогом",
-  "groups.catalog": "Каталог"
+  "groups.catalog": "Каталог",
+  "labels.vehicle_catalog.read": "Перегляд каталогу автомобілів",
+  "labels.vehicle_catalog.write": "Керування каталогом автомобілів",
+  "groups.vehicle_catalog": "Каталог автомобілів"
 }

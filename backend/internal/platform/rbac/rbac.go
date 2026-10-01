@@ -139,6 +139,10 @@ const (
 	// Product catalog (TEC-144): written by the center only (K4).
 	PermCatalogRead  = "catalog.read"
 	PermCatalogWrite = "catalog.write"
+
+	// Vehicle catalog (TEC-149): global car brands/models; super_admin writes.
+	PermVehicleCatalogRead  = "vehicle_catalog.read"
+	PermVehicleCatalogWrite = "vehicle_catalog.write"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

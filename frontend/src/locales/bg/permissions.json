@@ -136,5 +136,8 @@
   "labels.platform.legal_texts.write": "Запис на правни текстове",
   "labels.catalog.read": "Преглед на каталога",
   "labels.catalog.write": "Управление на каталога",
-  "groups.catalog": "Каталог"
+  "groups.catalog": "Каталог",
+  "labels.vehicle_catalog.read": "Преглед на каталога с автомобили",
+  "labels.vehicle_catalog.write": "Управление на каталога с автомобили",
+  "groups.vehicle_catalog": "Каталог с автомобили"
 }
