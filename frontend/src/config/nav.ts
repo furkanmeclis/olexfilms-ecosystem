@@ -2,7 +2,9 @@ import {
   Activity,
   Bell,
   Building2,
+  Blocks,
   Download,
+  FileText,
   HardDrive,
   KeyRound,
   LayoutDashboard,
@@ -76,6 +78,13 @@ export const platformNav = defineNav({
           permission: permissions.activity.read,
         },
         {
+          id: "document-templates",
+          titleKey: "layout.nav_document_templates",
+          href: routes.platform.documentTemplates.root,
+          icon: FileText,
+          permission: permissions.documentTemplates.read,
+        },
+        {
           id: "logs",
           titleKey: "layout.nav_logs",
           href: routes.platform.logs.root,
@@ -95,6 +104,13 @@ export const platformNav = defineNav({
           href: routes.platform.access.root,
           icon: KeyRound,
           permission: permissions.access.read,
+        },
+        {
+          id: "modules",
+          titleKey: "layout.nav_modules",
+          href: routes.platform.modules.root,
+          icon: Blocks,
+          permission: permissions.modules.platformRead,
         },
       ],
     },
@@ -196,8 +212,9 @@ export const cmsNav = defineNav({
 
 /**
  * Tenant menu. Items may narrow by organization type (orgTypes: center |
- * distributor | dealer) and member role (orgRoles); tenant I/O routes are
- * owner-only on the API (RequireOrgRole).
+ * distributor | dealer), member role (orgRoles) and module (feature: a key
+ * from GET /v1/features, hidden while the module is off); tenant I/O routes
+ * are owner-only on the API (RequireOrgRole).
  */
 export function tenantNav(slug: string) {
   return defineNav({
@@ -220,6 +237,14 @@ export function tenantNav(slug: string) {
             titleKey: "layout.nav_profile",
             href: routes.tenant.profile.root(slug),
             icon: UserRound,
+          },
+          {
+            // Özellikler belongs to the core organizations module (always
+            // on), so the entry needs no `feature` gate.
+            id: "features",
+            titleKey: "layout.nav_features",
+            href: routes.tenant.features.root(slug),
+            icon: Blocks,
           },
         ],
       },

@@ -1,7 +1,8 @@
 /**
- * Plan-limit events. `parseApiError` emits one whenever the API answers with
- * LIMIT_REACHED (409) or FEATURE_DISABLED (403); the tenant layout listens and
- * shows the upgrade dialog, so individual mutations need no special handling.
+ * Module / limit events. `parseApiError` emits one whenever the API answers
+ * with FEATURE_DISABLED (403: the module is off for the organization, 409: it
+ * is off one level up) or LIMIT_REACHED (reserved, no endpoint emits it), so
+ * listeners can react without per-mutation handling.
  */
 export type LimitEventCode =
   "LIMIT_REACHED" | "FEATURE_DISABLED" | "SUBSCRIPTION_READ_ONLY";
@@ -63,7 +64,7 @@ export function limitDetailFrom(
   };
 }
 
-/** True when a query failed because the plan turns the module off. */
+/** True when a query failed because the module is off for the organization. */
 export function isFeatureDisabledError(error: unknown): boolean {
   return (
     typeof error === "object" &&
@@ -72,7 +73,7 @@ export function isFeatureDisabledError(error: unknown): boolean {
   );
 }
 
-/** True for any plan-limit or feature-disabled API error. */
+/** True for any limit or feature-disabled API error. */
 export function isLimitError(error: unknown): boolean {
   const code =
     typeof error === "object" && error !== null

@@ -75,6 +75,8 @@ const (
 	PermPlatformAuthSettingsWrite         = "platform.auth.settings.write"
 	PermPlatformOrganizationsRead         = "platform.organizations.read"
 	PermPlatformOrganizationsWrite        = "platform.organizations.write"
+	PermPlatformDocumentTemplatesRead     = "platform.documents.templates.read"
+	PermPlatformDocumentTemplatesWrite    = "platform.documents.templates.write"
 	PermAuthSession                       = "auth.session"
 	PermNotificationsRead                 = "notifications.read"
 	PermNotificationsManage               = "notifications.manage"
@@ -111,7 +113,14 @@ const (
 	PermSocialRead              = "social.read"
 	PermSocialWrite             = "social.write"
 	PermPrivacyAnonymize        = "privacy.anonymize"
-	PermWhatsAppManage          = "whatsapp.manage"
+
+	// Module packages (TEC-86).
+	PermModulesRead          = "modules.read"
+	PermModulesManage        = "modules.manage"
+	PermPlatformModulesRead  = "platform.modules.read"
+	PermPlatformModulesWrite = "platform.modules.write"
+
+	PermWhatsAppManage = "whatsapp.manage"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

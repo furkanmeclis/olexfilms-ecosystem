@@ -27,6 +27,7 @@ type Querier interface {
 	CountAppLogs(ctx context.Context, arg CountAppLogsParams) (int64, error)
 	CountAppLogsByLevel(ctx context.Context) ([]CountAppLogsByLevelRow, error)
 	CountBulkJobsForActor(ctx context.Context, actorID int64) (int64, error)
+	CountDocumentTemplates(ctx context.Context, arg CountDocumentTemplatesParams) (int64, error)
 	CountExportJobsForActor(ctx context.Context, actorID int64) (int64, error)
 	CountExportJobsForOrganization(ctx context.Context, organizationID pgtype.Int8) (int64, error)
 	CountImportJobsForActor(ctx context.Context, actorID int64) (int64, error)
@@ -45,6 +46,7 @@ type Querier interface {
 	CountUsers(ctx context.Context, arg CountUsersParams) (int64, error)
 	CountUsersWithRole(ctx context.Context, roleSlug string) (int64, error)
 	CreateBulkJob(ctx context.Context, arg CreateBulkJobParams) (BulkJob, error)
+	CreateDocumentTemplate(ctx context.Context, arg CreateDocumentTemplateParams) (DocumentTemplate, error)
 	CreateExportJob(ctx context.Context, arg CreateExportJobParams) (ExportJob, error)
 	CreateImportJob(ctx context.Context, arg CreateImportJobParams) (ImportJob, error)
 	CreateLogPurgeRule(ctx context.Context, arg CreateLogPurgeRuleParams) (LogPurgeRule, error)
@@ -58,6 +60,7 @@ type Querier interface {
 	CreateRole(ctx context.Context, arg CreateRoleParams) (Role, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateWebAuthnCredential(ctx context.Context, arg CreateWebAuthnCredentialParams) (WebauthnCredential, error)
+	DeactivateDocumentTemplates(ctx context.Context, arg DeactivateDocumentTemplatesParams) error
 	DeleteAppLogByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	DeleteAppLogsByUUIDs(ctx context.Context, uuids []uuid.UUID) (int64, error)
 	DeleteAppLogsMatching(ctx context.Context, arg DeleteAppLogsMatchingParams) (int64, error)
@@ -65,6 +68,7 @@ type Querier interface {
 	DeleteMemberRoles(ctx context.Context, memberID int64) error
 	DeleteOAuthAccountByProviderAccount(ctx context.Context, arg DeleteOAuthAccountByProviderAccountParams) error
 	DeleteOAuthAccountByUserProvider(ctx context.Context, arg DeleteOAuthAccountByUserProviderParams) error
+	DeleteOrgModuleFlag(ctx context.Context, arg DeleteOrgModuleFlagParams) (int64, error)
 	DeletePermissionBySlug(ctx context.Context, slug string) error
 	DeletePushSubscription(ctx context.Context, arg DeletePushSubscriptionParams) error
 	DeleteRole(ctx context.Context, argUuid uuid.UUID) error
@@ -72,12 +76,14 @@ type Querier interface {
 	DeleteStorageShare(ctx context.Context, argUuid uuid.UUID) error
 	DeleteStorageStar(ctx context.Context, arg DeleteStorageStarParams) error
 	DeleteStorageTrashByUUID(ctx context.Context, argUuid uuid.UUID) error
+	DeleteSystemModuleFlag(ctx context.Context, moduleKey string) (int64, error)
 	DeleteUserTOTP(ctx context.Context, userID int64) error
 	DeleteWebAuthnCredentialByCredentialID(ctx context.Context, credentialID string) error
 	DeleteWebAuthnCredentialByUUID(ctx context.Context, arg DeleteWebAuthnCredentialByUUIDParams) error
 	// Every organization below the given one (not including itself).
 	Descendants(ctx context.Context, id int64) ([]Organization, error)
 	ExtensionExists(ctx context.Context, extname string) (bool, error)
+	GetActiveDocumentTemplate(ctx context.Context, arg GetActiveDocumentTemplateParams) (DocumentTemplate, error)
 	GetActiveOTPByEmailType(ctx context.Context, arg GetActiveOTPByEmailTypeParams) (OtpCode, error)
 	GetActivePhoneOTP(ctx context.Context, arg GetActivePhoneOTPParams) (OtpCode, error)
 	GetAppLogByUUID(ctx context.Context, argUuid uuid.UUID) (AppLog, error)
@@ -88,6 +94,11 @@ type Querier interface {
 	GetBrandCenter(ctx context.Context, brandID int64) (Organization, error)
 	GetBulkJobByID(ctx context.Context, id int64) (BulkJob, error)
 	GetBulkJobByUUID(ctx context.Context, argUuid uuid.UUID) (BulkJob, error)
+	GetDocumentRenderByID(ctx context.Context, id int64) (DocumentRender, error)
+	GetDocumentRenderByUUID(ctx context.Context, argUuid uuid.UUID) (DocumentRender, error)
+	GetDocumentTemplateByID(ctx context.Context, id int64) (DocumentTemplate, error)
+	GetDocumentTemplateByUUID(ctx context.Context, argUuid uuid.UUID) (DocumentTemplate, error)
+	GetDraftDocumentTemplate(ctx context.Context, arg GetDraftDocumentTemplateParams) (DocumentTemplate, error)
 	GetExportJobByID(ctx context.Context, id int64) (ExportJob, error)
 	GetExportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ExportJob, error)
 	GetGitHubAppSettings(ctx context.Context) (GithubAppSetting, error)
@@ -96,6 +107,7 @@ type Querier interface {
 	GetLatestKVKKNotice(ctx context.Context, locale string) (KvkkNotice, error)
 	GetLatestPhoneOTP(ctx context.Context, arg GetLatestPhoneOTPParams) (OtpCode, error)
 	GetLogPurgeRuleByUUID(ctx context.Context, argUuid uuid.UUID) (LogPurgeRule, error)
+	GetModule(ctx context.Context, key string) (Module, error)
 	GetNotificationByID(ctx context.Context, id int64) (Notification, error)
 	GetNotificationByUUID(ctx context.Context, argUuid uuid.UUID) (Notification, error)
 	GetNotificationPreferences(ctx context.Context, userID int64) (NotificationPreference, error)
@@ -103,6 +115,7 @@ type Querier interface {
 	GetOAuthAccountByUserProvider(ctx context.Context, arg GetOAuthAccountByUserProviderParams) (GetOAuthAccountByUserProviderRow, error)
 	GetOAuthProviderSettings(ctx context.Context, provider string) (OauthProviderSetting, error)
 	GetOTPByUUID(ctx context.Context, argUuid uuid.UUID) (OtpCode, error)
+	GetOrgModuleFlag(ctx context.Context, arg GetOrgModuleFlagParams) (ModuleFlag, error)
 	GetOrganizationByID(ctx context.Context, id int64) (Organization, error)
 	GetOrganizationBySlug(ctx context.Context, slug string) (Organization, error)
 	GetOrganizationByUUID(ctx context.Context, argUuid uuid.UUID) (Organization, error)
@@ -167,6 +180,8 @@ type Querier interface {
 	ListBrands(ctx context.Context) ([]Brand, error)
 	ListBulkChangesForJob(ctx context.Context, jobID int64) ([]BulkChange, error)
 	ListBulkJobsForActor(ctx context.Context, arg ListBulkJobsForActorParams) ([]BulkJob, error)
+	ListDocumentTemplateVersions(ctx context.Context, arg ListDocumentTemplateVersionsParams) ([]DocumentTemplate, error)
+	ListDocumentTemplates(ctx context.Context, arg ListDocumentTemplatesParams) ([]ListDocumentTemplatesRow, error)
 	ListEnabledLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
 	ListExportJobsForActor(ctx context.Context, arg ListExportJobsForActorParams) ([]ExportJob, error)
 	ListExportJobsForOrganization(ctx context.Context, arg ListExportJobsForOrganizationParams) ([]ExportJob, error)
@@ -181,6 +196,9 @@ type Querier interface {
 	ListMemberGrants(ctx context.Context, arg ListMemberGrantsParams) ([]ListMemberGrantsRow, error)
 	ListMemberRoleSlugs(ctx context.Context, arg ListMemberRoleSlugsParams) ([]string, error)
 	ListMemberRolesByOrganization(ctx context.Context, organizationID int64) ([]ListMemberRolesByOrganizationRow, error)
+	// System rows plus the org / dealer_standard rows of the given organizations.
+	ListModuleFlagsForOrgs(ctx context.Context, orgIds []int64) ([]ListModuleFlagsForOrgsRow, error)
+	ListModules(ctx context.Context) ([]Module, error)
 	ListNotificationsForUser(ctx context.Context, arg ListNotificationsForUserParams) ([]Notification, error)
 	ListOAuthAccountsByUserID(ctx context.Context, userID int64) ([]ListOAuthAccountsByUserIDRow, error)
 	ListOAuthAccountsForUserIDs(ctx context.Context, userIds []int64) ([]ListOAuthAccountsForUserIDsRow, error)
@@ -189,6 +207,7 @@ type Querier interface {
 	ListOrganizationMemberOptions(ctx context.Context, organizationID int64) ([]ListOrganizationMemberOptionsRow, error)
 	ListOrganizationMembers(ctx context.Context, organizationID int64) ([]ListOrganizationMembersRow, error)
 	ListOrganizationMembersByUserID(ctx context.Context, arg ListOrganizationMembersByUserIDParams) ([]ListOrganizationMembersByUserIDRow, error)
+	ListOrganizationOwnerUserIDs(ctx context.Context, organizationID int64) ([]int64, error)
 	ListOrganizationsFiltered(ctx context.Context, arg ListOrganizationsFilteredParams) ([]ListOrganizationsFilteredRow, error)
 	// Organizations reachable by a scope filter: an explicit id set
 	// (managed/subtree) or a whole brand (brand), or every brand (all, both NULL).
@@ -215,6 +234,7 @@ type Querier interface {
 	ListStorageStarsByUser(ctx context.Context, userID int64) ([]StorageStar, error)
 	ListStorageTrash(ctx context.Context, arg ListStorageTrashParams) ([]StorageTrash, error)
 	ListStuckProcessingNotificationIDs(ctx context.Context, staleMinutes int32) ([]int64, error)
+	ListUserIDsByRoleSlug(ctx context.Context, slug string) ([]int64, error)
 	ListUserRoleSlugs(ctx context.Context, userID int64) ([]string, error)
 	ListUserRolesByUserID(ctx context.Context, userID int64) ([]Role, error)
 	ListUserRolesByUserUUID(ctx context.Context, argUuid uuid.UUID) ([]Role, error)
@@ -232,6 +252,9 @@ type Querier interface {
 	MarkBulkJobFailed(ctx context.Context, arg MarkBulkJobFailedParams) (BulkJob, error)
 	MarkBulkJobProcessing(ctx context.Context, id int64) (BulkJob, error)
 	MarkBulkJobRolledBack(ctx context.Context, arg MarkBulkJobRolledBackParams) (BulkJob, error)
+	MarkDocumentRenderFailed(ctx context.Context, arg MarkDocumentRenderFailedParams) error
+	MarkDocumentRenderProcessing(ctx context.Context, id int64) (DocumentRender, error)
+	MarkDocumentRenderReady(ctx context.Context, arg MarkDocumentRenderReadyParams) (DocumentRender, error)
 	MarkExportJobCompleted(ctx context.Context, arg MarkExportJobCompletedParams) (ExportJob, error)
 	MarkExportJobFailed(ctx context.Context, arg MarkExportJobFailedParams) (ExportJob, error)
 	MarkExportJobProcessing(ctx context.Context, id int64) (ExportJob, error)
@@ -253,10 +276,14 @@ type Querier interface {
 	MarkOutboxPublished(ctx context.Context, id int64) error
 	MarkOutboxRetry(ctx context.Context, arg MarkOutboxRetryParams) error
 	MarkUserPhoneVerified(ctx context.Context, id int64) error
+	NextDocumentTemplateVersion(ctx context.Context, arg NextDocumentTemplateVersionParams) (int32, error)
 	PingDB(ctx context.Context) (int32, error)
+	PublishDocumentTemplate(ctx context.Context, id int64) (DocumentTemplate, error)
 	QueueImportJob(ctx context.Context, argUuid uuid.UUID) (ImportJob, error)
 	RemoveUserRoleBySlug(ctx context.Context, arg RemoveUserRoleBySlugParams) error
 	ReplaceUserRoles(ctx context.Context, userID int64) error
+	// A failed render is re-queued with a new attempt number (new task id).
+	RetryDocumentRender(ctx context.Context, id int64) (DocumentRender, error)
 	RevokeAllRefreshTokensForUser(ctx context.Context, userID int64) error
 	RevokeOtherRefreshTokensForUser(ctx context.Context, arg RevokeOtherRefreshTokensForUserParams) error
 	RevokeRefreshTokenByHash(ctx context.Context, tokenHash string) (int64, error)
@@ -274,12 +301,14 @@ type Querier interface {
 	SupplierOf(ctx context.Context, id int64) (Organization, error)
 	UpdateAppSettings(ctx context.Context, arg UpdateAppSettingsParams) (AppSetting, error)
 	UpdateAuthSettings(ctx context.Context, arg UpdateAuthSettingsParams) (AuthSetting, error)
+	UpdateDocumentTemplateDraft(ctx context.Context, arg UpdateDocumentTemplateDraftParams) (DocumentTemplate, error)
 	UpdateGitHubAppSettings(ctx context.Context, arg UpdateGitHubAppSettingsParams) (GithubAppSetting, error)
 	UpdateImportJobFileKey(ctx context.Context, arg UpdateImportJobFileKeyParams) (ImportJob, error)
 	UpdateImportJobMapping(ctx context.Context, arg UpdateImportJobMappingParams) (ImportJob, error)
 	UpdateImportJobPreview(ctx context.Context, arg UpdateImportJobPreviewParams) (ImportJob, error)
 	UpdateLogPurgeRule(ctx context.Context, arg UpdateLogPurgeRuleParams) (LogPurgeRule, error)
 	UpdateMessageStatusByExternalIDs(ctx context.Context, arg UpdateMessageStatusByExternalIDsParams) (int64, error)
+	UpdateModuleDefaults(ctx context.Context, arg UpdateModuleDefaultsParams) (Module, error)
 	UpdateOAuthProviderSettings(ctx context.Context, arg UpdateOAuthProviderSettingsParams) (OauthProviderSetting, error)
 	UpdateOrganizationLetterhead(ctx context.Context, arg UpdateOrganizationLetterheadParams) (Organization, error)
 	UpdateOrganizationParent(ctx context.Context, arg UpdateOrganizationParentParams) (Organization, error)
@@ -298,9 +327,16 @@ type Querier interface {
 	UpdateWebAuthnCredentialName(ctx context.Context, arg UpdateWebAuthnCredentialNameParams) (WebauthnCredential, error)
 	UpdateWhatsAppStatus(ctx context.Context, arg UpdateWhatsAppStatusParams) (WhatsappSetting, error)
 	UpsertConversation(ctx context.Context, arg UpsertConversationParams) (Conversation, error)
+	// One row per cache key: a repeated request returns the existing row.
+	UpsertDocumentRender(ctx context.Context, arg UpsertDocumentRenderParams) (DocumentRender, error)
+	// Catalog sync: level and sort order follow the Go catalog; admin-edited
+	// default_enabled / is_paid survive (a core module is always on).
+	UpsertModuleCatalog(ctx context.Context, arg UpsertModuleCatalogParams) error
 	UpsertNotificationPreferences(ctx context.Context, arg UpsertNotificationPreferencesParams) (NotificationPreference, error)
+	UpsertOrgModuleFlag(ctx context.Context, arg UpsertOrgModuleFlagParams) (ModuleFlag, error)
 	UpsertPermission(ctx context.Context, arg UpsertPermissionParams) error
 	UpsertPushSubscription(ctx context.Context, arg UpsertPushSubscriptionParams) (PushSubscription, error)
+	UpsertSystemModuleFlag(ctx context.Context, arg UpsertSystemModuleFlagParams) (ModuleFlag, error)
 	UpsertSystemRole(ctx context.Context, arg UpsertSystemRoleParams) (Role, error)
 	UpsertUserTOTPSetup(ctx context.Context, arg UpsertUserTOTPSetupParams) (UserTotp, error)
 	UserHasRoleSlug(ctx context.Context, arg UserHasRoleSlugParams) (bool, error)

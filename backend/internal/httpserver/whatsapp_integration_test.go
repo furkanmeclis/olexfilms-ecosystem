@@ -187,7 +187,7 @@ func (it *itest) signedHook(body string, key string) (int, envelope) {
 	return rec.Code, env
 }
 
-func (it *itest) adminToken() string {
+func (it *itest) waAdminToken() string {
 	it.t.Helper()
 	admin, pw := it.user("wa-admin", rbac.RoleSuperAdmin)
 	return it.tokensFrom(it.do("POST", "/v1/auth/login", hostOlex, "", map[string]string{
@@ -198,7 +198,7 @@ func (it *itest) adminToken() string {
 // Acceptance 1 + 2: QR connection flow and a test message (mock wuzapi).
 func TestIntegrationWhatsAppAdmin(t *testing.T) {
 	it, fw := newWhatsAppIntegration(t)
-	tok := it.adminToken()
+	tok := it.waAdminToken()
 
 	code, env := it.do("GET", "/v1/platform/whatsapp", hostOlex, tok, nil)
 	if code != http.StatusOK {

@@ -121,6 +121,50 @@ type Conversation struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
+type DocumentRender struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	Kind            string             `json:"kind"`
+	TemplateID      int64              `json:"template_id"`
+	TemplateVersion int32              `json:"template_version"`
+	SourceType      string             `json:"source_type"`
+	SourceID        string             `json:"source_id"`
+	SourceVersion   string             `json:"source_version"`
+	Locale          string             `json:"locale"`
+	CacheKey        string             `json:"cache_key"`
+	Status          string             `json:"status"`
+	Attempts        int32              `json:"attempts"`
+	StorageKey      pgtype.Text        `json:"storage_key"`
+	Sha256          pgtype.Text        `json:"sha256"`
+	SizeBytes       pgtype.Int8        `json:"size_bytes"`
+	Error           pgtype.Text        `json:"error"`
+	RequestedBy     pgtype.Int8        `json:"requested_by"`
+	RenderedAt      pgtype.Timestamptz `json:"rendered_at"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type DocumentTemplate struct {
+	ID          int64              `json:"id"`
+	Uuid        uuid.UUID          `json:"uuid"`
+	Kind        string             `json:"kind"`
+	BrandID     pgtype.Int8        `json:"brand_id"`
+	Language    string             `json:"language"`
+	Name        string             `json:"name"`
+	Version     int32              `json:"version"`
+	IsActive    bool               `json:"is_active"`
+	LexicalJson []byte             `json:"lexical_json"`
+	Html        string             `json:"html"`
+	Variables   []byte             `json:"variables"`
+	ContentHash string             `json:"content_hash"`
+	CreatedBy   pgtype.Int8        `json:"created_by"`
+	PublishedAt pgtype.Timestamptz `json:"published_at"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
 type ExportJob struct {
 	ID             int64              `json:"id"`
 	Uuid           uuid.UUID          `json:"uuid"`
@@ -226,6 +270,30 @@ type Message struct {
 	Raw            []byte             `json:"raw"`
 	SentAt         pgtype.Timestamptz `json:"sent_at"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
+type Module struct {
+	Key            string             `json:"key"`
+	Level          string             `json:"level"`
+	DefaultEnabled bool               `json:"default_enabled"`
+	IsPaid         bool               `json:"is_paid"`
+	SortOrder      int32              `json:"sort_order"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ModuleFlag struct {
+	ID             int64              `json:"id"`
+	Scope          string             `json:"scope"`
+	OrganizationID pgtype.Int8        `json:"organization_id"`
+	ModuleKey      string             `json:"module_key"`
+	Enabled        bool               `json:"enabled"`
+	Source         string             `json:"source"`
+	SetByUserID    pgtype.Int8        `json:"set_by_user_id"`
+	ServiceID      pgtype.Int8        `json:"service_id"`
+	Note           pgtype.Text        `json:"note"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Notification struct {

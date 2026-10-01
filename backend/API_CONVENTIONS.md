@@ -78,14 +78,22 @@ Register `/meta` **before** `/{uuid}` on `ServeMux`. Capabilities must match liv
 - User fields: `name` / `surname`
 - Platform routes require the matching `platform.*` permission (`super_admin` bypasses `HasPermission`)
 
-## Plan limits
+## Module flags (feature flags)
 
-Tenant mutations may be refused by the organization's subscription (`internal/platform/entitlements`):
+Modules are switched per organization (`internal/platform/features`, TEC-86); there are no plan
+or subscription limits. The Go catalog (`features.Modules`) is the single source of module keys:
+core (always on), standard (on by default) and add-on (off by default).
 
-- `409 LIMIT_REACHED` — a hard limit is exhausted; `details` carries `feature`, `limit`, `used`, `tolerance`.
-- `403 FEATURE_DISABLED` — the plan turns the feature / module off (also returned by `middleware.RequireFeature` route gates).
+- `403 FEATURE_DISABLED` — `middleware.RequireFeature(checker, key)` (after `RequireOrganization`)
+  when the module is off for the active organization. Unknown keys are off.
+- `409 FEATURE_DISABLED` — a write tried to switch a module on below a level where it is off
+  (closed system wide, or not enabled for the distributor).
+- `422 MODULE_CORE` — core modules cannot be switched off.
+- `409 MODULE_ADMIN_OVERRIDE` — the platform admin set the dealer's value; the distributor cannot change it.
 
-Handlers map `*entitlements.LimitError` → `middleware.WriteLimitReached` and `entitlements.ErrFeatureDisabled` → `FEATURE_DISABLED`.
+Values are resolved on read (live inheritance) and cached in Redis for 30 s; every write invalidates
+the affected snapshots (system changes bump a generation counter), so changes apply at once.
+`LIMIT_REACHED` stays reserved; no endpoint emits it.
 
 ## Notifications
 

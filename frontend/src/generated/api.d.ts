@@ -1664,6 +1664,384 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/platform/document-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List PDF document template versions
+         * @description Without `current=false` only active and draft versions are listed. Requires platform.documents.templates.read.
+         */
+        get: operations["listDocumentTemplates"];
+        put?: never;
+        /**
+         * Save the open draft of a kind / brand / language
+         * @description Updates the open draft or opens the next version. HTML is sanitized server-side; unknown variables are rejected with 422. Requires platform.documents.templates.write.
+         */
+        post: operations["saveDocumentTemplateDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/document-templates/kinds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Document kinds with their variable schema */
+        get: operations["listDocumentKinds"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/document-templates/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Render editor HTML or a stored version with sample data
+         * @description Synchronous Gotenberg call (rate limited per user). Nothing is stored.
+         */
+        post: operations["previewDocumentTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/document-templates/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a template version with HTML and editor state */
+        get: operations["getDocumentTemplate"];
+        /** Edit a draft version (published versions are immutable, 409) */
+        put: operations["updateDocumentTemplateDraft"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/document-templates/{uuid}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish a draft (retires the previous active version)
+         * @description Rendered PDFs of older versions are no longer served; the cache key contains the template hash and version.
+         */
+        post: operations["publishDocumentTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/document-templates/{uuid}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every version of the template's kind / brand / language */
+        get: operations["listDocumentTemplateVersions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/documents/render": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request the PDF of a business record in the active organization
+         * @description 200 with the cached document when ready, 202 while worker-docs renders it. Repeated requests for the same cache key queue a single task. Visibility comes from the source module (SourceLoader).
+         */
+        post: operations["requestDocumentRender"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/documents/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Document render status */
+        get: operations["getDocumentRender"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/documents/{uuid}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stream a ready PDF (other organizations get 404) */
+        get: operations["downloadDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/features": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Modules of the active organization (Özellikler page, menus, guards)
+         * @description Every member may read it. `items` lists the modules the level above has access to (closed system wide or missing at the distributor are left out); `enabled` lists the keys that are on. The module catalog (keys, levels) comes from the backend; the frontend never duplicates it.
+         */
+        get: operations["listFeatures"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/features/{key}/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask the level above to switch a module on (in-app notification)
+         * @description Notifies the owners of the parent distributor, or the platform admins for a distributor (or a dealer under the center). Needs modules.read.
+         */
+        post: operations["requestFeature"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/modules/dealers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Module matrix of the distributor's dealers (modules.read subtree) */
+        get: operations["listDealerModules"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/modules/dealers/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Switch a module for several dealers at once (all or nothing)
+         * @description Needs modules.manage (subtree). A dealer outside the distributor's subtree rejects the whole batch (403). `enabled: null` clears the dealers' own values (back to the dealer standard).
+         */
+        post: operations["bulkDealerModules"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/modules/dealers/{uuid}/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Switch a module for one dealer (modules.manage) */
+        put: operations["setDealerModule"];
+        post?: never;
+        /** Drop a dealer's own value (back to the dealer standard) */
+        delete: operations["clearDealerModule"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/modules/dealer-standard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The distributor's dealer standard (what new dealers get) */
+        get: operations["getDealerStandard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/modules/dealer-standard/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change the dealer standard (modules.manage)
+         * @description Dealers without their own value follow the standard at once (live inheritance). Switching on needs the module on for the distributor (409).
+         */
+        put: operations["setDealerStandard"];
+        post?: never;
+        /** Drop a standard value (dealers follow the module default) */
+        delete: operations["clearDealerStandard"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/modules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Module catalog with system switches (platform.modules.read) */
+        get: operations["listPlatformModules"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/modules/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Close/reopen a module system wide or change its defaults
+         * @description `enabled: false` closes the module everywhere with no exception. Core modules cannot be closed (422 MODULE_CORE).
+         */
+        patch: operations["patchPlatformModule"];
+        trace?: never;
+    };
+    "/v1/platform/organizations/{uuid}/modules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Resolved module states of one organization (platform.modules.read) */
+        get: operations["listPlatformOrganizationModules"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/organizations/{uuid}/modules/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set an organization's module as admin (source=admin)
+         * @description Works for a dealer even when its distributor lacks the module; refused (409 FEATURE_DISABLED) when the module is closed system wide.
+         */
+        put: operations["setPlatformOrganizationModule"];
+        post?: never;
+        /** Drop an organization's own value (back to inheritance) */
+        delete: operations["clearPlatformOrganizationModule"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2805,8 +3183,277 @@ export interface components {
             data: components["schemas"]["TenantSettings"];
             meta: components["schemas"]["ResponseMeta"];
         };
+        /** @enum {string} */
+        DocumentKind: "service" | "measurement" | "contract" | "order_slip" | "invoice_view" | "warranty";
+        DocumentVariable: {
+            /** @example customer_name */
+            key: string;
+            /** @enum {string} */
+            type: "text" | "html";
+            group: string;
+            label_tr: string;
+            label_en: string;
+        };
+        DocumentKindInfo: {
+            kind: components["schemas"]["DocumentKind"];
+            variables: components["schemas"]["DocumentVariable"][];
+            /** @description A business module registered a SourceLoader */
+            has_source: boolean;
+        };
+        DocumentTemplate: {
+            /** Format: uuid */
+            uuid: string;
+            kind: components["schemas"]["DocumentKind"];
+            /** Format: uuid */
+            brand_uuid?: string | null;
+            brand_slug?: string | null;
+            /** @example tr */
+            language: string;
+            name: string;
+            version: number;
+            /** @enum {string} */
+            status: "draft" | "active" | "superseded";
+            is_active: boolean;
+            html?: string | null;
+            lexical_json?: unknown;
+            variables: string[];
+            content_hash: string;
+            /** Format: date-time */
+            published_at?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        DocumentTemplateSaveRequest: {
+            kind?: components["schemas"]["DocumentKind"];
+            /** @description Empty = platform default */
+            brand_slug?: string;
+            language?: string;
+            name?: string;
+            /** @description Editor HTML with {{key}} placeholders */
+            html: string;
+            /** @description Lexical editor state */
+            lexical_json?: unknown;
+        };
+        DocumentPreviewRequest: {
+            kind?: components["schemas"]["DocumentKind"];
+            /** Format: uuid */
+            template_uuid?: string | null;
+            html?: string;
+            locale?: string;
+        };
+        DocumentRenderRequest: {
+            kind: components["schemas"]["DocumentKind"];
+            source_id: string;
+            locale?: string;
+        };
+        DocumentRender: {
+            /** Format: uuid */
+            uuid: string;
+            kind: components["schemas"]["DocumentKind"];
+            source_type: string;
+            source_id: string;
+            locale: string;
+            /** @enum {string} */
+            status: "pending" | "processing" | "ready" | "failed";
+            size_bytes?: number | null;
+            sha256?: string | null;
+            error?: string | null;
+            download_url?: string | null;
+            /** Format: date-time */
+            rendered_at?: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        EnvelopeDocumentTemplate: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["DocumentTemplate"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeDocumentTemplateList: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["DocumentTemplate"][];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeDocumentKindList: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["DocumentKindInfo"][];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeDocumentRender: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["DocumentRender"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeDocumentTemplatePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["DocumentTemplate"][];
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        ModuleLevel: "core" | "standard" | "addon";
+        ModuleActor: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+        };
+        ModuleState: {
+            key: string;
+            level: components["schemas"]["ModuleLevel"];
+            enabled: boolean;
+            /** @description False when the level above has no access. */
+            visible: boolean;
+            paid: boolean;
+            default_enabled: boolean;
+            /** @description core | system | default | upstream | standard | admin | distributor | service */
+            source: string;
+            set_by?: components["schemas"]["ModuleActor"];
+            /** Format: date-time */
+            updated_at?: string;
+            upstream_enabled: boolean;
+            admin_override: boolean;
+        };
+        EnvelopeFeatureList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                organization_type: string;
+                items: components["schemas"]["ModuleState"][];
+                enabled: string[];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFeatureRequest: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                /** @enum {string} */
+                status: "requested";
+                recipients: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        DealerModuleEntry: {
+            key: string;
+            enabled: boolean;
+            visible: boolean;
+            source: string;
+            admin_override: boolean;
+        };
+        DealerModuleRow: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            slug: string;
+            modules: components["schemas"]["DealerModuleEntry"][];
+        };
+        EnvelopeDealerModuleList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["DealerModuleRow"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        ModuleSwitchRequest: {
+            enabled: boolean;
+        };
+        DealerModuleBulkRequest: {
+            dealer_uuids: string[];
+            key: string;
+            /** @description null clears the dealers' own values. */
+            enabled?: boolean | null;
+        };
+        EnvelopeModuleUpdated: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                updated: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        DealerStandardEntry: {
+            key: string;
+            level: components["schemas"]["ModuleLevel"];
+            paid: boolean;
+            distributor_enabled: boolean;
+            enabled: boolean;
+            explicit: boolean;
+            set_by?: components["schemas"]["ModuleActor"];
+        };
+        EnvelopeDealerStandard: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["DealerStandardEntry"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        PlatformModule: {
+            key: string;
+            level: components["schemas"]["ModuleLevel"];
+            /** @description False when closed system wide. */
+            enabled: boolean;
+            default_enabled: boolean;
+            paid: boolean;
+            set_by?: components["schemas"]["ModuleActor"];
+        };
+        PlatformModulePatch: {
+            enabled?: boolean;
+            default_enabled?: boolean;
+            paid?: boolean;
+        };
+        EnvelopePlatformModule: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PlatformModule"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePlatformModuleList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["PlatformModule"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePlatformOrganizationModules: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                organization_type: string;
+                items: components["schemas"]["ModuleState"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeModuleState: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ModuleState"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
     };
     responses: {
+        /** @description 409 FEATURE_DISABLED (closed one level up) or MODULE_ADMIN_OVERRIDE; 422 MODULE_CORE (core modules cannot be switched off) */
+        ModuleError: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description Validation or malformed request */
         BadRequest: {
             headers: {
@@ -2872,6 +3519,8 @@ export interface components {
         };
     };
     parameters: {
+        /** @description Module key from the backend catalog (GET /v1/features) */
+        ModuleKey: string;
         /** @description Resource UUID */
         ResourceUUID: string;
         Limit: number;
@@ -5647,6 +6296,710 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             500: components["responses"]["InternalError"];
+        };
+    };
+    listDocumentTemplates: {
+        parameters: {
+            query?: {
+                kind?: components["schemas"]["DocumentKind"];
+                language?: string;
+                current?: boolean;
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Template versions page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDocumentTemplatePage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    saveDocumentTemplateDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentTemplateSaveRequest"];
+            };
+        };
+        responses: {
+            /** @description Saved draft */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDocumentTemplate"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["BadRequest"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listDocumentKinds: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Kinds */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDocumentKindList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    previewDocumentTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description PDF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["BadRequest"];
+            429: components["responses"]["TooManyRequests"];
+            503: components["responses"]["InternalError"];
+        };
+    };
+    getDocumentTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Template version */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDocumentTemplate"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateDocumentTemplateDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentTemplateSaveRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated draft */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDocumentTemplate"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["BadRequest"];
+        };
+    };
+    publishDocumentTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Published version */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDocumentTemplate"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listDocumentTemplateVersions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Versions, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDocumentTemplateList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    requestDocumentRender: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentRenderRequest"];
+            };
+        };
+        responses: {
+            /** @description Ready document */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDocumentRender"];
+                };
+            };
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDocumentRender"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getDocumentRender: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Render */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDocumentRender"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    downloadDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listFeatures: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Module states */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFeatureList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    requestFeature: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Module key from the backend catalog (GET /v1/features) */
+                key: components["parameters"]["ModuleKey"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    note?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Request sent */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFeatureRequest"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ModuleError"];
+        };
+    };
+    listDealerModules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dealers with their module states */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDealerModuleList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    bulkDealerModules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DealerModuleBulkRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeModuleUpdated"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["ModuleError"];
+            422: components["responses"]["ModuleError"];
+        };
+    };
+    setDealerModule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                /** @description Module key from the backend catalog (GET /v1/features) */
+                key: components["parameters"]["ModuleKey"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModuleSwitchRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeModuleUpdated"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["ModuleError"];
+            422: components["responses"]["ModuleError"];
+        };
+    };
+    clearDealerModule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                /** @description Module key from the backend catalog (GET /v1/features) */
+                key: components["parameters"]["ModuleKey"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cleared */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeModuleUpdated"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["ModuleError"];
+            422: components["responses"]["ModuleError"];
+        };
+    };
+    getDealerStandard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dealer standard */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDealerStandard"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    setDealerStandard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Module key from the backend catalog (GET /v1/features) */
+                key: components["parameters"]["ModuleKey"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModuleSwitchRequest"];
+            };
+        };
+        responses: {
+            /** @description Dealer standard */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDealerStandard"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["ModuleError"];
+            422: components["responses"]["ModuleError"];
+        };
+    };
+    clearDealerStandard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Module key from the backend catalog (GET /v1/features) */
+                key: components["parameters"]["ModuleKey"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dealer standard */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDealerStandard"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ModuleError"];
+        };
+    };
+    listPlatformModules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Modules */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePlatformModuleList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    patchPlatformModule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Module key from the backend catalog (GET /v1/features) */
+                key: components["parameters"]["ModuleKey"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformModulePatch"];
+            };
+        };
+        responses: {
+            /** @description Module */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePlatformModule"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ModuleError"];
+        };
+    };
+    listPlatformOrganizationModules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Module states */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePlatformOrganizationModules"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    setPlatformOrganizationModule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                /** @description Module key from the backend catalog (GET /v1/features) */
+                key: components["parameters"]["ModuleKey"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModuleSwitchRequest"];
+            };
+        };
+        responses: {
+            /** @description Module state */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeModuleState"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["ModuleError"];
+            422: components["responses"]["ModuleError"];
+        };
+    };
+    clearPlatformOrganizationModule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                /** @description Module key from the backend catalog (GET /v1/features) */
+                key: components["parameters"]["ModuleKey"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Module state */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeModuleState"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ModuleError"];
         };
     };
 }

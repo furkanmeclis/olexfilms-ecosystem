@@ -48,6 +48,8 @@ export const Permission = {
   PlatformAuthSettingsWrite: "platform.auth.settings.write",
   PlatformOrganizationsRead: "platform.organizations.read",
   PlatformOrganizationsWrite: "platform.organizations.write",
+  PlatformDocumentTemplatesRead: "platform.documents.templates.read",
+  PlatformDocumentTemplatesWrite: "platform.documents.templates.write",
 
   TenantSettingsRead: "tenant.settings.read",
   TenantSettingsWrite: "tenant.settings.write",
@@ -80,6 +82,11 @@ export const Permission = {
   SocialRead: "social.read",
   SocialWrite: "social.write",
   PrivacyAnonymize: "privacy.anonymize",
+
+  ModulesRead: "modules.read",
+  ModulesManage: "modules.manage",
+  PlatformModulesRead: "platform.modules.read",
+  PlatformModulesWrite: "platform.modules.write",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];
@@ -245,6 +252,10 @@ export const permissions = {
     tenantWrite: Permission.OrganizationsWrite,
     supplierWrite: Permission.OrganizationsSupplierWrite,
   },
+  documentTemplates: {
+    read: Permission.PlatformDocumentTemplatesRead,
+    write: Permission.PlatformDocumentTemplatesWrite,
+  },
   members: {
     read: Permission.MembersRead,
     write: Permission.MembersWrite,
@@ -286,6 +297,12 @@ export const permissions = {
   },
   privacy: {
     anonymize: Permission.PrivacyAnonymize,
+  },
+  modules: {
+    read: Permission.ModulesRead,
+    manage: Permission.ModulesManage,
+    platformRead: Permission.PlatformModulesRead,
+    platformWrite: Permission.PlatformModulesWrite,
   },
   auth: {
     session: Permission.AuthSession,

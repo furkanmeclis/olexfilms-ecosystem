@@ -26,6 +26,9 @@ export const routes = {
     settings: {
       root: (slug: string) => `/t/${slug}/settings`,
     },
+    features: {
+      root: (slug: string) => `/t/${slug}/features`,
+    },
   },
   guest: {
     login: "/platform/login",
@@ -91,6 +94,10 @@ export const routes = {
       detail: (uuid: string) => `/platform/organizations/${uuid}`,
       edit: (uuid: string) => `/platform/organizations/${uuid}/edit`,
     },
+    documentTemplates: {
+      root: "/platform/document-templates",
+      edit: (uuid: string) => `/platform/document-templates/${uuid}`,
+    },
     activity: {
       root: "/platform/activity",
     },
@@ -99,6 +106,9 @@ export const routes = {
     },
     storage: {
       root: "/platform/storage",
+    },
+    modules: {
+      root: "/platform/modules",
     },
     profile: {
       root: "/platform/profile",

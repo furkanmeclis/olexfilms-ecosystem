@@ -116,5 +116,12 @@
   "scopes.own": "Created by me",
   "scopes.customer": "Own customer records",
   "sensitive": "Sensitive permission",
-  "super_admin_only": "Super admin only"
+  "super_admin_only": "Super admin only",
+  "labels.modules.read": "View module settings",
+  "labels.modules.manage": "Manage dealer modules",
+  "labels.platform.modules.read": "View platform modules",
+  "labels.platform.modules.write": "Manage platform modules",
+  "groups.modules": "Modules",
+  "labels.platform.documents.templates.read": "Read document templates",
+  "labels.platform.documents.templates.write": "Write document templates"
 }

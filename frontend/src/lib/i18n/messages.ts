@@ -1,6 +1,7 @@
 import type { AppLocale } from "@/config/i18n";
 
 import enAccess from "@/locales/en/access.json";
+import enModules from "@/locales/en/modules.json";
 import enActivity from "@/locales/en/activity.json";
 import enAuth from "@/locales/en/auth.json";
 import enBranding from "@/locales/en/branding.json";
@@ -11,6 +12,7 @@ import enCommon from "@/locales/en/common.json";
 import enDashboard from "@/locales/en/dashboard.json";
 import enEditor from "@/locales/en/editor.json";
 import enEntity from "@/locales/en/entity.json";
+import enDocuments from "@/locales/en/documents.json";
 import enExports from "@/locales/en/exports.json";
 import enForm from "@/locales/en/form.json";
 import enImports from "@/locales/en/imports.json";
@@ -31,6 +33,7 @@ import enTable from "@/locales/en/table.json";
 import enUsers from "@/locales/en/users.json";
 import enRegister from "@/locales/en/register.json";
 import trAccess from "@/locales/tr/access.json";
+import trModules from "@/locales/tr/modules.json";
 import trActivity from "@/locales/tr/activity.json";
 import trAuth from "@/locales/tr/auth.json";
 import trBranding from "@/locales/tr/branding.json";
@@ -41,6 +44,7 @@ import trCommon from "@/locales/tr/common.json";
 import trDashboard from "@/locales/tr/dashboard.json";
 import trEditor from "@/locales/tr/editor.json";
 import trEntity from "@/locales/tr/entity.json";
+import trDocuments from "@/locales/tr/documents.json";
 import trExports from "@/locales/tr/exports.json";
 import trForm from "@/locales/tr/form.json";
 import trImports from "@/locales/tr/imports.json";
@@ -85,12 +89,14 @@ const catalogs: Record<AppLocale, Record<string, MessageDictionary>> = {
     notifications: trNotifications,
     dashboard: trDashboard,
     activity: trActivity,
+    documents: trDocuments,
     exports: trExports,
     imports: trImports,
     logs: trLogs,
     settings: trSettings,
     storage: trStorage,
     access: trAccess,
+    modules: trModules,
     integrations: trIntegrations,
     organizations: trOrganizations,
     register: trRegister,
@@ -117,12 +123,14 @@ const catalogs: Record<AppLocale, Record<string, MessageDictionary>> = {
     notifications: enNotifications,
     dashboard: enDashboard,
     activity: enActivity,
+    documents: enDocuments,
     exports: enExports,
     imports: enImports,
     logs: enLogs,
     settings: enSettings,
     storage: enStorage,
     access: enAccess,
+    modules: enModules,
     integrations: enIntegrations,
     organizations: enOrganizations,
     register: enRegister,

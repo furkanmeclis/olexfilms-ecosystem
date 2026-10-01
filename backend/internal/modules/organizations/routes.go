@@ -8,6 +8,7 @@ import (
 	authusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/usecase"
 	orghandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/handler"
 	orgusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ratelimit"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
@@ -25,6 +26,7 @@ func RegisterRoutes(
 	q *db.Queries,
 	limiter *ratelimit.Limiter,
 	stepUp orghandler.StepUpChecker,
+	checker middleware.FeatureChecker,
 ) {
 	h := orghandler.New(svc, auth, store)
 	h.SetRateLimiter(limiter)
@@ -68,7 +70,11 @@ func RegisterRoutes(
 		http.HandlerFunc(h.PlatformAddMember), authn, require(rbac.PermPlatformOrganizationsWrite),
 	))
 
-	requireOrg := middleware.RequireOrganization(tokens, q)
+	// Tenant routes belong to the core organizations module (TEC-86):
+	// RequireFeature never closes them, it marks where the module boundary is.
+	baseOrg := middleware.RequireOrganization(tokens, q)
+	coreModule := middleware.RequireFeature(checker, features.ModuleOrganizations)
+	requireOrg := func(next http.Handler) http.Handler { return baseOrg(coreModule(next)) }
 	tenantSettingsRead := func(handler http.HandlerFunc) http.Handler {
 		return middleware.Chain(http.HandlerFunc(handler), authn, requireOrg, require(rbac.PermTenantSettingsRead))
 	}

@@ -32,6 +32,8 @@ const (
 	CodeStepUpRequired            = "STEP_UP_REQUIRED"
 	CodeLimitReached              = "LIMIT_REACHED"
 	CodeFeatureDisabled           = "FEATURE_DISABLED"
+	CodeModuleCore                = "MODULE_CORE"
+	CodeModuleAdminOverride       = "MODULE_ADMIN_OVERRIDE"
 	CodeMFARequired               = "MFA_REQUIRED"
 	CodeMFANotEnrolled            = "MFA_NOT_ENROLLED"
 	CodeRateLimited               = "RATE_LIMITED"
