@@ -69,3 +69,26 @@ Yedek şunları kapsar: app DB (`db.dump`), wuzapi DB (`wuzapi.dump`), SeaweedFS
 ## 5. Lokal
 
 `compose.local.yml` aynı altyapı servislerini (wuzapi dahil) ve ayrıca mailhog (1025/8025) ile adminer'ı (8081) içerir. Backend 8080'de, wuzapi 8082'de çalışır. Komut: `make local-dev`.
+
+## 6. CI ve sürüm
+
+`.github/workflows/ci.yml` her PR'da ve `main`'e her push'ta çalışır. Aynı ref'te yeni bir PR çalışması eskisini iptal eder; `main` çalışmaları iptal edilmez.
+
+| Job | Ne yapar |
+| --- | --- |
+| `backend` | Postgres 18 + Redis 8 servisleri; `sqlc generate` + diff; golangci-lint (sabit sürüm, `backend/.golangci.yml`); `go vet`; `migrate up`; `go test ./... -count=1` (`TEST_DATABASE_URL` tanımlı, entegrasyon testleri gerçekten koşar); `make openapi-lint` |
+| `frontend` | pnpm install, lint, `format:check`, typecheck, test, build |
+| `contracts` | `make api-generate` + `git diff --exit-code` (OpenAPI kopyası, `frontend/src/generated/`); `make check-i18n` |
+| `image-build` | Sahte secret'lı env (`gen-env-server.sh --app ci.example`) ile `compose.prod.yml` backend + frontend image'larını buildx bake ile derler; push yok, gha cache |
+| `dr-drill` | `scripts/dr-drill.sh`: backup → silme → restore → doğrulama |
+| `ci` | Yukarıdakilerin hepsini bekler; biri bile başarılı değilse kırmızı. Branch protection / auto-merge zorunlu check'i budur |
+| `release-tag` | Yalnızca `main` push'unda ve `ci` yeşilse: sıradaki `v0.N` tag'ini atar |
+
+Tag akışı: PR squash-merge → `main` push → CI yeşil → `release-tag` en büyük `v0.N`'i bulur, `v0.(N+1)` atar (hiç yoksa `v0.1`); HEAD zaten `v0.N` ise bir şey yapmaz → GitHub tag push webhook'u → Dokploy `v0.*` tag'ini çeker ve `docker compose up -d --build` çalıştırır. Image registry'ye push yoktur; Dokploy sunucuda derler. `GITHUB_TOKEN` ile atılan tag başka workflow tetiklemez ama webhook yine gider.
+
+Elle yapılacak iki ayar (bir kez, repo/Dokploy sahibi):
+
+1. GitHub → repo **Settings → Actions → General → Workflow permissions**: **Read and write permissions**. Job seviyesinde `contents: write` istenir; repo ayarı salt okunursa tag push'u 403 alır.
+2. Dokploy → Compose uygulaması → **General / Provider**: GitHub kaynağı, trigger türü **Tag**, desen `v0.*`; **Deployments → Webhook URL**'ini GitHub → repo **Settings → Webhooks**'a ekleyin (content type `application/json`, event: **Just the push event**). Dokploy GitHub App ile bağlıysa webhook otomatik kurulur; yalnızca tag trigger'ını seçin.
+
+Bu repo ve ajanlar prod'a bağlanmaz, deploy tetiklemez; deploy yalnızca tag ile olur. Bir sürümü geri almak için Dokploy'da önceki tag'i seçip yeniden deploy edin.
