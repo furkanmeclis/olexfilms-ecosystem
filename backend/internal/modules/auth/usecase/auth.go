@@ -462,7 +462,7 @@ func (u *AuthUseCase) refresh(ctx context.Context, rawToken string, meta model.S
 	if err != nil {
 		return model.Tokens{}, ErrInvalidCredentials
 	}
-	if user.Status == "disabled" {
+	if user.Status == "disabled" || user.Status == "anonymized" {
 		return model.Tokens{}, ErrUserDisabled
 	}
 	meta.ImpersonatorUserID = session.ImpersonatorUserID

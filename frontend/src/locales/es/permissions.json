@@ -146,5 +146,10 @@
   "labels.stock.adjust": "Ajustar existencias",
   "labels.stock.reclassify": "Reclasificar existencias",
   "labels.stock.import": "Importar existencias",
-  "groups.stock": "Existencias"
+  "groups.stock": "Existencias",
+  "labels.vehicles.read": "Ver vehículos",
+  "labels.vehicles.write": "Gestionar vehículos",
+  "labels.customers.anonymize": "Anonimizar clientes",
+  "labels.customers.merge": "Fusionar clientes",
+  "groups.vehicles": "Vehículos"
 }

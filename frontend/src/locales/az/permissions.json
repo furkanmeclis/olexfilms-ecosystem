@@ -146,5 +146,10 @@
   "labels.stock.adjust": "Stoku düzəlt",
   "labels.stock.reclassify": "Stoku yenidən təsnif et",
   "labels.stock.import": "Stoku idxal et",
-  "groups.stock": "Stok"
+  "groups.stock": "Stok",
+  "labels.vehicles.read": "Avtomobillərə baxmaq",
+  "labels.vehicles.write": "Avtomobilləri idarə etmək",
+  "labels.customers.anonymize": "Müştəriləri anonimləşdirmək",
+  "labels.customers.merge": "Müştəriləri birləşdirmək",
+  "groups.vehicles": "Avtomobillər"
 }

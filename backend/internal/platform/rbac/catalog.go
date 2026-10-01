@@ -263,6 +263,27 @@ var Permissions = []PermissionDef{
 		Slug: PermAccountingDispute, Name: "Dispute accounting entries", Module: "accounting", Scopes: scopesTree,
 		Description: "Open a dispute on an entry posted by the parent organization (K24).",
 	},
+
+	// TEC-159: customer vehicles and the center-only customer operations
+	// (K19). Appended last; migration 000048 seeds them.
+	{
+		Slug: PermVehiclesRead, Name: "Read vehicles", Module: "vehicles", Scopes: scopesRecords,
+		Description: "Customer vehicles: plate, VIN, car brand and model.",
+	},
+	{
+		Slug: PermVehiclesWrite, Name: "Write vehicles", Module: "vehicles", Scopes: scopesRecordsInt,
+		Description: "Create and edit customer vehicles.",
+	},
+	{
+		Slug: PermCustomersAnonymize, Name: "Anonymize customers", Module: "customers", Scopes: scopesSupplier,
+		Sensitive:   true,
+		Description: "KVKK/GDPR anonymization of a customer; services and warranties stay (center only, K19).",
+	},
+	{
+		Slug: PermCustomersMerge, Name: "Merge customers", Module: "customers", Scopes: scopesSupplier,
+		Sensitive:   true,
+		Description: "Merge duplicate customer accounts into one user (center only).",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -329,6 +350,11 @@ var Roles = []RoleDef{
 			PermCustomersRead:          ScopeBrand,
 			PermCustomersWrite:         ScopeBrand,
 			PermPricingRecommendedRead: ScopeBrand,
+			// TEC-159 (000048).
+			PermVehiclesRead:       ScopeBrand,
+			PermVehiclesWrite:      ScopeBrand,
+			PermCustomersAnonymize: ScopeBrand,
+			PermCustomersMerge:     ScopeBrand,
 		}),
 	},
 	{
@@ -372,6 +398,7 @@ var Roles = []RoleDef{
 			PermCatalogRead:        ScopeBrand,
 			PermOrganizationsRead:  ScopeBrand,
 			PermCustomersRead:      ScopeBrand,
+			PermVehiclesRead:       ScopeBrand,
 			PermCampaignsRead:      ScopeBrand,
 			PermCampaignsWrite:     ScopeBrand,
 			PermLeadsRead:          ScopeBrand,
@@ -394,6 +421,8 @@ var Roles = []RoleDef{
 			PermServicesWrite:          ScopeSubtree,
 			PermCustomersRead:          ScopeSubtree,
 			PermCustomersWrite:         ScopeSubtree,
+			PermVehiclesRead:           ScopeSubtree,
+			PermVehiclesWrite:          ScopeSubtree,
 			PermPricingPurchaseRead:    ScopeManaged,
 			PermPricingSaleRead:        ScopeManaged,
 			PermPricingSaleWrite:       ScopeManaged,
@@ -421,6 +450,8 @@ var Roles = []RoleDef{
 			PermServicesWrite:      ScopeSubtree,
 			PermCustomersRead:      ScopeSubtree,
 			PermCustomersWrite:     ScopeSubtree,
+			PermVehiclesRead:       ScopeSubtree,
+			PermVehiclesWrite:      ScopeSubtree,
 		}),
 	},
 	{
@@ -464,6 +495,8 @@ var Roles = []RoleDef{
 			PermServicesWrite:          ScopeManaged,
 			PermCustomersRead:          ScopeManaged,
 			PermCustomersWrite:         ScopeManaged,
+			PermVehiclesRead:           ScopeManaged,
+			PermVehiclesWrite:          ScopeManaged,
 			PermPricingPurchaseRead:    ScopeManaged,
 			PermPricingSaleRead:        ScopeManaged,
 			PermPricingSaleWrite:       ScopeManaged,
@@ -486,6 +519,8 @@ var Roles = []RoleDef{
 			PermServicesWrite:      ScopeOwn,
 			PermCustomersRead:      ScopeManaged,
 			PermCustomersWrite:     ScopeOwn,
+			PermVehiclesRead:       ScopeManaged,
+			PermVehiclesWrite:      ScopeOwn,
 		}),
 	},
 	{
@@ -509,6 +544,7 @@ var Roles = []RoleDef{
 			PermVehicleCatalogRead: ScopeCustomer,
 			PermServicesRead:       ScopeCustomer,
 			PermCustomersRead:      ScopeCustomer,
+			PermVehiclesRead:       ScopeCustomer,
 		}),
 	},
 	{
@@ -518,6 +554,7 @@ var Roles = []RoleDef{
 			PermVehicleCatalogRead: ScopeCustomer,
 			PermServicesRead:       ScopeCustomer,
 			PermCustomersRead:      ScopeCustomer,
+			PermVehiclesRead:       ScopeCustomer,
 		}),
 	},
 }

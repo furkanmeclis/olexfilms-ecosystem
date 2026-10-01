@@ -156,6 +156,29 @@ func TestAccountingGrants(t *testing.T) {
 	}
 }
 
+// TEC-159 (K19): only center roles (and super_admin) anonymize or merge
+// customers; every role that reads customers also reads their vehicles at
+// the same scope.
+func TestCustomerGrants(t *testing.T) {
+	for _, r := range Roles {
+		for _, perm := range []string{PermCustomersAnonymize, PermCustomersMerge} {
+			if _, ok := r.Grants[perm]; ok && r.OrgType != OrgTypeCenter {
+				t.Fatalf("%s (%s) must not hold %s", r.Slug, r.OrgType, perm)
+			}
+		}
+		if sc, ok := r.Grants[PermCustomersRead]; ok && r.Grants[PermVehiclesRead] != sc {
+			t.Fatalf("%s vehicles.read = %q, want %q", r.Slug, r.Grants[PermVehiclesRead], sc)
+		}
+		if sc, ok := r.Grants[PermCustomersWrite]; ok && r.Grants[PermVehiclesWrite] != sc {
+			t.Fatalf("%s vehicles.write = %q, want %q", r.Slug, r.Grants[PermVehiclesWrite], sc)
+		}
+	}
+	center, _ := RoleBySlug(RoleCenterStaff)
+	if center.Grants[PermCustomersAnonymize] != ScopeBrand || center.Grants[PermCustomersMerge] != ScopeBrand {
+		t.Fatalf("center_staff customer grants = %v", center.Grants)
+	}
+}
+
 func TestDefaultMemberRole(t *testing.T) {
 	cases := map[[2]string]string{
 		{OrgTypeCenter, "owner"}:      RoleCenterStaff,

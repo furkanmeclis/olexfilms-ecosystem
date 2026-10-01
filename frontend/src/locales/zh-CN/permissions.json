@@ -146,5 +146,10 @@
   "labels.stock.adjust": "调整库存",
   "labels.stock.reclassify": "重新分类库存",
   "labels.stock.import": "导入库存",
-  "groups.stock": "库存"
+  "groups.stock": "库存",
+  "labels.vehicles.read": "查看车辆",
+  "labels.vehicles.write": "管理车辆",
+  "labels.customers.anonymize": "匿名化客户",
+  "labels.customers.merge": "合并客户",
+  "groups.vehicles": "车辆"
 }
