@@ -49,6 +49,8 @@ var azCatalog = map[string]string{
 	"common.status":                            "Vəziyyət",
 	"common.active":                            "Aktiv",
 	"common.passive":                           "Passiv",
+	"customers.anonymized_name":                "Anonim müştəri",
+	"users.status.anonymized":                  "Anonimləşdirilib",
 	"users.status.active":                      "Aktiv",
 	"users.status.disabled":                    "Deaktiv",
 	"users.status.pending":                     "Gözləmədə",

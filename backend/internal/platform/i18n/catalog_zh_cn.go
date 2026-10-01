@@ -49,6 +49,8 @@ var zhCNCatalog = map[string]string{
 	"common.status":                            "状态",
 	"common.active":                            "启用",
 	"common.passive":                           "停用",
+	"customers.anonymized_name":                "匿名客户",
+	"users.status.anonymized":                  "已匿名化",
 	"users.status.active":                      "启用",
 	"users.status.disabled":                    "已禁用",
 	"users.status.pending":                     "待处理",

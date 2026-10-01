@@ -49,6 +49,8 @@ var deCatalog = map[string]string{
 	"common.status":                            "Zustand",
 	"common.active":                            "Aktiv",
 	"common.passive":                           "Inaktiv",
+	"customers.anonymized_name":                "Anonymer Kunde",
+	"users.status.anonymized":                  "Anonymisiert",
 	"users.status.active":                      "Aktiv",
 	"users.status.disabled":                    "Deaktiviert",
 	"users.status.pending":                     "Ausstehend",

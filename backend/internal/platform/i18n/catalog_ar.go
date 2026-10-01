@@ -49,6 +49,8 @@ var arCatalog = map[string]string{
 	"common.status":                            "الحالة",
 	"common.active":                            "نشط",
 	"common.passive":                           "غير نشط",
+	"customers.anonymized_name":                "عميل مجهول",
+	"users.status.anonymized":                  "مجهول الهوية",
 	"users.status.active":                      "نشط",
 	"users.status.disabled":                    "معطّل",
 	"users.status.pending":                     "قيد الانتظار",

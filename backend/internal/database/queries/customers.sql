@@ -244,3 +244,92 @@ SELECT COALESCE(c.iso2, '')::text AS iso2
 FROM organizations o
 LEFT JOIN countries c ON c.id = o.country_id
 WHERE o.id = sqlc.arg(id);
+
+-- TEC-160 (F1-08b): customer and vehicle API (/v1/customers, /v1/vehicles).
+
+-- Fill-only identity: a customer created by another organization keeps its
+-- name, e-mail and locale; only empty values are filled.
+-- name: FillCustomerIdentity :one
+UPDATE users
+SET name    = CASE WHEN btrim(name) = '' AND sqlc.narg(name)::text IS NOT NULL THEN sqlc.narg(name)::text ELSE name END,
+    surname = CASE WHEN btrim(surname) = '' AND sqlc.narg(surname)::text IS NOT NULL THEN sqlc.narg(surname)::text ELSE surname END,
+    email   = COALESCE(email, sqlc.narg(email)::text),
+    locale  = COALESCE(locale, sqlc.narg(locale)::text)
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL
+RETURNING *;
+
+-- Full identity edit (only when the caller's scope covers every link of the
+-- customer and the user has no panel membership).
+-- name: SetCustomerIdentity :one
+UPDATE users
+SET name    = sqlc.arg(name),
+    surname = sqlc.arg(surname),
+    email   = sqlc.narg(email)
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL
+RETURNING *;
+
+-- name: CountCustomerOrganizationLinks :one
+SELECT COUNT(*)::bigint AS total,
+       (COUNT(*) FILTER (
+         WHERE (sqlc.narg(org_ids)::bigint[] IS NULL OR organization_id = ANY (sqlc.narg(org_ids)::bigint[]))
+           AND (sqlc.narg(brand_id)::bigint IS NULL OR brand_id = sqlc.narg(brand_id))
+       ))::bigint AS in_scope
+FROM customer_organizations
+WHERE user_id = sqlc.arg(user_id);
+
+-- name: CountOrganizationMembershipsByUser :one
+SELECT COUNT(*)::bigint FROM organization_members WHERE user_id = sqlc.arg(user_id);
+
+-- Vehicle with its customer and car brand/model, for API responses.
+-- name: GetVehicleViewByUUID :one
+SELECT sqlc.embed(v), u.uuid AS customer_uuid,
+       cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
+       cm.uuid AS car_model_uuid, cm.name AS car_model_name,
+       o.uuid AS organization_uuid
+FROM vehicles v
+JOIN users u ON u.id = v.user_id
+LEFT JOIN car_brands cb ON cb.id = v.car_brand_id
+LEFT JOIN car_models cm ON cm.id = v.car_model_id
+LEFT JOIN organizations o ON o.id = v.organization_id
+WHERE v.uuid = sqlc.arg(uuid) AND v.deleted_at IS NULL;
+
+-- Vehicles of customers linked to the organizations in scope; the brand is
+-- always the domain brand (K20).
+-- name: ListScopedVehicles :many
+SELECT sqlc.embed(v), u.uuid AS customer_uuid,
+       cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
+       cm.uuid AS car_model_uuid, cm.name AS car_model_name,
+       o.uuid AS organization_uuid
+FROM vehicles v
+JOIN users u ON u.id = v.user_id
+LEFT JOIN car_brands cb ON cb.id = v.car_brand_id
+LEFT JOIN car_models cm ON cm.id = v.car_model_id
+LEFT JOIN organizations o ON o.id = v.organization_id
+WHERE v.deleted_at IS NULL
+  AND v.brand_id = sqlc.arg(brand_id)
+  AND (sqlc.narg(user_id)::bigint IS NULL OR v.user_id = sqlc.narg(user_id))
+  AND EXISTS (
+    SELECT 1 FROM customer_organizations co
+    WHERE co.user_id = v.user_id
+      AND co.brand_id = sqlc.arg(brand_id)
+      AND (sqlc.narg(org_ids)::bigint[] IS NULL OR co.organization_id = ANY (sqlc.narg(org_ids)::bigint[]))
+  )
+  AND (sqlc.narg(plate_normalized)::text IS NULL OR v.plate_normalized LIKE sqlc.narg(plate_normalized) || '%')
+  AND (sqlc.narg(vin)::text IS NULL OR v.vin = sqlc.narg(vin))
+ORDER BY v.created_at DESC, v.id DESC
+LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
+
+-- name: CountScopedVehicles :one
+SELECT COUNT(*)::bigint
+FROM vehicles v
+WHERE v.deleted_at IS NULL
+  AND v.brand_id = sqlc.arg(brand_id)
+  AND (sqlc.narg(user_id)::bigint IS NULL OR v.user_id = sqlc.narg(user_id))
+  AND EXISTS (
+    SELECT 1 FROM customer_organizations co
+    WHERE co.user_id = v.user_id
+      AND co.brand_id = sqlc.arg(brand_id)
+      AND (sqlc.narg(org_ids)::bigint[] IS NULL OR co.organization_id = ANY (sqlc.narg(org_ids)::bigint[]))
+  )
+  AND (sqlc.narg(plate_normalized)::text IS NULL OR v.plate_normalized LIKE sqlc.narg(plate_normalized) || '%')
+  AND (sqlc.narg(vin)::text IS NULL OR v.vin = sqlc.narg(vin));

@@ -49,6 +49,8 @@ var ruCatalog = map[string]string{
 	"common.status":                            "Статус",
 	"common.active":                            "Активен",
 	"common.passive":                           "Неактивен",
+	"customers.anonymized_name":                "Анонимный клиент",
+	"users.status.anonymized":                  "Анонимизирован",
 	"users.status.active":                      "Активен",
 	"users.status.disabled":                    "Отключён",
 	"users.status.pending":                     "Ожидает",
