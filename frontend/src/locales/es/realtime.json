@@ -1,1 +1,17 @@
-{}
+{
+  "reconnected": "Conexión en tiempo real restablecida",
+  "offline": "Está sin conexión: tiempo real en pausa",
+  "event_fallback": "Actualización: {{type}}",
+  "event_notifications_sent": "Notificación enviada",
+  "event_notifications_delivered": "Notificación entregada",
+  "event_notifications_failed": "Error en la notificación",
+  "event_jobs_completed": "Tarea completada",
+  "event_jobs_failed": "Error en la tarea",
+  "event_imports_completed": "Importación completada",
+  "event_imports_failed": "Error en la importación",
+  "event_exports_completed": "Exportación completada",
+  "event_exports_failed": "Error en la exportación",
+  "event_exports_cancelled": "Exportación cancelada",
+  "event_reports_export_completed": "Exportación del informe lista",
+  "event_reports_export_failed": "Error en la exportación del informe"
+}

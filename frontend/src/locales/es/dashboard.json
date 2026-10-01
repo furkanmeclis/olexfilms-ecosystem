@@ -1,1 +1,22 @@
-{}
+{
+  "description": "Totales de la plataforma y accesos directos a roles, usuarios y notificaciones.",
+  "forbidden_description": "Solo los usuarios de la plataforma pueden ver el resumen.",
+  "error_description": "No se pudieron cargar los datos del resumen.",
+  "kpi_roles_total": "Roles",
+  "kpi_users_total": "Usuarios",
+  "kpi_notifications": "Notificaciones",
+  "quick_links_title": "Accesos directos",
+  "quick_links_description": "Vaya directamente a las áreas habituales de la plataforma.",
+  "link_roles_description": "Consultar y gestionar roles.",
+  "link_users_description": "Consultar y gestionar usuarios de la plataforma.",
+  "link_notifications_description": "Registro de notificaciones de la plataforma.",
+  "link_profile_description": "Cuenta, contraseña y preferencias.",
+  "pipeline.follow_up": "Clientes potenciales por seguir",
+  "pipeline.overdue": "Seguimientos atrasados: {{count}}",
+  "pipeline.open_leads": "Clientes potenciales abiertos: {{count}}",
+  "pipeline.open_quotes": "Presupuestos pendientes de respuesta",
+  "pipeline.expiring": "Presupuestos que vencen en 3 días: {{count}}",
+  "pipeline.awaiting": "Presupuestos pendientes de respuesta: {{count}}",
+  "tenant.welcome_title": "Bienvenido",
+  "tenant.welcome_description": "Panel de la organización. Los módulos aparecerán aquí a medida que se añadan."
+}
