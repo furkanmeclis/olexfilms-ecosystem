@@ -83,6 +83,12 @@ tags:
       Car brands and models (TEC-149): global reference data, read by every
       organization role and portal customers, written by super_admin only.
       Logos and hero images are public, unsigned and cacheable.
+  - name: Customers
+    description: >-
+      Customers and vehicles (TEC-160, K11/K20): one phone is one user, global
+      customer profile, visibility through customer_organizations (dealer: own
+      organization, distributor: subtree, center: brand). Identity numbers are
+      encrypted and returned as last4 only.
   - name: Pricing
     description: >-
       Price list and effective price views (TEC-146, K8). The center writes the
@@ -5212,6 +5218,340 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/customers:
+    get:
+      tags: [Customers]
+      operationId: listCustomers
+      summary: Customers linked to the organizations in scope
+      description: >-
+        customers.read. A dealer sees the customers linked to its organization
+        (customer_organizations), a distributor its subtree, the center the
+        brand; always the domain brand (K20). Anonymized customers are listed
+        masked (`anonymized: true`, localized name, no contact data).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - name: status
+          in: query
+          schema: { type: string, enum: [active, disabled, pending, anonymized] }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Customers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCustomerPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Customers]
+      operationId: createCustomer
+      summary: Create or link a customer by phone (one phone = one user)
+      description: >-
+        customers.write. The phone is normalized to E.164 (default region:
+        the organization's country, TR when unknown). An existing user with
+        that phone is linked to the active organization instead of creating
+        a second user (200, `existing_user: true`); its name, e-mail and
+        profile are only filled where empty, differing values are listed in
+        `ignored_fields`. A new user gets the customer role (201). National
+        id and tax number are stored encrypted; only their last four
+        characters are ever returned.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerCreateInput"
+      responses:
+        "200":
+          description: Existing user linked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCustomerWrite"
+        "201":
+          description: New customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCustomerWrite"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          description: PII_ENCRYPTION_UNAVAILABLE (CUSTOMER_PII_KEY not configured)
+
+  /v1/customers/{uuid}:
+    get:
+      tags: [Customers]
+      operationId: getCustomer
+      summary: One customer of the scope
+      description: Out-of-scope customers answer 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCustomer"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Customers]
+      operationId: updateCustomer
+      summary: Edit a customer
+      description: >-
+        customers.write. Absent keys keep the stored value, null or "" clears
+        it. Values are replaced only when `identity_editable` is true (every
+        link of the customer is in the caller's scope and the user has no
+        panel membership); otherwise only empty fields are filled and the rest
+        is listed in `ignored_fields`. Anonymized customers answer 409
+        CUSTOMER_ANONYMIZED.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerUpdateInput"
+      responses:
+        "200":
+          description: Updated customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCustomerWrite"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          description: PII_ENCRYPTION_UNAVAILABLE (CUSTOMER_PII_KEY not configured)
+
+  /v1/customers/{uuid}/upgrade-to-dealer:
+    post:
+      tags: [Customers]
+      operationId: upgradeCustomerToDealer
+      summary: Make a customer a member of an existing dealer
+      description: >-
+        customers.write in a center organization or a distributor above the
+        dealer (dealers get 403, dealers outside the reach 404). Adds an
+        organization_members row with the dealer_owner or dealer_staff role;
+        no organization is created. The customer role, links, vehicles and
+        history stay, so the same user signs in to the portal (WhatsApp OTP)
+        and to the panel. A second upgrade into the same dealer answers 409
+        ALREADY_MEMBER.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerUpgradeInput"
+      responses:
+        "201":
+          description: Membership created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCustomerUpgrade"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/vehicles:
+    get:
+      tags: [Customers]
+      operationId: listVehicles
+      summary: Vehicles of customers in scope
+      description: >-
+        vehicles.read. Only vehicles whose customer is linked to an
+        organization in scope (domain brand). `customer_uuid` outside the
+        scope answers 404; `plate` is a prefix of the normalized plate.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: customer_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - name: plate
+          in: query
+          schema: { type: string }
+        - name: vin
+          in: query
+          schema: { type: string }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Vehicles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehiclePage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Customers]
+      operationId: createVehicle
+      summary: Register a vehicle for a customer in scope
+      description: >-
+        vehicles.write. The plate is validated against its country's format
+        (400 INVALID_PLATE); plate_country defaults to the organization's
+        country, then TR. The car brand/model come from the vehicle catalog
+        (a model alone implies its brand). VIN is optional, 17 characters
+        without I, O, Q. VIN and plate are not unique: `warnings` reports a
+        duplicate in the brand.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VehicleCreateInput"
+      responses:
+        "201":
+          description: Vehicle
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicle"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/vehicles/{uuid}:
+    get:
+      tags: [Customers]
+      operationId: getVehicle
+      summary: One vehicle (customer in scope, else 404)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Vehicle
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicle"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Customers]
+      operationId: updateVehicle
+      summary: Edit a vehicle
+      description: >-
+        vehicles.write. Absent keys keep the stored value, null clears it
+        (the plate cannot be cleared). A vehicle of an anonymized customer
+        answers 409 CUSTOMER_ANONYMIZED.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VehicleUpdateInput"
+      responses:
+        "200":
+          description: Vehicle
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicle"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+    delete:
+      tags: [Customers]
+      operationId: deleteVehicle
+      summary: Remove a vehicle (soft delete)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "204":
+          description: Removed
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   /v1/portal/vehicle-catalog/brands:
     get:
       tags: [VehicleCatalog]
@@ -8241,6 +8581,276 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ErrorDetail"
+
+    CustomerType:
+      type: string
+      enum: [individual, corporate]
+
+    CustomerOrganizationLink:
+      type: object
+      required: [uuid, name, type, linked_at, first_service_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        type: { type: string, enum: [center, distributor, dealer] }
+        linked_at: { type: string, format: date-time }
+        first_service_at: { type: [string, "null"], format: date-time }
+
+    CustomerSummary:
+      type: object
+      description: >-
+        An anonymized customer is masked: `anonymized: true`, name is the
+        localized "Anonymous customer" label, surname empty, contact fields
+        null.
+      required: [uuid, name, surname, email, phone, status, anonymized, type, company_name, locale, created_at, linked_at, first_service_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        surname: { type: string }
+        email: { type: [string, "null"] }
+        phone: { type: [string, "null"], description: E.164 }
+        status: { type: string, enum: [active, disabled, pending, anonymized] }
+        anonymized: { type: boolean }
+        type: { $ref: "#/components/schemas/CustomerType" }
+        company_name: { type: [string, "null"] }
+        locale: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+        linked_at: { type: [string, "null"], format: date-time }
+        first_service_at: { type: [string, "null"], format: date-time }
+
+    CustomerDetail:
+      allOf:
+        - $ref: "#/components/schemas/CustomerSummary"
+        - type: object
+          required: [tax_office, national_id_last4, tax_no_last4, address, notification_prefs, editable, identity_editable, organizations]
+          properties:
+            tax_office: { type: [string, "null"] }
+            national_id_last4:
+              type: [string, "null"]
+              description: Last four characters; the full value is never returned.
+            tax_no_last4:
+              type: [string, "null"]
+              description: Last four characters; the full value is never returned.
+            address: { type: object, additionalProperties: true }
+            notification_prefs:
+              type: object
+              additionalProperties: { type: boolean }
+            editable:
+              type: boolean
+              description: False for anonymized, disabled or merged accounts.
+            identity_editable:
+              type: boolean
+              description: >-
+                True when every link of the customer is in the caller's scope
+                and the user has no panel membership; otherwise edits only
+                fill empty fields.
+            organizations:
+              type: array
+              description: Serving organizations inside the caller's scope.
+              items: { $ref: "#/components/schemas/CustomerOrganizationLink" }
+
+    CustomerWrite:
+      allOf:
+        - $ref: "#/components/schemas/CustomerDetail"
+        - type: object
+          required: [existing_user, ignored_fields]
+          properties:
+            existing_user:
+              type: boolean
+              description: The phone already belonged to a user, who was linked.
+            ignored_fields:
+              type: array
+              description: Submitted values kept as stored (shared customer, fill-only).
+              items: { type: string }
+
+    CustomerCreateInput:
+      type: object
+      additionalProperties: false
+      required: [phone, name]
+      properties:
+        phone: { type: string, description: Any format; normalized to E.164 }
+        name: { type: string, maxLength: 100 }
+        surname: { type: string, maxLength: 100 }
+        email: { type: string, format: email }
+        locale: { type: string, example: tr }
+        type: { $ref: "#/components/schemas/CustomerType" }
+        company_name: { type: string, maxLength: 200 }
+        tax_office: { type: string, maxLength: 150 }
+        national_id: { type: string, description: "TC kimlik no; stored encrypted (5-20 letters/digits)" }
+        tax_no: { type: string, description: Stored encrypted (5-20 letters/digits) }
+        address: { type: object, additionalProperties: true }
+        notification_prefs:
+          type: object
+          description: Keys whatsapp, email, sms, push.
+          additionalProperties: { type: boolean }
+
+    CustomerUpdateInput:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, maxLength: 100 }
+        surname: { type: [string, "null"], maxLength: 100 }
+        email: { type: [string, "null"] }
+        type: { $ref: "#/components/schemas/CustomerType" }
+        company_name: { type: [string, "null"], maxLength: 200 }
+        tax_office: { type: [string, "null"], maxLength: 150 }
+        national_id: { type: [string, "null"] }
+        tax_no: { type: [string, "null"] }
+        address: { type: [object, "null"], additionalProperties: true }
+        notification_prefs:
+          type: [object, "null"]
+          additionalProperties: { type: boolean }
+
+    CustomerUpgradeInput:
+      type: object
+      additionalProperties: false
+      required: [organization_uuid, role]
+      properties:
+        organization_uuid: { type: string, format: uuid, description: An existing dealer }
+        role: { type: string, enum: [dealer_owner, dealer_staff] }
+
+    CustomerUpgrade:
+      type: object
+      required: [customer_uuid, organization, role, member_role]
+      properties:
+        customer_uuid: { type: string, format: uuid }
+        organization:
+          type: object
+          required: [uuid, slug, name, type]
+          properties:
+            uuid: { type: string, format: uuid }
+            slug: { type: string }
+            name: { type: string }
+            type: { type: string }
+        role: { type: string, enum: [dealer_owner, dealer_staff] }
+        member_role: { type: string, enum: [owner, staff] }
+
+    VehicleCatalogRef:
+      type: object
+      required: [uuid, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+
+    Vehicle:
+      type: object
+      required: [uuid, customer_uuid, organization_uuid, plate, plate_normalized, plate_country, vin, model_year, car_brand, car_model, created_at, updated_at, warnings]
+      properties:
+        uuid: { type: string, format: uuid }
+        customer_uuid: { type: string, format: uuid }
+        organization_uuid:
+          type: [string, "null"]
+          format: uuid
+          description: Organization that registered the vehicle.
+        plate: { type: [string, "null"] }
+        plate_normalized: { type: [string, "null"] }
+        plate_country: { type: [string, "null"], description: ISO 3166-1 alpha-2 }
+        vin: { type: [string, "null"] }
+        model_year: { type: [integer, "null"] }
+        car_brand:
+          oneOf:
+            - $ref: "#/components/schemas/VehicleCatalogRef"
+            - type: "null"
+        car_model:
+          oneOf:
+            - $ref: "#/components/schemas/VehicleCatalogRef"
+            - type: "null"
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        warnings:
+          type: array
+          description: After a write, vin_duplicate / plate_duplicate when another vehicle of the brand has the same value.
+          items: { type: string, enum: [vin_duplicate, plate_duplicate] }
+
+    VehicleCreateInput:
+      type: object
+      additionalProperties: false
+      required: [customer_uuid, plate]
+      properties:
+        customer_uuid: { type: string, format: uuid }
+        plate: { type: string, maxLength: 20 }
+        plate_country: { type: string, description: "ISO alpha-2; default: organization country, then TR" }
+        car_brand_uuid: { type: [string, "null"], format: uuid }
+        car_model_uuid: { type: [string, "null"], format: uuid }
+        model_year: { type: [integer, "null"], minimum: 1900 }
+        vin: { type: string, description: "17 characters without I, O, Q" }
+
+    VehicleUpdateInput:
+      type: object
+      additionalProperties: false
+      properties:
+        plate: { type: string, maxLength: 20 }
+        plate_country: { type: [string, "null"] }
+        car_brand_uuid: { type: [string, "null"], format: uuid }
+        car_model_uuid: { type: [string, "null"], format: uuid }
+        model_year: { type: [integer, "null"], minimum: 1900 }
+        vin: { type: [string, "null"] }
+
+    EnvelopeCustomer:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/CustomerDetail" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeCustomerWrite:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/CustomerWrite" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeCustomerPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/CustomerSummary" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeCustomerUpgrade:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/CustomerUpgrade" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeVehicle:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Vehicle" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeVehiclePage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/Vehicle" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     ResponseMeta:
       type: object
