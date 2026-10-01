@@ -685,7 +685,9 @@ func mapDBError(err error) error {
 			return &ConflictError{Field: "name"}
 		}
 		return &ConflictError{Field: "record"}
-	case "23503":
+	case "23503", "23001":
+		// foreign_key_violation; PostgreSQL 18 reports ON DELETE RESTRICT
+		// as restrict_violation (23001).
 		return ErrInUse
 	case "23514":
 		// catalog_check_center_org trigger (K4) or a CHECK constraint.

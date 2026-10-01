@@ -10,6 +10,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -207,6 +208,15 @@ func TestProductDocumentCarriesBrand(t *testing.T) {
 		db.ProductCategory{Name: "C"})
 	if doc.BrandID != 2 || doc.Spec != SearchSpec || doc.Title != "N" {
 		t.Fatalf("doc = %+v", doc)
+	}
+}
+
+// PostgreSQL 18 reports ON DELETE RESTRICT as 23001, older versions as 23503.
+func TestMapDBErrorInUse(t *testing.T) {
+	for _, code := range []string{"23503", "23001"} {
+		if err := mapDBError(&pgconn.PgError{Code: code}); !errors.Is(err, ErrInUse) {
+			t.Errorf("%s -> %v, want ErrInUse", code, err)
+		}
 	}
 }
 
