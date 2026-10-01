@@ -175,6 +175,17 @@ type DevicePushToken struct {
 	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
 }
 
+type DistributorDealerPrice struct {
+	ID               int64              `json:"id"`
+	ProductID        int64              `json:"product_id"`
+	BrandID          int64              `json:"brand_id"`
+	DistributorOrgID int64              `json:"distributor_org_id"`
+	Currency         string             `json:"currency"`
+	Price            pgtype.Numeric     `json:"price"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
 type DistributorPriceOverride struct {
 	ID               int64              `json:"id"`
 	ProductID        int64              `json:"product_id"`
