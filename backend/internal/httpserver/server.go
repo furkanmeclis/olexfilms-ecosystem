@@ -13,6 +13,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/config"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/errtrack"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/middleware"
 	accessmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/access"
 	accesshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/access/handler"
@@ -306,7 +307,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 
 	s.http = &http.Server{
 		Addr:         cfg.HTTP.Addr,
-		Handler:      middleware.ServerErrors(log)(middleware.RequestID(middleware.ResolveBrand(brandResolver)(mux))),
+		Handler:      middleware.ServerErrors(log)(middleware.RequestID(errtrack.Middleware(errtrack.Recover(log)(middleware.ResolveBrand(brandResolver)(mux))))),
 		ReadTimeout:  cfg.HTTP.ReadTimeout,
 		WriteTimeout: cfg.HTTP.WriteTimeout,
 		IdleTimeout:  cfg.HTTP.IdleTimeout,

@@ -12,6 +12,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/cache"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/config"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/errtrack"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/httpserver"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/logging"
 	logsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/logs/usecase"
@@ -32,6 +33,12 @@ func main() {
 	}
 
 	log := logging.New(cfg.Log.Level, cfg.Log.Format)
+	if on, err := errtrack.Init(errtrack.OptionsFromEnv(cfg.App.Env, "server")); err != nil {
+		log.Warn("errtrack_init_failed", "error", err)
+	} else if on {
+		log.Info("errtrack_enabled", "release", errtrack.OptionsFromEnv(cfg.App.Env, "server").Release)
+	}
+	defer errtrack.Flush(2 * time.Second)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -128,6 +135,8 @@ func main() {
 	case err := <-errCh:
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error("server_failed", "error", err)
+			errtrack.Capture(context.Background(), errtrack.ModuleUnknown, err, errtrack.Tags{errtrack.TagComponent: "server"})
+			errtrack.Flush(2 * time.Second)
 			os.Exit(1)
 		}
 	}
