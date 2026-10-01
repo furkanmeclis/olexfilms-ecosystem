@@ -322,6 +322,18 @@ var trCatalog = map[string]string{
 	"export.title.tenant.accounting.balances":       "Bakiye raporu",
 	"resources.tenant.accounting.cari_statement":    "Cari ekstre",
 	"resources.tenant.accounting.balances":          "Bakiye raporu",
+	// TEC-166: order statuses.
+	"orders.status.draft":      "Taslak",
+	"orders.status.submitted":  "Gönderildi",
+	"orders.status.approved":   "Onaylandı",
+	"orders.status.preparing":  "Hazırlanıyor",
+	"orders.status.ready":      "Hazır",
+	"orders.status.processing": "İşleniyor",
+	"orders.status.shipped":    "Kargoya verildi",
+	"orders.status.delivered":  "Teslim edildi",
+	"orders.status.received":   "Teslim alındı",
+	"orders.status.cancelling": "İptal ediliyor",
+	"orders.status.cancelled":  "İptal edildi",
 }
 
 var enCatalog = map[string]string{
@@ -613,4 +625,16 @@ var enCatalog = map[string]string{
 	"export.title.tenant.accounting.balances":       "Balance report",
 	"resources.tenant.accounting.cari_statement":    "Account statement",
 	"resources.tenant.accounting.balances":          "Balance report",
+	// TEC-166: order statuses.
+	"orders.status.draft":      "Draft",
+	"orders.status.submitted":  "Submitted",
+	"orders.status.approved":   "Approved",
+	"orders.status.preparing":  "Preparing",
+	"orders.status.ready":      "Ready",
+	"orders.status.processing": "Processing",
+	"orders.status.shipped":    "Shipped",
+	"orders.status.delivered":  "Delivered",
+	"orders.status.received":   "Received",
+	"orders.status.cancelling": "Cancelling",
+	"orders.status.cancelled":  "Cancelled",
 }

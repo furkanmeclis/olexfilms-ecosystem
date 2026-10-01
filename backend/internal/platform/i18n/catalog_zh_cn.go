@@ -321,4 +321,16 @@ var zhCNCatalog = map[string]string{
 	"export.title.tenant.accounting.balances":       "余额报表",
 	"resources.tenant.accounting.cari_statement":    "对账单",
 	"resources.tenant.accounting.balances":          "余额报表",
+	// TEC-166: order statuses.
+	"orders.status.draft":      "草稿",
+	"orders.status.submitted":  "已提交",
+	"orders.status.approved":   "已批准",
+	"orders.status.preparing":  "备货中",
+	"orders.status.ready":      "已备好",
+	"orders.status.processing": "处理中",
+	"orders.status.shipped":    "已发货",
+	"orders.status.delivered":  "已送达",
+	"orders.status.received":   "已收货",
+	"orders.status.cancelling": "取消中",
+	"orders.status.cancelled":  "已取消",
 }

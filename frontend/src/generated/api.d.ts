@@ -4367,6 +4367,90 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Orders inside the orders.read scope (sales and purchases)
+         * @description Every order where an organization of the orders.read scope is the seller or the buyer (managed: the active organization's own sales and purchases; a dealer never sees its distributor's other dealers). side=seller|buyer limits the list to the active organization's sales or purchases. List rows carry no items or history.
+         */
+        get: operations["listOrders"];
+        put?: never;
+        /**
+         * Open a draft order of the active organization to its parent (K6)
+         * @description The active organization is the buyer and its parent the seller: distributor -> center or dealer -> distributor (anything else is 422 ORDER_NO_SUPPLIER). The currency is the brand currency. Unit prices are the buyer's effective purchase price from the pricing module (K8); price fields sent by the client are ignored. A product without a price in the order currency is 400 with detail code PRICE_NOT_FOUND. Needs orders.write.
+         */
+        post: operations["createOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orders/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One order with its lines and status history
+         * @description Orders outside the orders.read scope answer 404.
+         */
+        get: operations["getOrder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orders/{uuid}/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace the lines of a draft order (buyer, orders.write)
+         * @description Prices are fetched again from the pricing module; client prices are ignored. Only drafts are editable (409 ORDER_NOT_EDITABLE).
+         */
+        put: operations["replaceOrderItems"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orders/{uuid}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move an order to another status
+         * @description Stock-free transitions (TEC-166): draft -> submitted (buyer, orders.write); submitted -> approved (seller, orders.approve: line prices are fetched again and locked, the rate to TRY is frozen into rate_snapshot/try_rate, 422 RATE_NOT_FOUND without a rate); approved -> preparing | processing (seller, orders.ship or orders.approve); draft | submitted | approved | preparing -> cancelled (either side, orders.cancel). A request for the current status is a no-op. Other moves answer 409 ORDER_INVALID_TRANSITION; the stock-bound statuses (ready, shipped, delivered, received, cancelling) answer 409 ORDER_TRANSITION_UNAVAILABLE until TEC-167/168. Every move writes the status history and an orders.* outbox event.
+         */
+        post: operations["transitionOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -7768,6 +7852,148 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["AccountingBalanceReport"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        OrderStatus: "draft" | "submitted" | "approved" | "preparing" | "ready" | "processing" | "shipped" | "delivered" | "received" | "cancelling" | "cancelled";
+        OrderOrgRef: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            /** @enum {string} */
+            type: "center" | "distributor" | "dealer";
+        };
+        OrderProductRef: {
+            /** Format: uuid */
+            uuid: string;
+            sku: string;
+            name: string;
+            unit_type: string;
+        };
+        OrderItem: {
+            /** Format: uuid */
+            uuid: string;
+            product: components["schemas"]["OrderProductRef"];
+            /** @description Pieces (null for roll_meter products) */
+            quantity: number | null;
+            /** @description Meters with two decimals (roll_meter products) */
+            meters: string | null;
+            /**
+             * @description Buyer's purchase price (NUMERIC(14,4)); locked at approval
+             * @example 80.0000
+             */
+            unit_price: string;
+            /** @enum {string} */
+            price_source: "list" | "override" | "distributor_dealer";
+            /** @example 240.00 */
+            line_total: string;
+            note: string | null;
+        };
+        OrderHistoryEntry: {
+            from_status: components["schemas"]["OrderStatus"] | null;
+            to_status: components["schemas"]["OrderStatus"];
+            reason: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        /** @description Rate frozen at approval (1 base = rate quote; quote is TRY). */
+        OrderRateSnapshot: {
+            /** @example EUR */
+            base: string;
+            /** @example TRY */
+            quote: string;
+            /** @example 35.1234 */
+            rate: string;
+            /** Format: date */
+            rate_date: string;
+            /** @example tcmb */
+            source: string;
+            /** @description Pivot currency of a cross rate */
+            via?: string;
+        };
+        Order: {
+            /** Format: uuid */
+            uuid: string;
+            /** @example ORD-00000001 */
+            order_no: string;
+            status: components["schemas"]["OrderStatus"];
+            /** @description Status in the request language */
+            status_label: string;
+            /**
+             * @description Side of the active organization (observer = inside the read scope only)
+             * @enum {string}
+             */
+            role: "seller" | "buyer" | "observer";
+            seller: components["schemas"]["OrderOrgRef"];
+            buyer: components["schemas"]["OrderOrgRef"];
+            /** @description Seller brand currency */
+            currency: string;
+            /** @example 240.00 */
+            subtotal: string;
+            /** @example 0.00 */
+            tax_total: string;
+            /** @example 240.00 */
+            total: string;
+            rate_snapshot: components["schemas"]["OrderRateSnapshot"] | null;
+            /** @description TRY rate frozen at approval */
+            try_rate: string | null;
+            note: string | null;
+            cancel_reason: string | null;
+            /** Format: date-time */
+            submitted_at: string | null;
+            /** Format: date-time */
+            approved_at: string | null;
+            /** Format: date-time */
+            cancelled_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** @description Statuses the caller may move the order to */
+            available_transitions: components["schemas"]["OrderStatus"][];
+            /** @description Lines (detail responses only) */
+            items?: components["schemas"]["OrderItem"][];
+            /** @description Status history (detail responses only) */
+            history?: components["schemas"]["OrderHistoryEntry"][];
+        };
+        /** @description Prices are never accepted from the client (K8). */
+        OrderItemInput: {
+            /** Format: uuid */
+            product_uuid: string;
+            /** @description Pieces (piece/fixed products) */
+            quantity?: number;
+            /** @description Meters (roll_meter products); a JSON number is accepted too */
+            meters?: string;
+            note?: string;
+        };
+        OrderItemsInput: {
+            items: components["schemas"]["OrderItemInput"][];
+        };
+        OrderCreateInput: {
+            note?: string;
+            items: components["schemas"]["OrderItemInput"][];
+        };
+        OrderTransitionInput: {
+            status: components["schemas"]["OrderStatus"];
+            /** @description Kept in the history; the cancel reason for cancelled */
+            reason?: string;
+        };
+        EnvelopeOrder: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Order"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeOrderPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["Order"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
             meta: components["schemas"]["ResponseMeta"];
         };
     };
@@ -15799,6 +16025,150 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    listOrders: {
+        parameters: {
+            query?: {
+                side?: "seller" | "buyer";
+                status?: components["schemas"]["OrderStatus"];
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Orders */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrderPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderCreateInput"];
+            };
+        };
+        responses: {
+            /** @description Draft order */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrder"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrder"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    replaceOrderItems: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderItemsInput"];
+            };
+        };
+        responses: {
+            /** @description Updated order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrder"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    transitionOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderTransitionInput"];
+            };
+        };
+        responses: {
+            /** @description Order after the transition */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrder"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
 }

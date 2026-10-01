@@ -321,4 +321,16 @@ var elCatalog = map[string]string{
 	"export.title.tenant.accounting.balances":       "Αναφορά υπολοίπων",
 	"resources.tenant.accounting.cari_statement":    "Καρτέλα λογαριασμού",
 	"resources.tenant.accounting.balances":          "Αναφορά υπολοίπων",
+	// TEC-166: order statuses.
+	"orders.status.draft":      "Πρόχειρο",
+	"orders.status.submitted":  "Υποβλήθηκε",
+	"orders.status.approved":   "Εγκρίθηκε",
+	"orders.status.preparing":  "Σε προετοιμασία",
+	"orders.status.ready":      "Έτοιμη",
+	"orders.status.processing": "Σε επεξεργασία",
+	"orders.status.shipped":    "Απεστάλη",
+	"orders.status.delivered":  "Παραδόθηκε",
+	"orders.status.received":   "Παραλήφθηκε",
+	"orders.status.cancelling": "Ακυρώνεται",
+	"orders.status.cancelled":  "Ακυρώθηκε",
 }

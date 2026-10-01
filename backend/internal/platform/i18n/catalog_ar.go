@@ -321,4 +321,16 @@ var arCatalog = map[string]string{
 	"export.title.tenant.accounting.balances":       "تقرير الأرصدة",
 	"resources.tenant.accounting.cari_statement":    "كشف حساب",
 	"resources.tenant.accounting.balances":          "تقرير الأرصدة",
+	// TEC-166: order statuses.
+	"orders.status.draft":      "مسودة",
+	"orders.status.submitted":  "مُرسل",
+	"orders.status.approved":   "معتمد",
+	"orders.status.preparing":  "قيد التجهيز",
+	"orders.status.ready":      "جاهز",
+	"orders.status.processing": "قيد المعالجة",
+	"orders.status.shipped":    "تم الشحن",
+	"orders.status.delivered":  "تم التسليم",
+	"orders.status.received":   "تم الاستلام",
+	"orders.status.cancelling": "قيد الإلغاء",
+	"orders.status.cancelled":  "ملغى",
 }
