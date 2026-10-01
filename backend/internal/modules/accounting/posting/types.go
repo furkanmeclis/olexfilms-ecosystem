@@ -29,6 +29,10 @@ const (
 	DirectionIncome  = "income"
 	DirectionExpense = "expense"
 	DirectionCharge  = "charge"
+	// Settlements (TEC-172): cash/bank movement that closes a cari; never
+	// income or expense (TEC-99 decision 2).
+	DirectionCollection = "collection"
+	DirectionPayment    = "payment"
 )
 
 // Categories and roles of the hierarchical sale bridge.

@@ -17,6 +17,9 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/middleware"
 	accessmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/access"
 	accesshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/access/handler"
+	accountinghandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting/handler"
+	accountingposting "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting/posting"
+	accountingusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting/usecase"
 	activitymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/activity"
 	activityhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/activity/handler"
 	activityusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/activity/usecase"
@@ -316,6 +319,11 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	ratesmodule.RegisterRoutes(mux, rateshandler.New(ratesSvc, activityRec), tokens, loader)
 	// TEC-146: price list and effective price views (K8).
 	pricingmodule.RegisterRoutes(mux, pricinghandler.New(pricingusecase.New(deps.Queries), activityRec),
+		tokens, loader, deps.Queries, stepUpSvc, featureSvc)
+	// TEC-172: accounting accounts, cari, manual entries and settlements.
+	accountingPoster := accountingposting.New(deps.Queries, outbox.NewStore(deps.DB, deps.Queries), ratesSvc)
+	accountinghandler.RegisterRoutes(mux,
+		accountinghandler.New(accountingusecase.New(deps.DB, deps.Queries, accountingPoster, featureSvc)),
 		tokens, loader, deps.Queries, stepUpSvc, featureSvc)
 	pdfClient := pdfrender.NewWithOptions(cfg.Gotenberg.URL, pdfrender.Options{MaxConnsPerHost: cfg.Queue.Concurrency})
 	realtime.RegisterRoutes(mux, realtime.NewHandler(rtIssuer, uc), tokens, loader)

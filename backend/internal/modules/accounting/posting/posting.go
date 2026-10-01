@@ -72,6 +72,24 @@ func (p *Poster) Charge(ctx context.Context, tx pgx.Tx, e Entry) (Result, error)
 	return p.post(ctx, tx, DirectionCharge, e)
 }
 
+// Collect books a collection: the counterparty paid the organization into a
+// cash/bank account; the cari receivable goes down, no income is written.
+func (p *Poster) Collect(ctx context.Context, tx pgx.Tx, e Entry) (Result, error) {
+	if e.AccountID == 0 || e.CounterpartyOrgID == 0 {
+		return Result{}, fmt.Errorf("%w: a collection needs an account and a cari", ErrInvalid)
+	}
+	return p.post(ctx, tx, DirectionCollection, e)
+}
+
+// Pay books a payment: the organization paid the counterparty from a
+// cash/bank account; the cari debt goes down, no expense is written.
+func (p *Poster) Pay(ctx context.Context, tx pgx.Tx, e Entry) (Result, error) {
+	if e.AccountID == 0 || e.CounterpartyOrgID == 0 {
+		return Result{}, fmt.Errorf("%w: a payment needs an account and a cari", ErrInvalid)
+	}
+	return p.post(ctx, tx, DirectionPayment, e)
+}
+
 // PostHierarchicalSaleTx books a parent→child sale on both ledgers (K9):
 // seller income on the buyer's cari in the seller's currency, buyer
 // "purchase" expense on the seller's cari in the buyer's currency, both
@@ -377,6 +395,8 @@ func (p *Poster) publish(ctx context.Context, tx pgx.Tx, row db.FinanceEntry, ac
 	switch {
 	case row.CariID.Valid && reversal:
 		name = events.CariEntryVoided
+	case row.CariID.Valid && (row.Direction == DirectionCollection || row.Direction == DirectionPayment):
+		name = events.CariPaymentPosted
 	case row.CariID.Valid:
 		name = events.CariChargePosted
 	case reversal:

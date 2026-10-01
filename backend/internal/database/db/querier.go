@@ -43,6 +43,7 @@ type Querier interface {
 	CountCarBrands(ctx context.Context, arg CountCarBrandsParams) (int64, error)
 	CountCarModels(ctx context.Context, arg CountCarModelsParams) (int64, error)
 	CountCarModelsByBrand(ctx context.Context, carBrandID int64) (int64, error)
+	CountCariAccountsWithBalance(ctx context.Context, arg CountCariAccountsWithBalanceParams) (int64, error)
 	CountDistributorPriceOverrides(ctx context.Context, arg CountDistributorPriceOverridesParams) (int64, error)
 	CountDocumentTemplates(ctx context.Context, arg CountDocumentTemplatesParams) (int64, error)
 	CountExportJobsForActor(ctx context.Context, actorID int64) (int64, error)
@@ -63,6 +64,7 @@ type Querier interface {
 	CountProductCategories(ctx context.Context, arg CountProductCategoriesParams) (int64, error)
 	CountProducts(ctx context.Context, arg CountProductsParams) (int64, error)
 	CountRoles(ctx context.Context, q_ pgtype.Text) (int64, error)
+	CountSearchFinanceEntries(ctx context.Context, arg CountSearchFinanceEntriesParams) (int64, error)
 	CountStockMovementsByUnit(ctx context.Context, unitID int64) (int64, error)
 	CountStorageActivity(ctx context.Context, objectKey string) (int64, error)
 	CountStorageTrash(ctx context.Context) (int64, error)
@@ -223,6 +225,7 @@ type Querier interface {
 	GetCariAccount(ctx context.Context, arg GetCariAccountParams) (CariAccount, error)
 	GetCariAccountByCounterpartyOrg(ctx context.Context, arg GetCariAccountByCounterpartyOrgParams) (CariAccount, error)
 	GetCariAccountByUUID(ctx context.Context, argUuid uuid.UUID) (CariAccount, error)
+	GetCariAccountWithBalance(ctx context.Context, arg GetCariAccountWithBalanceParams) (GetCariAccountWithBalanceRow, error)
 	// ---------------------------------------------------------------------------
 	// Balances (views over the ledger).
 	GetCariBalance(ctx context.Context, arg GetCariBalanceParams) (CariAccountBalance, error)
@@ -244,9 +247,11 @@ type Querier interface {
 	GetFinanceAccount(ctx context.Context, arg GetFinanceAccountParams) (FinanceAccount, error)
 	GetFinanceAccountBalance(ctx context.Context, arg GetFinanceAccountBalanceParams) (FinanceAccountBalance, error)
 	GetFinanceAccountByUUID(ctx context.Context, argUuid uuid.UUID) (FinanceAccount, error)
+	GetFinanceAccountWithBalance(ctx context.Context, arg GetFinanceAccountWithBalanceParams) (GetFinanceAccountWithBalanceRow, error)
 	GetFinanceEntry(ctx context.Context, arg GetFinanceEntryParams) (FinanceEntry, error)
 	GetFinanceEntryBySource(ctx context.Context, arg GetFinanceEntryBySourceParams) (FinanceEntry, error)
 	GetFinanceEntryByUUID(ctx context.Context, argUuid uuid.UUID) (FinanceEntry, error)
+	GetFinanceEntryInOrgByUUID(ctx context.Context, arg GetFinanceEntryInOrgByUUIDParams) (FinanceEntry, error)
 	// GetFinanceEntryReversal returns the reversal row of an entry, if any.
 	GetFinanceEntryReversal(ctx context.Context, entryID pgtype.Int8) (FinanceEntry, error)
 	GetGitHubAppSettings(ctx context.Context) (GithubAppSetting, error)
@@ -415,6 +420,7 @@ type Querier interface {
 	// Search matches the model name, "brand model" and the external id.
 	ListCarModels(ctx context.Context, arg ListCarModelsParams) ([]ListCarModelsRow, error)
 	ListCariAccounts(ctx context.Context, arg ListCariAccountsParams) ([]CariAccount, error)
+	ListCariAccountsWithBalance(ctx context.Context, arg ListCariAccountsWithBalanceParams) ([]ListCariAccountsWithBalanceRow, error)
 	ListCariBalances(ctx context.Context, organizationID int64) ([]CariAccountBalance, error)
 	ListCariEntries(ctx context.Context, arg ListCariEntriesParams) ([]FinanceEntry, error)
 	// TEC-84: countries > provinces > districts, territories, plate formats.
@@ -439,6 +445,10 @@ type Querier interface {
 	ListExportJobsForOrganization(ctx context.Context, arg ListExportJobsForOrganizationParams) ([]ExportJob, error)
 	ListFinanceAccountBalances(ctx context.Context, organizationID int64) ([]FinanceAccountBalance, error)
 	ListFinanceAccounts(ctx context.Context, arg ListFinanceAccountsParams) ([]FinanceAccount, error)
+	// TEC-172 (F1-07b): read models of the /v1/accounting endpoints. The caller
+	// resolves the book (one organization inside the request scope) and passes
+	// its id; every query is limited to that organization.
+	ListFinanceAccountsWithBalance(ctx context.Context, arg ListFinanceAccountsWithBalanceParams) ([]ListFinanceAccountsWithBalanceRow, error)
 	ListFinanceEntries(ctx context.Context, arg ListFinanceEntriesParams) ([]FinanceEntry, error)
 	// ListFinanceEntriesBySource lists every row of one source in every
 	// organization (seller and buyer side, originals and reversals), so
@@ -648,6 +658,9 @@ type Querier interface {
 	RevokeStorageLink(ctx context.Context, argUuid uuid.UUID) (StorageLink, error)
 	// TEC-91: mobile refresh chains (rotation, reuse detection, device sign-out).
 	RotateRefreshTokenByHash(ctx context.Context, tokenHash string) (int64, error)
+	// SearchFinanceEntries is the filtered, paged ledger of one organization.
+	// reversed_by_uuid is set when the row has been reversed (void).
+	SearchFinanceEntries(ctx context.Context, arg SearchFinanceEntriesParams) ([]SearchFinanceEntriesRow, error)
 	SetAppSettingsLogo(ctx context.Context, logoObjectKey pgtype.Text) (AppSetting, error)
 	SetCarBrandHero(ctx context.Context, arg SetCarBrandHeroParams) (CarBrand, error)
 	SetCarBrandLogo(ctx context.Context, arg SetCarBrandLogoParams) (CarBrand, error)
