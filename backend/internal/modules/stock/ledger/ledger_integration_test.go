@@ -38,6 +38,10 @@ type env struct {
 	roll   db.Product
 	fixed  db.Product
 	suffix string
+	// Shared customer vehicle of the services created by e.service.
+	vehicle  db.Vehicle
+	carBrand int64
+	carModel int64
 }
 
 var refSeq atomic.Int64
@@ -233,7 +237,7 @@ func (e *env) count(t *testing.T, sql string, args ...any) int {
 func TestBarcodeHistory(t *testing.T) {
 	e := newEnv(t)
 	u := e.unit(t, e.piece, "")
-	svc := ledger.Owner{Type: ledger.OwnerService, ID: tempServiceID(), OrgID: e.dealer.ID}
+	svc := *e.serviceOwner(t, e.dealer)
 	transfer, order := nextRef(), nextRef()
 
 	e.mustPost(t, mv(ledger.TypeEntry, u, nextRef(), ptr(e.cLoc)))
@@ -311,7 +315,7 @@ func TestNoSecondOwner(t *testing.T) {
 	e.mustFail(t, mv(ledger.TypeTransferOut, u, nextRef(), orgOwner(e.dealer)), ledger.ErrTransitionNotAllowed)
 	e.mustFail(t, mv(ledger.TypeEntry, u, nextRef(), ptr(e.cLoc)), ledger.ErrTransitionNotAllowed)
 	e.mustFail(t, mv(ledger.TypeConsumption, u, nextRef(),
-		&ledger.Owner{Type: ledger.OwnerService, ID: tempServiceID(), OrgID: e.dist.ID}), ledger.ErrTransitionNotAllowed)
+		e.serviceOwner(t, e.dist)), ledger.ErrTransitionNotAllowed)
 	stale := mv(ledger.TypeTransferCancelRestore, u, nextRef(), nil)
 	stale.From = ptr(e.cLoc)
 	e.mustFail(t, stale, ledger.ErrOwnerMismatch)
@@ -364,7 +368,7 @@ func TestRollMeters(t *testing.T) {
 
 	// The rest of the roll goes in one consumption.
 	e.mustPost(t, mv(ledger.TypeConsumption, u, nextRef(),
-		&ledger.Owner{Type: ledger.OwnerService, ID: tempServiceID(), OrgID: e.center.ID}))
+		e.serviceOwner(t, e.center)))
 	_, unit = e.state(t, u)
 	if got, _ := unit.RemainingMeters.Float64Value(); got.Float64 != 0 || unit.Status != "used" {
 		t.Fatalf("after consumption remaining = %v status %s", got.Float64, unit.Status)
@@ -377,7 +381,7 @@ func TestRollMeters(t *testing.T) {
 // Double consumption and negative stock are rejected (serial and fixed).
 func TestDoubleConsumptionAndNegativeStock(t *testing.T) {
 	e := newEnv(t)
-	svc := &ledger.Owner{Type: ledger.OwnerService, ID: tempServiceID(), OrgID: e.center.ID}
+	svc := e.serviceOwner(t, e.center)
 	u := e.unit(t, e.piece, "")
 	e.mustPost(t, mv(ledger.TypeEntry, u, nextRef(), orgOwner(e.center)))
 	e.mustPost(t, mv(ledger.TypeConsumption, u, nextRef(), svc))
@@ -456,7 +460,7 @@ func TestConcurrentConsumption(t *testing.T) {
 		u := e.unit(t, e.piece, "")
 		e.mustPost(t, mv(ledger.TypeEntry, u, nextRef(), orgOwner(e.center)))
 		svc := func() *ledger.Owner {
-			return &ledger.Owner{Type: ledger.OwnerService, ID: tempServiceID(), OrgID: e.center.ID}
+			return e.serviceOwner(t, e.center)
 		}
 		errs := race(e, mv(ledger.TypeConsumption, u, nextRef(), svc()), mv(ledger.TypeConsumption, u, nextRef(), svc()))
 		oneWins(t, errs, ledger.ErrTransitionNotAllowed)
@@ -503,6 +507,48 @@ func oneWins(t *testing.T, errs [2]error, loser error) {
 	}
 }
 
-// tempServiceID stands in for a service until the service table and its
-// owner FK arrive with TEC-97 (owner_id is BIGINT).
-func tempServiceID() int64 { return 1_000_000_000 + nextRef() }
+// service creates a real draft service of org: since TEC-178 (000050) a
+// service owner is a foreign key to services(id, organization_id), and the
+// holder organization must be the service organization.
+func (e *env) service(t *testing.T, org db.Organization) int64 {
+	t.Helper()
+	if e.vehicle.ID == 0 {
+		user, err := e.q.CreateUser(e.ctx, db.CreateUserParams{
+			PasswordHash: "x", Name: "T178", Surname: e.suffix, Status: "active",
+		})
+		if err != nil {
+			t.Fatalf("customer: %v", err)
+		}
+		if err := e.pool.QueryRow(e.ctx, `INSERT INTO car_brands (name) VALUES ($1) RETURNING id`,
+			"t178-"+e.suffix).Scan(&e.carBrand); err != nil {
+			t.Fatalf("car brand: %v", err)
+		}
+		if err := e.pool.QueryRow(e.ctx, `INSERT INTO car_models (car_brand_id, name) VALUES ($1, $2) RETURNING id`,
+			e.carBrand, "t178-"+e.suffix).Scan(&e.carModel); err != nil {
+			t.Fatalf("car model: %v", err)
+		}
+		if e.vehicle, err = e.q.CreateVehicle(e.ctx, db.CreateVehicleParams{
+			UserID: user.ID, BrandID: e.brand,
+			CarBrandID: pgtype.Int8{Int64: e.carBrand, Valid: true},
+			CarModelID: pgtype.Int8{Int64: e.carModel, Valid: true},
+		}); err != nil {
+			t.Fatalf("vehicle: %v", err)
+		}
+	}
+	s, err := e.q.CreateService(e.ctx, db.CreateServiceParams{
+		ServiceNo:      fmt.Sprintf("T178-%s-%d", e.suffix, nextRef()),
+		OrganizationID: org.ID, BrandID: e.brand,
+		CustomerUserID: e.vehicle.UserID, VehicleID: e.vehicle.ID,
+		CarBrandID: e.carBrand, CarModelID: e.carModel, Status: "draft",
+	})
+	if err != nil {
+		t.Fatalf("service: %v", err)
+	}
+	return s.ID
+}
+
+// serviceOwner is a service owner held by the service organization.
+func (e *env) serviceOwner(t *testing.T, org db.Organization) *ledger.Owner {
+	t.Helper()
+	return &ledger.Owner{Type: ledger.OwnerService, ID: e.service(t, org), OrgID: org.ID}
+}
