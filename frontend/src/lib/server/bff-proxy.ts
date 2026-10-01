@@ -290,6 +290,8 @@ function passthroughHeaders(
     "content-disposition",
     "cache-control",
     "location",
+    // 429/503 cooldown hint (OTP resend, rate limits); TEC-142.
+    "retry-after",
     "x-request-id",
     "x-content-type-options",
     "content-security-policy",

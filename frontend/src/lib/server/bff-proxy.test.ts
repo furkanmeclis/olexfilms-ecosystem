@@ -73,6 +73,11 @@ vi.mock("@/lib/server/upstream", () => ({
         },
       });
     }
+    if (path.endsWith("/rate-limited")) {
+      const res = json(429, { success: false, error: { code: "RATE_LIMITED" } });
+      res.headers.set("Retry-After", "59");
+      return res;
+    }
     if (auth === "Bearer access-new") return json(200, { success: true });
     if (path.startsWith("portal/") || path === "auth/me") {
       return json(200, { success: true });
@@ -163,6 +168,27 @@ describe("BFF refresh", () => {
     const res = await get("tenant/items/1");
 
     expect(res.status).toBe(401);
+  });
+});
+
+describe("BFF response headers (TEC-142)", () => {
+  beforeEach(() => {
+    state.accessToken = "access-new";
+    state.refreshToken = "refresh-new";
+    calls.length = 0;
+    resetSharedRefresh();
+  });
+
+  it("forwards Retry-After on a panel 429", async () => {
+    const res = await get("tenant/items/rate-limited");
+    expect(res.status).toBe(429);
+    expect(res.headers.get("retry-after")).toBe("59");
+  });
+
+  it("forwards Retry-After on a portal 429", async () => {
+    const res = await portalGet("portal/otp/rate-limited");
+    expect(res.status).toBe(429);
+    expect(res.headers.get("retry-after")).toBe("59");
   });
 });
 
