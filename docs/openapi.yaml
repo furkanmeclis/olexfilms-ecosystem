@@ -1834,7 +1834,9 @@ paths:
       tags: [Auth]
       operationId: patchAuthProfile
       summary: Update own profile
-      description: Partial update of name/surname. Email/password/status/roles are not changeable here.
+      description: >-
+        Partial update of name/surname/locale/timezone. Email/password/status/roles
+        are not changeable here.
       security:
         - bearerAuth: []
       requestBody:
@@ -1852,6 +1854,8 @@ paths:
                 $ref: "#/components/schemas/EnvelopeMe"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "500":
@@ -3596,6 +3600,14 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
+    UnprocessableEntity:
+      description: >-
+        A well-formed value that is not accepted, such as an unsupported locale
+        or an unknown timezone (code VALIDATION_ERROR, details[].field names it).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
     Unauthenticated:
       description: Missing or invalid credentials / access token
       content:
@@ -3789,9 +3801,22 @@ components:
         email_verified:
           type: boolean
         locale:
-          type: string
-          enum: [tr, en]
-          default: tr
+          description: The user's own language; null inherits from the organization (see Me.effective_locale).
+          oneOf:
+            - $ref: "#/components/schemas/Locale"
+            - type: "null"
+        timezone:
+          type: [string, "null"]
+          description: The user's own IANA timezone; null inherits from the organization.
+          examples: ["Asia/Dubai"]
+
+    Locale:
+      type: string
+      description: >-
+        Canonical locale code (K10). Inputs are normalized: "zh_CN", "zh-cn"
+        and "zh" become zh-CN; a regional code falls back to its language
+        ("tr-TR" -> tr). Unknown codes are rejected with 422.
+      enum: [tr, en, bg, de, el, uk, ru, fr, es, it, zh-CN, az, ar]
 
     MeLinks:
       type: object
@@ -3821,8 +3846,19 @@ components:
 
     Me:
       type: object
-      required: [user, roles, permissions, links, channels, realtime]
+      required: [user, roles, permissions, links, channels, realtime, effective_locale, effective_timezone]
       properties:
+        effective_locale:
+          description: >-
+            Resolved language: user -> active organization -> brand center ->
+            Accept-Language -> tr.
+          $ref: "#/components/schemas/Locale"
+        effective_timezone:
+          type: string
+          description: >-
+            Resolved IANA timezone: user -> active organization -> brand
+            center -> Europe/Istanbul.
+          examples: ["Europe/Istanbul"]
         user:
           $ref: "#/components/schemas/PublicUser"
         roles:
@@ -4004,7 +4040,7 @@ components:
           type: string
           description: ISO 4217 code
         locale:
-          type: string
+          $ref: "#/components/schemas/Locale"
         timezone:
           type: string
         contract_valid_until:
@@ -4077,6 +4113,7 @@ components:
           type: string
         locale:
           type: string
+          description: Normalized to a Locale code (tr-TR -> tr, zh_CN -> zh-CN); unknown codes -> 422.
         timezone:
           type: string
 
@@ -4109,6 +4146,7 @@ components:
           type: string
         locale:
           type: string
+          description: Normalized to a Locale code (tr-TR -> tr, zh_CN -> zh-CN); unknown codes -> 422.
         timezone:
           type: string
         parent_uuid:
@@ -4514,7 +4552,15 @@ components:
         surname: { type: string }
         locale:
           type: string
-          enum: [tr, en]
+          description: >-
+            Any spelling of a supported locale (zh_CN is stored as zh-CN,
+            tr-TR as tr). Empty string clears it (inherit from the
+            organization). Unknown codes -> 422.
+          examples: ["zh_CN", "ar", ""]
+        timezone:
+          type: string
+          description: IANA timezone name. Empty string clears it. Unknown names -> 422.
+          examples: ["Asia/Dubai", ""]
 
     ForgotPasswordRequest:
       type: object
@@ -5104,7 +5150,7 @@ components:
       properties:
         action: { type: string }
         target: { $ref: "#/components/schemas/BulkTarget" }
-        locale: { type: string, enum: [tr, en] }
+        locale: { $ref: "#/components/schemas/Locale" }
 
     BulkSummary:
       type: object

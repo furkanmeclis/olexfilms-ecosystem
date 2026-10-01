@@ -1046,7 +1046,7 @@ export interface paths {
         head?: never;
         /**
          * Update own profile
-         * @description Partial update of name/surname. Email/password/status/roles are not changeable here.
+         * @description Partial update of name/surname/locale/timezone. Email/password/status/roles are not changeable here.
          */
         patch: operations["patchAuthProfile"];
         trace?: never;
@@ -2146,12 +2146,19 @@ export interface components {
             status: string;
             is_super_admin: boolean;
             email_verified: boolean;
+            /** @description The user's own language; null inherits from the organization (see Me.effective_locale). */
+            locale?: components["schemas"]["Locale"] | null;
             /**
-             * @default tr
-             * @enum {string}
+             * @description The user's own IANA timezone; null inherits from the organization.
+             * @example Asia/Dubai
              */
-            locale: "tr" | "en";
+            timezone?: string | null;
         };
+        /**
+         * @description Canonical locale code (K10). Inputs are normalized: "zh_CN", "zh-cn" and "zh" become zh-CN; a regional code falls back to its language ("tr-TR" -> tr). Unknown codes are rejected with 422.
+         * @enum {string}
+         */
+        Locale: "tr" | "en" | "bg" | "de" | "el" | "uk" | "ru" | "fr" | "es" | "it" | "zh-CN" | "az" | "ar";
         MeLinks: {
             /** @example /v1/auth/profile */
             profile: string;
@@ -2174,6 +2181,13 @@ export interface components {
             user_channel: string;
         };
         Me: {
+            /** @description Resolved language: user -> active organization -> brand center -> Accept-Language -> tr. */
+            effective_locale: components["schemas"]["Locale"];
+            /**
+             * @description Resolved IANA timezone: user -> active organization -> brand center -> Europe/Istanbul.
+             * @example Europe/Istanbul
+             */
+            effective_timezone: string;
             user: components["schemas"]["PublicUser"];
             roles: string[];
             permissions: string[];
@@ -2264,7 +2278,7 @@ export interface components {
             parent?: components["schemas"]["OrganizationParentRef"] | null;
             /** @description ISO 4217 code */
             currency?: string;
-            locale?: string;
+            locale?: components["schemas"]["Locale"];
             timezone?: string;
             /** Format: date */
             contract_valid_until?: string | null;
@@ -2310,6 +2324,7 @@ export interface components {
             /** @description Distributor only; stored in settings, the warehouse is created in F1. */
             register_as_warehouse?: boolean;
             currency?: string;
+            /** @description Normalized to a Locale code (tr-TR -> tr, zh_CN -> zh-CN); unknown codes -> 422. */
             locale?: string;
             timezone?: string;
         };
@@ -2327,6 +2342,7 @@ export interface components {
             access_ends_at?: string;
             clear_access_ends_at?: boolean;
             currency?: string;
+            /** @description Normalized to a Locale code (tr-TR -> tr, zh_CN -> zh-CN); unknown codes -> 422. */
             locale?: string;
             timezone?: string;
             /**
@@ -2589,8 +2605,19 @@ export interface components {
         PatchProfileRequest: {
             name?: string;
             surname?: string;
-            /** @enum {string} */
-            locale?: "tr" | "en";
+            /**
+             * @description Any spelling of a supported locale (zh_CN is stored as zh-CN, tr-TR as tr). Empty string clears it (inherit from the organization). Unknown codes -> 422.
+             * @example zh_CN
+             * @example ar
+             * @example
+             */
+            locale?: string;
+            /**
+             * @description IANA timezone name. Empty string clears it. Unknown names -> 422.
+             * @example Asia/Dubai
+             * @example
+             */
+            timezone?: string;
         };
         ForgotPasswordRequest: {
             /** Format: email */
@@ -3008,8 +3035,7 @@ export interface components {
         BulkExecuteRequest: {
             action: string;
             target: components["schemas"]["BulkTarget"];
-            /** @enum {string} */
-            locale?: "tr" | "en";
+            locale?: components["schemas"]["Locale"];
         };
         BulkSummary: {
             total?: number;
@@ -3456,6 +3482,15 @@ export interface components {
         };
         /** @description Validation or malformed request */
         BadRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description A well-formed value that is not accepted, such as an unsupported locale or an unknown timezone (code VALIDATION_ERROR, details[].field names it). */
+        UnprocessableEntity: {
             headers: {
                 [name: string]: unknown;
             };
@@ -5340,6 +5375,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
+            422: components["responses"]["UnprocessableEntity"];
             500: components["responses"]["InternalError"];
         };
     };

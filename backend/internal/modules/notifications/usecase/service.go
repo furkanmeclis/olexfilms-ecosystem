@@ -15,6 +15,8 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/providers"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/templates"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
@@ -51,6 +53,7 @@ type Querier interface {
 	UpsertNotificationPreferences(ctx context.Context, arg db.UpsertNotificationPreferencesParams) (db.NotificationPreference, error)
 	GetUserByID(ctx context.Context, id int64) (db.User, error)
 	GetUserByUUID(ctx context.Context, id uuid.UUID) (db.User, error)
+	GetLocaleSources(ctx context.Context, arg db.GetLocaleSourcesParams) (db.GetLocaleSourcesRow, error)
 }
 
 // Enqueuer schedules background delivery tasks.
@@ -97,18 +100,36 @@ func (s *Service) WithActionSigner(secret string, ttl time.Duration) *Service {
 }
 
 // Enqueue creates queued notification rows and schedules delivery.
+// recipientLocale resolves a recipient's effective locale (user -> brand
+// center -> tr) through i18n.Resolve. The requester's Accept-Language is not
+// used: the recipient may be someone else. "" when the user is not found.
+func (s *Service) recipientLocale(ctx context.Context, userID int64) string {
+	params := db.GetLocaleSourcesParams{UserID: userID}
+	if b, ok := brandctx.From(ctx); ok {
+		params.BrandID = pgtype.Int8{Int64: b.ID, Valid: true}
+	}
+	row, err := s.q.GetLocaleSources(ctx, params)
+	if err != nil {
+		return ""
+	}
+	return string(i18n.Resolve(i18n.Sources{
+		UserLocale: row.UserLocale, CenterLocale: row.CenterLocale,
+	}).Locale)
+}
+
 func (s *Service) Enqueue(ctx context.Context, in model.EnqueueInput) ([]model.Notification, error) {
 	if len(in.Channels) == 0 {
 		return nil, fmt.Errorf("%w: channels required", ErrInvalidRequest)
 	}
 	lang := in.Language
+	if l, ok := i18n.Parse(lang); ok {
+		lang = string(l)
+	}
 	if lang == "" && in.UserID != nil {
-		if u, err := s.q.GetUserByID(ctx, *in.UserID); err == nil && u.Locale != "" {
-			lang = u.Locale
-		}
+		lang = s.recipientLocale(ctx, *in.UserID)
 	}
 	if lang == "" {
-		lang = "tr"
+		lang = string(i18n.DefaultLocale)
 	}
 	priority := in.Priority
 	if priority == "" {

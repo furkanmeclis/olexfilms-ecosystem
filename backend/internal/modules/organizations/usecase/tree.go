@@ -10,6 +10,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -259,7 +260,11 @@ func (s *Service) placement(ctx context.Context, in RegisterInput) (placementRes
 		}
 		out.Currency = c
 	}
-	if l := strings.TrimSpace(in.Locale); l != "" {
+	if strings.TrimSpace(in.Locale) != "" {
+		l, err := parseOrgLocale(in.Locale)
+		if err != nil {
+			return placementResult{}, err
+		}
 		out.Locale = l
 	}
 	if tz := strings.TrimSpace(in.Timezone); tz != "" {
@@ -291,6 +296,16 @@ func checkBrand(ctx context.Context, orgBrandID int64) error {
 		return ErrBrandMismatch
 	}
 	return nil
+}
+
+// parseOrgLocale maps an API locale ("tr-TR", "zh_CN") to the canonical short
+// code stored in organizations.locale; unknown codes wrap i18n.ErrInvalidLocale.
+func parseOrgLocale(raw string) (string, error) {
+	l, ok := i18n.Parse(raw)
+	if !ok {
+		return "", fmt.Errorf("%w: locale %q", i18n.ErrInvalidLocale, raw)
+	}
+	return string(l), nil
 }
 
 func validCurrency(c string) bool {

@@ -10,6 +10,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/model"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -410,16 +411,21 @@ func (r *Postgres) RevokeOtherSessions(ctx context.Context, userID int64, keep u
 	})
 }
 
-func (r *Postgres) UpdateProfile(ctx context.Context, userUUID uuid.UUID, name, surname, locale *string) (model.User, error) {
+func (r *Postgres) UpdateProfile(ctx context.Context, userUUID uuid.UUID, in model.ProfilePatch) (model.User, error) {
 	params := db.UpdateUserProfileByUUIDParams{Uuid: userUUID}
-	if name != nil {
-		params.Name = pgtype.Text{String: *name, Valid: true}
+	if in.Name != nil {
+		params.Name = pgtype.Text{String: *in.Name, Valid: true}
 	}
-	if surname != nil {
-		params.Surname = pgtype.Text{String: *surname, Valid: true}
+	if in.Surname != nil {
+		params.Surname = pgtype.Text{String: *in.Surname, Valid: true}
 	}
-	if locale != nil {
-		params.Locale = pgtype.Text{String: *locale, Valid: true}
+	if in.Locale != nil {
+		params.SetLocale = true
+		params.Locale = pgtype.Text{String: *in.Locale, Valid: *in.Locale != ""}
+	}
+	if in.Timezone != nil {
+		params.SetTimezone = true
+		params.Timezone = pgtype.Text{String: *in.Timezone, Valid: *in.Timezone != ""}
 	}
 	row, err := r.q.UpdateUserProfileByUUID(ctx, params)
 	if err != nil {
@@ -691,14 +697,34 @@ func (r *Postgres) ListPermissionsFiltered(ctx context.Context, limit, offset in
 	return out, total, nil
 }
 
-func mapUser(row db.User) model.User {
-	locale := row.Locale
-	if locale == "" {
-		locale = "tr"
+// LocaleSources loads the stored locale/timezone chain for i18n.Resolve.
+func (r *Postgres) LocaleSources(ctx context.Context, userID int64, orgUUID *uuid.UUID, brandID *int64) (i18n.Sources, error) {
+	params := db.GetLocaleSourcesParams{UserID: userID}
+	if orgUUID != nil {
+		params.OrganizationUuid = pgtype.UUID{Bytes: *orgUUID, Valid: true}
 	}
+	if brandID != nil {
+		params.BrandID = pgtype.Int8{Int64: *brandID, Valid: true}
+	}
+	row, err := r.q.GetLocaleSources(ctx, params)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return i18n.Sources{}, ErrNotFound
+		}
+		return i18n.Sources{}, err
+	}
+	return i18n.Sources{
+		UserLocale: row.UserLocale, UserTimezone: row.UserTimezone,
+		OrgLocale: row.OrgLocale, OrgTimezone: row.OrgTimezone,
+		CenterLocale: row.CenterLocale, CenterTimezone: row.CenterTimezone,
+	}, nil
+}
+
+func mapUser(row db.User) model.User {
 	return model.User{
 		ID: row.ID, UUID: row.Uuid, Email: row.Email, PasswordHash: row.PasswordHash,
-		Name: row.Name, Surname: row.Surname, Status: row.Status, Locale: locale,
+		Name: row.Name, Surname: row.Surname, Status: row.Status,
+		Locale: row.Locale.String, Timezone: row.Timezone.String,
 		EmailVerified: row.EmailVerifiedAt.Valid, CreatedAt: row.CreatedAt.Time,
 	}
 }

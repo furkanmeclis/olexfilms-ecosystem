@@ -61,7 +61,7 @@ func (a *UsersAdapter) Export(ctx context.Context, query ioengine.ExportQuery, _
 		}
 		out = append(out, map[string]any{
 			"uuid": u.Uuid.String(), "email": u.Email, "name": u.Name, "surname": u.Surname,
-			"status": u.Status, "locale": u.Locale,
+			"status": u.Status, "locale": u.Locale.String,
 			"role_slugs": strings.Join(roleSlugs, ","),
 			"created_at": u.CreatedAt.Time,
 		})
@@ -98,8 +98,13 @@ func (a *UsersAdapter) ApplyRow(ctx context.Context, row map[string]any, default
 	if locale == "" {
 		locale = strVal(defaults, "locale")
 	}
-	if locale == "" {
-		locale = "tr"
+	// Empty keeps users.locale NULL (inherit from the organization).
+	if locale != "" {
+		l, ok := i18n.Parse(locale)
+		if !ok {
+			return ioengine.RowResult{OK: false, Error: "unsupported locale: " + locale}, nil
+		}
+		locale = string(l)
 	}
 	if _, err := a.q.GetUserByEmail(ctx, email); err == nil {
 		return ioengine.RowResult{OK: false, Error: "email already exists"}, nil
@@ -120,7 +125,9 @@ func (a *UsersAdapter) ApplyRow(ctx context.Context, row map[string]any, default
 	if err != nil {
 		return ioengine.RowResult{OK: false, Error: err.Error()}, nil
 	}
-	_ = a.q.UpdateUserLocale(ctx, db.UpdateUserLocaleParams{ID: created.ID, Locale: locale})
+	if locale != "" {
+		_ = a.q.UpdateUserLocale(ctx, db.UpdateUserLocaleParams{ID: created.ID, Locale: pgtype.Text{String: locale, Valid: true}})
+	}
 	roleSlugs := parseSlugs(strVal(row, "role_slugs"))
 	if len(roleSlugs) == 0 {
 		roleSlugs = parseSlugs(strVal(defaults, "role_slugs"))

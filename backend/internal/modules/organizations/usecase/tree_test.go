@@ -69,7 +69,7 @@ func TestSupplierOfChain(t *testing.T) {
 			Slug: "t83-" + name + "-" + suffix, Name: name, Status: "active",
 			AccessStartsAt: pgtype.Timestamptz{Time: time.Now().Add(-time.Hour), Valid: true},
 			Type:           typ, ParentID: pgtype.Int8{Int64: parentID, Valid: true},
-			BrandID: olex.ID, Currency: "TRY", Locale: "tr-TR", Timezone: "Europe/Istanbul",
+			BrandID: olex.ID, Currency: "TRY", Locale: "tr", Timezone: "Europe/Istanbul",
 			Settings: []byte("{}"),
 		})
 		if err != nil {

@@ -45,9 +45,30 @@ RETURNING *;
 UPDATE users
 SET name = COALESCE(sqlc.narg(name), name),
     surname = COALESCE(sqlc.narg(surname), surname),
-    locale = COALESCE(sqlc.narg(locale), locale)
+    locale = CASE WHEN sqlc.arg(set_locale)::bool THEN sqlc.narg(locale) ELSE locale END,
+    timezone = CASE WHEN sqlc.arg(set_timezone)::bool THEN sqlc.narg(timezone) ELSE timezone END
 WHERE uuid = sqlc.arg(uuid) AND deleted_at IS NULL
 RETURNING *;
+
+-- name: GetLocaleSources :one
+-- Stored locale/timezone preferences for i18n.Resolve: the user, the active
+-- organization (when given) and the center of its brand, or of the request
+-- brand when there is no active organization.
+SELECT
+    COALESCE(u.locale, '')::text   AS user_locale,
+    COALESCE(u.timezone, '')::text AS user_timezone,
+    COALESCE(o.locale, '')::text   AS org_locale,
+    COALESCE(o.timezone, '')::text AS org_timezone,
+    COALESCE(c.locale, '')::text   AS center_locale,
+    COALESCE(c.timezone, '')::text AS center_timezone
+FROM users u
+LEFT JOIN organizations o
+    ON o.uuid = sqlc.narg(organization_uuid)::uuid AND o.deleted_at IS NULL
+LEFT JOIN organizations c
+    ON c.type = 'center'
+   AND c.deleted_at IS NULL
+   AND c.brand_id = COALESCE(o.brand_id, sqlc.narg(brand_id)::bigint)
+WHERE u.id = sqlc.arg(user_id) AND u.deleted_at IS NULL;
 
 -- name: UpdateUserLocale :exec
 UPDATE users

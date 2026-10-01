@@ -17,6 +17,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/repository"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authrevoke"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/password"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
@@ -44,7 +45,10 @@ type Repository interface {
 	FindUserByID(ctx context.Context, id int64) (model.User, error)
 	UpdateLastLogin(ctx context.Context, userID int64) error
 	UpdatePassword(ctx context.Context, userID int64, hash string) error
-	UpdateProfile(ctx context.Context, userUUID uuid.UUID, name, surname, locale *string) (model.User, error)
+	UpdateProfile(ctx context.Context, userUUID uuid.UUID, in model.ProfilePatch) (model.User, error)
+	// LocaleSources loads the stored locale/timezone chain (user, active org,
+	// brand center) for i18n.Resolve.
+	LocaleSources(ctx context.Context, userID int64, orgUUID *uuid.UUID, brandID *int64) (i18n.Sources, error)
 	SetEmailVerified(ctx context.Context, userID int64) (model.User, error)
 	UpdateUserPlatform(ctx context.Context, id uuid.UUID, name, surname, status *string) (model.User, error)
 	ListUsersFiltered(ctx context.Context, limit, offset int32, q, status, roleSlug string) ([]model.User, int64, error)
@@ -452,6 +456,12 @@ func (u *AuthUseCase) Me(ctx context.Context, userUUID uuid.UUID, impersonatorUU
 		Channels:           model.MeChannels{User: "user:" + user.UUID.String()},
 		Realtime:           model.MeRealtime{Enabled: u.realtime.Enabled, WSURL: u.realtime.WSURL, UserChannel: "user:" + user.UUID.String()},
 	}
+	resolved, err := u.ResolveLocale(ctx, user.ID, access.OrganizationUUID)
+	if err != nil {
+		return model.Me{}, err
+	}
+	out.EffectiveLocale = string(resolved.Locale)
+	out.EffectiveTimezone = resolved.Timezone
 	if u.orgResolver != nil {
 		memberships, err := u.orgResolver.ListMembershipsForUser(ctx, user.ID)
 		if err != nil {
