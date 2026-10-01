@@ -10,6 +10,7 @@ import {
 import { LocaleSwitch } from "@/components/layout/locale-switch";
 import { ThemeSwitch } from "@/components/layout/theme-switch";
 import { UserMenu } from "@/components/layout/user-menu";
+import { OrganizationSwitcher } from "@/features/organizations/components/organization-switcher";
 import { SearchTrigger } from "@/features/search-engine";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -61,6 +62,7 @@ export function Header({
         <div className="ms-auto flex items-center gap-1">
           <SearchTrigger compact className="md:hidden" />
           <NotificationInbox />
+          <OrganizationSwitcher />
           <LocaleSwitch />
           <ThemeSwitch />
           <UserMenu />

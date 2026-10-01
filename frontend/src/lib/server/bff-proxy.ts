@@ -10,6 +10,7 @@ import {
 import {
   clientIpFromHeaders,
   fetchUpstream,
+  forwardedHostFromHeaders,
   fetchUpstreamStream,
   type UpstreamResult,
 } from "@/lib/server/upstream";
@@ -150,6 +151,7 @@ async function persistTokensFromEnvelope(envelope: Envelope | null) {
 function rotateRefreshToken(
   refreshToken: string,
   forwardedFor: string | null,
+  forwardedHost: string | null = null,
 ): Promise<RefreshResult> {
   return sharedRefresh(refreshToken, async (token) => {
     const headers = new Headers({
@@ -158,6 +160,8 @@ function rotateRefreshToken(
     });
     // Rate limits and session rows key on the client IP (first caller's).
     if (forwardedFor) headers.set("X-Forwarded-For", forwardedFor);
+    // Go re-validates the org scope against the domain's brand on refresh.
+    if (forwardedHost) headers.set("X-Forwarded-Host", forwardedHost);
     const result = await fetchUpstream("auth/refresh", {
       method: "POST",
       headers,
@@ -182,6 +186,7 @@ export function isRefreshUnavailableStatus(status: number): boolean {
 
 async function refreshViaUpstream(
   forwardedFor: string | null,
+  forwardedHost: string | null = null,
 ): Promise<RefreshOutcome> {
   const { refreshToken, userId } = await getApiTokens();
   if (!refreshToken || !userId) return "rejected";
@@ -191,7 +196,11 @@ async function refreshViaUpstream(
   // flow signs out when the session is really gone.
   let result: RefreshResult;
   try {
-    result = await rotateRefreshToken(refreshToken, forwardedFor);
+    result = await rotateRefreshToken(
+      refreshToken,
+      forwardedFor,
+      forwardedHost,
+    );
   } catch {
     return "unavailable";
   }
@@ -311,6 +320,7 @@ async function proxyBuffered(
       rotated = await rotateRefreshToken(
         refreshToken,
         headers.get("X-Forwarded-For"),
+        headers.get("X-Forwarded-Host"),
       );
     } catch {
       return unavailableResponse();
@@ -337,7 +347,10 @@ async function proxyBuffered(
     !isAuthPublicTokenPath(path) &&
     !isLogoutPath(path)
   ) {
-    const refreshed = await refreshViaUpstream(headers.get("X-Forwarded-For"));
+    const refreshed = await refreshViaUpstream(
+      headers.get("X-Forwarded-For"),
+      headers.get("X-Forwarded-Host"),
+    );
     if (refreshed === "unavailable") return unavailableResponse();
     if (refreshed === "ok") {
       const { accessToken: nextAccess } = await getApiTokens();
@@ -399,7 +412,10 @@ async function proxyStream(
     !isAuthPublicTokenPath(path)
   ) {
     await result.body?.cancel().catch(() => undefined);
-    const refreshed = await refreshViaUpstream(headers.get("X-Forwarded-For"));
+    const refreshed = await refreshViaUpstream(
+      headers.get("X-Forwarded-For"),
+      headers.get("X-Forwarded-Host"),
+    );
     if (refreshed === "unavailable") return unavailableResponse();
     if (refreshed === "ok") {
       const { accessToken: nextAccess } = await getApiTokens();
@@ -522,6 +538,9 @@ export async function proxyToUpstream(
   // request would share the BFF's address (one global bucket).
   const clientIp = clientIpFromHeaders(request.headers);
   if (clientIp) headers.set("X-Forwarded-For", clientIp);
+  // Go resolves the brand from the browser-facing host (K3).
+  const forwardedHost = forwardedHostFromHeaders(request.headers);
+  if (forwardedHost) headers.set("X-Forwarded-Host", forwardedHost);
 
   if (accessToken && !isAuthPublicTokenPath(path)) {
     headers.set("Authorization", `Bearer ${accessToken}`);

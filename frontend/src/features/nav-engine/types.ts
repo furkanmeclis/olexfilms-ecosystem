@@ -55,6 +55,15 @@ export type NavAdornmentComponent = ComponentType<{
   children: (adornment: NavAdornment) => ReactNode;
 }>;
 
+/** Organization tree level a nav entry is shown for. */
+export type NavOrgType = "center" | "distributor" | "dealer";
+
+/** Active organization used to filter tenant menus. */
+export type NavOrgContext = {
+  type?: string;
+  role?: string;
+};
+
 export type NavItemDef = {
   id: string;
   titleKey: string;
@@ -62,6 +71,10 @@ export type NavItemDef = {
   icon: LucideIcon;
   permission?: string | string[];
   anyPermission?: string[];
+  /** Shown only when the active organization has one of these types. */
+  orgTypes?: NavOrgType[];
+  /** Shown only for these member roles in the active organization. */
+  orgRoles?: string[];
   soon?: boolean;
   /** Command palette icon key (see resolveSearchIcon). */
   searchIcon?: string;
@@ -80,6 +93,8 @@ export type NavGroupDef = {
   collapsible?: boolean;
   permission?: string | string[];
   anyPermission?: string[];
+  orgTypes?: NavOrgType[];
+  orgRoles?: string[];
   items: NavItemDef[];
 };
 

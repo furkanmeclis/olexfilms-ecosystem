@@ -2,14 +2,16 @@
 
 import { SidebarContent } from "@/components/ui/sidebar";
 import { NavGroup } from "@/features/nav-engine/components/nav-group";
-import type { NavCatalog } from "@/features/nav-engine/types";
+import type { NavCatalog, NavOrgContext } from "@/features/nav-engine/types";
 
 export function NavEngine({
   catalog,
   homeHref,
+  org,
 }: {
   catalog: NavCatalog;
   homeHref: string;
+  org?: NavOrgContext | null;
 }) {
   return (
     <SidebarContent>
@@ -19,6 +21,7 @@ export function NavEngine({
           group={group}
           catalogId={catalog.id}
           homeHref={homeHref}
+          org={org}
         />
       ))}
     </SidebarContent>

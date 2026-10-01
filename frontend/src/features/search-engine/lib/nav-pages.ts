@@ -1,19 +1,17 @@
 import type { AppLayoutVariant } from "@/components/layout/app-layout";
 import { cmsNav, platformNav, tenantNav } from "@/config/nav";
-import { isNavEntryVisible } from "@/features/nav-engine/lib/access";
+import {
+  isNavEntryVisible,
+  type NavAccess,
+} from "@/features/nav-engine/lib/access";
 import { resolveSearchIcon } from "@/features/search-engine/lib/icons";
 import type { PaletteItem } from "@/features/search-engine/types";
 import type { NavCatalog } from "@/features/nav-engine/types";
 import { createElement } from "react";
 
-type AccessFns = {
-  can: (permission: string | string[]) => boolean;
-  canAny: (permissions: string[]) => boolean;
-};
-
 export function buildNavPageItems(
   variant: AppLayoutVariant,
-  access: AccessFns,
+  access: NavAccess,
   t: (key: string) => string,
   tenantSlug?: string,
   hiddenItemIds: ReadonlySet<string> = new Set(),

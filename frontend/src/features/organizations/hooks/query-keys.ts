@@ -6,4 +6,5 @@ export const organizationsKeys = {
   details: () => [...organizationsKeys.all, "detail"] as const,
   detail: (uuid: string) => [...organizationsKeys.details(), uuid] as const,
   meta: () => [...organizationsKeys.all, "meta"] as const,
+  mine: () => [...organizationsKeys.all, "mine"] as const,
 };

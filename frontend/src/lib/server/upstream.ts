@@ -34,6 +34,16 @@ export function clientIpFromHeaders(headers: Headers): string | null {
   return hops.length > 0 ? hops[hops.length - 1]! : null;
 }
 
+/**
+ * Browser-facing host of the request, for brand resolution in Go (K3).
+ * Prefers the proxy's X-Forwarded-Host (first hop), then Host.
+ */
+export function forwardedHostFromHeaders(headers: Headers): string | null {
+  const raw = headers.get("x-forwarded-host") ?? headers.get("host");
+  const first = raw?.split(",")[0]?.trim();
+  return first ? first : null;
+}
+
 function scrubUpstreamHeaders(init?: HeadersInit): Headers {
   const headers = new Headers(init);
   headers.delete("host");

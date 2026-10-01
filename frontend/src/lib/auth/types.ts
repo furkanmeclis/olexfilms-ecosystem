@@ -13,6 +13,9 @@ export type RoleSummary = {
   is_system?: boolean;
 };
 
+/** Organization tree level (center -> distributor -> dealer). */
+export type OrganizationType = "center" | "distributor" | "dealer";
+
 export type OrganizationSummary = {
   uuid: string;
   slug: string;
@@ -21,6 +24,9 @@ export type OrganizationSummary = {
   logo_url?: string | null;
   status: string;
   access_ends_at?: string | null;
+  type?: OrganizationType;
+  brand?: { slug: string; name?: string };
+  parent?: { uuid: string; slug?: string; name: string } | null;
 };
 
 /** Client session identity — profile + RBAC. */
@@ -73,6 +79,9 @@ export function mapMeToAuthUser(me: Me): AuthUser {
       logo_url: org.logo_url,
       status: org.status,
       access_ends_at: org.access_ends_at,
+      type: org.type,
+      brand: org.brand,
+      parent: org.parent ?? null,
     })),
     realtimeUserChannel: realtime?.user_channel,
     realtimeEnabled: realtime?.enabled,

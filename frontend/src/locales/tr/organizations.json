@@ -105,5 +105,14 @@
   "access.denied_description": "Bu işletmeye üyeliğiniz bulunmuyor.",
   "access.back_home": "Ana sayfaya dön",
   "access.expired_title": "Erişim süresi doldu",
-  "access.expired_description": "{{name}} aboneliği sona erdi. Destek ile iletişime geçin."
+  "access.expired_description": "{{name}} aboneliği sona erdi. Destek ile iletişime geçin.",
+  "status.read_only": "Salt okunur",
+  "types.center": "Merkez",
+  "types.distributor": "Distribütör",
+  "types.dealer": "Bayi",
+  "switcher.label": "Organizasyon değiştir",
+  "switcher.select": "Organizasyon seçin",
+  "switcher.error": "Organizasyon değiştirilemedi",
+  "columns.type": "Tür",
+  "columns.parent": "Üst organizasyon"
 }

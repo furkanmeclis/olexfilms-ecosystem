@@ -68,6 +68,22 @@ export function useOrganizationsColumns({
           ),
         }),
         createColumn<Organization>({
+          accessorKey: "type",
+          labelKey: "organizations.columns.type",
+          enableSorting: false,
+          cell: ({ row }) =>
+            row.original.type
+              ? t(`organizations.types.${row.original.type}`)
+              : "—",
+        }),
+        createColumn<Organization>({
+          id: "parent",
+          accessorFn: (row) => row.parent?.name ?? "",
+          labelKey: "organizations.columns.parent",
+          enableSorting: false,
+          cell: ({ row }) => row.original.parent?.name ?? "—",
+        }),
+        createColumn<Organization>({
           accessorKey: "city",
           labelKey: "organizations.columns.city",
           enableSorting: true,

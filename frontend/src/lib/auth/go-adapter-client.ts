@@ -266,6 +266,7 @@ export async function loginWithPassword(
   totpCode?: string,
   organizationSlug?: string,
   clientIp?: string | null,
+  forwardedHost?: string | null,
 ) {
   const result = await fetchUpstream("auth/login", {
     method: "POST",
@@ -273,6 +274,7 @@ export async function loginWithPassword(
       Accept: "application/json",
       "Content-Type": "application/json",
       ...(clientIp ? { "X-Forwarded-For": clientIp } : {}),
+      ...(forwardedHost ? { "X-Forwarded-Host": forwardedHost } : {}),
     },
     body: JSON.stringify({
       email,

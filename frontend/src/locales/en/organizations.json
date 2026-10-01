@@ -105,5 +105,14 @@
   "access.denied_description": "You are not a member of this organization.",
   "access.back_home": "Back to home",
   "access.expired_title": "Access expired",
-  "access.expired_description": "{{name}} subscription has ended. Contact support."
+  "access.expired_description": "{{name}} subscription has ended. Contact support.",
+  "status.read_only": "Read-only",
+  "types.center": "Center",
+  "types.distributor": "Distributor",
+  "types.dealer": "Dealer",
+  "switcher.label": "Switch organization",
+  "switcher.select": "Select organization",
+  "switcher.error": "Could not switch organization",
+  "columns.type": "Type",
+  "columns.parent": "Parent"
 }
