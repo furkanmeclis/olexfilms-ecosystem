@@ -13,17 +13,20 @@ import (
 var ErrInvalidToken = errors.New("invalid token")
 
 // Audiences (session realms). Panel logins (password, passkey, OAuth) get
-// "panel"; customer WhatsApp OTP logins get "portal". Enforcement per route
-// group is the portal work (TEC-90).
+// "panel"; customer WhatsApp OTP logins get "portal" (TEC-90); the mobile
+// app's Bearer sessions get "mobile" (TEC-91). Enforcement per route group:
+// middleware.RealmAllows.
 const (
 	AudiencePanel  = "panel"
 	AudiencePortal = "portal"
+	AudienceMobile = "mobile"
 )
 
 // NormalizeAudience maps "" and unknown values to panel.
 func NormalizeAudience(aud string) string {
-	if aud == AudiencePortal {
-		return AudiencePortal
+	switch aud {
+	case AudiencePortal, AudienceMobile:
+		return aud
 	}
 	return AudiencePanel
 }
@@ -151,7 +154,7 @@ func (m *Manager) ParseAccess(token string) (Claims, error) {
 // Realm returns the token audience (panel for tokens issued before aud).
 func (c Claims) Realm() string {
 	for _, a := range c.Audience {
-		if a == AudiencePortal || a == AudiencePanel {
+		if a == AudiencePortal || a == AudiencePanel || a == AudienceMobile {
 			return a
 		}
 	}

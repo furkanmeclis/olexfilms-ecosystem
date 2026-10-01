@@ -69,6 +69,12 @@ type Repository interface {
 	GetRefreshSession(ctx context.Context, hash string) (model.RefreshSession, error)
 	ResolveOrganizationInternalID(ctx context.Context, orgUUID uuid.UUID) (int64, error)
 	RevokeRefresh(ctx context.Context, hash string) error
+	// Mobile refresh chains (TEC-91).
+	RotateRefresh(ctx context.Context, hash string) error
+	FindRefreshAny(ctx context.Context, hash string) (model.RefreshSession, error)
+	FindRefreshByUUID(ctx context.Context, id uuid.UUID) (model.RefreshSession, error)
+	RevokeRefreshFamily(ctx context.Context, family uuid.UUID) ([]uuid.UUID, error)
+	RevokeMobileDeviceSessions(ctx context.Context, userID int64, deviceID string, keep uuid.UUID) ([]uuid.UUID, error)
 	RevokeAllRefresh(ctx context.Context, userID int64) error
 	ListActiveSessions(ctx context.Context, userID int64) ([]model.DeviceSession, error)
 	RevokeSession(ctx context.Context, userID int64, sessionUUID uuid.UUID) error
@@ -126,6 +132,9 @@ type AuthUseCase struct {
 	revocations *authrevoke.Store
 	// Optional: phone (WhatsApp OTP) login, see phone.go.
 	phoneRepo PhoneRepository
+	// Mobile sessions (TEC-91), see mobile.go and qr.go.
+	mobileRefreshTTL time.Duration
+	qr               qrDeps
 }
 
 // SecretBox encrypts at-rest secrets (TOTP).
@@ -314,6 +323,13 @@ func (u *AuthUseCase) Login(ctx context.Context, email, rawPassword, totpCode, o
 	if realm == jwt.AudiencePortal && strings.TrimSpace(organizationSlug) != "" {
 		return model.Tokens{}, fmt.Errorf("%w: organization_slug is not used in the portal", ErrInvalidRequest)
 	}
+	return u.passwordLogin(ctx, email, rawPassword, totpCode, organizationSlug, meta)
+}
+
+// passwordLogin is the shared e-mail + password sign-in of Login (panel,
+// portal) and MobileLogin (mobile); meta.Realm is already validated.
+func (u *AuthUseCase) passwordLogin(ctx context.Context, email, rawPassword, totpCode, organizationSlug string, meta model.SessionMeta) (model.Tokens, error) {
+	realm := meta.Realm
 	if u.authSettings != nil {
 		ok, err := u.authSettings.CanPasswordLogin(ctx)
 		if err != nil {
@@ -394,20 +410,53 @@ func (u *AuthUseCase) Login(ctx context.Context, email, rawPassword, totpCode, o
 	return u.issueTokensForUser(ctx, user, meta, orgUUID)
 }
 
-// Refresh rotates an opaque refresh token.
+// Refresh rotates an opaque refresh token of a web (panel / portal) session.
+// Mobile sessions rotate through MobileRefresh only.
 func (u *AuthUseCase) Refresh(ctx context.Context, rawToken string, meta model.SessionMeta) (model.Tokens, error) {
+	return u.refresh(ctx, rawToken, meta, false)
+}
+
+func (u *AuthUseCase) refresh(ctx context.Context, rawToken string, meta model.SessionMeta, mobile bool) (model.Tokens, error) {
 	hash := tokenHash(rawToken)
 	session, err := u.repo.GetRefreshSession(ctx, hash)
 	if err != nil {
+		if mobile && u.detectRefreshReuse(ctx, hash) {
+			return model.Tokens{}, ErrRefreshReused
+		}
+		return model.Tokens{}, ErrInvalidCredentials
+	}
+	if (session.Client == model.ClientMobile) != mobile {
 		return model.Tokens{}, ErrInvalidCredentials
 	}
 	// Revoke must win the race: a concurrent refresh with the same token
 	// finds no active row and is rejected, so a refresh token is single-use.
-	if err := u.repo.RevokeRefresh(ctx, hash); err != nil {
+	// Mobile rows are marked rotated so a replay can be detected.
+	revoke := u.repo.RevokeRefresh
+	if mobile {
+		revoke = u.repo.RotateRefresh
+	}
+	if err := revoke(ctx, hash); err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
+			if mobile && u.detectRefreshReuse(ctx, hash) {
+				return model.Tokens{}, ErrRefreshReused
+			}
 			return model.Tokens{}, ErrInvalidCredentials
 		}
 		return model.Tokens{}, err
+	}
+	if mobile {
+		meta.Client = model.ClientMobile
+		meta.FamilyID = session.FamilyID
+		dev := model.DeviceInfo{}
+		if session.Device != nil {
+			dev = *session.Device
+		}
+		if meta.Device != nil && meta.Device.AppVersion != "" {
+			dev.AppVersion = meta.Device.AppVersion
+		}
+		meta.Device = &dev
+	} else {
+		meta.Client, meta.Device, meta.FamilyID = "", nil, uuid.Nil
 	}
 	user, err := u.repo.FindUserByID(ctx, session.UserID)
 	if err != nil {
@@ -639,7 +688,7 @@ func (u *AuthUseCase) issueTokensForUser(ctx context.Context, user model.User, m
 	if err != nil {
 		return model.Tokens{}, err
 	}
-	refreshExp := u.now().UTC().Add(u.tokens.RefreshTTL())
+	refreshExp := u.now().UTC().Add(u.refreshTTLFor(meta))
 	saveMeta := meta
 	if organizationID != nil && *organizationID != uuid.Nil {
 		if internalID, err := u.repo.ResolveOrganizationInternalID(ctx, *organizationID); err == nil {

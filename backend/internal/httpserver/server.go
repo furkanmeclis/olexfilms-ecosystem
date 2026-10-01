@@ -277,6 +277,18 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	ratesSvc := fxrates.New(deps.Queries, fxrates.NewFetcher(cfg.Rates.TCMBURL, cfg.Rates.ECBURL), log)
 	uc.SetOrganizationResolver(orgSvc)
 	authmodule.RegisterRoutes(mux, h, tokens, loader, stepUpSvc)
+	// TEC-91: mobile API (Bearer, aud=mobile) and QR web sign-in.
+	uc.SetMobileRefreshTTL(cfg.JWT.MobileRefreshTTL)
+	if deps.Queries != nil {
+		var qrPublisher authusecase.QRPublisher
+		if deps.Realtime != nil {
+			qrPublisher = deps.Realtime
+		}
+		uc.SetQRLogin(deps.Queries, qrPublisher, rtIssuer, cfg.Mobile.QRLoginTTL)
+	}
+	authmodule.RegisterMobileRoutes(mux,
+		authhandler.NewMobile(uc, notifSvc, ratelimit.New(deps.Redis, cfg.App.Env)),
+		tokens, loader, cfg.Mobile.MinAPIVersion, cfg.Mobile.MaxAPIVersion)
 	var featureCache features.Cache = features.NoCache{}
 	if deps.Redis != nil {
 		featureCache = features.NewRedisCache(deps.Redis, cfg.App.Env, func(op string, err error) {

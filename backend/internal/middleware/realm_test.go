@@ -27,6 +27,16 @@ func TestRealmAllows(t *testing.T) {
 		{"portal", "/v1/auth/step-up", false},
 		{"portal", "/v1/realtime/token", false},
 		{"portal", "/v1/portal", false},
+		// TEC-91: mobile Bearer sessions and /v1/mobile/* pair up only.
+		{"mobile", "/v1/mobile/auth/me", true},
+		{"mobile", "/v1/mobile/push-token", true},
+		{"mobile", "/v1/auth/me", false},
+		{"mobile", "/v1/platform/users", false},
+		{"mobile", "/v1/portal/consents", false},
+		{"mobile", "/v1/realtime/token", false},
+		{"panel", "/v1/mobile/auth/me", false},
+		{"", "/v1/mobile/auth/qr/abc/approve", false},
+		{"portal", "/v1/mobile/auth/me", false},
 	}
 	for _, c := range cases {
 		if got := RealmAllows(c.realm, c.path); got != c.want {

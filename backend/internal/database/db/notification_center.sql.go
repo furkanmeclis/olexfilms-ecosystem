@@ -620,6 +620,21 @@ func (q *Queries) PurgeNotificationsBefore(ctx context.Context, arg PurgeNotific
 	return result.RowsAffected(), nil
 }
 
+const revokeAllDevicePushTokensForUser = `-- name: RevokeAllDevicePushTokensForUser :execrows
+UPDATE device_push_tokens
+SET revoked_at = NOW()
+WHERE user_id = $1
+  AND revoked_at IS NULL
+`
+
+func (q *Queries) RevokeAllDevicePushTokensForUser(ctx context.Context, userID int64) (int64, error) {
+	result, err := q.db.Exec(ctx, revokeAllDevicePushTokensForUser, userID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const revokeDevicePushToken = `-- name: RevokeDevicePushToken :execrows
 UPDATE device_push_tokens
 SET revoked_at = NOW()
@@ -635,6 +650,29 @@ type RevokeDevicePushTokenParams struct {
 
 func (q *Queries) RevokeDevicePushToken(ctx context.Context, arg RevokeDevicePushTokenParams) (int64, error) {
 	result, err := q.db.Exec(ctx, revokeDevicePushToken, arg.ExpoToken, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const revokeDevicePushTokensForDevice = `-- name: RevokeDevicePushTokensForDevice :execrows
+
+UPDATE device_push_tokens
+SET revoked_at = NOW()
+WHERE user_id = $1
+  AND device_id = $2
+  AND revoked_at IS NULL
+`
+
+type RevokeDevicePushTokensForDeviceParams struct {
+	UserID   int64  `json:"user_id"`
+	DeviceID string `json:"device_id"`
+}
+
+// TEC-91: mobile sign-out drops the device's Expo tokens.
+func (q *Queries) RevokeDevicePushTokensForDevice(ctx context.Context, arg RevokeDevicePushTokensForDeviceParams) (int64, error) {
+	result, err := q.db.Exec(ctx, revokeDevicePushTokensForDevice, arg.UserID, arg.DeviceID)
 	if err != nil {
 		return 0, err
 	}

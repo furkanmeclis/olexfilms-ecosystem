@@ -207,3 +207,18 @@ ORDER BY last_seen_at DESC;
 
 -- name: DeletePushSubscriptionByEndpoint :exec
 DELETE FROM push_subscriptions WHERE endpoint = $1;
+
+-- TEC-91: mobile sign-out drops the device's Expo tokens.
+
+-- name: RevokeDevicePushTokensForDevice :execrows
+UPDATE device_push_tokens
+SET revoked_at = NOW()
+WHERE user_id = $1
+  AND device_id = $2
+  AND revoked_at IS NULL;
+
+-- name: RevokeAllDevicePushTokensForUser :execrows
+UPDATE device_push_tokens
+SET revoked_at = NOW()
+WHERE user_id = $1
+  AND revoked_at IS NULL;

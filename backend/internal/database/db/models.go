@@ -660,6 +660,26 @@ type PushSubscription struct {
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+type QrLoginChallenge struct {
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	Code              string             `json:"code"`
+	SecretHash        string             `json:"secret_hash"`
+	Status            string             `json:"status"`
+	BrandID           pgtype.Int8        `json:"brand_id"`
+	OrganizationID    pgtype.Int8        `json:"organization_id"`
+	WebIp             pgtype.Text        `json:"web_ip"`
+	WebUserAgent      pgtype.Text        `json:"web_user_agent"`
+	UserID            pgtype.Int8        `json:"user_id"`
+	ApproverSessionID pgtype.Int8        `json:"approver_session_id"`
+	ApproverDevice    pgtype.Text        `json:"approver_device"`
+	ExpiresAt         pgtype.Timestamptz `json:"expires_at"`
+	ScannedAt         pgtype.Timestamptz `json:"scanned_at"`
+	DecidedAt         pgtype.Timestamptz `json:"decided_at"`
+	ConsumedAt        pgtype.Timestamptz `json:"consumed_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+}
+
 type RefreshToken struct {
 	ID                 int64              `json:"id"`
 	Uuid               uuid.UUID          `json:"uuid"`
@@ -673,6 +693,13 @@ type RefreshToken struct {
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
 	OrganizationID     pgtype.Int8        `json:"organization_id"`
 	Realm              string             `json:"realm"`
+	Client             string             `json:"client"`
+	DeviceID           pgtype.Text        `json:"device_id"`
+	DeviceName         pgtype.Text        `json:"device_name"`
+	Platform           pgtype.Text        `json:"platform"`
+	AppVersion         pgtype.Text        `json:"app_version"`
+	FamilyID           pgtype.UUID        `json:"family_id"`
+	RotatedAt          pgtype.Timestamptz `json:"rotated_at"`
 }
 
 type Role struct {

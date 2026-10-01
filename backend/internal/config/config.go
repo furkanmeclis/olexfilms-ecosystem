@@ -33,6 +33,16 @@ type Config struct {
 	Gotenberg  GotenbergConfig
 	Wuzapi     WuzapiConfig
 	Rates      RatesConfig
+	Mobile     MobileConfig
+}
+
+// MobileConfig is the mobile API contract (TEC-91): the supported range of
+// the X-Mobile-Api-Version header (integer major versions) and the QR web
+// sign-in challenge lifetime.
+type MobileConfig struct {
+	MinAPIVersion int
+	MaxAPIVersion int
+	QRLoginTTL    time.Duration
 }
 
 // RatesConfig points the daily exchange rate fetch (TEC-84) at TCMB and ECB.
@@ -90,6 +100,8 @@ type JWTConfig struct {
 	RefreshSecret string
 	AccessTTL     time.Duration
 	RefreshTTL    time.Duration
+	// MobileRefreshTTL is the refresh lifetime of mobile app sessions.
+	MobileRefreshTTL time.Duration
 }
 
 type AppConfig struct {
@@ -280,10 +292,11 @@ func Load() (Config, error) {
 			FrontendURL:   frontendURL,
 		},
 		JWT: JWTConfig{
-			AccessSecret:  getEnv("JWT_ACCESS_SECRET", "app-dev-access-secret-change-me-32b"),
-			RefreshSecret: getEnv("JWT_REFRESH_SECRET", "app-dev-refresh-secret-change-me-32b"),
-			AccessTTL:     getDuration("JWT_ACCESS_TTL", 15*time.Minute),
-			RefreshTTL:    getDuration("JWT_REFRESH_TTL", 168*time.Hour),
+			AccessSecret:     getEnv("JWT_ACCESS_SECRET", "app-dev-access-secret-change-me-32b"),
+			RefreshSecret:    getEnv("JWT_REFRESH_SECRET", "app-dev-refresh-secret-change-me-32b"),
+			AccessTTL:        getDuration("JWT_ACCESS_TTL", 15*time.Minute),
+			RefreshTTL:       getDuration("JWT_REFRESH_TTL", 168*time.Hour),
+			MobileRefreshTTL: getDuration("JWT_MOBILE_REFRESH_TTL", 720*time.Hour),
 		},
 		Log: LogConfig{
 			Level:  getEnv("LOG_LEVEL", "debug"),
@@ -320,6 +333,11 @@ func Load() (Config, error) {
 		Rates: RatesConfig{
 			TCMBURL: getEnv("RATES_TCMB_URL", "https://www.tcmb.gov.tr/kurlar/today.xml"),
 			ECBURL:  getEnv("RATES_ECB_URL", "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml"),
+		},
+		Mobile: MobileConfig{
+			MinAPIVersion: getInt("MOBILE_API_MIN_VERSION", 1),
+			MaxAPIVersion: getInt("MOBILE_API_MAX_VERSION", 1),
+			QRLoginTTL:    getDuration("QR_LOGIN_TTL", 120*time.Second),
 		},
 	}
 
