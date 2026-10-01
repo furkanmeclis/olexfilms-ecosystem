@@ -22,15 +22,19 @@ func NewWhatsAppStatusPollTask() *asynq.Task {
 	return asynq.NewTask(TaskWhatsAppStatusPoll, []byte("{}"), asynq.MaxRetry(0))
 }
 
-// WithWhatsAppPoll registers the poll handler.
+// WithWhatsAppPoll sets the poll processor. The task handler itself is
+// registered once in NewWorkerWithQueues, so a repeated call replaces fn.
 func (w *Worker) WithWhatsAppPoll(fn WhatsAppPollFunc) *Worker {
-	w.mux.HandleFunc(TaskWhatsAppStatusPoll, func(ctx context.Context, _ *asynq.Task) error {
-		if fn == nil {
-			return nil
-		}
-		return fn(ctx)
-	})
+	w.pollWhatsApp = fn
 	return w
+}
+
+func (w *Worker) handleWhatsAppPoll(ctx context.Context, _ *asynq.Task) error {
+	if w.pollWhatsApp == nil {
+		w.log.Warn("whatsapp_poll_handler_missing")
+		return nil
+	}
+	return w.pollWhatsApp(ctx)
 }
 
 // RegisterWhatsAppPoll adds the 1-minute poll to a scheduler.

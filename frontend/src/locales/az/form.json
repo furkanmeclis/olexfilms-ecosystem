@@ -1,1 +1,17 @@
-{}
+{
+  "pick_date": "Tarix seçin",
+  "show_password": "Şifrəni göstər",
+  "hide_password": "Şifrəni gizlət",
+  "cancel": "Ləğv et",
+  "clear": "Təmizlə",
+  "save": "Yadda saxla",
+  "required": "Məcburi sahə",
+  "on_this_page": "Bu səhifədə",
+  "combobox_placeholder": "Seçin…",
+  "combobox_search": "Axtar…",
+  "combobox_empty": "Nəticə tapılmadı",
+  "combobox_selected": "Seçildi",
+  "command_title": "Əmr / seçim",
+  "command_description": "Element axtarın və seçin",
+  "command_group_default": "Nəticələr"
+}

@@ -1,1 +1,14 @@
-{}
+{
+  "create": "创建",
+  "refresh": "刷新",
+  "filters": "筛选",
+  "filters_active": "筛选（{{count}}）",
+  "filters_description": "使用筛选条件缩小列表范围。",
+  "filter_any": "全部",
+  "filter_unsupported": "此筛选的 API 参数暂不可用。",
+  "reset_filters": "重置",
+  "apply_filters": "应用",
+  "delete_title": "删除：{{name}}",
+  "delete_description": "确定要删除 {{name}} 吗？",
+  "delete_soft_description": "{{name}} 将被软删除。记录会被归档，而不会被永久移除。"
+}

@@ -1,1 +1,22 @@
-{}
+{
+  "description": "Итоги платформы и быстрые ссылки на роли, пользователей и уведомления.",
+  "forbidden_description": "Обзор доступен только пользователям платформы.",
+  "error_description": "Не удалось загрузить данные обзора.",
+  "kpi_roles_total": "Роли",
+  "kpi_users_total": "Пользователи",
+  "kpi_notifications": "Уведомления",
+  "quick_links_title": "Быстрые ссылки",
+  "quick_links_description": "Переход к основным разделам платформы.",
+  "link_roles_description": "Просмотр и управление ролями.",
+  "link_users_description": "Просмотр и управление пользователями платформы.",
+  "link_notifications_description": "Журнал уведомлений платформы.",
+  "link_profile_description": "Аккаунт, пароль и настройки.",
+  "pipeline.follow_up": "Лиды для повторного контакта",
+  "pipeline.overdue": "Просроченные контакты: {{count}}",
+  "pipeline.open_leads": "Открытые лиды: {{count}}",
+  "pipeline.open_quotes": "Предложения без ответа",
+  "pipeline.expiring": "Предложения, истекающие в течение 3 дней: {{count}}",
+  "pipeline.awaiting": "Предложения без ответа: {{count}}",
+  "tenant.welcome_title": "Добро пожаловать",
+  "tenant.welcome_description": "Панель организации. Модули появятся здесь по мере добавления."
+}

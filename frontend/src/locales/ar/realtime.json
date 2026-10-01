@@ -1,1 +1,17 @@
-{}
+{
+  "reconnected": "استُعيد الاتصال الفوري",
+  "offline": "أنت غير متصل — التحديثات الفورية متوقفة مؤقتًا",
+  "event_fallback": "تحديث: {{type}}",
+  "event_notifications_sent": "أُرسل الإشعار",
+  "event_notifications_delivered": "سُلّم الإشعار",
+  "event_notifications_failed": "فشل الإشعار",
+  "event_jobs_completed": "اكتملت المهمة",
+  "event_jobs_failed": "فشلت المهمة",
+  "event_imports_completed": "اكتمل الاستيراد",
+  "event_imports_failed": "فشل الاستيراد",
+  "event_exports_completed": "اكتمل التصدير",
+  "event_exports_failed": "فشل التصدير",
+  "event_exports_cancelled": "أُلغي التصدير",
+  "event_reports_export_completed": "تصدير التقرير جاهز",
+  "event_reports_export_failed": "فشل تصدير التقرير"
+}

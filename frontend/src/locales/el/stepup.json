@@ -1,1 +1,24 @@
-{}
+{
+  "dialog.title": "Επιβεβαιώστε την ταυτότητά σας",
+  "dialog.description": "Αυτή η ενέργεια απαιτεί πρόσφατη επαλήθευση με κωδικό, passkey ή εφαρμογή ταυτοποίησης.",
+  "dialog.password": "Κωδικός πρόσβασης",
+  "dialog.password_placeholder": "Εισαγάγετε τον κωδικό σας",
+  "dialog.totp": "Κωδικός εφαρμογής ταυτοποίησης",
+  "dialog.totp_placeholder": "Εξαψήφιος κωδικός ή κωδικός ανάκτησης",
+  "dialog.verify": "Επαλήθευση",
+  "dialog.verify_pending": "Επαλήθευση…",
+  "dialog.passkey": "Χρήση passkey",
+  "dialog.passkey_pending": "Αναμονή για passkey…",
+  "dialog.or_password": "ή κωδικός",
+  "dialog.no_methods": "Δεν έχουν ενεργοποιηθεί μέθοδοι επαλήθευσης. Επικοινωνήστε με έναν διαχειριστή.",
+  "gate.title": "Προστατευμένο περιεχόμενο",
+  "gate.description": "Επαληθεύστε την ταυτότητά σας για να δείτε αυτή την ενότητα.",
+  "gate.purpose.users.detail.roles": "Επαληθεύστε για να δείτε τους ρόλους αυτού του χρήστη.",
+  "gate.unlock": "Ξεκλείδωμα",
+  "gate.unlocking": "Ξεκλείδωμα…",
+  "validation.password_required": "Ο κωδικός είναι υποχρεωτικός",
+  "validation.totp_required": "Ο κωδικός εφαρμογής ταυτοποίησης είναι υποχρεωτικός",
+  "error.verification_failed": "Η επαλήθευση απέτυχε",
+  "error.passkey_failed": "Η επαλήθευση με passkey απέτυχε",
+  "error.totp_failed": "Η επαλήθευση με εφαρμογή ταυτοποίησης απέτυχε"
+}

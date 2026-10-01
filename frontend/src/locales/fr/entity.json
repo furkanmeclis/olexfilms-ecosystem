@@ -1,1 +1,14 @@
-{}
+{
+  "create": "Créer",
+  "refresh": "Actualiser",
+  "filters": "Filtres",
+  "filters_active": "Filtres ({{count}})",
+  "filters_description": "Affinez la liste à l'aide des filtres.",
+  "filter_any": "Tous",
+  "filter_unsupported": "Le paramètre d'API pour ce filtre n'est pas encore disponible.",
+  "reset_filters": "Réinitialiser",
+  "apply_filters": "Appliquer",
+  "delete_title": "Supprimer : {{name}}",
+  "delete_description": "Voulez-vous vraiment supprimer {{name}} ?",
+  "delete_soft_description": "{{name}} sera supprimé de façon réversible. L'enregistrement est archivé, pas définitivement effacé."
+}

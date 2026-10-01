@@ -1,1 +1,17 @@
-{}
+{
+  "pick_date": "选择日期",
+  "show_password": "显示密码",
+  "hide_password": "隐藏密码",
+  "cancel": "取消",
+  "clear": "清除",
+  "save": "保存",
+  "required": "必填项",
+  "on_this_page": "本页内容",
+  "combobox_placeholder": "请选择…",
+  "combobox_search": "搜索…",
+  "combobox_empty": "未找到结果",
+  "combobox_selected": "已选择",
+  "command_title": "命令 / 选择",
+  "command_description": "搜索并选择一项",
+  "command_group_default": "结果"
+}

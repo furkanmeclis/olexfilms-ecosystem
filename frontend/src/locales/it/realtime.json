@@ -1,1 +1,17 @@
-{}
+{
+  "reconnected": "Connessione in tempo reale ripristinata",
+  "offline": "Sei offline: tempo reale in pausa",
+  "event_fallback": "Aggiornamento: {{type}}",
+  "event_notifications_sent": "Notifica inviata",
+  "event_notifications_delivered": "Notifica consegnata",
+  "event_notifications_failed": "Notifica non riuscita",
+  "event_jobs_completed": "Attività completata",
+  "event_jobs_failed": "Attività non riuscita",
+  "event_imports_completed": "Importazione completata",
+  "event_imports_failed": "Importazione non riuscita",
+  "event_exports_completed": "Esportazione completata",
+  "event_exports_failed": "Esportazione non riuscita",
+  "event_exports_cancelled": "Esportazione annullata",
+  "event_reports_export_completed": "Esportazione del report pronta",
+  "event_reports_export_failed": "Esportazione del report non riuscita"
+}

@@ -1,1 +1,24 @@
-{}
+{
+  "dialog.title": "Identität bestätigen",
+  "dialog.description": "Diese Aktion erfordert eine aktuelle Bestätigung per Passwort, Passkey oder Authenticator.",
+  "dialog.password": "Passwort",
+  "dialog.password_placeholder": "Passwort eingeben",
+  "dialog.totp": "Authenticator-Code",
+  "dialog.totp_placeholder": "6-stelliger Code oder Wiederherstellungscode",
+  "dialog.verify": "Bestätigen",
+  "dialog.verify_pending": "Wird geprüft…",
+  "dialog.passkey": "Passkey verwenden",
+  "dialog.passkey_pending": "Warten auf Passkey…",
+  "dialog.or_password": "oder Passwort",
+  "dialog.no_methods": "Keine Bestätigungsmethode aktiviert. Wenden Sie sich an einen Administrator.",
+  "gate.title": "Geschützter Inhalt",
+  "gate.description": "Bestätigen Sie Ihre Identität, um diesen Bereich zu sehen.",
+  "gate.purpose.users.detail.roles": "Bestätigen Sie, um die zugewiesenen Rollen dieses Benutzers zu sehen.",
+  "gate.unlock": "Entsperren",
+  "gate.unlocking": "Wird entsperrt…",
+  "validation.password_required": "Passwort ist erforderlich",
+  "validation.totp_required": "Authenticator-Code ist erforderlich",
+  "error.verification_failed": "Bestätigung fehlgeschlagen",
+  "error.passkey_failed": "Passkey-Bestätigung fehlgeschlagen",
+  "error.totp_failed": "Authenticator-Bestätigung fehlgeschlagen"
+}

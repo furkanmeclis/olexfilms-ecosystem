@@ -27,6 +27,7 @@
  *   node scripts/check-i18n.mjs
  *   node scripts/check-i18n.mjs --json
  *   node scripts/check-i18n.mjs --strict
+ *   node scripts/check-i18n.mjs --strict --locales de,fr,es,it,ru,uk
  *   make check-i18n
  */
 
@@ -44,8 +45,18 @@ const I18N_CONFIG = path.join(ROOT, "frontend/src/config/i18n.ts");
 /** tr and en are complete: every key in one must exist in the other. */
 const REQUIRED_LOCALES = ["en", "tr"];
 const LOCALES = readSupportedLocales();
+const RAW_ARGS = process.argv.slice(2);
+/**
+ * --locales de,fr (or --locales=de,fr): only these languages get the
+ * partial-language checks, and --strict fails on their warnings only.
+ */
+const SELECTED_LOCALES = readSelectedLocales();
 /** Languages that may lag behind en (TEC-138 translates them). */
-const PARTIAL_LOCALES = LOCALES.filter((l) => !REQUIRED_LOCALES.includes(l));
+const PARTIAL_LOCALES = LOCALES.filter(
+  (l) => !REQUIRED_LOCALES.includes(l) && (!SELECTED_LOCALES || SELECTED_LOCALES.includes(l)),
+);
+/** Plural suffixes (Intl.PluralRules categories, see lib/i18n/messages.ts). */
+const PLURAL_SUFFIX_RE = /_(zero|one|two|few|many|other)$/;
 const LOCALES_DIR = path.join(ROOT, "frontend/src/locales");
 const CATALOG_LOADERS = path.join(ROOT, "frontend/src/lib/i18n/catalog-loaders.ts");
 const BACKEND_CATALOG = path.join(ROOT, "backend/internal/platform/i18n/catalog.go");
@@ -77,7 +88,7 @@ const KEY_RE = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/;
 const SLUG_VALUE_RE = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/;
 const TURKISH_RE = /[çğıöşüÇĞİÖŞÜ]/;
 
-const argv = new Set(process.argv.slice(2));
+const argv = new Set(RAW_ARGS);
 const WANT_JSON = argv.has("--json");
 const STRICT = argv.has("--strict");
 const WANT_UNUSED = argv.has("--unused");
@@ -87,17 +98,67 @@ if (argv.has("--help") || argv.has("-h")) {
   console.log(`check-i18n — missing / unwired translation keys
 
 Usage:
-  node scripts/check-i18n.mjs [--json] [--strict] [--unused] [--verbose]
+  node scripts/check-i18n.mjs [--json] [--strict] [--unused] [--verbose] [--locales a,b]
 
   --json     machine-readable report
   --strict   treat warnings as errors (a language missing keys fails)
   --unused   also report locale keys that nothing references
   --verbose  list missing keys per namespace for partial languages
+  --locales  comma-separated languages (e.g. de,fr,ru): partial-language
+             checks run only for them and --strict fails only on their
+             findings (other warnings stay warnings)
 `);
   process.exit(0);
 }
 
 const findings = [];
+
+function readSelectedLocales() {
+  const i = RAW_ARGS.findIndex((a) => a === "--locales" || a.startsWith("--locales="));
+  if (i < 0) return null;
+  const raw = RAW_ARGS[i].includes("=") ? RAW_ARGS[i].split("=")[1] : RAW_ARGS[i + 1];
+  const list = String(raw ?? "")
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean);
+  const unknown = list.filter((l) => !LOCALES.includes(l));
+  if (!list.length || unknown.length) {
+    console.error(
+      `--locales needs languages from SUPPORTED_LOCALES (${LOCALES.join(", ")}); got "${raw ?? ""}"`,
+    );
+    process.exit(2);
+  }
+  return list;
+}
+
+/** CLDR plural categories of a language (zh-CN: other only, ru: one/few/many/other). */
+function pluralCategories(locale) {
+  try {
+    return new Set(new Intl.PluralRules(locale).resolvedOptions().pluralCategories);
+  } catch {
+    return new Set(["one", "other"]);
+  }
+}
+
+/**
+ * en key a plural variant stands for: items_few -> items_other when en has
+ * items_other and the language uses that category; null otherwise.
+ */
+function pluralBase(locale, key, enKeys) {
+  const m = PLURAL_SUFFIX_RE.exec(key);
+  if (!m) return null;
+  const other = `${key.slice(0, m.index)}_other`;
+  if (!(other in enKeys)) return null;
+  return pluralCategories(locale).has(m[1]) ? other : null;
+}
+
+/** A plural key en has but the language has no category for (zh-CN items_one). */
+function pluralNotUsed(locale, key, enKeys) {
+  const m = PLURAL_SUFFIX_RE.exec(key);
+  if (!m || m[1] === "other") return false;
+  if (!(`${key.slice(0, m.index)}_other` in enKeys)) return false;
+  return !pluralCategories(locale).has(m[1]);
+}
 
 function readSupportedLocales() {
   const src = fs.readFileSync(I18N_CONFIG, "utf8");
@@ -468,6 +529,19 @@ function paint(code, text) {
   return process.stdout.isTTY ? `\x1b[${code}m${text}\x1b[0m` : text;
 }
 
+/**
+ * --strict fails on warnings; with --locales only on the selected languages'
+ * warnings (missing keys, unwired files), not on unrelated ones.
+ */
+function strictFailure() {
+  if (!STRICT) return false;
+  return findings.some(
+    (f) =>
+      f.level === "warning" &&
+      (!SELECTED_LOCALES || (f.locale && SELECTED_LOCALES.includes(f.locale))),
+  );
+}
+
 function printHuman() {
   const errors = findings.filter((f) => f.level === "error");
   const warnings = findings.filter((f) => f.level === "warning");
@@ -513,7 +587,10 @@ function checkPartialLocales(catalogs, enNs) {
     for (const ns of enNs) {
       const enKeys = Object.keys(catalogs.en[ns]?.keys ?? {});
       const keys = cat[ns]?.keys ?? {};
-      const missing = enKeys.filter((k) => !String(keys[k] ?? "").trim());
+      const enMap = catalogs.en[ns]?.keys ?? {};
+      const missing = enKeys.filter(
+        (k) => !String(keys[k] ?? "").trim() && !pluralNotUsed(locale, k, enMap),
+      );
       total += enKeys.length;
       missingTotal += missing.length;
       if (missing.length) gaps.push(ns);
@@ -522,11 +599,11 @@ function checkPartialLocales(catalogs, enNs) {
           "warning",
           "locale-incomplete-namespace",
           `${locale} ${ns}: ${missing.length}/${enKeys.length} keys missing, e.g. ${missing.slice(0, 3).join(", ")}`,
-          { at: rel(path.join(LOCALES_DIR, locale, `${ns}.json`)) },
+          { at: rel(path.join(LOCALES_DIR, locale, `${ns}.json`)), locale },
         );
       }
       for (const k of Object.keys(keys)) {
-        if (!(k in (catalogs.en[ns]?.keys ?? {}))) {
+        if (!(k in enMap) && !pluralBase(locale, k, enMap)) {
           add("error", "locale-extra-key", `${locale} has ${ns}.${k}, en does not`, {
             at: rel(cat[ns].file),
           });
@@ -545,23 +622,38 @@ function checkPartialLocales(catalogs, enNs) {
         "warning",
         "locale-incomplete",
         `${locale}: ${done}/${total} keys translated (${pct}%), ${gaps.length} namespace(s) fall back to en (--verbose lists them)`,
-        { at: rel(path.join(LOCALES_DIR, locale)) },
+        { at: rel(path.join(LOCALES_DIR, locale)), locale },
       );
     }
   }
 }
 
 /** Every translation keeps exactly the {{params}} of the en text. */
+/**
+ * A plural form other than _other may spell the number out and drop {{count}}
+ * (ar items_two "سجلان" = two records); every other param must stay.
+ */
+function spellsOutCount(key, enKeys, want, got) {
+  const m = PLURAL_SUFFIX_RE.exec(key);
+  if (!m || m[1] === "other" || !(`${key.slice(0, m.index)}_other` in enKeys)) return false;
+  const withoutCount = want
+    .split(",")
+    .filter((p) => p && p !== "count")
+    .join(",");
+  return got === withoutCount;
+}
+
 function checkParams(catalogs) {
   for (const locale of LOCALES) {
     if (locale === "en") continue;
     for (const [ns, data] of Object.entries(catalogs[locale] ?? {})) {
       const enKeys = catalogs.en[ns]?.keys ?? {};
       for (const [k, v] of Object.entries(data.keys)) {
-        if (!(k in enKeys) || !String(v).trim()) continue;
-        const want = paramSet(enKeys[k]);
+        const enKey = k in enKeys ? k : pluralBase(locale, k, enKeys);
+        if (!enKey || !String(v).trim()) continue;
+        const want = paramSet(enKeys[enKey]);
         const got = paramSet(v);
-        if (want !== got) {
+        if (want !== got && !spellsOutCount(k, enKeys, want, got)) {
           add(
             "error",
             "param-mismatch",
@@ -679,6 +771,7 @@ function main() {
           REQUIRED_LOCALES.includes(locale) ? "error" : "warning",
           "unwired-namespace",
           `${locale}/${ns}.json is not registered in ${rel(indexFile)} — t("${ns}.*") cannot resolve it (pnpm i18n:gen)`,
+          { locale },
         );
       }
     }
@@ -688,6 +781,7 @@ function main() {
           "error",
           "catalog-file-missing",
           `${rel(indexFile)} registers ${ns} but locales/${locale}/${ns}.json is missing`,
+          { locale },
         );
       }
     }
@@ -727,7 +821,14 @@ function main() {
     ? readFile(BACKEND_CATALOG_LOCALES)
     : "";
   for (const locale of PARTIAL_LOCALES) {
+    // A translated locale lives in catalog_<locale>.go (zh-CN -> catalog_zh_cn.go).
+    const ownFile = path.join(
+      path.dirname(BACKEND_CATALOG),
+      `catalog_${locale.toLowerCase().replace(/-/g, "_")}.go`,
+    );
+    const ownSrc = fs.existsSync(ownFile) ? readFile(ownFile) : "";
     const map =
+      parseGoCatalog(ownSrc, goCatalogVar(locale)) ??
       parseGoCatalog(backendLocalesSrc, goCatalogVar(locale)) ??
       parseGoCatalog(backendSrc, goCatalogVar(locale));
     if (!map) {
@@ -735,6 +836,7 @@ function main() {
         "warning",
         "backend-locale-catalog-missing",
         `Backend catalog ${goCatalogVar(locale)} not found (falls back to en)`,
+        { locale },
       );
       continue;
     }
@@ -744,6 +846,7 @@ function main() {
         "warning",
         "backend-locale-incomplete",
         `${locale} catalog: ${missing.length}/${Object.keys(backend.en).length} keys missing (fall back to en)`,
+        { locale },
       );
     }
     for (const [k, v] of Object.entries(map)) {
@@ -1000,7 +1103,7 @@ function main() {
     console.log(
       JSON.stringify(
         {
-          ok: errors === 0 && (!STRICT || warnings === 0),
+          ok: errors === 0 && !strictFailure(),
           errors,
           warnings,
           findings,
@@ -1013,9 +1116,7 @@ function main() {
     printHuman();
   }
 
-  const failed =
-    findings.some((f) => f.level === "error") ||
-    (STRICT && findings.some((f) => f.level === "warning"));
+  const failed = findings.some((f) => f.level === "error") || strictFailure();
   process.exit(failed ? 1 : 0);
 }
 

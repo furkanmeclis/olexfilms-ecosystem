@@ -1,1 +1,8 @@
-{}
+{
+  "logo.upload": "Качване на лого",
+  "logo.replace": "Смяна на логото",
+  "logo.clear": "Премахване на логото",
+  "logo.uploading": "Качване…",
+  "logo.too_large": "Логото трябва да е до 2 MB.",
+  "logo.invalid_type": "Използвайте изображение JPEG, PNG или WebP."
+}

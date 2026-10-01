@@ -1,1 +1,24 @@
-{}
+{
+  "dialog.title": "Підтвердьте особу",
+  "dialog.description": "Для цієї дії потрібне нещодавнє підтвердження паролем, ключем доступу або застосунком-автентифікатором.",
+  "dialog.password": "Пароль",
+  "dialog.password_placeholder": "Введіть пароль",
+  "dialog.totp": "Код автентифікатора",
+  "dialog.totp_placeholder": "6-значний код або код відновлення",
+  "dialog.verify": "Підтвердити",
+  "dialog.verify_pending": "Перевірка…",
+  "dialog.passkey": "Використати ключ доступу",
+  "dialog.passkey_pending": "Очікування ключа доступу…",
+  "dialog.or_password": "або пароль",
+  "dialog.no_methods": "Способи підтвердження не ввімкнено. Зверніться до адміністратора.",
+  "gate.title": "Захищені дані",
+  "gate.description": "Підтвердьте особу, щоб відкрити цей розділ.",
+  "gate.purpose.users.detail.roles": "Підтвердьте особу, щоб побачити ролі цього користувача.",
+  "gate.unlock": "Розблокувати",
+  "gate.unlocking": "Розблокування…",
+  "validation.password_required": "Введіть пароль",
+  "validation.totp_required": "Введіть код автентифікатора",
+  "error.verification_failed": "Підтвердження не вдалося",
+  "error.passkey_failed": "Не вдалося підтвердити ключем доступу",
+  "error.totp_failed": "Не вдалося підтвердити кодом автентифікатора"
+}

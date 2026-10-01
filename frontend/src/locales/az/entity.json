@@ -1,1 +1,14 @@
-{}
+{
+  "create": "Yarat",
+  "refresh": "Yenilə",
+  "filters": "Filtrlər",
+  "filters_active": "Filtrlər ({{count}})",
+  "filters_description": "Filtrlərlə siyahını daraldın.",
+  "filter_any": "Hamısı",
+  "filter_unsupported": "Bu filtr üçün API parametri hələ mövcud deyil.",
+  "reset_filters": "Sıfırla",
+  "apply_filters": "Tətbiq et",
+  "delete_title": "Silmə: {{name}}",
+  "delete_description": "{{name}} silinsin? Əminsiniz?",
+  "delete_soft_description": "{{name}} yumşaq silinəcək. Qeyd arxivləşdirilir, birdəfəlik silinmir."
+}

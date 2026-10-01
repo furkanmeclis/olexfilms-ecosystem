@@ -1,1 +1,22 @@
-{}
+{
+  "description": "Totaux de la plateforme et raccourcis vers les rôles, utilisateurs et notifications.",
+  "forbidden_description": "Seuls les utilisateurs de la plateforme peuvent voir la vue d'ensemble.",
+  "error_description": "Les données de la vue d'ensemble n'ont pas pu être chargées.",
+  "kpi_roles_total": "Rôles",
+  "kpi_users_total": "Utilisateurs",
+  "kpi_notifications": "Notifications",
+  "quick_links_title": "Accès rapides",
+  "quick_links_description": "Accédez directement aux zones courantes de la plateforme.",
+  "link_roles_description": "Consulter et gérer les rôles.",
+  "link_users_description": "Consulter et gérer les utilisateurs de la plateforme.",
+  "link_notifications_description": "Journal des notifications de la plateforme.",
+  "link_profile_description": "Compte, mot de passe et préférences.",
+  "pipeline.follow_up": "Prospects à relancer",
+  "pipeline.overdue": "Relances en retard : {{count}}",
+  "pipeline.open_leads": "Prospects ouverts : {{count}}",
+  "pipeline.open_quotes": "Devis en attente de réponse",
+  "pipeline.expiring": "Devis expirant sous 3 jours : {{count}}",
+  "pipeline.awaiting": "Devis en attente de réponse : {{count}}",
+  "tenant.welcome_title": "Bienvenue",
+  "tenant.welcome_description": "Espace de l'organisation. Les modules apparaîtront ici à mesure de leur ajout."
+}

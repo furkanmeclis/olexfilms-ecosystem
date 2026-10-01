@@ -1,1 +1,14 @@
-{}
+{
+  "create": "إنشاء",
+  "refresh": "تحديث",
+  "filters": "عوامل التصفية",
+  "filters_active": "عوامل التصفية ({{count}})",
+  "filters_description": "ضيّق القائمة باستخدام عوامل التصفية.",
+  "filter_any": "الكل",
+  "filter_unsupported": "معامل واجهة البرمجة لهذا المرشّح غير متاح بعد.",
+  "reset_filters": "إعادة تعيين",
+  "apply_filters": "تطبيق",
+  "delete_title": "حذف: {{name}}",
+  "delete_description": "هل أنت متأكد من حذف {{name}}؟",
+  "delete_soft_description": "سيُحذف {{name}} حذفًا مؤقتًا. يُؤرشَف السجل ولا يُزال نهائيًا."
+}

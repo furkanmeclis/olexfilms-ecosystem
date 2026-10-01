@@ -1,1 +1,17 @@
-{}
+{
+  "reconnected": "Връзката в реално време е възстановена",
+  "offline": "Нямате връзка — режимът в реално време е на пауза",
+  "event_fallback": "Актуализация: {{type}}",
+  "event_notifications_sent": "Известието е изпратено",
+  "event_notifications_delivered": "Известието е доставено",
+  "event_notifications_failed": "Известието не бе изпратено",
+  "event_jobs_completed": "Задачата е завършена",
+  "event_jobs_failed": "Задачата е неуспешна",
+  "event_imports_completed": "Импортът е завършен",
+  "event_imports_failed": "Импортът е неуспешен",
+  "event_exports_completed": "Експортът е завършен",
+  "event_exports_failed": "Експортът е неуспешен",
+  "event_exports_cancelled": "Експортът е отменен",
+  "event_reports_export_completed": "Експортът на отчета е готов",
+  "event_reports_export_failed": "Експортът на отчета е неуспешен"
+}

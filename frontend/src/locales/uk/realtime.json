@@ -1,1 +1,17 @@
-{}
+{
+  "reconnected": "З'єднання в реальному часі відновлено",
+  "offline": "Немає підключення — оновлення в реальному часі призупинено",
+  "event_fallback": "Оновлення: {{type}}",
+  "event_notifications_sent": "Сповіщення надіслано",
+  "event_notifications_delivered": "Сповіщення доставлено",
+  "event_notifications_failed": "Помилка сповіщення",
+  "event_jobs_completed": "Завдання виконано",
+  "event_jobs_failed": "Помилка завдання",
+  "event_imports_completed": "Імпорт завершено",
+  "event_imports_failed": "Помилка імпорту",
+  "event_exports_completed": "Експорт завершено",
+  "event_exports_failed": "Помилка експорту",
+  "event_exports_cancelled": "Експорт скасовано",
+  "event_reports_export_completed": "Експорт звіту готовий",
+  "event_reports_export_failed": "Помилка експорту звіту"
+}

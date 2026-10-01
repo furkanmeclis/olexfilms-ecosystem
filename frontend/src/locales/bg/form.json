@@ -1,1 +1,17 @@
-{}
+{
+  "pick_date": "Изберете дата",
+  "show_password": "Покажи паролата",
+  "hide_password": "Скрий паролата",
+  "cancel": "Отказ",
+  "clear": "Изчисти",
+  "save": "Запази",
+  "required": "Задължително поле",
+  "on_this_page": "На тази страница",
+  "combobox_placeholder": "Изберете…",
+  "combobox_search": "Търсене…",
+  "combobox_empty": "Няма намерени резултати",
+  "combobox_selected": "Избрано",
+  "command_title": "Команда / избор",
+  "command_description": "Потърсете и изберете елемент",
+  "command_group_default": "Резултати"
+}

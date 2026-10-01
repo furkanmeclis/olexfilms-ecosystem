@@ -1,1 +1,22 @@
-{}
+{
+  "title": "Müəssisə qeydiyyatı",
+  "description": "Bir neçə dəqiqəyə Olexfilms-də təşkilatınızı yaradın.",
+  "submit": "Qeydiyyatı tamamla",
+  "submitting": "Hesab yaradılır…",
+  "error": "Qeydiyyatı tamamlamaq mümkün olmadı. Məlumatlarınızı yoxlayıb yenidən cəhd edin.",
+  "error_sign_in": "Qeydiyyat uğurlu oldu, lakin giriş alınmadı. Giriş səhifəsindən cəhd edin.",
+  "fields.name": "Əlaqə şəxsinin adı",
+  "fields.surname": "Əlaqə şəxsinin soyadı",
+  "fields.organization_name": "Müəssisənin adı",
+  "fields.city": "Şəhər",
+  "fields.district": "Rayon",
+  "fields.phone": "Telefon",
+  "fields.email": "E-poçt",
+  "fields.address": "Ünvan",
+  "fields.password": "Şifrə",
+  "validation.organization_name_required": "Müəssisənin adı məcburidir",
+  "validation.city_required": "Şəhər məcburidir",
+  "validation.district_required": "Rayon məcburidir",
+  "validation.phone_required": "Telefon məcburidir",
+  "validation.address_required": "Ünvan məcburidir"
+}

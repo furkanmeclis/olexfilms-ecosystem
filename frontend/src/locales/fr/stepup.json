@@ -1,1 +1,24 @@
-{}
+{
+  "dialog.title": "Confirmez votre identité",
+  "dialog.description": "Cette action nécessite une vérification récente par mot de passe, clé d'accès ou application d'authentification.",
+  "dialog.password": "Mot de passe",
+  "dialog.password_placeholder": "Saisissez votre mot de passe",
+  "dialog.totp": "Code d'authentification",
+  "dialog.totp_placeholder": "Code à 6 chiffres ou code de récupération",
+  "dialog.verify": "Vérifier",
+  "dialog.verify_pending": "Vérification…",
+  "dialog.passkey": "Utiliser une clé d'accès",
+  "dialog.passkey_pending": "En attente de la clé d'accès…",
+  "dialog.or_password": "ou mot de passe",
+  "dialog.no_methods": "Aucune méthode de vérification n'est activée. Contactez un administrateur.",
+  "gate.title": "Contenu protégé",
+  "gate.description": "Vérifiez votre identité pour afficher cette section.",
+  "gate.purpose.users.detail.roles": "Vérifiez votre identité pour voir les rôles attribués à cet utilisateur.",
+  "gate.unlock": "Déverrouiller",
+  "gate.unlocking": "Déverrouillage…",
+  "validation.password_required": "Le mot de passe est obligatoire",
+  "validation.totp_required": "Le code d'authentification est obligatoire",
+  "error.verification_failed": "Échec de la vérification",
+  "error.passkey_failed": "Échec de la vérification par clé d'accès",
+  "error.totp_failed": "Échec de la vérification par application d'authentification"
+}

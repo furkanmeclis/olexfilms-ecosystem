@@ -1,1 +1,7 @@
-{}
+{
+  "home.title": "Inicio",
+  "home.subtitle": "Base de gestión de contenidos: añada módulos aquí.",
+  "home.welcome": "Bienvenido",
+  "home.greeting": "Sesión iniciada como {{name}}.",
+  "home.placeholder": "Su espacio de CMS está listo."
+}

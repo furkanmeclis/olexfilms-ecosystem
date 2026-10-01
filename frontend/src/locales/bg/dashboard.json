@@ -1,1 +1,22 @@
-{}
+{
+  "description": "Обобщени данни за платформата и бързи връзки към роли, потребители и известия.",
+  "forbidden_description": "Само потребители на платформата могат да виждат обзора.",
+  "error_description": "Данните за обзора не можаха да се заредят.",
+  "kpi_roles_total": "Роли",
+  "kpi_users_total": "Потребители",
+  "kpi_notifications": "Известия",
+  "quick_links_title": "Бързи връзки",
+  "quick_links_description": "Преминете към често използвани раздели на платформата.",
+  "link_roles_description": "Преглед и управление на роли.",
+  "link_users_description": "Преглед и управление на потребителите на платформата.",
+  "link_notifications_description": "Дневник на известията на платформата.",
+  "link_profile_description": "Акаунт, парола и предпочитания.",
+  "pipeline.follow_up": "Потенциални клиенти за проследяване",
+  "pipeline.overdue": "Просрочени проследявания: {{count}}",
+  "pipeline.open_leads": "Отворени потенциални клиенти: {{count}}",
+  "pipeline.open_quotes": "Оферти, чакащи отговор",
+  "pipeline.expiring": "Оферти, изтичащи до 3 дни: {{count}}",
+  "pipeline.awaiting": "Оферти, чакащи отговор: {{count}}",
+  "tenant.welcome_title": "Добре дошли",
+  "tenant.welcome_description": "Панел на организацията. Модулите ще се появяват тук, когато бъдат добавени."
+}

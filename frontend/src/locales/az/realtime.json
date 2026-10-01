@@ -1,1 +1,17 @@
-{}
+{
+  "reconnected": "Real vaxt bağlantısı bərpa olundu",
+  "offline": "Oflaynsınız — real vaxt yeniləmələri dayandırılıb",
+  "event_fallback": "Yeniləmə: {{type}}",
+  "event_notifications_sent": "Bildiriş göndərildi",
+  "event_notifications_delivered": "Bildiriş çatdırıldı",
+  "event_notifications_failed": "Bildiriş uğursuz oldu",
+  "event_jobs_completed": "Tapşırıq tamamlandı",
+  "event_jobs_failed": "Tapşırıq uğursuz oldu",
+  "event_imports_completed": "İdxal tamamlandı",
+  "event_imports_failed": "İdxal uğursuz oldu",
+  "event_exports_completed": "İxrac tamamlandı",
+  "event_exports_failed": "İxrac uğursuz oldu",
+  "event_exports_cancelled": "İxrac ləğv edildi",
+  "event_reports_export_completed": "Hesabat ixracı hazırdır",
+  "event_reports_export_failed": "Hesabat ixracı uğursuz oldu"
+}

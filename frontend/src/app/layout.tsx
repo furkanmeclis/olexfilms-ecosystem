@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 import { brand } from "@/config/brand";
 import { i18nConfig } from "@/config/i18n";
@@ -66,9 +66,13 @@ export default async function RootLayout({
   // Language, direction and zone come from cookies (TEC-137) so the server
   // writes the right <html lang dir> and text on the first paint: no LTR
   // flash for Arabic, and the choice survives a reload before Me loads.
+  // Without the language cookie (anonymous first visit) the browser's
+  // Accept-Language decides (TEC-142).
   const store = await cookies();
+  const requestHeaders = await headers();
   const { locale, dir, timeZone } = resolveRequestLocale(
     (name) => store.get(name)?.value,
+    requestHeaders.get("accept-language"),
   );
   // en is bundled on the client; any other language is handed over so the
   // hydration render matches the server render.

@@ -139,8 +139,12 @@ func TestResolveChain(t *testing.T) {
 }
 
 func TestTranslateFallsBackToEN(t *testing.T) {
-	if got := Translate(LocaleDE, "users.email"); got != enCatalog["users.email"] {
-		t.Fatalf("de users.email = %q, want en value", got)
+	// A key only en has (not translated yet) resolves to the en label.
+	const onlyEN = "test.only_en_label"
+	enCatalog[onlyEN] = "English only"
+	t.Cleanup(func() { delete(enCatalog, onlyEN) })
+	if got := Translate(LocaleDE, onlyEN); got != "English only" {
+		t.Fatalf("de %s = %q, want en value", onlyEN, got)
 	}
 	if got := Translate(LocaleAR, "missing.key"); got != "missing.key" {
 		t.Fatalf("missing key = %q", got)
