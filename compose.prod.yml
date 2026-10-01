@@ -87,6 +87,8 @@ x-backend-environment: &backend-environment
   MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?MEILI_MASTER_KEY is required}
   MEILI_INDEX_PREFIX: ${MEILI_INDEX_PREFIX:-app}
   GOTENBERG_URL: ${GOTENBERG_URL:-http://gotenberg.${APP_NETWORK_NAME:-${NAME_PREFIX:-app}-app}:3000}
+  # PDF fonts: embedded (Noto subsets inlined) or system (Gotenberg image).
+  PDF_FONTS: ${PDF_FONTS:-embedded}
   # WhatsApp gateway (design K16/K21): single wuzapi instance, private.
   WUZAPI_URL: http://wuzapi.${APP_NETWORK_NAME:-${NAME_PREFIX:-app}-app}:8080
   WUZAPI_ADMIN_TOKEN: ${WUZAPI_ADMIN_TOKEN:?WUZAPI_ADMIN_TOKEN is required}
@@ -439,6 +441,8 @@ services:
       APP_ROLE: worker
       AUTO_MIGRATE: "false"
       WORKER_QUEUES: ${WORKER_DOCS_QUEUES:-docs}
+      # PDF rendering is I/O-bound on Gotenberg: more parallel tasks than core.
+      QUEUE_CONCURRENCY: ${WORKER_DOCS_CONCURRENCY:-20}
       SCHEDULER_ENABLED: "false"
     depends_on:
       <<: *worker-depends

@@ -31,6 +31,9 @@ type ProcessSearchDeleteFunc func(ctx context.Context, spec, id string) error
 // ProcessSearchReindexFunc rebuilds one or all search indexes.
 type ProcessSearchReindexFunc func(ctx context.Context, spec string) error
 
+// ProcessDocsRenderFunc renders one document_renders row to PDF.
+type ProcessDocsRenderFunc func(ctx context.Context, renderID int64) error
+
 // PurgeLogsFunc applies due log retention rules.
 type PurgeLogsFunc func(ctx context.Context) error
 
@@ -47,6 +50,7 @@ type Worker struct {
 	processSearchDelete  ProcessSearchDeleteFunc
 	processSearchReindex ProcessSearchReindexFunc
 	purgeLogs            PurgeLogsFunc
+	processDocsRender    ProcessDocsRenderFunc
 }
 
 // NewWorker builds a worker that handles known task types on every queue.
@@ -65,6 +69,7 @@ func DefaultQueues() map[string]int {
 		QueueBulk:          2,
 		QueueSearch:        2,
 		QueueMaintenance:   1,
+		QueueDocs:          2,
 	}
 }
 
@@ -98,6 +103,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskSearchUpsert, w.handleSearchUpsert)
 	mux.HandleFunc(TaskSearchDelete, w.handleSearchDelete)
 	mux.HandleFunc(TaskSearchReindex, w.handleSearchReindex)
+	mux.HandleFunc(TaskDocsRender, w.handleDocsRender)
 	return w
 }
 
@@ -147,6 +153,12 @@ func (w *Worker) WithSearch(upsert ProcessSearchUpsertFunc, del ProcessSearchDel
 // WithLogPurge registers log retention rule processor.
 func (w *Worker) WithLogPurge(fn PurgeLogsFunc) *Worker {
 	w.purgeLogs = fn
+	return w
+}
+
+// WithDocsRender registers the PDF document render processor.
+func (w *Worker) WithDocsRender(fn ProcessDocsRenderFunc) *Worker {
+	w.processDocsRender = fn
 	return w
 }
 
@@ -274,4 +286,16 @@ func handlePing(log *slog.Logger) asynq.HandlerFunc {
 		)
 		return nil
 	}
+}
+
+func (w *Worker) handleDocsRender(ctx context.Context, task *asynq.Task) error {
+	payload, err := ParseDocsRenderPayload(task.Payload())
+	if err != nil {
+		return err
+	}
+	if w.processDocsRender == nil {
+		w.log.Warn("docs_render_handler_missing", "id", payload.RenderID)
+		return nil
+	}
+	return w.processDocsRender(ctx, payload.RenderID)
 }

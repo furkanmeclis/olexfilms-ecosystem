@@ -22,15 +22,17 @@ func TestParseWorkerQueues(t *testing.T) {
 			t.Errorf("core worker misses queue %q", q)
 		}
 	}
-	if _, ok := core[queue.QueueExports]; ok {
-		t.Error("core worker must not consume the docs queue")
+	for _, q := range []string{queue.QueueExports, queue.QueueDocs} {
+		if _, ok := core[q]; ok {
+			t.Errorf("core worker must not consume the docs group queue %q", q)
+		}
 	}
 	if core[queue.QueueNotifications] <= core["default"] || core["default"] <= core[queue.QueueMaintenance] {
 		t.Errorf("weights must be critical > default > low: %v", core)
 	}
 
 	docs, err := parseWorkerQueues("docs")
-	if err != nil || !reflect.DeepEqual(docs, map[string]int{queue.QueueExports: 2}) {
+	if err != nil || !reflect.DeepEqual(docs, map[string]int{queue.QueueDocs: 4, queue.QueueExports: 2}) {
 		t.Fatalf("docs = %v, %v", docs, err)
 	}
 

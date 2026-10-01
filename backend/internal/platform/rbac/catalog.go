@@ -149,6 +149,11 @@ var Permissions = []PermissionDef{
 		Scopes: []Scope{ScopeManaged, ScopeBrand, ScopeAll}, Sensitive: true,
 		Description: "KVKK/GDPR anonymization (K19). Requires step-up.",
 	},
+
+	// TEC-88: PDF document templates (center admin editor). Appended last so
+	// earlier sort orders stay stable; migration 000030 seeds them.
+	platformPerm(PermPlatformDocumentTemplatesRead, "Read document templates"),
+	platformPerm(PermPlatformDocumentTemplatesWrite, "Write document templates"),
 }
 
 func grants(base map[string]Scope, extra map[string]Scope) map[string]Scope {

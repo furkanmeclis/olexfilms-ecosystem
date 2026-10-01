@@ -116,5 +116,7 @@
   "scopes.own": "Benim oluşturduklarım",
   "scopes.customer": "Kendi müşteri kayıtları",
   "sensitive": "Hassas izin",
-  "super_admin_only": "Yalnızca süper admin"
+  "super_admin_only": "Yalnızca süper admin",
+  "labels.platform.documents.templates.read": "Belge şablonlarını görüntüle",
+  "labels.platform.documents.templates.write": "Belge şablonlarını düzenle"
 }

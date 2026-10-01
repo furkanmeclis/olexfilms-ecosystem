@@ -116,5 +116,7 @@
   "scopes.own": "Created by me",
   "scopes.customer": "Own customer records",
   "sensitive": "Sensitive permission",
-  "super_admin_only": "Super admin only"
+  "super_admin_only": "Super admin only",
+  "labels.platform.documents.templates.read": "Read document templates",
+  "labels.platform.documents.templates.write": "Write document templates"
 }
