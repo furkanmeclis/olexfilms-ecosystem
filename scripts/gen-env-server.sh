@@ -184,6 +184,7 @@ set_kv MEILI_MASTER_KEY "$(secret MEILI_MASTER_KEY hex 32)"
 set_kv MEILI_INDEX_PREFIX "$PREFIX"
 # --- PDF (Gotenberg, private) ---
 set_kv GOTENBERG_URL "http://gotenberg.$NET:3000"
+set_kv PDF_FONTS "$(keep PDF_FONTS embedded)"
 # --- WhatsApp gateway (wuzapi, private) ---
 set_kv WUZAPI_URL "http://wuzapi.$NET:8080"
 set_kv WUZAPI_ADMIN_TOKEN "$(secret WUZAPI_ADMIN_TOKEN hex 32)"
@@ -194,6 +195,7 @@ set_kv WUZAPI_GLOBAL_ENCRYPTION_KEY "$(stable WUZAPI_GLOBAL_ENCRYPTION_KEY 0 hex
 set_kv QUEUE_WORKER_INPROCESS false
 set_kv WORKER_QUEUES "$(keep WORKER_QUEUES critical,default,low)"
 set_kv WORKER_DOCS_QUEUES "$(keep WORKER_DOCS_QUEUES docs)"
+set_kv WORKER_DOCS_CONCURRENCY "$(keep WORKER_DOCS_CONCURRENCY 20)"
 set_kv SCHEDULER_ENABLED true
 # --- Public URLs ---
 set_kv CORS_ALLOWED_ORIGINS "$APP_URL"
