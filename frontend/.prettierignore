@@ -4,3 +4,4 @@ out
 build
 src/generated
 pnpm-lock.yaml
+src/components/shadix-ui

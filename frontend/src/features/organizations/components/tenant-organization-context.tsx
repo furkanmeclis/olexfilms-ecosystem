@@ -32,8 +32,8 @@ export function TenantOrganizationContext({
   const membership = user?.organizations.find((org) => org.slug === slug);
   const hasMembership = Boolean(membership);
   const sessionOrgUuid =
-    (session as { organizationUuid?: string | null } | null)?.organizationUuid ??
-    null;
+    (session as { organizationUuid?: string | null } | null)
+      ?.organizationUuid ?? null;
   const alreadyScoped =
     Boolean(membership?.uuid) &&
     Boolean(sessionOrgUuid) &&
@@ -69,7 +69,7 @@ export function TenantOrganizationContext({
     return () => {
       cancelled = true;
     };
-  // update intentionally excluded: accessed via updateRef to avoid loops.
+    // update intentionally excluded: accessed via updateRef to avoid loops.
   }, [
     alreadyScoped,
     bootstrapped,
