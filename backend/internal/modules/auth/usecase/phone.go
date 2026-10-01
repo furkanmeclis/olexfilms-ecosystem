@@ -9,6 +9,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/repository"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/password"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
@@ -76,12 +77,13 @@ func (u *AuthUseCase) LoginWithVerifiedPhone(ctx context.Context, e164, locale s
 	return tokens, created, nil
 }
 
-// supportedLocale maps to the users.locale CHECK (tr, en).
+// supportedLocale maps a request locale to a supported code (K10); an
+// unknown or empty value returns "" so the account inherits (NULL).
 func supportedLocale(locale string) string {
-	if len(locale) >= 2 && (locale[:2] == "en" || locale[:2] == "EN") {
-		return "en"
+	if l, ok := i18n.Parse(locale); ok {
+		return string(l)
 	}
-	return "tr"
+	return ""
 }
 
 // unusablePasswordHash hashes 32 random bytes nobody knows: phone accounts

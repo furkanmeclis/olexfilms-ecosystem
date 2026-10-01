@@ -220,7 +220,10 @@ func (s *Service) notifyAlarm(ctx context.Context, state, reason string) {
 	}
 	actionURL := "/platform/integrations/whatsapp"
 	for _, r := range recipients {
-		lang := r.Locale
+		lang := r.Locale.String
+		if lang == "" {
+			lang = "tr"
+		}
 		texts, ok := alarmTexts[lang]
 		if !ok {
 			lang, texts = "en", alarmTexts["en"]

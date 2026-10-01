@@ -66,7 +66,7 @@ func (d *dbtest) org(name, typ string, parent db.Organization) db.Organization {
 		Slug: "t86-" + name + "-" + d.suffix, Name: name + " " + d.suffix, Status: "active",
 		AccessStartsAt: pgtype.Timestamptz{Time: time.Now().Add(-time.Hour), Valid: true},
 		Type:           typ, ParentID: pgtype.Int8{Int64: parent.ID, Valid: true},
-		BrandID: parent.BrandID, Currency: "TRY", Locale: "tr-TR", Timezone: "Europe/Istanbul",
+		BrandID: parent.BrandID, Currency: "TRY", Locale: "tr", Timezone: "Europe/Istanbul",
 		Settings: []byte("{}"),
 	})
 	if err != nil {

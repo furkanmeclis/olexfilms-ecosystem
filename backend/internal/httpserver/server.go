@@ -362,7 +362,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 
 	s.http = &http.Server{
 		Addr:         cfg.HTTP.Addr,
-		Handler:      middleware.ServerErrors(log)(middleware.RequestID(errtrack.Middleware(errtrack.Recover(log)(middleware.ResolveBrand(brandResolver)(mux))))),
+		Handler:      middleware.ServerErrors(log)(middleware.RequestID(errtrack.Middleware(errtrack.Recover(log)(middleware.ResolveBrand(brandResolver)(middleware.ResolveLocale(mux)))))),
 		ReadTimeout:  cfg.HTTP.ReadTimeout,
 		WriteTimeout: cfg.HTTP.WriteTimeout,
 		IdleTimeout:  cfg.HTTP.IdleTimeout,

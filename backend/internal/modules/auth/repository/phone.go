@@ -36,11 +36,12 @@ func (r *Postgres) CreatePhoneUser(ctx context.Context, e164, passwordHash, loca
 		if err != nil {
 			return err
 		}
-		if locale != "" && locale != row.Locale {
-			if err := q.UpdateUserLocale(ctx, db.UpdateUserLocaleParams{ID: row.ID, Locale: locale}); err != nil {
+		if locale != "" {
+			// Empty keeps NULL: the locale is inherited (i18n.Resolve).
+			if err := q.UpdateUserLocale(ctx, db.UpdateUserLocaleParams{ID: row.ID, Locale: optText(locale)}); err != nil {
 				return err
 			}
-			row.Locale = locale
+			row.Locale = optText(locale)
 		}
 		user = mapUser(row)
 		if roleSlug == "" {

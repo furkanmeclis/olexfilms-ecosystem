@@ -612,10 +612,11 @@ type User struct {
 	Status          string             `json:"status"`
 	EmailVerifiedAt pgtype.Timestamptz `json:"email_verified_at"`
 	LastLoginAt     pgtype.Timestamptz `json:"last_login_at"`
-	Locale          string             `json:"locale"`
+	Locale          pgtype.Text        `json:"locale"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
+	Timezone        pgtype.Text        `json:"timezone"`
 	PhoneE164       pgtype.Text        `json:"phone_e164"`
 	PhoneVerifiedAt pgtype.Timestamptz `json:"phone_verified_at"`
 }

@@ -13,6 +13,7 @@ import (
 	authusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/usecase"
 	orgusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ratelimit"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/resourcemeta"
@@ -562,6 +563,9 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.NotFound(w, r, "Organization was not found")
 	case errors.Is(err, orgusecase.ErrConflict):
 		response.Conflict(w, r, response.CodeConflict, err.Error())
+	case errors.Is(err, i18n.ErrInvalidLocale):
+		response.ErrorWithDetails(w, r, http.StatusUnprocessableEntity, response.CodeValidationError, "Unsupported locale",
+			[]response.Detail{{Field: "locale", Message: "locale must be one of " + i18n.SupportedList(), Code: "unsupported_locale"}})
 	case errors.Is(err, orgusecase.ErrInvalidRequest):
 		response.BadRequest(w, r, response.CodeValidationError, err.Error())
 	case errors.Is(err, orgusecase.ErrNoTenantMembership):

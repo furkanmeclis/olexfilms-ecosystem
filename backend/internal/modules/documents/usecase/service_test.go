@@ -88,7 +88,7 @@ func (e *env) mkOrg(parent db.Organization, name string) db.Organization {
 		Slug: "t88-" + name + "-" + suffix, Name: "Bayi " + name, Status: "active",
 		AccessStartsAt: pgtype.Timestamptz{Time: time.Now().Add(-time.Hour), Valid: true},
 		Type:           "dealer", ParentID: pgtype.Int8{Int64: parent.ID, Valid: true},
-		BrandID: parent.BrandID, Currency: "TRY", Locale: "tr-TR", Timezone: "Europe/Istanbul",
+		BrandID: parent.BrandID, Currency: "TRY", Locale: "tr", Timezone: "Europe/Istanbul",
 		Settings: []byte("{}"),
 	})
 	if err != nil {

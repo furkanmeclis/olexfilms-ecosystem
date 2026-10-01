@@ -61,7 +61,7 @@ func (q *Queries) CountUsersWithRole(ctx context.Context, roleSlug string) (int6
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (email, password_hash, name, surname, status, email_verified_at, phone_e164, phone_verified_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, phone_e164, phone_verified_at
+RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, timezone, phone_e164, phone_verified_at
 `
 
 type CreateUserParams struct {
@@ -101,14 +101,65 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.Timezone,
 		&i.PhoneE164,
 		&i.PhoneVerifiedAt,
 	)
 	return i, err
 }
 
+const getLocaleSources = `-- name: GetLocaleSources :one
+SELECT
+    COALESCE(u.locale, '')::text   AS user_locale,
+    COALESCE(u.timezone, '')::text AS user_timezone,
+    COALESCE(o.locale, '')::text   AS org_locale,
+    COALESCE(o.timezone, '')::text AS org_timezone,
+    COALESCE(c.locale, '')::text   AS center_locale,
+    COALESCE(c.timezone, '')::text AS center_timezone
+FROM users u
+LEFT JOIN organizations o
+    ON o.uuid = $1::uuid AND o.deleted_at IS NULL
+LEFT JOIN organizations c
+    ON c.type = 'center'
+   AND c.deleted_at IS NULL
+   AND c.brand_id = COALESCE(o.brand_id, $2::bigint)
+WHERE u.id = $3 AND u.deleted_at IS NULL
+`
+
+type GetLocaleSourcesParams struct {
+	OrganizationUuid pgtype.UUID `json:"organization_uuid"`
+	BrandID          pgtype.Int8 `json:"brand_id"`
+	UserID           int64       `json:"user_id"`
+}
+
+type GetLocaleSourcesRow struct {
+	UserLocale     string `json:"user_locale"`
+	UserTimezone   string `json:"user_timezone"`
+	OrgLocale      string `json:"org_locale"`
+	OrgTimezone    string `json:"org_timezone"`
+	CenterLocale   string `json:"center_locale"`
+	CenterTimezone string `json:"center_timezone"`
+}
+
+// Stored locale/timezone preferences for i18n.Resolve: the user, the active
+// organization (when given) and the center of its brand, or of the request
+// brand when there is no active organization.
+func (q *Queries) GetLocaleSources(ctx context.Context, arg GetLocaleSourcesParams) (GetLocaleSourcesRow, error) {
+	row := q.db.QueryRow(ctx, getLocaleSources, arg.OrganizationUuid, arg.BrandID, arg.UserID)
+	var i GetLocaleSourcesRow
+	err := row.Scan(
+		&i.UserLocale,
+		&i.UserTimezone,
+		&i.OrgLocale,
+		&i.OrgTimezone,
+		&i.CenterLocale,
+		&i.CenterTimezone,
+	)
+	return i, err
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, phone_e164, phone_verified_at FROM users
+SELECT id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, timezone, phone_e164, phone_verified_at FROM users
 WHERE email = $1 AND deleted_at IS NULL
 `
 
@@ -129,6 +180,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email pgtype.Text) (User, 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.Timezone,
 		&i.PhoneE164,
 		&i.PhoneVerifiedAt,
 	)
@@ -136,7 +188,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email pgtype.Text) (User, 
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, phone_e164, phone_verified_at FROM users
+SELECT id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, timezone, phone_e164, phone_verified_at FROM users
 WHERE id = $1 AND deleted_at IS NULL
 `
 
@@ -157,6 +209,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.Timezone,
 		&i.PhoneE164,
 		&i.PhoneVerifiedAt,
 	)
@@ -164,7 +217,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 }
 
 const getUserByPhone = `-- name: GetUserByPhone :one
-SELECT id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, phone_e164, phone_verified_at FROM users
+SELECT id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, timezone, phone_e164, phone_verified_at FROM users
 WHERE phone_e164 = $1 AND deleted_at IS NULL
 `
 
@@ -185,6 +238,7 @@ func (q *Queries) GetUserByPhone(ctx context.Context, phoneE164 pgtype.Text) (Us
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.Timezone,
 		&i.PhoneE164,
 		&i.PhoneVerifiedAt,
 	)
@@ -192,7 +246,7 @@ func (q *Queries) GetUserByPhone(ctx context.Context, phoneE164 pgtype.Text) (Us
 }
 
 const getUserByUUID = `-- name: GetUserByUUID :one
-SELECT id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, phone_e164, phone_verified_at FROM users
+SELECT id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, timezone, phone_e164, phone_verified_at FROM users
 WHERE uuid = $1 AND deleted_at IS NULL
 `
 
@@ -213,6 +267,7 @@ func (q *Queries) GetUserByUUID(ctx context.Context, argUuid uuid.UUID) (User, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.Timezone,
 		&i.PhoneE164,
 		&i.PhoneVerifiedAt,
 	)
@@ -263,7 +318,7 @@ func (q *Queries) ListUserUUIDsForBulk(ctx context.Context, arg ListUserUUIDsFor
 }
 
 const listUsersFiltered = `-- name: ListUsersFiltered :many
-SELECT DISTINCT u.id, u.uuid, u.email, u.password_hash, u.name, u.surname, u.status, u.email_verified_at, u.last_login_at, u.locale, u.created_at, u.updated_at, u.deleted_at, u.phone_e164, u.phone_verified_at
+SELECT DISTINCT u.id, u.uuid, u.email, u.password_hash, u.name, u.surname, u.status, u.email_verified_at, u.last_login_at, u.locale, u.created_at, u.updated_at, u.deleted_at, u.timezone, u.phone_e164, u.phone_verified_at
 FROM users u
 LEFT JOIN user_roles ur ON ur.user_id = u.id
 LEFT JOIN roles r ON r.id = ur.role_id
@@ -317,6 +372,7 @@ func (q *Queries) ListUsersFiltered(ctx context.Context, arg ListUsersFilteredPa
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.Timezone,
 			&i.PhoneE164,
 			&i.PhoneVerifiedAt,
 		); err != nil {
@@ -331,7 +387,7 @@ func (q *Queries) ListUsersFiltered(ctx context.Context, arg ListUsersFilteredPa
 }
 
 const listUsersForExport = `-- name: ListUsersForExport :many
-SELECT DISTINCT u.id, u.uuid, u.email, u.password_hash, u.name, u.surname, u.status, u.email_verified_at, u.last_login_at, u.locale, u.created_at, u.updated_at, u.deleted_at, u.phone_e164, u.phone_verified_at
+SELECT DISTINCT u.id, u.uuid, u.email, u.password_hash, u.name, u.surname, u.status, u.email_verified_at, u.last_login_at, u.locale, u.created_at, u.updated_at, u.deleted_at, u.timezone, u.phone_e164, u.phone_verified_at
 FROM users u
 LEFT JOIN user_roles ur ON ur.user_id = u.id
 LEFT JOIN roles r ON r.id = ur.role_id
@@ -376,6 +432,7 @@ func (q *Queries) ListUsersForExport(ctx context.Context, arg ListUsersForExport
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.Timezone,
 			&i.PhoneE164,
 			&i.PhoneVerifiedAt,
 		); err != nil {
@@ -418,8 +475,8 @@ WHERE id = $1 AND deleted_at IS NULL
 `
 
 type UpdateUserLocaleParams struct {
-	ID     int64  `json:"id"`
-	Locale string `json:"locale"`
+	ID     int64       `json:"id"`
+	Locale pgtype.Text `json:"locale"`
 }
 
 func (q *Queries) UpdateUserLocale(ctx context.Context, arg UpdateUserLocaleParams) error {
@@ -449,7 +506,7 @@ SET name = COALESCE($1, name),
     surname = COALESCE($2, surname),
     status = COALESCE($3, status)
 WHERE uuid = $4 AND deleted_at IS NULL
-RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, phone_e164, phone_verified_at
+RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, timezone, phone_e164, phone_verified_at
 `
 
 type UpdateUserPlatformParams struct {
@@ -481,6 +538,7 @@ func (q *Queries) UpdateUserPlatform(ctx context.Context, arg UpdateUserPlatform
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.Timezone,
 		&i.PhoneE164,
 		&i.PhoneVerifiedAt,
 	)
@@ -517,23 +575,30 @@ const updateUserProfileByUUID = `-- name: UpdateUserProfileByUUID :one
 UPDATE users
 SET name = COALESCE($1, name),
     surname = COALESCE($2, surname),
-    locale = COALESCE($3, locale)
-WHERE uuid = $4 AND deleted_at IS NULL
-RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, phone_e164, phone_verified_at
+    locale = CASE WHEN $3::bool THEN $4 ELSE locale END,
+    timezone = CASE WHEN $5::bool THEN $6 ELSE timezone END
+WHERE uuid = $7 AND deleted_at IS NULL
+RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, timezone, phone_e164, phone_verified_at
 `
 
 type UpdateUserProfileByUUIDParams struct {
-	Name    pgtype.Text `json:"name"`
-	Surname pgtype.Text `json:"surname"`
-	Locale  pgtype.Text `json:"locale"`
-	Uuid    uuid.UUID   `json:"uuid"`
+	Name        pgtype.Text `json:"name"`
+	Surname     pgtype.Text `json:"surname"`
+	SetLocale   bool        `json:"set_locale"`
+	Locale      pgtype.Text `json:"locale"`
+	SetTimezone bool        `json:"set_timezone"`
+	Timezone    pgtype.Text `json:"timezone"`
+	Uuid        uuid.UUID   `json:"uuid"`
 }
 
 func (q *Queries) UpdateUserProfileByUUID(ctx context.Context, arg UpdateUserProfileByUUIDParams) (User, error) {
 	row := q.db.QueryRow(ctx, updateUserProfileByUUID,
 		arg.Name,
 		arg.Surname,
+		arg.SetLocale,
 		arg.Locale,
+		arg.SetTimezone,
+		arg.Timezone,
 		arg.Uuid,
 	)
 	var i User
@@ -551,6 +616,7 @@ func (q *Queries) UpdateUserProfileByUUID(ctx context.Context, arg UpdateUserPro
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.Timezone,
 		&i.PhoneE164,
 		&i.PhoneVerifiedAt,
 	)

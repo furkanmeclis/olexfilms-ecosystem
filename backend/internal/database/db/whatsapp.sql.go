@@ -247,9 +247,9 @@ WHERE u.deleted_at IS NULL
 `
 
 type ListWhatsAppAlarmRecipientsRow struct {
-	ID     int64     `json:"id"`
-	Uuid   uuid.UUID `json:"uuid"`
-	Locale string    `json:"locale"`
+	ID     int64       `json:"id"`
+	Uuid   uuid.UUID   `json:"uuid"`
+	Locale pgtype.Text `json:"locale"`
 }
 
 func (q *Queries) ListWhatsAppAlarmRecipients(ctx context.Context) ([]ListWhatsAppAlarmRecipientsRow, error) {

@@ -106,6 +106,10 @@ type Querier interface {
 	GetImportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ImportJob, error)
 	GetLatestKVKKNotice(ctx context.Context, locale string) (KvkkNotice, error)
 	GetLatestPhoneOTP(ctx context.Context, arg GetLatestPhoneOTPParams) (OtpCode, error)
+	// Stored locale/timezone preferences for i18n.Resolve: the user, the active
+	// organization (when given) and the center of its brand, or of the request
+	// brand when there is no active organization.
+	GetLocaleSources(ctx context.Context, arg GetLocaleSourcesParams) (GetLocaleSourcesRow, error)
 	GetLogPurgeRuleByUUID(ctx context.Context, argUuid uuid.UUID) (LogPurgeRule, error)
 	GetModule(ctx context.Context, key string) (Module, error)
 	GetNotificationByID(ctx context.Context, id int64) (Notification, error)
