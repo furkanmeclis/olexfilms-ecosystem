@@ -2042,6 +2042,222 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/otp/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request a phone login code (WhatsApp, SMS fallback)
+         * @description Sends a 6-digit code to the phone over WhatsApp (SMS when the admin
+         *     enabled the fallback and WhatsApp failed). The message carries the
+         *     KVKK notice of the request locale (`locale` or Accept-Language; tr/en).
+         *     The answer is the same whether or not an account exists for the number.
+         *     Limits: code valid 5 minutes, a new code after 60 seconds, 5 codes per
+         *     phone per hour (database counters) and Redis counters per phone and IP.
+         *     Without Redis the endpoint fails closed (503 RATE_LIMITER_UNAVAILABLE).
+         */
+        post: operations["postAuthOtpRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/otp/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify a phone login code and sign in (portal)
+         * @description Verifies the latest code of the phone and returns the same token pair as
+         *     `POST /v1/auth/login`. The access JWT has `aud: ["portal"]` and the
+         *     refresh session keeps realm `portal` across refreshes. An unknown phone
+         *     becomes a new customer account (role `customer`, no e-mail); an
+         *     existing unverified account with the phone is claimed (K11, K26).
+         *     Five wrong codes kill the code (429 OTP_LOCKED).
+         */
+        post: operations["postAuthOtpVerify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/whatsapp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * WhatsApp gateway status and settings
+         * @description Requires `whatsapp.manage`.
+         */
+        get: operations["getPlatformWhatsApp"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/whatsapp/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start the WhatsApp session (QR becomes available)
+         * @description Requires `whatsapp.manage`.
+         */
+        post: operations["postPlatformWhatsAppConnect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/whatsapp/qr": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Current QR code (data URL) or connected state
+         * @description Requires `whatsapp.manage`. Poll every 2-3 seconds until `connected` is true.
+         */
+        get: operations["getPlatformWhatsAppQr"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/whatsapp/pair-phone": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pair with a phone number (linking code)
+         * @description Requires `whatsapp.manage`.
+         */
+        post: operations["postPlatformWhatsAppPairPhone"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/whatsapp/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Log the WhatsApp session out
+         * @description Requires `whatsapp.manage`.
+         */
+        post: operations["postPlatformWhatsAppLogout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/whatsapp/test-message": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a test WhatsApp message
+         * @description Requires `whatsapp.manage`.
+         */
+        post: operations["postPlatformWhatsAppTestMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/whatsapp/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update SMS fallback and KVKK notice texts
+         * @description Requires `whatsapp.manage`. A changed KVKK text becomes a new notice version.
+         */
+        put: operations["putPlatformWhatsAppSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hooks/wuzapi": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * wuzapi webhook (JSON mode)
+         * @description Called by wuzapi (WEBHOOK_FORMAT=json). Authenticated by the
+         *     `x-hmac-signature` header: hex(HMAC-SHA256(WUZAPI_WEBHOOK_SECRET, raw body)).
+         *     Message events are stored once (UNIQUE(channel, external_id)) and emit
+         *     `whatsapp.message.received` to the outbox; LoggedOut / TemporaryBan
+         *     update the gateway status and notify WhatsApp admins. A 5xx answer makes
+         *     wuzapi retry.
+         */
+        post: operations["postHooksWuzapi"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3441,6 +3657,176 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["ModuleState"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        OTPRequest: {
+            /**
+             * @description Any format; normalized to E.164 (default region: country, else TR)
+             * @example 0555 123 45 67
+             */
+            phone: string;
+            /**
+             * @default customer_login
+             * @enum {string}
+             */
+            purpose: "customer_login";
+            /**
+             * @description ISO 3166-1 alpha-2 default region
+             * @example TR
+             */
+            country?: string;
+            /**
+             * @description Message / KVKK locale (falls back to Accept-Language)
+             * @example tr
+             */
+            locale?: string;
+        };
+        OTPRequestResult: {
+            /** @enum {string} */
+            status: "sent";
+            /** @enum {string} */
+            channel: "whatsapp" | "sms";
+            /** Format: date-time */
+            expires_at: string;
+            /** Format: date-time */
+            resend_at: string;
+        };
+        OTPVerifyRequest: {
+            /** @example +905551234567 */
+            phone: string;
+            /** @example 123456 */
+            code: string;
+            /**
+             * @default customer_login
+             * @enum {string}
+             */
+            purpose: "customer_login";
+            /** @example TR */
+            country?: string;
+            /**
+             * @description Locale of a newly created account
+             * @example tr
+             */
+            locale?: string;
+        };
+        WhatsAppKVKKNotice: {
+            /** @example tr */
+            locale: string;
+            version: number;
+            body: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        WhatsAppConnectionLog: {
+            /** @example loggedout */
+            type: string;
+            reason?: string;
+            alarm: boolean;
+            /** Format: date-time */
+            created_at: string;
+        };
+        WhatsAppOverview: {
+            /** @example wuzapi */
+            provider: string;
+            configured: boolean;
+            /** @enum {string} */
+            status: "unknown" | "disconnected" | "connecting" | "qr" | "connected" | "logged_out" | "banned";
+            connected: boolean;
+            logged_in: boolean;
+            jid?: string;
+            /** @description E.164 of the linked number */
+            phone?: string;
+            /** Format: date-time */
+            last_seen_at?: string;
+            /** Format: date-time */
+            last_event_at?: string;
+            last_error_reason?: string;
+            sms_fallback_enabled: boolean;
+            webhook_configured: boolean;
+            gateway_error?: string;
+            kvkk_notices: components["schemas"]["WhatsAppKVKKNotice"][];
+            events: components["schemas"]["WhatsAppConnectionLog"][];
+        };
+        WhatsAppQR: {
+            connected: boolean;
+            /** @description data:image/png;base64,... */
+            qr_code?: string;
+        };
+        WhatsAppAction: {
+            /** @example connecting */
+            status: string;
+        };
+        WhatsAppPairPhoneRequest: {
+            /** @example +905551234567 */
+            phone: string;
+        };
+        WhatsAppPairPhone: {
+            /** @example ABCD-EFGH */
+            linking_code: string;
+        };
+        WhatsAppTestMessageRequest: {
+            /** @example +905551234567 */
+            phone: string;
+            body: string;
+        };
+        WhatsAppTestMessage: {
+            message_id: string;
+            to: string;
+        };
+        WhatsAppSettingsRequest: {
+            sms_fallback_enabled?: boolean;
+            /** @description Locale (tr, en) → notice text (1-2000 characters) */
+            kvkk_notices?: {
+                [key: string]: string;
+            };
+        };
+        WhatsAppWebhookResult: {
+            messages: number;
+            duplicates: number;
+            statuses: number;
+            connections: number;
+            alarms: number;
+        };
+        EnvelopeOTPRequestResult: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["OTPRequestResult"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWhatsAppOverview: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WhatsAppOverview"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWhatsAppQR: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WhatsAppQR"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWhatsAppAction: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WhatsAppAction"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWhatsAppPairPhone: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WhatsAppPairPhone"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWhatsAppTestMessage: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WhatsAppTestMessage"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWhatsAppWebhookResult: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WhatsAppWebhookResult"];
             meta: components["schemas"]["ResponseMeta"];
         };
     };
@@ -7000,6 +7386,546 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ModuleError"];
+        };
+    };
+    postAuthOtpRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OTPRequest"];
+            };
+        };
+        responses: {
+            /** @description Code sent */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOTPRequestResult"];
+                };
+            };
+            /** @description INVALID_PHONE or VALIDATION_ERROR (unsupported purpose) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /**
+             * @description RATE_LIMITED. `error.details[0]` is `{field: resend_at, message: <RFC3339>, code: cooldown|hourly_limit|ip_limit}`;
+             *     `Retry-After` is set.
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+            /** @description OTP_DELIVERY_FAILED or RATE_LIMITER_UNAVAILABLE */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    postAuthOtpVerify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OTPVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Authenticated (portal realm) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTokens"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description INVALID_OTP_CODE (wrong, expired or used code) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Account disabled (generic message) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description OTP_LOCKED (too many wrong codes) or RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+            /** @description RATE_LIMITER_UNAVAILABLE */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getPlatformWhatsApp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWhatsAppOverview"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            /** @description WHATSAPP_NOT_CONNECTED */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+            /** @description WHATSAPP_GATEWAY_ERROR (wuzapi answered with an error) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description WHATSAPP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    postPlatformWhatsAppConnect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWhatsAppAction"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            /** @description WHATSAPP_NOT_CONNECTED */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+            /** @description WHATSAPP_GATEWAY_ERROR (wuzapi answered with an error) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description WHATSAPP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getPlatformWhatsAppQr: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWhatsAppQR"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            /** @description WHATSAPP_NOT_CONNECTED */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+            /** @description WHATSAPP_GATEWAY_ERROR (wuzapi answered with an error) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description WHATSAPP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    postPlatformWhatsAppPairPhone: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WhatsAppPairPhoneRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWhatsAppPairPhone"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            /** @description WHATSAPP_NOT_CONNECTED */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+            /** @description WHATSAPP_GATEWAY_ERROR (wuzapi answered with an error) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description WHATSAPP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    postPlatformWhatsAppLogout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWhatsAppAction"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            /** @description WHATSAPP_NOT_CONNECTED */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+            /** @description WHATSAPP_GATEWAY_ERROR (wuzapi answered with an error) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description WHATSAPP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    postPlatformWhatsAppTestMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WhatsAppTestMessageRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWhatsAppTestMessage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            /** @description WHATSAPP_NOT_CONNECTED */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+            /** @description WHATSAPP_GATEWAY_ERROR (wuzapi answered with an error) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description WHATSAPP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    putPlatformWhatsAppSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WhatsAppSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWhatsAppOverview"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            /** @description WHATSAPP_NOT_CONNECTED */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+            /** @description WHATSAPP_GATEWAY_ERROR (wuzapi answered with an error) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description WHATSAPP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    postHooksWuzapi: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-hmac-signature": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @example Message */
+                    type?: string;
+                    event?: {
+                        [key: string]: unknown;
+                    };
+                    token?: string;
+                } & {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Processed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWhatsAppWebhookResult"];
+                };
+            };
+            /** @description INVALID_SIGNATURE */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+            /** @description WHATSAPP_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
 }

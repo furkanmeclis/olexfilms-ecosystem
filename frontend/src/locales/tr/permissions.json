@@ -123,5 +123,7 @@
   "labels.platform.modules.write": "Platform modüllerini yönet",
   "groups.modules": "Modüller",
   "labels.platform.documents.templates.read": "Belge şablonlarını görüntüle",
-  "labels.platform.documents.templates.write": "Belge şablonlarını düzenle"
+  "labels.platform.documents.templates.write": "Belge şablonlarını düzenle",
+  "labels.whatsapp.manage": "WhatsApp entegrasyonunu yönet",
+  "groups.whatsapp": "WhatsApp"
 }

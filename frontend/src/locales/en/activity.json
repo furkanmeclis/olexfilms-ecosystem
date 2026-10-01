@@ -159,5 +159,11 @@
   "actions.modules.platform.updated": "Module system setting updated",
   "actions.modules.organization.updated": "Organization module updated",
   "actions.modules.organization.cleared": "Organization module reset",
-  "resources.modules": "Modules"
+  "resources.modules": "Modules",
+  "resources.platform.integrations.whatsapp": "WhatsApp integration",
+  "actions.whatsapp.connect": "WhatsApp session started",
+  "actions.whatsapp.pair_phone": "WhatsApp phone pairing requested",
+  "actions.whatsapp.logout": "WhatsApp session logged out",
+  "actions.whatsapp.test_message": "WhatsApp test message sent",
+  "actions.whatsapp.settings.updated": "WhatsApp settings updated"
 }
