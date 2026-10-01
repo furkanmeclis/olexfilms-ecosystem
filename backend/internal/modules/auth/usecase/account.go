@@ -96,6 +96,7 @@ func (u *AuthUseCase) UpdateProfile(
 	ctx context.Context,
 	userUUID uuid.UUID,
 	impersonatorUUID *uuid.UUID,
+	orgUUID *uuid.UUID,
 	name, surname, locale *string,
 ) (model.Me, error) {
 	user, err := u.repo.FindUserByUUID(ctx, userUUID)
@@ -142,7 +143,7 @@ func (u *AuthUseCase) UpdateProfile(
 			TemplateVars: map[string]string{"name": user.Name},
 		})
 	}
-	return u.Me(ctx, userUUID, impersonatorUUID)
+	return u.Me(ctx, userUUID, impersonatorUUID, orgUUID)
 }
 
 // ForgotPassword always returns accepted; enqueues reset email when user exists.

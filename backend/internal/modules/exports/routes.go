@@ -57,9 +57,8 @@ func RegisterRoutes(
 	// Tenant export jobs: business modules add their own
 	// POST /v1/tenant/<resource>/export routes next to their permissions.
 	requireOrg := middleware.RequireOrganization(tokens, q)
-	requireOwner := middleware.RequireOrgRole("owner")
 	tenantExport := func(handler http.HandlerFunc) http.Handler {
-		return middleware.Chain(http.HandlerFunc(handler), authn, requireOrg, requireOwner)
+		return middleware.Chain(http.HandlerFunc(handler), authn, requireOrg, require(rbac.PermTenantExportsRead))
 	}
 	mux.Handle("GET /v1/tenant/exports", tenantExport(h.ListTenant))
 	mux.Handle("GET /v1/tenant/exports/{uuid}", tenantExport(h.GetTenant))

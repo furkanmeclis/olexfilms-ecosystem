@@ -14,13 +14,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/config"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/password"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/stepup"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
 const (
@@ -47,6 +51,7 @@ type itest struct {
 	pool    *pgxpool.Pool
 	q       *db.Queries
 	tokens  *jwt.Manager
+	rdb     *redis.Client
 	suffix  string
 }
 
@@ -73,7 +78,10 @@ func newIntegration(t *testing.T) *itest {
 
 	q := db.New(pool)
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	srv, err := New(cfg, log, Deps{DB: pool, Queries: q})
+	mr := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	t.Cleanup(func() { _ = rdb.Close() })
+	srv, err := New(cfg, log, Deps{DB: pool, Queries: q, Redis: rdb})
 	if err != nil {
 		t.Fatalf("server: %v", err)
 	}
@@ -82,8 +90,16 @@ func newIntegration(t *testing.T) *itest {
 		t.Fatal(err)
 	}
 	return &itest{
-		t: t, handler: srv.http.Handler, pool: pool, q: q, tokens: tokens,
+		t: t, handler: srv.http.Handler, pool: pool, q: q, tokens: tokens, rdb: rdb,
 		suffix: fmt.Sprintf("%d", time.Now().UnixNano()),
+	}
+}
+
+// stepUp gives the user a fresh step-up grant (as after a password check).
+func (it *itest) stepUp(userUUID uuid.UUID) {
+	it.t.Helper()
+	if _, err := stepup.NewStore(it.rdb, "test").SetGrant(context.Background(), userUUID, "password", 10*time.Minute); err != nil {
+		it.t.Fatalf("step-up grant: %v", err)
 	}
 }
 
@@ -169,12 +185,24 @@ func (it *itest) user(name string, roles ...string) (db.User, string) {
 	return u, pw
 }
 
-func (it *itest) member(org db.Organization, u db.User, role string) {
+// member adds a membership with the default organization role of the org
+// type (or the explicit roleSlugs).
+func (it *itest) member(org db.Organization, u db.User, role string, roleSlugs ...string) {
 	it.t.Helper()
-	if _, err := it.q.CreateOrganizationMember(context.Background(), db.CreateOrganizationMemberParams{
+	ctx := context.Background()
+	m, err := it.q.CreateOrganizationMember(ctx, db.CreateOrganizationMemberParams{
 		OrganizationID: org.ID, UserID: u.ID, Role: role,
-	}); err != nil {
+	})
+	if err != nil {
 		it.t.Fatalf("member: %v", err)
+	}
+	if len(roleSlugs) == 0 {
+		roleSlugs = []string{rbac.DefaultMemberRole(org.Type, role)}
+	}
+	for _, slug := range roleSlugs {
+		if err := it.q.AssignMemberRoleBySlug(ctx, db.AssignMemberRoleBySlugParams{MemberID: m.ID, Slug: slug}); err != nil {
+			it.t.Fatalf("member role %s: %v", slug, err)
+		}
 	}
 }
 
@@ -220,7 +248,7 @@ func TestIntegrationMultiOrgRoles(t *testing.T) {
 	center := it.brandCenter("olex")
 	orgA := it.org("a", "dealer", center)
 	orgB := it.org("b", "dealer", center)
-	u, pw := it.user("multi", rbac.RoleOrganizationUser, rbac.RoleOrganizationOwner)
+	u, pw := it.user("multi")
 	it.member(orgA, u, "owner")
 	it.member(orgB, u, "staff")
 
@@ -275,7 +303,7 @@ func TestIntegrationBrandIsolation(t *testing.T) {
 	orgGlorian := it.org("glorian-dealer", "dealer", glorianCenter)
 	_ = it.org("glorian-dealer-2", "dealer", glorianCenter)
 
-	u, pw := it.user("brand", rbac.RoleOrganizationUser, rbac.RoleOrganizationOwner)
+	u, pw := it.user("brand")
 	it.member(orgOlex, u, "owner")
 	it.member(orgGlorian, u, "owner")
 
@@ -465,6 +493,13 @@ func TestIntegrationPlatformTree(t *testing.T) {
 	if code != http.StatusOK || len(children.Items) != 1 || children.Items[0].UUID != dealer.UUID {
 		t.Fatalf("children: %d %+v", code, children)
 	}
+
+	// TEC-85: a supplier (parent) change is sensitive and needs a step-up.
+	if code, env := it.do("PATCH", "/v1/platform/organizations/"+dealer.UUID, hostOlex, atp.AccessToken,
+		map[string]any{"parent_uuid": center.Uuid.String()}); code != http.StatusForbidden || errCode(env) != "STEP_UP_REQUIRED" {
+		t.Fatalf("parent change without step-up: %d %s", code, errCode(env))
+	}
+	it.stepUp(admin.Uuid)
 
 	// Cycle: distributor under its own dealer is rejected.
 	if code, _ := it.do("PATCH", "/v1/platform/organizations/"+dist.UUID, hostOlex, atp.AccessToken,

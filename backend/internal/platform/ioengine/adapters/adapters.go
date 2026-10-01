@@ -242,11 +242,18 @@ func (a *RolesAdapter) ApplyRow(ctx context.Context, row map[string]any, _ map[s
 		return ioengine.RowResult{OK: false, Error: err.Error()}, nil
 	}
 	for _, p := range parseSlugs(strVal(row, "permission_slugs")) {
-		perm, err := a.q.GetPermissionBySlug(ctx, p)
+		slug, want := rbac.ParseGrant(p)
+		perm, err := a.q.GetPermissionBySlug(ctx, slug)
 		if err != nil {
 			continue
 		}
-		_ = a.q.InsertRolePermission(ctx, db.InsertRolePermissionParams{RoleID: created.ID, PermissionID: perm.ID})
+		scope, ok := rbac.GrantScope(perm.Scopes, perm.SuperAdminOnly, want)
+		if !ok {
+			continue
+		}
+		_ = a.q.InsertRolePermission(ctx, db.InsertRolePermissionParams{
+			RoleID: created.ID, PermissionID: perm.ID, Scope: string(scope),
+		})
 	}
 	return ioengine.RowResult{
 		OK: true, EntityType: "role", EntityUUID: created.Uuid.String(), Op: "create",

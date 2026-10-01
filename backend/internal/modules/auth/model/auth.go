@@ -35,19 +35,41 @@ type RoleSummary struct {
 	Slug        string    `json:"slug"`
 	Description *string   `json:"description,omitempty"`
 	IsSystem    bool      `json:"is_system"`
+	// OrgType is platform, center, distributor, dealer, customer or fleet
+	// (empty for custom roles, which are global).
+	OrgType *string `json:"org_type,omitempty"`
 }
 
 // PermissionSummary is a catalog permission entry.
 type PermissionSummary struct {
-	UUID uuid.UUID `json:"uuid"`
-	Name string    `json:"name"`
-	Slug string    `json:"slug"`
+	UUID           uuid.UUID `json:"uuid"`
+	Name           string    `json:"name"`
+	Slug           string    `json:"slug"`
+	Module         string    `json:"module"`
+	Scopes         []string  `json:"scopes"`
+	IsSensitive    bool      `json:"is_sensitive"`
+	SuperAdminOnly bool      `json:"super_admin_only"`
+	Description    *string   `json:"description,omitempty"`
+}
+
+// RoleGrant is one permission of a role with its scope.
+type RoleGrant struct {
+	Permission string `json:"permission"`
+	Scope      string `json:"scope"`
 }
 
 // RoleDetail includes permission slugs.
 type RoleDetail struct {
 	RoleSummary
-	PermissionSlugs []string `json:"permission_slugs"`
+	PermissionSlugs []string    `json:"permission_slugs"`
+	Grants          []RoleGrant `json:"grants"`
+}
+
+// Grant is one permission granted with a scope by a role.
+type Grant struct {
+	Role       string `json:"role"`
+	Permission string `json:"permission"`
+	Scope      string `json:"scope"`
 }
 
 // Tokens is the auth token pair returned to clients.
@@ -85,14 +107,21 @@ type MeImpersonation struct {
 
 // Me is the session hydration payload.
 type Me struct {
-	User          PublicUser            `json:"user"`
-	Roles         []string              `json:"roles"`
-	Permissions   []string              `json:"permissions"`
-	Organizations []OrganizationSummary `json:"organizations"`
-	Links         MeLinks               `json:"links"`
-	Channels      MeChannels            `json:"channels"`
-	Realtime      MeRealtime            `json:"realtime"`
-	Impersonation *MeImpersonation      `json:"impersonation,omitempty"`
+	User        PublicUser `json:"user"`
+	Roles       []string   `json:"roles"`
+	Permissions []string   `json:"permissions"`
+	// Grants maps each held permission to its scope in the active
+	// organization context (global roles + active membership roles).
+	Grants map[string]string `json:"grants"`
+	// ActiveOrganization is the organization of the session (JWT oid).
+	ActiveOrganization *uuid.UUID `json:"active_organization_uuid,omitempty"`
+	// OrganizationRoles are the membership roles in the active organization.
+	OrganizationRoles []string              `json:"organization_roles"`
+	Organizations     []OrganizationSummary `json:"organizations"`
+	Links             MeLinks               `json:"links"`
+	Channels          MeChannels            `json:"channels"`
+	Realtime          MeRealtime            `json:"realtime"`
+	Impersonation     *MeImpersonation      `json:"impersonation,omitempty"`
 }
 
 // OrganizationSummary is a tenant membership on /auth/me.
@@ -174,6 +203,9 @@ type CreateRoleInput struct {
 	Slug            string
 	Description     *string
 	PermissionSlugs []string
+	// Grants maps permission slug to scope; slugs only in PermissionSlugs get
+	// the broadest scope the permission allows.
+	Grants map[string]string
 }
 
 // PatchRoleInput partially updates a role.
@@ -181,6 +213,7 @@ type PatchRoleInput struct {
 	Name            *string
 	Description     *string
 	PermissionSlugs *[]string
+	Grants          *map[string]string
 }
 
 // RefreshSession is the persisted refresh token identity.

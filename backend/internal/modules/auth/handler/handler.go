@@ -182,7 +182,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	p := authctx.MustPrincipal(r.Context())
-	me, err := h.uc.Me(r.Context(), p.UserID, p.ImpersonatorUserID)
+	me, err := h.uc.Me(r.Context(), p.UserID, p.ImpersonatorUserID, p.OrganizationUUID)
 	if err != nil {
 		writeUsecaseError(w, r, err)
 		return
@@ -200,7 +200,7 @@ func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	if err := decodeJSON(w, r, &in); err != nil {
 		return
 	}
-	me, err := h.uc.UpdateProfile(r.Context(), p.UserID, p.ImpersonatorUserID, in.Name, in.Surname, in.Locale)
+	me, err := h.uc.UpdateProfile(r.Context(), p.UserID, p.ImpersonatorUserID, p.OrganizationUUID, in.Name, in.Surname, in.Locale)
 	if err != nil {
 		writeUsecaseError(w, r, err)
 		return
@@ -452,16 +452,18 @@ func (h *Handler) ListPlatformRoles(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) CreatePlatformRole(w http.ResponseWriter, r *http.Request) {
 	var in struct {
-		Name            string   `json:"name"`
-		Slug            string   `json:"slug"`
-		Description     *string  `json:"description"`
-		PermissionSlugs []string `json:"permission_slugs"`
+		Name            string            `json:"name"`
+		Slug            string            `json:"slug"`
+		Description     *string           `json:"description"`
+		PermissionSlugs []string          `json:"permission_slugs"`
+		Grants          map[string]string `json:"grants"`
 	}
 	if err := decodeJSON(w, r, &in); err != nil {
 		return
 	}
 	role, err := h.uc.CreatePlatformRole(r.Context(), model.CreateRoleInput{
 		Name: in.Name, Slug: in.Slug, Description: in.Description, PermissionSlugs: in.PermissionSlugs,
+		Grants: in.Grants,
 	})
 	if err != nil {
 		writeUsecaseError(w, r, err)
@@ -491,9 +493,10 @@ func (h *Handler) PatchPlatformRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in struct {
-		Name            *string  `json:"name"`
-		Description     *string  `json:"description"`
-		PermissionSlugs []string `json:"permission_slugs"`
+		Name            *string            `json:"name"`
+		Description     *string            `json:"description"`
+		PermissionSlugs []string           `json:"permission_slugs"`
+		Grants          *map[string]string `json:"grants"`
 	}
 	if err := decodeJSON(w, r, &in); err != nil {
 		return
@@ -503,7 +506,7 @@ func (h *Handler) PatchPlatformRole(w http.ResponseWriter, r *http.Request) {
 		permSlugs = &in.PermissionSlugs
 	}
 	role, err := h.uc.PatchPlatformRole(r.Context(), rid, model.PatchRoleInput{
-		Name: in.Name, Description: in.Description, PermissionSlugs: permSlugs,
+		Name: in.Name, Description: in.Description, PermissionSlugs: permSlugs, Grants: in.Grants,
 	})
 	if err != nil {
 		writeUsecaseError(w, r, err)

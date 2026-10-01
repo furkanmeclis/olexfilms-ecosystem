@@ -214,3 +214,35 @@ UPDATE organizations
 SET parent_id = $2
 WHERE id = $1 AND deleted_at IS NULL
 RETURNING *;
+
+-- name: AssignMemberRoleBySlug :exec
+INSERT INTO organization_member_roles (member_id, role_id)
+SELECT sqlc.arg(member_id), r.id
+FROM roles r
+WHERE r.slug = sqlc.arg(slug)
+ON CONFLICT DO NOTHING;
+
+-- name: DeleteMemberRoles :exec
+DELETE FROM organization_member_roles WHERE member_id = $1;
+
+-- name: ListMemberRolesByOrganization :many
+SELECT om.id AS member_id, r.slug
+FROM organization_members om
+INNER JOIN organization_member_roles mr ON mr.member_id = om.id
+INNER JOIN roles r ON r.id = mr.role_id
+WHERE om.organization_id = $1
+ORDER BY om.id, r.slug;
+
+-- name: ListOrganizationsInScope :many
+-- Organizations reachable by a scope filter: an explicit id set
+-- (managed/subtree) or a whole brand (brand), or every brand (all, both NULL).
+SELECT sqlc.embed(o), b.slug AS brand_slug, p.uuid AS parent_uuid, p.name AS parent_name
+FROM organizations o
+JOIN brands b ON b.id = o.brand_id
+LEFT JOIN organizations p ON p.id = o.parent_id
+WHERE o.deleted_at IS NULL
+  AND (sqlc.narg(org_ids)::bigint[] IS NULL OR o.id = ANY (sqlc.narg(org_ids)::bigint[]))
+  AND (sqlc.narg(brand_id)::bigint IS NULL OR o.brand_id = sqlc.narg(brand_id))
+  AND (sqlc.narg(type)::text IS NULL OR o.type = sqlc.narg(type))
+ORDER BY o.type ASC, o.name ASC
+LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);

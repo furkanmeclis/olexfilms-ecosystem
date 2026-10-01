@@ -12,6 +12,24 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const assignMemberRoleBySlug = `-- name: AssignMemberRoleBySlug :exec
+INSERT INTO organization_member_roles (member_id, role_id)
+SELECT $1, r.id
+FROM roles r
+WHERE r.slug = $2
+ON CONFLICT DO NOTHING
+`
+
+type AssignMemberRoleBySlugParams struct {
+	MemberID int64  `json:"member_id"`
+	Slug     string `json:"slug"`
+}
+
+func (q *Queries) AssignMemberRoleBySlug(ctx context.Context, arg AssignMemberRoleBySlugParams) error {
+	_, err := q.db.Exec(ctx, assignMemberRoleBySlug, arg.MemberID, arg.Slug)
+	return err
+}
+
 const clearOrganizationLogo = `-- name: ClearOrganizationLogo :one
 UPDATE organizations
 SET logo_object_key = NULL
@@ -210,6 +228,15 @@ func (q *Queries) CreateOrganizationMember(ctx context.Context, arg CreateOrgani
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const deleteMemberRoles = `-- name: DeleteMemberRoles :exec
+DELETE FROM organization_member_roles WHERE member_id = $1
+`
+
+func (q *Queries) DeleteMemberRoles(ctx context.Context, memberID int64) error {
+	_, err := q.db.Exec(ctx, deleteMemberRoles, memberID)
+	return err
 }
 
 const descendants = `-- name: Descendants :many
@@ -665,6 +692,40 @@ func (q *Queries) GetOrganizationTreeByUUID(ctx context.Context, argUuid uuid.UU
 	return i, err
 }
 
+const listMemberRolesByOrganization = `-- name: ListMemberRolesByOrganization :many
+SELECT om.id AS member_id, r.slug
+FROM organization_members om
+INNER JOIN organization_member_roles mr ON mr.member_id = om.id
+INNER JOIN roles r ON r.id = mr.role_id
+WHERE om.organization_id = $1
+ORDER BY om.id, r.slug
+`
+
+type ListMemberRolesByOrganizationRow struct {
+	MemberID int64  `json:"member_id"`
+	Slug     string `json:"slug"`
+}
+
+func (q *Queries) ListMemberRolesByOrganization(ctx context.Context, organizationID int64) ([]ListMemberRolesByOrganizationRow, error) {
+	rows, err := q.db.Query(ctx, listMemberRolesByOrganization, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListMemberRolesByOrganizationRow{}
+	for rows.Next() {
+		var i ListMemberRolesByOrganizationRow
+		if err := rows.Scan(&i.MemberID, &i.Slug); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listOrganizationChildren = `-- name: ListOrganizationChildren :many
 SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, b.slug AS brand_slug, p.uuid AS parent_uuid, p.name AS parent_name
 FROM organizations o
@@ -950,6 +1011,98 @@ func (q *Queries) ListOrganizationsFiltered(ctx context.Context, arg ListOrganiz
 	items := []ListOrganizationsFilteredRow{}
 	for rows.Next() {
 		var i ListOrganizationsFilteredRow
+		if err := rows.Scan(
+			&i.Organization.ID,
+			&i.Organization.Uuid,
+			&i.Organization.Slug,
+			&i.Organization.Name,
+			&i.Organization.City,
+			&i.Organization.District,
+			&i.Organization.Phone,
+			&i.Organization.Address,
+			&i.Organization.LogoObjectKey,
+			&i.Organization.Status,
+			&i.Organization.PlanCode,
+			&i.Organization.AccessStartsAt,
+			&i.Organization.AccessEndsAt,
+			&i.Organization.CreatedAt,
+			&i.Organization.UpdatedAt,
+			&i.Organization.DeletedAt,
+			&i.Organization.Email,
+			&i.Organization.Website,
+			&i.Organization.Tagline,
+			&i.Organization.FooterText,
+			&i.Organization.PaperSize,
+			&i.Organization.PrimaryColor,
+			&i.Organization.Type,
+			&i.Organization.ParentID,
+			&i.Organization.BrandID,
+			&i.Organization.Currency,
+			&i.Organization.Locale,
+			&i.Organization.Timezone,
+			&i.Organization.CountryID,
+			&i.Organization.ContractPdfKey,
+			&i.Organization.ContractValidUntil,
+			&i.Organization.Settings,
+			&i.BrandSlug,
+			&i.ParentUuid,
+			&i.ParentName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listOrganizationsInScope = `-- name: ListOrganizationsInScope :many
+SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, b.slug AS brand_slug, p.uuid AS parent_uuid, p.name AS parent_name
+FROM organizations o
+JOIN brands b ON b.id = o.brand_id
+LEFT JOIN organizations p ON p.id = o.parent_id
+WHERE o.deleted_at IS NULL
+  AND ($1::bigint[] IS NULL OR o.id = ANY ($1::bigint[]))
+  AND ($2::bigint IS NULL OR o.brand_id = $2)
+  AND ($3::text IS NULL OR o.type = $3)
+ORDER BY o.type ASC, o.name ASC
+LIMIT $5 OFFSET $4
+`
+
+type ListOrganizationsInScopeParams struct {
+	OrgIds      []int64     `json:"org_ids"`
+	BrandID     pgtype.Int8 `json:"brand_id"`
+	Type        pgtype.Text `json:"type"`
+	OffsetCount int32       `json:"offset_count"`
+	LimitCount  int32       `json:"limit_count"`
+}
+
+type ListOrganizationsInScopeRow struct {
+	Organization Organization `json:"organization"`
+	BrandSlug    string       `json:"brand_slug"`
+	ParentUuid   pgtype.UUID  `json:"parent_uuid"`
+	ParentName   pgtype.Text  `json:"parent_name"`
+}
+
+// Organizations reachable by a scope filter: an explicit id set
+// (managed/subtree) or a whole brand (brand), or every brand (all, both NULL).
+func (q *Queries) ListOrganizationsInScope(ctx context.Context, arg ListOrganizationsInScopeParams) ([]ListOrganizationsInScopeRow, error) {
+	rows, err := q.db.Query(ctx, listOrganizationsInScope,
+		arg.OrgIds,
+		arg.BrandID,
+		arg.Type,
+		arg.OffsetCount,
+		arg.LimitCount,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListOrganizationsInScopeRow{}
+	for rows.Next() {
+		var i ListOrganizationsInScopeRow
 		if err := rows.Scan(
 			&i.Organization.ID,
 			&i.Organization.Uuid,
