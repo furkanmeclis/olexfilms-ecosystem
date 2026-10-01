@@ -151,5 +151,15 @@
   "labels.vehicles.write": "Fahrzeuge verwalten",
   "labels.customers.anonymize": "Kunden anonymisieren",
   "labels.customers.merge": "Kunden zusammenführen",
-  "groups.vehicles": "Fahrzeuge"
+  "groups.vehicles": "Fahrzeuge",
+  "labels.orders.read": "Bestellungen ansehen",
+  "labels.orders.write": "Bestellungen verwalten",
+  "labels.orders.approve": "Bestellungen freigeben",
+  "labels.orders.ship": "Bestellungen versenden",
+  "labels.orders.receive": "Bestellungen entgegennehmen",
+  "labels.orders.cancel": "Bestellungen stornieren",
+  "labels.transfers.request": "Umlagerung anfordern",
+  "labels.transfers.approve": "Umlagerungen freigeben",
+  "groups.orders": "Bestellungen",
+  "groups.transfers": "Umlagerungen"
 }

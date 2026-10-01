@@ -151,5 +151,15 @@
   "labels.vehicles.write": "Araçları yönet",
   "labels.customers.anonymize": "Müşterileri anonimleştir",
   "labels.customers.merge": "Müşterileri birleştir",
-  "groups.vehicles": "Araçlar"
+  "groups.vehicles": "Araçlar",
+  "labels.orders.read": "Siparişleri görüntüle",
+  "labels.orders.write": "Siparişleri yönet",
+  "labels.orders.approve": "Siparişleri onayla",
+  "labels.orders.ship": "Siparişleri sevk et",
+  "labels.orders.receive": "Siparişleri teslim al",
+  "labels.orders.cancel": "Siparişleri iptal et",
+  "labels.transfers.request": "Stok transferi talep et",
+  "labels.transfers.approve": "Stok transferlerini onayla",
+  "groups.orders": "Siparişler",
+  "groups.transfers": "Transferler"
 }

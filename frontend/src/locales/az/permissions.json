@@ -151,5 +151,15 @@
   "labels.vehicles.write": "Avtomobilləri idarə etmək",
   "labels.customers.anonymize": "Müştəriləri anonimləşdirmək",
   "labels.customers.merge": "Müştəriləri birləşdirmək",
-  "groups.vehicles": "Avtomobillər"
+  "groups.vehicles": "Avtomobillər",
+  "labels.orders.read": "Sifarişlərə bax",
+  "labels.orders.write": "Sifarişləri idarə et",
+  "labels.orders.approve": "Sifarişləri təsdiqlə",
+  "labels.orders.ship": "Sifarişləri göndər",
+  "labels.orders.receive": "Sifarişləri qəbul et",
+  "labels.orders.cancel": "Sifarişləri ləğv et",
+  "labels.transfers.request": "Stok transferi tələb et",
+  "labels.transfers.approve": "Stok transferlərini təsdiqlə",
+  "groups.orders": "Sifarişlər",
+  "groups.transfers": "Transferlər"
 }

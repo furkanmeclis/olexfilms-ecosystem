@@ -116,6 +116,15 @@ export const Permission = {
   StockAdjust: "stock.adjust",
   StockReclassify: "stock.reclassify",
   StockImport: "stock.import",
+
+  OrdersRead: "orders.read",
+  OrdersWrite: "orders.write",
+  OrdersApprove: "orders.approve",
+  OrdersShip: "orders.ship",
+  OrdersReceive: "orders.receive",
+  OrdersCancel: "orders.cancel",
+  TransfersRequest: "transfers.request",
+  TransfersApprove: "transfers.approve",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];
@@ -310,6 +319,18 @@ export const permissions = {
   vehicles: {
     read: Permission.VehiclesRead,
     write: Permission.VehiclesWrite,
+  },
+  orders: {
+    read: Permission.OrdersRead,
+    write: Permission.OrdersWrite,
+    approve: Permission.OrdersApprove,
+    ship: Permission.OrdersShip,
+    receive: Permission.OrdersReceive,
+    cancel: Permission.OrdersCancel,
+  },
+  transfers: {
+    request: Permission.TransfersRequest,
+    approve: Permission.TransfersApprove,
   },
   catalog: {
     read: Permission.CatalogRead,

@@ -195,6 +195,33 @@ const (
 	StockExternalOutbound      = "stock.external_outbound"
 )
 
+// Order domain events (TEC-165): one per status transition, written to the
+// outbox in the transition's transaction. Distinct from the commerce.*
+// events of external commerce apps.
+const (
+	OrdersCreated         = "orders.created"
+	OrdersUpdated         = "orders.updated"
+	OrdersSubmitted       = "orders.submitted"
+	OrdersApproved        = "orders.approved"
+	OrdersPreparing       = "orders.preparing"
+	OrdersReady           = "orders.ready"
+	OrdersProcessing      = "orders.processing"
+	OrdersShipped         = "orders.shipped"
+	OrdersDelivered       = "orders.delivered"
+	OrdersReceived        = "orders.received"
+	OrdersCancelRequested = "orders.cancel_requested"
+	OrdersCancelled       = "orders.cancelled"
+)
+
+// Sibling dealer transfer events (K13, TEC-165).
+const (
+	TransfersRequested = "transfers.requested"
+	TransfersApproved  = "transfers.approved"
+	TransfersRejected  = "transfers.rejected"
+	TransfersCompleted = "transfers.completed"
+	TransfersCancelled = "transfers.cancelled"
+)
+
 // Contracts domain events.
 const (
 	ContractsInstanceSigned = "contracts.instance_signed"
@@ -407,6 +434,23 @@ func catalogConstants() []string {
 		StockCountAdjustment,
 		StockVoid,
 		StockExternalOutbound,
+		OrdersCreated,
+		OrdersUpdated,
+		OrdersSubmitted,
+		OrdersApproved,
+		OrdersPreparing,
+		OrdersReady,
+		OrdersProcessing,
+		OrdersShipped,
+		OrdersDelivered,
+		OrdersReceived,
+		OrdersCancelRequested,
+		OrdersCancelled,
+		TransfersRequested,
+		TransfersApproved,
+		TransfersRejected,
+		TransfersCompleted,
+		TransfersCancelled,
 		ContractsInstanceSigned,
 		AuthWelcome,
 		AuthEmailVerification,

@@ -284,6 +284,42 @@ var Permissions = []PermissionDef{
 		Sensitive:   true,
 		Description: "Merge duplicate customer accounts into one user (center only).",
 	},
+
+	// TEC-165: orders (K6/K7) and sibling dealer transfers (K13). Appended
+	// last; migration 000049 seeds them. Orders are bounded by the domain
+	// brand (K20), so no role holds them at scope all.
+	{
+		Slug: PermOrdersRead, Name: "Read orders", Module: "orders", Scopes: scopesTree,
+		Description: "Orders the organization sells or buys.",
+	},
+	{
+		Slug: PermOrdersWrite, Name: "Write orders", Module: "orders", Scopes: scopesTree,
+		Description: "Create and edit draft orders and submit them to the supplier.",
+	},
+	{
+		Slug: PermOrdersApprove, Name: "Approve orders", Module: "orders", Scopes: scopesTree,
+		Description: "Approve incoming orders as the seller; freezes prices and the exchange rate (K7).",
+	},
+	{
+		Slug: PermOrdersShip, Name: "Ship orders", Module: "orders", Scopes: scopesTree,
+		Description: "Assign barcodes, prepare, ship and deliver orders as the seller.",
+	},
+	{
+		Slug: PermOrdersReceive, Name: "Receive orders", Module: "orders", Scopes: scopesTree,
+		Description: "Confirm receipt of delivered orders as the buyer.",
+	},
+	{
+		Slug: PermOrdersCancel, Name: "Cancel orders", Module: "orders", Scopes: scopesTree,
+		Description: "Cancel orders; after shipping the order waits in cancelling until the goods return.",
+	},
+	{
+		Slug: PermTransfersRequest, Name: "Request stock transfers", Module: "transfers", Scopes: scopesTree,
+		Description: "Request a stock transfer to a sibling dealer (K13).",
+	},
+	{
+		Slug: PermTransfersApprove, Name: "Approve stock transfers", Module: "transfers", Scopes: scopesTree,
+		Description: "Approve or reject transfers between dealers of the distributor (K13).",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -355,6 +391,11 @@ var Roles = []RoleDef{
 			PermVehiclesWrite:      ScopeBrand,
 			PermCustomersAnonymize: ScopeBrand,
 			PermCustomersMerge:     ScopeBrand,
+			// TEC-165 (000049).
+			PermOrdersRead:    ScopeBrand,
+			PermOrdersWrite:   ScopeBrand,
+			PermOrdersApprove: ScopeBrand,
+			PermOrdersCancel:  ScopeBrand,
 		}),
 	},
 	{
@@ -372,6 +413,9 @@ var Roles = []RoleDef{
 			PermStockAdjust:     ScopeAll,
 			PermStockReclassify: ScopeAll,
 			PermStockImport:     ScopeAll,
+			// TEC-165 (000049): orders stay brand-bound (K20).
+			PermOrdersRead: ScopeBrand,
+			PermOrdersShip: ScopeBrand,
 		}),
 	},
 	{
@@ -388,6 +432,7 @@ var Roles = []RoleDef{
 			PermPricingSaleWrite:        ScopeBrand,
 			PermPricingRecommendedRead:  ScopeBrand,
 			PermPricingRecommendedWrite: ScopeBrand,
+			PermOrdersRead:              ScopeBrand,
 		}),
 	},
 	{
@@ -437,6 +482,14 @@ var Roles = []RoleDef{
 			PermStockAdjust:            ScopeManaged,
 			PermModulesRead:            ScopeSubtree,
 			PermModulesManage:          ScopeSubtree,
+			// TEC-165 (000049): seller to its dealers, buyer from the center.
+			PermOrdersRead:       ScopeManaged,
+			PermOrdersWrite:      ScopeManaged,
+			PermOrdersApprove:    ScopeManaged,
+			PermOrdersShip:       ScopeManaged,
+			PermOrdersReceive:    ScopeManaged,
+			PermOrdersCancel:     ScopeManaged,
+			PermTransfersApprove: ScopeManaged,
 		}),
 	},
 	{
@@ -465,6 +518,9 @@ var Roles = []RoleDef{
 			PermStockRead:          ScopeManaged,
 			PermStockWrite:         ScopeManaged,
 			PermStockAdjust:        ScopeManaged,
+			PermOrdersRead:         ScopeManaged,
+			PermOrdersShip:         ScopeManaged,
+			PermOrdersReceive:      ScopeManaged,
 		}),
 	},
 	{
@@ -480,6 +536,7 @@ var Roles = []RoleDef{
 			PermPricingSaleRead:        ScopeManaged,
 			PermPricingSaleWrite:       ScopeManaged,
 			PermPricingRecommendedRead: ScopeManaged,
+			PermOrdersRead:             ScopeManaged,
 		}),
 	},
 	{
@@ -507,6 +564,12 @@ var Roles = []RoleDef{
 			PermWarehouseRead:     ScopeManaged,
 			PermStockRead:         ScopeManaged,
 			PermModulesRead:       ScopeManaged,
+			// TEC-165 (000049): buyer side and K13 transfer requests.
+			PermOrdersRead:       ScopeManaged,
+			PermOrdersWrite:      ScopeManaged,
+			PermOrdersReceive:    ScopeManaged,
+			PermOrdersCancel:     ScopeManaged,
+			PermTransfersRequest: ScopeManaged,
 		}),
 	},
 	{
@@ -521,6 +584,8 @@ var Roles = []RoleDef{
 			PermCustomersWrite:     ScopeOwn,
 			PermVehiclesRead:       ScopeManaged,
 			PermVehiclesWrite:      ScopeOwn,
+			PermOrdersRead:         ScopeManaged,
+			PermOrdersReceive:      ScopeManaged,
 		}),
 	},
 	{
@@ -535,6 +600,7 @@ var Roles = []RoleDef{
 			PermPricingPurchaseRead:    ScopeManaged,
 			PermPricingSaleRead:        ScopeManaged,
 			PermPricingRecommendedRead: ScopeManaged,
+			PermOrdersRead:             ScopeManaged,
 		}),
 	},
 	{

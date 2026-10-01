@@ -697,6 +697,91 @@ type OauthProviderSetting struct {
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
+type Order struct {
+	ID                        int64              `json:"id"`
+	Uuid                      uuid.UUID          `json:"uuid"`
+	OrderNo                   string             `json:"order_no"`
+	OrganizationID            int64              `json:"organization_id"`
+	BrandID                   int64              `json:"brand_id"`
+	SellerOrgID               int64              `json:"seller_org_id"`
+	BuyerOrgID                int64              `json:"buyer_org_id"`
+	SellerWarehouseLocationID pgtype.Int8        `json:"seller_warehouse_location_id"`
+	BuyerWarehouseLocationID  pgtype.Int8        `json:"buyer_warehouse_location_id"`
+	Status                    string             `json:"status"`
+	Currency                  string             `json:"currency"`
+	RateSnapshot              []byte             `json:"rate_snapshot"`
+	TryRate                   pgtype.Numeric     `json:"try_rate"`
+	Subtotal                  pgtype.Numeric     `json:"subtotal"`
+	TaxTotal                  pgtype.Numeric     `json:"tax_total"`
+	Total                     pgtype.Numeric     `json:"total"`
+	DeliveryMode              pgtype.Text        `json:"delivery_mode"`
+	TrackingNo                pgtype.Text        `json:"tracking_no"`
+	ShippingDocumentKey       pgtype.Text        `json:"shipping_document_key"`
+	ReceiptDocumentKey        pgtype.Text        `json:"receipt_document_key"`
+	ExternalReference         pgtype.Text        `json:"external_reference"`
+	Note                      pgtype.Text        `json:"note"`
+	CancelReason              pgtype.Text        `json:"cancel_reason"`
+	CreatedByUserID           pgtype.Int8        `json:"created_by_user_id"`
+	ApprovedByUserID          pgtype.Int8        `json:"approved_by_user_id"`
+	SubmittedAt               pgtype.Timestamptz `json:"submitted_at"`
+	ApprovedAt                pgtype.Timestamptz `json:"approved_at"`
+	ReadyAt                   pgtype.Timestamptz `json:"ready_at"`
+	ShippedAt                 pgtype.Timestamptz `json:"shipped_at"`
+	DeliveredAt               pgtype.Timestamptz `json:"delivered_at"`
+	ReceivedAt                pgtype.Timestamptz `json:"received_at"`
+	CancelRequestedAt         pgtype.Timestamptz `json:"cancel_requested_at"`
+	CancelledAt               pgtype.Timestamptz `json:"cancelled_at"`
+	CreatedAt                 pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                 pgtype.Timestamptz `json:"updated_at"`
+}
+
+type OrderItem struct {
+	ID                       int64              `json:"id"`
+	Uuid                     uuid.UUID          `json:"uuid"`
+	OrderID                  int64              `json:"order_id"`
+	OrganizationID           int64              `json:"organization_id"`
+	BrandID                  int64              `json:"brand_id"`
+	ProductID                int64              `json:"product_id"`
+	Quantity                 pgtype.Int4        `json:"quantity"`
+	Meters                   pgtype.Numeric     `json:"meters"`
+	UnitPrice                pgtype.Numeric     `json:"unit_price"`
+	PriceSource              string             `json:"price_source"`
+	RecommendedPriceSnapshot pgtype.Numeric     `json:"recommended_price_snapshot"`
+	LineTotal                pgtype.Numeric     `json:"line_total"`
+	Note                     pgtype.Text        `json:"note"`
+	CreatedAt                pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                pgtype.Timestamptz `json:"updated_at"`
+}
+
+type OrderItemUnit struct {
+	ID               int64              `json:"id"`
+	OrderItemID      int64              `json:"order_item_id"`
+	OrganizationID   int64              `json:"organization_id"`
+	BrandID          int64              `json:"brand_id"`
+	UnitID           int64              `json:"unit_id"`
+	Quantity         pgtype.Int4        `json:"quantity"`
+	Meters           pgtype.Numeric     `json:"meters"`
+	ReservationID    pgtype.Int8        `json:"reservation_id"`
+	MovementID       pgtype.Int8        `json:"movement_id"`
+	AssignedByUserID pgtype.Int8        `json:"assigned_by_user_id"`
+	AssignedAt       pgtype.Timestamptz `json:"assigned_at"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+type OrderStatusHistory struct {
+	ID             int64              `json:"id"`
+	OrderID        int64              `json:"order_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	FromStatus     pgtype.Text        `json:"from_status"`
+	ToStatus       string             `json:"to_status"`
+	ActorUserID    pgtype.Int8        `json:"actor_user_id"`
+	Reason         pgtype.Text        `json:"reason"`
+	Metadata       []byte             `json:"metadata"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
 type Organization struct {
 	ID                 int64              `json:"id"`
 	Uuid               uuid.UUID          `json:"uuid"`
@@ -1048,6 +1133,52 @@ type StockReclassification struct {
 	DecidedAt         pgtype.Timestamptz `json:"decided_at"`
 	DecisionNote      pgtype.Text        `json:"decision_note"`
 	MovementID        pgtype.Int8        `json:"movement_id"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type StockReservation struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	UnitID          int64              `json:"unit_id"`
+	UnitKind        string             `json:"unit_kind"`
+	OrderItemID     int64              `json:"order_item_id"`
+	Quantity        pgtype.Int4        `json:"quantity"`
+	Meters          pgtype.Numeric     `json:"meters"`
+	Status          string             `json:"status"`
+	ReleasedAt      pgtype.Timestamptz `json:"released_at"`
+	ConsumedAt      pgtype.Timestamptz `json:"consumed_at"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type StockTransferRequest struct {
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	FromOrgID         int64              `json:"from_org_id"`
+	ToOrgID           int64              `json:"to_org_id"`
+	ApproverOrgID     int64              `json:"approver_org_id"`
+	ProductID         int64              `json:"product_id"`
+	UnitID            pgtype.Int8        `json:"unit_id"`
+	Quantity          pgtype.Int4        `json:"quantity"`
+	Meters            pgtype.Numeric     `json:"meters"`
+	Currency          string             `json:"currency"`
+	UnitPrice         pgtype.Numeric     `json:"unit_price"`
+	LineTotal         pgtype.Numeric     `json:"line_total"`
+	RateSnapshot      []byte             `json:"rate_snapshot"`
+	Status            string             `json:"status"`
+	Reason            pgtype.Text        `json:"reason"`
+	RequestedByUserID pgtype.Int8        `json:"requested_by_user_id"`
+	DecidedByUserID   pgtype.Int8        `json:"decided_by_user_id"`
+	DecidedAt         pgtype.Timestamptz `json:"decided_at"`
+	DecisionNote      pgtype.Text        `json:"decision_note"`
+	CompletedAt       pgtype.Timestamptz `json:"completed_at"`
+	CancelledAt       pgtype.Timestamptz `json:"cancelled_at"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
