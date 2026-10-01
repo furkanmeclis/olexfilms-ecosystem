@@ -9,6 +9,7 @@ import {
   NoPortalAccessError,
   OTPLockedError,
 } from "@/lib/auth/credentials-errors";
+import { goAdapter } from "@/lib/auth/go-adapter";
 import {
   loginWithPassword,
   verifyPhoneOTP,
@@ -103,6 +104,14 @@ const portalAuth = NextAuth({
   useSecureCookies: secureCookies(),
   cookies: authCookies("portal"),
   session: { strategy: "jwt" },
+  // No passkey provider here. @auth/core keeps its config assertion flags in
+  // module-level state shared by both instances of the process: once the
+  // panel instance (Passkey) has been asserted, this instance must also pass
+  // the WebAuthn checks (experimental flag + an adapter) or every request
+  // fails with ExperimentalFeatureNotEnabled / MissingAdapter. With JWT
+  // sessions and credentials providers the adapter is never called.
+  experimental: { enableWebAuthn: true },
+  adapter: goAdapter({ pendingGitHubLogins: new Map<string, string>() }),
   pages: {
     signIn: routes.portal.login,
     error: routes.portal.login,
