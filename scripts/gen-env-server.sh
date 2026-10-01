@@ -15,7 +15,8 @@
 # running Postgres role / SeaweedFS identity yourself). It never touches
 # APP_ENCRYPTION_KEY (data encrypted at rest) or WUZAPI_GLOBAL_ENCRYPTION_KEY
 # (WhatsApp sessions); --rotate-encryption-key regenerates APP_ENCRYPTION_KEY
-# only, which makes every stored encrypted value unreadable.
+# only, which makes every stored encrypted value unreadable. CUSTOMER_PII_KEY
+# (customer identity numbers) is generated once and never rotated here.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -207,6 +208,8 @@ set_kv SITE_URL "$APP_URL"
 set_kv API_URL "http://backend.$NET:8080/v1"
 # --- Encryption at rest (never rotate once data exists) ---
 set_kv APP_ENCRYPTION_KEY "$(stable APP_ENCRYPTION_KEY "$ROTATE_ENC" b64 32)"
+# Customer national ids / tax numbers (TEC-159): generated once, never rotated.
+set_kv CUSTOMER_PII_KEY "$(stable CUSTOMER_PII_KEY 0 b64 32)"
 # --- NextAuth ---
 set_kv AUTH_SECRET "$(secret AUTH_SECRET hex 32)"
 set_kv AUTH_URL "$APP_URL"
@@ -260,7 +263,7 @@ TMP_OUT="$(mktemp)"
 REQUIRED="BACKEND_IMAGE FRONTEND_IMAGE DB_USER DB_PASSWORD DB_NAME REDIS_PASSWORD
 S3_ACCESS_KEY S3_SECRET_KEY S3_BUCKET SEAWEEDFS_JWT_WRITE_KEY SEAWEEDFS_JWT_READ_KEY
 CENTRIFUGO_API_KEY CENTRIFUGO_TOKEN_HMAC_SECRET CENTRIFUGO_WS_URL CENTRIFUGO_ALLOWED_ORIGINS
-JWT_ACCESS_SECRET JWT_REFRESH_SECRET MEILI_MASTER_KEY APP_ENCRYPTION_KEY
+JWT_ACCESS_SECRET JWT_REFRESH_SECRET MEILI_MASTER_KEY APP_ENCRYPTION_KEY CUSTOMER_PII_KEY
 AUTH_SECRET AUTH_URL AUTH_ADAPTER_SECRET CORS_ALLOWED_ORIGINS
 VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY GOTENBERG_URL WORKER_QUEUES
 WUZAPI_ADMIN_TOKEN WUZAPI_WEBHOOK_SECRET WUZAPI_GLOBAL_ENCRYPTION_KEY"

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/crypto"
 	"github.com/joho/godotenv"
 )
 
@@ -114,6 +115,10 @@ type AppConfig struct {
 // EncryptionConfig holds at-rest secret encryption material.
 type EncryptionConfig struct {
 	Key string
+	// CustomerPIIKey (CUSTOMER_PII_KEY, base64 of 32 bytes) encrypts customer
+	// national ids and tax numbers (TEC-159). No default: an empty key is an
+	// error outside development and crypto.NewPIIBox refuses it everywhere.
+	CustomerPIIKey string
 }
 
 type HTTPConfig struct {
@@ -234,7 +239,8 @@ func Load() (Config, error) {
 			DefaultBrandSlug: getEnv("DEFAULT_BRAND_SLUG", "olex"),
 		},
 		Encryption: EncryptionConfig{
-			Key: getEnv("APP_ENCRYPTION_KEY", defaultEncryptionKey),
+			Key:            getEnv("APP_ENCRYPTION_KEY", defaultEncryptionKey),
+			CustomerPIIKey: getEnv("CUSTOMER_PII_KEY", ""),
 		},
 		HTTP: HTTPConfig{
 			Addr:         getEnv("APP_HTTP_ADDR", ":8080"),
@@ -389,6 +395,12 @@ func (c Config) validate() error {
 		// production never encrypts secrets or signs tokens with known keys.
 		if c.Encryption.Key == "" || c.Encryption.Key == defaultEncryptionKey {
 			return fmt.Errorf("config: set a unique APP_ENCRYPTION_KEY outside development")
+		}
+		if _, err := crypto.NewPIIBox(c.Encryption.CustomerPIIKey); err != nil {
+			return fmt.Errorf("config: CUSTOMER_PII_KEY: %w", err)
+		}
+		if strings.TrimSpace(c.Encryption.CustomerPIIKey) == strings.TrimSpace(c.Encryption.Key) {
+			return fmt.Errorf("config: CUSTOMER_PII_KEY must differ from APP_ENCRYPTION_KEY")
 		}
 		if c.Auth.AdapterSecret == defaultAdapterSecret {
 			return fmt.Errorf("config: replace default AUTH_ADAPTER_SECRET outside development")
