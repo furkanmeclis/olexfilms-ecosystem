@@ -14,9 +14,17 @@ info:
     (`backend/internal/modules/**/routes.go`) are the source of truth if a path
     below is missing from the router.
 
-    **Roles:**
-    - `super_admin` — system role; assigned via `make create-super-admin`
-    - `organization_user` — system role for business owners/staff
+    **Roles (TEC-85, scoped RBAC):**
+    - `super_admin` — platform role; assigned via `make create-super-admin`; the
+      only role that may impersonate.
+    - Organization roles granted per membership: `center_staff`,
+      `center_warehouse`, `center_accounting`, `center_social`,
+      `distributor_owner|staff|warehouse_staff|accounting`,
+      `dealer_owner|staff|accounting`.
+    - Global portal roles: `customer`, `fleet` (read-only).
+    - Every grant has a scope: `all > brand > subtree > managed > assigned > own`
+      (`customer` only covers itself). `make roles-sync` reconciles the DB with
+      the Go catalog (`backend/internal/platform/rbac/catalog.go`).
     - Custom roles via `/v1/platform/roles`
 
     **Auth:** Bearer JWT access tokens + opaque refresh tokens.
@@ -997,6 +1005,82 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /v1/platform/permissions:
+    get:
+      tags: [Platform]
+      operationId: listPlatformPermissions
+      summary: Permission catalog with modules and allowed scopes
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer }
+        - name: offset
+          in: query
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, meta]
+                properties:
+                  success: { type: boolean, enum: [true] }
+                  data:
+                    type: object
+                    required: [items, total, limit, offset]
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: "#/components/schemas/PermissionSummary" }
+                      total: { type: integer, format: int64 }
+                      limit: { type: integer }
+                      offset: { type: integer }
+                  meta: { $ref: "#/components/schemas/ResponseMeta" }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/roles/{uuid}:
+    get:
+      tags: [Platform]
+      operationId: getPlatformRole
+      summary: Role with its scoped grants
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Role detail
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, meta]
+                properties:
+                  success: { type: boolean, enum: [true] }
+                  data: { $ref: "#/components/schemas/RoleDetail" }
+                  meta: { $ref: "#/components/schemas/ResponseMeta" }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/platform/roles/bulk:
     post:
       tags: [Platform]
@@ -1447,6 +1531,14 @@ paths:
                   format: uuid
                 role:
                   type: string
+                  enum: [owner, staff]
+                role_slugs:
+                  type: array
+                  description: >-
+                    Organization roles of the org type (e.g. dealer_accounting).
+                    Empty means the default role of the org type and `role`.
+                  items:
+                    type: string
       responses:
         "201":
           description: Member added
@@ -2313,6 +2405,68 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /v1/tenant/organizations:
+    get:
+      tags: [Tenant]
+      operationId: listTenantOrganizations
+      summary: Organizations inside the caller's organizations.read scope
+      description: >-
+        managed: the active organization; subtree: a distributor and its
+        dealers; brand: every organization of the brand. Never leaves the
+        request brand.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          schema:
+            $ref: "#/components/schemas/OrganizationType"
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0 }
+      responses:
+        "200":
+          description: Organizations in scope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeScopedOrganizationList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/tenant/organizations/{uuid}:
+    get:
+      tags: [Tenant]
+      operationId: getTenantOrganization
+      summary: One organization inside the caller's scope (404 outside it)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrganization"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/tenant/settings:
     get:
       tags: [Tenant]
@@ -2936,6 +3090,21 @@ components:
           type: array
           items:
             type: string
+        grants:
+          type: object
+          description: >-
+            Permission slug -> scope in the active organization context (global
+            roles + roles of the active membership).
+          additionalProperties:
+            $ref: "#/components/schemas/PermissionScope"
+        active_organization_uuid:
+          type: string
+          format: uuid
+        organization_roles:
+          type: array
+          description: Roles of the user in the active organization.
+          items:
+            type: string
         organizations:
           type: array
           items:
@@ -3394,6 +3563,52 @@ components:
         slug: { type: string }
         description: { type: [string, "null"] }
         is_system: { type: boolean }
+        org_type:
+          type: string
+          description: Subject kind of the role; organization roles are granted per membership.
+          enum: [platform, center, distributor, dealer, customer, fleet]
+
+    PermissionScope:
+      type: string
+      description: >-
+        Reach of a grant. all > brand > subtree > managed > assigned > own;
+        customer only covers itself.
+      enum: [all, brand, subtree, managed, assigned, own, customer]
+
+    PermissionSummary:
+      type: object
+      required: [uuid, name, slug, module, scopes, is_sensitive, super_admin_only]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        module: { type: string }
+        scopes:
+          type: array
+          items: { $ref: "#/components/schemas/PermissionScope" }
+        is_sensitive: { type: boolean }
+        super_admin_only: { type: boolean }
+        description: { type: [string, "null"] }
+
+    RoleGrant:
+      type: object
+      required: [permission, scope]
+      properties:
+        permission: { type: string }
+        scope: { $ref: "#/components/schemas/PermissionScope" }
+
+    RoleDetail:
+      allOf:
+        - $ref: "#/components/schemas/RoleSummary"
+        - type: object
+          required: [permission_slugs, grants]
+          properties:
+            permission_slugs:
+              type: array
+              items: { type: string }
+            grants:
+              type: array
+              items: { $ref: "#/components/schemas/RoleGrant" }
 
     PlatformUserDetail:
       allOf:
@@ -3905,6 +4120,21 @@ components:
             items:
               type: array
               items: { $ref: "#/components/schemas/Organization" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeScopedOrganizationList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, scope]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/Organization" }
+            scope: { $ref: "#/components/schemas/PermissionScope" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeMembershipList:
