@@ -309,8 +309,9 @@ func (s *Service) supplier(ctx context.Context, q *db.Queries, buyer db.Organiza
 	if err != nil {
 		return db.Organization{}, fmt.Errorf("orders: supplier: %w", err)
 	}
-	if seller.BrandID != buyer.BrandID ||
-		!(buyer.Type == OrgDistributor && seller.Type == OrgCenter) && !(buyer.Type == OrgDealer && seller.Type == OrgDistributor) {
+	flowOK := (buyer.Type == OrgDistributor && seller.Type == OrgCenter) ||
+		(buyer.Type == OrgDealer && seller.Type == OrgDistributor)
+	if seller.BrandID != buyer.BrandID || !flowOK {
 		return db.Organization{}, ErrNoSupplier
 	}
 	return seller, nil
