@@ -22,6 +22,8 @@ const FRONTEND = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
 );
+// Prettier resolves its plugins from the working directory.
+process.chdir(FRONTEND);
 const LOCALES_DIR = path.join(FRONTEND, "src/locales");
 const CONFIG = path.join(FRONTEND, "src/config/i18n.ts");
 const LOADERS = path.join(FRONTEND, "src/lib/i18n/catalog-loaders.ts");

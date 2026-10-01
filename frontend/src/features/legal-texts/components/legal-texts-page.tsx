@@ -76,7 +76,7 @@ export function LegalTextsPage() {
 }
 
 function Editor({ view }: { view: LegalTextAdmin }) {
-  const { t } = useLocale();
+  const { t, format, locale: uiLocale } = useLocale();
   const queryClient = useQueryClient();
   const [locale, setLocale] = useState<string>("tr");
   const current = view.texts.find((x) => x.locale === locale);
@@ -87,11 +87,11 @@ function Editor({ view }: { view: LegalTextAdmin }) {
 
   const names = useMemo(() => {
     try {
-      return new Intl.DisplayNames(undefined, { type: "language" });
+      return new Intl.DisplayNames([uiLocale], { type: "language" });
     } catch {
       return null;
     }
-  }, []);
+  }, [uiLocale]);
 
   const publish = useMutation({
     mutationFn: () => legalTextsService.publish(KIND, locale, body),
@@ -181,7 +181,7 @@ function Editor({ view }: { view: LegalTextAdmin }) {
                     {v.locale} · v{v.version}
                   </span>
                   <span className="text-muted-foreground">
-                    {new Date(v.created_at).toLocaleString()}
+                    {format.dateTime(v.created_at)}
                   </span>
                 </li>
               ))}
