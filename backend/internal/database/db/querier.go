@@ -51,6 +51,7 @@ type Querier interface {
 	CountMessagesByExternalID(ctx context.Context, arg CountMessagesByExternalIDParams) (int64, error)
 	CountNotificationDeliveries(ctx context.Context, arg CountNotificationDeliveriesParams) (int64, error)
 	CountNotificationsForUser(ctx context.Context, arg CountNotificationsForUserParams) (int64, error)
+	CountOrganizationCustomers(ctx context.Context, arg CountOrganizationCustomersParams) (int64, error)
 	CountOrganizations(ctx context.Context, arg CountOrganizationsParams) (int64, error)
 	CountOutboxByStatus(ctx context.Context, status string) (int64, error)
 	CountPermissions(ctx context.Context, q_ pgtype.Text) (int64, error)
@@ -77,6 +78,11 @@ type Querier interface {
 	// counterparty organization. When it already exists no row is returned
 	// (pgx.ErrNoRows) and the caller reads it with GetCariAccountByCounterpartyOrg.
 	CreateCariForOrgIfMissing(ctx context.Context, arg CreateCariForOrgIfMissingParams) (CariAccount, error)
+	// TEC-159: customer profiles, customer x organization links and vehicles
+	// (migration 000048). Scope arguments follow scopefilter: org_ids NULL means
+	// no organization restriction (all/brand), an empty array matches nothing;
+	// brand_id NULL means every brand.
+	CreateCustomerProfile(ctx context.Context, arg CreateCustomerProfileParams) (CustomerProfile, error)
 	CreateDistrict(ctx context.Context, arg CreateDistrictParams) (District, error)
 	CreateDocumentTemplate(ctx context.Context, arg CreateDocumentTemplateParams) (DocumentTemplate, error)
 	CreateExportJob(ctx context.Context, arg CreateExportJobParams) (ExportJob, error)
@@ -116,6 +122,7 @@ type Querier interface {
 	// Units.
 	CreateUnit(ctx context.Context, arg CreateUnitParams) (Unit, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	CreateVehicle(ctx context.Context, arg CreateVehicleParams) (Vehicle, error)
 	// TEC-153: stock ledger primitives for ledger.Post (TEC-154) and the stock
 	// API. Every write goes through ledger.Post inside one transaction: lock the
 	// state row (FOR UPDATE), append the movement, update the projections.
@@ -125,6 +132,8 @@ type Querier interface {
 	// Warehouse locations (minimal; TEC-95 extends).
 	CreateWarehouseLocation(ctx context.Context, arg CreateWarehouseLocationParams) (WarehouseLocation, error)
 	CreateWebAuthnCredential(ctx context.Context, arg CreateWebAuthnCredentialParams) (WebauthnCredential, error)
+	// Scope check: is the customer linked to an organization the caller reaches?
+	CustomerInScope(ctx context.Context, arg CustomerInScopeParams) (bool, error)
 	DeactivateDocumentTemplates(ctx context.Context, arg DeactivateDocumentTemplatesParams) error
 	DecideQRLoginChallenge(ctx context.Context, arg DecideQRLoginChallengeParams) (QrLoginChallenge, error)
 	DecideStockReclassification(ctx context.Context, arg DecideStockReclassificationParams) (StockReclassification, error)
@@ -177,6 +186,7 @@ type Querier interface {
 	// ---------------------------------------------------------------------------
 	// Product stock projections.
 	EnsureBinProductStock(ctx context.Context, arg EnsureBinProductStockParams) error
+	EnsureCustomerProfile(ctx context.Context, userID int64) error
 	// Projection deltas are two steps: Ensure* creates a zero row on first use
 	// (no-op otherwise), Add* applies the signed delta. A plain UPDATE keeps the
 	// CHECK (>= 0) on the result only; an INSERT ... ON CONFLICT DO UPDATE would
@@ -187,6 +197,10 @@ type Querier interface {
 	// The rate of a pair (either direction) on the latest day within
 	// [min_date, on_date]; on that day manual > tcmb > ecb, direct before inverse.
 	FindPairRate(ctx context.Context, arg FindPairRateParams) (FindPairRateRow, error)
+	// Plate lookup (not unique: plates change hands).
+	FindVehiclesByPlate(ctx context.Context, arg FindVehiclesByPlateParams) ([]Vehicle, error)
+	// Duplicate-VIN warning (VIN is not unique; ownership transfer is F1-06).
+	FindVehiclesByVIN(ctx context.Context, arg FindVehiclesByVINParams) ([]Vehicle, error)
 	GetActiveDocumentTemplate(ctx context.Context, arg GetActiveDocumentTemplateParams) (DocumentTemplate, error)
 	GetActiveOTPByEmailType(ctx context.Context, arg GetActiveOTPByEmailTypeParams) (OtpCode, error)
 	GetActivePhoneOTP(ctx context.Context, arg GetActivePhoneOTPParams) (OtpCode, error)
@@ -212,6 +226,9 @@ type Querier interface {
 	GetConsentForText(ctx context.Context, arg GetConsentForTextParams) (Consent, error)
 	GetCountryByID(ctx context.Context, id int64) (Country, error)
 	GetCountryByISO2(ctx context.Context, iso2 string) (Country, error)
+	GetCustomerOrganization(ctx context.Context, arg GetCustomerOrganizationParams) (CustomerOrganization, error)
+	GetCustomerProfile(ctx context.Context, userID int64) (CustomerProfile, error)
+	GetCustomerProfileForUpdate(ctx context.Context, userID int64) (CustomerProfile, error)
 	GetDistributorPriceOverride(ctx context.Context, arg GetDistributorPriceOverrideParams) (GetDistributorPriceOverrideRow, error)
 	GetDistrictByID(ctx context.Context, id int64) (District, error)
 	GetDocumentRenderByID(ctx context.Context, id int64) (DocumentRender, error)
@@ -260,6 +277,8 @@ type Querier interface {
 	GetOrganizationByID(ctx context.Context, id int64) (Organization, error)
 	GetOrganizationBySlug(ctx context.Context, slug string) (Organization, error)
 	GetOrganizationByUUID(ctx context.Context, argUuid uuid.UUID) (Organization, error)
+	// Country of an organization for the default phone region (K29).
+	GetOrganizationCountryISO2(ctx context.Context, id int64) (string, error)
 	GetOrganizationMember(ctx context.Context, arg GetOrganizationMemberParams) (GetOrganizationMemberRow, error)
 	GetOrganizationMemberByUserAndOrgUUID(ctx context.Context, arg GetOrganizationMemberByUserAndOrgUUIDParams) (GetOrganizationMemberByUserAndOrgUUIDRow, error)
 	GetOrganizationMemberByUserAndSlug(ctx context.Context, arg GetOrganizationMemberByUserAndSlugParams) (GetOrganizationMemberByUserAndSlugRow, error)
@@ -305,6 +324,8 @@ type Querier interface {
 	GetUserByUUID(ctx context.Context, argUuid uuid.UUID) (User, error)
 	GetUserTOTPByUserID(ctx context.Context, userID int64) (UserTotp, error)
 	GetValidRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
+	GetVehicleByUUID(ctx context.Context, argUuid uuid.UUID) (Vehicle, error)
+	GetVehicleByUUIDForUpdate(ctx context.Context, argUuid uuid.UUID) (Vehicle, error)
 	GetWarehouseLocation(ctx context.Context, arg GetWarehouseLocationParams) (WarehouseLocation, error)
 	GetWarehouseLocationByUUID(ctx context.Context, argUuid uuid.UUID) (WarehouseLocation, error)
 	GetWebAuthnCredentialByCredentialID(ctx context.Context, credentialID string) (WebauthnCredential, error)
@@ -316,6 +337,7 @@ type Querier interface {
 	InsertAppLog(ctx context.Context, arg InsertAppLogParams) error
 	InsertBulkChange(ctx context.Context, arg InsertBulkChangeParams) (BulkChange, error)
 	InsertConsent(ctx context.Context, arg InsertConsentParams) (Consent, error)
+	InsertCustomerOrganization(ctx context.Context, arg InsertCustomerOrganizationParams) (CustomerOrganization, error)
 	// ---------------------------------------------------------------------------
 	// Ledger entries.
 	// InsertFinanceEntry appends an original row. A retried sourced write (same
@@ -355,6 +377,9 @@ type Querier interface {
 	InvalidateActiveOTPs(ctx context.Context, arg InvalidateActiveOTPsParams) error
 	InvalidateActivePhoneOTPs(ctx context.Context, arg InvalidateActivePhoneOTPsParams) error
 	LatestExchangeRateDate(ctx context.Context, onDate pgtype.Date) (pgtype.Date, error)
+	// Idempotent link: a second call keeps the row and fills first_service_at
+	// only when it was empty.
+	LinkCustomerOrganization(ctx context.Context, arg LinkCustomerOrganizationParams) (CustomerOrganization, error)
 	ListActiveDevicePushTokens(ctx context.Context, userID int64) ([]DevicePushToken, error)
 	ListActiveMobileSessionUUIDsForDevice(ctx context.Context, arg ListActiveMobileSessionUUIDsForDeviceParams) ([]uuid.UUID, error)
 	ListActivePublicKeys(ctx context.Context, keys []string) ([]string, error)
@@ -389,6 +414,8 @@ type Querier interface {
 	// TEC-84: currencies and daily exchange rates. Rates travel as text so no
 	// precision is lost between NUMERIC and Go.
 	ListCurrencies(ctx context.Context, activeOnly bool) ([]Currency, error)
+	// Organizations serving a customer (portal, customer detail).
+	ListCustomerOrganizationsByUser(ctx context.Context, arg ListCustomerOrganizationsByUserParams) ([]ListCustomerOrganizationsByUserRow, error)
 	ListDealerPricesForProducts(ctx context.Context, arg ListDealerPricesForProductsParams) ([]ListDealerPricesForProductsRow, error)
 	// Center view of the distributor-specific prices with product and
 	// distributor identities.
@@ -439,6 +466,8 @@ type Querier interface {
 	// have not been reversed yet, locked for the reversing transaction.
 	ListOpenFinanceEntriesBySource(ctx context.Context, arg ListOpenFinanceEntriesBySourceParams) ([]FinanceEntry, error)
 	ListOrganizationChildren(ctx context.Context, parentID pgtype.Int8) ([]ListOrganizationChildrenRow, error)
+	// Customers of the organizations in scope; one row per user.
+	ListOrganizationCustomers(ctx context.Context, arg ListOrganizationCustomersParams) ([]ListOrganizationCustomersRow, error)
 	ListOrganizationMemberOptions(ctx context.Context, organizationID int64) ([]ListOrganizationMemberOptionsRow, error)
 	ListOrganizationMembers(ctx context.Context, organizationID int64) ([]ListOrganizationMembersRow, error)
 	ListOrganizationMembersByUserID(ctx context.Context, arg ListOrganizationMembersByUserIDParams) ([]ListOrganizationMembersByUserIDRow, error)
@@ -448,6 +477,9 @@ type Querier interface {
 	// Organizations reachable by a scope filter: an explicit id set
 	// (managed/subtree) or a whole brand (brand), or every brand (all, both NULL).
 	ListOrganizationsInScope(ctx context.Context, arg ListOrganizationsInScopeParams) ([]ListOrganizationsInScopeRow, error)
+	// K29 organization phone normalization (cmd/normalize-org-phones): rows
+	// whose original phone was moved aside by migration 000048.
+	ListOrganizationsWithRawPhone(ctx context.Context) ([]ListOrganizationsWithRawPhoneRow, error)
 	// Territories of the brand that overlap an area: the same area, an ancestor
 	// (the country or the province of a district) or a descendant.
 	ListOverlappingTerritories(ctx context.Context, arg ListOverlappingTerritoriesParams) ([]ListOverlappingTerritoriesRow, error)
@@ -504,6 +536,9 @@ type Querier interface {
 	ListUserUUIDsForBulk(ctx context.Context, arg ListUserUUIDsForBulkParams) ([]uuid.UUID, error)
 	ListUsersFiltered(ctx context.Context, arg ListUsersFilteredParams) ([]User, error)
 	ListUsersForExport(ctx context.Context, arg ListUsersForExportParams) ([]User, error)
+	ListVehiclesByUser(ctx context.Context, arg ListVehiclesByUserParams) ([]ListVehiclesByUserRow, error)
+	// Vehicles of customers linked to the organizations in scope.
+	ListVehiclesInScope(ctx context.Context, arg ListVehiclesInScopeParams) ([]ListVehiclesInScopeRow, error)
 	ListWarehouseLocations(ctx context.Context, arg ListWarehouseLocationsParams) ([]WarehouseLocation, error)
 	ListWebAuthnCredentialsByUserID(ctx context.Context, userID int64) ([]WebauthnCredential, error)
 	ListWebAuthnCredentialsForUserIDs(ctx context.Context, userIds []int64) ([]WebauthnCredential, error)
@@ -531,6 +566,7 @@ type Querier interface {
 	MarkBulkJobFailed(ctx context.Context, arg MarkBulkJobFailedParams) (BulkJob, error)
 	MarkBulkJobProcessing(ctx context.Context, id int64) (BulkJob, error)
 	MarkBulkJobRolledBack(ctx context.Context, arg MarkBulkJobRolledBackParams) (BulkJob, error)
+	MarkCustomerFirstService(ctx context.Context, arg MarkCustomerFirstServiceParams) (int64, error)
 	MarkDeliveryProcessing(ctx context.Context, id int64) error
 	MarkDeliveryResult(ctx context.Context, arg MarkDeliveryResultParams) error
 	MarkDocumentRenderFailed(ctx context.Context, arg MarkDocumentRenderFailedParams) error
@@ -569,6 +605,9 @@ type Querier interface {
 	// changed the list since it was read (expected).
 	ReplaceProductImages(ctx context.Context, arg ReplaceProductImagesParams) (Product, error)
 	ReplaceUserRoles(ctx context.Context, userID int64) error
+	// Success: phone gets the E.164 form and phone_raw is cleared. A phone
+	// written by the API in the meantime is kept (only phone_raw is cleared).
+	ResolveOrganizationRawPhone(ctx context.Context, arg ResolveOrganizationRawPhoneParams) (int64, error)
 	// The most specific territory covering an address (district > province >
 	// country) whose distributor is live.
 	ResolveTerritory(ctx context.Context, arg ResolveTerritoryParams) (ResolveTerritoryRow, error)
@@ -593,6 +632,9 @@ type Querier interface {
 	SetCarModelHero(ctx context.Context, arg SetCarModelHeroParams) (CarModel, error)
 	SetCariAccountActive(ctx context.Context, arg SetCariAccountActiveParams) (CariAccount, error)
 	SetCountryActive(ctx context.Context, arg SetCountryActiveParams) (Country, error)
+	// Ciphertext and mask are written together; NULL/NULL clears the value.
+	SetCustomerNationalID(ctx context.Context, arg SetCustomerNationalIDParams) (CustomerProfile, error)
+	SetCustomerTaxNo(ctx context.Context, arg SetCustomerTaxNoParams) (CustomerProfile, error)
 	SetNotificationChannelEnabled(ctx context.Context, arg SetNotificationChannelEnabledParams) (NotificationChannelSetting, error)
 	SetOrganizationLogo(ctx context.Context, arg SetOrganizationLogoParams) (Organization, error)
 	// Bulk activate/deactivate within one brand.
@@ -605,6 +647,7 @@ type Querier interface {
 	SetWhatsAppInstance(ctx context.Context, arg SetWhatsAppInstanceParams) (WhatsappSetting, error)
 	SetWhatsAppSMSFallback(ctx context.Context, smsFallbackEnabled bool) (WhatsappSetting, error)
 	SlugExists(ctx context.Context, slug string) (bool, error)
+	SoftDeleteVehicle(ctx context.Context, id int64) (int64, error)
 	// The supplier of an organization is its parent in the tree (K9).
 	// Returns no rows for a center.
 	SupplierOf(ctx context.Context, id int64) (Organization, error)
@@ -613,6 +656,7 @@ type Querier interface {
 	// Full replacement of the editable fields (read-modify-write in the use case).
 	UpdateCarBrand(ctx context.Context, arg UpdateCarBrandParams) (CarBrand, error)
 	UpdateCarModel(ctx context.Context, arg UpdateCarModelParams) (CarModel, error)
+	UpdateCustomerProfile(ctx context.Context, arg UpdateCustomerProfileParams) (CustomerProfile, error)
 	UpdateDocumentTemplateDraft(ctx context.Context, arg UpdateDocumentTemplateDraftParams) (DocumentTemplate, error)
 	UpdateFinanceAccount(ctx context.Context, arg UpdateFinanceAccountParams) (FinanceAccount, error)
 	UpdateGitHubAppSettings(ctx context.Context, arg UpdateGitHubAppSettingsParams) (GithubAppSetting, error)
@@ -652,6 +696,8 @@ type Querier interface {
 	UpdateUserProfileBasics(ctx context.Context, arg UpdateUserProfileBasicsParams) error
 	UpdateUserProfileByUUID(ctx context.Context, arg UpdateUserProfileByUUIDParams) (User, error)
 	UpdateUserTOTPRecoveryHashes(ctx context.Context, arg UpdateUserTOTPRecoveryHashesParams) error
+	// Full replace of the editable fields (the caller reads the row first).
+	UpdateVehicle(ctx context.Context, arg UpdateVehicleParams) (Vehicle, error)
 	UpdateWarehouseLocation(ctx context.Context, arg UpdateWarehouseLocationParams) (WarehouseLocation, error)
 	UpdateWebAuthnCredentialCounter(ctx context.Context, arg UpdateWebAuthnCredentialCounterParams) error
 	UpdateWebAuthnCredentialName(ctx context.Context, arg UpdateWebAuthnCredentialNameParams) (WebauthnCredential, error)

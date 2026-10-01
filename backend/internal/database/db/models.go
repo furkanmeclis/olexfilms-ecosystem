@@ -225,6 +225,31 @@ type Currency struct {
 	SortOrder int32  `json:"sort_order"`
 }
 
+type CustomerOrganization struct {
+	ID             int64              `json:"id"`
+	UserID         int64              `json:"user_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	FirstServiceAt pgtype.Timestamptz `json:"first_service_at"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
+type CustomerProfile struct {
+	UserID            int64              `json:"user_id"`
+	Type              string             `json:"type"`
+	CompanyName       pgtype.Text        `json:"company_name"`
+	TaxOffice         pgtype.Text        `json:"tax_office"`
+	NationalIDEnc     []byte             `json:"national_id_enc"`
+	NationalIDLast4   pgtype.Text        `json:"national_id_last4"`
+	TaxNoEnc          []byte             `json:"tax_no_enc"`
+	TaxNoLast4        pgtype.Text        `json:"tax_no_last4"`
+	Address           []byte             `json:"address"`
+	NotificationPrefs []byte             `json:"notification_prefs"`
+	AnonymizedAt      pgtype.Timestamptz `json:"anonymized_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
 type DevicePushToken struct {
 	ID         int64              `json:"id"`
 	Uuid       uuid.UUID          `json:"uuid"`
@@ -707,6 +732,7 @@ type Organization struct {
 	Settings           []byte             `json:"settings"`
 	ProvinceID         pgtype.Int8        `json:"province_id"`
 	DistrictID         pgtype.Int8        `json:"district_id"`
+	PhoneRaw           pgtype.Text        `json:"phone_raw"`
 }
 
 type OrganizationMember struct {
@@ -1131,22 +1157,23 @@ type UnitCurrentState struct {
 }
 
 type User struct {
-	ID              int64              `json:"id"`
-	Uuid            uuid.UUID          `json:"uuid"`
-	Email           pgtype.Text        `json:"email"`
-	PasswordHash    string             `json:"password_hash"`
-	Name            string             `json:"name"`
-	Surname         string             `json:"surname"`
-	Status          string             `json:"status"`
-	EmailVerifiedAt pgtype.Timestamptz `json:"email_verified_at"`
-	LastLoginAt     pgtype.Timestamptz `json:"last_login_at"`
-	Locale          pgtype.Text        `json:"locale"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
-	Timezone        pgtype.Text        `json:"timezone"`
-	PhoneE164       pgtype.Text        `json:"phone_e164"`
-	PhoneVerifiedAt pgtype.Timestamptz `json:"phone_verified_at"`
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	Email            pgtype.Text        `json:"email"`
+	PasswordHash     string             `json:"password_hash"`
+	Name             string             `json:"name"`
+	Surname          string             `json:"surname"`
+	Status           string             `json:"status"`
+	EmailVerifiedAt  pgtype.Timestamptz `json:"email_verified_at"`
+	LastLoginAt      pgtype.Timestamptz `json:"last_login_at"`
+	Locale           pgtype.Text        `json:"locale"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt        pgtype.Timestamptz `json:"deleted_at"`
+	Timezone         pgtype.Text        `json:"timezone"`
+	PhoneE164        pgtype.Text        `json:"phone_e164"`
+	PhoneVerifiedAt  pgtype.Timestamptz `json:"phone_verified_at"`
+	MergedIntoUserID pgtype.Int8        `json:"merged_into_user_id"`
 }
 
 type UserRole struct {
@@ -1163,6 +1190,24 @@ type UserTotp struct {
 	RecoveryHashes []string           `json:"recovery_hashes"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Vehicle struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	UserID          int64              `json:"user_id"`
+	OrganizationID  pgtype.Int8        `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	CarBrandID      pgtype.Int8        `json:"car_brand_id"`
+	CarModelID      pgtype.Int8        `json:"car_model_id"`
+	ModelYear       pgtype.Int2        `json:"model_year"`
+	Plate           pgtype.Text        `json:"plate"`
+	PlateNormalized pgtype.Text        `json:"plate_normalized"`
+	PlateCountry    pgtype.Text        `json:"plate_country"`
+	Vin             pgtype.Text        `json:"vin"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
 }
 
 type WarehouseLocation struct {
