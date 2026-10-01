@@ -476,6 +476,7 @@ func (s *Service) withJobOrganization(ctx context.Context, job db.ImportJob) (co
 	}
 	return orgctx.WithScope(ctx, orgctx.Scope{
 		InternalID: org.ID, UUID: org.Uuid, Slug: org.Slug, Name: org.Name,
+		Status: org.Status, OrgType: org.Type, BrandID: org.BrandID,
 	}), nil
 }
 

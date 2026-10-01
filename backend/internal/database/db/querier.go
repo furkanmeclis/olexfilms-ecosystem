@@ -181,7 +181,12 @@ type Querier interface {
 	GetProduct(ctx context.Context, arg GetProductParams) (Product, error)
 	GetProductBySKU(ctx context.Context, arg GetProductBySKUParams) (Product, error)
 	GetProductByUUID(ctx context.Context, arg GetProductByUUIDParams) (Product, error)
+	// Search indexer only. Every document carries its brand_id and the search
+	// query filters on it (K1/K20).
+	GetProductByUUIDForIndex(ctx context.Context, argUuid uuid.UUID) (Product, error)
 	GetProductCategory(ctx context.Context, arg GetProductCategoryParams) (ProductCategory, error)
+	// TEC-145: catalog API helpers.
+	GetProductCategoryByName(ctx context.Context, arg GetProductCategoryByNameParams) (ProductCategory, error)
 	GetProductCategoryByUUID(ctx context.Context, arg GetProductCategoryByUUIDParams) (ProductCategory, error)
 	GetProductPrice(ctx context.Context, arg GetProductPriceParams) (GetProductPriceRow, error)
 	GetProvinceByID(ctx context.Context, id int64) (Province, error)
@@ -310,6 +315,8 @@ type Querier interface {
 	ListProductCategories(ctx context.Context, arg ListProductCategoriesParams) ([]ProductCategory, error)
 	ListProductPrices(ctx context.Context, arg ListProductPricesParams) ([]ListProductPricesRow, error)
 	ListProducts(ctx context.Context, arg ListProductsParams) ([]Product, error)
+	// Search indexer only (full reindex across brands).
+	ListProductsForIndex(ctx context.Context) ([]Product, error)
 	ListProvincesByCountry(ctx context.Context, countryID int64) ([]ListProvincesByCountryRow, error)
 	ListPushSubscriptionsByUser(ctx context.Context, userID int64) ([]PushSubscription, error)
 	ListRoleGrantsByRoleID(ctx context.Context, roleID int64) ([]ListRoleGrantsByRoleIDRow, error)
@@ -408,6 +415,9 @@ type Querier interface {
 	SetOrganizationLogo(ctx context.Context, arg SetOrganizationLogoParams) (Organization, error)
 	// Bulk activate/deactivate within one brand.
 	SetProductsActive(ctx context.Context, arg SetProductsActiveParams) (int64, error)
+	// Bulk activate/deactivate by public id within one brand. Returns the rows
+	// that changed so the caller can reindex them.
+	SetProductsActiveByUUIDs(ctx context.Context, arg SetProductsActiveByUUIDsParams) ([]uuid.UUID, error)
 	SetRolePermissions(ctx context.Context, roleID int64) error
 	SetUserEmailVerified(ctx context.Context, id int64) (User, error)
 	SetWhatsAppInstance(ctx context.Context, arg SetWhatsAppInstanceParams) (WhatsappSetting, error)

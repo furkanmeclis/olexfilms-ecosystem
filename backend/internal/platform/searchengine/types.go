@@ -11,6 +11,9 @@ type Spec struct {
 	Searchable   []string `json:"searchable_fields,omitempty"`
 	Filterable   []string `json:"filterable_fields,omitempty"`
 	TenantScoped bool     `json:"tenant_scoped,omitempty"`
+	// BrandScoped documents carry brand_id; search filters on the brand of
+	// the active organization (K1/K20) and hides the spec without one.
+	BrandScoped bool `json:"brand_scoped,omitempty"`
 }
 
 // Document is the Meilisearch index payload for one entity.
@@ -23,6 +26,8 @@ type Document struct {
 	Href             string   `json:"href"`
 	Icon             string   `json:"icon,omitempty"`
 	OrganizationSlug string   `json:"organization_slug,omitempty"`
+	// BrandID is set on brand scoped specs (filterable).
+	BrandID int64 `json:"brand_id,omitempty"`
 }
 
 // Hit is a normalized search result returned to clients.

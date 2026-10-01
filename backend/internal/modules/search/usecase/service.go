@@ -8,6 +8,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -43,13 +44,16 @@ func (s *Service) ListSpecs(ctx context.Context) []searchengine.Spec {
 	if !ok {
 		return nil
 	}
-	tenantSlug := s.tenantSlug(ctx, p)
+	tenant := s.tenantScope(ctx, p)
 	out := make([]searchengine.Spec, 0, len(s.reg.Specs()))
 	for _, spec := range s.reg.Specs() {
 		if spec.Permission != "" && !p.HasPermission(spec.Permission) {
 			continue
 		}
-		if spec.TenantScoped && tenantSlug == "" {
+		if spec.TenantScoped && tenant.slug == "" {
+			continue
+		}
+		if spec.BrandScoped && tenant.brandID == 0 {
 			continue
 		}
 		out = append(out, spec)
@@ -97,15 +101,25 @@ func (s *Service) specsWithFilters(ctx context.Context, specs []searchengine.Spe
 	if !ok {
 		return nil, nil
 	}
-	tenantSlug := s.tenantSlug(ctx, p)
+	tenant := s.tenantScope(ctx, p)
 	filters := make(map[string]string)
 	out := make([]string, 0, len(specs))
 	for _, spec := range specs {
+		var parts []string
 		if spec.TenantScoped {
-			if tenantSlug == "" {
+			if tenant.slug == "" {
 				continue
 			}
-			filters[spec.ID] = organizationSlugFilter(tenantSlug)
+			parts = append(parts, organizationSlugFilter(tenant.slug))
+		}
+		if spec.BrandScoped {
+			if tenant.brandID == 0 {
+				continue
+			}
+			parts = append(parts, brandFilter(tenant.brandID))
+		}
+		if len(parts) > 0 {
+			filters[spec.ID] = strings.Join(parts, " AND ")
 		}
 		out = append(out, spec.ID)
 	}
@@ -115,9 +129,18 @@ func (s *Service) specsWithFilters(ctx context.Context, specs []searchengine.Spe
 	return out, filters
 }
 
-func (s *Service) tenantSlug(ctx context.Context, p authctx.Principal) string {
+// tenant is the active organization as search sees it.
+type tenant struct {
+	slug    string
+	brandID int64
+}
+
+// tenantScope resolves the active organization. brandID stays 0 when the
+// organization does not belong to the request domain's brand (K1/K20), so
+// brand scoped specs are never searched across brands.
+func (s *Service) tenantScope(ctx context.Context, p authctx.Principal) tenant {
 	if s == nil || s.q == nil || p.OrganizationUUID == nil || *p.OrganizationUUID == uuid.Nil {
-		return ""
+		return tenant{}
 	}
 	row, err := s.q.GetOrganizationMemberByUserAndOrgUUID(ctx, db.GetOrganizationMemberByUserAndOrgUUIDParams{
 		UserID: p.UserInternal,
@@ -127,12 +150,21 @@ func (s *Service) tenantSlug(ctx context.Context, p authctx.Principal) string {
 		if err != pgx.ErrNoRows {
 			s.log.Warn("search_tenant_scope_failed", "error", err)
 		}
-		return ""
+		return tenant{}
 	}
 	if row.OrganizationStatus == "suspended" {
-		return ""
+		return tenant{}
 	}
-	return strings.TrimSpace(row.OrganizationSlug)
+	out := tenant{slug: strings.TrimSpace(row.OrganizationSlug)}
+	if b, ok := brandctx.From(ctx); ok && b.ID == row.OrganizationBrandID {
+		out.brandID = row.OrganizationBrandID
+	}
+	return out
+}
+
+// brandFilter is the Meilisearch filter of brand scoped specs.
+func brandFilter(brandID int64) string {
+	return fmt.Sprintf("brand_id = %d", brandID)
 }
 
 func organizationSlugFilter(slug string) string {

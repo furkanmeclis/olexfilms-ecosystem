@@ -338,6 +338,39 @@ func (q *Queries) GetProductByUUID(ctx context.Context, arg GetProductByUUIDPara
 	return i, err
 }
 
+const getProductByUUIDForIndex = `-- name: GetProductByUUIDForIndex :one
+SELECT id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at FROM products WHERE uuid = $1
+`
+
+// Search indexer only. Every document carries its brand_id and the search
+// query filters on it (K1/K20).
+func (q *Queries) GetProductByUUIDForIndex(ctx context.Context, argUuid uuid.UUID) (Product, error) {
+	row := q.db.QueryRow(ctx, getProductByUUIDForIndex, argUuid)
+	var i Product
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.CategoryID,
+		&i.Sku,
+		&i.Name,
+		&i.DescriptionMd,
+		&i.WarrantyDurationMonths,
+		&i.MicronThickness,
+		&i.Images,
+		&i.UnitType,
+		&i.UsesFixedBarcode,
+		&i.Active,
+		&i.ExternalID,
+		&i.ConnectionID,
+		&i.LockedFields,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getProductCategory = `-- name: GetProductCategory :one
 SELECT id, uuid, organization_id, brand_id, name, available_parts, sort, active, created_at, updated_at FROM product_categories
 WHERE id = $1 AND brand_id = $2
@@ -350,6 +383,36 @@ type GetProductCategoryParams struct {
 
 func (q *Queries) GetProductCategory(ctx context.Context, arg GetProductCategoryParams) (ProductCategory, error) {
 	row := q.db.QueryRow(ctx, getProductCategory, arg.ID, arg.BrandID)
+	var i ProductCategory
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.Name,
+		&i.AvailableParts,
+		&i.Sort,
+		&i.Active,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getProductCategoryByName = `-- name: GetProductCategoryByName :one
+
+SELECT id, uuid, organization_id, brand_id, name, available_parts, sort, active, created_at, updated_at FROM product_categories
+WHERE brand_id = $1 AND name = $2
+`
+
+type GetProductCategoryByNameParams struct {
+	BrandID int64  `json:"brand_id"`
+	Name    string `json:"name"`
+}
+
+// TEC-145: catalog API helpers.
+func (q *Queries) GetProductCategoryByName(ctx context.Context, arg GetProductCategoryByNameParams) (ProductCategory, error) {
+	row := q.db.QueryRow(ctx, getProductCategoryByName, arg.BrandID, arg.Name)
 	var i ProductCategory
 	err := row.Scan(
 		&i.ID,
@@ -521,6 +584,51 @@ func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]P
 	return items, nil
 }
 
+const listProductsForIndex = `-- name: ListProductsForIndex :many
+SELECT id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at FROM products ORDER BY id
+`
+
+// Search indexer only (full reindex across brands).
+func (q *Queries) ListProductsForIndex(ctx context.Context) ([]Product, error) {
+	rows, err := q.db.Query(ctx, listProductsForIndex)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Product{}
+	for rows.Next() {
+		var i Product
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.CategoryID,
+			&i.Sku,
+			&i.Name,
+			&i.DescriptionMd,
+			&i.WarrantyDurationMonths,
+			&i.MicronThickness,
+			&i.Images,
+			&i.UnitType,
+			&i.UsesFixedBarcode,
+			&i.Active,
+			&i.ExternalID,
+			&i.ConnectionID,
+			&i.LockedFields,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const setProductsActive = `-- name: SetProductsActive :execrows
 UPDATE products
 SET active = $1
@@ -540,6 +648,43 @@ func (q *Queries) SetProductsActive(ctx context.Context, arg SetProductsActivePa
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const setProductsActiveByUUIDs = `-- name: SetProductsActiveByUUIDs :many
+UPDATE products
+SET active = $1
+WHERE brand_id = $2
+  AND uuid = ANY($3::uuid[])
+  AND active IS DISTINCT FROM $1
+RETURNING uuid
+`
+
+type SetProductsActiveByUUIDsParams struct {
+	Active  bool        `json:"active"`
+	BrandID int64       `json:"brand_id"`
+	Uuids   []uuid.UUID `json:"uuids"`
+}
+
+// Bulk activate/deactivate by public id within one brand. Returns the rows
+// that changed so the caller can reindex them.
+func (q *Queries) SetProductsActiveByUUIDs(ctx context.Context, arg SetProductsActiveByUUIDsParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, setProductsActiveByUUIDs, arg.Active, arg.BrandID, arg.Uuids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []uuid.UUID{}
+	for rows.Next() {
+		var uuid uuid.UUID
+		if err := rows.Scan(&uuid); err != nil {
+			return nil, err
+		}
+		items = append(items, uuid)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateProduct = `-- name: UpdateProduct :one
