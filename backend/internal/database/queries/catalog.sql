@@ -126,3 +126,28 @@ WHERE brand_id = sqlc.arg(brand_id)
     OR name ILIKE '%' || sqlc.narg(q)::text || '%'
     OR sku ILIKE '%' || sqlc.narg(q)::text || '%'
   );
+
+-- TEC-145: catalog API helpers.
+
+-- name: GetProductCategoryByName :one
+SELECT * FROM product_categories
+WHERE brand_id = sqlc.arg(brand_id) AND name = sqlc.arg(name);
+
+-- name: SetProductsActiveByUUIDs :many
+-- Bulk activate/deactivate by public id within one brand. Returns the rows
+-- that changed so the caller can reindex them.
+UPDATE products
+SET active = sqlc.arg(active)
+WHERE brand_id = sqlc.arg(brand_id)
+  AND uuid = ANY(sqlc.arg(uuids)::uuid[])
+  AND active IS DISTINCT FROM sqlc.arg(active)
+RETURNING uuid;
+
+-- name: GetProductByUUIDForIndex :one
+-- Search indexer only. Every document carries its brand_id and the search
+-- query filters on it (K1/K20).
+SELECT * FROM products WHERE uuid = sqlc.arg(uuid);
+
+-- name: ListProductsForIndex :many
+-- Search indexer only (full reindex across brands).
+SELECT * FROM products ORDER BY id;

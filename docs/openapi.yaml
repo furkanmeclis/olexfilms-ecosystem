@@ -74,6 +74,8 @@ tags:
     description: Countries, provinces, districts, distributor territories and plate formats
   - name: Rates
     description: Currencies and daily exchange rates (TCMB, ECB, manual override)
+  - name: Catalog
+    description: Product categories and products of the active brand (center writes, K4)
   - name: Pricing
     description: >-
       Price list and effective price views (TEC-146, K8). The center writes the
@@ -4287,6 +4289,431 @@ paths:
                 $ref: "#/components/schemas/Error"
         "500":
           $ref: "#/components/responses/InternalError"
+
+  /v1/catalog/categories:
+    get:
+      tags: [Catalog]
+      operationId: listCatalogCategories
+      summary: Product categories of the active brand
+      description: >-
+        Needs `catalog.read`. Filtered by the brand of the active organization
+        (K1/K20); a category of another brand is never listed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - name: active
+          in: query
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Categories
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCatalogCategoryPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Catalog]
+      operationId: createCatalogCategory
+      summary: Create a product category (center only)
+      description: >-
+        Needs `catalog.write` and the brand center as active organization
+        (K4); distributors and dealers get 403.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogCategoryInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCatalogCategory"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/catalog/categories/{uuid}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    get:
+      tags: [Catalog]
+      operationId: getCatalogCategory
+      summary: One product category of the active brand
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Category
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCatalogCategory"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Catalog]
+      operationId: updateCatalogCategory
+      summary: Update a product category (center only)
+      description: Omitted fields keep their value.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogCategoryInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCatalogCategory"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+    delete:
+      tags: [Catalog]
+      operationId: deleteCatalogCategory
+      summary: Delete a product category without products (center only)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/Deleted"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: 409 CONFLICT (the category still has products)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/catalog/products:
+    get:
+      tags: [Catalog]
+      operationId: listCatalogProducts
+      summary: Products of the active brand
+      description: >-
+        Needs `catalog.read`. Filtered by the brand of the active organization
+        (K1/K20): an Olex organization never lists a Glorian product. `q`
+        matches name or SKU.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - name: active
+          in: query
+          schema: { type: boolean }
+        - name: category_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - name: unit_type
+          in: query
+          schema: { $ref: "#/components/schemas/CatalogUnitType" }
+      responses:
+        "200":
+          description: Products
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCatalogProductPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Catalog]
+      operationId: createCatalogProduct
+      summary: Create a product (center only)
+      description: >-
+        Needs `catalog.write` and the brand center as active organization
+        (K4). SKU is unique inside the brand (409 on duplicates).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogProductInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCatalogProduct"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/catalog/products/bulk-active:
+    post:
+      tags: [Catalog]
+      operationId: bulkSetCatalogProductsActive
+      summary: Activate or deactivate products in bulk (center only)
+      description: >-
+        At most 500 uuids per request. Uuids outside the active brand are
+        ignored; `updated` counts the products whose state changed.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [uuids, active]
+              properties:
+                uuids:
+                  type: array
+                  maxItems: 500
+                  items: { type: string, format: uuid }
+                active: { type: boolean }
+      responses:
+        "200":
+          description: Result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCatalogBulkActive"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/catalog/products/export:
+    post:
+      tags: [Catalog]
+      operationId: exportCatalogProducts
+      summary: Queue a product export of the active brand (I/O engine)
+      description: >-
+        Needs `catalog.read`. Creates an export job of the active
+        organization (resource `tenant.catalog.products`); poll and download
+        it through `/v1/tenant/exports/{uuid}`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [format]
+              properties:
+                format: { type: string, enum: [pdf, xlsx, csv, json] }
+                locale: { type: string, example: tr }
+                query:
+                  type: object
+                  description: Optional filters
+                  properties:
+                    q: { type: string }
+                    active: { type: string, enum: ["true", "false"] }
+                    category_uuid: { type: string, format: uuid }
+                    unit_type: { $ref: "#/components/schemas/CatalogUnitType" }
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/catalog/products/import:
+    post:
+      tags: [Catalog]
+      operationId: importCatalogProducts
+      summary: Upload a product import file (center only, I/O engine)
+      description: >-
+        Needs `catalog.write` and the brand center (K4). Rows are matched by
+        SKU inside the brand (update) or created; the category is matched by
+        name and must exist. Map, preview, confirm and roll back through
+        `/v1/tenant/imports/{uuid}`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                format: { type: string, enum: [csv, tsv, xlsx, json], default: csv }
+                locale: { type: string, example: tr }
+      responses:
+        "201":
+          description: Import job created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeImportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/catalog/products/import/sample:
+    get:
+      tags: [Catalog]
+      operationId: catalogProductsImportSample
+      summary: Sample product import file
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: format
+          in: query
+          schema: { type: string, enum: [csv, tsv, xlsx, json], default: xlsx }
+        - name: locale
+          in: query
+          schema: { type: string, example: tr }
+      responses:
+        "200":
+          description: Sample file
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/catalog/products/{uuid}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    get:
+      tags: [Catalog]
+      operationId: getCatalogProduct
+      summary: One product of the active brand
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCatalogProduct"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Catalog]
+      operationId: updateCatalogProduct
+      summary: Update a product (center only)
+      description: >-
+        Omitted fields keep their value; `warranty_duration_months` and
+        `micron_thickness` sent as null are cleared.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogProductInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCatalogProduct"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+    delete:
+      tags: [Catalog]
+      operationId: deleteCatalogProduct
+      summary: Delete a product (center only; its prices are deleted too)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/Deleted"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /v1/geo/countries:
     get:
@@ -8725,6 +9152,181 @@ components:
         date: { type: string, format: date }
         count: { type: integer }
         error: { type: string }
+
+    CatalogUnitType:
+      type: string
+      enum: [piece, roll_meter]
+      description: piece (adet) or roll_meter (metraj/rulo)
+
+    CatalogCategory:
+      type: object
+      required: [uuid, name, available_parts, sort, active, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string, maxLength: 200 }
+        available_parts:
+          type: array
+          description: Vehicle parts a service may pick for products of the category
+          items: { type: string, maxLength: 100 }
+        sort: { type: integer, format: int32 }
+        active: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    CatalogCategoryInput:
+      type: object
+      additionalProperties: false
+      description: POST needs name; PATCH changes only the fields it names.
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        available_parts:
+          type: array
+          maxItems: 100
+          items: { type: string, maxLength: 100 }
+        sort: { type: integer, format: int32 }
+        active: { type: boolean }
+
+    CatalogProductImage:
+      type: object
+      required: [key, sort]
+      properties:
+        key: { type: string, maxLength: 512, description: Storage object key }
+        sort: { type: integer }
+
+    CatalogProduct:
+      type: object
+      required:
+        - uuid
+        - category
+        - sku
+        - name
+        - description_md
+        - warranty_duration_months
+        - micron_thickness
+        - images
+        - unit_type
+        - uses_fixed_barcode
+        - active
+        - external_id
+        - locked_fields
+        - created_at
+        - updated_at
+      properties:
+        uuid: { type: string, format: uuid }
+        category:
+          type: object
+          required: [uuid, name]
+          properties:
+            uuid: { type: string, format: uuid }
+            name: { type: string }
+        sku: { type: string, maxLength: 64 }
+        name: { type: string, maxLength: 200 }
+        description_md: { type: string, description: Markdown }
+        warranty_duration_months: { type: [integer, "null"], format: int32 }
+        micron_thickness: { type: [number, "null"] }
+        images:
+          type: array
+          items: { $ref: "#/components/schemas/CatalogProductImage" }
+        unit_type: { $ref: "#/components/schemas/CatalogUnitType" }
+        uses_fixed_barcode: { type: boolean }
+        active: { type: boolean }
+        external_id:
+          type: [string, "null"]
+          description: Reserved for the F2 Glorian catalog sync (read-only)
+        locked_fields:
+          type: array
+          description: Fields locked by the F2 Glorian sync (read-only)
+          items: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    CatalogProductInput:
+      type: object
+      additionalProperties: false
+      description: >-
+        POST needs category_uuid, sku and name (unit_type defaults to piece,
+        active to true). PATCH changes only the fields it names.
+      properties:
+        category_uuid: { type: string, format: uuid }
+        sku: { type: string, minLength: 1, maxLength: 64 }
+        name: { type: string, minLength: 1, maxLength: 200 }
+        description_md: { type: string, maxLength: 20000 }
+        warranty_duration_months: { type: [integer, "null"], minimum: 0, maximum: 600 }
+        micron_thickness: { type: [number, "null"], exclusiveMinimum: 0, maximum: 999999.99 }
+        images:
+          type: array
+          maxItems: 20
+          items: { $ref: "#/components/schemas/CatalogProductImage" }
+        unit_type: { $ref: "#/components/schemas/CatalogUnitType" }
+        uses_fixed_barcode: { type: boolean }
+        active: { type: boolean }
+
+    EnvelopeCatalogCategory:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/CatalogCategory" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeCatalogCategoryPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/CatalogCategory" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeCatalogProduct:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/CatalogProduct" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeCatalogProductPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/CatalogProduct" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeCatalogBulkActive:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [requested, updated, uuids]
+          properties:
+            requested: { type: integer }
+            updated: { type: integer }
+            uuids:
+              type: array
+              description: Products whose state changed
+              items: { type: string, format: uuid }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeCountryList:
       type: object

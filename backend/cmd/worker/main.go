@@ -13,6 +13,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/errtrack"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/logging"
 	bulkusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/bulk/usecase"
+	catalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/catalog/usecase"
 	docusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/usecase"
 	exportusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/usecase"
 	importusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/imports/usecase"
@@ -100,7 +101,17 @@ func main() {
 	defer outboxStop()
 
 	activityRec := activity.NewRecorder(queries, log)
+	searchReg := searchengine.NewRegistry(
+		searchadapters.NewUsers(queries),
+		searchadapters.NewRoles(queries),
+		catalogusecase.NewSearchAdapter(queries),
+	)
+	searchClient := searchengine.NewClient(cfg.Search, log)
+	searchIndexer := searchengine.NewIndexer(searchClient, searchReg, nil, log)
+	// TEC-145: product import/export runs here; the import reindexes products.
+	catalogSvc := catalogusecase.New(queries, searchIndexer)
 	ioReg := ioengine.NewRegistry(
+		catalogusecase.NewIOAdapter(catalogSvc, queries),
 		ioadapters.NewUsers(queries),
 		ioadapters.NewRoles(queries),
 		ioadapters.NewNotifications(queries),
@@ -119,12 +130,6 @@ func main() {
 	bulkSvc := bulkusecase.New(queries, bulkReg, nil, notifSvc, activityRec, cfg.Bulk, log)
 	logsSvc := logsusecase.New(queries)
 	ratesSvc := fxrates.New(queries, fxrates.NewFetcher(cfg.Rates.TCMBURL, cfg.Rates.ECBURL), log)
-	searchReg := searchengine.NewRegistry(
-		searchadapters.NewUsers(queries),
-		searchadapters.NewRoles(queries),
-	)
-	searchClient := searchengine.NewClient(cfg.Search, log)
-	searchIndexer := searchengine.NewIndexer(searchClient, searchReg, nil, log)
 
 	persist := logging.Attach(log, logsSvc)
 	log = persist.Logger()

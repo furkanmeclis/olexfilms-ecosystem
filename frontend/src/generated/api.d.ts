@@ -2416,6 +2416,181 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/catalog/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Product categories of the active brand
+         * @description Needs `catalog.read`. Filtered by the brand of the active organization (K1/K20); a category of another brand is never listed.
+         */
+        get: operations["listCatalogCategories"];
+        put?: never;
+        /**
+         * Create a product category (center only)
+         * @description Needs `catalog.write` and the brand center as active organization (K4); distributors and dealers get 403.
+         */
+        post: operations["createCatalogCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/catalog/categories/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /** One product category of the active brand */
+        get: operations["getCatalogCategory"];
+        put?: never;
+        post?: never;
+        /** Delete a product category without products (center only) */
+        delete: operations["deleteCatalogCategory"];
+        options?: never;
+        head?: never;
+        /**
+         * Update a product category (center only)
+         * @description Omitted fields keep their value.
+         */
+        patch: operations["updateCatalogCategory"];
+        trace?: never;
+    };
+    "/v1/catalog/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Products of the active brand
+         * @description Needs `catalog.read`. Filtered by the brand of the active organization (K1/K20): an Olex organization never lists a Glorian product. `q` matches name or SKU.
+         */
+        get: operations["listCatalogProducts"];
+        put?: never;
+        /**
+         * Create a product (center only)
+         * @description Needs `catalog.write` and the brand center as active organization (K4). SKU is unique inside the brand (409 on duplicates).
+         */
+        post: operations["createCatalogProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/catalog/products/bulk-active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Activate or deactivate products in bulk (center only)
+         * @description At most 500 uuids per request. Uuids outside the active brand are ignored; `updated` counts the products whose state changed.
+         */
+        post: operations["bulkSetCatalogProductsActive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/catalog/products/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a product export of the active brand (I/O engine)
+         * @description Needs `catalog.read`. Creates an export job of the active organization (resource `tenant.catalog.products`); poll and download it through `/v1/tenant/exports/{uuid}`.
+         */
+        post: operations["exportCatalogProducts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/catalog/products/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload a product import file (center only, I/O engine)
+         * @description Needs `catalog.write` and the brand center (K4). Rows are matched by SKU inside the brand (update) or created; the category is matched by name and must exist. Map, preview, confirm and roll back through `/v1/tenant/imports/{uuid}`.
+         */
+        post: operations["importCatalogProducts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/catalog/products/import/sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sample product import file */
+        get: operations["catalogProductsImportSample"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/catalog/products/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /** One product of the active brand */
+        get: operations["getCatalogProduct"];
+        put?: never;
+        post?: never;
+        /** Delete a product (center only; its prices are deleted too) */
+        delete: operations["deleteCatalogProduct"];
+        options?: never;
+        head?: never;
+        /**
+         * Update a product (center only)
+         * @description Omitted fields keep their value; `warranty_duration_months` and `micron_thickness` sent as null are cleared.
+         */
+        patch: operations["updateCatalogProduct"];
+        trace?: never;
+    };
     "/v1/geo/countries": {
         parameters: {
             query?: never;
@@ -5288,6 +5463,127 @@ export interface components {
             date?: string;
             count: number;
             error?: string;
+        };
+        /**
+         * @description piece (adet) or roll_meter (metraj/rulo)
+         * @enum {string}
+         */
+        CatalogUnitType: "piece" | "roll_meter";
+        CatalogCategory: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            /** @description Vehicle parts a service may pick for products of the category */
+            available_parts: string[];
+            /** Format: int32 */
+            sort: number;
+            active: boolean;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /** @description POST needs name; PATCH changes only the fields it names. */
+        CatalogCategoryInput: {
+            name?: string;
+            available_parts?: string[];
+            /** Format: int32 */
+            sort?: number;
+            active?: boolean;
+        };
+        CatalogProductImage: {
+            /** @description Storage object key */
+            key: string;
+            sort: number;
+        };
+        CatalogProduct: {
+            /** Format: uuid */
+            uuid: string;
+            category: {
+                /** Format: uuid */
+                uuid: string;
+                name: string;
+            };
+            sku: string;
+            name: string;
+            /** @description Markdown */
+            description_md: string;
+            /** Format: int32 */
+            warranty_duration_months: number | null;
+            micron_thickness: number | null;
+            images: components["schemas"]["CatalogProductImage"][];
+            unit_type: components["schemas"]["CatalogUnitType"];
+            uses_fixed_barcode: boolean;
+            active: boolean;
+            /** @description Reserved for the F2 Glorian catalog sync (read-only) */
+            external_id: string | null;
+            /** @description Fields locked by the F2 Glorian sync (read-only) */
+            locked_fields: string[];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /** @description POST needs category_uuid, sku and name (unit_type defaults to piece, active to true). PATCH changes only the fields it names. */
+        CatalogProductInput: {
+            /** Format: uuid */
+            category_uuid?: string;
+            sku?: string;
+            name?: string;
+            description_md?: string;
+            warranty_duration_months?: number | null;
+            micron_thickness?: number | null;
+            images?: components["schemas"]["CatalogProductImage"][];
+            unit_type?: components["schemas"]["CatalogUnitType"];
+            uses_fixed_barcode?: boolean;
+            active?: boolean;
+        };
+        EnvelopeCatalogCategory: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["CatalogCategory"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeCatalogCategoryPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["CatalogCategory"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeCatalogProduct: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["CatalogProduct"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeCatalogProductPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["CatalogProduct"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeCatalogBulkActive: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                requested: number;
+                updated: number;
+                /** @description Products whose state changed */
+                uuids: string[];
+            };
+            meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeCountryList: {
             /** @enum {boolean} */
@@ -10147,6 +10443,419 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+        };
+    };
+    listCatalogCategories: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                active?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Categories */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCatalogCategoryPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createCatalogCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CatalogCategoryInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCatalogCategory"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getCatalogCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Category */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCatalogCategory"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteCatalogCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["Deleted"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description 409 CONFLICT (the category still has products) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    updateCatalogCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CatalogCategoryInput"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCatalogCategory"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    listCatalogProducts: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                active?: boolean;
+                category_uuid?: string;
+                unit_type?: components["schemas"]["CatalogUnitType"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Products */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCatalogProductPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createCatalogProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CatalogProductInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCatalogProduct"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    bulkSetCatalogProductsActive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    uuids: string[];
+                    active: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCatalogBulkActive"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    exportCatalogProducts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    format: "pdf" | "xlsx" | "csv" | "json";
+                    /** @example tr */
+                    locale?: string;
+                    /** @description Optional filters */
+                    query?: {
+                        q?: string;
+                        /** @enum {string} */
+                        active?: "true" | "false";
+                        /** Format: uuid */
+                        category_uuid?: string;
+                        unit_type?: components["schemas"]["CatalogUnitType"];
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    importCatalogProducts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    /**
+                     * @default csv
+                     * @enum {string}
+                     */
+                    format?: "csv" | "tsv" | "xlsx" | "json";
+                    /** @example tr */
+                    locale?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Import job created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeImportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    catalogProductsImportSample: {
+        parameters: {
+            query?: {
+                format?: "csv" | "tsv" | "xlsx" | "json";
+                locale?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sample file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getCatalogProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Product */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCatalogProduct"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteCatalogProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["Deleted"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateCatalogProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CatalogProductInput"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCatalogProduct"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     listCountries: {
