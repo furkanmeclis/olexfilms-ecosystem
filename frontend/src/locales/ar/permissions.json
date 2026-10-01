@@ -133,5 +133,8 @@
   "labels.platform.territories.write": "إدارة المناطق",
   "labels.platform.rates.read": "عرض أسعار الصرف",
   "labels.platform.rates.write": "إدارة أسعار الصرف",
-  "labels.platform.legal_texts.write": "تعديل النصوص القانونية"
+  "labels.platform.legal_texts.write": "تعديل النصوص القانونية",
+  "labels.catalog.read": "عرض الكتالوج",
+  "labels.catalog.write": "إدارة الكتالوج",
+  "groups.catalog": "الكتالوج"
 }

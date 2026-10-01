@@ -133,5 +133,8 @@
   "labels.platform.territories.write": "Управление территориями",
   "labels.platform.rates.read": "Просмотр курсов валют",
   "labels.platform.rates.write": "Управление курсами валют",
-  "labels.platform.legal_texts.write": "Изменение юридических текстов"
+  "labels.platform.legal_texts.write": "Изменение юридических текстов",
+  "labels.catalog.read": "Просмотр каталога",
+  "labels.catalog.write": "Управление каталогом",
+  "groups.catalog": "Каталог"
 }

@@ -133,5 +133,8 @@
   "labels.platform.territories.write": "管理区域",
   "labels.platform.rates.read": "查看汇率",
   "labels.platform.rates.write": "管理汇率",
-  "labels.platform.legal_texts.write": "写入法律文本"
+  "labels.platform.legal_texts.write": "写入法律文本",
+  "labels.catalog.read": "查看目录",
+  "labels.catalog.write": "管理目录",
+  "groups.catalog": "目录"
 }

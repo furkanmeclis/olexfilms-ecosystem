@@ -133,5 +133,8 @@
   "labels.platform.territories.write": "Управление на територии",
   "labels.platform.rates.read": "Преглед на валутните курсове",
   "labels.platform.rates.write": "Управление на валутните курсове",
-  "labels.platform.legal_texts.write": "Запис на правни текстове"
+  "labels.platform.legal_texts.write": "Запис на правни текстове",
+  "labels.catalog.read": "Преглед на каталога",
+  "labels.catalog.write": "Управление на каталога",
+  "groups.catalog": "Каталог"
 }

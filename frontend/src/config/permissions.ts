@@ -99,6 +99,9 @@ export const Permission = {
   NotificationDeliveriesRead: "notification_deliveries.read",
 
   PlatformLegalTextsWrite: "platform.legal_texts.write",
+
+  CatalogRead: "catalog.read",
+  CatalogWrite: "catalog.write",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];

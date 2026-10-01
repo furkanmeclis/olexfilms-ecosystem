@@ -133,5 +133,8 @@
   "labels.platform.territories.write": "Διαχείριση περιοχών ευθύνης",
   "labels.platform.rates.read": "Προβολή συναλλαγματικών ισοτιμιών",
   "labels.platform.rates.write": "Διαχείριση συναλλαγματικών ισοτιμιών",
-  "labels.platform.legal_texts.write": "Εγγραφή νομικών κειμένων"
+  "labels.platform.legal_texts.write": "Εγγραφή νομικών κειμένων",
+  "labels.catalog.read": "Προβολή καταλόγου",
+  "labels.catalog.write": "Διαχείριση καταλόγου",
+  "groups.catalog": "Κατάλογος"
 }

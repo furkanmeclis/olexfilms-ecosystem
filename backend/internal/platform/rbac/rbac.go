@@ -135,6 +135,10 @@ const (
 
 	// Portal legal texts (TEC-90): AI guidelines Markdown, per language.
 	PermPlatformLegalTextsWrite = "platform.legal_texts.write"
+
+	// Product catalog (TEC-144): written by the center only (K4).
+	PermCatalogRead  = "catalog.read"
+	PermCatalogWrite = "catalog.write"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

@@ -133,5 +133,8 @@
   "labels.platform.territories.write": "Керування територіями",
   "labels.platform.rates.read": "Перегляд курсів валют",
   "labels.platform.rates.write": "Керування курсами валют",
-  "labels.platform.legal_texts.write": "Зміна юридичних текстів"
+  "labels.platform.legal_texts.write": "Зміна юридичних текстів",
+  "labels.catalog.read": "Перегляд каталогу",
+  "labels.catalog.write": "Керування каталогом",
+  "groups.catalog": "Каталог"
 }

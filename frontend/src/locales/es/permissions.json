@@ -133,5 +133,8 @@
   "labels.platform.territories.write": "Gestionar territorios",
   "labels.platform.rates.read": "Ver tipos de cambio",
   "labels.platform.rates.write": "Gestionar tipos de cambio",
-  "labels.platform.legal_texts.write": "Editar textos legales"
+  "labels.platform.legal_texts.write": "Editar textos legales",
+  "labels.catalog.read": "Ver catálogo",
+  "labels.catalog.write": "Gestionar catálogo",
+  "groups.catalog": "Catálogo"
 }
