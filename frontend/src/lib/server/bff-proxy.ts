@@ -518,11 +518,17 @@ const PORTAL_PATHS: readonly RegExp[] = [
 /** Whether a realm's BFF may forward path (segments already validated). */
 export function isRealmPathAllowed(realm: AuthRealm, path: string): boolean {
   if (realm === "portal") return PORTAL_PATHS.some((re) => re.test(path));
-  // The panel BFF never forwards portal routes or the phone OTP flow.
+  // The panel BFF never forwards portal routes, the phone OTP flow, the
+  // mobile API (Bearer passthrough `/api/v1/mobile/*`, TEC-91) or the QR
+  // sign-in exchange (Auth.js calls it server side, so the panel token pair
+  // never reaches the browser).
   return !(
     path === "portal" ||
     path.startsWith("portal/") ||
-    path.startsWith("auth/otp/")
+    path.startsWith("auth/otp/") ||
+    path === "mobile" ||
+    path.startsWith("mobile/") ||
+    path === "auth/qr/complete"
   );
 }
 

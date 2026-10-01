@@ -28,6 +28,7 @@ import {
   adapterGetOAuthAccountUser,
   adapterGetUserByEmail,
   adapterIssueSession,
+  completeQRLogin,
   loginWithPassword,
   type OAuthConfigPayload,
 } from "@/lib/auth/go-adapter-client";
@@ -212,6 +213,52 @@ async function _doBuildProviders(): Promise<Provider[]> {
   if (passkeyLogin) {
     providers.push(Passkey({}));
   }
+
+  // QR sign-in approved on the mobile app (TEC-91): code + this browser's
+  // secret are exchanged server side for the panel token pair.
+  providers.push(
+    Credentials({
+      id: "qr-login",
+      name: "QR",
+      credentials: {
+        code: { label: "Code", type: "text" },
+        secret: { label: "Secret", type: "text" },
+      },
+      async authorize(credentials, request) {
+        const code = String(credentials?.code ?? "").trim();
+        const secret = String(credentials?.secret ?? "").trim();
+        if (!code || !secret) return null;
+        try {
+          const result = await completeQRLogin({
+            code,
+            secret,
+            clientIp:
+              request instanceof Request
+                ? clientIpFromHeaders(request.headers)
+                : null,
+            forwardedHost:
+              request instanceof Request
+                ? forwardedHostFromHeaders(request.headers)
+                : null,
+          });
+          return {
+            id: result.user.uuid,
+            email: result.user.email ?? undefined,
+            name: result.user.name,
+            accessToken: result.access_token,
+            refreshToken: result.refresh_token,
+            expiresIn: result.expires_in,
+          };
+        } catch (error) {
+          console.error("[auth][qr-login] authorize failed", {
+            code: (error as Error & { code?: string }).code,
+            status: (error as Error & { status?: number }).status,
+          });
+          return null;
+        }
+      },
+    }),
+  );
 
   if (github) {
     providers.push(

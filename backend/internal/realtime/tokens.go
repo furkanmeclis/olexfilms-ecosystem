@@ -74,6 +74,45 @@ func (i *TokenIssuer) ConnectionToken(userUUID string) (string, time.Time, error
 	return signed, exp, nil
 }
 
+// GuestChannelTokens issues anonymous tokens for a browser that is not signed
+// in (QR web sign-in, TEC-91): the connection token has an empty sub and a
+// server-side subscription to channel only (Centrifugo "channels" claim), the
+// subscription token covers the same single channel for clients that
+// subscribe themselves. Both expire after ttl (capped by the issuer TTL).
+// Publishing stays closed in the namespace config.
+func (i *TokenIssuer) GuestChannelTokens(channel string, ttl time.Duration) (string, string, time.Time, error) {
+	if i == nil {
+		return "", "", time.Time{}, fmt.Errorf("realtime: token issuer disabled")
+	}
+	if channel == "" {
+		return "", "", time.Time{}, fmt.Errorf("realtime: channel is required")
+	}
+	if ttl <= 0 || ttl > i.ttl {
+		ttl = i.ttl
+	}
+	now := time.Now().UTC()
+	exp := now.Add(ttl)
+	conn, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub":      "",
+		"channels": []string{channel},
+		"exp":      exp.Unix(),
+		"iat":      now.Unix(),
+	}).SignedString(i.secret)
+	if err != nil {
+		return "", "", time.Time{}, fmt.Errorf("realtime: sign guest connection token: %w", err)
+	}
+	sub, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub":     "",
+		"channel": channel,
+		"exp":     exp.Unix(),
+		"iat":     now.Unix(),
+	}).SignedString(i.secret)
+	if err != nil {
+		return "", "", time.Time{}, fmt.Errorf("realtime: sign guest subscription token: %w", err)
+	}
+	return conn, sub, exp, nil
+}
+
 // SubscriptionToken issues a channel subscription JWT.
 func (i *TokenIssuer) SubscriptionToken(userUUID, channel string) (string, time.Time, error) {
 	if i == nil {

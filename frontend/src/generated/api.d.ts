@@ -2848,6 +2848,311 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/mobile/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mobile sign-in (device)
+         * @description E-mail + password sign-in of the mobile app with the device
+         *     description. Returns a mobile token pair (JWT `aud=mobile`, refresh
+         *     30 days, `JWT_MOBILE_REFRESH_TTL`) and the session hydration. Same
+         *     account rules as the panel (customer / fleet only accounts use the
+         *     portal: 403 `NO_PANEL_ACCESS`). An older session of the same device
+         *     ends. The app keeps the tokens itself and calls
+         *     `/api/v1/mobile/*` with `Authorization: Bearer` (no cookies).
+         */
+        post: operations["postMobileAuthLogin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rotate the mobile refresh token
+         * @description Single-use rotation; the new pair continues the device chain. A
+         *     rotated token presented again revokes the whole chain of that device
+         *     (401 `REFRESH_TOKEN_REUSED`): the app signs in again. Web refresh
+         *     tokens are refused here and mobile ones on `/v1/auth/refresh`.
+         */
+        post: operations["postMobileAuthRefresh"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mobile session
+         * @description `/v1/auth/me` plus the device session and `current_warehouse`
+         *     (reserved for F1, always null now).
+         */
+        get: operations["getMobileAuthMe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign this device out
+         * @description Ends every session of the caller's device and drops its Expo push tokens.
+         */
+        post: operations["postMobileAuthLogout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/auth/logout-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign out everywhere
+         * @description Ends every session of the user (all devices and browsers, this one included) and drops every push token.
+         */
+        post: operations["postMobileAuthLogoutAll"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/auth/organization-context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Switch the active organization
+         * @description Re-issues the device's token pair with another active organization
+         *     (`oid`); the current session ends. A `warehouse_id` context (`whid`)
+         *     is reserved for F1.
+         */
+        post: operations["postMobileAuthOrganizationContext"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/push-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Register the device's Expo push token
+         * @description Idempotent upsert into `device_push_tokens` (same store and use case
+         *     as `POST /v1/notifications/push-devices`). Shape of the previous
+         *     mobile API: `expo_push_token` + `platform`; `device_id`, `platform`
+         *     and `app_version` default to the session's device.
+         */
+        put: operations["putMobilePushToken"];
+        post?: never;
+        /** Delete an Expo push token */
+        delete: operations["deleteMobilePushToken"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/auth/qr/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Scan a QR web sign-in
+         * @description Shows the browser's IP and user agent before the user decides and
+         *     marks the challenge scanned (published as `{status: scanned}`).
+         */
+        get: operations["getMobileAuthQR"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/auth/qr/{code}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a QR web sign-in
+         * @description Signs the waiting browser in as the caller, in the session's active
+         *     organization (panel realm rules apply). Mobile sessions only.
+         */
+        post: operations["postMobileAuthQRApprove"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/auth/qr/{code}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject a QR web sign-in */
+        post: operations["postMobileAuthQRReject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/measurements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload a paint thickness measurement (contract draft, K28)
+         * @description **Draft contract — answers 501 until F3.** The schema is finalized in
+         *     F3 (measurement module); fields may still change there, while `vin`,
+         *     `raw` and the version header stay mandatory. Idempotent by the
+         *     `Idempotency-Key` header or `client_measurement_id`. Accepted uploads
+         *     will answer `202 {uuid, status: accepted}`. Permission:
+         *     `measurements.write` (managed scope) once the module exists.
+         */
+        post: operations["postMobileMeasurement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/qr/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a QR web sign-in
+         * @description For a browser that is not signed in. Returns the code (shown as the
+         *     QR `payload`), a secret only this browser knows, and a short-lived
+         *     anonymous Centrifugo connection token subscribed to `qr:{code}`
+         *     only (subscribe-only namespace). The channel carries `{status}`
+         *     only: `scanned`, `approved`, `rejected`, `consumed`. Lifetime
+         *     `QR_LOGIN_TTL` (120 s). Fallback: poll `GET /v1/auth/qr/{code}/status`.
+         */
+        post: operations["postAuthQRStart"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/qr/{code}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** QR web sign-in status (polling) */
+        get: operations["getAuthQRStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/qr/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exchange an approved QR sign-in for a panel session
+         * @description Single use. Called server side by the BFF (Auth.js `qr-login`
+         *     provider); the panel BFF never forwards it from the browser. 403
+         *     `QR_LOGIN_REJECTED`, 409 `QR_LOGIN_PENDING` / `QR_LOGIN_CLOSED`, 410
+         *     `QR_LOGIN_EXPIRED`, 422 `QR_LOGIN_INVALID_SECRET`.
+         */
+        post: operations["postAuthQRComplete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3938,6 +4243,15 @@ export interface components {
             /** Format: date-time */
             expires_at: string;
             impersonated?: boolean;
+            /**
+             * @description Mobile sessions describe the device (TEC-91)
+             * @enum {string}
+             */
+            client?: "web" | "mobile";
+            device_name?: string | null;
+            /** @enum {string|null} */
+            platform?: "ios" | "android" | null;
+            app_version?: string | null;
         };
         SessionList: {
             items: components["schemas"]["AuthSession"][];
@@ -5050,8 +5364,203 @@ export interface components {
             data: components["schemas"]["Consent"];
             meta: components["schemas"]["ResponseMeta"];
         };
+        MobileDevice: {
+            /** @description Stable installation id of the app (one refresh chain per device) */
+            id: string;
+            /** @example Pixel 9 */
+            name?: string;
+            /** @enum {string} */
+            platform: "ios" | "android";
+            /** @example 2.0.0 */
+            app_version?: string;
+        };
+        MobileLoginRequest: {
+            /** Format: email */
+            email: string;
+            password: string;
+            totp_code?: string;
+            organization_slug?: string;
+            device: components["schemas"]["MobileDevice"];
+        };
+        MobileRefreshRequest: {
+            refresh_token: string;
+            /** @description Current app version (updates the stored device) */
+            app_version?: string;
+        };
+        MobileSession: {
+            /** Format: uuid */
+            uuid: string;
+            device: components["schemas"]["MobileDevice"];
+            /** Format: date-time */
+            expires_at: string;
+        };
+        MobileMe: components["schemas"]["Me"] & {
+            session: components["schemas"]["MobileSession"] | null;
+            /** @description Warehouse context, reserved for F1 (always null) */
+            current_warehouse: null;
+        };
+        MobileLoginResult: components["schemas"]["Tokens"] & {
+            me: components["schemas"]["MobileMe"];
+        };
+        MobilePushTokenRequest: {
+            /** @example ExponentPushToken[xxxxxxxx] */
+            expo_push_token: string;
+            /** @enum {string} */
+            platform?: "ios" | "android";
+            device_id?: string;
+            /** @description Accepted for compatibility with the previous mobile API (not stored) */
+            device_name?: string;
+            app_version?: string;
+        };
+        MobileMeasurementRequest: {
+            /** @description Idempotency key in the body (alternative to the Idempotency-Key header) */
+            client_measurement_id?: string;
+            vin: string;
+            plate?: string;
+            /** Format: uuid */
+            service_uuid?: string;
+            /** Format: date-time */
+            measured_at: string;
+            /** @description NexPTG body type */
+            body_type?: string;
+            /**
+             * @default um
+             * @enum {string}
+             */
+            unit: "um";
+            device: {
+                serial: string;
+                model?: string;
+                firmware?: string;
+            };
+            parts: {
+                /** @description Body part key, e.g. hood, roof, front_left_door */
+                part: string;
+                /** @description Measuring spot on the part */
+                place?: string;
+                values: number[];
+            }[];
+            /** @description Device report as received (NexPTG JSON), stored unchanged */
+            raw: {
+                [key: string]: unknown;
+            };
+        };
+        MobileMeasurementAccepted: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            status: "accepted";
+        };
+        QRRealtime: {
+            enabled: boolean;
+            ws_url?: string;
+            /** @example qr:3q2-7w1abc */
+            channel: string;
+            /** @description Anonymous connection JWT, server-side subscribed to channel only */
+            token?: string;
+            /** @description Subscription JWT for channel (clients that subscribe themselves) */
+            subscription_token?: string;
+            /** Format: date-time */
+            expires_at: string;
+        };
+        QRStart: {
+            code: string;
+            /** @description Shown once; proves this browser on complete */
+            secret: string;
+            /** @example olexfilms://qr-login/abc */
+            payload: string;
+            /** @enum {string} */
+            status: "pending";
+            /** Format: date-time */
+            expires_at: string;
+            realtime: components["schemas"]["QRRealtime"];
+        };
+        QRStatus: {
+            /** @enum {string} */
+            status: "pending" | "scanned" | "approved" | "rejected" | "consumed";
+            /** Format: date-time */
+            expires_at: string;
+        };
+        QRScan: {
+            code: string;
+            /** @enum {string} */
+            status: "pending" | "scanned";
+            web_ip?: string;
+            web_user_agent?: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            expires_at: string;
+        };
+        QRCompleteRequest: {
+            code: string;
+            secret: string;
+        };
+        QRComplete: components["schemas"]["Tokens"] & {
+            user: components["schemas"]["PublicUser"];
+        };
+        EnvelopeMobileLogin: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["MobileLoginResult"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeMobileMe: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["MobileMe"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeMobileMeasurementAccepted: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["MobileMeasurementAccepted"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeQRStart: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["QRStart"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeQRStatus: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["QRStatus"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeQRScan: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["QRScan"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeQRComplete: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["QRComplete"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
     };
     responses: {
+        /** @description 426 MOBILE_API_VERSION_UNSUPPORTED (missing or unsupported X-Mobile-Api-Version; update the app) */
+        MobileApiVersionUnsupported: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description 410 QR_LOGIN_EXPIRED */
+        QRLoginExpired: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description Deleted */
         Deleted: {
             headers: {
@@ -5162,6 +5671,10 @@ export interface components {
         };
     };
     parameters: {
+        /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+        MobileApiVersion: string;
+        /** @description QR sign-in challenge code */
+        QRCode: string;
         /** @description ISO 3166-1 alpha-2 country code (case-insensitive) */
         CountryISO2: string;
         /** @description Province or district id */
@@ -10157,6 +10670,447 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             500: components["responses"]["InternalError"];
+        };
+    };
+    postMobileAuthLogin: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MobileLoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Signed in */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeMobileLogin"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    postMobileAuthRefresh: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MobileRefreshRequest"];
+            };
+        };
+        responses: {
+            /** @description Rotated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTokens"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    getMobileAuthMe: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Session */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeMobileMe"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    postMobileAuthLogout: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Signed out */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStatus"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    postMobileAuthLogoutAll: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Signed out */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStatus"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    postMobileAuthOrganizationContext: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrganizationContextRequest"];
+            };
+        };
+        responses: {
+            /** @description New token pair */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTokens"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    putMobilePushToken: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MobilePushTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description Registered */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePushDevice"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    deleteMobilePushToken: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expo_push_token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStatus"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    getMobileAuthQR: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description QR sign-in challenge code */
+                code: components["parameters"]["QRCode"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Challenge summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQRScan"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            410: components["responses"]["QRLoginExpired"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    postMobileAuthQRApprove: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description QR sign-in challenge code */
+                code: components["parameters"]["QRCode"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Approved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQRStatus"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            410: components["responses"]["QRLoginExpired"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    postMobileAuthQRReject: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description QR sign-in challenge code */
+                code: components["parameters"]["QRCode"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rejected */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQRStatus"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            410: components["responses"]["QRLoginExpired"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    postMobileMeasurement: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+                /** @description Client generated key; a repeated key returns the first result. */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MobileMeasurementRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted (F3) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeMobileMeasurementAccepted"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+            /** @description 501 NOT_IMPLEMENTED until F3 */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    postAuthQRStart: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Challenge */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQRStart"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    getAuthQRStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description QR sign-in challenge code */
+                code: components["parameters"]["QRCode"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQRStatus"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            410: components["responses"]["QRLoginExpired"];
+        };
+    };
+    postAuthQRComplete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QRCompleteRequest"];
+            };
+        };
+        responses: {
+            /** @description Panel token pair */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQRComplete"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            410: components["responses"]["QRLoginExpired"];
+            422: components["responses"]["UnprocessableEntity"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
 }

@@ -339,7 +339,20 @@ func (r *memRepo) ResolveOrganizationInternalID(context.Context, uuid.UUID) (int
 	return 0, repository.ErrNotFound
 }
 
-func (r *memRepo) RevokeRefresh(context.Context, string) error   { return nil }
+func (r *memRepo) RevokeRefresh(context.Context, string) error { return nil }
+func (r *memRepo) RotateRefresh(context.Context, string) error { return nil }
+func (r *memRepo) FindRefreshAny(context.Context, string) (model.RefreshSession, error) {
+	return model.RefreshSession{}, repository.ErrNotFound
+}
+func (r *memRepo) FindRefreshByUUID(context.Context, uuid.UUID) (model.RefreshSession, error) {
+	return model.RefreshSession{}, repository.ErrNotFound
+}
+func (r *memRepo) RevokeRefreshFamily(context.Context, uuid.UUID) ([]uuid.UUID, error) {
+	return nil, nil
+}
+func (r *memRepo) RevokeMobileDeviceSessions(context.Context, int64, string, uuid.UUID) ([]uuid.UUID, error) {
+	return nil, nil
+}
 func (r *memRepo) RevokeAllRefresh(context.Context, int64) error { return nil }
 
 func (r *memRepo) CreateOTP(context.Context, *int64, string, string, string, time.Time) error {

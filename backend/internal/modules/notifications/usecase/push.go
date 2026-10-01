@@ -131,6 +131,35 @@ func (s *Service) RegisterPushDevice(ctx context.Context, userID int64, in PushD
 	}, nil
 }
 
+type deviceRevoker interface {
+	RevokeDevicePushTokensForDevice(ctx context.Context, arg db.RevokeDevicePushTokensForDeviceParams) (int64, error)
+	RevokeAllDevicePushTokensForUser(ctx context.Context, userID int64) (int64, error)
+}
+
+// RevokePushDevicesForDevice revokes every Expo token of one device of the
+// user (mobile sign-out, TEC-91).
+func (s *Service) RevokePushDevicesForDevice(ctx context.Context, userID int64, deviceID string) error {
+	q, ok := s.q.(deviceRevoker)
+	if !ok || strings.TrimSpace(deviceID) == "" {
+		return nil
+	}
+	_, err := q.RevokeDevicePushTokensForDevice(ctx, db.RevokeDevicePushTokensForDeviceParams{
+		UserID: userID, DeviceID: strings.TrimSpace(deviceID),
+	})
+	return err
+}
+
+// RevokeAllPushDevices revokes every Expo token of the user (sign out
+// everywhere, TEC-91).
+func (s *Service) RevokeAllPushDevices(ctx context.Context, userID int64) error {
+	q, ok := s.q.(deviceRevoker)
+	if !ok {
+		return nil
+	}
+	_, err := q.RevokeAllDevicePushTokensForUser(ctx, userID)
+	return err
+}
+
 // RevokePushDevice revokes the caller's Expo token.
 func (s *Service) RevokePushDevice(ctx context.Context, userID int64, token string) error {
 	q, ok := s.q.(deviceStore)

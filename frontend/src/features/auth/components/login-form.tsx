@@ -16,6 +16,7 @@ import { AppForm, AppInput, AppPassword } from "@/components/forms";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup } from "@/components/ui/field";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { routes } from "@/config/routes";
 import {
   createLoginSchema,
@@ -34,6 +35,7 @@ import { fetchAppPublicConfig } from "@/services/app-config.service";
 import { z } from "zod";
 
 import { AuthCard } from "./auth-card";
+import { QRLoginPanel } from "./qr-login-panel";
 
 function resolveNext(raw: string | null, fallback: string) {
   // Only same-origin paths. Browsers treat a backslash like "/", so a value
@@ -370,112 +372,128 @@ export function LoginForm() {
       title={t("auth.login.title")}
       description={t("auth.login.description")}
     >
-      <div className="space-y-4">
-        {showPasskey ? (
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            disabled={authPending}
-            onClick={onPasskeySignIn}
-          >
-            <Fingerprint aria-hidden />
-            {passkeyPending
-              ? t("auth.passkey.signing_in")
-              : t("auth.passkey.sign_in")}
-          </Button>
-        ) : null}
+      <Tabs defaultValue="password">
+        <TabsList className="mb-4 grid w-full grid-cols-2">
+          <TabsTrigger value="password">
+            {t("auth.login.tab_password")}
+          </TabsTrigger>
+          <TabsTrigger value="qr">{t("auth.qr.tab")}</TabsTrigger>
+        </TabsList>
+        <TabsContent value="qr">
+          <QRLoginPanel onSignedIn={finishLogin} />
+        </TabsContent>
+        <TabsContent value="password">
+          <div className="space-y-4">
+            {showPasskey ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                disabled={authPending}
+                onClick={onPasskeySignIn}
+              >
+                <Fingerprint aria-hidden />
+                {passkeyPending
+                  ? t("auth.passkey.signing_in")
+                  : t("auth.passkey.sign_in")}
+              </Button>
+            ) : null}
 
-        {oauthButtons
-          .filter((button) => button.enabled)
-          .map((button) => (
-            <Button
-              key={button.id}
-              type="button"
-              variant="outline"
-              className="w-full"
-              disabled={authPending}
-              onClick={() => onOAuthSignIn(button.id)}
-            >
-              {button.icon}
-              {oauthPending === button.id ? button.pendingLabel : button.label}
-            </Button>
-          ))}
+            {oauthButtons
+              .filter((button) => button.enabled)
+              .map((button) => (
+                <Button
+                  key={button.id}
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  disabled={authPending}
+                  onClick={() => onOAuthSignIn(button.id)}
+                >
+                  {button.icon}
+                  {oauthPending === button.id
+                    ? button.pendingLabel
+                    : button.label}
+                </Button>
+              ))}
 
-        {showPassword ? (
-          <>
-            {(showPasskey || oauthButtons.some((button) => button.enabled)) && (
-              <div className="flex items-center gap-3">
-                <Separator className="flex-1" />
-                <span className="text-muted-foreground text-xs uppercase">
-                  {t("auth.passkey.or_password")}
-                </span>
-                <Separator className="flex-1" />
-              </div>
-            )}
+            {showPassword ? (
+              <>
+                {(showPasskey ||
+                  oauthButtons.some((button) => button.enabled)) && (
+                  <div className="flex items-center gap-3">
+                    <Separator className="flex-1" />
+                    <span className="text-muted-foreground text-xs uppercase">
+                      {t("auth.passkey.or_password")}
+                    </span>
+                    <Separator className="flex-1" />
+                  </div>
+                )}
 
-            <AppForm
-              schema={schema}
-              defaultValues={{ email: "", password: "" }}
-              onSubmit={onSubmit}
-            >
-              <FieldGroup>
-                {displayError ? (
-                  <Field data-invalid={true}>
-                    <FieldError>{displayError}</FieldError>
-                  </Field>
-                ) : null}
+                <AppForm
+                  schema={schema}
+                  defaultValues={{ email: "", password: "" }}
+                  onSubmit={onSubmit}
+                >
+                  <FieldGroup>
+                    {displayError ? (
+                      <Field data-invalid={true}>
+                        <FieldError>{displayError}</FieldError>
+                      </Field>
+                    ) : null}
 
-                <AppInput
-                  name="email"
-                  label={t("auth.login.email")}
-                  type="email"
-                  autoComplete="email"
-                  placeholder={t("auth.placeholders.email")}
-                />
-                <AppPassword
-                  name="password"
-                  label={t("auth.login.password")}
-                  autoComplete="current-password"
-                  placeholder={t("auth.placeholders.password")}
-                  labelAction={
-                    <Link
-                      href={routes.guest.forgotPassword}
-                      className="ms-auto text-sm underline-offset-4 hover:underline"
-                    >
-                      {t("auth.login.forgot_link")}
-                    </Link>
-                  }
-                />
+                    <AppInput
+                      name="email"
+                      label={t("auth.login.email")}
+                      type="email"
+                      autoComplete="email"
+                      placeholder={t("auth.placeholders.email")}
+                    />
+                    <AppPassword
+                      name="password"
+                      label={t("auth.login.password")}
+                      autoComplete="current-password"
+                      placeholder={t("auth.placeholders.password")}
+                      labelAction={
+                        <Link
+                          href={routes.guest.forgotPassword}
+                          className="ms-auto text-sm underline-offset-4 hover:underline"
+                        >
+                          {t("auth.login.forgot_link")}
+                        </Link>
+                      }
+                    />
 
-                <Field>
-                  <Button type="submit" disabled={authPending}>
-                    {pending
-                      ? t("auth.login.submitting")
-                      : t("auth.login.submit")}
-                  </Button>
-                </Field>
-              </FieldGroup>
-            </AppForm>
-          </>
-        ) : displayError ? (
-          <Field data-invalid={true}>
-            <FieldError>{displayError}</FieldError>
-          </Field>
-        ) : null}
+                    <Field>
+                      <Button type="submit" disabled={authPending}>
+                        {pending
+                          ? t("auth.login.submitting")
+                          : t("auth.login.submit")}
+                      </Button>
+                    </Field>
+                  </FieldGroup>
+                </AppForm>
+              </>
+            ) : displayError ? (
+              <Field data-invalid={true}>
+                <FieldError>{displayError}</FieldError>
+              </Field>
+            ) : null}
 
-        {showRegisterLink ? (
-          <p className="text-muted-foreground text-center text-sm">
-            {t("auth.login.no_account")}{" "}
-            <Link
-              href={routes.guest.register}
-              className="underline-offset-4 hover:underline"
-            >
-              {t("auth.login.register_link")}
-            </Link>
-          </p>
-        ) : null}
-      </div>
+            {showRegisterLink ? (
+              <p className="text-muted-foreground text-center text-sm">
+                {t("auth.login.no_account")}{" "}
+                <Link
+                  href={routes.guest.register}
+                  className="underline-offset-4 hover:underline"
+                >
+                  {t("auth.login.register_link")}
+                </Link>
+              </p>
+            ) : null}
+          </div>
+        </TabsContent>
+      </Tabs>
     </AuthCard>
   );
 }
