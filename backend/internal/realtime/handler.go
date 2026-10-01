@@ -73,6 +73,14 @@ func (h *Handler) SubscriptionToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req.Channel = strings.TrimSpace(req.Channel)
+	// The caller's own user:{uuid} channel is not organization-bound, so it
+	// needs no active organization (TEC-142). Every other channel still
+	// requires the auth.session permission, which comes from the active
+	// organization's roles.
+	if !isOwnUserChannel(p, req.Channel) && !p.HasPermission(rbac.PermAuthSession) {
+		response.Forbidden(w, r, "Missing permission: "+rbac.PermAuthSession)
+		return
+	}
 	if h.authz == nil {
 		response.Forbidden(w, r, "Not allowed to subscribe to this channel")
 		return
@@ -98,7 +106,18 @@ func (h *Handler) SubscriptionToken(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func isOwnUserChannel(p authctx.Principal, channel string) bool {
+	uid, ok := ParseUserChannel(channel)
+	return ok && uid == p.UserID
+}
+
 // RegisterRoutes mounts realtime token endpoints.
+//
+// The connection token only carries the user id (sub) and grants no channel,
+// so any authenticated panel session gets one, with or without an active
+// organization: the first tenant page load used to get 403 before the
+// organization context was set (TEC-142). Subscription tokens check the
+// channel in SubscriptionToken.
 func RegisterRoutes(
 	mux *http.ServeMux,
 	h *Handler,
@@ -106,11 +125,10 @@ func RegisterRoutes(
 	loader middleware.IdentityLoader,
 ) {
 	authn := middleware.Authenticate(tokens, loader)
-	requireSession := middleware.RequirePermission(rbac.PermAuthSession)
 	mux.Handle("POST /v1/realtime/connection-token", middleware.Chain(
-		http.HandlerFunc(h.ConnectionToken), authn, requireSession,
+		http.HandlerFunc(h.ConnectionToken), authn,
 	))
 	mux.Handle("POST /v1/realtime/subscription-token", middleware.Chain(
-		http.HandlerFunc(h.SubscriptionToken), authn, requireSession,
+		http.HandlerFunc(h.SubscriptionToken), authn,
 	))
 }

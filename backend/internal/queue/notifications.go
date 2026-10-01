@@ -22,16 +22,20 @@ func NewNotificationPurgeTask() *asynq.Task {
 	return asynq.NewTask(TaskNotificationPurge, []byte("{}"), asynq.MaxRetry(1))
 }
 
-// WithNotificationPurge registers the sweep handler.
+// WithNotificationPurge sets the sweep processor. The task handler itself is
+// registered once in NewWorkerWithQueues, so a repeated call replaces fn.
 func (w *Worker) WithNotificationPurge(fn NotificationPurgeFunc) *Worker {
-	w.mux.HandleFunc(TaskNotificationPurge, func(ctx context.Context, _ *asynq.Task) error {
-		if fn == nil {
-			return nil
-		}
-		_, err := fn(ctx)
-		return err
-	})
+	w.purgeNotifications = fn
 	return w
+}
+
+func (w *Worker) handleNotificationPurge(ctx context.Context, _ *asynq.Task) error {
+	if w.purgeNotifications == nil {
+		w.log.Warn("notification_purge_handler_missing")
+		return nil
+	}
+	_, err := w.purgeNotifications(ctx)
+	return err
 }
 
 // RegisterNotificationPurge adds the hourly sweep to a scheduler.

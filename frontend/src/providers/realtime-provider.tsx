@@ -11,6 +11,8 @@ import {
   type ReactNode,
 } from "react";
 
+import { useSession } from "next-auth/react";
+
 import { realtimeConfig } from "@/config/realtime";
 import {
   RealtimeChannels,
@@ -86,6 +88,12 @@ function toastLabelForEvent(
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated, bootstrapped, user } = useAuth();
+  const { data: session } = useSession();
+  const organizationUuid =
+    (session as { organizationUuid?: string | null } | null)
+      ?.organizationUuid ?? null;
+  // undefined until the first connect; then the org the token was fetched for.
+  const connectedOrg = useRef<string | null | undefined>(undefined);
   const { t } = useLocale();
   const [status, setStatus] = useState(realtimeManager.getStatus());
   const [online, setOnline] = useState(true);
@@ -151,6 +159,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     realtimeDebug.patch({ enabled: realtimeConfig.enabled });
 
     if (!realtimeConfig.enabled || !isAuthenticated) {
+      connectedOrg.current = undefined;
       clearDefaultChannels();
       realtimeManager.disconnect();
       wasConnected.current = false;
@@ -169,10 +178,21 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     }
 
     let cancelled = false;
+    // Organization context changed (switcher, or TenantOrganizationContext
+    // setting oid after the first tenant page load): re-issue the connection
+    // token and re-subscribe (TEC-142).
+    const orgChanged =
+      connectedOrg.current !== undefined &&
+      connectedOrg.current !== organizationUuid;
+    connectedOrg.current = organizationUuid;
 
     (async () => {
       try {
-        await realtimeManager.connect();
+        if (orgChanged) {
+          await realtimeManager.reconnectAfterAuthRefresh();
+        } else {
+          await realtimeManager.connect();
+        }
         if (cancelled) return;
 
         const noop: RealtimePublicationHandler = () => undefined;
@@ -218,7 +238,13 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       clearDefaultChannels();
     };
-  }, [bootstrapped, isAuthenticated, user, clearDefaultChannels]);
+  }, [
+    bootstrapped,
+    isAuthenticated,
+    user,
+    organizationUuid,
+    clearDefaultChannels,
+  ]);
 
   const value = useMemo<RealtimeContextValue>(
     () => ({
