@@ -52,6 +52,7 @@ type itest struct {
 	q       *db.Queries
 	tokens  *jwt.Manager
 	rdb     *redis.Client
+	srv     *Server
 	suffix  string
 }
 
@@ -90,7 +91,7 @@ func newIntegration(t *testing.T) *itest {
 		t.Fatal(err)
 	}
 	return &itest{
-		t: t, handler: srv.http.Handler, pool: pool, q: q, tokens: tokens, rdb: rdb,
+		t: t, handler: srv.http.Handler, pool: pool, q: q, tokens: tokens, rdb: rdb, srv: srv,
 		suffix: fmt.Sprintf("%d", time.Now().UnixNano()),
 	}
 }

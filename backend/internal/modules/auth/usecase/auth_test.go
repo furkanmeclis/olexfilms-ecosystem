@@ -416,7 +416,7 @@ func (r *memRepo) CreateRole(_ context.Context, name, slug string, description *
 func (r *memRepo) UpdateRole(context.Context, uuid.UUID, *string, *string) (model.RoleSummary, error) {
 	return model.RoleSummary{}, nil
 }
-func (r *memRepo) DeleteRole(context.Context, uuid.UUID) error               { return nil }
+func (r *memRepo) DeleteRole(context.Context, uuid.UUID) error                        { return nil }
 func (r *memRepo) SetRolePermissions(context.Context, int64, map[string]string) error { return nil }
 func (r *memRepo) ListRoleGrants(context.Context, uuid.UUID) ([]model.RoleGrant, error) {
 	return []model.RoleGrant{}, nil

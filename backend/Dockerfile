@@ -16,7 +16,9 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build -trimpath -ldflags="-s -w" -o /out/worker ./cmd/worker && \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -trimpath -ldflags="-s -w" -o /out/create-super-admin ./cmd/create-super-admin
+    go build -trimpath -ldflags="-s -w" -o /out/create-super-admin ./cmd/create-super-admin && \
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -trimpath -ldflags="-s -w" -o /out/roles-sync ./cmd/roles-sync
 
 FROM migrate/migrate:v4.19.1 AS migrate
 
@@ -31,6 +33,7 @@ COPY --from=migrate /usr/local/bin/migrate /usr/local/bin/migrate
 COPY --from=builder /out/server /app/server
 COPY --from=builder /out/worker /app/worker
 COPY --from=builder /out/create-super-admin /app/create-super-admin
+COPY --from=builder /out/roles-sync /app/roles-sync
 COPY migrations /app/migrations
 COPY deploy/docker/entrypoint.sh /app/entrypoint.sh
 
