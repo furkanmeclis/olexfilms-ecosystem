@@ -4139,6 +4139,120 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/accounting/cari/{uuid}/statement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cari statement (ekstre) of a period with opening, running and closing balance
+         * @description Rows before `from` make up the opening balance; each period row shows debit (raises what the counterparty owes the book owner) or credit and the running balance. A reversal row is shown in the opposite column. `from`/`to` are calendar days (UTC, inclusive). Read scope as in TEC-172: the active organization's book or one below it; a dealer reads its own cari only. Labels follow the user language (K10) or `locale`.
+         */
+        get: operations["getAccountingCariStatement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/cari/{uuid}/statement/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a statement export job (PDF, XLSX or CSV)
+         * @description The job runs on worker-docs (exports queue). PDF is rendered by Gotenberg on the organization letterhead, in the user language (RTL for ar); XLSX/CSV headers are in the same language. Poll and download through /v1/accounting/exports/{uuid}.
+         */
+        post: operations["exportAccountingCariStatement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/reports/balances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every cari and cash/bank balance of a book as of a day
+         * @description `as_of` is a calendar day (UTC, end of day inclusive); without it the report covers every row. Receivable sums the positive cari balances, payable the negative ones.
+         */
+        get: operations["getAccountingBalanceReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/reports/balances/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Queue a balance report export job (PDF, XLSX or CSV) */
+        post: operations["exportAccountingBalanceReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/exports/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * An accounting export job of the active organization
+         * @description download_url points at /v1/accounting/exports/{uuid}/download once completed.
+         */
+        get: operations["getAccountingExport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/exports/{uuid}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download a completed accounting export file */
+        get: operations["downloadAccountingExport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -7192,6 +7306,128 @@ export interface components {
                 limit: number;
                 offset: number;
             };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        CariStatementLine: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: date-time */
+            date: string;
+            direction: components["schemas"]["AccountingDirection"];
+            category: string;
+            /** @description Category in the report language */
+            category_label: string;
+            /** @description Entry description, or the category label when empty */
+            description: string;
+            /** @example manual */
+            source_type: string | null;
+            /** Format: uuid */
+            source_uuid: string | null;
+            /** @example Manual entry */
+            source_label: string;
+            /** Format: uuid */
+            reversal_of_uuid: string | null;
+            orig_currency: string;
+            orig_amount: components["schemas"]["AccountingAmount"];
+            debit: components["schemas"]["AccountingAmount"];
+            credit: components["schemas"]["AccountingAmount"];
+            balance: components["schemas"]["AccountingAmount"];
+        };
+        CariStatement: {
+            organization: components["schemas"]["AccountingRef"];
+            cari: components["schemas"]["CariAccount"];
+            currency: string;
+            /** Format: date */
+            from: string | null;
+            /** Format: date */
+            to: string | null;
+            opening_balance: components["schemas"]["AccountingAmount"];
+            total_debit: components["schemas"]["AccountingAmount"];
+            total_credit: components["schemas"]["AccountingAmount"];
+            closing_balance: components["schemas"]["AccountingAmount"];
+            lines: components["schemas"]["CariStatementLine"][];
+            /** Format: date-time */
+            generated_at: string;
+        };
+        AccountingCariBalance: {
+            /** Format: uuid */
+            uuid: string;
+            counterparty: components["schemas"]["CariCounterparty"];
+            currency: string;
+            active: boolean;
+            balance: components["schemas"]["AccountingAmount"];
+            /** Format: int64 */
+            entry_count: number;
+        };
+        AccountingAccountBalance: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            type: "cash" | "bank";
+            name: string;
+            currency: string;
+            active: boolean;
+            balance: components["schemas"]["AccountingAmount"];
+            /** Format: int64 */
+            entry_count: number;
+        };
+        AccountingBalanceReport: {
+            organization: components["schemas"]["AccountingRef"];
+            currency: string;
+            /** Format: date */
+            as_of: string | null;
+            cari: components["schemas"]["AccountingCariBalance"][];
+            accounts: components["schemas"]["AccountingAccountBalance"][];
+            totals: {
+                receivable: components["schemas"]["AccountingAmount"];
+                payable: components["schemas"]["AccountingAmount"];
+                cari_net: components["schemas"]["AccountingAmount"];
+                cash: components["schemas"]["AccountingAmount"];
+                bank: components["schemas"]["AccountingAmount"];
+                accounts: components["schemas"]["AccountingAmount"];
+            };
+            /** Format: date-time */
+            generated_at: string;
+        };
+        AccountingExportInput: {
+            /** @enum {string} */
+            format: "pdf" | "xlsx" | "csv";
+            /**
+             * Format: uuid
+             * @description Book (default the active organization; one below it inside the read scope)
+             */
+            organization_uuid?: string | null;
+            /**
+             * Format: date
+             * @description Statement only
+             */
+            from?: string;
+            /**
+             * Format: date
+             * @description Statement only
+             */
+            to?: string;
+            /**
+             * Format: date
+             * @description Balance report only
+             */
+            as_of?: string;
+            /**
+             * @description Report language override (default the user language)
+             * @example tr
+             */
+            locale?: string;
+        };
+        EnvelopeCariStatement: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["CariStatement"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAccountingBalanceReport: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AccountingBalanceReport"];
             meta: components["schemas"]["ResponseMeta"];
         };
     };
@@ -14739,6 +14975,179 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getAccountingCariStatement: {
+        parameters: {
+            query?: {
+                /** @description Book to read: the active organization (default) or an organization below it inside the accounting.read scope. */
+                organization_uuid?: components["parameters"]["AccountingOrganizationUUID"];
+                from?: string;
+                to?: string;
+                /** @description Label language override (one of the 13 app languages) */
+                locale?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Statement */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCariStatement"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    exportAccountingCariStatement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountingExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getAccountingBalanceReport: {
+        parameters: {
+            query?: {
+                /** @description Book to read: the active organization (default) or an organization below it inside the accounting.read scope. */
+                organization_uuid?: components["parameters"]["AccountingOrganizationUUID"];
+                as_of?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Balance report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAccountingBalanceReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    exportAccountingBalanceReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountingExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getAccountingExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Export job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    downloadAccountingExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description File bytes (application/pdf, xlsx or text/csv) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
 }
