@@ -97,5 +97,6 @@
   "toast.confirm_failed": "无法确认导入。",
   "toast.confirmed": "导入已确认并加入队列。",
   "toast.rollback_success": "导入已成功回滚。",
-  "toast.auto_mapped": "已自动匹配 {{count}} 列。"
+  "toast.auto_mapped": "已自动匹配 {{count}} 列。",
+  "resources.tenant.catalog.products": "产品"
 }

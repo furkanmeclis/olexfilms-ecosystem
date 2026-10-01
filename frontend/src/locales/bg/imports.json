@@ -97,5 +97,6 @@
   "toast.confirm_failed": "Импортът не можа да бъде потвърден.",
   "toast.confirmed": "Импортът е потвърден и е в опашката.",
   "toast.rollback_success": "Импортът е отменен успешно.",
-  "toast.auto_mapped": "Автоматично съпоставени колони: {{count}}."
+  "toast.auto_mapped": "Автоматично съпоставени колони: {{count}}.",
+  "resources.tenant.catalog.products": "Продукти"
 }

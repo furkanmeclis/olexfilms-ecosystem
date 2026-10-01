@@ -97,5 +97,6 @@
   "toast.confirm_failed": "Не удалось подтвердить импорт.",
   "toast.confirmed": "Импорт подтверждён и поставлен в очередь.",
   "toast.rollback_success": "Импорт успешно откачен.",
-  "toast.auto_mapped": "Сопоставлено автоматически столбцов: {{count}}."
+  "toast.auto_mapped": "Сопоставлено автоматически столбцов: {{count}}.",
+  "resources.tenant.catalog.products": "Товары"
 }

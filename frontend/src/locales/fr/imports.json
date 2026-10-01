@@ -97,5 +97,6 @@
   "toast.confirm_failed": "L'import n'a pas pu être confirmé.",
   "toast.confirmed": "Import confirmé et mis en file d'attente.",
   "toast.rollback_success": "Import annulé avec succès.",
-  "toast.auto_mapped": "Colonnes associées automatiquement : {{count}}."
+  "toast.auto_mapped": "Colonnes associées automatiquement : {{count}}.",
+  "resources.tenant.catalog.products": "Produits"
 }

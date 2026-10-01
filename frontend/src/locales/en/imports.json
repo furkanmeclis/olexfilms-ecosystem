@@ -97,5 +97,6 @@
   "toast.confirm_failed": "Import could not be confirmed.",
   "toast.confirmed": "Import confirmed and queued.",
   "toast.rollback_success": "Import rolled back successfully.",
-  "toast.auto_mapped": "{{count}} column(s) auto-matched."
+  "toast.auto_mapped": "{{count}} column(s) auto-matched.",
+  "resources.tenant.catalog.products": "Products"
 }

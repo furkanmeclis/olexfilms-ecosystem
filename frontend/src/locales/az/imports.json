@@ -97,5 +97,6 @@
   "toast.confirm_failed": "İdxalı təsdiqləmək mümkün olmadı.",
   "toast.confirmed": "İdxal təsdiqləndi və növbəyə qoyuldu.",
   "toast.rollback_success": "İdxal uğurla geri alındı.",
-  "toast.auto_mapped": "{{count}} sütun avtomatik uyğunlaşdırıldı."
+  "toast.auto_mapped": "{{count}} sütun avtomatik uyğunlaşdırıldı.",
+  "resources.tenant.catalog.products": "Məhsullar"
 }

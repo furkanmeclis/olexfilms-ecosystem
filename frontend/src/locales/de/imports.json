@@ -97,5 +97,6 @@
   "toast.confirm_failed": "Der Import konnte nicht bestätigt werden.",
   "toast.confirmed": "Import bestätigt und eingereiht.",
   "toast.rollback_success": "Import erfolgreich rückgängig gemacht.",
-  "toast.auto_mapped": "Automatisch zugeordnete Spalten: {{count}}."
+  "toast.auto_mapped": "Automatisch zugeordnete Spalten: {{count}}.",
+  "resources.tenant.catalog.products": "Produkte"
 }
