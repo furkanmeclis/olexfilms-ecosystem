@@ -1,0 +1,90 @@
+// Package accounting holds the shared, code-defined parts of the accounting
+// module (TEC-99). The ledger rows live in finance_entries (000047); the
+// source API is accounting/posting, the HTTP surface accounting/handler.
+package accounting
+
+import "regexp"
+
+// Ledger directions (finance_entries.direction, chk_finance_entries_direction).
+const (
+	DirectionIncome     = "income"
+	DirectionExpense    = "expense"
+	DirectionCharge     = "charge"
+	DirectionCollection = "collection"
+	DirectionPayment    = "payment"
+)
+
+// Category is one entry of the F1 category catalog. F1 keeps the catalog in
+// code (no table, no migration): finance_entries.category stores Key, which
+// must satisfy chk_finance_entries_category. LabelKey is resolved by the
+// backend i18n catalog in all 13 languages.
+type Category struct {
+	Key       string `json:"key"`
+	Direction string `json:"direction"`
+	LabelKey  string `json:"label_key"`
+	// Manual reports whether a person may pick it for a manual entry.
+	// System categories (sale, purchase) are written by the source API only
+	// (hierarchical sale bridge, K9).
+	Manual bool `json:"manual"`
+}
+
+// System categories written by accounting/posting (keep in sync with
+// posting.CategorySale / posting.CategoryPurchase).
+const (
+	CategorySale       = "sale"
+	CategoryPurchase   = "purchase"
+	CategoryCollection = "collection"
+	CategoryPayment    = "payment"
+)
+
+func cat(key, direction string, manual bool) Category {
+	return Category{Key: key, Direction: direction, LabelKey: "accounting.category." + key, Manual: manual}
+}
+
+// categories is the F1 catalog, in display order per direction.
+var categories = []Category{
+	// Income.
+	cat(CategorySale, DirectionIncome, false),
+	cat("service_income", DirectionIncome, true),
+	cat("interest_income", DirectionIncome, true),
+	cat("other_income", DirectionIncome, true),
+	// Expense.
+	cat(CategoryPurchase, DirectionExpense, false),
+	cat("rent", DirectionExpense, true),
+	cat("salary", DirectionExpense, true),
+	cat("utilities", DirectionExpense, true),
+	cat("tax", DirectionExpense, true),
+	cat("shipping", DirectionExpense, true),
+	cat("marketing", DirectionExpense, true),
+	cat("bank_fee", DirectionExpense, true),
+	cat("other_expense", DirectionExpense, true),
+	// Cari charge (non-P&L debit of the counterparty).
+	cat("opening_balance", DirectionCharge, true),
+	cat("adjustment", DirectionCharge, true),
+	// Settlements (cash/bank movement + cari closing, never income).
+	cat(CategoryCollection, DirectionCollection, true),
+	cat(CategoryPayment, DirectionPayment, true),
+}
+
+// Same pattern as chk_finance_entries_category (000047).
+var categoryKeyRe = regexp.MustCompile(`^[a-z][a-z0-9_.]{0,63}$`)
+
+// Categories returns a copy of the catalog.
+func Categories() []Category {
+	out := make([]Category, len(categories))
+	copy(out, categories)
+	return out
+}
+
+// LookupCategory returns the catalog entry of key.
+func LookupCategory(key string) (Category, bool) {
+	for _, c := range categories {
+		if c.Key == key {
+			return c, true
+		}
+	}
+	return Category{}, false
+}
+
+// ValidCategoryKey reports whether key satisfies the database CHECK.
+func ValidCategoryKey(key string) bool { return categoryKeyRe.MatchString(key) }

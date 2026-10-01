@@ -86,6 +86,11 @@ tags:
       Price list and effective price views (TEC-146, K8). The center writes the
       list price and distributor-specific prices, a distributor writes its
       price to dealers; every reader gets one view masked by pricing.* grants.
+  - name: Accounting
+    description: >-
+      Accounting core (TEC-99/TEC-172): cash/bank accounts, cari balances,
+      manual entries, collections/payments and voids. The ledger is
+      append-only; dealers read only (accounting.read) in F1.
   - name: Mobile
     description: |
       Mobile app API (TEC-91). `/v1/mobile/*` is reached through the BFF
@@ -6999,6 +7004,445 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/accounting/categories:
+    get:
+      tags: [Accounting]
+      operationId: listAccountingCategories
+      summary: F1 category catalog (code-defined) with labels in the request language
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: direction
+          in: query
+          schema: { $ref: "#/components/schemas/AccountingDirection" }
+      responses:
+        "200":
+          description: Categories
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAccountingCategoryList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/accounting/accounts:
+    get:
+      tags: [Accounting]
+      operationId: listAccountingAccounts
+      summary: Cash and bank accounts of a book with balances
+      description: >-
+        The book is the active organization, or organization_uuid when it is
+        below the active organization and inside the accounting.read scope
+        (otherwise 404).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AccountingOrganizationUUID"
+        - name: active
+          in: query
+          schema: { type: boolean }
+        - name: type
+          in: query
+          schema: { type: string, enum: [cash, bank] }
+      responses:
+        "200":
+          description: Accounts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFinanceAccountList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Accounting]
+      operationId: createAccountingAccount
+      summary: Open a cash or bank account in the active organization (its currency)
+      description: >-
+        Needs accounting.write; dealer roles hold none (403). The IBAN (bank
+        only) is normalised and checked (country length, mod-97).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinanceAccountCreateInput"
+      responses:
+        "201":
+          description: Created account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFinanceAccount"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/accounting/accounts/{uuid}:
+    get:
+      tags: [Accounting]
+      operationId: getAccountingAccount
+      summary: One cash or bank account with its balance
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - $ref: "#/components/parameters/AccountingOrganizationUUID"
+      responses:
+        "200":
+          description: Account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFinanceAccount"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Accounting]
+      operationId: updateAccountingAccount
+      summary: Rename, change the IBAN of, or (de)activate an account
+      description: >-
+        Accounts are never deleted; `active: false` deactivates one (it then
+        takes no new entries). Absent fields keep the stored value; `iban:
+        null` clears it.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinanceAccountUpdateInput"
+      responses:
+        "200":
+          description: Updated account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFinanceAccount"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/accounting/cari:
+    get:
+      tags: [Accounting]
+      operationId: listAccountingCari
+      summary: Cari accounts of a book with balances (positive = receivable)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AccountingOrganizationUUID"
+        - name: active
+          in: query
+          schema: { type: boolean }
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Cari accounts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCariAccountPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/accounting/cari/{uuid}:
+    get:
+      tags: [Accounting]
+      operationId: getAccountingCari
+      summary: One cari account with its balance
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - $ref: "#/components/parameters/AccountingOrganizationUUID"
+      responses:
+        "200":
+          description: Cari account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCariAccount"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/accounting/entries:
+    get:
+      tags: [Accounting]
+      operationId: listAccountingEntries
+      summary: Ledger rows of a book, newest first
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AccountingOrganizationUUID"
+        - name: account_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - name: cari_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - name: direction
+          in: query
+          schema: { $ref: "#/components/schemas/AccountingDirection" }
+        - name: category
+          in: query
+          schema: { type: string, examples: [rent] }
+        - name: source_type
+          in: query
+          description: manual, order, ...
+          schema: { type: string }
+        - name: date_from
+          in: query
+          description: First day (UTC, inclusive) of created_at
+          schema: { type: string, format: date }
+        - name: date_to
+          in: query
+          description: Last day (UTC, inclusive) of created_at
+          schema: { type: string, format: date }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFinanceEntryPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Accounting]
+      operationId: createAccountingEntry
+      summary: Manual income, expense or cari charge (source_type manual)
+      description: >-
+        Written to the active organization's book through the posting API.
+        Income/expense need an account and/or a cari; a charge needs a cari
+        only. The cari is named by cari_uuid or by the counterparty
+        organization (the parent or a direct child of the same brand; opened
+        when missing). System categories (sale, purchase) are refused. A
+        repeated idempotency_key answers 200 with the earlier entry.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinanceEntryInput"
+      responses:
+        "200":
+          description: Replayed (same idempotency_key)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFinanceEntry"
+        "201":
+          description: Created entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFinanceEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/accounting/entries/{uuid}:
+    get:
+      tags: [Accounting]
+      operationId: getAccountingEntry
+      summary: One ledger row
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - $ref: "#/components/parameters/AccountingOrganizationUUID"
+      responses:
+        "200":
+          description: Entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFinanceEntry"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/accounting/entries/{uuid}/void:
+    post:
+      tags: [Accounting]
+      operationId: voidAccountingEntry
+      summary: Reverse a manual entry (step-up)
+      description: >-
+        Appends the mirror row (reversal_of_uuid, negated amounts); the
+        ledger is append-only. Only open manual entries of the active
+        organization (409 ENTRY_NOT_VOIDABLE otherwise). Needs a recent
+        step-up (403 STEP_UP_REQUIRED).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinanceEntryVoidInput"
+      responses:
+        "201":
+          description: Reversal row
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFinanceEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/accounting/collections:
+    post:
+      tags: [Accounting]
+      operationId: createAccountingCollection
+      summary: Collection from a counterparty into a cash/bank account
+      description: >-
+        Lowers the cari receivable and raises the account; never writes
+        income (TEC-99 decision 2). A repeated idempotency_key answers 200.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinanceSettlementInput"
+      responses:
+        "200":
+          description: Replayed (same idempotency_key)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFinanceEntry"
+        "201":
+          description: Created collection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFinanceEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/accounting/payments:
+    post:
+      tags: [Accounting]
+      operationId: createAccountingPayment
+      summary: Payment to a counterparty from a cash/bank account
+      description: >-
+        Lowers the cari debt and the account; never writes an expense. A
+        repeated idempotency_key answers 200.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinanceSettlementInput"
+      responses:
+        "200":
+          description: Replayed (same idempotency_key)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFinanceEntry"
+        "201":
+          description: Created payment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFinanceEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -7007,6 +7451,13 @@ components:
       bearerFormat: JWT
 
   parameters:
+    AccountingOrganizationUUID:
+      name: organization_uuid
+      in: query
+      description: >-
+        Book to read: the active organization (default) or an organization
+        below it inside the accounting.read scope.
+      schema: { type: string, format: uuid }
     VehicleCatalogUUID:
       name: uuid
       in: path
@@ -10929,6 +11380,271 @@ components:
             items:
               type: array
               items: { $ref: "#/components/schemas/DistributorPrice" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    AccountingDirection:
+      type: string
+      enum: [income, expense, charge, collection, payment]
+
+    AccountingAmount:
+      type: string
+      pattern: '^-?[0-9]{1,16}\.[0-9]{2}$'
+      description: Signed decimal (NUMERIC(18,2)) as a string; reversal rows are negative.
+      example: "1500.00"
+
+    AccountingAmountInput:
+      type: string
+      pattern: '^[0-9]{1,16}(\.[0-9]{1,2})?$'
+      description: Positive decimal with at most two fraction digits.
+      example: "1500.00"
+
+    AccountingCategory:
+      type: object
+      required: [key, direction, label_key, label, manual]
+      properties:
+        key: { type: string, example: rent }
+        direction: { $ref: "#/components/schemas/AccountingDirection" }
+        label_key: { type: string, example: accounting.category.rent }
+        label: { type: string, description: label_key in the request language, example: Rent }
+        manual:
+          type: boolean
+          description: false for system categories written by the source API only (sale, purchase)
+
+    FinanceAccount:
+      type: object
+      required: [uuid, type, name, currency, iban, active, balance, entry_count, last_entry_at, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        type: { type: string, enum: [cash, bank] }
+        name: { type: string }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        iban: { type: [string, "null"], example: TR330006100519786457841326 }
+        active: { type: boolean }
+        balance: { $ref: "#/components/schemas/AccountingAmount" }
+        entry_count: { type: integer, format: int64 }
+        last_entry_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    FinanceAccountCreateInput:
+      type: object
+      required: [type, name]
+      additionalProperties: false
+      properties:
+        type: { type: string, enum: [cash, bank] }
+        name: { type: string, maxLength: 200 }
+        iban: { type: [string, "null"], description: Bank accounts only; spaces allowed }
+
+    FinanceAccountUpdateInput:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, maxLength: 200 }
+        iban: { type: [string, "null"], description: null clears it }
+        active: { type: boolean }
+
+    CariCounterparty:
+      type: object
+      required: [type, uuid, name]
+      properties:
+        type: { type: string, enum: [organization, user] }
+        uuid: { type: [string, "null"], format: uuid }
+        name: { type: string }
+        org_type: { type: string, enum: [center, distributor, dealer] }
+
+    CariAccount:
+      type: object
+      required: [uuid, counterparty, currency, active, balance, entry_count, last_entry_at, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        counterparty: { $ref: "#/components/schemas/CariCounterparty" }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        active: { type: boolean }
+        balance:
+          $ref: "#/components/schemas/AccountingAmount"
+        entry_count: { type: integer, format: int64 }
+        last_entry_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+
+    AccountingRef:
+      type: object
+      required: [uuid, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+
+    FinanceEntry:
+      type: object
+      required:
+        - uuid
+        - direction
+        - category
+        - category_label_key
+        - account
+        - cari_uuid
+        - counterparty_organization
+        - orig_currency
+        - orig_amount
+        - currency
+        - amount
+        - rate
+        - rate_date
+        - source_type
+        - source_uuid
+        - revision
+        - reversal_of_uuid
+        - reversed_by_uuid
+        - voided
+        - description
+        - created_at
+      properties:
+        uuid: { type: string, format: uuid }
+        direction: { $ref: "#/components/schemas/AccountingDirection" }
+        category: { type: string }
+        category_label_key: { type: string, example: accounting.category.rent }
+        account:
+          oneOf:
+            - $ref: "#/components/schemas/AccountingRef"
+            - type: "null"
+        cari_uuid: { type: [string, "null"], format: uuid }
+        counterparty_organization:
+          oneOf:
+            - $ref: "#/components/schemas/AccountingRef"
+            - type: "null"
+        orig_currency: { type: string, minLength: 3, maxLength: 3 }
+        orig_amount: { $ref: "#/components/schemas/AccountingAmount" }
+        currency: { type: string, minLength: 3, maxLength: 3, description: The organization's ledger currency (K7) }
+        amount: { $ref: "#/components/schemas/AccountingAmount" }
+        rate: { type: string, description: "Frozen rate orig_currency→currency (NUMERIC(18,8))", example: "1.00000000" }
+        rate_date: { type: string, format: date }
+        source_type: { type: [string, "null"], example: manual }
+        source_uuid: { type: [string, "null"], format: uuid }
+        revision: { type: integer }
+        reversal_of_uuid: { type: [string, "null"], format: uuid }
+        reversed_by_uuid: { type: [string, "null"], format: uuid }
+        voided: { type: boolean, description: The row has been reversed }
+        description: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+
+    FinanceEntryInput:
+      type: object
+      required: [direction, category, amount]
+      additionalProperties: false
+      properties:
+        direction: { type: string, enum: [income, expense, charge] }
+        category: { type: string, description: A manual category of the direction (GET /v1/accounting/categories) }
+        amount: { $ref: "#/components/schemas/AccountingAmountInput" }
+        currency: { type: string, minLength: 3, maxLength: 3, description: Defaults to the organization's currency; others convert at today's rate }
+        account_uuid: { type: [string, "null"], format: uuid }
+        cari_uuid: { type: [string, "null"], format: uuid }
+        counterparty_organization_uuid: { type: [string, "null"], format: uuid }
+        description: { type: string, maxLength: 1000 }
+        idempotency_key: { type: [string, "null"], format: uuid }
+
+    FinanceSettlementInput:
+      type: object
+      required: [account_uuid, amount]
+      additionalProperties: false
+      properties:
+        account_uuid: { type: string, format: uuid }
+        cari_uuid: { type: [string, "null"], format: uuid }
+        counterparty_organization_uuid: { type: [string, "null"], format: uuid }
+        amount: { $ref: "#/components/schemas/AccountingAmountInput" }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        description: { type: string, maxLength: 1000 }
+        idempotency_key: { type: [string, "null"], format: uuid }
+
+    FinanceEntryVoidInput:
+      type: object
+      required: [reason]
+      additionalProperties: false
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 1000 }
+
+    EnvelopeAccountingCategoryList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/AccountingCategory" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFinanceAccount:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/FinanceAccount" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFinanceAccountList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/FinanceAccount" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeCariAccount:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/CariAccount" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeCariAccountPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/CariAccount" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFinanceEntry:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/FinanceEntry" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFinanceEntryPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/FinanceEntry" }
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }
