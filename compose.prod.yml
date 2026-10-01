@@ -91,6 +91,8 @@ x-backend-environment: &backend-environment
   WUZAPI_URL: http://wuzapi.${APP_NETWORK_NAME:-${NAME_PREFIX:-app}-app}:8080
   WUZAPI_ADMIN_TOKEN: ${WUZAPI_ADMIN_TOKEN:?WUZAPI_ADMIN_TOKEN is required}
   WUZAPI_WEBHOOK_SECRET: ${WUZAPI_WEBHOOK_SECRET:?WUZAPI_WEBHOOK_SECRET is required}
+  # Registered on the wuzapi instance user; must match WUZAPI_GLOBAL_WEBHOOK.
+  WUZAPI_WEBHOOK_URL: ${WUZAPI_WEBHOOK_URL:-http://backend.${APP_NETWORK_NAME:-${NAME_PREFIX:-app}-app}:8080/hooks/wuzapi}
   LOG_LEVEL: ${LOG_LEVEL:-info}
   LOG_FORMAT: ${LOG_FORMAT:-json}
 
@@ -261,8 +263,8 @@ services:
       WUZAPI_GLOBAL_ENCRYPTION_KEY: ${WUZAPI_GLOBAL_ENCRYPTION_KEY:?WUZAPI_GLOBAL_ENCRYPTION_KEY is required}
       # Signs webhook bodies (HMAC); the backend verifies with the same secret.
       WUZAPI_GLOBAL_HMAC_KEY: ${WUZAPI_WEBHOOK_SECRET:?WUZAPI_WEBHOOK_SECRET is required}
-      # Global webhook target (backend /hooks/wuzapi, F0 WhatsApp OTP work).
-      WUZAPI_GLOBAL_WEBHOOK: ${WUZAPI_WEBHOOK_URL:-}
+      # Global webhook target: backend /hooks/wuzapi on the private network.
+      WUZAPI_GLOBAL_WEBHOOK: ${WUZAPI_WEBHOOK_URL:-http://backend.${APP_NETWORK_NAME:-${NAME_PREFIX:-app}-app}:8080/hooks/wuzapi}
       WEBHOOK_FORMAT: json
       DB_HOST: postgres.${APP_NETWORK_NAME:-${NAME_PREFIX:-app}-app}
       DB_PORT: "5432"
