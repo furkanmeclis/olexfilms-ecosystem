@@ -3124,6 +3124,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/customers/{uuid}/merge/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dry run of a customer merge (writes nothing)
+         * @description customers.merge (center roles) in a center organization. Runs the same statements as the merge in a transaction that is rolled back and reports what would move from this customer (source) to target_uuid: vehicles, services, warranties, organization links and consents, the unique-key conflicts that are folded (a link to the same organization on both users) and the records that stay with the source. No audit row, no event. Refusals (409): CUSTOMER_MERGE_SELF, CUSTOMER_ALREADY_MERGED (source or target was already merged), CUSTOMER_MERGE_ANONYMIZED, CUSTOMER_HAS_PANEL_ACCOUNT (either user is an organization user), CUSTOMER_MERGE_PENDING_TRANSFER (open vehicle transfer of the source), CUSTOMER_INACTIVE (target disabled).
+         */
+        post: operations["previewCustomerMerge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/customers/{uuid}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merge this customer (source) into another one (irreversible)
+         * @description customers.merge (center roles) in a center organization, plus a fresh step-up (403 STEP_UP_REQUIRED). One transaction: vehicles, services (following their vehicle), warranties (holder), organization links (duplicates folded into the target's link), consents and the profile move to target_uuid; the phone / e-mail the target lacks is handed over. Nothing is deleted: the source keeps its row with merged_into_user_id = target and status disabled, its refresh tokens are revoked and it can no longer sign in. Customer cari accounts are not moved (reported). Writes the audit row customers.merged and the outbox event customer.merged. Same refusals as the preview.
+         */
+        post: operations["mergeCustomer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/customers/{uuid}/data-export": {
         parameters: {
             query?: never;
@@ -6541,6 +6581,56 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["CustomerAnonymizeResult"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        CustomerMergeInput: {
+            /**
+             * Format: uuid
+             * @description The customer that remains (receives the records).
+             */
+            target_uuid: string;
+        };
+        CustomerMergeResult: {
+            /** Format: uuid */
+            source_uuid: string;
+            /** Format: uuid */
+            target_uuid: string;
+            dry_run: boolean;
+            moved: {
+                vehicles: number;
+                services: number;
+                warranties: number;
+                organization_links: number;
+                consents: number;
+            };
+            conflicts: {
+                /** @description Source links folded into the target's link of the same organization. */
+                organization_links: number;
+                /** @description Source consents for a legal text the target already decided (stay on the source). */
+                consents_kept: number;
+                /** @description Services whose vehicle now belongs to a third person (stay on the source). */
+                services_kept: number;
+                /** @description Customer cari accounts of the source (ledgers are not moved). */
+                cari_accounts_kept: number;
+            };
+            /**
+             * @description moved = target had no profile; merged = target filled its empty fields.
+             * @enum {string}
+             */
+            profile: "moved" | "merged" | "kept" | "none";
+            phone_moved: boolean;
+            email_moved: boolean;
+            sessions_revoked: number;
+            /**
+             * Format: date-time
+             * @description Set when applied.
+             */
+            merged_at?: string;
+        };
+        EnvelopeCustomerMergeResult: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["CustomerMergeResult"];
             meta: components["schemas"]["ResponseMeta"];
         };
         CustomerDataExportInput: {
@@ -14696,6 +14786,70 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeCustomerAnonymizeResult"];
                 };
             };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    previewCustomerMerge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomerMergeInput"];
+            };
+        };
+        responses: {
+            /** @description What the merge would move */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCustomerMergeResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    mergeCustomer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomerMergeInput"];
+            };
+        };
+        responses: {
+            /** @description Merged */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCustomerMergeResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
