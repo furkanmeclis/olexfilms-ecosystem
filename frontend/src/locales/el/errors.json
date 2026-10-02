@@ -101,5 +101,20 @@
   "codes.VEHICLE_TRANSFER_INVALID_CODE": "Ο κωδικός είναι λανθασμένος.",
   "codes.VEHICLE_TRANSFER_LOCKED": "Πάρα πολλοί λανθασμένοι κωδικοί· η μεταβίβαση ακυρώθηκε.",
   "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "Οι κωδικοί δεν στάλθηκαν. Δοκιμάστε ξανά αργότερα.",
-  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Ο ιδιοκτήτης του οχήματος άλλαξε· ξεκινήστε νέα μεταβίβαση."
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Ο ιδιοκτήτης του οχήματος άλλαξε· ξεκινήστε νέα μεταβίβαση.",
+  "codes.ORDER_INVALID_TRANSITION": "Η κατάσταση της παραγγελίας δεν επιτρέπει αυτή την ενέργεια.",
+  "codes.ORDER_TRANSITION_UNAVAILABLE": "Αυτό το βήμα δεν είναι ακόμη διαθέσιμο.",
+  "codes.ORDER_NOT_EDITABLE": "Μόνο οι πρόχειρες παραγγελίες μπορούν να επεξεργαστούν.",
+  "codes.ORDER_NO_SUPPLIER": "Μόνο διανομέας (από το κέντρο) ή αντιπρόσωπος (από τον διανομέα του) μπορεί να παραγγείλει προϊόντα.",
+  "codes.ORDER_NOT_ASSIGNABLE": "Οι μονάδες ανατίθενται μόνο κατά την προετοιμασία.",
+  "codes.ORDER_UNIT_ALREADY_ASSIGNED": "Αυτή η μονάδα είναι ήδη στη γραμμή.",
+  "codes.ORDER_UNIT_RESERVED": "Αυτή η μονάδα είναι δεσμευμένη από άλλη παραγγελία.",
+  "codes.ORDER_UNIT_NOT_AVAILABLE": "Αυτή η μονάδα δεν είναι στο απόθεμά σας ή ανήκει σε άλλο προϊόν.",
+  "codes.ORDER_INSUFFICIENT_STOCK": "Δεν υπάρχει αρκετό ελεύθερο απόθεμα για αυτό το barcode.",
+  "codes.ORDER_ITEM_OVER_ASSIGNED": "Η ανάθεση υπερβαίνει την ποσότητα της γραμμής.",
+  "codes.ORDER_NOT_FULLY_ASSIGNED": "Πρώτα κάθε γραμμή πρέπει να καλυφθεί πλήρως.",
+  "codes.ORDER_STOCK_UNAVAILABLE": "Η κίνηση αποθέματος για αυτή την αποστολή απορρίφθηκε.",
+  "codes.PRICE_NOT_FOUND": "Δεν υπάρχει τιμή για αυτό το προϊόν στο νόμισμα της παραγγελίας.",
+  "codes.RATE_NOT_FOUND": "Δεν υπάρχει διαθέσιμη ισοτιμία για πάγωμα στο νόμισμα της παραγγελίας.",
+  "codes.ROLL_CUT_UNSUPPORTED": "Τα ρολά αποστέλλονται ολόκληρα· τα μέτρα πρέπει να ισούνται με το υπόλοιπο μήκος."
 }

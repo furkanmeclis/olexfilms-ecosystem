@@ -101,5 +101,20 @@
   "codes.VEHICLE_TRANSFER_INVALID_CODE": "The code is wrong.",
   "codes.VEHICLE_TRANSFER_LOCKED": "Too many wrong codes; the transfer was cancelled.",
   "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "The codes could not be sent. Try again later.",
-  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "The vehicle owner changed; start a new transfer."
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "The vehicle owner changed; start a new transfer.",
+  "codes.ORDER_INVALID_TRANSITION": "The order status does not allow this action.",
+  "codes.ORDER_TRANSITION_UNAVAILABLE": "This step is not available yet.",
+  "codes.ORDER_NOT_EDITABLE": "Only draft orders can be edited.",
+  "codes.ORDER_NO_SUPPLIER": "Only a distributor (from the center) or a dealer (from its distributor) can place product orders.",
+  "codes.ORDER_NOT_ASSIGNABLE": "Units can be assigned only while the order is being prepared.",
+  "codes.ORDER_UNIT_ALREADY_ASSIGNED": "This unit is already on the line.",
+  "codes.ORDER_UNIT_RESERVED": "This unit is reserved by another order.",
+  "codes.ORDER_UNIT_NOT_AVAILABLE": "This unit is not in your stock or is of another product.",
+  "codes.ORDER_INSUFFICIENT_STOCK": "Not enough unreserved stock for this barcode.",
+  "codes.ORDER_ITEM_OVER_ASSIGNED": "The assignment exceeds the line amount.",
+  "codes.ORDER_NOT_FULLY_ASSIGNED": "Every line must be fully assigned first.",
+  "codes.ORDER_STOCK_UNAVAILABLE": "The stock movement for this shipment was refused.",
+  "codes.PRICE_NOT_FOUND": "There is no price for this product in the order currency.",
+  "codes.RATE_NOT_FOUND": "No exchange rate is available to freeze for the order currency.",
+  "codes.ROLL_CUT_UNSUPPORTED": "Rolls ship whole; the meters must equal the remaining length."
 }

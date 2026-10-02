@@ -101,5 +101,20 @@
   "codes.VEHICLE_TRANSFER_INVALID_CODE": "Der Code ist falsch.",
   "codes.VEHICLE_TRANSFER_LOCKED": "Zu viele falsche Codes; die Übertragung wurde abgebrochen.",
   "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "Die Codes konnten nicht gesendet werden. Versuchen Sie es später erneut.",
-  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Der Fahrzeugeigentümer hat sich geändert; starten Sie eine neue Übertragung."
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Der Fahrzeugeigentümer hat sich geändert; starten Sie eine neue Übertragung.",
+  "codes.ORDER_INVALID_TRANSITION": "Der Bestellstatus erlaubt diese Aktion nicht.",
+  "codes.ORDER_TRANSITION_UNAVAILABLE": "Dieser Schritt ist noch nicht verfügbar.",
+  "codes.ORDER_NOT_EDITABLE": "Nur Bestellentwürfe können bearbeitet werden.",
+  "codes.ORDER_NO_SUPPLIER": "Nur ein Distributor (beim Zentrum) oder ein Händler (bei seinem Distributor) kann Produkte bestellen.",
+  "codes.ORDER_NOT_ASSIGNABLE": "Einheiten können nur während der Vorbereitung zugewiesen werden.",
+  "codes.ORDER_UNIT_ALREADY_ASSIGNED": "Diese Einheit ist der Position bereits zugewiesen.",
+  "codes.ORDER_UNIT_RESERVED": "Diese Einheit ist für eine andere Bestellung reserviert.",
+  "codes.ORDER_UNIT_NOT_AVAILABLE": "Diese Einheit ist nicht in Ihrem Bestand oder gehört zu einem anderen Produkt.",
+  "codes.ORDER_INSUFFICIENT_STOCK": "Nicht genug freier Bestand für diesen Barcode.",
+  "codes.ORDER_ITEM_OVER_ASSIGNED": "Die Zuweisung überschreitet die Positionsmenge.",
+  "codes.ORDER_NOT_FULLY_ASSIGNED": "Zuerst muss jede Position vollständig zugewiesen sein.",
+  "codes.ORDER_STOCK_UNAVAILABLE": "Die Lagerbewegung für diese Sendung wurde abgelehnt.",
+  "codes.PRICE_NOT_FOUND": "Für dieses Produkt gibt es keinen Preis in der Bestellwährung.",
+  "codes.RATE_NOT_FOUND": "Für die Bestellwährung ist kein einzufrierender Wechselkurs verfügbar.",
+  "codes.ROLL_CUT_UNSUPPORTED": "Rollen werden vollständig versendet; die Meter müssen der Restlänge entsprechen."
 }

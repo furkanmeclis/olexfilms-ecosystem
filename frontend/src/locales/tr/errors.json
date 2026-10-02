@@ -101,5 +101,20 @@
   "codes.VEHICLE_TRANSFER_INVALID_CODE": "Kod hatalı.",
   "codes.VEHICLE_TRANSFER_LOCKED": "Çok fazla hatalı kod girildi; devir iptal edildi.",
   "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "Kodlar gönderilemedi. Daha sonra tekrar deneyin.",
-  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Aracın sahibi değişti; yeni bir devir başlatın."
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Aracın sahibi değişti; yeni bir devir başlatın.",
+  "codes.ORDER_INVALID_TRANSITION": "Siparişin durumu bu işleme izin vermiyor.",
+  "codes.ORDER_TRANSITION_UNAVAILABLE": "Bu adım henüz kullanılamıyor.",
+  "codes.ORDER_NOT_EDITABLE": "Yalnızca taslak siparişler düzenlenebilir.",
+  "codes.ORDER_NO_SUPPLIER": "Ürün siparişini yalnızca distribütör (merkezden) veya bayi (distribütöründen) verebilir.",
+  "codes.ORDER_NOT_ASSIGNABLE": "Birimler yalnızca sipariş hazırlanırken atanabilir.",
+  "codes.ORDER_UNIT_ALREADY_ASSIGNED": "Bu birim zaten bu kalemde.",
+  "codes.ORDER_UNIT_RESERVED": "Bu birim başka bir sipariş için ayrılmış.",
+  "codes.ORDER_UNIT_NOT_AVAILABLE": "Bu birim stoğunuzda değil veya başka bir ürüne ait.",
+  "codes.ORDER_INSUFFICIENT_STOCK": "Bu barkod için yeterli serbest stok yok.",
+  "codes.ORDER_ITEM_OVER_ASSIGNED": "Atama kalem miktarını aşıyor.",
+  "codes.ORDER_NOT_FULLY_ASSIGNED": "Önce her kalem tamamen karşılanmalı.",
+  "codes.ORDER_STOCK_UNAVAILABLE": "Bu sevkiyat için stok hareketi reddedildi.",
+  "codes.PRICE_NOT_FOUND": "Bu ürün için sipariş para biriminde fiyat yok.",
+  "codes.RATE_NOT_FOUND": "Sipariş para birimi için dondurulacak kur bulunamadı.",
+  "codes.ROLL_CUT_UNSUPPORTED": "Rulolar bütün sevk edilir; metre kalan uzunluğa eşit olmalı."
 }
