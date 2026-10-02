@@ -216,7 +216,7 @@ func TestIntegrationServicesFlow(t *testing.T) {
 	}
 
 	// 5. Dealer transitions: draft -> pending -> processing -> ready; a
-	// skipped step is 409, completion is not available yet.
+	// skipped step is 409 (completion: TestIntegrationServiceCompletion).
 	tr := func(tok, id, status string, want int) (serviceView, string) {
 		return it.svcCall("POST", "/v1/services/"+id+"/transitions", tok, map[string]string{"status": status}, want)
 	}
@@ -228,9 +228,6 @@ func TestIntegrationServicesFlow(t *testing.T) {
 		if v.Status != st {
 			t.Fatalf("status = %s want %s", v.Status, st)
 		}
-	}
-	if _, ec := tr(aTok, s1.UUID, "completed", http.StatusConflict); ec != "SERVICE_COMPLETION_UNAVAILABLE" {
-		t.Fatalf("complete = %s", ec)
 	}
 	if _, ec := it.svcCall("POST", "/v1/services/"+s1.UUID+"/items", aTok,
 		map[string]any{"barcode": units[1].Barcode}, http.StatusConflict); ec != "SERVICE_NOT_EDITABLE" {

@@ -22,12 +22,11 @@ import (
 
 // Error codes specific to services.
 const (
-	CodeInvalidTransition     = "SERVICE_INVALID_TRANSITION"
-	CodeCompletionUnavailable = "SERVICE_COMPLETION_UNAVAILABLE"
-	CodeNotEditable           = "SERVICE_NOT_EDITABLE"
-	CodeUnitInUse             = "SERVICE_UNIT_IN_USE"
-	CodeUnitNotAvailable      = "SERVICE_UNIT_NOT_AVAILABLE"
-	CodeTooManyImages         = "SERVICE_TOO_MANY_IMAGES"
+	CodeInvalidTransition = "SERVICE_INVALID_TRANSITION"
+	CodeNotEditable       = "SERVICE_NOT_EDITABLE"
+	CodeUnitInUse         = "SERVICE_UNIT_IN_USE"
+	CodeUnitNotAvailable  = "SERVICE_UNIT_NOT_AVAILABLE"
+	CodeTooManyImages     = "SERVICE_TOO_MANY_IMAGES"
 )
 
 // imageField is the multipart field of the image upload.
@@ -58,8 +57,6 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Forbidden(w, r, "This organization cannot perform this service action")
 	case errors.Is(err, svcuc.ErrInvalidTransition):
 		response.Conflict(w, r, CodeInvalidTransition, "The service status does not allow this transition")
-	case errors.Is(err, svcuc.ErrCompletionUnavailable):
-		response.Conflict(w, r, CodeCompletionUnavailable, "Service completion is not available yet")
 	case errors.Is(err, svcuc.ErrNotEditable):
 		response.Conflict(w, r, CodeNotEditable, "The service status does not allow this change")
 	case errors.Is(err, svcuc.ErrUnitInUse):
@@ -224,6 +221,26 @@ func (h *Handler) RemoveItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, r, http.StatusOK, v)
+}
+
+// StockUnits (GET /v1/services/{uuid}/stock-units?barcode&product_uuid&min_meters&limit&offset):
+// the stock picker of the service organization (TEC-180).
+func (h *Handler) StockUnits(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	q := apiquery.Parse(r.URL.Query())
+	v := r.URL.Query()
+	items, err := h.svc.StockUnits(r.Context(), caller(r), id, svcuc.StockFilter{
+		Barcode: v.Get("barcode"), ProductUUID: v.Get("product_uuid"), MinMeters: v.Get("min_meters"),
+		Limit: q.Limit, Offset: q.Offset,
+	})
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, map[string]any{"items": items})
 }
 
 type transitionBody struct {

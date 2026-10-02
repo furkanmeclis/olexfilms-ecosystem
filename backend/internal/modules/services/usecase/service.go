@@ -42,15 +42,13 @@ var (
 	// ErrInvalidTransition: the status does not allow the move (also any
 	// move out of completed / cancelled).
 	ErrInvalidTransition = errors.New("services: invalid status transition")
-	// ErrCompletionUnavailable: completion (stock consumption) arrives with
-	// TEC-180.
-	ErrCompletionUnavailable = errors.New("services: completion not available yet")
 	// ErrNotEditable: the service status does not allow this change.
 	ErrNotEditable = errors.New("services: service is not editable")
 	// ErrUnitInUse: the serial unit is already in another open service.
 	ErrUnitInUse = errors.New("services: unit is in another open service")
 	// ErrUnitNotAvailable: the unit is not held (available) by the service
-	// organization, or not enough of it.
+	// organization, or not enough of it (also a ledger refusal on
+	// completion).
 	ErrUnitNotAvailable = errors.New("services: unit is not available to the organization")
 	// ErrTooManyImages: the image limit of a service is reached.
 	ErrTooManyImages = errors.New("services: too many images")

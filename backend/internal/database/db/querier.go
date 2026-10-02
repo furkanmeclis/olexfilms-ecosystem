@@ -697,6 +697,14 @@ type Querier interface {
 	ListServiceImages(ctx context.Context, serviceID int64) ([]ServiceImage, error)
 	ListServiceItems(ctx context.Context, serviceID int64) ([]ServiceItem, error)
 	ListServiceStatusLogs(ctx context.Context, serviceID int64) ([]ServiceStatusLog, error)
+	// ---------------------------------------------------------------------------
+	// Stock picker (TEC-180): units the service organization can add as items.
+	// Serial units held (available / placed) by the organization in its own
+	// organization or location owners, minus pieces already in an open service
+	// and rolls taken whole by an open service; fixed barcodes with pieces on
+	// hand (summed over the organization's owners). Filters: exact barcode,
+	// product, and remaining meters of a roll (min_meters: rolls only).
+	ListServiceStockUnits(ctx context.Context, arg ListServiceStockUnitsParams) ([]ListServiceStockUnitsRow, error)
 	// Services of a customer across brands' organizations in scope (portal and
 	// customer detail).
 	ListServicesByCustomer(ctx context.Context, arg ListServicesByCustomerParams) ([]Service, error)
