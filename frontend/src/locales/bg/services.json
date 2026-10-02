@@ -191,6 +191,7 @@
   "detail.created": "Създадена на {{date}}",
   "detail.vehicle": "Автомобил",
   "detail.vehicle_model": "Марка / модел / година",
+  "detail.vehicle_open": "Отвори страницата на автомобила",
   "detail.customer": "Клиент",
   "detail.anonymized": "Анонимизиран",
   "detail.organization": "Дилър",

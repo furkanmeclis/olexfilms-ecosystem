@@ -191,6 +191,7 @@
   "detail.created": "أُنشئت في {{date}}",
   "detail.vehicle": "المركبة",
   "detail.vehicle_model": "العلامة / الطراز / السنة",
+  "detail.vehicle_open": "فتح صفحة المركبة",
   "detail.customer": "العميل",
   "detail.anonymized": "مجهول الهوية",
   "detail.organization": "الوكيل",

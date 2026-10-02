@@ -191,6 +191,7 @@
   "detail.created": "Δημιουργήθηκε {{date}}",
   "detail.vehicle": "Όχημα",
   "detail.vehicle_model": "Μάρκα / μοντέλο / έτος",
+  "detail.vehicle_open": "Άνοιγμα σελίδας οχήματος",
   "detail.customer": "Πελάτης",
   "detail.anonymized": "Ανωνυμοποιημένος",
   "detail.organization": "Αντιπρόσωπος",

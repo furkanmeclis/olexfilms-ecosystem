@@ -191,6 +191,7 @@
   "detail.created": "创建于 {{date}}",
   "detail.vehicle": "车辆",
   "detail.vehicle_model": "品牌 / 型号 / 年份",
+  "detail.vehicle_open": "打开车辆页面",
   "detail.customer": "客户",
   "detail.anonymized": "已匿名化",
   "detail.organization": "经销商",

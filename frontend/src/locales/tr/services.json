@@ -191,6 +191,7 @@
   "detail.created": "Oluşturulma: {{date}}",
   "detail.vehicle": "Araç",
   "detail.vehicle_model": "Marka / model / yıl",
+  "detail.vehicle_open": "Araç sayfasını aç",
   "detail.customer": "Müşteri",
   "detail.anonymized": "Anonimleştirildi",
   "detail.organization": "Bayi",

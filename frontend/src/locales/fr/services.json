@@ -191,6 +191,7 @@
   "detail.created": "Créé le {{date}}",
   "detail.vehicle": "Véhicule",
   "detail.vehicle_model": "Marque / modèle / année",
+  "detail.vehicle_open": "Ouvrir la fiche du véhicule",
   "detail.customer": "Client",
   "detail.anonymized": "Anonymisé",
   "detail.organization": "Revendeur",

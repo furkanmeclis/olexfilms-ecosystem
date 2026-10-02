@@ -191,6 +191,7 @@
   "detail.created": "Створено {{date}}",
   "detail.vehicle": "Автомобіль",
   "detail.vehicle_model": "Марка / модель / рік",
+  "detail.vehicle_open": "Відкрити сторінку автомобіля",
   "detail.customer": "Клієнт",
   "detail.anonymized": "Анонімізовано",
   "detail.organization": "Дилер",

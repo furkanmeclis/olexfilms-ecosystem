@@ -191,6 +191,7 @@
   "detail.created": "Yaradılıb: {{date}}",
   "detail.vehicle": "Avtomobil",
   "detail.vehicle_model": "Marka / model / il",
+  "detail.vehicle_open": "Avtomobil səhifəsini aç",
   "detail.customer": "Müştəri",
   "detail.anonymized": "Anonimləşdirilib",
   "detail.organization": "Diler",
