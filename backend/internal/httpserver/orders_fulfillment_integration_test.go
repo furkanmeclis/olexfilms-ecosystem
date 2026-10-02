@@ -101,6 +101,11 @@ func TestIntegrationOrdersFulfillment(t *testing.T) {
 
 	piece := it.product(center, "T167P")
 	fixed := it.product(center, "T167F")
+	// units_check_integrity: a fixed barcode needs a uses_fixed_barcode product.
+	if _, err := it.pool.Exec(ctx, `UPDATE products SET uses_fixed_barcode = TRUE WHERE id = $1`, fixed.ID); err != nil {
+		t.Fatalf("fixed product: %v", err)
+	}
+	fixed.UsesFixedBarcode = true
 	it.setListPrice(piece, cur, "50")
 	it.setListPrice(fixed, cur, "5")
 
