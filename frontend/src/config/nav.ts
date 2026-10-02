@@ -2,6 +2,7 @@ import {
   Activity,
   Bell,
   BellRing,
+  BookOpen,
   Building2,
   Car,
   Blocks,
@@ -11,6 +12,7 @@ import {
   FolderTree,
   HardDrive,
   KeyRound,
+  Landmark,
   LayoutDashboard,
   LogIn,
   MapPinned,
@@ -22,6 +24,7 @@ import {
   Shield,
   Upload,
   UserRound,
+  Users,
   Wrench,
 } from "lucide-react";
 
@@ -358,6 +361,43 @@ export function tenantNav(slug: string) {
             icon: Wrench,
             permission: SERVICE_WIZARD_PERMISSIONS,
             feature: "services",
+          },
+        ],
+      },
+      {
+        // TEC-176: the book reads need accounting.read and the accounting
+        // module (same gates as /v1/accounting); write controls inside the
+        // pages follow accounting.write and the organization type.
+        id: "accounting",
+        labelKey: "accounting.nav",
+        icon: BookOpen,
+        defaultOpen: true,
+        permission: permissions.accounting.read,
+        feature: "accounting",
+        items: [
+          {
+            id: "accounting-accounts",
+            titleKey: "accounting.nav_accounts",
+            href: routes.tenant.accounting.accounts(slug),
+            icon: Landmark,
+            permission: permissions.accounting.read,
+            feature: "accounting",
+          },
+          {
+            id: "accounting-cari",
+            titleKey: "accounting.nav_cari",
+            href: routes.tenant.accounting.cari(slug),
+            icon: Users,
+            permission: permissions.accounting.read,
+            feature: "accounting",
+          },
+          {
+            id: "accounting-entries",
+            titleKey: "accounting.nav_entries",
+            href: routes.tenant.accounting.entries(slug),
+            icon: ScrollText,
+            permission: permissions.accounting.read,
+            feature: "accounting",
           },
         ],
       },
