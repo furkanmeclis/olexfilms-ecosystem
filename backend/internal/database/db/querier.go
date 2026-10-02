@@ -795,9 +795,10 @@ type Querier interface {
 	SetWhatsAppSMSFallback(ctx context.Context, smsFallbackEnabled bool) (WhatsappSetting, error)
 	SlugExists(ctx context.Context, slug string) (bool, error)
 	SoftDeleteVehicle(ctx context.Context, id int64) (int64, error)
-	// Fixed barcodes: total actively reserved quantity, checked against the
-	// holding by the use case (sum <= on hand).
-	SumActiveReservedQuantityByUnit(ctx context.Context, unitID int64) (int64, error)
+	// Fixed barcodes: total quantity actively reserved by the seller
+	// organization, checked against what that organization holds by the use
+	// case (sum <= on hand, under the unit row lock).
+	SumActiveReservedQuantityByUnit(ctx context.Context, arg SumActiveReservedQuantityByUnitParams) (int64, error)
 	// The supplier of an organization is its parent in the tree (K9).
 	// Returns no rows for a center.
 	SupplierOf(ctx context.Context, id int64) (Organization, error)
