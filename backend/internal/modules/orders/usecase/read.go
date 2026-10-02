@@ -95,6 +95,21 @@ type OrderView struct {
 	AvailableTransitions []string      `json:"available_transitions"`
 	Items                []ItemView    `json:"items,omitempty"`
 	History              []HistoryView `json:"history,omitempty"`
+	// Split is set on an assignment that cut the meters off a roll as a
+	// new unit (TEC-184): the new barcode to label (printing: TEC-95).
+	Split *SplitView `json:"split,omitempty"`
+}
+
+// SplitView is the roll split an assignment made.
+type SplitView struct {
+	UUID                  uuid.UUID `json:"uuid"`
+	Meters                string    `json:"meters"`
+	SourceUnitUUID        uuid.UUID `json:"source_unit_uuid"`
+	SourceBarcode         string    `json:"source_barcode"`
+	SourceRemainingMeters string    `json:"source_remaining_meters"`
+	NewUnitUUID           uuid.UUID `json:"new_unit_uuid"`
+	NewBarcode            string    `json:"new_barcode"`
+	Replayed              bool      `json:"replayed"`
 }
 
 func tsPtr(t pgtype.Timestamptz) *time.Time {

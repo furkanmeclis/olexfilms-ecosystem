@@ -284,6 +284,7 @@ var azCatalog = map[string]string{
 	"accounting.category.other_expense":   "Digər xərclər",
 	"accounting.category.opening_balance": "İlkin qalıq",
 	"accounting.category.adjustment":      "Düzəliş",
+	"accounting.category.cari_transfer":   "Cari hesab devri",
 	"accounting.category.collection":      "Ödənişin qəbulu",
 	"accounting.category.payment":         "Ödəniş",
 	"accounting.direction.income":         "Gəlir",
@@ -291,6 +292,7 @@ var azCatalog = map[string]string{
 	"accounting.direction.charge":         "Borclandırma",
 	"accounting.direction.collection":     "Ödənişin qəbulu",
 	"accounting.direction.payment":        "Ödəniş",
+	"accounting.direction.opening":        "Açılış",
 	"accounting.account_type.cash":        "Kassa",
 	"accounting.account_type.bank":        "Bank hesabı",
 	// TEC-175: cari statement, balance report and export titles.
@@ -345,6 +347,9 @@ var azCatalog = map[string]string{
 	"export.title.portal.customer_data_export": "Şəxsi məlumatların çıxarışı",
 	"resources.customers.data_export":          "Müştərinin şəxsi məlumatları",
 	"resources.portal.customer_data_export":    "Şəxsi məlumatlarım",
+	// TEC-164: customer list export.
+	"export.title.customers.list":              "Müştəri siyahısı",
+	"resources.customers.list":                 "Müştərilər",
 	"customers.export.section":                 "Bölmə",
 	"customers.export.item":                    "Qeyd",
 	"customers.export.field":                   "Sahə",

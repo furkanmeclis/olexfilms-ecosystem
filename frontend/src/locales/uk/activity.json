@@ -189,5 +189,7 @@
   "actions.stock.reclassification.approved": "Перекласифікацію схвалено",
   "actions.stock.reclassification.rejected": "Перекласифікацію відхилено",
   "actions.stock.reclassification.cancelled": "Запит на перекласифікацію відкликано",
-  "resources.stock.reclassification": "Перекласифікація запасів"
+  "resources.stock.reclassification": "Перекласифікація запасів",
+  "actions.stock.split.created": "Рулон поділено",
+  "resources.stock.split": "Поділ рулону"
 }

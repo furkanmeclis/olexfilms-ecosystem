@@ -116,5 +116,15 @@
   "codes.ORDER_STOCK_UNAVAILABLE": "Se rechazó el movimiento de stock de este envío.",
   "codes.PRICE_NOT_FOUND": "No hay precio para este producto en la moneda del pedido.",
   "codes.RATE_NOT_FOUND": "No hay tipo de cambio disponible para congelar en la moneda del pedido.",
-  "codes.ROLL_CUT_UNSUPPORTED": "Los rollos se envían enteros; los metros deben igualar la longitud restante."
+  "codes.CUSTOMER_ANONYMIZED": "El cliente está anonimizado y no se puede cambiar.",
+  "codes.CUSTOMER_INACTIVE": "La cuenta del cliente no está activa.",
+  "codes.ALREADY_MEMBER": "El cliente ya es miembro de este concesionario.",
+  "codes.PII_ENCRYPTION_UNAVAILABLE": "Los números de identidad no se pueden guardar ahora (falta la clave de cifrado).",
+  "codes.INVALID_PLATE": "La matrícula no coincide con el formato de su país.",
+  "codes.ROLL_METERS_EXCEED_REMAINING": "Al rollo le quedan menos metros de los solicitados.",
+  "codes.STOCK_SPLIT_NOT_ROLL": "Solo se pueden dividir rollos; ni piezas ni códigos fijos.",
+  "codes.STOCK_SPLIT_INSUFFICIENT_METERS": "Al rollo le quedan menos metros de los solicitados.",
+  "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "El rollo no está en el stock de esta organización.",
+  "codes.STOCK_SPLIT_UNIT_IN_USE": "El rollo está en un servicio o pedido abierto.",
+  "codes.STOCK_SPLIT_KEY_CONFLICT": "Esta clave de idempotencia se usó para otra división."
 }

@@ -118,6 +118,8 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	// TEC-192: the delayed review request goes to the service customer
 	// (WhatsApp); the task writes the event once per service.
 	on(events.ServiceReviewRequested, serviceReviewDispatch)
+	// TEC-164: a new customer gets the WhatsApp welcome with the portal link.
+	on(events.CustomerCreated, customerWelcomeDispatch)
 	on(events.AIDraftCreated, func(event events.Event) (notifmodel.DispatchInput, bool) {
 		ids := userIDsFromAIEvent(event)
 		return notifmodel.DispatchInput{
@@ -180,6 +182,34 @@ func serviceReviewDispatch(event events.Event) (notifmodel.DispatchInput, bool) 
 			"service_uuid": stringFromPayload(event.Payload, "service_uuid"),
 			"service_no":   vars["service_no"],
 		},
+		ActionURL: &url,
+	}
+	if brand, ok := int64FromPayload(event.Payload, "brand_id"); ok && brand > 0 {
+		in.BrandID = &brand
+	}
+	return in, true
+}
+
+// customerWelcomeDispatch maps customer.created to the welcome message for
+// the new customer; a customer without a phone (or an event without the
+// portal link) sends nothing. The brand is the creating organization's
+// (K20).
+func customerWelcomeDispatch(event events.Event) (notifmodel.DispatchInput, bool) {
+	customer, ok := int64FromPayload(event.Payload, "customer_user_id")
+	url := stringFromPayload(event.Payload, "portal_url")
+	if !ok || customer <= 0 || url == "" {
+		return notifmodel.DispatchInput{}, false
+	}
+	if hasPhone, _ := event.Payload["has_phone"].(bool); !hasPhone {
+		return notifmodel.DispatchInput{}, false
+	}
+	vars := map[string]string{}
+	for _, k := range []string{"customer_name", "organization_name", "portal_url"} {
+		vars[k] = stringFromPayload(event.Payload, k)
+	}
+	in := notifmodel.DispatchInput{
+		EventCode: catalog.EventCustomerWelcome, UserIDs: []int64{customer}, Vars: vars,
+		Payload:   map[string]any{"customer_uuid": stringFromPayload(event.Payload, "customer_uuid")},
 		ActionURL: &url,
 	}
 	if brand, ok := int64FromPayload(event.Payload, "brand_id"); ok && brand > 0 {

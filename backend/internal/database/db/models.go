@@ -858,6 +858,17 @@ type OrganizationMemberRole struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
+type OrganizationParentChange struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	OldParentID    int64              `json:"old_parent_id"`
+	NewParentID    int64              `json:"new_parent_id"`
+	ActorUserID    pgtype.Int8        `json:"actor_user_id"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
 type OrganizationProductStock struct {
 	OrganizationID int64              `json:"organization_id"`
 	ProductID      int64              `json:"product_id"`
@@ -1259,6 +1270,22 @@ type StockReservation struct {
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
+type StockSplit struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	ProductID       int64              `json:"product_id"`
+	SourceUnitID    int64              `json:"source_unit_id"`
+	NewUnitID       int64              `json:"new_unit_id"`
+	Meters          pgtype.Numeric     `json:"meters"`
+	IdempotencyKey  string             `json:"idempotency_key"`
+	ReferenceType   pgtype.Text        `json:"reference_type"`
+	ReferenceID     pgtype.Int8        `json:"reference_id"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+}
+
 type StockTransferRequest struct {
 	ID                int64              `json:"id"`
 	Uuid              uuid.UUID          `json:"uuid"`
@@ -1267,7 +1294,7 @@ type StockTransferRequest struct {
 	FromOrgID         int64              `json:"from_org_id"`
 	ToOrgID           int64              `json:"to_org_id"`
 	ApproverOrgID     int64              `json:"approver_org_id"`
-	ProductID         int64              `json:"product_id"`
+	ProductID         pgtype.Int8        `json:"product_id"`
 	UnitID            pgtype.Int8        `json:"unit_id"`
 	Quantity          pgtype.Int4        `json:"quantity"`
 	Meters            pgtype.Numeric     `json:"meters"`
@@ -1283,6 +1310,33 @@ type StockTransferRequest struct {
 	DecisionNote      pgtype.Text        `json:"decision_note"`
 	CompletedAt       pgtype.Timestamptz `json:"completed_at"`
 	CancelledAt       pgtype.Timestamptz `json:"cancelled_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	TransferNo        string             `json:"transfer_no"`
+	Total             pgtype.Numeric     `json:"total"`
+	CancelReason      pgtype.Text        `json:"cancel_reason"`
+	ShippedByUserID   pgtype.Int8        `json:"shipped_by_user_id"`
+	ReceivedByUserID  pgtype.Int8        `json:"received_by_user_id"`
+	CancelledByUserID pgtype.Int8        `json:"cancelled_by_user_id"`
+	ShippedAt         pgtype.Timestamptz `json:"shipped_at"`
+	ReceivedAt        pgtype.Timestamptz `json:"received_at"`
+}
+
+type StockTransferRequestItem struct {
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	RequestID         int64              `json:"request_id"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	UnitID            int64              `json:"unit_id"`
+	ProductID         int64              `json:"product_id"`
+	Quantity          pgtype.Int4        `json:"quantity"`
+	Meters            pgtype.Numeric     `json:"meters"`
+	UnitPrice         pgtype.Numeric     `json:"unit_price"`
+	LineTotal         pgtype.Numeric     `json:"line_total"`
+	OutMovementID     pgtype.Int8        `json:"out_movement_id"`
+	InMovementID      pgtype.Int8        `json:"in_movement_id"`
+	RestoreMovementID pgtype.Int8        `json:"restore_movement_id"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }

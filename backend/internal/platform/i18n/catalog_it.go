@@ -284,6 +284,7 @@ var itCatalog = map[string]string{
 	"accounting.category.other_expense":   "Altre spese",
 	"accounting.category.opening_balance": "Saldo di apertura",
 	"accounting.category.adjustment":      "Rettifica",
+	"accounting.category.cari_transfer":   "Trasferimento partitario",
 	"accounting.category.collection":      "Incasso",
 	"accounting.category.payment":         "Pagamento",
 	"accounting.direction.income":         "Ricavo",
@@ -291,6 +292,7 @@ var itCatalog = map[string]string{
 	"accounting.direction.charge":         "Addebito",
 	"accounting.direction.collection":     "Incasso",
 	"accounting.direction.payment":        "Pagamento",
+	"accounting.direction.opening":        "Apertura",
 	"accounting.account_type.cash":        "Cassa",
 	"accounting.account_type.bank":        "Banca",
 	// TEC-175: cari statement, balance report and export titles.
@@ -345,6 +347,9 @@ var itCatalog = map[string]string{
 	"export.title.portal.customer_data_export": "Esportazione dei dati personali",
 	"resources.customers.data_export":          "Dati personali del cliente",
 	"resources.portal.customer_data_export":    "I miei dati personali",
+	// TEC-164: customer list export.
+	"export.title.customers.list":              "Elenco clienti",
+	"resources.customers.list":                 "Clienti",
 	"customers.export.section":                 "Sezione",
 	"customers.export.item":                    "Voce",
 	"customers.export.field":                   "Campo",

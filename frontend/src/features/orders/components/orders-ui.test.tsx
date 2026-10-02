@@ -311,6 +311,53 @@ describe("OrderDetailPage: buttons by role and status", () => {
     expect($("[data-testid=assign-form]")).toBeNull();
   });
 
+  it("seller preparing roll: meters split the roll, new barcode in the toast", async () => {
+    const rollItem = {
+      ...order().items![0],
+      product: {
+        uuid: "p2",
+        sku: "PPF-190",
+        name: "PPF",
+        unit_type: "roll_meter",
+      },
+      quantity: null,
+      meters: "12.00",
+    };
+    const preparing = {
+      role: "seller" as const,
+      status: "preparing" as const,
+      available_transitions: ["ready", "cancelled"] as never,
+    };
+    api.get.mockResolvedValue(order({ ...preparing, items: [rollItem] }));
+    api.assignUnit.mockResolvedValue(
+      order({
+        ...preparing,
+        items: [{ ...rollItem, assigned: "12.00" }],
+        split: {
+          uuid: "s1",
+          meters: "12.00",
+          source_unit_uuid: "r1",
+          source_barcode: "ROLL-1",
+          source_remaining_meters: "38.00",
+          new_unit_uuid: "n1",
+          new_barcode: "ROLL-1-S1",
+          replayed: false,
+        },
+      }),
+    );
+    await render(createElement(OrderDetailPage, { slug: "acme", uuid: "o1" }));
+    expect($('input[name="quantity"]')).toBeNull();
+    await type($('input[name="barcode"]'), "ROLL-1");
+    await type($('input[name="meters"]'), "12");
+    await click($("[data-testid=assign-submit]"));
+    const body = api.assignUnit.mock.calls.at(-1)![2];
+    expect(body).toMatchObject({ barcode: "ROLL-1", meters: "12" });
+    expect(typeof body.idempotency_key).toBe("string");
+    expect(toast.success).toHaveBeenCalledWith(
+      'orders.assign.split_success {"barcode":"ROLL-1-S1","rest":"38.00"}',
+    );
+  });
+
   it("buyer shipped: receive confirms through the dialog", async () => {
     api.get.mockResolvedValue(
       order({

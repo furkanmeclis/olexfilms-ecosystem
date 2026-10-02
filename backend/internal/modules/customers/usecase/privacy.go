@@ -48,6 +48,7 @@ type Revoker interface {
 // SearchIndexer refreshes a search document (*searchengine.Indexer).
 type SearchIndexer interface {
 	EnqueueUpsert(ctx context.Context, spec, id string)
+	EnqueueDelete(ctx context.Context, spec, id string)
 }
 
 // SetRevoker enables immediate access token revocation (nil: refresh tokens
@@ -55,7 +56,8 @@ type SearchIndexer interface {
 func (s *Service) SetRevoker(r Revoker) { s.revoker = r }
 
 // SetSearchIndexer refreshes the users search document after anonymization
-// so the old name, e-mail and phone leave the index.
+// so the old name, e-mail and phone leave the index, and keeps the customers
+// index in sync (TEC-164).
 func (s *Service) SetSearchIndexer(i SearchIndexer) { s.search = i }
 
 // AnonymizeResult is the outcome of an anonymization. Changed is false when
@@ -132,6 +134,8 @@ func (s *Service) AnonymizeCustomer(ctx context.Context, c Caller, id uuid.UUID,
 		}
 		if s.search != nil {
 			s.search.EnqueueUpsert(ctx, adapters.SpecUsers, userUUID.String())
+			// TEC-164: an anonymized customer leaves the customers index.
+			s.search.EnqueueDelete(ctx, SearchSpec, userUUID.String())
 		}
 	}
 	return res, nil

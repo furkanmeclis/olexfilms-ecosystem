@@ -10,6 +10,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/logging"
 	catalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/catalog/usecase"
+	customersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/customers/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
 	searchadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine/adapters"
 )
@@ -47,6 +48,7 @@ func main() {
 		searchadapters.NewUsers(queries),
 		searchadapters.NewRoles(queries),
 		catalogusecase.NewSearchAdapter(queries),
+		customersusecase.NewSearchAdapter(queries), // TEC-164
 	)
 	indexer := searchengine.NewIndexer(client, reg, nil, log)
 	if err := indexer.ProcessReindex(ctx, ""); err != nil {

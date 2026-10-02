@@ -125,7 +125,9 @@ type Service struct {
 	plates  PlateValidator
 	revoker Revoker
 	search  SearchIndexer
+	finder  CustomerFinder // TEC-164: customers index search (nil: SQL only)
 	out     outbox.Enqueuer
+	portal  string     // TEC-164: portal URL of the customer.created message
 	tr      *transfers // TEC-190: vehicle transfer (nil: disabled)
 }
 

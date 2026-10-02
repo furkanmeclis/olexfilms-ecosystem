@@ -12,7 +12,7 @@ import (
 func TestCategoryCatalog(t *testing.T) {
 	directions := map[string]bool{
 		DirectionIncome: true, DirectionExpense: true, DirectionCharge: true,
-		DirectionCollection: true, DirectionPayment: true,
+		DirectionCollection: true, DirectionPayment: true, DirectionOpening: true,
 	}
 	seen := map[string]bool{}
 	for _, c := range Categories() {

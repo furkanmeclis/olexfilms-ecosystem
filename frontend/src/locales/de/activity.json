@@ -189,5 +189,7 @@
   "actions.stock.reclassification.approved": "Umklassifizierung genehmigt",
   "actions.stock.reclassification.rejected": "Umklassifizierung abgelehnt",
   "actions.stock.reclassification.cancelled": "Umklassifizierungsanfrage zurückgezogen",
-  "resources.stock.reclassification": "Bestandsumklassifizierung"
+  "resources.stock.reclassification": "Bestandsumklassifizierung",
+  "actions.stock.split.created": "Rolle geteilt",
+  "resources.stock.split": "Rollenteilung"
 }

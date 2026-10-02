@@ -189,5 +189,7 @@
   "actions.stock.reclassification.approved": "تمت الموافقة على إعادة التصنيف",
   "actions.stock.reclassification.rejected": "تم رفض إعادة التصنيف",
   "actions.stock.reclassification.cancelled": "تم سحب طلب إعادة التصنيف",
-  "resources.stock.reclassification": "إعادة تصنيف المخزون"
+  "resources.stock.reclassification": "إعادة تصنيف المخزون",
+  "actions.stock.split.created": "قُسّمت اللفة",
+  "resources.stock.split": "تقسيم اللفة"
 }

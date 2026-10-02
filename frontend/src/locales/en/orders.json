@@ -148,7 +148,7 @@
   "actions.complete_cancel.description": "Confirm that the shipped units are back; they return to your stock.",
   "actions.complete_cancel.confirm": "Complete cancellation",
   "actions.complete_cancel.success": "Order cancelled.",
-  "assign.hint": "Scan or type the barcode of each unit to ship. Fixed barcodes take a quantity; rolls ship whole.",
+  "assign.hint": "Scan or type the barcode of each unit to ship. Fixed barcodes take a quantity; rolls take meters: leave it empty for the whole roll, fewer meters split the roll under a new barcode.",
   "assign.complete": "Every line is covered. You can mark the order as ready.",
   "assign.not_complete": "Assign units to every line first.",
   "assign.assigned": "Assigned",
@@ -158,5 +158,8 @@
   "assign.submit": "Assign",
   "assign.remove": "Remove unit",
   "assign.success": "Unit assigned.",
-  "assign.failed": "The unit could not be assigned."
+  "assign.failed": "The unit could not be assigned.",
+  "assign.meters": "Meters",
+  "assign.meters_placeholder": "All",
+  "assign.split_success": "Roll split: new barcode {{barcode}}, {{rest}} m left on the roll."
 }

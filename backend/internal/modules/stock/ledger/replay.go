@@ -22,12 +22,19 @@ import (
 // (metadata.from_product_id). Replay follows the product along the chain;
 // the unit's stock counts under the product of its last movement, which
 // must equal units.product_id (else an anomaly).
+//
+// Split (TEC-184): the source roll's movement is an ordinary meter change
+// (owner kept, used at 0 m) and the new unit's first movement places it at
+// the same owner with remaining = initial; trackSplits checks both shapes
+// and SplitAnomalies that the meters the roll lost equal the new unit's.
 
 // Projection is the expected state of every projection.
 type Projection struct {
 	Units     map[int64]*UnitProjection
 	OrgStocks map[OrgStockKey]StockAmount
 	BinStocks map[BinStockKey]BinStockAmount
+	// splits: both sides of each split seen so far (TEC-184).
+	splits map[int64]*splitPair
 }
 
 // OrgStockKey keys organization_product_stocks.
@@ -116,6 +123,7 @@ func (p *Projection) Replay(u db.Unit, mvs []db.StockMovement) (*UnitProjection,
 	if err != nil {
 		return nil, err
 	}
+	p.trackSplits(u, up, mvs)
 	p.Units[u.ID] = up
 	for k, v := range d.bin {
 		key := BinStockKey{LocationID: k[0], ProductID: up.ProductID}

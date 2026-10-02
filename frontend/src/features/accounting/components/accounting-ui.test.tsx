@@ -41,6 +41,7 @@ vi.mock("@/components/ui/date-picker", async () => {
 });
 
 import { AccountForm } from "./account-form-dialog";
+import { AccountOpeningForm } from "./account-opening-dialog";
 import { EntryFilters } from "./entry-filters";
 import { SettlementForm } from "./settlement-dialog";
 import { EntryAmount, EntryStatus } from "./shared";
@@ -317,6 +318,32 @@ describe("AccountForm validation", () => {
     );
     expect(($("#account-type") as HTMLSelectElement).disabled).toBe(true);
     expect(($("#account-name") as HTMLInputElement).value).toBe("Kasa");
+  });
+});
+
+describe("AccountOpeningForm (TEC-198)", () => {
+  it("validates, then posts the normalized amount and date", async () => {
+    const onSubmit = vi.fn().mockResolvedValue({});
+    await render(
+      createElement(AccountOpeningForm, {
+        account: account({ type: "cash" }),
+        onCancel: () => {},
+        onSubmit,
+      }),
+    );
+    await submit($("[data-testid=account-opening-form]"));
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(container.textContent).toContain("accounting.validation.amount");
+    expect(container.textContent).toContain("accounting.validation.date");
+
+    await type($("#opening-amount"), "1.500,5");
+    await type($("#opening-date"), "2021-03-01");
+    await submit($("[data-testid=account-opening-form]"));
+    expect(onSubmit).toHaveBeenCalledWith({
+      amount: "1500.50",
+      opening_date: "2021-03-01",
+      description: undefined,
+    });
   });
 });
 

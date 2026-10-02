@@ -206,6 +206,7 @@ const (
 	StockCountAdjustment       = "stock.count_adjustment"
 	StockVoid                  = "stock.void"
 	StockExternalOutbound      = "stock.external_outbound"
+	StockSplit                 = "stock.split"
 )
 
 // Order domain events (TEC-165): one per status transition, written to the
@@ -226,11 +227,16 @@ const (
 	OrdersCancelled       = "orders.cancelled"
 )
 
-// Sibling dealer transfer events (K13, TEC-165).
+// Sibling transfer events (K13, TEC-165; TEC-197): one per status
+// transition of a stock transfer request, written to the outbox in the
+// transition's transaction. transfers.completed is the 000049 name and is
+// not written since TEC-197 (shipped/received replace it).
 const (
 	TransfersRequested = "transfers.requested"
 	TransfersApproved  = "transfers.approved"
 	TransfersRejected  = "transfers.rejected"
+	TransfersShipped   = "transfers.shipped"
+	TransfersReceived  = "transfers.received"
 	TransfersCompleted = "transfers.completed"
 	TransfersCancelled = "transfers.cancelled"
 )
@@ -294,6 +300,11 @@ const (
 	TasksStatusChanged = "tasks.status_changed"
 	TasksCommentAdded  = "tasks.comment_added"
 )
+
+// CustomerCreated (TEC-164) is written when an organization creates a new
+// customer user; the notification module sends the WhatsApp welcome with
+// the portal link.
+const CustomerCreated = "customer.created"
 
 // Contracts domain events.
 const (
@@ -511,6 +522,7 @@ func catalogConstants() []string {
 		StockCountAdjustment,
 		StockVoid,
 		StockExternalOutbound,
+		StockSplit,
 		OrdersCreated,
 		OrdersUpdated,
 		OrdersSubmitted,
@@ -526,6 +538,8 @@ func catalogConstants() []string {
 		TransfersRequested,
 		TransfersApproved,
 		TransfersRejected,
+		TransfersShipped,
+		TransfersReceived,
 		TransfersCompleted,
 		TransfersCancelled,
 		ServiceCreated,
@@ -549,6 +563,7 @@ func catalogConstants() []string {
 		VehicleTransferCancelled,
 		VehicleTransferExpired,
 		CustomerMerged,
+		CustomerCreated,
 		ContractsInstanceSigned,
 		AuthWelcome,
 		AuthEmailVerification,

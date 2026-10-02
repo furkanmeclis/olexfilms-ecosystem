@@ -50,6 +50,24 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/stock/reclassifications/{uuid}/cancel", scoped(rh.Cancel, rbac.PermStockWrite))
 }
 
+// RegisterSplitRoutes mounts the TEC-184 roll split (stock.write): the
+// holding organization cuts meters off a roll as a new unit.
+func RegisterSplitRoutes(
+	mux *http.ServeMux,
+	h *stockhandler.Split,
+	checker middleware.FeatureChecker,
+	tokens *jwt.Manager,
+	loader middleware.IdentityLoader,
+	q *db.Queries,
+) {
+	mux.Handle("POST /v1/stock/splits", middleware.Chain(http.HandlerFunc(h.Create),
+		middleware.Authenticate(tokens, loader),
+		middleware.RequireOrganization(tokens, q),
+		middleware.RequireFeature(checker, features.ModuleStock),
+		middleware.RequireScope(q, rbac.PermStockWrite),
+	))
+}
+
 // RegisterImportRoutes mounts the TEC-158 stock import upload (stock.import,
 // center only). Preview, confirm and undo run on /v1/tenant/imports/{uuid}.
 func RegisterImportRoutes(

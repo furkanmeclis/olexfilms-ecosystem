@@ -11,6 +11,7 @@ import catalogMessages from "./catalog.json";
 import chart from "./chart.json";
 import cms from "./cms.json";
 import common from "./common.json";
+import customers from "./customers.json";
 import dashboard from "./dashboard.json";
 import documents from "./documents.json";
 import editor from "./editor.json";
@@ -39,6 +40,7 @@ import settings from "./settings.json";
 import stepup from "./stepup.json";
 import storage from "./storage.json";
 import table from "./table.json";
+import transfers from "./transfers.json";
 import users from "./users.json";
 import vehicles from "./vehicles.json";
 import warranty from "./warranty.json";
@@ -54,6 +56,7 @@ const catalog: LocaleCatalog = {
   chart,
   cms,
   common,
+  customers,
   dashboard,
   documents,
   editor,
@@ -82,6 +85,7 @@ const catalog: LocaleCatalog = {
   stepup,
   storage,
   table,
+  transfers,
   users,
   vehicles,
   warranty,

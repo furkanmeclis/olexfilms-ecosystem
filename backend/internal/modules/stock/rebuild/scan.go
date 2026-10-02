@@ -79,6 +79,7 @@ func scan(ctx context.Context, q *db.Queries, orgID int64) (*scanResult, error) 
 			return nil, err
 		}
 	}
+	sc.anomalies = append(sc.anomalies, sc.exp.SplitAnomalies()...)
 	if err := sc.stocks(ctx, q, orgID); err != nil {
 		return nil, err
 	}

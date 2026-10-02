@@ -116,5 +116,15 @@
   "codes.ORDER_STOCK_UNAVAILABLE": "Die Lagerbewegung für diese Sendung wurde abgelehnt.",
   "codes.PRICE_NOT_FOUND": "Für dieses Produkt gibt es keinen Preis in der Bestellwährung.",
   "codes.RATE_NOT_FOUND": "Für die Bestellwährung ist kein einzufrierender Wechselkurs verfügbar.",
-  "codes.ROLL_CUT_UNSUPPORTED": "Rollen werden vollständig versendet; die Meter müssen der Restlänge entsprechen."
+  "codes.CUSTOMER_ANONYMIZED": "Der Kunde ist anonymisiert und kann nicht geändert werden.",
+  "codes.CUSTOMER_INACTIVE": "Das Kundenkonto ist nicht aktiv.",
+  "codes.ALREADY_MEMBER": "Der Kunde ist bereits Mitglied dieses Händlers.",
+  "codes.PII_ENCRYPTION_UNAVAILABLE": "Ausweisnummern können derzeit nicht gespeichert werden (Schlüssel fehlt).",
+  "codes.INVALID_PLATE": "Das Kennzeichen entspricht nicht dem Format seines Landes.",
+  "codes.ROLL_METERS_EXCEED_REMAINING": "Auf der Rolle sind weniger Meter als angefordert übrig.",
+  "codes.STOCK_SPLIT_NOT_ROLL": "Nur Rollen können geteilt werden; Stückartikel und feste Barcodes nicht.",
+  "codes.STOCK_SPLIT_INSUFFICIENT_METERS": "Auf der Rolle sind weniger Meter als angefordert übrig.",
+  "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "Die Rolle ist nicht im Bestand dieser Organisation.",
+  "codes.STOCK_SPLIT_UNIT_IN_USE": "Die Rolle wird in einem offenen Service oder Auftrag verwendet.",
+  "codes.STOCK_SPLIT_KEY_CONFLICT": "Dieser Idempotenzschlüssel wurde für eine andere Teilung verwendet."
 }
