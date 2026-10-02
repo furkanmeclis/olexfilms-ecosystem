@@ -79,6 +79,10 @@ export const routes = {
       create: (slug: string) => `/t/${slug}/transfers/new`,
       detail: (slug: string, uuid: string) => `/t/${slug}/transfers/${uuid}`,
     },
+    /** TEC-224 dealer "My stock" (units on hand, consumed in services). */
+    stock: {
+      root: (slug: string) => `/t/${slug}/stock`,
+    },
     /** TEC-163 customers: list, new, detail (with vehicles), edit. */
     customers: {
       list: (slug: string) => `/t/${slug}/customers`,
