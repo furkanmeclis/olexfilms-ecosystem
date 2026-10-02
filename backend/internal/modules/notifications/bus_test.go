@@ -44,3 +44,36 @@ func TestWarrantyDispatch(t *testing.T) {
 		t.Fatal("an event without holder must be skipped")
 	}
 }
+
+// TEC-192: service.review_requested goes to the service customer with the
+// dealer's review link; without a customer or a link nothing is sent.
+func TestServiceReviewDispatch(t *testing.T) {
+	ev := events.New(events.ServiceReviewRequested).WithPayload(map[string]any{
+		"customer_user_id": int64(42), "brand_id": int64(3),
+		"organization_name": "Tech Oto", "review_url": "https://g.page/r/x/review",
+		"plate": "34 ABC 123", "service_no": "DS00000001", "service_uuid": "u-1",
+	})
+	in, ok := serviceReviewDispatch(ev)
+	if !ok {
+		t.Fatal("want a dispatch")
+	}
+	if in.EventCode != catalog.EventServiceReviewRequest || len(in.UserIDs) != 1 || in.UserIDs[0] != 42 {
+		t.Fatalf("dispatch = %+v", in)
+	}
+	if in.BrandID == nil || *in.BrandID != 3 || in.ActionURL == nil || *in.ActionURL != "https://g.page/r/x/review" {
+		t.Fatalf("brand/action = %v %v", in.BrandID, in.ActionURL)
+	}
+	if in.Vars["review_url"] != "https://g.page/r/x/review" || in.Vars["organization_name"] != "Tech Oto" {
+		t.Fatalf("vars = %v", in.Vars)
+	}
+	if _, ok := serviceReviewDispatch(events.New(events.ServiceReviewRequested).WithPayload(map[string]any{
+		"customer_user_id": int64(42),
+	})); ok {
+		t.Fatal("no review_url: want no dispatch")
+	}
+	if _, ok := serviceReviewDispatch(events.New(events.ServiceReviewRequested).WithPayload(map[string]any{
+		"review_url": "https://g.page/r/x/review",
+	})); ok {
+		t.Fatal("no customer: want no dispatch")
+	}
+}

@@ -249,6 +249,11 @@ const (
 	ServiceNoteAdded    = "service.note_added"
 )
 
+// ServiceReviewRequested is written by the delayed service:review_request
+// task (TEC-192) in the transaction that stamps review_request_sent_at; the
+// notification module sends the WhatsApp review request from it.
+const ServiceReviewRequested = "service.review_requested"
+
 // Warranty domain events (TEC-98 / TEC-185). warranty.created is written
 // by the service.completed consumer, expiring_soon (payload days: 30 or 7)
 // and expired by the daily cron, holder_changed by a completed vehicle
@@ -518,6 +523,7 @@ func catalogConstants() []string {
 		ServiceImageAdded,
 		ServiceImageRemoved,
 		ServiceNoteAdded,
+		ServiceReviewRequested,
 		WarrantyCreated,
 		WarrantyExpiringSoon,
 		WarrantyExpired,

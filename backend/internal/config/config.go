@@ -36,6 +36,7 @@ type Config struct {
 	Rates      RatesConfig
 	Mobile     MobileConfig
 	Warranty   WarrantyConfig
+	Services   ServicesConfig
 }
 
 // MobileConfig is the mobile API contract (TEC-91): the supported range of
@@ -55,6 +56,13 @@ type WarrantyConfig struct {
 	RepairScanDays   int
 	PublicRateLimit  int
 	PublicRateWindow time.Duration
+}
+
+// ServicesConfig tunes the service follow-up tasks. ReviewRequestDelay is
+// how long after service.completed the Google review request is sent
+// (TEC-192, SERVICE_REVIEW_REQUEST_DELAY, default 24h).
+type ServicesConfig struct {
+	ReviewRequestDelay time.Duration
 }
 
 // RatesConfig points the daily exchange rate fetch (TEC-84) at TCMB and ECB.
@@ -355,6 +363,9 @@ func Load() (Config, error) {
 			RepairScanDays:   getInt("WARRANTY_REPAIR_SCAN_DAYS", 30),
 			PublicRateLimit:  getInt("WARRANTY_PUBLIC_RATE_LIMIT", 30),
 			PublicRateWindow: getDuration("WARRANTY_PUBLIC_RATE_WINDOW", time.Minute),
+		},
+		Services: ServicesConfig{
+			ReviewRequestDelay: getDuration("SERVICE_REVIEW_REQUEST_DELAY", 24*time.Hour),
 		},
 		Mobile: MobileConfig{
 			MinAPIVersion: getInt("MOBILE_API_MIN_VERSION", 1),
