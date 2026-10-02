@@ -323,6 +323,7 @@ var arCatalog = map[string]string{
 	"accounting.source.order":                       "طلب",
 	"accounting.source.service":                     "خدمة",
 	"accounting.source.transfer":                    "تحويل",
+	"accounting.source.opening_balance":             "الرصيد الافتتاحي",
 	"export.title.tenant.accounting.cari_statement": "كشف حساب",
 	"export.title.tenant.accounting.balances":       "تقرير الأرصدة",
 	"resources.tenant.accounting.cari_statement":    "كشف حساب",

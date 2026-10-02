@@ -8758,7 +8758,7 @@ paths:
           schema: { type: string, examples: [rent] }
         - name: source_type
           in: query
-          description: manual, order, ...
+          description: manual, order, opening_balance, ...
           schema: { type: string }
         - name: date_from
           in: query
@@ -8858,12 +8858,15 @@ paths:
     post:
       tags: [Accounting]
       operationId: voidAccountingEntry
-      summary: Reverse a manual entry (step-up)
+      summary: Reverse a manual entry or an opening balance (step-up)
       description: >-
         Appends the mirror row (reversal_of_uuid, negated amounts); the
-        ledger is append-only. Only open manual entries of the active
-        organization (409 ENTRY_NOT_VOIDABLE otherwise). Needs a recent
-        step-up (403 STEP_UP_REQUIRED).
+        ledger is append-only. Only open manual entries and opening
+        balances (TEC-177) of the active organization (409
+        ENTRY_NOT_VOIDABLE otherwise). Reversing an opening balance writes
+        accounting.opening_balance_voided to the audit log; a new opening
+        balance may then be booked. Needs a recent step-up (403
+        STEP_UP_REQUIRED).
       security:
         - bearerAuth: []
       parameters:
@@ -8917,6 +8920,59 @@ paths:
                 $ref: "#/components/schemas/EnvelopeFinanceEntry"
         "201":
           description: Created collection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFinanceEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/accounting/opening-balances:
+    post:
+      tags: [Accounting]
+      operationId: createAccountingOpeningBalance
+      summary: Book the one-off opening balance of a cari (step-up)
+      description: >-
+        TEC-177. Writes the balance a cari carries over (F2 migrator data or
+        paper) in the active organization's book, once per cari: a debit
+        side (the counterparty owes us) is a charge, a credit side (we owe
+        the counterparty) an account-less collection; neither touches P&L or
+        cash. The row is dated at opening_date (ledger order and rate day),
+        so statements show it at the start of the cari's history. The same
+        opening balance again answers 200 with the earlier entry; other
+        values while one is open answer 409 OPENING_BALANCE_EXISTS. Correct
+        it by reversing the entry (POST /v1/accounting/entries/{uuid}/void),
+        then book it again. Needs accounting.write (dealer roles answer 403)
+        and a recent step-up (403 STEP_UP_REQUIRED). Writes
+        cari.opening_balance_posted to the outbox and
+        accounting.opening_balance_posted to the audit log.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinanceOpeningBalanceInput"
+      responses:
+        "200":
+          description: Replayed (the same opening balance is already booked)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFinanceEntry"
+        "201":
+          description: Created opening balance
           content:
             application/json:
               schema:
@@ -15208,6 +15264,25 @@ components:
         currency: { type: string, minLength: 3, maxLength: 3 }
         description: { type: string, maxLength: 1000 }
         idempotency_key: { type: [string, "null"], format: uuid }
+
+    FinanceOpeningBalanceInput:
+      type: object
+      required: [side, amount, opening_date]
+      additionalProperties: false
+      properties:
+        cari_uuid: { type: [string, "null"], format: uuid }
+        counterparty_organization_uuid: { type: [string, "null"], format: uuid }
+        side:
+          type: string
+          enum: [debit, credit]
+          description: debit = the counterparty owes us; credit = we owe the counterparty.
+        amount: { $ref: "#/components/schemas/AccountingAmountInput" }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        opening_date:
+          type: string
+          format: date
+          description: Opening date (2000-01-01 .. today); the row is dated here.
+        description: { type: string, maxLength: 1000 }
 
     FinanceEntryVoidInput:
       type: object

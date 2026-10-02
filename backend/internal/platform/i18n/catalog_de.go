@@ -323,6 +323,7 @@ var deCatalog = map[string]string{
 	"accounting.source.order":                       "Bestellung",
 	"accounting.source.service":                     "Dienstleistung",
 	"accounting.source.transfer":                    "Umbuchung",
+	"accounting.source.opening_balance":             "Eröffnungssaldo",
 	"export.title.tenant.accounting.cari_statement": "Kontoauszug",
 	"export.title.tenant.accounting.balances":       "Saldenbericht",
 	"resources.tenant.accounting.cari_statement":    "Kontoauszug",

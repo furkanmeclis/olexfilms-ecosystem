@@ -407,6 +407,10 @@ type Querier interface {
 	// brand when there is no active organization.
 	GetLocaleSources(ctx context.Context, arg GetLocaleSourcesParams) (GetLocaleSourcesRow, error)
 	GetLogPurgeRuleByUUID(ctx context.Context, argUuid uuid.UUID) (LogPurgeRule, error)
+	// GetMaxFinanceEntryRevisionBySource is the highest revision written for a
+	// source in one organization (0: none). TEC-177 opens a new revision of an
+	// opening balance once the previous one is reversed.
+	GetMaxFinanceEntryRevisionBySource(ctx context.Context, arg GetMaxFinanceEntryRevisionBySourceParams) (int32, error)
 	GetModule(ctx context.Context, key string) (Module, error)
 	GetNotificationByID(ctx context.Context, id int64) (Notification, error)
 	GetNotificationByUUID(ctx context.Context, argUuid uuid.UUID) (Notification, error)
@@ -555,7 +559,9 @@ type Querier interface {
 	// InsertFinanceEntry appends an original row. A retried sourced write (same
 	// organization, source, role and revision) conflicts with
 	// uq_finance_entries_source and returns no row (pgx.ErrNoRows); the caller
-	// then reads the existing row with GetFinanceEntryBySource.
+	// then reads the existing row with GetFinanceEntryBySource. posted_at places
+	// the row in the ledger order (created_at); NULL means now. Only an opening
+	// balance (TEC-177) passes it: the row sits at the opening date.
 	InsertFinanceEntry(ctx context.Context, arg InsertFinanceEntryParams) (FinanceEntry, error)
 	// InsertFinanceReversal appends the mirror row of entry reversal_of_id
 	// (negated amounts, same targets and source). A second reversal of the same

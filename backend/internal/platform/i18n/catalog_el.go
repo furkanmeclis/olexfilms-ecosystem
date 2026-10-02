@@ -323,6 +323,7 @@ var elCatalog = map[string]string{
 	"accounting.source.order":                       "Παραγγελία",
 	"accounting.source.service":                     "Υπηρεσία",
 	"accounting.source.transfer":                    "Μεταφορά",
+	"accounting.source.opening_balance":             "Υπόλοιπο έναρξης",
 	"export.title.tenant.accounting.cari_statement": "Καρτέλα λογαριασμού",
 	"export.title.tenant.accounting.balances":       "Αναφορά υπολοίπων",
 	"resources.tenant.accounting.cari_statement":    "Καρτέλα λογαριασμού",

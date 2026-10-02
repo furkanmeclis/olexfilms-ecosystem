@@ -15,6 +15,9 @@ const (
 	CariChargePosted  = "cari.charge_posted"
 	CariPaymentPosted = "cari.payment_posted"
 	CariEntryVoided   = "cari.entry_voided"
+	// CariOpeningBalancePosted: the one-off opening balance of a cari
+	// (TEC-177); its reversal publishes CariEntryVoided.
+	CariOpeningBalancePosted = "cari.opening_balance_posted"
 )
 
 // Finance (income/expense ledger, TEC-99) domain events. A ledger row that
@@ -366,6 +369,7 @@ func catalogConstants() []string {
 		CariChargePosted,
 		CariPaymentPosted,
 		CariEntryVoided,
+		CariOpeningBalancePosted,
 		FinanceEntryPosted,
 		FinanceEntryVoided,
 		AccountingDisputeOpened,

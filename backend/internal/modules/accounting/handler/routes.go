@@ -18,7 +18,7 @@ import (
 // accounting.write, TEC-99 decision 7, so their writes answer 403); the
 // scope is resolved per request (RequireScope) and the use case limits the
 // book to the active organization and the organizations below it. Voiding
-// an entry also needs a recent step-up.
+// an entry and booking an opening balance also need a recent step-up.
 func RegisterRoutes(
 	mux *http.ServeMux,
 	h *Handler,
@@ -79,4 +79,8 @@ func RegisterRoutes(
 
 	mux.Handle("POST /v1/accounting/collections", write(h.CreateCollection))
 	mux.Handle("POST /v1/accounting/payments", write(h.CreatePayment))
+
+	// TEC-177: one-off opening balance of a cari (step-up); reversed through
+	// POST /v1/accounting/entries/{uuid}/void.
+	mux.Handle("POST /v1/accounting/opening-balances", sensitive(h.CreateOpeningBalance))
 }

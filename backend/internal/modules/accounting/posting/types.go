@@ -90,6 +90,9 @@ type Entry struct {
 	CounterpartyOrgID int64
 	Description       string
 	ActorUserID       *int64
+	// PostedAt places the row in the ledger order (created_at); zero means
+	// now. Only an opening balance (TEC-177) sets it, to its opening date.
+	PostedAt time.Time
 }
 
 // Sale is a sale from an organization to its child (K9): the seller books
