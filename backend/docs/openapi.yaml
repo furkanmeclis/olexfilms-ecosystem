@@ -78,6 +78,8 @@ tags:
     description: Product categories and products of the active brand (center writes, K4)
   - name: Stock
     description: Stock ledger reads (barcode history, organization and bin stock), scoped on the holding organization
+  - name: Warehouse
+    description: Warehouse tree (warehouses, rooms, aisle/shelf/bin locations) of center and distributor organizations (K12, K20)
   - name: VehicleCatalog
     description: >-
       Car brands and models (TEC-149): global reference data, read by every
@@ -5567,6 +5569,561 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeStockReclassification"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/warehouses:
+    get:
+      tags: [Warehouse]
+      operationId: listWarehouses
+      summary: Warehouses of the active organization
+      description: >-
+        Needs `warehouse.read`; center and distributor organizations only (403
+        for dealers, K12). Works on the active organization's own warehouses.
+        Ordered by sort_order. `active` filters.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: active
+          in: query
+          required: false
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Warehouses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+    post:
+      tags: [Warehouse]
+      operationId: createWarehouse
+      summary: Open a warehouse
+      description: >-
+        Needs `warehouse.write`; center and distributor organizations only (403
+        for dealers, K12).
+        `code` is upper-cased (A-Z, 0-9, _; 1-32), unique per organization
+        (409 WAREHOUSE_CODE_TAKEN). The warehouse is brand-independent (K20).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseInput" }
+      responses:
+        "201":
+          description: Created warehouse
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/warehouse/warehouses/reorder:
+    post:
+      tags: [Warehouse]
+      operationId: reorderWarehouses
+      summary: Reorder warehouses
+      description: >-
+        Needs `warehouse.write`; center and distributor organizations only (403
+        for dealers, K12).
+        sort_order becomes the position in `uuids`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseReorderInput" }
+      responses:
+        "204":
+          description: Reordered
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/warehouse/warehouses/{uuid}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    get:
+      tags: [Warehouse]
+      operationId: getWarehouse
+      summary: One warehouse
+      description: >-
+        Needs `warehouse.read`; center and distributor organizations only (403
+        for dealers, K12). Works on the active organization's own warehouses.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Warehouse
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Warehouse]
+      operationId: updateWarehouse
+      summary: Edit a warehouse
+      description: >-
+        Needs `warehouse.write`; center and distributor organizations only (403
+        for dealers, K12).
+        A new code re-derives the full_code of every location below it.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehousePatch" }
+      responses:
+        "200":
+          description: Warehouse
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+    delete:
+      tags: [Warehouse]
+      operationId: deleteWarehouse
+      summary: Remove an empty warehouse
+      description: >-
+        Needs `warehouse.write`; center and distributor organizations only (403
+        for dealers, K12).
+        409 WAREHOUSE_IN_USE while it has rooms.
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Removed
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/warehouses/{uuid}/rooms:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    get:
+      tags: [Warehouse]
+      operationId: listWarehouseRooms
+      summary: Rooms of a warehouse
+      description: >-
+        Needs `warehouse.read`; center and distributor organizations only (403
+        for dealers, K12). Works on the active organization's own warehouses.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Rooms
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseRoomList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Warehouse]
+      operationId: createWarehouseRoom
+      summary: Add a room
+      description: >-
+        Needs `warehouse.write`; center and distributor organizations only (403
+        for dealers, K12).
+        `code` is unique within the warehouse (409 WAREHOUSE_CODE_TAKEN).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseRoomInput" }
+      responses:
+        "201":
+          description: Created room
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseRoom"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/warehouse/rooms/reorder:
+    post:
+      tags: [Warehouse]
+      operationId: reorderWarehouseRooms
+      summary: Reorder rooms
+      description: >-
+        Needs `warehouse.write`; center and distributor organizations only (403
+        for dealers, K12).
+        The rooms belong to one warehouse; sort_order becomes the position.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseReorderInput" }
+      responses:
+        "204":
+          description: Reordered
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/warehouse/rooms/{uuid}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    get:
+      tags: [Warehouse]
+      operationId: getWarehouseRoom
+      summary: One room
+      description: >-
+        Needs `warehouse.read`; center and distributor organizations only (403
+        for dealers, K12). Works on the active organization's own warehouses.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Room
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseRoom"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Warehouse]
+      operationId: updateWarehouseRoom
+      summary: Edit a room
+      description: >-
+        Needs `warehouse.write`; center and distributor organizations only (403
+        for dealers, K12).
+        A new code re-derives the full_code of every location in it.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseRoomPatch" }
+      responses:
+        "200":
+          description: Room
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseRoom"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+    delete:
+      tags: [Warehouse]
+      operationId: deleteWarehouseRoom
+      summary: Remove an empty room
+      description: >-
+        Needs `warehouse.write`; center and distributor organizations only (403
+        for dealers, K12).
+        409 WAREHOUSE_IN_USE while it has locations.
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Removed
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/rooms/{uuid}/locations:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    get:
+      tags: [Warehouse]
+      operationId: listWarehouseRoomLocations
+      summary: Location tree of a room
+      description: >-
+        Needs `warehouse.read`; center and distributor organizations only (403
+        for dealers, K12). Works on the active organization's own warehouses.
+        Flat list; build the tree with parent_uuid, siblings by sort_order.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Locations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseLocationList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/warehouse/locations:
+    post:
+      tags: [Warehouse]
+      operationId: createWarehouseLocation
+      summary: Add a location
+      description: >-
+        Needs `warehouse.write`; center and distributor organizations only (403
+        for dealers, K12).
+        Tree: aisle at the room root; shelf at the room root or under an aisle;
+        bin under a shelf (422 otherwise). full_code =
+        <warehouse>-<room>-<ancestors>-<code>, unique per organization (409
+        WAREHOUSE_CODE_TAKEN).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseLocationInput" }
+      responses:
+        "201":
+          description: Created location
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseLocation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/warehouse/locations/reorder:
+    post:
+      tags: [Warehouse]
+      operationId: reorderWarehouseLocations
+      summary: Reorder sibling locations
+      description: >-
+        Needs `warehouse.write`; center and distributor organizations only (403
+        for dealers, K12).
+        The locations share room and parent (422 otherwise).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseReorderInput" }
+      responses:
+        "204":
+          description: Reordered
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/warehouse/locations/generate:
+    post:
+      tags: [Warehouse]
+      operationId: generateWarehouseLocations
+      summary: Generate a location tree
+      description: >-
+        Needs `warehouse.write`; center and distributor organizations only (403
+        for dealers, K12).
+        Every node of a level gets every code of the next level, e.g. aisle
+        A x shelf 1-10 x bin 1-5 (pad 2: 01..10). Existing siblings with the
+        same code are reused. At most 2000 nodes per request; one transaction.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseGenerateInput" }
+      responses:
+        "201":
+          description: Generation counts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseGenerateResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/warehouse/locations/{uuid}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    get:
+      tags: [Warehouse]
+      operationId: getWarehouseLocation
+      summary: One location
+      description: >-
+        Needs `warehouse.read`; center and distributor organizations only (403
+        for dealers, K12). Works on the active organization's own warehouses.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Location
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseLocation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Warehouse]
+      operationId: updateWarehouseLocation
+      summary: Edit a location
+      description: >-
+        Needs `warehouse.write`; center and distributor organizations only (403
+        for dealers, K12).
+        A new code re-derives the full_code of the location and its subtree.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseLocationPatch" }
+      responses:
+        "200":
+          description: Location
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseLocation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+    delete:
+      tags: [Warehouse]
+      operationId: deleteWarehouseLocation
+      summary: Remove a location
+      description: >-
+        Needs `warehouse.write`; center and distributor organizations only (403
+        for dealers, K12).
+        409 WAREHOUSE_IN_USE while it has children or stock history;
+        deactivate it instead.
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Removed
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "403":
@@ -14218,6 +14775,212 @@ components:
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    WarehouseCode:
+      type: string
+      pattern: "^[A-Za-z0-9_]{1,32}$"
+      description: Upper-cased on save; the hyphen is the full_code separator.
+
+    Warehouse:
+      type: object
+      required: [uuid, code, name, address, active, sort_order, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        address: { type: string, nullable: true }
+        active: { type: boolean }
+        sort_order: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    WarehouseInput:
+      type: object
+      required: [code]
+      additionalProperties: false
+      properties:
+        code: { $ref: "#/components/schemas/WarehouseCode" }
+        name: { type: string, maxLength: 200, description: Defaults to the code. }
+        address: { type: string, nullable: true }
+
+    WarehousePatch:
+      type: object
+      additionalProperties: false
+      properties:
+        code: { $ref: "#/components/schemas/WarehouseCode" }
+        name: { type: string, maxLength: 200 }
+        address: { type: string, nullable: true }
+        active: { type: boolean }
+
+    WarehouseReorderInput:
+      type: object
+      required: [uuids]
+      additionalProperties: false
+      properties:
+        uuids:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items: { type: string, format: uuid }
+
+    WarehouseRoom:
+      type: object
+      required: [uuid, warehouse_uuid, code, name, active, sort_order, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        warehouse_uuid: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        active: { type: boolean }
+        sort_order: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    WarehouseRoomInput:
+      type: object
+      required: [code]
+      additionalProperties: false
+      properties:
+        code: { $ref: "#/components/schemas/WarehouseCode" }
+        name: { type: string, maxLength: 200, description: Defaults to the code. }
+
+    WarehouseRoomPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        code: { $ref: "#/components/schemas/WarehouseCode" }
+        name: { type: string, maxLength: 200 }
+        active: { type: boolean }
+
+    WarehouseLocationType:
+      type: string
+      enum: [aisle, shelf, bin]
+
+    WarehouseLocation:
+      type: object
+      required: [uuid, warehouse_uuid, room_uuid, parent_uuid, type, code, full_code, name, active, sort_order, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        warehouse_uuid: { type: string, format: uuid }
+        room_uuid: { type: string, format: uuid }
+        parent_uuid: { type: string, format: uuid, nullable: true }
+        type: { $ref: "#/components/schemas/WarehouseLocationType" }
+        code: { type: string }
+        full_code: { type: string, example: "IST-R1-A-01-03" }
+        name: { type: string }
+        active: { type: boolean }
+        sort_order: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    WarehouseLocationInput:
+      type: object
+      required: [room_uuid, type, code]
+      additionalProperties: false
+      properties:
+        room_uuid: { type: string, format: uuid }
+        parent_uuid: { type: string, format: uuid, nullable: true }
+        type: { $ref: "#/components/schemas/WarehouseLocationType" }
+        code: { $ref: "#/components/schemas/WarehouseCode" }
+        name: { type: string, maxLength: 200, description: Defaults to the code. }
+
+    WarehouseLocationPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        code: { $ref: "#/components/schemas/WarehouseCode" }
+        name: { type: string, maxLength: 200 }
+        active: { type: boolean }
+
+    WarehouseGenerateLevel:
+      type: object
+      required: [type]
+      additionalProperties: false
+      description: Either `codes`, or the range `from`..`to` rendered as prefix + zero-padded number.
+      properties:
+        type: { $ref: "#/components/schemas/WarehouseLocationType" }
+        codes:
+          type: array
+          items: { $ref: "#/components/schemas/WarehouseCode" }
+        from: { type: integer, minimum: 0, maximum: 9999 }
+        to: { type: integer, minimum: 0, maximum: 9999 }
+        pad: { type: integer, minimum: 0, maximum: 4 }
+        prefix: { type: string }
+
+    WarehouseGenerateInput:
+      type: object
+      required: [room_uuid, levels]
+      additionalProperties: false
+      properties:
+        room_uuid: { type: string, format: uuid }
+        parent_uuid: { type: string, format: uuid, nullable: true }
+        levels:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/WarehouseGenerateLevel" }
+
+    WarehouseGenerateResult:
+      type: object
+      required: [created, existing]
+      properties:
+        created: { type: integer }
+        existing: { type: integer }
+
+    EnvelopeWarehouse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Warehouse" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeWarehouseList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/Warehouse" } } } }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeWarehouseRoom:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/WarehouseRoom" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeWarehouseRoomList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/WarehouseRoom" } } } }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeWarehouseLocation:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/WarehouseLocation" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeWarehouseLocationList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/WarehouseLocation" } } } }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeWarehouseGenerateResult:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/WarehouseGenerateResult" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     StockReclassificationStatus:
