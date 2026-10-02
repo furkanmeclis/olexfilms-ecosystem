@@ -98,6 +98,9 @@ import (
 	vehiclecatalogmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/vehiclecatalog"
 	vehiclecataloghandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/vehiclecatalog/handler"
 	vehiclecatalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/vehiclecatalog/usecase"
+	warehousemodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warehouse"
+	warehousehandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warehouse/handler"
+	warehouseusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warehouse/usecase"
 	warrantymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty"
 	warrantyhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty/handler"
 	warrantyusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty/usecase"
@@ -478,6 +481,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	stockmodule.RegisterImportRoutes(mux, stockhandler.NewImport(importSvc), featureSvc, tokens, loader, deps.Queries)
 	// TEC-156: super_admin projection drift check (dry run).
 	stockmodule.RegisterPlatformRoutes(mux, stockhandler.NewRebuild(stockrebuild.New(deps.DB, deps.Queries), deps.Queries), tokens, loader)
+	// TEC-201: warehouse tree (warehouses, rooms, aisle/shelf/bin locations).
+	warehousemodule.RegisterRoutes(mux, warehousehandler.New(warehouseusecase.New(deps.DB, deps.Queries)),
+		featureSvc, tokens, loader, deps.Queries)
 	// TEC-149: vehicle catalog (global car brands/models, super_admin writes).
 	vehiclecatalogmodule.RegisterRoutes(mux, vehiclecataloghandler.New(
 		vehiclecatalogusecase.New(deps.Queries), deps.Storage, activityRec), tokens, loader)
