@@ -128,31 +128,35 @@ WHERE brand_id = $1
   AND ($4::bigint IS NULL OR customer_user_id = $4)
   AND ($5::bigint IS NULL OR vehicle_id = $5)
   AND ($6::text IS NULL OR status = $6::text)
+  AND ($7::timestamptz IS NULL OR created_at >= $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR created_at < $8::timestamptz)
   AND (
-    $7::text IS NULL
-    OR service_no ILIKE '%' || $7 || '%'
-    OR plate ILIKE '%' || $7 || '%'
-    OR vin ILIKE '%' || $7 || '%'
+    $9::text IS NULL
+    OR service_no ILIKE '%' || $9 || '%'
+    OR plate ILIKE '%' || $9 || '%'
+    OR vin ILIKE '%' || $9 || '%'
     OR EXISTS (
       SELECT 1 FROM users cu
       WHERE cu.id = services.customer_user_id
         AND cu.status <> 'anonymized'
         AND (
-          (cu.name || ' ' || cu.surname) ILIKE '%' || $7 || '%'
-          OR cu.phone_e164 LIKE '%' || $7 || '%'
+          (cu.name || ' ' || cu.surname) ILIKE '%' || $9 || '%'
+          OR cu.phone_e164 LIKE '%' || $9 || '%'
         )
     )
   )
 `
 
 type CountServicesInScopeParams struct {
-	BrandID         int64       `json:"brand_id"`
-	OrgIds          []int64     `json:"org_ids"`
-	CreatedByUserID pgtype.Int8 `json:"created_by_user_id"`
-	CustomerUserID  pgtype.Int8 `json:"customer_user_id"`
-	VehicleID       pgtype.Int8 `json:"vehicle_id"`
-	Status          pgtype.Text `json:"status"`
-	Q               pgtype.Text `json:"q"`
+	BrandID         int64              `json:"brand_id"`
+	OrgIds          []int64            `json:"org_ids"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	CustomerUserID  pgtype.Int8        `json:"customer_user_id"`
+	VehicleID       pgtype.Int8        `json:"vehicle_id"`
+	Status          pgtype.Text        `json:"status"`
+	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
+	CreatedTo       pgtype.Timestamptz `json:"created_to"`
+	Q               pgtype.Text        `json:"q"`
 }
 
 func (q *Queries) CountServicesInScope(ctx context.Context, arg CountServicesInScopeParams) (int64, error) {
@@ -163,6 +167,8 @@ func (q *Queries) CountServicesInScope(ctx context.Context, arg CountServicesInS
 		arg.CustomerUserID,
 		arg.VehicleID,
 		arg.Status,
+		arg.CreatedFrom,
+		arg.CreatedTo,
 		arg.Q,
 	)
 	var count int64
@@ -1182,35 +1188,39 @@ WHERE brand_id = $1
   AND ($4::bigint IS NULL OR customer_user_id = $4)
   AND ($5::bigint IS NULL OR vehicle_id = $5)
   AND ($6::text IS NULL OR status = $6::text)
+  AND ($7::timestamptz IS NULL OR created_at >= $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR created_at < $8::timestamptz)
   AND (
-    $7::text IS NULL
-    OR service_no ILIKE '%' || $7 || '%'
-    OR plate ILIKE '%' || $7 || '%'
-    OR vin ILIKE '%' || $7 || '%'
+    $9::text IS NULL
+    OR service_no ILIKE '%' || $9 || '%'
+    OR plate ILIKE '%' || $9 || '%'
+    OR vin ILIKE '%' || $9 || '%'
     OR EXISTS (
       SELECT 1 FROM users cu
       WHERE cu.id = services.customer_user_id
         AND cu.status <> 'anonymized'
         AND (
-          (cu.name || ' ' || cu.surname) ILIKE '%' || $7 || '%'
-          OR cu.phone_e164 LIKE '%' || $7 || '%'
+          (cu.name || ' ' || cu.surname) ILIKE '%' || $9 || '%'
+          OR cu.phone_e164 LIKE '%' || $9 || '%'
         )
     )
   )
 ORDER BY created_at DESC, id DESC
-LIMIT $9 OFFSET $8
+LIMIT $11 OFFSET $10
 `
 
 type ListServicesInScopeParams struct {
-	BrandID         int64       `json:"brand_id"`
-	OrgIds          []int64     `json:"org_ids"`
-	CreatedByUserID pgtype.Int8 `json:"created_by_user_id"`
-	CustomerUserID  pgtype.Int8 `json:"customer_user_id"`
-	VehicleID       pgtype.Int8 `json:"vehicle_id"`
-	Status          pgtype.Text `json:"status"`
-	Q               pgtype.Text `json:"q"`
-	RowOffset       int32       `json:"row_offset"`
-	RowLimit        int32       `json:"row_limit"`
+	BrandID         int64              `json:"brand_id"`
+	OrgIds          []int64            `json:"org_ids"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	CustomerUserID  pgtype.Int8        `json:"customer_user_id"`
+	VehicleID       pgtype.Int8        `json:"vehicle_id"`
+	Status          pgtype.Text        `json:"status"`
+	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
+	CreatedTo       pgtype.Timestamptz `json:"created_to"`
+	Q               pgtype.Text        `json:"q"`
+	RowOffset       int32              `json:"row_offset"`
+	RowLimit        int32              `json:"row_limit"`
 }
 
 // Scope list: org_ids NULL = whole brand (brand/all scope); created_by for
@@ -1225,6 +1235,8 @@ func (q *Queries) ListServicesInScope(ctx context.Context, arg ListServicesInSco
 		arg.CustomerUserID,
 		arg.VehicleID,
 		arg.Status,
+		arg.CreatedFrom,
+		arg.CreatedTo,
 		arg.Q,
 		arg.RowOffset,
 		arg.RowLimit,

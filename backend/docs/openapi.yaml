@@ -8816,6 +8816,18 @@ paths:
         - name: vehicle_uuid
           in: query
           schema: { type: string, format: uuid }
+        - name: created_from
+          in: query
+          description: >-
+            Inclusive lower bound of created_at (TEC-183): RFC3339, or a
+            YYYY-MM-DD day in UTC.
+          schema: { type: string }
+        - name: created_to
+          in: query
+          description: >-
+            Exclusive upper bound of created_at: RFC3339, or a YYYY-MM-DD day
+            in UTC that covers the whole day. Must be after created_from.
+          schema: { type: string }
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
@@ -14744,6 +14756,22 @@ components:
           description: The change was made by another organization (e.g. the center)
         created_at: { type: string, format: date-time }
 
+    ServiceWarranty:
+      type: object
+      description: A warranty the completed service issued (TEC-186), detail only.
+      required: [uuid, public_code, service_item_uuid, product_name, item_kind, status, start_at, end_at, expired_at, voided_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        public_code: { type: string }
+        service_item_uuid: { type: string, format: uuid }
+        product_name: { type: string }
+        item_kind: { type: string, enum: [full, partial] }
+        status: { type: string, enum: [active, expired, void] }
+        start_at: { type: string, format: date-time }
+        end_at: { type: string, format: date-time }
+        expired_at: { type: [string, "null"], format: date-time }
+        voided_at: { type: [string, "null"], format: date-time }
+
     Service:
       type: object
       required:
@@ -14809,6 +14837,9 @@ components:
         status_logs:
           type: array
           items: { $ref: "#/components/schemas/ServiceStatusLog" }
+        warranties:
+          type: array
+          items: { $ref: "#/components/schemas/ServiceWarranty" }
 
     ServiceCreateInput:
       type: object

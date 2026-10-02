@@ -8795,6 +8795,27 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        /** @description A warranty the completed service issued (TEC-186), detail only. */
+        ServiceWarranty: {
+            /** Format: uuid */
+            uuid: string;
+            public_code: string;
+            /** Format: uuid */
+            service_item_uuid: string;
+            product_name: string;
+            /** @enum {string} */
+            item_kind: "full" | "partial";
+            /** @enum {string} */
+            status: "active" | "expired" | "void";
+            /** Format: date-time */
+            start_at: string;
+            /** Format: date-time */
+            end_at: string;
+            /** Format: date-time */
+            expired_at: string | null;
+            /** Format: date-time */
+            voided_at: string | null;
+        };
         Service: {
             /** Format: uuid */
             uuid: string;
@@ -8833,6 +8854,7 @@ export interface components {
             items?: components["schemas"]["ServiceItem"][];
             images?: components["schemas"]["ServiceImage"][];
             status_logs?: components["schemas"]["ServiceStatusLog"][];
+            warranties?: components["schemas"]["ServiceWarranty"][];
         };
         ServiceCreateInput: {
             /** Format: uuid */
@@ -17699,6 +17721,10 @@ export interface operations {
                 status?: components["schemas"]["ServiceStatus"];
                 customer_uuid?: string;
                 vehicle_uuid?: string;
+                /** @description Inclusive lower bound of created_at (TEC-183): RFC3339, or a YYYY-MM-DD day in UTC. */
+                created_from?: string;
+                /** @description Exclusive upper bound of created_at: RFC3339, or a YYYY-MM-DD day in UTC that covers the whole day. Must be after created_from. */
+                created_to?: string;
                 limit?: number;
                 offset?: number;
             };
