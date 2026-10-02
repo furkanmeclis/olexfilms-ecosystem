@@ -284,6 +284,7 @@ var arCatalog = map[string]string{
 	"accounting.category.other_expense":   "مصروفات أخرى",
 	"accounting.category.opening_balance": "الرصيد الافتتاحي",
 	"accounting.category.adjustment":      "تسوية",
+	"accounting.category.cari_transfer":   "تحويل الحساب الجاري",
 	"accounting.category.collection":      "تحصيل",
 	"accounting.category.payment":         "دفع",
 	"accounting.direction.income":         "إيراد",
@@ -291,6 +292,7 @@ var arCatalog = map[string]string{
 	"accounting.direction.charge":         "قيد مدين",
 	"accounting.direction.collection":     "تحصيل",
 	"accounting.direction.payment":        "دفع",
+	"accounting.direction.opening":        "افتتاح",
 	"accounting.account_type.cash":        "الصندوق",
 	"accounting.account_type.bank":        "البنك",
 	// TEC-175: cari statement, balance report and export titles.

@@ -284,6 +284,7 @@ var ruCatalog = map[string]string{
 	"accounting.category.other_expense":   "Прочие расходы",
 	"accounting.category.opening_balance": "Начальный остаток",
 	"accounting.category.adjustment":      "Корректировка",
+	"accounting.category.cari_transfer":   "Перенос расчётов с контрагентом",
 	"accounting.category.collection":      "Поступление оплаты",
 	"accounting.category.payment":         "Платёж",
 	"accounting.direction.income":         "Доход",
@@ -291,6 +292,7 @@ var ruCatalog = map[string]string{
 	"accounting.direction.charge":         "Начисление",
 	"accounting.direction.collection":     "Поступление оплаты",
 	"accounting.direction.payment":        "Платёж",
+	"accounting.direction.opening":        "Открытие",
 	"accounting.account_type.cash":        "Касса",
 	"accounting.account_type.bank":        "Банк",
 	// TEC-175: cari statement, balance report and export titles.

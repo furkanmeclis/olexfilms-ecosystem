@@ -135,6 +135,83 @@ func (s *Service) PostOpeningBalanceTx(ctx context.Context, tx pgx.Tx, o posting
 	return res, nil
 }
 
+// SourceAccountOpening is the source_type of cash/bank opening balance rows
+// (TEC-198).
+const SourceAccountOpening = posting.SourceAccountOpening
+
+// Audit actions of cash/bank opening balances.
+const (
+	AuditAccountOpeningPosted = "accounting.account_opening_posted"
+	AuditAccountOpeningVoided = "accounting.account_opening_voided"
+)
+
+// AccountOpeningInput is the opening balance of a cash/bank account of the
+// active organization: a positive amount in the account's currency at the
+// opening date (YYYY-MM-DD).
+type AccountOpeningInput struct {
+	Amount      string
+	Date        string
+	Description string
+}
+
+// PostAccountOpening books the one-off opening balance of a cash/bank
+// account of the active organization (TEC-198). It moves the account
+// balance without a cari and never reaches income or expense (P&L). The bool
+// is true when the same opening balance was already booked.
+func (s *Service) PostAccountOpening(ctx context.Context, c Caller, accountUUID uuid.UUID, in AccountOpeningInput) (Entry, bool, error) {
+	book, err := s.writeBook(ctx, c)
+	if err != nil {
+		return Entry{}, false, err
+	}
+	if strings.TrimSpace(in.Amount) == "" {
+		return Entry{}, false, invalid("amount", "is required")
+	}
+	day, err := time.Parse(time.DateOnly, strings.TrimSpace(in.Date))
+	if err != nil {
+		return Entry{}, false, invalid("opening_date", "must be a date (YYYY-MM-DD)")
+	}
+	description := strings.TrimSpace(in.Description)
+	if len([]rune(description)) > 1000 {
+		return Entry{}, false, invalid("description", "must be at most 1000 characters")
+	}
+	a, err := s.q.GetFinanceAccountByUUID(ctx, accountUUID)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && a.OrganizationID != book.ID) {
+		return Entry{}, false, ErrAccountNotFound
+	}
+	if err != nil {
+		return Entry{}, false, fmt.Errorf("accounting: account: %w", err)
+	}
+	if !a.Active {
+		return Entry{}, false, invalid("account_uuid", "the account is inactive")
+	}
+	var res posting.AccountOpeningResult
+	err = s.inTx(ctx, func(tx pgx.Tx) error {
+		var err error
+		res, err = s.poster.PostAccountOpeningTx(ctx, tx, posting.AccountOpening{
+			OrganizationID: book.ID, AccountID: a.ID, Amount: strings.TrimSpace(in.Amount),
+			Date: day, Description: description, ActorUserID: c.actor(),
+		})
+		if err != nil || res.Replayed {
+			return err
+		}
+		return s.auditEntry(ctx, tx, AuditAccountOpeningPosted, res.Entry, c.actor(), map[string]any{
+			"account_uuid": a.Uuid.String(),
+			"opening_date": res.Entry.CreatedAt.Time.UTC().Format(time.DateOnly),
+		})
+	})
+	if err != nil {
+		if errors.Is(err, posting.ErrIdempotencyConflict) {
+			return Entry{}, false, ErrOpeningBalanceExists
+		}
+		if errors.Is(err, posting.ErrOpeningDate) {
+			return Entry{}, false, invalid("opening_date", "must be between 2000-01-01 and today")
+		}
+		return Entry{}, false, postingErr(err)
+	}
+	out, err := s.entry(ctx, s.q, book.ID, res.Entry.Uuid)
+	return out, res.Replayed, err
+}
+
 // auditEntry writes the audit row of a ledger row in tx.
 func (s *Service) auditEntry(ctx context.Context, tx pgx.Tx, action string, e db.FinanceEntry, actor *int64, extra map[string]any) error {
 	payload := map[string]any{

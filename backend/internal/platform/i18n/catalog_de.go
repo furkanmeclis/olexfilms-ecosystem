@@ -284,6 +284,7 @@ var deCatalog = map[string]string{
 	"accounting.category.other_expense":   "Sonstige Aufwendungen",
 	"accounting.category.opening_balance": "Eröffnungssaldo",
 	"accounting.category.adjustment":      "Korrektur",
+	"accounting.category.cari_transfer":   "Kontokorrent-Übertrag",
 	"accounting.category.collection":      "Zahlungseingang",
 	"accounting.category.payment":         "Zahlungsausgang",
 	"accounting.direction.income":         "Ertrag",
@@ -291,6 +292,7 @@ var deCatalog = map[string]string{
 	"accounting.direction.charge":         "Belastung",
 	"accounting.direction.collection":     "Zahlungseingang",
 	"accounting.direction.payment":        "Zahlungsausgang",
+	"accounting.direction.opening":        "Eröffnung",
 	"accounting.account_type.cash":        "Kasse",
 	"accounting.account_type.bank":        "Bankkonto",
 	// TEC-175: cari statement, balance report and export titles.

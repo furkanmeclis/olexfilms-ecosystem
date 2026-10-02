@@ -284,6 +284,7 @@ var elCatalog = map[string]string{
 	"accounting.category.other_expense":   "Λοιπά έξοδα",
 	"accounting.category.opening_balance": "Υπόλοιπο έναρξης",
 	"accounting.category.adjustment":      "Διόρθωση",
+	"accounting.category.cari_transfer":   "Μεταφορά τρεχούμενου λογαριασμού",
 	"accounting.category.collection":      "Είσπραξη",
 	"accounting.category.payment":         "Πληρωμή",
 	"accounting.direction.income":         "Έσοδο",
@@ -291,6 +292,7 @@ var elCatalog = map[string]string{
 	"accounting.direction.charge":         "Χρέωση",
 	"accounting.direction.collection":     "Είσπραξη",
 	"accounting.direction.payment":        "Πληρωμή",
+	"accounting.direction.opening":        "Έναρξη",
 	"accounting.account_type.cash":        "Ταμείο",
 	"accounting.account_type.bank":        "Τράπεζα",
 	// TEC-175: cari statement, balance report and export titles.

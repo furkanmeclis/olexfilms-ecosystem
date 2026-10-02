@@ -179,7 +179,7 @@ func (s *Service) entry(ctx context.Context, q *db.Queries, orgID int64, id uuid
 func validDirection(d string) bool {
 	switch d {
 	case accounting.DirectionIncome, accounting.DirectionExpense, accounting.DirectionCharge,
-		accounting.DirectionCollection, accounting.DirectionPayment:
+		accounting.DirectionCollection, accounting.DirectionPayment, accounting.DirectionOpening:
 		return true
 	}
 	return false
@@ -373,7 +373,8 @@ func (s *Service) counterparty(ctx context.Context, book db.Organization, cariUU
 	}
 }
 
-// Void reverses a manual entry or an opening balance (TEC-177) of the
+// Void reverses a manual entry, a cari opening balance (TEC-177) or a
+// cash/bank opening balance (TEC-198) of the
 // active organization's book, and nothing else. Entries sourced by other
 // modules are voided by their source (VoidBySourceTx); disputes are TEC-174.
 // Reversing an opening balance also writes an audit row; a new opening
@@ -398,7 +399,8 @@ func (s *Service) Void(ctx context.Context, c Caller, id uuid.UUID, reason strin
 		return Entry{}, fmt.Errorf("accounting: entry: %w", err)
 	}
 	sourceType := row.SourceType.String
-	if (sourceType != SourceManual && sourceType != SourceOpeningBalance) || !row.SourceUuid.Valid || row.ReversalOfID.Valid {
+	voidable := sourceType == SourceManual || sourceType == SourceOpeningBalance || sourceType == SourceAccountOpening
+	if !voidable || !row.SourceUuid.Valid || row.ReversalOfID.Valid {
 		return Entry{}, ErrNotVoidable
 	}
 	var reversal db.FinanceEntry
@@ -416,8 +418,11 @@ func (s *Service) Void(ctx context.Context, c Caller, id uuid.UUID, reason strin
 		if reversal.ID == 0 {
 			return ErrNotVoidable // already reversed
 		}
-		if sourceType == SourceOpeningBalance {
+		switch sourceType {
+		case SourceOpeningBalance:
 			return s.auditEntry(ctx, tx, AuditOpeningBalanceVoided, reversal, c.actor(), map[string]any{"reason": reason})
+		case SourceAccountOpening:
+			return s.auditEntry(ctx, tx, AuditAccountOpeningVoided, reversal, c.actor(), map[string]any{"reason": reason})
 		}
 		return nil
 	})
