@@ -432,8 +432,9 @@ func (s *Service) VerifyTransfer(ctx context.Context, c Caller, id uuid.UUID, in
 	maxAttempts := s.transferMaxAttempts()
 
 	var (
-		view   VehicleTransferView
-		result error // committed outcome (wrong code, expired, locked)
+		view     VehicleTransferView
+		result   error // committed outcome (wrong code, expired, locked)
+		newOwner int64 // TEC-164: indexed after commit
 	)
 	err = s.inTxRaw(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		t, v, err := s.lockScopedTransfer(ctx, q, c, id)
@@ -512,12 +513,19 @@ func (s *Service) VerifyTransfer(ctx context.Context, c Caller, id uuid.UUID, in
 		if err != nil {
 			return err
 		}
+		newOwner = t.ToUserID.Int64
 		view = s.transferView(t, v.Uuid, now)
 		view.WarrantiesMove = moved
 		return nil
 	})
 	if err != nil {
 		return VehicleTransferView{}, err
+	}
+	// TEC-164: the new owner may be a new customer or newly linked.
+	if newOwner > 0 && s.search != nil {
+		if u, err := s.q.GetUserByID(ctx, newOwner); err == nil {
+			s.indexCustomer(ctx, u.Uuid)
+		}
 	}
 	if result != nil {
 		return view, result

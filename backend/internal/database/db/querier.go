@@ -372,6 +372,7 @@ type Querier interface {
 	GetConsentForText(ctx context.Context, arg GetConsentForTextParams) (Consent, error)
 	GetCountryByID(ctx context.Context, id int64) (Country, error)
 	GetCountryByISO2(ctx context.Context, iso2 string) (Country, error)
+	GetCustomerForIndex(ctx context.Context, argUuid uuid.UUID) (GetCustomerForIndexRow, error)
 	GetCustomerOrganization(ctx context.Context, arg GetCustomerOrganizationParams) (CustomerOrganization, error)
 	GetCustomerProfile(ctx context.Context, userID int64) (CustomerProfile, error)
 	GetCustomerProfileForUpdate(ctx context.Context, userID int64) (CustomerProfile, error)
@@ -658,6 +659,10 @@ type Querier interface {
 	ListCustomerExportWarranties(ctx context.Context, arg ListCustomerExportWarrantiesParams) ([]ListCustomerExportWarrantiesRow, error)
 	// Organizations serving a customer (portal, customer detail).
 	ListCustomerOrganizationsByUser(ctx context.Context, arg ListCustomerOrganizationsByUserParams) ([]ListCustomerOrganizationsByUserRow, error)
+	// TEC-164: Meilisearch customers index. One document per customer linked to
+	// at least one organization; anonymized, merged and deleted users never
+	// enter the index. organization_ids / brand_ids drive the scope filter.
+	ListCustomersForIndex(ctx context.Context) ([]ListCustomersForIndexRow, error)
 	ListDealerPricesForProducts(ctx context.Context, arg ListDealerPricesForProductsParams) ([]ListDealerPricesForProductsRow, error)
 	// Center view of the distributor-specific prices with product and
 	// distributor identities.
