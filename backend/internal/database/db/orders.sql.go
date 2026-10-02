@@ -1174,7 +1174,7 @@ func (q *Queries) ListOrderItemUnitsByItem(ctx context.Context, orderItemID int6
 }
 
 const listOrderItemUnitsByOrder = `-- name: ListOrderItemUnitsByOrder :many
-SELECT oiu.id, oiu.order_item_id, oiu.organization_id, oiu.brand_id, oiu.unit_id, oiu.quantity, oiu.meters, oiu.reservation_id, oiu.movement_id, oiu.assigned_by_user_id, oiu.assigned_at, oiu.created_at, oiu.updated_at, u.barcode, u.unit_kind
+SELECT oiu.id, oiu.order_item_id, oiu.organization_id, oiu.brand_id, oiu.unit_id, oiu.quantity, oiu.meters, oiu.reservation_id, oiu.movement_id, oiu.assigned_by_user_id, oiu.assigned_at, oiu.created_at, oiu.updated_at, u.barcode, u.unit_kind, u.uuid AS unit_uuid
 FROM order_item_units oiu
 JOIN order_items i ON i.id = oiu.order_item_id
 JOIN units u ON u.id = oiu.unit_id
@@ -1198,6 +1198,7 @@ type ListOrderItemUnitsByOrderRow struct {
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 	Barcode          string             `json:"barcode"`
 	UnitKind         string             `json:"unit_kind"`
+	UnitUuid         uuid.UUID          `json:"unit_uuid"`
 }
 
 func (q *Queries) ListOrderItemUnitsByOrder(ctx context.Context, orderID int64) ([]ListOrderItemUnitsByOrderRow, error) {
@@ -1225,6 +1226,7 @@ func (q *Queries) ListOrderItemUnitsByOrder(ctx context.Context, orderID int64) 
 			&i.UpdatedAt,
 			&i.Barcode,
 			&i.UnitKind,
+			&i.UnitUuid,
 		); err != nil {
 			return nil, err
 		}
@@ -2392,13 +2394,19 @@ func (q *Queries) SetOrderShipping(ctx context.Context, arg SetOrderShippingPara
 const sumActiveReservedQuantityByUnit = `-- name: SumActiveReservedQuantityByUnit :one
 SELECT COALESCE(SUM(quantity), 0)::bigint AS reserved_quantity
 FROM stock_reservations
-WHERE unit_id = $1 AND status = 'active'
+WHERE unit_id = $1 AND organization_id = $2 AND status = 'active'
 `
 
-// Fixed barcodes: total actively reserved quantity, checked against the
-// holding by the use case (sum <= on hand).
-func (q *Queries) SumActiveReservedQuantityByUnit(ctx context.Context, unitID int64) (int64, error) {
-	row := q.db.QueryRow(ctx, sumActiveReservedQuantityByUnit, unitID)
+type SumActiveReservedQuantityByUnitParams struct {
+	UnitID         int64 `json:"unit_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+// Fixed barcodes: total quantity actively reserved by the seller
+// organization, checked against what that organization holds by the use
+// case (sum <= on hand, under the unit row lock).
+func (q *Queries) SumActiveReservedQuantityByUnit(ctx context.Context, arg SumActiveReservedQuantityByUnitParams) (int64, error) {
+	row := q.db.QueryRow(ctx, sumActiveReservedQuantityByUnit, arg.UnitID, arg.OrganizationID)
 	var reserved_quantity int64
 	err := row.Scan(&reserved_quantity)
 	return reserved_quantity, err

@@ -4442,10 +4442,50 @@ export interface paths {
         put?: never;
         /**
          * Move an order to another status
-         * @description Stock-free transitions (TEC-166): draft -> submitted (buyer, orders.write); submitted -> approved (seller, orders.approve: line prices are fetched again and locked, the rate to TRY is frozen into rate_snapshot/try_rate, 422 RATE_NOT_FOUND without a rate); approved -> preparing | processing (seller, orders.ship or orders.approve); draft | submitted | approved | preparing -> cancelled (either side, orders.cancel). A request for the current status is a no-op. Other moves answer 409 ORDER_INVALID_TRANSITION; the stock-bound statuses (ready, shipped, delivered, received, cancelling) answer 409 ORDER_TRANSITION_UNAVAILABLE until TEC-167/168. Every move writes the status history and an orders.* outbox event.
+         * @description Transitions (TEC-166, TEC-167): draft -> submitted (buyer, orders.write); submitted -> approved (seller, orders.approve: line prices are fetched again and locked, the rate to TRY is frozen into rate_snapshot/try_rate, 422 RATE_NOT_FOUND without a rate); approved -> preparing | processing (seller, orders.ship or orders.approve); preparing -> ready (seller, orders.ship; every line fully assigned, else 409 ORDER_NOT_FULLY_ASSIGNED); ready -> shipped (seller, orders.ship; one ledger order_out per assigned unit with idempotency key order:order_item_unit:<id>:order_out:<barcode>, serial units go in_transit owned by the buyer, reservations are consumed; 409 ORDER_STOCK_UNAVAILABLE when the ledger refuses); draft | submitted | approved | preparing | ready -> cancelled (either side, orders.cancel; active reservations are released). A request for the current status is a no-op (a repeated ship writes no movement). Other moves answer 409 ORDER_INVALID_TRANSITION; delivered, received and cancelling answer 409 ORDER_TRANSITION_UNAVAILABLE until TEC-168. Every move writes the status history and an orders.* outbox event.
          */
         post: operations["transitionOrder"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orders/{uuid}/items/{item_uuid}/units": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Assign a unit to an order line and reserve it (seller, orders.ship)
+         * @description Only while the order is preparing (409 ORDER_NOT_ASSIGNABLE). The unit is named by barcode (scan) or unit_uuid and must be of the line's product and in the seller's stock (409 ORDER_UNIT_NOT_AVAILABLE). Serial pieces count as 1; a serial unit reserved by another order answers 409 ORDER_UNIT_RESERVED. Rolls ship whole: meters, when given, must equal the roll's remaining meters (400 ROLL_CUT_UNSUPPORTED). Fixed barcodes take a quantity; the seller's active reservations may not exceed what it holds (409 ORDER_INSUFFICIENT_STOCK). The line amount may not be exceeded (409 ORDER_ITEM_OVER_ASSIGNED); a unit already on the line answers 409 ORDER_UNIT_ALREADY_ASSIGNED.
+         */
+        post: operations["assignOrderUnit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orders/{uuid}/items/{item_uuid}/units/{unit_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a unit from an order line (seller, orders.ship)
+         * @description Only while the order is preparing. The reservation is released (it stays as history) and the unit can be assigned again.
+         */
+        delete: operations["unassignOrderUnit"];
         options?: never;
         head?: never;
         patch?: never;
@@ -7870,6 +7910,32 @@ export interface components {
             name: string;
             unit_type: string;
         };
+        OrderAssignedUnit: {
+            /** Format: uuid */
+            unit_uuid: string;
+            barcode: string;
+            /** @enum {string} */
+            unit_kind: "serial" | "fixed";
+            /** @description Pieces (1 for a serial piece) */
+            quantity: number | null;
+            /** @description Whole roll meters (roll_meter lines) */
+            meters: string | null;
+            /** @description The order_out movement is written */
+            shipped: boolean;
+            /** Format: date-time */
+            assigned_at: string;
+        };
+        /** @description Give either barcode or unit_uuid. */
+        OrderUnitAssignInput: {
+            /** @description Scanned barcode */
+            barcode?: string;
+            /** Format: uuid */
+            unit_uuid?: string;
+            /** @description Fixed barcodes only (serial pieces are 1) */
+            quantity?: number;
+            /** @description Rolls only; must equal the remaining meters (a roll ships whole); a JSON number is accepted too */
+            meters?: string;
+        };
         OrderItem: {
             /** Format: uuid */
             uuid: string;
@@ -7888,6 +7954,12 @@ export interface components {
             /** @example 240.00 */
             line_total: string;
             note: string | null;
+            /**
+             * @description Amount covered by the assigned units (pieces, or meters with two decimals)
+             * @example 3
+             */
+            assigned: string;
+            units: components["schemas"]["OrderAssignedUnit"][];
         };
         OrderHistoryEntry: {
             from_status: components["schemas"]["OrderStatus"] | null;
@@ -7943,6 +8015,10 @@ export interface components {
             submitted_at: string | null;
             /** Format: date-time */
             approved_at: string | null;
+            /** Format: date-time */
+            ready_at: string | null;
+            /** Format: date-time */
+            shipped_at: string | null;
             /** Format: date-time */
             cancelled_at: string | null;
             /** Format: date-time */
@@ -16169,6 +16245,66 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    assignOrderUnit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                item_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderUnitAssignInput"];
+            };
+        };
+        responses: {
+            /** @description Order with the assignment */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrder"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    unassignOrderUnit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                item_uuid: string;
+                unit_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Order without the assignment */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrder"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
 }

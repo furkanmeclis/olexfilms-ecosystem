@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 	"time"
 
@@ -30,17 +31,32 @@ type ProductRef struct {
 	UnitType string    `json:"unit_type"`
 }
 
+// AssignedUnitView is a unit assigned to a line (TEC-167). Shipped is true
+// once its order_out movement is written.
+type AssignedUnitView struct {
+	UnitUUID   uuid.UUID `json:"unit_uuid"`
+	Barcode    string    `json:"barcode"`
+	UnitKind   string    `json:"unit_kind"`
+	Quantity   *int32    `json:"quantity"`
+	Meters     *string   `json:"meters"`
+	Shipped    bool      `json:"shipped"`
+	AssignedAt time.Time `json:"assigned_at"`
+}
+
 // ItemView is one order line. unit_price is the buyer's purchase price,
-// frozen at approval.
+// frozen at approval. Assigned is the amount covered by the assigned units
+// (quantity, or meters for roll lines).
 type ItemView struct {
-	UUID        uuid.UUID  `json:"uuid"`
-	Product     ProductRef `json:"product"`
-	Quantity    *int32     `json:"quantity"`
-	Meters      *string    `json:"meters"`
-	UnitPrice   string     `json:"unit_price"`
-	PriceSource string     `json:"price_source"`
-	LineTotal   string     `json:"line_total"`
-	Note        *string    `json:"note"`
+	UUID        uuid.UUID          `json:"uuid"`
+	Product     ProductRef         `json:"product"`
+	Quantity    *int32             `json:"quantity"`
+	Meters      *string            `json:"meters"`
+	UnitPrice   string             `json:"unit_price"`
+	PriceSource string             `json:"price_source"`
+	LineTotal   string             `json:"line_total"`
+	Note        *string            `json:"note"`
+	Assigned    string             `json:"assigned"`
+	Units       []AssignedUnitView `json:"units"`
 }
 
 // HistoryView is one status change.
@@ -70,6 +86,8 @@ type OrderView struct {
 	CancelReason *string         `json:"cancel_reason"`
 	SubmittedAt  *time.Time      `json:"submitted_at"`
 	ApprovedAt   *time.Time      `json:"approved_at"`
+	ReadyAt      *time.Time      `json:"ready_at"`
+	ShippedAt    *time.Time      `json:"shipped_at"`
 	CancelledAt  *time.Time      `json:"cancelled_at"`
 	CreatedAt    time.Time       `json:"created_at"`
 	UpdatedAt    time.Time       `json:"updated_at"`
@@ -137,7 +155,8 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, o db.Ord
 		Role:        role, Seller: seller, Buyer: buyer, Currency: strings.TrimSpace(o.Currency),
 		Subtotal: numericText(o.Subtotal, 2), TaxTotal: numericText(o.TaxTotal, 2), Total: numericText(o.Total, 2),
 		TryRate: rateText(o.TryRate), Note: textPtr(o.Note), CancelReason: textPtr(o.CancelReason),
-		SubmittedAt: tsPtr(o.SubmittedAt), ApprovedAt: tsPtr(o.ApprovedAt), CancelledAt: tsPtr(o.CancelledAt),
+		SubmittedAt: tsPtr(o.SubmittedAt), ApprovedAt: tsPtr(o.ApprovedAt),
+		ReadyAt: tsPtr(o.ReadyAt), ShippedAt: tsPtr(o.ShippedAt), CancelledAt: tsPtr(o.CancelledAt),
 		CreatedAt: o.CreatedAt.Time, UpdatedAt: o.UpdatedAt.Time,
 		AvailableTransitions: availableTransitions(o.Status, party, c.can),
 	}
@@ -159,6 +178,14 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, o db.Order)
 	if err != nil {
 		return OrderView{}, fmt.Errorf("orders: lines: %w", err)
 	}
+	assigned, err := q.ListOrderItemUnitsByOrder(ctx, o.ID)
+	if err != nil {
+		return OrderView{}, fmt.Errorf("orders: assigned units: %w", err)
+	}
+	byItem := map[int64][]db.ListOrderItemUnitsByOrderRow{}
+	for _, a := range assigned {
+		byItem[a.OrderItemID] = append(byItem[a.OrderItemID], a)
+	}
 	v.Items = make([]ItemView, 0, len(items))
 	for _, it := range items {
 		p, err := q.GetProduct(ctx, db.GetProductParams{ID: it.ProductID, BrandID: o.BrandID})
@@ -176,6 +203,7 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, o db.Order)
 			qv := it.Quantity.Int32
 			iv.Quantity = &qv
 		}
+		iv.Units, iv.Assigned = assignedUnits(byItem[it.ID], it.Meters.Valid)
 		v.Items = append(v.Items, iv)
 	}
 	hist, err := q.ListOrderStatusHistory(ctx, o.ID)
@@ -283,4 +311,28 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]OrderView
 		out = append(out, v)
 	}
 	return out, total, nil
+}
+
+// assignedUnits renders the units of a line and the amount they cover.
+func assignedUnits(rows []db.ListOrderItemUnitsByOrderRow, meters bool) ([]AssignedUnitView, string) {
+	sum := new(big.Rat)
+	out := make([]AssignedUnitView, 0, len(rows))
+	for _, a := range rows {
+		uv := AssignedUnitView{
+			UnitUUID: a.UnitUuid, Barcode: a.Barcode, UnitKind: a.UnitKind,
+			Meters: numericTextPtr(a.Meters, 2), Shipped: a.MovementID.Valid, AssignedAt: a.AssignedAt.Time,
+		}
+		if a.Quantity.Valid {
+			qv := a.Quantity.Int32
+			uv.Quantity = &qv
+			sum.Add(sum, new(big.Rat).SetInt64(int64(qv)))
+		} else if r := numericRat(a.Meters); r != nil {
+			sum.Add(sum, r)
+		}
+		out = append(out, uv)
+	}
+	if meters {
+		return out, sum.FloatString(2)
+	}
+	return out, sum.FloatString(0)
 }
