@@ -10009,6 +10009,18 @@ paths:
         - name: status
           in: query
           schema: { $ref: "#/components/schemas/OrderStatus" }
+        - name: created_from
+          in: query
+          description: >-
+            Inclusive lower bound of created_at (TEC-170): RFC3339, or a
+            YYYY-MM-DD day in UTC.
+          schema: { type: string }
+        - name: created_to
+          in: query
+          description: >-
+            Exclusive upper bound of created_at: RFC3339, or a YYYY-MM-DD day
+            in UTC that covers the whole day. Must be after created_from.
+          schema: { type: string }
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 20 }

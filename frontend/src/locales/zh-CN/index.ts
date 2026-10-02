@@ -25,6 +25,7 @@ import layout from "./layout.json";
 import logs from "./logs.json";
 import modules from "./modules.json";
 import notifications from "./notifications.json";
+import orders from "./orders.json";
 import organizations from "./organizations.json";
 import permissions from "./permissions.json";
 import portal from "./portal.json";
@@ -68,6 +69,7 @@ const catalog: LocaleCatalog = {
   logs,
   modules,
   notifications,
+  orders,
   organizations,
   permissions,
   portal,

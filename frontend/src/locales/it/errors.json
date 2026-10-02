@@ -101,5 +101,20 @@
   "codes.VEHICLE_TRANSFER_INVALID_CODE": "Il codice è errato.",
   "codes.VEHICLE_TRANSFER_LOCKED": "Troppi codici errati; il trasferimento è stato annullato.",
   "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "Non è stato possibile inviare i codici. Riprovi più tardi.",
-  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Il proprietario del veicolo è cambiato; avvii un nuovo trasferimento."
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Il proprietario del veicolo è cambiato; avvii un nuovo trasferimento.",
+  "codes.ORDER_INVALID_TRANSITION": "Lo stato dell'ordine non consente questa azione.",
+  "codes.ORDER_TRANSITION_UNAVAILABLE": "Questo passaggio non è ancora disponibile.",
+  "codes.ORDER_NOT_EDITABLE": "Solo le bozze d'ordine sono modificabili.",
+  "codes.ORDER_NO_SUPPLIER": "Solo un distributore (al centro) o un rivenditore (al proprio distributore) può ordinare prodotti.",
+  "codes.ORDER_NOT_ASSIGNABLE": "Le unità si possono assegnare solo durante la preparazione.",
+  "codes.ORDER_UNIT_ALREADY_ASSIGNED": "Questa unità è già sulla riga.",
+  "codes.ORDER_UNIT_RESERVED": "Questa unità è riservata da un altro ordine.",
+  "codes.ORDER_UNIT_NOT_AVAILABLE": "Questa unità non è nel vostro magazzino o appartiene a un altro prodotto.",
+  "codes.ORDER_INSUFFICIENT_STOCK": "Giacenza libera insufficiente per questo codice a barre.",
+  "codes.ORDER_ITEM_OVER_ASSIGNED": "L'assegnazione supera la quantità della riga.",
+  "codes.ORDER_NOT_FULLY_ASSIGNED": "Prima ogni riga deve essere assegnata completamente.",
+  "codes.ORDER_STOCK_UNAVAILABLE": "Il movimento di magazzino per questa spedizione è stato rifiutato.",
+  "codes.PRICE_NOT_FOUND": "Nessun prezzo per questo prodotto nella valuta dell'ordine.",
+  "codes.RATE_NOT_FOUND": "Nessun tasso di cambio disponibile da congelare per la valuta dell'ordine.",
+  "codes.ROLL_CUT_UNSUPPORTED": "I rotoli si spediscono interi; i metri devono corrispondere alla lunghezza residua."
 }

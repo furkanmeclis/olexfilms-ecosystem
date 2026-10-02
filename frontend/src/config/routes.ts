@@ -61,6 +61,13 @@ export const routes = {
       wizard: (slug: string, uuid: string) =>
         `/t/${slug}/services/${uuid}/wizard`,
     },
+    /** TEC-170 orders: list, new draft, detail, draft edit. */
+    orders: {
+      list: (slug: string) => `/t/${slug}/orders`,
+      create: (slug: string) => `/t/${slug}/orders/new`,
+      detail: (slug: string, uuid: string) => `/t/${slug}/orders/${uuid}`,
+      edit: (slug: string, uuid: string) => `/t/${slug}/orders/${uuid}/edit`,
+    },
     /** TEC-191 warranty list and detail. */
     warranties: {
       list: (slug: string) => `/t/${slug}/warranties`,

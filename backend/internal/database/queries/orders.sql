@@ -127,6 +127,8 @@ SELECT * FROM orders
 WHERE brand_id = sqlc.arg(brand_id)
   AND organization_id = sqlc.arg(seller_org_id)
   AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_to)::timestamptz IS NULL OR created_at < sqlc.narg(created_to)::timestamptz)
 ORDER BY created_at DESC, id DESC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
@@ -134,7 +136,9 @@ LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 SELECT COUNT(*) FROM orders
 WHERE brand_id = sqlc.arg(brand_id)
   AND organization_id = sqlc.arg(seller_org_id)
-  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text);
+  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_to)::timestamptz IS NULL OR created_at < sqlc.narg(created_to)::timestamptz);
 
 -- Buyer side: orders the organization buys.
 -- name: ListOrdersByBuyer :many
@@ -142,6 +146,8 @@ SELECT * FROM orders
 WHERE brand_id = sqlc.arg(brand_id)
   AND buyer_org_id = sqlc.arg(buyer_org_id)
   AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_to)::timestamptz IS NULL OR created_at < sqlc.narg(created_to)::timestamptz)
 ORDER BY created_at DESC, id DESC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
@@ -149,7 +155,9 @@ LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 SELECT COUNT(*) FROM orders
 WHERE brand_id = sqlc.arg(brand_id)
   AND buyer_org_id = sqlc.arg(buyer_org_id)
-  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text);
+  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_to)::timestamptz IS NULL OR created_at < sqlc.narg(created_to)::timestamptz);
 
 -- Scope list: orders where any of org_ids is the seller or the buyer
 -- (org_ids NULL = whole brand, for brand/all scopes).
@@ -160,6 +168,8 @@ WHERE brand_id = sqlc.arg(brand_id)
        OR organization_id = ANY (sqlc.narg(org_ids)::bigint[])
        OR buyer_org_id = ANY (sqlc.narg(org_ids)::bigint[]))
   AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_to)::timestamptz IS NULL OR created_at < sqlc.narg(created_to)::timestamptz)
 ORDER BY created_at DESC, id DESC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
@@ -169,7 +179,9 @@ WHERE brand_id = sqlc.arg(brand_id)
   AND (sqlc.narg(org_ids)::bigint[] IS NULL
        OR organization_id = ANY (sqlc.narg(org_ids)::bigint[])
        OR buyer_org_id = ANY (sqlc.narg(org_ids)::bigint[]))
-  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text);
+  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_to)::timestamptz IS NULL OR created_at < sqlc.narg(created_to)::timestamptz);
 
 -- ---------------------------------------------------------------------------
 -- Order lines.

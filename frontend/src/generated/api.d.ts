@@ -19593,6 +19593,10 @@ export interface operations {
             query?: {
                 side?: "seller" | "buyer";
                 status?: components["schemas"]["OrderStatus"];
+                /** @description Inclusive lower bound of created_at (TEC-170): RFC3339, or a YYYY-MM-DD day in UTC. */
+                created_from?: string;
+                /** @description Exclusive upper bound of created_at: RFC3339, or a YYYY-MM-DD day in UTC that covers the whole day. Must be after created_from. */
+                created_to?: string;
                 limit?: number;
                 offset?: number;
             };

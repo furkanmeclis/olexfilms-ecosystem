@@ -101,5 +101,20 @@
   "codes.VEHICLE_TRANSFER_INVALID_CODE": "验证码错误。",
   "codes.VEHICLE_TRANSFER_LOCKED": "错误验证码次数过多，过户已取消。",
   "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "验证码发送失败，请稍后重试。",
-  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "车辆车主已变更，请重新发起过户。"
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "车辆车主已变更，请重新发起过户。",
+  "codes.ORDER_INVALID_TRANSITION": "订单状态不允许此操作。",
+  "codes.ORDER_TRANSITION_UNAVAILABLE": "此步骤暂不可用。",
+  "codes.ORDER_NOT_EDITABLE": "只有草稿订单可以编辑。",
+  "codes.ORDER_NO_SUPPLIER": "只有经销商（向总部）或代理商（向其经销商）可以订购产品。",
+  "codes.ORDER_NOT_ASSIGNABLE": "只能在备货期间分配单元。",
+  "codes.ORDER_UNIT_ALREADY_ASSIGNED": "此单元已在该行中。",
+  "codes.ORDER_UNIT_RESERVED": "此单元已被其他订单预留。",
+  "codes.ORDER_UNIT_NOT_AVAILABLE": "此单元不在您的库存中或属于其他产品。",
+  "codes.ORDER_INSUFFICIENT_STOCK": "该条码的可用库存不足。",
+  "codes.ORDER_ITEM_OVER_ASSIGNED": "分配数量超出该行数量。",
+  "codes.ORDER_NOT_FULLY_ASSIGNED": "请先完整分配每一行。",
+  "codes.ORDER_STOCK_UNAVAILABLE": "此次发货的库存变动被拒绝。",
+  "codes.PRICE_NOT_FOUND": "该产品没有订单币种的价格。",
+  "codes.RATE_NOT_FOUND": "没有可锁定的订单币种汇率。",
+  "codes.ROLL_CUT_UNSUPPORTED": "卷材需整卷发货；米数必须等于剩余长度。"
 }

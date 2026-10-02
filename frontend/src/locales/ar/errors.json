@@ -101,5 +101,20 @@
   "codes.VEHICLE_TRANSFER_INVALID_CODE": "الرمز غير صحيح.",
   "codes.VEHICLE_TRANSFER_LOCKED": "عدد كبير من الرموز الخاطئة؛ تم إلغاء النقل.",
   "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "تعذر إرسال الرموز. حاول لاحقًا.",
-  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "تغيّر مالك المركبة؛ ابدأ عملية نقل جديدة."
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "تغيّر مالك المركبة؛ ابدأ عملية نقل جديدة.",
+  "codes.ORDER_INVALID_TRANSITION": "حالة الطلب لا تسمح بهذا الإجراء.",
+  "codes.ORDER_TRANSITION_UNAVAILABLE": "هذه الخطوة غير متاحة بعد.",
+  "codes.ORDER_NOT_EDITABLE": "يمكن تعديل مسودات الطلبات فقط.",
+  "codes.ORDER_NO_SUPPLIER": "لا يطلب المنتجات إلا موزّع (من المركز) أو وكيل (من موزّعه).",
+  "codes.ORDER_NOT_ASSIGNABLE": "لا يمكن تعيين الوحدات إلا أثناء تجهيز الطلب.",
+  "codes.ORDER_UNIT_ALREADY_ASSIGNED": "هذه الوحدة موجودة بالفعل في البند.",
+  "codes.ORDER_UNIT_RESERVED": "هذه الوحدة محجوزة لطلب آخر.",
+  "codes.ORDER_UNIT_NOT_AVAILABLE": "هذه الوحدة ليست في مخزونك أو تخص منتجًا آخر.",
+  "codes.ORDER_INSUFFICIENT_STOCK": "لا يوجد مخزون غير محجوز كافٍ لهذا الباركود.",
+  "codes.ORDER_ITEM_OVER_ASSIGNED": "التعيين يتجاوز كمية البند.",
+  "codes.ORDER_NOT_FULLY_ASSIGNED": "يجب تعيين كل البنود بالكامل أولًا.",
+  "codes.ORDER_STOCK_UNAVAILABLE": "تم رفض حركة المخزون لهذه الشحنة.",
+  "codes.PRICE_NOT_FOUND": "لا يوجد سعر لهذا المنتج بعملة الطلب.",
+  "codes.RATE_NOT_FOUND": "لا يتوفر سعر صرف لتثبيته لعملة الطلب.",
+  "codes.ROLL_CUT_UNSUPPORTED": "تُشحن اللفائف كاملة؛ يجب أن تساوي الأمتار الطول المتبقي."
 }

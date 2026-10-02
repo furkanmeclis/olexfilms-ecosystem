@@ -101,5 +101,20 @@
   "codes.VEHICLE_TRANSFER_INVALID_CODE": "Код неправильний.",
   "codes.VEHICLE_TRANSFER_LOCKED": "Забагато неправильних кодів; передачу скасовано.",
   "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "Не вдалося надіслати коди. Спробуйте пізніше.",
-  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Власник автомобіля змінився; почніть нову передачу."
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Власник автомобіля змінився; почніть нову передачу.",
+  "codes.ORDER_INVALID_TRANSITION": "Статус замовлення не дозволяє цю дію.",
+  "codes.ORDER_TRANSITION_UNAVAILABLE": "Цей крок поки недоступний.",
+  "codes.ORDER_NOT_EDITABLE": "Змінювати можна лише чернетки замовлень.",
+  "codes.ORDER_NO_SUPPLIER": "Замовляти товари може лише дистриб'ютор (у центру) або дилер (у свого дистриб'ютора).",
+  "codes.ORDER_NOT_ASSIGNABLE": "Одиниці можна призначати лише під час комплектації.",
+  "codes.ORDER_UNIT_ALREADY_ASSIGNED": "Ця одиниця вже в позиції.",
+  "codes.ORDER_UNIT_RESERVED": "Ця одиниця зарезервована іншим замовленням.",
+  "codes.ORDER_UNIT_NOT_AVAILABLE": "Цієї одиниці немає на вашому складі або вона належить іншому товару.",
+  "codes.ORDER_INSUFFICIENT_STOCK": "Недостатньо вільного залишку за цим штрихкодом.",
+  "codes.ORDER_ITEM_OVER_ASSIGNED": "Призначення перевищує кількість позиції.",
+  "codes.ORDER_NOT_FULLY_ASSIGNED": "Спершу всі позиції мають бути повністю призначені.",
+  "codes.ORDER_STOCK_UNAVAILABLE": "Складський рух для цього відвантаження відхилено.",
+  "codes.PRICE_NOT_FOUND": "Для цього товару немає ціни у валюті замовлення.",
+  "codes.RATE_NOT_FOUND": "Немає курсу для фіксації у валюті замовлення.",
+  "codes.ROLL_CUT_UNSUPPORTED": "Рулони відвантажуються цілими; метраж має дорівнювати залишку."
 }
