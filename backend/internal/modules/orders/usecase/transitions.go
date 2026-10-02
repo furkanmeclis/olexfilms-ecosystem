@@ -62,8 +62,17 @@ type rule struct {
 //	draft | submitted | approved | preparing | ready -> cancelled
 //	    (either side, orders.cancel; active reservations are released)
 //
-// delivered, received and cancelling arrive with TEC-168; until then they
-// answer 409 ORDER_TRANSITION_UNAVAILABLE.
+// and after shipping (TEC-168):
+//
+//	shipped -> received (buyer, orders.receive; received per shipped unit,
+//	    the units become available at the buyer; all units or none)
+//	shipped -> cancelling (either side, orders.cancel; nothing moves yet)
+//	cancelling -> cancelled (seller, orders.cancel or orders.ship: the goods
+//	    are back; order_cancel_restore per shipped unit)
+//
+// received is final here (no cancel; returns are a separate flow).
+// delivered is in the schema but not used: received follows shipped
+// directly, delivered answers 409 ORDER_TRANSITION_UNAVAILABLE.
 var transitions = map[string]map[string]rule{
 	StatusDraft: {
 		StatusSubmitted: {PartyBuyer, []string{rbac.PermOrdersWrite}},
@@ -86,12 +95,20 @@ var transitions = map[string]map[string]rule{
 		StatusShipped:   {PartySeller, []string{rbac.PermOrdersShip}},
 		StatusCancelled: {PartyEither, []string{rbac.PermOrdersCancel}},
 	},
+	StatusShipped: {
+		StatusReceived:   {PartyBuyer, []string{rbac.PermOrdersReceive}},
+		StatusCancelling: {PartyEither, []string{rbac.PermOrdersCancel}},
+	},
+	StatusCancelling: {
+		StatusCancelled: {PartySeller, []string{rbac.PermOrdersCancel, rbac.PermOrdersShip}},
+	},
 }
 
 // supportedTargets are the statuses this API moves an order to.
 var supportedTargets = map[string]bool{
 	StatusSubmitted: true, StatusApproved: true, StatusPreparing: true,
-	StatusProcessing: true, StatusReady: true, StatusShipped: true, StatusCancelled: true,
+	StatusProcessing: true, StatusReady: true, StatusShipped: true, StatusReceived: true,
+	StatusCancelling: true, StatusCancelled: true,
 }
 
 // lookupTransition returns the rule of from -> to, or ok=false.
@@ -144,6 +161,10 @@ func eventFor(to string) string {
 		return events.OrdersReady
 	case StatusShipped:
 		return events.OrdersShipped
+	case StatusReceived:
+		return events.OrdersReceived
+	case StatusCancelling:
+		return events.OrdersCancelRequested
 	case StatusCancelled:
 		return events.OrdersCancelled
 	}

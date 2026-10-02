@@ -47,6 +47,15 @@ func TestTransitionRules(t *testing.T) {
 		{StatusReady, StatusShipped, PartySeller, holds(rbac.PermOrdersShip), true},
 		{StatusReady, StatusShipped, PartyBuyer, all, false},
 		{StatusReady, StatusCancelled, PartyBuyer, holds(rbac.PermOrdersCancel), true},
+		{StatusShipped, StatusReceived, PartyBuyer, holds(rbac.PermOrdersReceive), true},
+		{StatusShipped, StatusReceived, PartySeller, holds(rbac.PermOrdersReceive), false},
+		{StatusShipped, StatusReceived, PartyBuyer, all, false},
+		{StatusShipped, StatusCancelling, PartyBuyer, holds(rbac.PermOrdersCancel), true},
+		{StatusShipped, StatusCancelling, PartySeller, holds(rbac.PermOrdersCancel), true},
+		{StatusShipped, StatusCancelling, PartySeller, holds(rbac.PermOrdersShip), false},
+		{StatusCancelling, StatusCancelled, PartySeller, holds(rbac.PermOrdersShip), true},
+		{StatusCancelling, StatusCancelled, PartySeller, holds(rbac.PermOrdersCancel), true},
+		{StatusCancelling, StatusCancelled, PartyBuyer, holds(rbac.PermOrdersCancel), false},
 	}
 	for _, c := range cases {
 		r, ok := lookupTransition(c.from, c.to)
@@ -60,15 +69,15 @@ func TestTransitionRules(t *testing.T) {
 		{StatusDraft, StatusApproved}, {StatusProcessing, StatusCancelled}, {StatusApproved, StatusShipped},
 		{StatusCancelled, StatusDraft}, {StatusApproved, StatusReady}, {StatusSubmitted, StatusDraft},
 		{StatusPreparing, StatusShipped}, {StatusShipped, StatusCancelled},
+		{StatusReceived, StatusCancelling}, {StatusReceived, StatusCancelled}, {StatusShipped, StatusDelivered},
+		{StatusDelivered, StatusReceived}, {StatusCancelling, StatusShipped},
 	} {
 		if _, ok := lookupTransition(m[0], m[1]); ok {
 			t.Errorf("%s -> %s must not be allowed", m[0], m[1])
 		}
 	}
-	for _, to := range []string{StatusReceived, StatusCancelling, StatusDelivered} {
-		if supportedTargets[to] {
-			t.Errorf("%s belongs to TEC-168", to)
-		}
+	if supportedTargets[StatusDelivered] {
+		t.Errorf("delivered is not used (TEC-168)")
 	}
 	// Every allowed target is supported and has an outbox event.
 	for from, m := range transitions {
