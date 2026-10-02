@@ -116,17 +116,30 @@ type PreviewSummary struct {
 	Invalid int          `json:"invalid"`
 	Rows    []RowPreview `json:"rows"`
 	Errors  []RowError   `json:"errors"`
+	// BatchUUID and Counts are set by staged importers (TEC-158): Counts is
+	// the number of rows per row status (new, duplicate, invalid, conflict,
+	// applied, undone, undo_rejected).
+	BatchUUID string         `json:"batch_uuid,omitempty"`
+	Counts    map[string]int `json:"counts,omitempty"`
 }
 
 type RowPreview struct {
 	Index int            `json:"index"`
 	Data  map[string]any `json:"data"`
+	// Status, StatusLabel (localized) and Target are set by staged
+	// importers: the row class and where the row would be written.
+	Status      string         `json:"status,omitempty"`
+	StatusLabel string         `json:"status_label,omitempty"`
+	Target      map[string]any `json:"target,omitempty"`
 }
 
 type RowError struct {
 	Index int    `json:"index"`
 	Field string `json:"field,omitempty"`
 	Error string `json:"error"`
+	// Code is the stable error code of staged importers (Error is then
+	// the localized message).
+	Code string `json:"code,omitempty"`
 }
 
 // Letterhead branding for PDF/XLSX headers.

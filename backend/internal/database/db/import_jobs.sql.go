@@ -547,6 +547,44 @@ func (q *Queries) QueueImportJob(ctx context.Context, argUuid uuid.UUID) (Import
 	return i, err
 }
 
+const setImportJobPreview = `-- name: SetImportJobPreview :one
+UPDATE import_jobs
+SET preview_json = $2
+WHERE id = $1
+RETURNING id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id
+`
+
+type SetImportJobPreviewParams struct {
+	ID          int64  `json:"id"`
+	PreviewJson []byte `json:"preview_json"`
+}
+
+// TEC-158: staged importers keep their apply/undo report in preview_json.
+func (q *Queries) SetImportJobPreview(ctx context.Context, arg SetImportJobPreviewParams) (ImportJob, error) {
+	row := q.db.QueryRow(ctx, setImportJobPreview, arg.ID, arg.PreviewJson)
+	var i ImportJob
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.Resource,
+		&i.ActorID,
+		&i.Format,
+		&i.Locale,
+		&i.Status,
+		&i.FileKey,
+		&i.MappingJson,
+		&i.DefaultsJson,
+		&i.PreviewJson,
+		&i.Error,
+		&i.RollbackUntil,
+		&i.AppliedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.OrganizationID,
+	)
+	return i, err
+}
+
 const updateImportJobFileKey = `-- name: UpdateImportJobFileKey :one
 UPDATE import_jobs
 SET file_key = $2

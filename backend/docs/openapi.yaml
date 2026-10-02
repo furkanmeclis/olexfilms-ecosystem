@@ -4905,6 +4905,75 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /v1/stock/import:
+    post:
+      tags: [Stock]
+      operationId: importStockUnits
+      summary: Upload a stock import file (brand center, staged)
+      description: >-
+        Needs `stock.import` and the brand center (K14). Columns: barcode,
+        product_sku (required), quantity (fixed barcodes), meters (rolls),
+        location_code (optional, a location of the center; default the
+        organization). Map, preview, confirm and undo through
+        `/v1/tenant/imports/{uuid}`: the preview stages the rows of the batch
+        (batch uuid = job uuid) and classifies them as new, duplicate,
+        invalid or conflict with their target; confirm (worker-core import
+        queue) creates the new units and posts their entry movements through
+        the stock ledger in one transaction, and confirming again writes
+        nothing; rollback voids the units that saw no other movement and
+        refuses the others row by row (STOCK_IMPORT_UNDO_UNIT_TOUCHED).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                format: { type: string, enum: [csv, tsv, xlsx, json], default: csv }
+                locale: { type: string, example: tr }
+      responses:
+        "201":
+          description: Import job created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeImportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/stock/import/sample:
+    get:
+      tags: [Stock]
+      operationId: stockImportSample
+      summary: Sample stock import file
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: format
+          in: query
+          schema: { type: string, enum: [csv, tsv, xlsx, json], default: xlsx }
+        - name: locale
+          in: query
+          schema: { type: string, example: tr }
+      responses:
+        "200":
+          description: Sample file
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /v1/stock/units/by-barcode/{barcode}:
     parameters:
       - name: barcode
@@ -12096,10 +12165,67 @@ components:
         defaults:
           type: object
           additionalProperties: { type: string }
+        preview_summary: { $ref: "#/components/schemas/ImportPreviewSummary" }
         error: { type: [string, "null"] }
         rollback_until: { type: [string, "null"], format: date-time }
         applied_at: { type: [string, "null"], format: date-time }
         created_at: { type: string, format: date-time }
+
+    ImportPreviewSummary:
+      type: object
+      description: >-
+        Dry run (preview) or apply/undo report of an import job. Staged
+        importers (stock import, TEC-158) also set batch_uuid, counts per row
+        status, the row status/target and stable error codes.
+      properties:
+        total: { type: integer }
+        valid: { type: integer }
+        invalid: { type: integer }
+        batch_uuid: { type: string, format: uuid }
+        counts:
+          type: object
+          description: >-
+            Rows per status: new, duplicate, invalid, conflict, applied,
+            undone, undo_rejected.
+          additionalProperties: { type: integer }
+        rows:
+          type: array
+          items:
+            type: object
+            required: [index]
+            properties:
+              index: { type: integer, description: 1-based data row number }
+              data:
+                type: object
+                additionalProperties: true
+              status:
+                type: string
+                enum: [new, duplicate, invalid, conflict, applied, undone, undo_rejected]
+              status_label: { type: string, description: Localized status (job locale) }
+              target:
+                type: object
+                description: >-
+                  Where the row is written: organization_uuid,
+                  organization_name, owner_type (organization or
+                  warehouse_location), location_uuid, location_code,
+                  product_uuid, product_sku, product_name, unit_kind (serial
+                  or fixed), unit_type.
+                additionalProperties: true
+        errors:
+          type: array
+          items:
+            type: object
+            required: [index, error]
+            properties:
+              index: { type: integer }
+              field: { type: string }
+              code:
+                type: string
+                description: >-
+                  Stable code, e.g. STOCK_IMPORT_PRODUCT_NOT_FOUND,
+                  STOCK_IMPORT_DUPLICATE_IN_FILE, STOCK_IMPORT_HELD_BY_OTHER_ORG,
+                  STOCK_IMPORT_UNDO_UNIT_TOUCHED.
+              error: { type: string, description: Localized message (job locale) }
 
     EnvelopeImportJob:
       type: object

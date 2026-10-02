@@ -21,6 +21,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -146,7 +147,11 @@ func (s *Service) Sample(ctx context.Context, resource string, format ioengine.I
 	if len(fields) == 0 {
 		return nil, "", ErrInvalidRequest
 	}
-	return ioengine.EncodeSample(format, locale, fields, adapters.SampleRows(resource))
+	rows := adapters.SampleRows(resource)
+	if sp, ok := adapter.(interface{ SampleRows() []map[string]any }); ok {
+		rows = sp.SampleRows()
+	}
+	return ioengine.EncodeSample(format, locale, fields, rows)
 }
 
 // UpdateMapping saves column mapping and defaults.
@@ -175,7 +180,7 @@ func (s *Service) Preview(ctx context.Context, jobUUID uuid.UUID, actorID int64,
 	}
 	summary, err := s.buildPreview(ctx, job)
 	if err != nil {
-		return ImportJobView{}, err
+		return ImportJobView{}, mapStagedErr(err)
 	}
 	pb, _ := json.Marshal(summary)
 	row, err := s.q.UpdateImportJobPreview(ctx, db.UpdateImportJobPreviewParams{Uuid: jobUUID, PreviewJson: pb})
@@ -187,10 +192,19 @@ func (s *Service) Preview(ctx context.Context, jobUUID uuid.UUID, actorID int64,
 
 // Confirm queues apply task.
 func (s *Service) Confirm(ctx context.Context, jobUUID uuid.UUID, actorID int64, orgID *int64) (ImportJobView, error) {
-	if _, err := s.getAccessible(ctx, jobUUID, actorID, orgID); err != nil {
+	job, err := s.getAccessible(ctx, jobUUID, actorID, orgID)
+	if err != nil {
 		return ImportJobView{}, err
 	}
+	// TEC-158: confirming a staged batch again (queued, applying or
+	// applied) writes nothing new; the job is returned as it is.
+	if _, staged := s.staged(job.Resource); staged && confirmedStatus(job.Status) {
+		return mapImportJob(job), nil
+	}
 	row, err := s.q.QueueImportJob(ctx, jobUUID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ImportJobView{}, fmt.Errorf("%w: import job is not previewed", ErrInvalidRequest)
+	}
 	if err != nil {
 		return ImportJobView{}, err
 	}
@@ -222,6 +236,9 @@ func (s *Service) ProcessImport(ctx context.Context, jobID int64) error {
 	adapter, err := s.registry.Get(job.Resource)
 	if err != nil {
 		return s.failImport(ctx, jobID, err.Error())
+	}
+	if st, ok := adapter.(ioengine.StagedImporter); ok {
+		return s.processStaged(ctx, job, st)
 	}
 	rows, mapping, defaults, err := s.loadMappedRows(ctx, job)
 	if err != nil {
@@ -305,6 +322,9 @@ func (s *Service) Rollback(ctx context.Context, jobUUID uuid.UUID, actorID int64
 	if err != nil {
 		return ImportJobView{}, err
 	}
+	if st, ok := s.staged(job.Resource); ok {
+		return s.undoStaged(ctx, job, actorID, st)
+	}
 	if job.Status != "applied" {
 		return ImportJobView{}, ErrInvalidRequest
 	}
@@ -385,9 +405,16 @@ func (s *Service) GetJob(ctx context.Context, jobUUID uuid.UUID, actorID int64, 
 }
 
 func (s *Service) buildPreview(ctx context.Context, job db.ImportJob) (ioengine.PreviewSummary, error) {
-	rows, _, _, err := s.loadMappedRows(ctx, job)
+	rows, _, defaults, err := s.loadMappedRows(ctx, job)
 	if err != nil {
 		return ioengine.PreviewSummary{}, err
+	}
+	if st, ok := s.staged(job.Resource); ok {
+		ctx, err = s.withJobOrganization(ctx, job)
+		if err != nil {
+			return ioengine.PreviewSummary{}, err
+		}
+		return st.Stage(ctx, jobRef(job), rows, defaults)
 	}
 	summary := ioengine.PreviewSummary{Total: len(rows)}
 	previews := make([]ioengine.RowPreview, 0, min(len(rows), 50))

@@ -24,6 +24,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/providers"
 	notifusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/usecase"
 	stockrebuild "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/rebuild"
+	stockusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/usecase"
 	warrantymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty"
 	whatsappmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
@@ -132,6 +133,8 @@ func main() {
 		// masked, so no PII key is needed here).
 		customersusecase.NewDataExportAdapter(customersExportSvc),
 		customersusecase.NewPortalDataExportAdapter(customersExportSvc),
+		// TEC-158: stock import batches are applied here (import queue).
+		stockusecase.NewImporter(pool, queries, outboxStore),
 	)
 	exportSvc := exportusecase.New(queries, store, ioReg, nil, notifSvc, activityRec, log)
 	pdfClient := pdfrender.NewWithOptions(cfg.Gotenberg.URL, pdfrender.Options{MaxConnsPerHost: cfg.Queue.Concurrency})
