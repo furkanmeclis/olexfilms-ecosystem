@@ -323,6 +323,7 @@ var esCatalog = map[string]string{
 	"accounting.source.order":                       "Pedido",
 	"accounting.source.service":                     "Servicio",
 	"accounting.source.transfer":                    "Traspaso",
+	"accounting.source.opening_balance":             "Saldo inicial",
 	"export.title.tenant.accounting.cari_statement": "Extracto de cuenta",
 	"export.title.tenant.accounting.balances":       "Informe de saldos",
 	"resources.tenant.accounting.cari_statement":    "Extracto de cuenta",

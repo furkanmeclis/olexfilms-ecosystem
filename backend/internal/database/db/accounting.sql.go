@@ -508,12 +508,36 @@ func (q *Queries) GetFinanceEntryReversal(ctx context.Context, entryID pgtype.In
 	return i, err
 }
 
+const getMaxFinanceEntryRevisionBySource = `-- name: GetMaxFinanceEntryRevisionBySource :one
+SELECT COALESCE(MAX(revision), 0)::int AS revision
+FROM finance_entries
+WHERE organization_id = $1
+  AND source_type = $2::text
+  AND source_uuid = $3::uuid
+`
+
+type GetMaxFinanceEntryRevisionBySourceParams struct {
+	OrganizationID int64     `json:"organization_id"`
+	SourceType     string    `json:"source_type"`
+	SourceUuid     uuid.UUID `json:"source_uuid"`
+}
+
+// GetMaxFinanceEntryRevisionBySource is the highest revision written for a
+// source in one organization (0: none). TEC-177 opens a new revision of an
+// opening balance once the previous one is reversed.
+func (q *Queries) GetMaxFinanceEntryRevisionBySource(ctx context.Context, arg GetMaxFinanceEntryRevisionBySourceParams) (int32, error) {
+	row := q.db.QueryRow(ctx, getMaxFinanceEntryRevisionBySource, arg.OrganizationID, arg.SourceType, arg.SourceUuid)
+	var revision int32
+	err := row.Scan(&revision)
+	return revision, err
+}
+
 const insertFinanceEntry = `-- name: InsertFinanceEntry :one
 
 INSERT INTO finance_entries (
     organization_id, brand_id, account_id, cari_id, direction, category,
     orig_currency, orig_amount, currency, amount, rate, rate_date,
-    source_type, source_uuid, role, revision, description, actor_user_id
+    source_type, source_uuid, role, revision, description, actor_user_id, created_at
 )
 VALUES (
     $1, $2, $3, $4,
@@ -521,7 +545,8 @@ VALUES (
     $7, $8, $9, $10,
     $11, $12,
     $13, $14, $15, $16,
-    $17, $18
+    $17, $18,
+    COALESCE($19::timestamptz, NOW())
 )
 ON CONFLICT (organization_id, source_type, source_uuid, role, revision)
     WHERE reversal_of_id IS NULL
@@ -530,24 +555,25 @@ RETURNING id, uuid, organization_id, brand_id, account_id, cari_id, direction, c
 `
 
 type InsertFinanceEntryParams struct {
-	OrganizationID int64          `json:"organization_id"`
-	BrandID        int64          `json:"brand_id"`
-	AccountID      pgtype.Int8    `json:"account_id"`
-	CariID         pgtype.Int8    `json:"cari_id"`
-	Direction      string         `json:"direction"`
-	Category       string         `json:"category"`
-	OrigCurrency   string         `json:"orig_currency"`
-	OrigAmount     pgtype.Numeric `json:"orig_amount"`
-	Currency       string         `json:"currency"`
-	Amount         pgtype.Numeric `json:"amount"`
-	Rate           pgtype.Numeric `json:"rate"`
-	RateDate       pgtype.Date    `json:"rate_date"`
-	SourceType     pgtype.Text    `json:"source_type"`
-	SourceUuid     pgtype.UUID    `json:"source_uuid"`
-	Role           string         `json:"role"`
-	Revision       int32          `json:"revision"`
-	Description    pgtype.Text    `json:"description"`
-	ActorUserID    pgtype.Int8    `json:"actor_user_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	AccountID      pgtype.Int8        `json:"account_id"`
+	CariID         pgtype.Int8        `json:"cari_id"`
+	Direction      string             `json:"direction"`
+	Category       string             `json:"category"`
+	OrigCurrency   string             `json:"orig_currency"`
+	OrigAmount     pgtype.Numeric     `json:"orig_amount"`
+	Currency       string             `json:"currency"`
+	Amount         pgtype.Numeric     `json:"amount"`
+	Rate           pgtype.Numeric     `json:"rate"`
+	RateDate       pgtype.Date        `json:"rate_date"`
+	SourceType     pgtype.Text        `json:"source_type"`
+	SourceUuid     pgtype.UUID        `json:"source_uuid"`
+	Role           string             `json:"role"`
+	Revision       int32              `json:"revision"`
+	Description    pgtype.Text        `json:"description"`
+	ActorUserID    pgtype.Int8        `json:"actor_user_id"`
+	PostedAt       pgtype.Timestamptz `json:"posted_at"`
 }
 
 // ---------------------------------------------------------------------------
@@ -555,7 +581,9 @@ type InsertFinanceEntryParams struct {
 // InsertFinanceEntry appends an original row. A retried sourced write (same
 // organization, source, role and revision) conflicts with
 // uq_finance_entries_source and returns no row (pgx.ErrNoRows); the caller
-// then reads the existing row with GetFinanceEntryBySource.
+// then reads the existing row with GetFinanceEntryBySource. posted_at places
+// the row in the ledger order (created_at); NULL means now. Only an opening
+// balance (TEC-177) passes it: the row sits at the opening date.
 func (q *Queries) InsertFinanceEntry(ctx context.Context, arg InsertFinanceEntryParams) (FinanceEntry, error) {
 	row := q.db.QueryRow(ctx, insertFinanceEntry,
 		arg.OrganizationID,
@@ -576,6 +604,7 @@ func (q *Queries) InsertFinanceEntry(ctx context.Context, arg InsertFinanceEntry
 		arg.Revision,
 		arg.Description,
 		arg.ActorUserID,
+		arg.PostedAt,
 	)
 	var i FinanceEntry
 	err := row.Scan(

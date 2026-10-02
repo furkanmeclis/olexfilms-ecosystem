@@ -354,6 +354,9 @@ func (p *Poster) post(ctx context.Context, tx pgx.Tx, direction string, e Entry)
 	if e.AccountID != 0 {
 		arg.AccountID = pgtype.Int8{Int64: e.AccountID, Valid: true}
 	}
+	if !e.PostedAt.IsZero() {
+		arg.PostedAt = pgtype.Timestamptz{Time: e.PostedAt, Valid: true}
+	}
 	row, err := q.InsertFinanceEntry(ctx, arg)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// A concurrent writer of the same key won.
@@ -478,6 +481,8 @@ func (p *Poster) publish(ctx context.Context, tx pgx.Tx, row db.FinanceEntry, ac
 	switch {
 	case row.CariID.Valid && reversal:
 		name = events.CariEntryVoided
+	case row.CariID.Valid && row.SourceType.String == SourceOpeningBalance:
+		name = events.CariOpeningBalancePosted
 	case row.CariID.Valid && (row.Direction == DirectionCollection || row.Direction == DirectionPayment):
 		name = events.CariPaymentPosted
 	case row.CariID.Valid:

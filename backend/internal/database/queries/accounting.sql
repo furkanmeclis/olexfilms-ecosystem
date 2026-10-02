@@ -89,12 +89,14 @@ RETURNING *;
 -- InsertFinanceEntry appends an original row. A retried sourced write (same
 -- organization, source, role and revision) conflicts with
 -- uq_finance_entries_source and returns no row (pgx.ErrNoRows); the caller
--- then reads the existing row with GetFinanceEntryBySource.
+-- then reads the existing row with GetFinanceEntryBySource. posted_at places
+-- the row in the ledger order (created_at); NULL means now. Only an opening
+-- balance (TEC-177) passes it: the row sits at the opening date.
 -- name: InsertFinanceEntry :one
 INSERT INTO finance_entries (
     organization_id, brand_id, account_id, cari_id, direction, category,
     orig_currency, orig_amount, currency, amount, rate, rate_date,
-    source_type, source_uuid, role, revision, description, actor_user_id
+    source_type, source_uuid, role, revision, description, actor_user_id, created_at
 )
 VALUES (
     sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.narg(account_id), sqlc.narg(cari_id),
@@ -102,7 +104,8 @@ VALUES (
     sqlc.arg(orig_currency), sqlc.arg(orig_amount), sqlc.arg(currency), sqlc.arg(amount),
     sqlc.arg(rate), sqlc.arg(rate_date),
     sqlc.narg(source_type), sqlc.narg(source_uuid), sqlc.arg(role), sqlc.arg(revision),
-    sqlc.narg(description), sqlc.narg(actor_user_id)
+    sqlc.narg(description), sqlc.narg(actor_user_id),
+    COALESCE(sqlc.narg(posted_at)::timestamptz, NOW())
 )
 ON CONFLICT (organization_id, source_type, source_uuid, role, revision)
     WHERE reversal_of_id IS NULL
@@ -144,6 +147,16 @@ WHERE organization_id = sqlc.arg(organization_id)
   AND role = sqlc.arg(role)
   AND revision = sqlc.arg(revision)
   AND reversal_of_id IS NULL;
+
+-- GetMaxFinanceEntryRevisionBySource is the highest revision written for a
+-- source in one organization (0: none). TEC-177 opens a new revision of an
+-- opening balance once the previous one is reversed.
+-- name: GetMaxFinanceEntryRevisionBySource :one
+SELECT COALESCE(MAX(revision), 0)::int AS revision
+FROM finance_entries
+WHERE organization_id = sqlc.arg(organization_id)
+  AND source_type = sqlc.arg(source_type)::text
+  AND source_uuid = sqlc.arg(source_uuid)::uuid;
 
 -- GetFinanceEntryReversal returns the reversal row of an entry, if any.
 -- name: GetFinanceEntryReversal :one

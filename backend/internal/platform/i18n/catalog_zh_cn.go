@@ -323,6 +323,7 @@ var zhCNCatalog = map[string]string{
 	"accounting.source.order":                       "订单",
 	"accounting.source.service":                     "服务",
 	"accounting.source.transfer":                    "调拨",
+	"accounting.source.opening_balance":             "期初余额",
 	"export.title.tenant.accounting.cari_statement": "对账单",
 	"export.title.tenant.accounting.balances":       "余额报表",
 	"resources.tenant.accounting.cari_statement":    "对账单",

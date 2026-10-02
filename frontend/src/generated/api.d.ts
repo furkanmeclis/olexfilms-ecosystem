@@ -4720,8 +4720,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Reverse a manual entry (step-up)
-         * @description Appends the mirror row (reversal_of_uuid, negated amounts); the ledger is append-only. Only open manual entries of the active organization (409 ENTRY_NOT_VOIDABLE otherwise). Needs a recent step-up (403 STEP_UP_REQUIRED).
+         * Reverse a manual entry or an opening balance (step-up)
+         * @description Appends the mirror row (reversal_of_uuid, negated amounts); the ledger is append-only. Only open manual entries and opening balances (TEC-177) of the active organization (409 ENTRY_NOT_VOIDABLE otherwise). Reversing an opening balance writes accounting.opening_balance_voided to the audit log; a new opening balance may then be booked. Needs a recent step-up (403 STEP_UP_REQUIRED).
          */
         post: operations["voidAccountingEntry"];
         delete?: never;
@@ -4744,6 +4744,26 @@ export interface paths {
          * @description Lowers the cari receivable and raises the account; never writes income (TEC-99 decision 2). A repeated idempotency_key answers 200.
          */
         post: operations["createAccountingCollection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/opening-balances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Book the one-off opening balance of a cari (step-up)
+         * @description TEC-177. Writes the balance a cari carries over (F2 migrator data or paper) in the active organization's book, once per cari: a debit side (the counterparty owes us) is a charge, a credit side (we owe the counterparty) an account-less collection; neither touches P&L or cash. The row is dated at opening_date (ledger order and rate day), so statements show it at the start of the cari's history. The same opening balance again answers 200 with the earlier entry; other values while one is open answer 409 OPENING_BALANCE_EXISTS. Correct it by reversing the entry (POST /v1/accounting/entries/{uuid}/void), then book it again. Needs accounting.write (dealer roles answer 403) and a recent step-up (403 STEP_UP_REQUIRED). Writes cari.opening_balance_posted to the outbox and accounting.opening_balance_posted to the audit log.
+         */
+        post: operations["createAccountingOpeningBalance"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8801,6 +8821,25 @@ export interface components {
             description?: string;
             /** Format: uuid */
             idempotency_key?: string | null;
+        };
+        FinanceOpeningBalanceInput: {
+            /** Format: uuid */
+            cari_uuid?: string | null;
+            /** Format: uuid */
+            counterparty_organization_uuid?: string | null;
+            /**
+             * @description debit = the counterparty owes us; credit = we owe the counterparty.
+             * @enum {string}
+             */
+            side: "debit" | "credit";
+            amount: components["schemas"]["AccountingAmountInput"];
+            currency?: string;
+            /**
+             * Format: date
+             * @description Opening date (2000-01-01 .. today); the row is dated here.
+             */
+            opening_date: string;
+            description?: string;
         };
         FinanceEntryVoidInput: {
             reason: string;
@@ -17930,7 +17969,7 @@ export interface operations {
                 cari_uuid?: string;
                 direction?: components["schemas"]["AccountingDirection"];
                 category?: string;
-                /** @description manual, order, ... */
+                /** @description manual, order, opening_balance, ... */
                 source_type?: string;
                 /** @description First day (UTC, inclusive) of created_at */
                 date_from?: string;
@@ -18083,6 +18122,45 @@ export interface operations {
                 };
             };
             /** @description Created collection */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFinanceEntry"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    createAccountingOpeningBalance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FinanceOpeningBalanceInput"];
+            };
+        };
+        responses: {
+            /** @description Replayed (the same opening balance is already booked) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFinanceEntry"];
+                };
+            };
+            /** @description Created opening balance */
             201: {
                 headers: {
                     [name: string]: unknown;

@@ -323,6 +323,7 @@ var bgCatalog = map[string]string{
 	"accounting.source.order":                       "Поръчка",
 	"accounting.source.service":                     "Услуга",
 	"accounting.source.transfer":                    "Прехвърляне",
+	"accounting.source.opening_balance":             "Начално салдо",
 	"export.title.tenant.accounting.cari_statement": "Извлечение по сметка",
 	"export.title.tenant.accounting.balances":       "Отчет за салдата",
 	"resources.tenant.accounting.cari_statement":    "Извлечение по сметка",
