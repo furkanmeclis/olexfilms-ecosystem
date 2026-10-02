@@ -372,6 +372,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-189: public warranty lookup behind /garanti/{public_code}.
 	warrantymodule.RegisterPublicRoutes(mux, deps.Queries, ratelimit.New(deps.Redis, cfg.App.Env),
 		cfg.Warranty.PublicRateLimit, cfg.Warranty.PublicRateWindow)
+	// TEC-191: panel / portal warranty list and detail, center void.
+	warrantymodule.RegisterListRoutes(mux, deps.DB, deps.Queries, cfg.Auth.FrontendURL,
+		tokens, loader, featureSvc, stepUpSvc)
 
 	// TEC-145: product catalog (brand scoped, center writes).
 	catalogSvc := catalogusecase.New(deps.Queries, searchIndexer)
