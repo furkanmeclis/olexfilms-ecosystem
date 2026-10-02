@@ -2900,6 +2900,120 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/customers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Customers linked to the organizations in scope
+         * @description customers.read. A dealer sees the customers linked to its organization (customer_organizations), a distributor its subtree, the center the brand; always the domain brand (K20). Anonymized customers are listed masked (`anonymized: true`, localized name, no contact data).
+         */
+        get: operations["listCustomers"];
+        put?: never;
+        /**
+         * Create or link a customer by phone (one phone = one user)
+         * @description customers.write. The phone is normalized to E.164 (default region: the organization's country, TR when unknown). An existing user with that phone is linked to the active organization instead of creating a second user (200, `existing_user: true`); its name, e-mail and profile are only filled where empty, differing values are listed in `ignored_fields`. A new user gets the customer role (201). National id and tax number are stored encrypted; only their last four characters are ever returned.
+         */
+        post: operations["createCustomer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/customers/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One customer of the scope
+         * @description Out-of-scope customers answer 404.
+         */
+        get: operations["getCustomer"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Edit a customer
+         * @description customers.write. Absent keys keep the stored value, null or "" clears it. Values are replaced only when `identity_editable` is true (every link of the customer is in the caller's scope and the user has no panel membership); otherwise only empty fields are filled and the rest is listed in `ignored_fields`. Anonymized customers answer 409 CUSTOMER_ANONYMIZED.
+         */
+        patch: operations["updateCustomer"];
+        trace?: never;
+    };
+    "/v1/customers/{uuid}/upgrade-to-dealer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Make a customer a member of an existing dealer
+         * @description customers.write in a center organization or a distributor above the dealer (dealers get 403, dealers outside the reach 404). Adds an organization_members row with the dealer_owner or dealer_staff role; no organization is created. The customer role, links, vehicles and history stay, so the same user signs in to the portal (WhatsApp OTP) and to the panel. A second upgrade into the same dealer answers 409 ALREADY_MEMBER.
+         */
+        post: operations["upgradeCustomerToDealer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/vehicles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Vehicles of customers in scope
+         * @description vehicles.read. Only vehicles whose customer is linked to an organization in scope (domain brand). `customer_uuid` outside the scope answers 404; `plate` is a prefix of the normalized plate.
+         */
+        get: operations["listVehicles"];
+        put?: never;
+        /**
+         * Register a vehicle for a customer in scope
+         * @description vehicles.write. The plate is validated against its country's format (400 INVALID_PLATE); plate_country defaults to the organization's country, then TR. The car brand/model come from the vehicle catalog (a model alone implies its brand). VIN is optional, 17 characters without I, O, Q. VIN and plate are not unique: `warnings` reports a duplicate in the brand.
+         */
+        post: operations["createVehicle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/vehicles/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One vehicle (customer in scope, else 404) */
+        get: operations["getVehicle"];
+        put?: never;
+        post?: never;
+        /** Remove a vehicle (soft delete) */
+        delete: operations["deleteVehicle"];
+        options?: never;
+        head?: never;
+        /**
+         * Edit a vehicle
+         * @description vehicles.write. Absent keys keep the stored value, null clears it (the plate cannot be cleared). A vehicle of an anonymized customer answers 409 CUSTOMER_ANONYMIZED.
+         */
+        patch: operations["updateVehicle"];
+        trace?: never;
+    };
     "/v1/portal/vehicle-catalog/brands": {
         parameters: {
             query?: never;
@@ -4253,6 +4367,90 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Orders inside the orders.read scope (sales and purchases)
+         * @description Every order where an organization of the orders.read scope is the seller or the buyer (managed: the active organization's own sales and purchases; a dealer never sees its distributor's other dealers). side=seller|buyer limits the list to the active organization's sales or purchases. List rows carry no items or history.
+         */
+        get: operations["listOrders"];
+        put?: never;
+        /**
+         * Open a draft order of the active organization to its parent (K6)
+         * @description The active organization is the buyer and its parent the seller: distributor -> center or dealer -> distributor (anything else is 422 ORDER_NO_SUPPLIER). The currency is the brand currency. Unit prices are the buyer's effective purchase price from the pricing module (K8); price fields sent by the client are ignored. A product without a price in the order currency is 400 with detail code PRICE_NOT_FOUND. Needs orders.write.
+         */
+        post: operations["createOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orders/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One order with its lines and status history
+         * @description Orders outside the orders.read scope answer 404.
+         */
+        get: operations["getOrder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orders/{uuid}/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace the lines of a draft order (buyer, orders.write)
+         * @description Prices are fetched again from the pricing module; client prices are ignored. Only drafts are editable (409 ORDER_NOT_EDITABLE).
+         */
+        put: operations["replaceOrderItems"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orders/{uuid}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move an order to another status
+         * @description Stock-free transitions (TEC-166): draft -> submitted (buyer, orders.write); submitted -> approved (seller, orders.approve: line prices are fetched again and locked, the rate to TRY is frozen into rate_snapshot/try_rate, 422 RATE_NOT_FOUND without a rate); approved -> preparing | processing (seller, orders.ship or orders.approve); draft | submitted | approved | preparing -> cancelled (either side, orders.cancel). A request for the current status is a no-op. Other moves answer 409 ORDER_INVALID_TRANSITION; the stock-bound statuses (ready, shipped, delivered, received, cancelling) answer 409 ORDER_TRANSITION_UNAVAILABLE until TEC-167/168. Every move writes the status history and an orders.* outbox event.
+         */
+        post: operations["transitionOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4320,6 +4518,232 @@ export interface components {
             code: string;
             message: string;
             details?: components["schemas"]["ErrorDetail"][];
+        };
+        /** @enum {string} */
+        CustomerType: "individual" | "corporate";
+        CustomerOrganizationLink: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            /** @enum {string} */
+            type: "center" | "distributor" | "dealer";
+            /** Format: date-time */
+            linked_at: string;
+            /** Format: date-time */
+            first_service_at: string | null;
+        };
+        /** @description An anonymized customer is masked: `anonymized: true`, name is the localized "Anonymous customer" label, surname empty, contact fields null. */
+        CustomerSummary: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            surname: string;
+            email: string | null;
+            /** @description E.164 */
+            phone: string | null;
+            /** @enum {string} */
+            status: "active" | "disabled" | "pending" | "anonymized";
+            anonymized: boolean;
+            type: components["schemas"]["CustomerType"];
+            company_name: string | null;
+            locale: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            linked_at: string | null;
+            /** Format: date-time */
+            first_service_at: string | null;
+        };
+        CustomerDetail: components["schemas"]["CustomerSummary"] & {
+            tax_office: string | null;
+            /** @description Last four characters; the full value is never returned. */
+            national_id_last4: string | null;
+            /** @description Last four characters; the full value is never returned. */
+            tax_no_last4: string | null;
+            address: {
+                [key: string]: unknown;
+            };
+            notification_prefs: {
+                [key: string]: boolean;
+            };
+            /** @description False for anonymized, disabled or merged accounts. */
+            editable: boolean;
+            /** @description True when every link of the customer is in the caller's scope and the user has no panel membership; otherwise edits only fill empty fields. */
+            identity_editable: boolean;
+            /** @description Serving organizations inside the caller's scope. */
+            organizations: components["schemas"]["CustomerOrganizationLink"][];
+        };
+        CustomerWrite: components["schemas"]["CustomerDetail"] & {
+            /** @description The phone already belonged to a user, who was linked. */
+            existing_user: boolean;
+            /** @description Submitted values kept as stored (shared customer, fill-only). */
+            ignored_fields: string[];
+        };
+        CustomerCreateInput: {
+            /** @description Any format; normalized to E.164 */
+            phone: string;
+            name: string;
+            surname?: string;
+            /** Format: email */
+            email?: string;
+            /** @example tr */
+            locale?: string;
+            type?: components["schemas"]["CustomerType"];
+            company_name?: string;
+            tax_office?: string;
+            /** @description TC kimlik no; stored encrypted (5-20 letters/digits) */
+            national_id?: string;
+            /** @description Stored encrypted (5-20 letters/digits) */
+            tax_no?: string;
+            address?: {
+                [key: string]: unknown;
+            };
+            /** @description Keys whatsapp, email, sms, push. */
+            notification_prefs?: {
+                [key: string]: boolean;
+            };
+        };
+        CustomerUpdateInput: {
+            name?: string;
+            surname?: string | null;
+            email?: string | null;
+            type?: components["schemas"]["CustomerType"];
+            company_name?: string | null;
+            tax_office?: string | null;
+            national_id?: string | null;
+            tax_no?: string | null;
+            address?: {
+                [key: string]: unknown;
+            } | null;
+            notification_prefs?: {
+                [key: string]: boolean;
+            } | null;
+        };
+        CustomerUpgradeInput: {
+            /**
+             * Format: uuid
+             * @description An existing dealer
+             */
+            organization_uuid: string;
+            /** @enum {string} */
+            role: "dealer_owner" | "dealer_staff";
+        };
+        CustomerUpgrade: {
+            /** Format: uuid */
+            customer_uuid: string;
+            organization: {
+                /** Format: uuid */
+                uuid: string;
+                slug: string;
+                name: string;
+                type: string;
+            };
+            /** @enum {string} */
+            role: "dealer_owner" | "dealer_staff";
+            /** @enum {string} */
+            member_role: "owner" | "staff";
+        };
+        VehicleCatalogRef: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+        };
+        Vehicle: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            customer_uuid: string;
+            /**
+             * Format: uuid
+             * @description Organization that registered the vehicle.
+             */
+            organization_uuid: string | null;
+            plate: string | null;
+            plate_normalized: string | null;
+            /** @description ISO 3166-1 alpha-2 */
+            plate_country: string | null;
+            vin: string | null;
+            model_year: number | null;
+            car_brand: components["schemas"]["VehicleCatalogRef"] | null;
+            car_model: components["schemas"]["VehicleCatalogRef"] | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** @description After a write, vin_duplicate / plate_duplicate when another vehicle of the brand has the same value. */
+            warnings: ("vin_duplicate" | "plate_duplicate")[];
+        };
+        VehicleCreateInput: {
+            /** Format: uuid */
+            customer_uuid: string;
+            plate: string;
+            /** @description ISO alpha-2; default: organization country, then TR */
+            plate_country?: string;
+            /** Format: uuid */
+            car_brand_uuid?: string | null;
+            /** Format: uuid */
+            car_model_uuid?: string | null;
+            model_year?: number | null;
+            /** @description 17 characters without I, O, Q */
+            vin?: string;
+        };
+        VehicleUpdateInput: {
+            plate?: string;
+            plate_country?: string | null;
+            /** Format: uuid */
+            car_brand_uuid?: string | null;
+            /** Format: uuid */
+            car_model_uuid?: string | null;
+            model_year?: number | null;
+            vin?: string | null;
+        };
+        EnvelopeCustomer: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["CustomerDetail"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeCustomerWrite: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["CustomerWrite"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeCustomerPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["CustomerSummary"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeCustomerUpgrade: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["CustomerUpgrade"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeVehicle: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Vehicle"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeVehiclePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["Vehicle"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
         };
         ResponseMeta: {
             request_id: string;
@@ -7428,6 +7852,148 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["AccountingBalanceReport"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        OrderStatus: "draft" | "submitted" | "approved" | "preparing" | "ready" | "processing" | "shipped" | "delivered" | "received" | "cancelling" | "cancelled";
+        OrderOrgRef: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            /** @enum {string} */
+            type: "center" | "distributor" | "dealer";
+        };
+        OrderProductRef: {
+            /** Format: uuid */
+            uuid: string;
+            sku: string;
+            name: string;
+            unit_type: string;
+        };
+        OrderItem: {
+            /** Format: uuid */
+            uuid: string;
+            product: components["schemas"]["OrderProductRef"];
+            /** @description Pieces (null for roll_meter products) */
+            quantity: number | null;
+            /** @description Meters with two decimals (roll_meter products) */
+            meters: string | null;
+            /**
+             * @description Buyer's purchase price (NUMERIC(14,4)); locked at approval
+             * @example 80.0000
+             */
+            unit_price: string;
+            /** @enum {string} */
+            price_source: "list" | "override" | "distributor_dealer";
+            /** @example 240.00 */
+            line_total: string;
+            note: string | null;
+        };
+        OrderHistoryEntry: {
+            from_status: components["schemas"]["OrderStatus"] | null;
+            to_status: components["schemas"]["OrderStatus"];
+            reason: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        /** @description Rate frozen at approval (1 base = rate quote; quote is TRY). */
+        OrderRateSnapshot: {
+            /** @example EUR */
+            base: string;
+            /** @example TRY */
+            quote: string;
+            /** @example 35.1234 */
+            rate: string;
+            /** Format: date */
+            rate_date: string;
+            /** @example tcmb */
+            source: string;
+            /** @description Pivot currency of a cross rate */
+            via?: string;
+        };
+        Order: {
+            /** Format: uuid */
+            uuid: string;
+            /** @example ORD-00000001 */
+            order_no: string;
+            status: components["schemas"]["OrderStatus"];
+            /** @description Status in the request language */
+            status_label: string;
+            /**
+             * @description Side of the active organization (observer = inside the read scope only)
+             * @enum {string}
+             */
+            role: "seller" | "buyer" | "observer";
+            seller: components["schemas"]["OrderOrgRef"];
+            buyer: components["schemas"]["OrderOrgRef"];
+            /** @description Seller brand currency */
+            currency: string;
+            /** @example 240.00 */
+            subtotal: string;
+            /** @example 0.00 */
+            tax_total: string;
+            /** @example 240.00 */
+            total: string;
+            rate_snapshot: components["schemas"]["OrderRateSnapshot"] | null;
+            /** @description TRY rate frozen at approval */
+            try_rate: string | null;
+            note: string | null;
+            cancel_reason: string | null;
+            /** Format: date-time */
+            submitted_at: string | null;
+            /** Format: date-time */
+            approved_at: string | null;
+            /** Format: date-time */
+            cancelled_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** @description Statuses the caller may move the order to */
+            available_transitions: components["schemas"]["OrderStatus"][];
+            /** @description Lines (detail responses only) */
+            items?: components["schemas"]["OrderItem"][];
+            /** @description Status history (detail responses only) */
+            history?: components["schemas"]["OrderHistoryEntry"][];
+        };
+        /** @description Prices are never accepted from the client (K8). */
+        OrderItemInput: {
+            /** Format: uuid */
+            product_uuid: string;
+            /** @description Pieces (piece/fixed products) */
+            quantity?: number;
+            /** @description Meters (roll_meter products); a JSON number is accepted too */
+            meters?: string;
+            note?: string;
+        };
+        OrderItemsInput: {
+            items: components["schemas"]["OrderItemInput"][];
+        };
+        OrderCreateInput: {
+            note?: string;
+            items: components["schemas"]["OrderItemInput"][];
+        };
+        OrderTransitionInput: {
+            status: components["schemas"]["OrderStatus"];
+            /** @description Kept in the history; the cancel reason for cancelled */
+            reason?: string;
+        };
+        EnvelopeOrder: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Order"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeOrderPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["Order"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
             meta: components["schemas"]["ResponseMeta"];
         };
     };
@@ -12736,6 +13302,317 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    listCustomers: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+                status?: "active" | "disabled" | "pending" | "anonymized";
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Customers */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCustomerPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createCustomer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomerCreateInput"];
+            };
+        };
+        responses: {
+            /** @description Existing user linked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCustomerWrite"];
+                };
+            };
+            /** @description New customer */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCustomerWrite"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            /** @description PII_ENCRYPTION_UNAVAILABLE (CUSTOMER_PII_KEY not configured) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getCustomer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Customer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCustomer"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateCustomer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomerUpdateInput"];
+            };
+        };
+        responses: {
+            /** @description Updated customer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCustomerWrite"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            /** @description PII_ENCRYPTION_UNAVAILABLE (CUSTOMER_PII_KEY not configured) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    upgradeCustomerToDealer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomerUpgradeInput"];
+            };
+        };
+        responses: {
+            /** @description Membership created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCustomerUpgrade"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listVehicles: {
+        parameters: {
+            query?: {
+                customer_uuid?: string;
+                plate?: string;
+                vin?: string;
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Vehicles */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeVehiclePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createVehicle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VehicleCreateInput"];
+            };
+        };
+        responses: {
+            /** @description Vehicle */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeVehicle"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getVehicle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Vehicle */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeVehicle"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteVehicle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    updateVehicle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VehicleUpdateInput"];
+            };
+        };
+        responses: {
+            /** @description Vehicle */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeVehicle"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
     listPortalVehicleBrands: {
         parameters: {
             query?: {
@@ -15148,6 +16025,150 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    listOrders: {
+        parameters: {
+            query?: {
+                side?: "seller" | "buyer";
+                status?: components["schemas"]["OrderStatus"];
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Orders */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrderPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderCreateInput"];
+            };
+        };
+        responses: {
+            /** @description Draft order */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrder"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrder"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    replaceOrderItems: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderItemsInput"];
+            };
+        };
+        responses: {
+            /** @description Updated order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrder"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    transitionOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderTransitionInput"];
+            };
+        };
+        responses: {
+            /** @description Order after the transition */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrder"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
 }

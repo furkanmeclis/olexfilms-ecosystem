@@ -53,6 +53,7 @@ type Querier interface {
 	CountCarModels(ctx context.Context, arg CountCarModelsParams) (int64, error)
 	CountCarModelsByBrand(ctx context.Context, carBrandID int64) (int64, error)
 	CountCariAccountsWithBalance(ctx context.Context, arg CountCariAccountsWithBalanceParams) (int64, error)
+	CountCustomerOrganizationLinks(ctx context.Context, arg CountCustomerOrganizationLinksParams) (CountCustomerOrganizationLinksRow, error)
 	CountDistributorPriceOverrides(ctx context.Context, arg CountDistributorPriceOverridesParams) (int64, error)
 	CountDocumentTemplates(ctx context.Context, arg CountDocumentTemplatesParams) (int64, error)
 	CountExportJobsForActor(ctx context.Context, actorID int64) (int64, error)
@@ -66,6 +67,7 @@ type Querier interface {
 	CountOrdersBySeller(ctx context.Context, arg CountOrdersBySellerParams) (int64, error)
 	CountOrdersInScope(ctx context.Context, arg CountOrdersInScopeParams) (int64, error)
 	CountOrganizationCustomers(ctx context.Context, arg CountOrganizationCustomersParams) (int64, error)
+	CountOrganizationMembershipsByUser(ctx context.Context, userID int64) (int64, error)
 	CountOrganizationProductStockRows(ctx context.Context, arg CountOrganizationProductStockRowsParams) (int64, error)
 	CountOrganizations(ctx context.Context, arg CountOrganizationsParams) (int64, error)
 	CountOutboxByStatus(ctx context.Context, status string) (int64, error)
@@ -76,6 +78,7 @@ type Querier interface {
 	CountProductCategories(ctx context.Context, arg CountProductCategoriesParams) (int64, error)
 	CountProducts(ctx context.Context, arg CountProductsParams) (int64, error)
 	CountRoles(ctx context.Context, q_ pgtype.Text) (int64, error)
+	CountScopedVehicles(ctx context.Context, arg CountScopedVehiclesParams) (int64, error)
 	CountSearchFinanceEntries(ctx context.Context, arg CountSearchFinanceEntriesParams) (int64, error)
 	CountServicesInScope(ctx context.Context, arg CountServicesInScopeParams) (int64, error)
 	CountStockMovementsByUnit(ctx context.Context, unitID int64) (int64, error)
@@ -253,6 +256,10 @@ type Querier interface {
 	EnsureFixedBarcodeHolding(ctx context.Context, arg EnsureFixedBarcodeHoldingParams) error
 	EnsureOrganizationProductStock(ctx context.Context, arg EnsureOrganizationProductStockParams) error
 	ExtensionExists(ctx context.Context, extname string) (bool, error)
+	// TEC-160 (F1-08b): customer and vehicle API (/v1/customers, /v1/vehicles).
+	// Fill-only identity: a customer created by another organization keeps its
+	// name, e-mail and locale; only empty values are filled.
+	FillCustomerIdentity(ctx context.Context, arg FillCustomerIdentityParams) (User, error)
 	// The rate of a pair (either direction) on the latest day within
 	// [min_date, on_date]; on that day manual > tcmb > ecb, direct before inverse.
 	FindPairRate(ctx context.Context, arg FindPairRateParams) (FindPairRateRow, error)
@@ -417,6 +424,8 @@ type Querier interface {
 	GetValidRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
 	GetVehicleByUUID(ctx context.Context, argUuid uuid.UUID) (Vehicle, error)
 	GetVehicleByUUIDForUpdate(ctx context.Context, argUuid uuid.UUID) (Vehicle, error)
+	// Vehicle with its customer and car brand/model, for API responses.
+	GetVehicleViewByUUID(ctx context.Context, argUuid uuid.UUID) (GetVehicleViewByUUIDRow, error)
 	GetWarehouseLocation(ctx context.Context, arg GetWarehouseLocationParams) (WarehouseLocation, error)
 	GetWarehouseLocationByUUID(ctx context.Context, argUuid uuid.UUID) (WarehouseLocation, error)
 	GetWebAuthnCredentialByCredentialID(ctx context.Context, credentialID string) (WebauthnCredential, error)
@@ -644,6 +653,9 @@ type Querier interface {
 	ListRolesFiltered(ctx context.Context, arg ListRolesFilteredParams) ([]Role, error)
 	ListRolesForExport(ctx context.Context, q_ pgtype.Text) ([]Role, error)
 	ListRolesForUserIDs(ctx context.Context, userIds []int64) ([]ListRolesForUserIDsRow, error)
+	// Vehicles of customers linked to the organizations in scope; the brand is
+	// always the domain brand (K20).
+	ListScopedVehicles(ctx context.Context, arg ListScopedVehiclesParams) ([]ListScopedVehiclesRow, error)
 	ListServiceImages(ctx context.Context, serviceID int64) ([]ServiceImage, error)
 	ListServiceItems(ctx context.Context, serviceID int64) ([]ServiceItem, error)
 	ListServiceStatusLogs(ctx context.Context, serviceID int64) ([]ServiceStatusLog, error)
@@ -809,6 +821,9 @@ type Querier interface {
 	SetCarModelHero(ctx context.Context, arg SetCarModelHeroParams) (CarModel, error)
 	SetCariAccountActive(ctx context.Context, arg SetCariAccountActiveParams) (CariAccount, error)
 	SetCountryActive(ctx context.Context, arg SetCountryActiveParams) (Country, error)
+	// Full identity edit (only when the caller's scope covers every link of the
+	// customer and the user has no panel membership).
+	SetCustomerIdentity(ctx context.Context, arg SetCustomerIdentityParams) (User, error)
 	// Ciphertext and mask are written together; NULL/NULL clears the value.
 	SetCustomerNationalID(ctx context.Context, arg SetCustomerNationalIDParams) (CustomerProfile, error)
 	SetCustomerTaxNo(ctx context.Context, arg SetCustomerTaxNoParams) (CustomerProfile, error)

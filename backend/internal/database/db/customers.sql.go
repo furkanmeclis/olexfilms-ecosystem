@@ -12,6 +12,34 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countCustomerOrganizationLinks = `-- name: CountCustomerOrganizationLinks :one
+SELECT COUNT(*)::bigint AS total,
+       (COUNT(*) FILTER (
+         WHERE ($1::bigint[] IS NULL OR organization_id = ANY ($1::bigint[]))
+           AND ($2::bigint IS NULL OR brand_id = $2)
+       ))::bigint AS in_scope
+FROM customer_organizations
+WHERE user_id = $3
+`
+
+type CountCustomerOrganizationLinksParams struct {
+	OrgIds  []int64     `json:"org_ids"`
+	BrandID pgtype.Int8 `json:"brand_id"`
+	UserID  int64       `json:"user_id"`
+}
+
+type CountCustomerOrganizationLinksRow struct {
+	Total   int64 `json:"total"`
+	InScope int64 `json:"in_scope"`
+}
+
+func (q *Queries) CountCustomerOrganizationLinks(ctx context.Context, arg CountCustomerOrganizationLinksParams) (CountCustomerOrganizationLinksRow, error) {
+	row := q.db.QueryRow(ctx, countCustomerOrganizationLinks, arg.OrgIds, arg.BrandID, arg.UserID)
+	var i CountCustomerOrganizationLinksRow
+	err := row.Scan(&i.Total, &i.InScope)
+	return i, err
+}
+
 const countOrganizationCustomers = `-- name: CountOrganizationCustomers :one
 SELECT COUNT(DISTINCT u.id)::bigint
 FROM users u
@@ -44,6 +72,54 @@ func (q *Queries) CountOrganizationCustomers(ctx context.Context, arg CountOrgan
 		arg.BrandID,
 		arg.Status,
 		arg.Q,
+	)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countOrganizationMembershipsByUser = `-- name: CountOrganizationMembershipsByUser :one
+SELECT COUNT(*)::bigint FROM organization_members WHERE user_id = $1
+`
+
+func (q *Queries) CountOrganizationMembershipsByUser(ctx context.Context, userID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, countOrganizationMembershipsByUser, userID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countScopedVehicles = `-- name: CountScopedVehicles :one
+SELECT COUNT(*)::bigint
+FROM vehicles v
+WHERE v.deleted_at IS NULL
+  AND v.brand_id = $1
+  AND ($2::bigint IS NULL OR v.user_id = $2)
+  AND EXISTS (
+    SELECT 1 FROM customer_organizations co
+    WHERE co.user_id = v.user_id
+      AND co.brand_id = $1
+      AND ($3::bigint[] IS NULL OR co.organization_id = ANY ($3::bigint[]))
+  )
+  AND ($4::text IS NULL OR v.plate_normalized LIKE $4 || '%')
+  AND ($5::text IS NULL OR v.vin = $5)
+`
+
+type CountScopedVehiclesParams struct {
+	BrandID         int64       `json:"brand_id"`
+	UserID          pgtype.Int8 `json:"user_id"`
+	OrgIds          []int64     `json:"org_ids"`
+	PlateNormalized pgtype.Text `json:"plate_normalized"`
+	Vin             pgtype.Text `json:"vin"`
+}
+
+func (q *Queries) CountScopedVehicles(ctx context.Context, arg CountScopedVehiclesParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countScopedVehicles,
+		arg.BrandID,
+		arg.UserID,
+		arg.OrgIds,
+		arg.PlateNormalized,
+		arg.Vin,
 	)
 	var column_1 int64
 	err := row.Scan(&column_1)
@@ -203,6 +279,59 @@ ON CONFLICT (user_id) DO NOTHING
 func (q *Queries) EnsureCustomerProfile(ctx context.Context, userID int64) error {
 	_, err := q.db.Exec(ctx, ensureCustomerProfile, userID)
 	return err
+}
+
+const fillCustomerIdentity = `-- name: FillCustomerIdentity :one
+
+UPDATE users
+SET name    = CASE WHEN btrim(name) = '' AND $1::text IS NOT NULL THEN $1::text ELSE name END,
+    surname = CASE WHEN btrim(surname) = '' AND $2::text IS NOT NULL THEN $2::text ELSE surname END,
+    email   = COALESCE(email, $3::text),
+    locale  = COALESCE(locale, $4::text)
+WHERE id = $5 AND deleted_at IS NULL
+RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, timezone, phone_e164, phone_verified_at, merged_into_user_id
+`
+
+type FillCustomerIdentityParams struct {
+	Name    pgtype.Text `json:"name"`
+	Surname pgtype.Text `json:"surname"`
+	Email   pgtype.Text `json:"email"`
+	Locale  pgtype.Text `json:"locale"`
+	ID      int64       `json:"id"`
+}
+
+// TEC-160 (F1-08b): customer and vehicle API (/v1/customers, /v1/vehicles).
+// Fill-only identity: a customer created by another organization keeps its
+// name, e-mail and locale; only empty values are filled.
+func (q *Queries) FillCustomerIdentity(ctx context.Context, arg FillCustomerIdentityParams) (User, error) {
+	row := q.db.QueryRow(ctx, fillCustomerIdentity,
+		arg.Name,
+		arg.Surname,
+		arg.Email,
+		arg.Locale,
+		arg.ID,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Name,
+		&i.Surname,
+		&i.Status,
+		&i.EmailVerifiedAt,
+		&i.LastLoginAt,
+		&i.Locale,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Timezone,
+		&i.PhoneE164,
+		&i.PhoneVerifiedAt,
+		&i.MergedIntoUserID,
+	)
+	return i, err
 }
 
 const findVehiclesByPlate = `-- name: FindVehiclesByPlate :many
@@ -446,6 +575,59 @@ func (q *Queries) GetVehicleByUUIDForUpdate(ctx context.Context, argUuid uuid.UU
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getVehicleViewByUUID = `-- name: GetVehicleViewByUUID :one
+SELECT v.id, v.uuid, v.user_id, v.organization_id, v.brand_id, v.car_brand_id, v.car_model_id, v.model_year, v.plate, v.plate_normalized, v.plate_country, v.vin, v.created_at, v.updated_at, v.deleted_at, u.uuid AS customer_uuid,
+       cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
+       cm.uuid AS car_model_uuid, cm.name AS car_model_name,
+       o.uuid AS organization_uuid
+FROM vehicles v
+JOIN users u ON u.id = v.user_id
+LEFT JOIN car_brands cb ON cb.id = v.car_brand_id
+LEFT JOIN car_models cm ON cm.id = v.car_model_id
+LEFT JOIN organizations o ON o.id = v.organization_id
+WHERE v.uuid = $1 AND v.deleted_at IS NULL
+`
+
+type GetVehicleViewByUUIDRow struct {
+	Vehicle          Vehicle     `json:"vehicle"`
+	CustomerUuid     uuid.UUID   `json:"customer_uuid"`
+	CarBrandUuid     pgtype.UUID `json:"car_brand_uuid"`
+	CarBrandName     pgtype.Text `json:"car_brand_name"`
+	CarModelUuid     pgtype.UUID `json:"car_model_uuid"`
+	CarModelName     pgtype.Text `json:"car_model_name"`
+	OrganizationUuid pgtype.UUID `json:"organization_uuid"`
+}
+
+// Vehicle with its customer and car brand/model, for API responses.
+func (q *Queries) GetVehicleViewByUUID(ctx context.Context, argUuid uuid.UUID) (GetVehicleViewByUUIDRow, error) {
+	row := q.db.QueryRow(ctx, getVehicleViewByUUID, argUuid)
+	var i GetVehicleViewByUUIDRow
+	err := row.Scan(
+		&i.Vehicle.ID,
+		&i.Vehicle.Uuid,
+		&i.Vehicle.UserID,
+		&i.Vehicle.OrganizationID,
+		&i.Vehicle.BrandID,
+		&i.Vehicle.CarBrandID,
+		&i.Vehicle.CarModelID,
+		&i.Vehicle.ModelYear,
+		&i.Vehicle.Plate,
+		&i.Vehicle.PlateNormalized,
+		&i.Vehicle.PlateCountry,
+		&i.Vehicle.Vin,
+		&i.Vehicle.CreatedAt,
+		&i.Vehicle.UpdatedAt,
+		&i.Vehicle.DeletedAt,
+		&i.CustomerUuid,
+		&i.CarBrandUuid,
+		&i.CarBrandName,
+		&i.CarModelUuid,
+		&i.CarModelName,
+		&i.OrganizationUuid,
 	)
 	return i, err
 }
@@ -723,6 +905,103 @@ func (q *Queries) ListOrganizationsWithRawPhone(ctx context.Context) ([]ListOrga
 	return items, nil
 }
 
+const listScopedVehicles = `-- name: ListScopedVehicles :many
+SELECT v.id, v.uuid, v.user_id, v.organization_id, v.brand_id, v.car_brand_id, v.car_model_id, v.model_year, v.plate, v.plate_normalized, v.plate_country, v.vin, v.created_at, v.updated_at, v.deleted_at, u.uuid AS customer_uuid,
+       cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
+       cm.uuid AS car_model_uuid, cm.name AS car_model_name,
+       o.uuid AS organization_uuid
+FROM vehicles v
+JOIN users u ON u.id = v.user_id
+LEFT JOIN car_brands cb ON cb.id = v.car_brand_id
+LEFT JOIN car_models cm ON cm.id = v.car_model_id
+LEFT JOIN organizations o ON o.id = v.organization_id
+WHERE v.deleted_at IS NULL
+  AND v.brand_id = $1
+  AND ($2::bigint IS NULL OR v.user_id = $2)
+  AND EXISTS (
+    SELECT 1 FROM customer_organizations co
+    WHERE co.user_id = v.user_id
+      AND co.brand_id = $1
+      AND ($3::bigint[] IS NULL OR co.organization_id = ANY ($3::bigint[]))
+  )
+  AND ($4::text IS NULL OR v.plate_normalized LIKE $4 || '%')
+  AND ($5::text IS NULL OR v.vin = $5)
+ORDER BY v.created_at DESC, v.id DESC
+LIMIT $7 OFFSET $6
+`
+
+type ListScopedVehiclesParams struct {
+	BrandID         int64       `json:"brand_id"`
+	UserID          pgtype.Int8 `json:"user_id"`
+	OrgIds          []int64     `json:"org_ids"`
+	PlateNormalized pgtype.Text `json:"plate_normalized"`
+	Vin             pgtype.Text `json:"vin"`
+	OffsetCount     int32       `json:"offset_count"`
+	LimitCount      int32       `json:"limit_count"`
+}
+
+type ListScopedVehiclesRow struct {
+	Vehicle          Vehicle     `json:"vehicle"`
+	CustomerUuid     uuid.UUID   `json:"customer_uuid"`
+	CarBrandUuid     pgtype.UUID `json:"car_brand_uuid"`
+	CarBrandName     pgtype.Text `json:"car_brand_name"`
+	CarModelUuid     pgtype.UUID `json:"car_model_uuid"`
+	CarModelName     pgtype.Text `json:"car_model_name"`
+	OrganizationUuid pgtype.UUID `json:"organization_uuid"`
+}
+
+// Vehicles of customers linked to the organizations in scope; the brand is
+// always the domain brand (K20).
+func (q *Queries) ListScopedVehicles(ctx context.Context, arg ListScopedVehiclesParams) ([]ListScopedVehiclesRow, error) {
+	rows, err := q.db.Query(ctx, listScopedVehicles,
+		arg.BrandID,
+		arg.UserID,
+		arg.OrgIds,
+		arg.PlateNormalized,
+		arg.Vin,
+		arg.OffsetCount,
+		arg.LimitCount,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListScopedVehiclesRow{}
+	for rows.Next() {
+		var i ListScopedVehiclesRow
+		if err := rows.Scan(
+			&i.Vehicle.ID,
+			&i.Vehicle.Uuid,
+			&i.Vehicle.UserID,
+			&i.Vehicle.OrganizationID,
+			&i.Vehicle.BrandID,
+			&i.Vehicle.CarBrandID,
+			&i.Vehicle.CarModelID,
+			&i.Vehicle.ModelYear,
+			&i.Vehicle.Plate,
+			&i.Vehicle.PlateNormalized,
+			&i.Vehicle.PlateCountry,
+			&i.Vehicle.Vin,
+			&i.Vehicle.CreatedAt,
+			&i.Vehicle.UpdatedAt,
+			&i.Vehicle.DeletedAt,
+			&i.CustomerUuid,
+			&i.CarBrandUuid,
+			&i.CarBrandName,
+			&i.CarModelUuid,
+			&i.CarModelName,
+			&i.OrganizationUuid,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listVehiclesByUser = `-- name: ListVehiclesByUser :many
 SELECT v.id, v.uuid, v.user_id, v.organization_id, v.brand_id, v.car_brand_id, v.car_model_id, v.model_year, v.plate, v.plate_normalized, v.plate_country, v.vin, v.created_at, v.updated_at, v.deleted_at, cb.name AS car_brand_name, cm.name AS car_model_name
 FROM vehicles v
@@ -936,6 +1215,54 @@ func (q *Queries) ResolveOrganizationRawPhone(ctx context.Context, arg ResolveOr
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const setCustomerIdentity = `-- name: SetCustomerIdentity :one
+UPDATE users
+SET name    = $1,
+    surname = $2,
+    email   = $3
+WHERE id = $4 AND deleted_at IS NULL
+RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, timezone, phone_e164, phone_verified_at, merged_into_user_id
+`
+
+type SetCustomerIdentityParams struct {
+	Name    string      `json:"name"`
+	Surname string      `json:"surname"`
+	Email   pgtype.Text `json:"email"`
+	ID      int64       `json:"id"`
+}
+
+// Full identity edit (only when the caller's scope covers every link of the
+// customer and the user has no panel membership).
+func (q *Queries) SetCustomerIdentity(ctx context.Context, arg SetCustomerIdentityParams) (User, error) {
+	row := q.db.QueryRow(ctx, setCustomerIdentity,
+		arg.Name,
+		arg.Surname,
+		arg.Email,
+		arg.ID,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Name,
+		&i.Surname,
+		&i.Status,
+		&i.EmailVerifiedAt,
+		&i.LastLoginAt,
+		&i.Locale,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Timezone,
+		&i.PhoneE164,
+		&i.PhoneVerifiedAt,
+		&i.MergedIntoUserID,
+	)
+	return i, err
 }
 
 const setCustomerNationalID = `-- name: SetCustomerNationalID :one

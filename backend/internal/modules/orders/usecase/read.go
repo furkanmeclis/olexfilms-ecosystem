@@ -1,0 +1,286 @@
+package usecase
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
+)
+
+// OrgRef names an order party.
+type OrgRef struct {
+	UUID uuid.UUID `json:"uuid"`
+	Name string    `json:"name"`
+	Type string    `json:"type"`
+}
+
+// ProductRef names an order line's product.
+type ProductRef struct {
+	UUID     uuid.UUID `json:"uuid"`
+	SKU      string    `json:"sku"`
+	Name     string    `json:"name"`
+	UnitType string    `json:"unit_type"`
+}
+
+// ItemView is one order line. unit_price is the buyer's purchase price,
+// frozen at approval.
+type ItemView struct {
+	UUID        uuid.UUID  `json:"uuid"`
+	Product     ProductRef `json:"product"`
+	Quantity    *int32     `json:"quantity"`
+	Meters      *string    `json:"meters"`
+	UnitPrice   string     `json:"unit_price"`
+	PriceSource string     `json:"price_source"`
+	LineTotal   string     `json:"line_total"`
+	Note        *string    `json:"note"`
+}
+
+// HistoryView is one status change.
+type HistoryView struct {
+	FromStatus *string   `json:"from_status"`
+	ToStatus   string    `json:"to_status"`
+	Reason     *string   `json:"reason"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+// OrderView is an order as the API returns it.
+type OrderView struct {
+	UUID         uuid.UUID       `json:"uuid"`
+	OrderNo      string          `json:"order_no"`
+	Status       string          `json:"status"`
+	StatusLabel  string          `json:"status_label"`
+	Role         string          `json:"role"`
+	Seller       OrgRef          `json:"seller"`
+	Buyer        OrgRef          `json:"buyer"`
+	Currency     string          `json:"currency"`
+	Subtotal     string          `json:"subtotal"`
+	TaxTotal     string          `json:"tax_total"`
+	Total        string          `json:"total"`
+	RateSnapshot json.RawMessage `json:"rate_snapshot"`
+	TryRate      *string         `json:"try_rate"`
+	Note         *string         `json:"note"`
+	CancelReason *string         `json:"cancel_reason"`
+	SubmittedAt  *time.Time      `json:"submitted_at"`
+	ApprovedAt   *time.Time      `json:"approved_at"`
+	CancelledAt  *time.Time      `json:"cancelled_at"`
+	CreatedAt    time.Time       `json:"created_at"`
+	UpdatedAt    time.Time       `json:"updated_at"`
+	// AvailableTransitions are the statuses the caller may move the order to.
+	AvailableTransitions []string      `json:"available_transitions"`
+	Items                []ItemView    `json:"items,omitempty"`
+	History              []HistoryView `json:"history,omitempty"`
+}
+
+func tsPtr(t pgtype.Timestamptz) *time.Time {
+	if !t.Valid {
+		return nil
+	}
+	v := t.Time
+	return &v
+}
+
+func textPtr(t pgtype.Text) *string {
+	if !t.Valid {
+		return nil
+	}
+	v := t.String
+	return &v
+}
+
+// StatusLabelKey is the i18n key of a status label.
+func StatusLabelKey(status string) string { return "orders.status." + status }
+
+type orgCache map[int64]OrgRef
+
+func (m orgCache) get(ctx context.Context, q *db.Queries, id int64) (OrgRef, error) {
+	if r, ok := m[id]; ok {
+		return r, nil
+	}
+	o, err := q.GetOrganizationByID(ctx, id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		m[id] = OrgRef{}
+		return OrgRef{}, nil
+	}
+	if err != nil {
+		return OrgRef{}, fmt.Errorf("orders: organization: %w", err)
+	}
+	r := OrgRef{UUID: o.Uuid, Name: o.Name, Type: o.Type}
+	m[id] = r
+	return r, nil
+}
+
+func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, o db.Order, orgs orgCache) (OrderView, error) {
+	seller, err := orgs.get(ctx, q, o.SellerOrgID)
+	if err != nil {
+		return OrderView{}, err
+	}
+	buyer, err := orgs.get(ctx, q, o.BuyerOrgID)
+	if err != nil {
+		return OrderView{}, err
+	}
+	party := partyOf(c, o)
+	role := string(party)
+	if role == "" {
+		role = "observer"
+	}
+	v := OrderView{
+		UUID: o.Uuid, OrderNo: o.OrderNo, Status: o.Status,
+		StatusLabel: i18n.Translate(i18n.FromContext(ctx).Locale, StatusLabelKey(o.Status)),
+		Role:        role, Seller: seller, Buyer: buyer, Currency: strings.TrimSpace(o.Currency),
+		Subtotal: numericText(o.Subtotal, 2), TaxTotal: numericText(o.TaxTotal, 2), Total: numericText(o.Total, 2),
+		TryRate: rateText(o.TryRate), Note: textPtr(o.Note), CancelReason: textPtr(o.CancelReason),
+		SubmittedAt: tsPtr(o.SubmittedAt), ApprovedAt: tsPtr(o.ApprovedAt), CancelledAt: tsPtr(o.CancelledAt),
+		CreatedAt: o.CreatedAt.Time, UpdatedAt: o.UpdatedAt.Time,
+		AvailableTransitions: availableTransitions(o.Status, party, c.can),
+	}
+	if len(o.RateSnapshot) > 0 {
+		v.RateSnapshot = json.RawMessage(o.RateSnapshot)
+	} else {
+		v.RateSnapshot = json.RawMessage("null")
+	}
+	return v, nil
+}
+
+// view is the full order: summary, lines and history.
+func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, o db.Order) (OrderView, error) {
+	v, err := s.summary(ctx, q, c, o, orgCache{})
+	if err != nil {
+		return OrderView{}, err
+	}
+	items, err := q.ListOrderItems(ctx, o.ID)
+	if err != nil {
+		return OrderView{}, fmt.Errorf("orders: lines: %w", err)
+	}
+	v.Items = make([]ItemView, 0, len(items))
+	for _, it := range items {
+		p, err := q.GetProduct(ctx, db.GetProductParams{ID: it.ProductID, BrandID: o.BrandID})
+		if err != nil {
+			return OrderView{}, fmt.Errorf("orders: product: %w", err)
+		}
+		iv := ItemView{
+			UUID:      it.Uuid,
+			Product:   ProductRef{UUID: p.Uuid, SKU: p.Sku, Name: p.Name, UnitType: p.UnitType},
+			Meters:    numericTextPtr(it.Meters, 2),
+			UnitPrice: numericText(it.UnitPrice, 4), PriceSource: it.PriceSource,
+			LineTotal: numericText(it.LineTotal, 2), Note: textPtr(it.Note),
+		}
+		if it.Quantity.Valid {
+			qv := it.Quantity.Int32
+			iv.Quantity = &qv
+		}
+		v.Items = append(v.Items, iv)
+	}
+	hist, err := q.ListOrderStatusHistory(ctx, o.ID)
+	if err != nil {
+		return OrderView{}, fmt.Errorf("orders: history: %w", err)
+	}
+	v.History = make([]HistoryView, 0, len(hist))
+	for _, h := range hist {
+		v.History = append(v.History, HistoryView{
+			FromStatus: textPtr(h.FromStatus), ToStatus: h.ToStatus, Reason: textPtr(h.Reason), CreatedAt: h.CreatedAt.Time,
+		})
+	}
+	return v, nil
+}
+
+// Get returns one order the caller's orders.read scope reaches (else 404).
+func (s *Service) Get(ctx context.Context, c Caller, orderUUID uuid.UUID) (OrderView, error) {
+	o, err := s.q.GetOrderByUUID(ctx, db.GetOrderByUUIDParams{Uuid: orderUUID, BrandID: c.Org.BrandID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return OrderView{}, ErrNotFound
+	}
+	if err != nil {
+		return OrderView{}, fmt.Errorf("orders: get: %w", err)
+	}
+	if !visible(c, o) {
+		return OrderView{}, ErrNotFound
+	}
+	return s.view(ctx, s.q, c, o)
+}
+
+// Sides of the order list.
+const (
+	SideAll    = ""
+	SideSeller = "seller"
+	SideBuyer  = "buyer"
+)
+
+// ListFilter narrows the order list.
+type ListFilter struct {
+	Side   string
+	Status string
+	Limit  int32
+	Offset int32
+}
+
+// List returns orders inside the caller's orders.read scope: every order
+// where an organization of the scope sells or buys (managed: the active
+// organization's own sales and purchases). side=seller|buyer limits the
+// list to the active organization's sales or purchases.
+func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]OrderView, int64, error) {
+	status := pgtype.Text{}
+	if st := strings.TrimSpace(f.Status); st != "" {
+		if !IsStatus(st) {
+			return nil, 0, invalid("status", "unknown order status")
+		}
+		status = pgtype.Text{String: st, Valid: true}
+	}
+	brand := c.Org.BrandID
+	var (
+		rows  []db.Order
+		total int64
+		err   error
+	)
+	switch f.Side {
+	case SideAll:
+		orgIDs := c.Filter.OrgIDsArg()
+		rows, err = s.q.ListOrdersInScope(ctx, db.ListOrdersInScopeParams{
+			BrandID: brand, OrgIds: orgIDs, Status: status, RowLimit: f.Limit, RowOffset: f.Offset,
+		})
+		if err == nil {
+			total, err = s.q.CountOrdersInScope(ctx, db.CountOrdersInScopeParams{BrandID: brand, OrgIds: orgIDs, Status: status})
+		}
+	case SideSeller, SideBuyer:
+		if !c.Filter.AllowsOrg(c.Org.InternalID, brand) {
+			return nil, 0, ErrForbidden
+		}
+		if f.Side == SideSeller {
+			rows, err = s.q.ListOrdersBySeller(ctx, db.ListOrdersBySellerParams{
+				BrandID: brand, SellerOrgID: c.Org.InternalID, Status: status, RowLimit: f.Limit, RowOffset: f.Offset,
+			})
+			if err == nil {
+				total, err = s.q.CountOrdersBySeller(ctx, db.CountOrdersBySellerParams{BrandID: brand, SellerOrgID: c.Org.InternalID, Status: status})
+			}
+		} else {
+			rows, err = s.q.ListOrdersByBuyer(ctx, db.ListOrdersByBuyerParams{
+				BrandID: brand, BuyerOrgID: c.Org.InternalID, Status: status, RowLimit: f.Limit, RowOffset: f.Offset,
+			})
+			if err == nil {
+				total, err = s.q.CountOrdersByBuyer(ctx, db.CountOrdersByBuyerParams{BrandID: brand, BuyerOrgID: c.Org.InternalID, Status: status})
+			}
+		}
+	default:
+		return nil, 0, invalid("side", "must be seller or buyer")
+	}
+	if err != nil {
+		return nil, 0, fmt.Errorf("orders: list: %w", err)
+	}
+	orgs := orgCache{}
+	out := make([]OrderView, 0, len(rows))
+	for _, o := range rows {
+		v, err := s.summary(ctx, s.q, c, o, orgs)
+		if err != nil {
+			return nil, 0, err
+		}
+		out = append(out, v)
+	}
+	return out, total, nil
+}
