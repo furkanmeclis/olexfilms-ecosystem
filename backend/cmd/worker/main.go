@@ -45,6 +45,7 @@ import (
 	searchadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine/adapters"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/sms"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/sysconfig"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/realtime"
 	"github.com/redis/go-redis/v9"
@@ -163,8 +164,12 @@ func main() {
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(queries),
 		bulkadapters.NewRoles(queries),
+		// TEC-212: tenant resources with undo.
+		bulkadapters.NewCatalogProducts(queries),
+		bulkadapters.NewTasks(queries),
 	)
-	bulkSvc := bulkusecase.New(queries, bulkReg, nil, notifSvc, activityRec, cfg.Bulk, log)
+	bulkSvc := bulkusecase.New(queries, bulkReg, nil, notifSvc, activityRec, cfg.Bulk, log).
+		WithPool(pool).WithUndoWindow(sysconfig.New(queries, sysconfig.NoCache{}).BulkUndoWindowHours)
 	logsSvc := logsusecase.New(queries)
 	ratesSvc := fxrates.New(queries, fxrates.NewFetcher(cfg.Rates.TCMBURL, cfg.Rates.ECBURL), log)
 	warrantyCron := warrantymodule.NewCron(pool, queries, cfg.Auth.FrontendURL)

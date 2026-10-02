@@ -78,6 +78,7 @@ type Querier interface {
 	CountAppLogsByLevel(ctx context.Context) ([]CountAppLogsByLevelRow, error)
 	CountBinProductStockRows(ctx context.Context, arg CountBinProductStockRowsParams) (int64, error)
 	CountBulkJobsForActor(ctx context.Context, actorID int64) (int64, error)
+	CountBulkOperationsForOrganization(ctx context.Context, organizationID pgtype.Int8) (int64, error)
 	CountCarBrands(ctx context.Context, arg CountCarBrandsParams) (int64, error)
 	CountCarModels(ctx context.Context, arg CountCarModelsParams) (int64, error)
 	CountCarModelsByBrand(ctx context.Context, carBrandID int64) (int64, error)
@@ -371,6 +372,10 @@ type Querier interface {
 	GetBrandCenter(ctx context.Context, brandID int64) (Organization, error)
 	GetBulkJobByID(ctx context.Context, id int64) (BulkJob, error)
 	GetBulkJobByUUID(ctx context.Context, argUuid uuid.UUID) (BulkJob, error)
+	GetBulkOperationByJobID(ctx context.Context, jobID pgtype.Int8) (BulkOperation, error)
+	// An operation visible from the given scope: a tenant operation of that
+	// organization, or (organization_id NULL in the query) a platform operation.
+	GetBulkOperationByUUID(ctx context.Context, arg GetBulkOperationByUUIDParams) (BulkOperation, error)
 	GetCarBrandByID(ctx context.Context, id int64) (CarBrand, error)
 	GetCarBrandByUUID(ctx context.Context, argUuid uuid.UUID) (CarBrand, error)
 	GetCarModelByUUID(ctx context.Context, argUuid uuid.UUID) (CarModel, error)
@@ -591,6 +596,8 @@ type Querier interface {
 	InsertActivityEvent(ctx context.Context, arg InsertActivityEventParams) (ActivityEvent, error)
 	InsertAppLog(ctx context.Context, arg InsertAppLogParams) error
 	InsertBulkChange(ctx context.Context, arg InsertBulkChangeParams) (BulkChange, error)
+	// TEC-212: bulk operation log + undo.
+	InsertBulkOperation(ctx context.Context, arg InsertBulkOperationParams) (BulkOperation, error)
 	InsertConsent(ctx context.Context, arg InsertConsentParams) (Consent, error)
 	InsertCustomerOrganization(ctx context.Context, arg InsertCustomerOrganizationParams) (CustomerOrganization, error)
 	// ---------------------------------------------------------------------------
@@ -685,6 +692,7 @@ type Querier interface {
 	ListBrands(ctx context.Context) ([]Brand, error)
 	ListBulkChangesForJob(ctx context.Context, jobID int64) ([]BulkChange, error)
 	ListBulkJobsForActor(ctx context.Context, arg ListBulkJobsForActorParams) ([]BulkJob, error)
+	ListBulkOperationsForOrganization(ctx context.Context, arg ListBulkOperationsForOrganizationParams) ([]BulkOperation, error)
 	ListCarBrands(ctx context.Context, arg ListCarBrandsParams) ([]ListCarBrandsRow, error)
 	// Search matches the model name, "brand model" and the external id.
 	ListCarModels(ctx context.Context, arg ListCarModelsParams) ([]ListCarModelsRow, error)
@@ -996,6 +1004,7 @@ type Querier interface {
 	// Active reservations of a unit (at most one for a serial unit).
 	LockActiveReservationsByUnit(ctx context.Context, unitID int64) ([]StockReservation, error)
 	LockBinProductStock(ctx context.Context, arg LockBinProductStockParams) (BinProductStock, error)
+	LockBulkOperationForUndo(ctx context.Context, id int64) (BulkOperation, error)
 	// ---------------------------------------------------------------------------
 	// Fixed barcode holdings (quantity per unit and owner).
 	LockFixedBarcodeHolding(ctx context.Context, arg LockFixedBarcodeHoldingParams) (FixedBarcodeHolding, error)
@@ -1050,6 +1059,7 @@ type Querier interface {
 	MarkBulkJobFailed(ctx context.Context, arg MarkBulkJobFailedParams) (BulkJob, error)
 	MarkBulkJobProcessing(ctx context.Context, id int64) (BulkJob, error)
 	MarkBulkJobRolledBack(ctx context.Context, arg MarkBulkJobRolledBackParams) (BulkJob, error)
+	MarkBulkOperationUndone(ctx context.Context, arg MarkBulkOperationUndoneParams) (BulkOperation, error)
 	MarkCustomerFirstService(ctx context.Context, arg MarkCustomerFirstServiceParams) (int64, error)
 	MarkDeliveryProcessing(ctx context.Context, id int64) error
 	MarkDeliveryResult(ctx context.Context, arg MarkDeliveryResultParams) error
@@ -1168,6 +1178,8 @@ type Querier interface {
 	// Organization Google Business link (decision 7).
 	SetOrganizationGoogleBusinessURL(ctx context.Context, arg SetOrganizationGoogleBusinessURLParams) (Organization, error)
 	SetOrganizationLogo(ctx context.Context, arg SetOrganizationLogoParams) (Organization, error)
+	// TEC-212: bulk engine adapter (one product, logged + undoable).
+	SetProductActiveByUUID(ctx context.Context, arg SetProductActiveByUUIDParams) (Product, error)
 	// Bulk activate/deactivate within one brand.
 	SetProductsActive(ctx context.Context, arg SetProductsActiveParams) (int64, error)
 	// Bulk activate/deactivate by public id within one brand. Returns the rows
@@ -1180,6 +1192,8 @@ type Querier interface {
 	SetServiceReviewRequestSent(ctx context.Context, id int64) (Service, error)
 	SetStockImportBatchState(ctx context.Context, arg SetStockImportBatchStateParams) (StockImportBatch, error)
 	SetStockImportRowErrors(ctx context.Context, arg SetStockImportRowErrorsParams) (StockImportRow, error)
+	// TEC-212: bulk engine adapter (assign one task, logged + undoable).
+	SetTaskAssignee(ctx context.Context, arg SetTaskAssigneeParams) (Task, error)
 	SetTransferItemInMovement(ctx context.Context, arg SetTransferItemInMovementParams) error
 	SetTransferItemOutMovement(ctx context.Context, arg SetTransferItemOutMovementParams) error
 	SetTransferItemPrice(ctx context.Context, arg SetTransferItemPriceParams) error

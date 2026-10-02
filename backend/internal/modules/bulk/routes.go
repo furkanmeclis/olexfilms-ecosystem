@@ -3,8 +3,11 @@ package bulk
 import (
 	"net/http"
 
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/middleware"
 	bulkhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/bulk/handler"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine/adapters"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 )
@@ -35,5 +38,43 @@ func RegisterRoutes(
 	))
 	mux.Handle("POST /v1/platform/roles/bulk", middleware.Chain(
 		http.HandlerFunc(h.ExecuteRoles), authn, require(rbac.PermPlatformRolesRead),
+	))
+	// TEC-212: undo of a platform operation (users / roles).
+	mux.Handle("POST /v1/platform/bulk-operations/{uuid}/undo", middleware.Chain(
+		http.HandlerFunc(h.UndoPlatform), authn, require(rbac.PermPlatformBulkRead),
+	))
+}
+
+// RegisterTenantRoutes mounts the organization-scoped bulk routes
+// (TEC-212): bulk actions of tenant resources and the undo log.
+func RegisterTenantRoutes(
+	mux *http.ServeMux,
+	h *bulkhandler.Handler,
+	checker middleware.FeatureChecker,
+	tokens *jwt.Manager,
+	loader middleware.IdentityLoader,
+	q *db.Queries,
+) {
+	authn := middleware.Authenticate(tokens, loader)
+	org := middleware.RequireOrganization(tokens, q)
+	route := func(fn http.HandlerFunc, slug string, extra ...func(http.Handler) http.Handler) http.Handler {
+		mws := append([]func(http.Handler) http.Handler{authn, org}, extra...)
+		mws = append(mws, middleware.RequireScope(q, slug))
+		return middleware.Chain(fn, mws...)
+	}
+
+	mux.Handle("POST /v1/catalog/products/bulk", route(
+		h.ExecuteTenant(adapters.ResourceCatalogProducts), rbac.PermCatalogWrite,
+		middleware.RequireFeature(checker, features.ModuleCatalog),
+	))
+	mux.Handle("POST /v1/tasks/bulk", route(h.ExecuteTenant(adapters.ResourceTasks), rbac.PermTasksWrite))
+
+	// The undo log of the organization; undo itself checks the action's
+	// permission on the operation row.
+	mux.Handle("GET /v1/tenant/bulk-operations", middleware.Chain(
+		http.HandlerFunc(h.ListTenantOperations), authn, org,
+	))
+	mux.Handle("POST /v1/tenant/bulk-operations/{uuid}/undo", middleware.Chain(
+		http.HandlerFunc(h.UndoTenant), authn, org,
 	))
 }
