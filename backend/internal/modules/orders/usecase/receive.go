@@ -31,16 +31,16 @@ import (
 // ReceiptHook runs inside the received transaction after the stock has
 // moved and the order is received. The accounting bridge (TEC-169) books
 // the seller income/receivable and the buyer expense/payable here; an
-// error rolls the receipt back.
+// error rolls the receipt back. actor is the receiving user (nil: system).
 type ReceiptHook interface {
-	OrderReceived(ctx context.Context, tx pgx.Tx, q *db.Queries, o db.Order) error
+	OrderReceived(ctx context.Context, tx pgx.Tx, q *db.Queries, o db.Order, actor *int64) error
 }
 
-// NoopReceiptHook is the hook until TEC-169.
+// NoopReceiptHook books nothing (tests, accounting not wired).
 type NoopReceiptHook struct{}
 
 // OrderReceived does nothing.
-func (NoopReceiptHook) OrderReceived(context.Context, pgx.Tx, *db.Queries, db.Order) error {
+func (NoopReceiptHook) OrderReceived(context.Context, pgx.Tx, *db.Queries, db.Order, *int64) error {
 	return nil
 }
 

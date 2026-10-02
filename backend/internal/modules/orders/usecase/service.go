@@ -511,7 +511,7 @@ func (s *Service) Transition(ctx context.Context, c Caller, orderUUID uuid.UUID,
 			}
 			if err == nil {
 				// Accounting hook point (TEC-96 decision 3, TEC-169).
-				err = s.receipts.OrderReceived(ctx, tx, q, o)
+				err = s.receipts.OrderReceived(ctx, tx, q, o, actorOf(c))
 			}
 		case StatusCancelled:
 			if from == StatusCancelling {

@@ -346,7 +346,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	accountingH := accountinghandler.New(accountingSvc)
 	accountinghandler.RegisterRoutes(mux, accountingH, tokens, loader, deps.Queries, stepUpSvc, featureSvc)
 	// TEC-166: orders (draft, server-side prices, rate frozen at approval).
-	ordersSvc := ordersusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries), ratesSvc)
+	// TEC-169: a received order books seller income / buyer purchase.
+	ordersSvc := ordersusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries), ratesSvc).
+		WithReceiptHook(ordersusecase.NewAccountingBridge(accountingPoster))
 	ordersmodule.RegisterRoutes(mux, ordershandler.New(ordersSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-179: services (draft, items from stock, stock-free transitions, images).
 	servicesSvc := servicesusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries))
