@@ -1411,6 +1411,15 @@ type StorageTrash struct {
 	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
 }
 
+type SystemSetting struct {
+	Key           string             `json:"key"`
+	Value         []byte             `json:"value"`
+	SchemaVersion int32              `json:"schema_version"`
+	UpdatedBy     pgtype.Int8        `json:"updated_by"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Task struct {
 	ID              int64              `json:"id"`
 	Uuid            uuid.UUID          `json:"uuid"`

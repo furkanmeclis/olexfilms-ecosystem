@@ -313,6 +313,7 @@ type Querier interface {
 	DeleteStorageStar(ctx context.Context, arg DeleteStorageStarParams) error
 	DeleteStorageTrashByUUID(ctx context.Context, argUuid uuid.UUID) error
 	DeleteSystemModuleFlag(ctx context.Context, moduleKey string) (int64, error)
+	DeleteSystemSetting(ctx context.Context, key string) (int64, error)
 	DeleteTerritory(ctx context.Context, arg DeleteTerritoryParams) (int64, error)
 	DeleteTypedLocation(ctx context.Context, arg DeleteTypedLocationParams) (int64, error)
 	DeleteUnitCurrentStateForRepair(ctx context.Context, unitID int64) error
@@ -529,6 +530,7 @@ type Querier interface {
 	GetStorageLinkByUUID(ctx context.Context, argUuid uuid.UUID) (StorageLink, error)
 	GetStorageTrashByOriginalKey(ctx context.Context, originalKey string) (StorageTrash, error)
 	GetStorageTrashByUUID(ctx context.Context, argUuid uuid.UUID) (StorageTrash, error)
+	GetSystemSetting(ctx context.Context, key string) (SystemSetting, error)
 	GetTaskByUUID(ctx context.Context, arg GetTaskByUUIDParams) (Task, error)
 	// An organization of the brand by uuid (the use case checks the type).
 	GetTaskSubjectOrg(ctx context.Context, arg GetTaskSubjectOrgParams) (GetTaskSubjectOrgRow, error)
@@ -907,6 +909,7 @@ type Querier interface {
 	ListStorageStarsByUser(ctx context.Context, userID int64) ([]StorageStar, error)
 	ListStorageTrash(ctx context.Context, arg ListStorageTrashParams) ([]StorageTrash, error)
 	ListStuckProcessingNotificationIDs(ctx context.Context, staleMinutes int32) ([]int64, error)
+	ListSystemSettings(ctx context.Context) ([]SystemSetting, error)
 	ListTaskComments(ctx context.Context, arg ListTaskCommentsParams) ([]ListTaskCommentsRow, error)
 	ListTasks(ctx context.Context, arg ListTasksParams) ([]ListTasksRow, error)
 	ListTerritories(ctx context.Context, arg ListTerritoriesParams) ([]ListTerritoriesRow, error)
@@ -1311,6 +1314,7 @@ type Querier interface {
 	UpsertPushSubscription(ctx context.Context, arg UpsertPushSubscriptionParams) (PushSubscription, error)
 	UpsertSystemModuleFlag(ctx context.Context, arg UpsertSystemModuleFlagParams) (ModuleFlag, error)
 	UpsertSystemRole(ctx context.Context, arg UpsertSystemRoleParams) (Role, error)
+	UpsertSystemSetting(ctx context.Context, arg UpsertSystemSettingParams) (SystemSetting, error)
 	UpsertUnitCurrentStateForRepair(ctx context.Context, arg UpsertUnitCurrentStateForRepairParams) error
 	UpsertUserTOTPSetup(ctx context.Context, arg UpsertUserTOTPSetupParams) (UserTotp, error)
 	UserHasRoleSlug(ctx context.Context, arg UserHasRoleSlugParams) (bool, error)
