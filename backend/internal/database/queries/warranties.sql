@@ -38,6 +38,32 @@ WHERE service_item_id = sqlc.arg(service_item_id);
 SELECT * FROM warranties
 WHERE public_code = sqlc.arg(public_code) AND brand_id = sqlc.arg(brand_id);
 
+-- Public warranty lookup (TEC-189): only the fields the public page shows.
+-- No users join: the holder's personal data is never read, so an anonymized
+-- customer's warranty answers the same way (K19). Vehicle fields come from
+-- the service snapshot first, then the vehicle.
+-- name: GetPublicWarrantyByCode :one
+SELECT w.public_code, w.status, w.start_at, w.end_at,
+       p.name AS product_name,
+       o.name AS organization_name, o.city AS organization_city,
+       COALESCE(pr.name, '')::text AS organization_province,
+       cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
+       (cb.logo_object_key IS NOT NULL)::boolean AS car_brand_has_logo,
+       cm.name AS car_model_name,
+       s.model_year AS service_model_year, s.plate AS service_plate,
+       s.plate_country AS service_plate_country, s.vin AS service_vin,
+       v.model_year AS vehicle_model_year, v.plate AS vehicle_plate,
+       v.plate_country AS vehicle_plate_country, v.vin AS vehicle_vin
+FROM warranties w
+JOIN products p ON p.id = w.product_id
+JOIN organizations o ON o.id = w.organization_id
+LEFT JOIN provinces pr ON pr.id = o.province_id
+JOIN services s ON s.id = w.service_id
+JOIN car_brands cb ON cb.id = s.car_brand_id
+JOIN car_models cm ON cm.id = s.car_model_id
+JOIN vehicles v ON v.id = w.vehicle_id
+WHERE w.public_code = sqlc.arg(public_code) AND w.brand_id = sqlc.arg(brand_id);
+
 -- name: LockWarranty :one
 SELECT * FROM warranties
 WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id)

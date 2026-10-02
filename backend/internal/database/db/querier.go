@@ -452,6 +452,11 @@ type Querier interface {
 	GetProductIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	GetProductPrice(ctx context.Context, arg GetProductPriceParams) (ProductPrice, error)
 	GetProvinceByID(ctx context.Context, id int64) (Province, error)
+	// Public warranty lookup (TEC-189): only the fields the public page shows.
+	// No users join: the holder's personal data is never read, so an anonymized
+	// customer's warranty answers the same way (K19). Vehicle fields come from
+	// the service snapshot first, then the vehicle.
+	GetPublicWarrantyByCode(ctx context.Context, arg GetPublicWarrantyByCodeParams) (GetPublicWarrantyByCodeRow, error)
 	GetQRLoginChallengeByCode(ctx context.Context, code string) (QrLoginChallenge, error)
 	GetRefreshTokenByHashAny(ctx context.Context, tokenHash string) (RefreshToken, error)
 	GetRefreshTokenByUUID(ctx context.Context, argUuid uuid.UUID) (RefreshToken, error)
