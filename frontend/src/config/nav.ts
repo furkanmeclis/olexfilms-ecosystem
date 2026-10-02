@@ -7,6 +7,7 @@ import {
   Building2,
   Car,
   Blocks,
+  Boxes,
   ClipboardList,
   Coins,
   Download,
@@ -536,6 +537,29 @@ export function tenantNav(slug: string) {
             permission: permissions.transfers.request,
             orgTypes: ["distributor", "dealer"],
             feature: "dealer_transfers",
+          },
+        ],
+      },
+      {
+        // TEC-224: the dealer's own stock (K12: units, no bins or counts);
+        // same gates as /v1/stock/organizations/{uuid}/units (stock.read
+        // and the stock module). A distributor reads its dealers too.
+        id: "stock",
+        labelKey: "stock.nav",
+        icon: Boxes,
+        defaultOpen: true,
+        permission: permissions.stock.read,
+        feature: "stock",
+        orgTypes: ["distributor", "dealer"],
+        items: [
+          {
+            id: "stock-mine",
+            titleKey: "stock.nav_mine",
+            href: routes.tenant.stock.root(slug),
+            icon: Boxes,
+            permission: permissions.stock.read,
+            feature: "stock",
+            orgTypes: ["distributor", "dealer"],
           },
         ],
       },
