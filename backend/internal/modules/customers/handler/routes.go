@@ -24,6 +24,10 @@ import (
 // customers.anonymize (center roles only, sensitive) and a fresh step-up;
 // the use case also requires a center organization. The portal export
 // (/v1/portal/me/data-export) is the signed-in customer's own data.
+//
+// TEC-193: the customer merge needs customers.merge (center roles only,
+// sensitive); the preview (dry run) writes nothing, the apply also needs a
+// fresh step-up. The use case requires a center organization.
 func RegisterRoutes(
 	mux *http.ServeMux,
 	h *Handler,
@@ -48,6 +52,11 @@ func RegisterRoutes(
 		return middleware.Chain(fn, authn, org, module, middleware.RequireScope(q, rbac.PermCustomersAnonymize),
 			middleware.RequireStepUp(stepUp))
 	}
+	mergePreview := with(rbac.PermCustomersMerge)
+	mergeStepUp := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, authn, org, module, middleware.RequireScope(q, rbac.PermCustomersMerge),
+			middleware.RequireStepUp(stepUp))
+	}
 	portal := func(fn http.HandlerFunc) http.Handler {
 		return middleware.Chain(fn, authn, middleware.RequirePermission(rbac.PermCustomersRead))
 	}
@@ -59,6 +68,8 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/customers/{uuid}/upgrade-to-dealer", writeC(h.UpgradeToDealer))
 	mux.Handle("POST /v1/customers/{uuid}/anonymize", privacyStepUp(h.AnonymizeCustomer))
 	mux.Handle("POST /v1/customers/{uuid}/data-export", privacyStepUp(h.RequestDataExport))
+	mux.Handle("POST /v1/customers/{uuid}/merge/preview", mergePreview(h.PreviewMerge))
+	mux.Handle("POST /v1/customers/{uuid}/merge", mergeStepUp(h.MergeCustomer))
 	mux.Handle("GET /v1/customer-data-exports/{uuid}", privacy(h.GetDataExport))
 	mux.Handle("GET /v1/customer-data-exports/{uuid}/download", privacy(h.DownloadDataExport))
 

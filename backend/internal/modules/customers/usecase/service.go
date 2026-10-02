@@ -25,6 +25,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/geo"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -124,6 +125,7 @@ type Service struct {
 	plates  PlateValidator
 	revoker Revoker
 	search  SearchIndexer
+	out     outbox.Enqueuer
 }
 
 // New creates the service. pii may be nil (CUSTOMER_PII_KEY unset in

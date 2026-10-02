@@ -11,6 +11,17 @@ export type CustomerWrite = Schemas["CustomerWrite"];
 export type CustomerCreateInput = Schemas["CustomerCreateInput"];
 export type Vehicle = Schemas["Vehicle"];
 export type VehicleCreateInput = Schemas["VehicleCreateInput"];
+export type ServiceItem = Schemas["ServiceItem"];
+export type ServiceItemInput = Schemas["ServiceItemInput"];
+export type ServiceStockUnit = Schemas["ServiceStockUnit"];
+export type ServiceStatus = Schemas["ServiceStatus"];
+
+export type StockUnitQuery = {
+  barcode?: string;
+  q?: string;
+  limit?: number;
+  offset?: number;
+};
 
 export type Page<T> = {
   items: T[];
@@ -54,6 +65,32 @@ export const serviceWizardService = {
   createVehicle(body: VehicleCreateInput) {
     return platformRequest<Vehicle>("POST", "/v1/vehicles", { body });
   },
+  /** Stock picker of the service organization (TEC-180, q: TEC-182). */
+  listStockUnits(uuid: string, params: StockUnitQuery) {
+    return platformRequest<{ items: ServiceStockUnit[] }>(
+      "GET",
+      `/v1/services/${enc(uuid)}/stock-units`,
+      { query: { limit: 20, offset: 0, ...params } },
+    );
+  },
+  addItem(uuid: string, body: ServiceItemInput) {
+    return platformRequest<Service>("POST", `/v1/services/${enc(uuid)}/items`, {
+      body,
+    });
+  },
+  removeItem(uuid: string, item: string) {
+    return platformRequest<Service>(
+      "DELETE",
+      `/v1/services/${enc(uuid)}/items/${enc(item)}`,
+    );
+  },
+  transition(uuid: string, status: ServiceStatus, note?: string) {
+    return platformRequest<Service>(
+      "POST",
+      `/v1/services/${enc(uuid)}/transitions`,
+      { body: note ? { status, note } : { status } },
+    );
+  },
 };
 
 export const serviceWizardKeys = {
@@ -62,4 +99,7 @@ export const serviceWizardKeys = {
   customers: (q: string) => ["service-wizard", "customers", q] as const,
   vehicles: (customerUuid: string) =>
     ["service-wizard", "vehicles", customerUuid] as const,
+  stock: (uuid: string, params: StockUnitQuery) =>
+    ["service-wizard", "stock", uuid, params] as const,
+  categories: ["service-wizard", "categories"] as const,
 };

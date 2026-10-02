@@ -2,9 +2,11 @@ package usecase
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
@@ -21,9 +23,11 @@ const (
 
 // StockFilter narrows the stock picker (TEC-180): Barcode is an exact
 // barcode (scanner lookup), ProductUUID a product, MinMeters the meters a
-// roll must still have (only rolls match when it is set).
+// roll must still have (only rolls match when it is set), Q a part of the
+// product name, SKU or barcode (TEC-182 product search).
 type StockFilter struct {
 	Barcode     string
+	Q           string
 	ProductUUID string
 	MinMeters   string
 	Limit       int32
@@ -34,13 +38,20 @@ type StockFilter struct {
 // QuantityOnHand is 1 for a serial unit and the pieces on hand for a fixed
 // barcode; the meters are set for rolls.
 type StockUnitView struct {
-	UUID            uuid.UUID  `json:"uuid"`
-	Barcode         string     `json:"barcode"`
-	UnitKind        string     `json:"unit_kind"`
-	Product         ProductRef `json:"product"`
-	QuantityOnHand  int32      `json:"quantity_on_hand"`
-	InitialMeters   *string    `json:"initial_meters"`
-	RemainingMeters *string    `json:"remaining_meters"`
+	UUID            uuid.UUID        `json:"uuid"`
+	Barcode         string           `json:"barcode"`
+	UnitKind        string           `json:"unit_kind"`
+	Product         StockProductView `json:"product"`
+	QuantityOnHand  int32            `json:"quantity_on_hand"`
+	InitialMeters   *string          `json:"initial_meters"`
+	RemainingMeters *string          `json:"remaining_meters"`
+}
+
+// StockProductView is the product of a picker unit with the parts its
+// category allows (the applied_parts of a new item must come from them).
+type StockProductView struct {
+	ProductRef
+	AvailableParts []string `json:"available_parts"`
 }
 
 // StockUnits lists the units the service organization holds and can add
@@ -81,6 +92,12 @@ func (s *Service) StockUnits(ctx context.Context, c Caller, id uuid.UUID, f Stoc
 		}
 		arg.Barcode = pgtype.Text{String: b, Valid: true}
 	}
+	if term := strings.TrimSpace(f.Q); term != "" {
+		if utf8.RuneCountInString(term) > 100 {
+			return nil, invalid("q", "must be at most 100 characters")
+		}
+		arg.Q = pgtype.Text{String: term, Valid: true}
+	}
 	if p := strings.TrimSpace(f.ProductUUID); p != "" {
 		pid, err := parseUUID("product_uuid", p)
 		if err != nil {
@@ -110,9 +127,18 @@ func (s *Service) StockUnits(ctx context.Context, c Caller, id uuid.UUID, f Stoc
 	}
 	out := make([]StockUnitView, 0, len(rows))
 	for _, r := range rows {
+		parts := []string{}
+		if len(r.ProductAvailableParts) > 0 {
+			if err := json.Unmarshal(r.ProductAvailableParts, &parts); err != nil || parts == nil {
+				parts = []string{}
+			}
+		}
 		out = append(out, StockUnitView{
 			UUID: r.Uuid, Barcode: r.Barcode, UnitKind: r.UnitKind,
-			Product:         ProductRef{UUID: r.ProductUuid, SKU: r.ProductSku, Name: r.ProductName, UnitType: r.ProductUnitType},
+			Product: StockProductView{
+				ProductRef:     ProductRef{UUID: r.ProductUuid, SKU: r.ProductSku, Name: r.ProductName, UnitType: r.ProductUnitType},
+				AvailableParts: parts,
+			},
 			QuantityOnHand:  r.QuantityOnHand,
 			InitialMeters:   numericTextPtr(r.InitialMeters),
 			RemainingMeters: numericTextPtr(r.RemainingMeters),

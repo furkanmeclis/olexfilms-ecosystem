@@ -979,15 +979,15 @@ const listServiceStockUnits = `-- name: ListServiceStockUnits :many
 WITH stock AS (
     SELECT s.unit_id, 1::int AS quantity_on_hand
     FROM unit_current_state s
-    WHERE s.holder_org_id = $6
-      AND s.brand_id = $7
+    WHERE s.holder_org_id = $7
+      AND s.brand_id = $8
       AND s.status IN ('available', 'placed')
       AND s.owner_type IN ('organization', 'warehouse_location')
     UNION ALL
     SELECT h.unit_id, SUM(h.quantity_on_hand)::int AS quantity_on_hand
     FROM fixed_barcode_holdings h
-    WHERE h.holder_org_id = $6
-      AND h.brand_id = $7
+    WHERE h.holder_org_id = $7
+      AND h.brand_id = $8
       AND h.owner_type IN ('organization', 'warehouse_location')
     GROUP BY h.unit_id
     HAVING SUM(h.quantity_on_hand) > 0
@@ -995,13 +995,19 @@ WITH stock AS (
 SELECT u.id, u.uuid, u.barcode, u.unit_kind, u.initial_meters, u.remaining_meters,
        st.quantity_on_hand,
        p.id AS product_id, p.uuid AS product_uuid, p.sku AS product_sku,
-       p.name AS product_name, p.unit_type AS product_unit_type
+       p.name AS product_name, p.unit_type AS product_unit_type,
+       c.available_parts AS product_available_parts
 FROM stock st
 JOIN units u ON u.id = st.unit_id
 JOIN products p ON p.id = u.product_id AND p.brand_id = u.brand_id
+JOIN product_categories c ON c.id = p.category_id AND c.brand_id = p.brand_id
 WHERE ($1::text IS NULL OR u.barcode = $1::text)
-  AND ($2::bigint IS NULL OR u.product_id = $2::bigint)
-  AND ($3::numeric IS NULL OR u.remaining_meters >= $3::numeric)
+  AND ($2::text IS NULL
+       OR p.name ILIKE '%' || $2::text || '%'
+       OR p.sku ILIKE '%' || $2::text || '%'
+       OR u.barcode ILIKE '%' || $2::text || '%')
+  AND ($3::bigint IS NULL OR u.product_id = $3::bigint)
+  AND ($4::numeric IS NULL OR u.remaining_meters >= $4::numeric)
   AND (u.unit_kind = 'fixed' OR NOT EXISTS (
         SELECT 1 FROM service_items i
         JOIN services sv ON sv.id = i.service_id
@@ -1010,11 +1016,12 @@ WHERE ($1::text IS NULL OR u.barcode = $1::text)
           AND (u.initial_meters IS NULL OR i.kind = 'full')
   ))
 ORDER BY p.name, u.barcode, u.id
-LIMIT $5 OFFSET $4
+LIMIT $6 OFFSET $5
 `
 
 type ListServiceStockUnitsParams struct {
 	Barcode        pgtype.Text    `json:"barcode"`
+	Q              pgtype.Text    `json:"q"`
 	ProductID      pgtype.Int8    `json:"product_id"`
 	MinMeters      pgtype.Numeric `json:"min_meters"`
 	RowOffset      int32          `json:"row_offset"`
@@ -1024,18 +1031,19 @@ type ListServiceStockUnitsParams struct {
 }
 
 type ListServiceStockUnitsRow struct {
-	ID              int64          `json:"id"`
-	Uuid            uuid.UUID      `json:"uuid"`
-	Barcode         string         `json:"barcode"`
-	UnitKind        string         `json:"unit_kind"`
-	InitialMeters   pgtype.Numeric `json:"initial_meters"`
-	RemainingMeters pgtype.Numeric `json:"remaining_meters"`
-	QuantityOnHand  int32          `json:"quantity_on_hand"`
-	ProductID       int64          `json:"product_id"`
-	ProductUuid     uuid.UUID      `json:"product_uuid"`
-	ProductSku      string         `json:"product_sku"`
-	ProductName     string         `json:"product_name"`
-	ProductUnitType string         `json:"product_unit_type"`
+	ID                    int64          `json:"id"`
+	Uuid                  uuid.UUID      `json:"uuid"`
+	Barcode               string         `json:"barcode"`
+	UnitKind              string         `json:"unit_kind"`
+	InitialMeters         pgtype.Numeric `json:"initial_meters"`
+	RemainingMeters       pgtype.Numeric `json:"remaining_meters"`
+	QuantityOnHand        int32          `json:"quantity_on_hand"`
+	ProductID             int64          `json:"product_id"`
+	ProductUuid           uuid.UUID      `json:"product_uuid"`
+	ProductSku            string         `json:"product_sku"`
+	ProductName           string         `json:"product_name"`
+	ProductUnitType       string         `json:"product_unit_type"`
+	ProductAvailableParts []byte         `json:"product_available_parts"`
 }
 
 // ---------------------------------------------------------------------------
@@ -1044,10 +1052,13 @@ type ListServiceStockUnitsRow struct {
 // organization or location owners, minus pieces already in an open service
 // and rolls taken whole by an open service; fixed barcodes with pieces on
 // hand (summed over the organization's owners). Filters: exact barcode,
-// product, and remaining meters of a roll (min_meters: rolls only).
+// product, and remaining meters of a roll (min_meters: rolls only); q
+// matches the product name, SKU or barcode (TEC-182). The category's
+// available_parts feeds the part list of the new item.
 func (q *Queries) ListServiceStockUnits(ctx context.Context, arg ListServiceStockUnitsParams) ([]ListServiceStockUnitsRow, error) {
 	rows, err := q.db.Query(ctx, listServiceStockUnits,
 		arg.Barcode,
+		arg.Q,
 		arg.ProductID,
 		arg.MinMeters,
 		arg.RowOffset,
@@ -1075,6 +1086,7 @@ func (q *Queries) ListServiceStockUnits(ctx context.Context, arg ListServiceStoc
 			&i.ProductSku,
 			&i.ProductName,
 			&i.ProductUnitType,
+			&i.ProductAvailableParts,
 		); err != nil {
 			return nil, err
 		}

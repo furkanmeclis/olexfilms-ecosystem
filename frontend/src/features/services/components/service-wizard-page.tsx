@@ -9,14 +9,19 @@ import { ErrorState } from "@/components/common/error-state";
 import { Loading } from "@/components/common/loading";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { routes } from "@/config/routes";
 import { CustomerVehicleStep } from "@/features/services/components/customer-vehicle-step";
 import { MeasurementStep } from "@/features/services/components/measurement-step";
+import { PartsStep } from "@/features/services/components/parts-step";
+import { StockStep } from "@/features/services/components/stock-step";
 import { resolveServiceWizardAccess } from "@/features/services/lib/access";
+import { partsFromItems } from "@/features/services/lib/car-parts";
 import {
-  PLACEHOLDER_STEPS,
+  readStoredParts,
+  storeParts,
+} from "@/features/services/lib/parts-store";
+import {
   WIZARD_STEPS,
   canOpenStep,
   nextStep,
@@ -82,38 +87,11 @@ function Stepper({
   );
 }
 
-function PlaceholderStep({
-  step,
-  onBack,
-  onNext,
-}: {
-  step: WizardStep;
-  onBack: () => void;
-  onNext: (() => void) | null;
-}) {
-  const { t } = useLocale();
-  return (
-    <div className="space-y-6" data-testid={`placeholder-${step}`}>
-      <div className="border-border text-muted-foreground rounded-lg border border-dashed px-6 py-12 text-center text-sm">
-        {t("services.wizard.placeholder")}
-      </div>
-      <div className="flex flex-wrap justify-between gap-2">
-        <Button type="button" variant="outline" onClick={onBack}>
-          {t("services.wizard.back")}
-        </Button>
-        {onNext ? (
-          <Button type="button" onClick={onNext}>
-            {t("services.wizard.next")}
-          </Button>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
 /**
- * Service wizard (TEC-181): `uuid` undefined starts a new draft at step 1;
- * with a uuid the draft is loaded and step 1 shows it read-only.
+ * Service wizard (TEC-181, TEC-182): `uuid` undefined starts a new draft at
+ * step 1; with a uuid the draft is loaded and step 1 shows it read-only.
+ * Step 2 picks the parts (kept per draft in the browser and applied to the
+ * items of step 4), step 4 adds the stock and completes the service.
  */
 export function ServiceWizardPage({
   slug,
@@ -129,6 +107,11 @@ export function ServiceWizardPage({
   const access = resolveServiceWizardAccess(can);
   const [step, setStep] = useState<WizardStep>(
     uuid ? "parts" : "customer_vehicle",
+  );
+  // null = not touched yet: the stored draft selection, else the parts the
+  // items already carry.
+  const [parts, setParts] = useState<string[] | null>(() =>
+    uuid ? readStoredParts(uuid) : null,
   );
 
   const service = useQuery({
@@ -197,6 +180,11 @@ export function ServiceWizardPage({
   const stored = (saved: Service) => {
     queryClient.setQueryData(serviceWizardKeys.service(saved.uuid), saved);
   };
+  const selectedParts = parts ?? partsFromItems(current?.items);
+  const changeParts = (next: string[]) => {
+    setParts(next);
+    if (current) storeParts(current.uuid, next);
+  };
 
   let body;
   if (step === "customer_vehicle" || !current) {
@@ -226,13 +214,29 @@ export function ServiceWizardPage({
         }}
       />
     );
-  } else if (PLACEHOLDER_STEPS.has(step)) {
-    const n = nextStep(step);
+  } else if (step === "parts") {
     body = (
-      <PlaceholderStep
-        step={step}
-        onBack={() => goBack(step)}
-        onNext={n ? () => setStep(n) : null}
+      <PartsStep
+        service={current}
+        selected={selectedParts}
+        onChange={changeParts}
+        onBack={() => goBack("parts")}
+        onNext={() => goNext("parts")}
+      />
+    );
+  } else if (step === "stock") {
+    body = (
+      <StockStep
+        service={current}
+        selectedParts={selectedParts}
+        onChanged={stored}
+        onBack={() => goBack("stock")}
+        onCompleted={(saved) => {
+          stored(saved);
+          storeParts(saved.uuid, null);
+          // The detail page comes with TEC-183; until then the tenant home.
+          router.push(routes.tenant.home(slug));
+        }}
       />
     );
   }

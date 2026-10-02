@@ -340,6 +340,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		customersSvc.SetRevoker(authrevoke.New(deps.Redis, cfg.App.Env, cfg.JWT.AccessTTL))
 	}
 	customersSvc.SetSearchIndexer(searchIndexer)
+	customersSvc.SetOutbox(outbox.NewStore(deps.DB, deps.Queries)) // TEC-193: customer.merged
 	customersH := customershandler.New(customersSvc, activityRec)
 	customershandler.RegisterRoutes(mux, customersH, tokens, loader, deps.Queries, featureSvc, stepUpSvc)
 	ratesmodule.RegisterRoutes(mux, rateshandler.New(ratesSvc, activityRec), tokens, loader)
@@ -403,6 +404,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 			WithLogPurge(logsSvc.ApplyDueRules).
 			WithRatesFetch(ratesSvc.FetchTask).
 			WithWarrantyCron(warrantyCron.ExpireTask, warrantyCron.ExpiringScanTask).
+			WithWarrantyRepairScan(warrantymodule.NewRepairScanner(deps.DB, deps.Queries, cfg.Auth.FrontendURL, cfg.Warranty.RepairScanDays, log).Task).
 			WithNotificationPurge(notifSvc.PurgeExpired).
 			WithWhatsAppPoll(waSvc.PollStatus)
 		if searchIndexer != nil {
