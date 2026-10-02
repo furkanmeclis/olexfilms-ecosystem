@@ -40,12 +40,13 @@ describe("customer access (TEC-163)", () => {
     expect(resolveCustomerListAccess(can([]))).toEqual({
       canRead: false,
       canCreate: false,
+      canExport: false,
     });
     expect(
       resolveCustomerListAccess(
         can([Permission.CustomersRead, Permission.CustomersWrite]),
       ),
-    ).toEqual({ canRead: true, canCreate: true });
+    ).toEqual({ canRead: true, canCreate: true, canExport: true });
   });
 
   it("privacy actions need customers.anonymize in a center", () => {

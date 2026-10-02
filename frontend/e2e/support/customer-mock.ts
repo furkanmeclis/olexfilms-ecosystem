@@ -243,6 +243,46 @@ export class CustomerMock {
       return ok(v, 201);
     }
 
+    // Customer list export (TEC-164/TEC-199): queued, then completed.
+    const listExport = "/v1/customer-list-exports/list-export-1";
+    if (method === "POST" && path === "/v1/customers/export") {
+      return ok(
+        {
+          uuid: "list-export-1",
+          resource: "customers",
+          format: body?.format ?? "csv",
+          status: "queued",
+          row_count: 0,
+          error: null,
+          download_url: null,
+          created_at: NOW,
+        },
+        202,
+      );
+    }
+    if (method === "GET" && path === listExport) {
+      return ok({
+        uuid: "list-export-1",
+        resource: "customers",
+        format: "csv",
+        status: "completed",
+        row_count: this.customer ? 1 : 0,
+        error: null,
+        download_url: `${listExport}/download`,
+        created_at: NOW,
+      });
+    }
+    if (method === "GET" && path === `${listExport}/download`) {
+      return route.fulfill({
+        status: 200,
+        contentType: "text/csv",
+        headers: {
+          "Content-Disposition": 'attachment; filename="customers.csv"',
+        },
+        body: "name,phone\nAyşe Yılmaz,+905551234567\n",
+      });
+    }
+
     this.unknown.push(`${method} ${path}`);
     return route.fulfill({
       status: 404,
