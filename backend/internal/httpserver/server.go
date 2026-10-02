@@ -384,6 +384,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-145: product catalog (brand scoped, center writes).
 	catalogSvc := catalogusecase.New(deps.Queries, searchIndexer)
 	warrantyCert := warrantymodule.NewCertificate(deps.Queries, deps.Storage, cfg.Auth.FrontendURL, log)
+	servicePDF := servicesusecase.NewPDF(servicesSvc, warrantyCert, deps.Storage, log)
 	ioReg := ioengine.NewRegistry(
 		catalogusecase.NewIOAdapter(catalogSvc, deps.Queries),
 		ioadapters.NewUsers(deps.Queries),
@@ -401,12 +402,15 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		// TEC-188: warranty certificate PDF (panel and portal).
 		warrantyusecase.NewCertificateAdapter(warrantyCert),
 		warrantyusecase.NewPortalCertificateAdapter(warrantyCert),
+		// TEC-196: service PDF.
+		servicesusecase.NewPDFAdapter(servicePDF),
 	)
 	exportSvc := exportusecase.New(deps.Queries, deps.Storage, ioReg, deps.Queue, notifSvc, activityRec, log)
 	exportSvc.SetDocumentPDF(pdfClient)
 	accountingH.WithExports(exportSvc)
 	customersH.WithExports(exportSvc)
 	warrantymodule.RegisterCertificateRoutes(mux, warrantyhandler.NewCertificate(warrantyCert, exportSvc), tokens, loader, deps.Queries, featureSvc)
+	servicesmodule.RegisterPDFRoutes(mux, serviceshandler.NewPDF(servicePDF, exportSvc), tokens, loader, deps.Queries, featureSvc)
 	// A nil *queue.Client must reach the import service as a nil Enqueuer
 	// (sync mode); a typed nil would fail every confirm.
 	var importQueue importusecase.Enqueuer
