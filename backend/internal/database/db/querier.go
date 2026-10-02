@@ -478,6 +478,10 @@ type Querier interface {
 	GetWarrantyByPublicCode(ctx context.Context, arg GetWarrantyByPublicCodeParams) (Warranty, error)
 	GetWarrantyByServiceItem(ctx context.Context, serviceItemID int64) (Warranty, error)
 	GetWarrantyByUUID(ctx context.Context, arg GetWarrantyByUUIDParams) (Warranty, error)
+	// service.completed consumer (TEC-186): the service, its organization's
+	// time zone (end_at is the end of the last day there, decision 4) and its
+	// brand slug (Glorian services get no warranty, K2).
+	GetWarrantyServiceContext(ctx context.Context, serviceID int64) (GetWarrantyServiceContextRow, error)
 	GetWebAuthnCredentialByCredentialID(ctx context.Context, credentialID string) (WebauthnCredential, error)
 	GetWebAuthnCredentialByUUID(ctx context.Context, arg GetWebAuthnCredentialByUUIDParams) (WebauthnCredential, error)
 	// WhatsApp gateway, KVKK notices, conversations and messages (TEC-92).
@@ -813,6 +817,11 @@ type Querier interface {
 	// Scope list: org_ids NULL = whole brand (brand/all scope);
 	// holder_user_id for scope customer (portal).
 	ListWarrantiesInScope(ctx context.Context, arg ListWarrantiesInScopeParams) ([]Warranty, error)
+	// One row per service item with what the warranty rules need: the
+	// product's warranty period (NULL/0 = none), the unit's source, external
+	// connection and brand, and whether the unit ever left the system through
+	// an external_outbound movement (no warranty for those, K2).
+	ListWarrantyCandidatesByService(ctx context.Context, serviceID int64) ([]ListWarrantyCandidatesByServiceRow, error)
 	// Notification context of the cron events (TEC-187): plate, product and the
 	// organization's name and time zone (end date is shown in the org zone).
 	ListWarrantyNoticeContexts(ctx context.Context, ids []int64) ([]ListWarrantyNoticeContextsRow, error)

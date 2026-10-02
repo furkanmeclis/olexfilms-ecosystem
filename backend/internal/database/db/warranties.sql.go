@@ -726,6 +726,51 @@ func (q *Queries) GetWarrantyByUUID(ctx context.Context, arg GetWarrantyByUUIDPa
 	return i, err
 }
 
+const getWarrantyServiceContext = `-- name: GetWarrantyServiceContext :one
+SELECT s.id, s.uuid, s.service_no, s.status, s.organization_id, s.brand_id, s.vehicle_id,
+       s.customer_user_id, s.completed_at, o.timezone, b.slug AS brand_slug
+FROM services s
+JOIN organizations o ON o.id = s.organization_id
+JOIN brands b ON b.id = s.brand_id
+WHERE s.id = $1
+`
+
+type GetWarrantyServiceContextRow struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	ServiceNo      string             `json:"service_no"`
+	Status         string             `json:"status"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	VehicleID      int64              `json:"vehicle_id"`
+	CustomerUserID int64              `json:"customer_user_id"`
+	CompletedAt    pgtype.Timestamptz `json:"completed_at"`
+	Timezone       string             `json:"timezone"`
+	BrandSlug      string             `json:"brand_slug"`
+}
+
+// service.completed consumer (TEC-186): the service, its organization's
+// time zone (end_at is the end of the last day there, decision 4) and its
+// brand slug (Glorian services get no warranty, K2).
+func (q *Queries) GetWarrantyServiceContext(ctx context.Context, serviceID int64) (GetWarrantyServiceContextRow, error) {
+	row := q.db.QueryRow(ctx, getWarrantyServiceContext, serviceID)
+	var i GetWarrantyServiceContextRow
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.ServiceNo,
+		&i.Status,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.VehicleID,
+		&i.CustomerUserID,
+		&i.CompletedAt,
+		&i.Timezone,
+		&i.BrandSlug,
+	)
+	return i, err
+}
+
 const incrementVehicleTransferAttempts = `-- name: IncrementVehicleTransferAttempts :one
 UPDATE vehicle_transfers
 SET attempts = attempts + 1
@@ -1107,6 +1152,69 @@ func (q *Queries) ListWarrantiesInScope(ctx context.Context, arg ListWarrantiesI
 			&i.Notified7At,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWarrantyCandidatesByService = `-- name: ListWarrantyCandidatesByService :many
+SELECT si.id, si.kind, si.product_id, si.unit_id,
+       p.warranty_duration_months,
+       u.source AS unit_source, u.connection_id AS unit_connection_id,
+       ub.slug AS unit_brand_slug,
+       EXISTS (
+           SELECT 1 FROM stock_movements m
+           WHERE m.unit_id = si.unit_id AND m.type = 'external_outbound'
+       )::boolean AS external_outbound
+FROM service_items si
+JOIN products p ON p.id = si.product_id
+JOIN units u ON u.id = si.unit_id
+JOIN brands ub ON ub.id = u.brand_id
+WHERE si.service_id = $1
+ORDER BY si.id
+`
+
+type ListWarrantyCandidatesByServiceRow struct {
+	ID                     int64       `json:"id"`
+	Kind                   string      `json:"kind"`
+	ProductID              int64       `json:"product_id"`
+	UnitID                 int64       `json:"unit_id"`
+	WarrantyDurationMonths pgtype.Int4 `json:"warranty_duration_months"`
+	UnitSource             string      `json:"unit_source"`
+	UnitConnectionID       pgtype.Int8 `json:"unit_connection_id"`
+	UnitBrandSlug          string      `json:"unit_brand_slug"`
+	ExternalOutbound       bool        `json:"external_outbound"`
+}
+
+// One row per service item with what the warranty rules need: the
+// product's warranty period (NULL/0 = none), the unit's source, external
+// connection and brand, and whether the unit ever left the system through
+// an external_outbound movement (no warranty for those, K2).
+func (q *Queries) ListWarrantyCandidatesByService(ctx context.Context, serviceID int64) ([]ListWarrantyCandidatesByServiceRow, error) {
+	rows, err := q.db.Query(ctx, listWarrantyCandidatesByService, serviceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListWarrantyCandidatesByServiceRow{}
+	for rows.Next() {
+		var i ListWarrantyCandidatesByServiceRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Kind,
+			&i.ProductID,
+			&i.UnitID,
+			&i.WarrantyDurationMonths,
+			&i.UnitSource,
+			&i.UnitConnectionID,
+			&i.UnitBrandSlug,
+			&i.ExternalOutbound,
 		); err != nil {
 			return nil, err
 		}

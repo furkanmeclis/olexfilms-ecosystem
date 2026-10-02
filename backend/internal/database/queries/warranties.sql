@@ -147,6 +147,37 @@ JOIN products p ON p.id = w.product_id
 JOIN organizations o ON o.id = w.organization_id
 WHERE w.id = ANY (sqlc.arg(ids)::bigint[]);
 
+-- service.completed consumer (TEC-186): the service, its organization's
+-- time zone (end_at is the end of the last day there, decision 4) and its
+-- brand slug (Glorian services get no warranty, K2).
+-- name: GetWarrantyServiceContext :one
+SELECT s.id, s.uuid, s.service_no, s.status, s.organization_id, s.brand_id, s.vehicle_id,
+       s.customer_user_id, s.completed_at, o.timezone, b.slug AS brand_slug
+FROM services s
+JOIN organizations o ON o.id = s.organization_id
+JOIN brands b ON b.id = s.brand_id
+WHERE s.id = sqlc.arg(service_id);
+
+-- One row per service item with what the warranty rules need: the
+-- product's warranty period (NULL/0 = none), the unit's source, external
+-- connection and brand, and whether the unit ever left the system through
+-- an external_outbound movement (no warranty for those, K2).
+-- name: ListWarrantyCandidatesByService :many
+SELECT si.id, si.kind, si.product_id, si.unit_id,
+       p.warranty_duration_months,
+       u.source AS unit_source, u.connection_id AS unit_connection_id,
+       ub.slug AS unit_brand_slug,
+       EXISTS (
+           SELECT 1 FROM stock_movements m
+           WHERE m.unit_id = si.unit_id AND m.type = 'external_outbound'
+       )::boolean AS external_outbound
+FROM service_items si
+JOIN products p ON p.id = si.product_id
+JOIN units u ON u.id = si.unit_id
+JOIN brands ub ON ub.id = u.brand_id
+WHERE si.service_id = sqlc.arg(service_id)
+ORDER BY si.id;
+
 -- ---------------------------------------------------------------------------
 -- Vehicle transfers.
 

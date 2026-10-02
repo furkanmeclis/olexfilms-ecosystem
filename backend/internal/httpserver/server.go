@@ -366,6 +366,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	nh := notifhandler.New(notifSvc)
 	notifmodule.RegisterRoutes(mux, nh, tokens, loader)
 	notifmodule.RegisterEventHandlers(eventBus, notifSvc, log)
+	// TEC-186: service.completed opens one warranty per service item.
+	warrantymodule.RegisterEventHandlers(eventBus, deps.DB, deps.Queries, cfg.Auth.FrontendURL, log)
 
 	// TEC-145: product catalog (brand scoped, center writes).
 	catalogSvc := catalogusecase.New(deps.Queries, searchIndexer)

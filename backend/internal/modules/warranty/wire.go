@@ -1,11 +1,14 @@
-// Package warranty is the warranty module (TEC-98, F1-06). This skeleton
-// carries the periodic tasks (TEC-187); the service.completed listener
-// (TEC-186), HTTP routes, PDF and transfers arrive with their own issues.
+// Package warranty is the warranty module (TEC-98, F1-06): the periodic
+// tasks (TEC-187) and the service.completed listener (TEC-186). HTTP
+// routes, PDF and transfers arrive with their own issues.
 package warranty
 
 import (
+	"log/slog"
+
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty/usecase"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -14,4 +17,21 @@ import (
 // frontendURL is the public origin used for the /garanti/{public_code} link.
 func NewCron(pool *pgxpool.Pool, q *db.Queries, frontendURL string) *usecase.CronService {
 	return usecase.NewCron(pool, q, outbox.NewStore(pool, q), frontendURL)
+}
+
+// NewListener builds the service.completed consumer.
+func NewListener(pool *pgxpool.Pool, q *db.Queries, frontendURL string, log *slog.Logger) *usecase.Listener {
+	return usecase.NewListener(pool, q, outbox.NewStore(pool, q), frontendURL, log)
+}
+
+// RegisterEventHandlers subscribes the warranty listener to the platform
+// bus (outbox -> bus, same as the notification handlers). Every process
+// that drains the outbox registers it, so whichever claims a
+// service.completed row opens the warranties; the listener is idempotent.
+func RegisterEventHandlers(bus events.Bus, pool *pgxpool.Pool, q *db.Queries, frontendURL string, log *slog.Logger) {
+	if bus == nil || pool == nil || q == nil {
+		return
+	}
+	l := NewListener(pool, q, frontendURL, log)
+	bus.Subscribe(events.ServiceCompleted, l.HandleServiceCompleted)
 }
