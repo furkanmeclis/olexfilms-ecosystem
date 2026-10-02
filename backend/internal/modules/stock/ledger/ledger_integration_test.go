@@ -131,6 +131,8 @@ func (e *env) location(t *testing.T, orgID int64, code string) ledger.Owner {
 
 var unitSeq atomic.Int64
 
+var serviceSeq atomic.Int64
+
 // unit creates a printed label (not in stock yet).
 func (e *env) unit(t *testing.T, p db.Product, meters string) db.Unit {
 	t.Helper()
@@ -537,7 +539,8 @@ func (e *env) service(t *testing.T, org db.Organization) int64 {
 		}
 	}
 	s, err := e.q.CreateService(e.ctx, db.CreateServiceParams{
-		ServiceNo:      fmt.Sprintf("T178-%s-%d", e.suffix, nextRef()),
+		// services.service_no is VARCHAR(32): "L" + 19-digit nanoseconds + sequence.
+		ServiceNo:      fmt.Sprintf("L%d-%d", time.Now().UnixNano(), serviceSeq.Add(1)),
 		OrganizationID: org.ID, BrandID: e.brand,
 		CustomerUserID: e.vehicle.UserID, VehicleID: e.vehicle.ID,
 		CarBrandID: e.carBrand, CarModelID: e.carModel, Status: "draft",
