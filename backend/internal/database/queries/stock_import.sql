@@ -52,5 +52,11 @@ WHERE id = sqlc.arg(id)
 RETURNING *;
 
 -- name: GetWarehouseLocationByCode :one
+-- TEC-201: typed locations (000059) repeat sibling codes, so they are
+-- addressed by full_code; legacy locations keep their organization-unique
+-- code.
 SELECT * FROM warehouse_locations
-WHERE organization_id = sqlc.arg(organization_id) AND code = sqlc.arg(code)::text;
+WHERE organization_id = sqlc.arg(organization_id)
+  AND (full_code = sqlc.arg(code)::text OR (room_id IS NULL AND code = sqlc.arg(code)::text))
+ORDER BY (room_id IS NOT NULL) DESC
+LIMIT 1;

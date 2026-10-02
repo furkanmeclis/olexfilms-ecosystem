@@ -112,8 +112,11 @@ func (q *Queries) GetStockImportBatchByJob(ctx context.Context, importJobID pgty
 }
 
 const getWarehouseLocationByCode = `-- name: GetWarehouseLocationByCode :one
-SELECT id, uuid, organization_id, parent_id, code, name, active, created_at, updated_at FROM warehouse_locations
-WHERE organization_id = $1 AND code = $2::text
+SELECT id, uuid, organization_id, parent_id, code, name, active, created_at, updated_at, warehouse_id, room_id, type, full_code, sort_order FROM warehouse_locations
+WHERE organization_id = $1
+  AND (full_code = $2::text OR (room_id IS NULL AND code = $2::text))
+ORDER BY (room_id IS NOT NULL) DESC
+LIMIT 1
 `
 
 type GetWarehouseLocationByCodeParams struct {
@@ -121,6 +124,9 @@ type GetWarehouseLocationByCodeParams struct {
 	Code           string `json:"code"`
 }
 
+// TEC-201: typed locations (000059) repeat sibling codes, so they are
+// addressed by full_code; legacy locations keep their organization-unique
+// code.
 func (q *Queries) GetWarehouseLocationByCode(ctx context.Context, arg GetWarehouseLocationByCodeParams) (WarehouseLocation, error) {
 	row := q.db.QueryRow(ctx, getWarehouseLocationByCode, arg.OrganizationID, arg.Code)
 	var i WarehouseLocation
@@ -134,6 +140,11 @@ func (q *Queries) GetWarehouseLocationByCode(ctx context.Context, arg GetWarehou
 		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.WarehouseID,
+		&i.RoomID,
+		&i.Type,
+		&i.FullCode,
+		&i.SortOrder,
 	)
 	return i, err
 }

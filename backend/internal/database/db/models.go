@@ -1064,6 +1064,19 @@ type RolePermission struct {
 	Scope        string `json:"scope"`
 }
 
+type Room struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	WarehouseID    int64              `json:"warehouse_id"`
+	Code           string             `json:"code"`
+	Name           string             `json:"name"`
+	Active         bool               `json:"active"`
+	SortOrder      int32              `json:"sort_order"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Service struct {
 	ID                  int64              `json:"id"`
 	Uuid                uuid.UUID          `json:"uuid"`
@@ -1469,6 +1482,19 @@ type VehicleTransfer struct {
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
 
+type Warehouse struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	Code           string             `json:"code"`
+	Name           string             `json:"name"`
+	Address        pgtype.Text        `json:"address"`
+	Active         bool               `json:"active"`
+	SortOrder      int32              `json:"sort_order"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
 type WarehouseLocation struct {
 	ID             int64              `json:"id"`
 	Uuid           uuid.UUID          `json:"uuid"`
@@ -1479,6 +1505,11 @@ type WarehouseLocation struct {
 	Active         bool               `json:"active"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	WarehouseID    pgtype.Int8        `json:"warehouse_id"`
+	RoomID         pgtype.Int8        `json:"room_id"`
+	Type           pgtype.Text        `json:"type"`
+	FullCode       pgtype.Text        `json:"full_code"`
+	SortOrder      int32              `json:"sort_order"`
 }
 
 type Warranty struct {
