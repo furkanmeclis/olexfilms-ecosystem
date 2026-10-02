@@ -545,11 +545,12 @@ var Roles = []RoleDef{
 			PermAccountingDispute:      ScopeManaged,
 			PermWarehouseRead:          ScopeManaged,
 			PermWarehouseWrite:         ScopeManaged,
-			PermStockRead:              ScopeManaged,
-			PermStockWrite:             ScopeManaged,
-			PermStockAdjust:            ScopeManaged,
-			PermModulesRead:            ScopeSubtree,
-			PermModulesManage:          ScopeSubtree,
+			// TEC-216 (000061): reads dealer stock; never moves it.
+			PermStockRead:     ScopeSubtree,
+			PermStockWrite:    ScopeManaged,
+			PermStockAdjust:   ScopeManaged,
+			PermModulesRead:   ScopeSubtree,
+			PermModulesManage: ScopeSubtree,
 			// TEC-165 (000049): seller to its dealers, buyer from the center.
 			PermOrdersRead:       ScopeManaged,
 			PermOrdersWrite:      ScopeManaged,
@@ -593,7 +594,7 @@ var Roles = []RoleDef{
 			PermCatalogRead:        ScopeManaged,
 			PermWarehouseRead:      ScopeManaged,
 			PermWarehouseWrite:     ScopeManaged,
-			PermStockRead:          ScopeManaged,
+			PermStockRead:          ScopeSubtree, // TEC-216 (000061)
 			PermStockWrite:         ScopeManaged,
 			PermStockAdjust:        ScopeManaged,
 			PermOrdersRead:         ScopeManaged,

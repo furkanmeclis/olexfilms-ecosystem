@@ -126,3 +126,78 @@ WHERE h.owner_type = 'warehouse_location' AND h.owner_id = sqlc.arg(location_id)
   AND u.product_id = ANY(sqlc.arg(product_ids)::bigint[])
 GROUP BY u.product_id, u.uuid, u.barcode
 ORDER BY u.product_id, u.barcode;
+
+-- TEC-216 (F1-12a): unit list of an organization. Serial units come from
+-- unit_current_state, fixed barcodes from fixed_barcode_holdings (summed
+-- per unit); both narrowed on holder_org_id. Without a status filter the
+-- list holds the units counted as stock (available, placed); a status
+-- filter lists exactly that status.
+
+-- name: ListOrganizationStockUnitRows :many
+WITH held AS (
+    SELECT s.unit_id, 1::int AS quantity, s.owner_type, s.owner_id, s.updated_at
+    FROM unit_current_state s
+    WHERE s.holder_org_id = sqlc.arg(organization_id)
+      AND s.owner_type IN ('organization', 'warehouse_location')
+    UNION ALL
+    SELECT h.unit_id, SUM(h.quantity_on_hand)::int AS quantity,
+           NULL::varchar AS owner_type, NULL::bigint AS owner_id, MAX(h.updated_at) AS updated_at
+    FROM fixed_barcode_holdings h
+    WHERE h.holder_org_id = sqlc.arg(organization_id)
+      AND h.owner_type IN ('organization', 'warehouse_location')
+    GROUP BY h.unit_id
+    HAVING SUM(h.quantity_on_hand) > 0
+)
+SELECT u.id, u.uuid, u.barcode, u.unit_kind, u.status,
+       u.initial_meters, u.remaining_meters,
+       held.quantity, held.updated_at,
+       p.id AS product_id, p.uuid AS product_uuid, p.sku, p.name AS product_name,
+       p.unit_type, p.uses_fixed_barcode,
+       l.uuid AS location_uuid, l.code AS location_code, l.name AS location_name
+FROM held
+JOIN units u ON u.id = held.unit_id
+JOIN products p ON p.id = u.product_id
+LEFT JOIN warehouse_locations l ON held.owner_type = 'warehouse_location' AND l.id = held.owner_id
+WHERE (sqlc.narg(brand_id)::bigint IS NULL OR u.brand_id = sqlc.narg(brand_id)::bigint)
+  AND (sqlc.narg(product_id)::bigint IS NULL OR u.product_id = sqlc.narg(product_id)::bigint)
+  AND ((sqlc.narg(status)::text IS NULL AND u.status IN ('available', 'placed'))
+       OR u.status = sqlc.narg(status)::text)
+  AND (sqlc.narg(barcode)::text IS NULL OR u.barcode = sqlc.narg(barcode)::text)
+  AND (
+    sqlc.narg(q)::text IS NULL
+    OR p.name ILIKE '%' || sqlc.narg(q)::text || '%'
+    OR p.sku ILIKE '%' || sqlc.narg(q)::text || '%'
+    OR u.barcode ILIKE '%' || sqlc.narg(q)::text || '%'
+  )
+ORDER BY p.name, u.barcode, u.id
+LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
+
+-- name: CountOrganizationStockUnitRows :one
+WITH held AS (
+    SELECT s.unit_id
+    FROM unit_current_state s
+    WHERE s.holder_org_id = sqlc.arg(organization_id)
+      AND s.owner_type IN ('organization', 'warehouse_location')
+    UNION ALL
+    SELECT h.unit_id
+    FROM fixed_barcode_holdings h
+    WHERE h.holder_org_id = sqlc.arg(organization_id)
+      AND h.owner_type IN ('organization', 'warehouse_location')
+    GROUP BY h.unit_id
+    HAVING SUM(h.quantity_on_hand) > 0
+)
+SELECT COUNT(*)::bigint
+FROM held
+JOIN units u ON u.id = held.unit_id
+JOIN products p ON p.id = u.product_id
+WHERE (sqlc.narg(brand_id)::bigint IS NULL OR u.brand_id = sqlc.narg(brand_id)::bigint)
+  AND (sqlc.narg(product_id)::bigint IS NULL OR u.product_id = sqlc.narg(product_id)::bigint)
+  AND ((sqlc.narg(status)::text IS NULL AND u.status IN ('available', 'placed'))
+       OR u.status = sqlc.narg(status)::text)
+  AND (sqlc.narg(barcode)::text IS NULL OR u.barcode = sqlc.narg(barcode)::text)
+  AND (
+    sqlc.narg(q)::text IS NULL
+    OR p.name ILIKE '%' || sqlc.narg(q)::text || '%'
+    OR p.sku ILIKE '%' || sqlc.narg(q)::text || '%'
+    OR u.barcode ILIKE '%' || sqlc.narg(q)::text || '%'
+  );
