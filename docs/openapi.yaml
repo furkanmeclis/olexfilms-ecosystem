@@ -102,8 +102,9 @@ tags:
   - name: Orders
     description: >-
       Product orders down the tree (TEC-96/TEC-166, K6): draft by the buyer,
-      server-side prices (K8), rate frozen at seller approval (K7) and the
-      stock-free status transitions.
+      server-side prices (K8), rate frozen at seller approval (K7), barcode
+      assignment and shipping (TEC-167), receipt and cancel after shipping
+      (TEC-168).
   - name: Mobile
     description: |
       Mobile app API (TEC-91). `/v1/mobile/*` is reached through the BFF
@@ -8255,12 +8256,23 @@ paths:
         serial units go in_transit owned by the buyer, reservations are
         consumed; 409 ORDER_STOCK_UNAVAILABLE when the ledger refuses);
         draft | submitted | approved | preparing | ready -> cancelled
-        (either side, orders.cancel; active reservations are released). A
-        request for the current status is a no-op (a repeated ship writes no
-        movement). Other moves answer 409 ORDER_INVALID_TRANSITION;
-        delivered, received and cancelling answer 409
-        ORDER_TRANSITION_UNAVAILABLE until TEC-168. Every move writes the
-        status history and an orders.* outbox event.
+        (either side, orders.cancel; active reservations are released).
+        After shipping (TEC-168): shipped -> received (buyer,
+        orders.receive; the whole shipment, no partial receipt: one ledger
+        received per shipped unit with idempotency key
+        order:order_item_unit:<id>:received:<barcode>, the units become
+        available at the buyer organization; orders.received);
+        shipped -> cancelling (either side, orders.cancel; nothing moves,
+        the reason is kept; orders.cancel_requested); cancelling ->
+        cancelled (seller, orders.cancel or orders.ship, once the goods are
+        back: one ledger order_cancel_restore per shipped unit returns it to
+        the seller's source owner and status). A received order cannot be
+        cancelled (409 ORDER_INVALID_TRANSITION; returns are a separate
+        flow). A request for the current status is a no-op (a repeated
+        ship, receipt or cancel writes no movement). Other moves answer 409
+        ORDER_INVALID_TRANSITION; delivered is not used (received follows
+        shipped) and answers 409 ORDER_TRANSITION_UNAVAILABLE. Every move
+        writes the status history and an orders.* outbox event.
       security:
         - bearerAuth: []
       parameters:
@@ -13417,7 +13429,7 @@ components:
       required: [status]
       properties:
         status: { $ref: "#/components/schemas/OrderStatus" }
-        reason: { type: string, description: Kept in the history; the cancel reason for cancelled }
+        reason: { type: string, description: Kept in the history; the cancel reason for cancelling and cancelled }
 
     EnvelopeOrder:
       type: object

@@ -39,7 +39,7 @@ var (
 	ErrNoSupplier = errors.New("orders: organization cannot place orders")
 	// ErrInvalidTransition: the order's status does not allow the move.
 	ErrInvalidTransition = errors.New("orders: invalid status transition")
-	// ErrTransitionUnavailable: delivered, received, cancelling (TEC-168).
+	// ErrTransitionUnavailable: a status this API does not move to (delivered).
 	ErrTransitionUnavailable = errors.New("orders: transition not available yet")
 	// ErrNotEditable: lines change only while the order is a draft.
 	ErrNotEditable = errors.New("orders: order is not a draft")
@@ -110,12 +110,24 @@ type Service struct {
 	rates RateResolver
 	// ledger writes the order_out movements at shipping (TEC-167).
 	ledger *ledger.Ledger
-	now    func() time.Time
+	// receipts is called in the received transaction (accounting, TEC-169).
+	receipts ReceiptHook
+	now      func() time.Time
 }
 
 // New creates the service.
 func New(pool TxBeginner, q *db.Queries, out outbox.Enqueuer, rates RateResolver) *Service {
-	return &Service{pool: pool, q: q, out: out, rates: rates, ledger: ledger.New(q, out), now: time.Now}
+	return &Service{pool: pool, q: q, out: out, rates: rates, ledger: ledger.New(q, out),
+		receipts: NoopReceiptHook{}, now: time.Now}
+}
+
+// WithReceiptHook sets the hook called when an order is received.
+func (s *Service) WithReceiptHook(h ReceiptHook) *Service {
+	if h == nil {
+		h = NoopReceiptHook{}
+	}
+	s.receipts = h
+	return s
 }
 
 func (s *Service) inTx(ctx context.Context, fn func(q *db.Queries, tx pgx.Tx) error) error {
@@ -493,10 +505,24 @@ func (s *Service) Transition(ctx context.Context, c Caller, orderUUID uuid.UUID,
 			if meta, err = s.ship(ctx, q, tx, c, o); err == nil {
 				o, err = q.UpdateOrderStatus(ctx, db.UpdateOrderStatusParams{ID: o.ID, Status: to})
 			}
+		case StatusReceived:
+			if meta, err = s.receive(ctx, q, tx, c, o); err == nil {
+				o, err = q.UpdateOrderStatus(ctx, db.UpdateOrderStatusParams{ID: o.ID, Status: to})
+			}
+			if err == nil {
+				// Accounting hook point (TEC-96 decision 3, TEC-169).
+				err = s.receipts.OrderReceived(ctx, tx, q, o)
+			}
 		case StatusCancelled:
-			// Before shipping a cancel frees every active reservation
-			// (TEC-96 decision 1).
-			if _, err = q.ReleaseReservationsByOrder(ctx, o.ID); err == nil {
+			if from == StatusCancelling {
+				// After shipping the goods come back: one restore per
+				// shipped unit (TEC-96 decision 1).
+				meta, err = s.restore(ctx, q, tx, c, o)
+			} else {
+				// Before shipping a cancel frees every active reservation.
+				_, err = q.ReleaseReservationsByOrder(ctx, o.ID)
+			}
+			if err == nil {
 				o, err = q.UpdateOrderStatus(ctx, db.UpdateOrderStatusParams{ID: o.ID, Status: to})
 			}
 		default:
@@ -506,7 +532,7 @@ func (s *Service) Transition(ctx context.Context, c Caller, orderUUID uuid.UUID,
 			return err
 		}
 		reason := textOrNull(in.Reason)
-		if to == StatusCancelled && reason.Valid {
+		if (to == StatusCancelled || to == StatusCancelling) && reason.Valid {
 			if o, err = q.SetOrderCancelReason(ctx, db.SetOrderCancelReasonParams{ID: o.ID, CancelReason: reason}); err != nil {
 				return fmt.Errorf("orders: cancel reason: %w", err)
 			}
