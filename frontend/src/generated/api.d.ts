@@ -2729,6 +2729,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/platform/stock/rebuild-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stock projection drift check (super_admin, dry run)
+         * @description Replays `stock_movements` chronologically, rebuilds the expected projections (unit_current_state, fixed_barcode_holdings, units.status / remaining_meters, bin and organization product stocks) and reports every value that differs from the stored projection. Never writes; the repair runs from `cmd/inventory-rebuild -apply` (one locked transaction plus an audit row). Without `organization_uuid` every organization is scanned. At most 1000 differences are returned (`diffs_truncated`).
+         */
+        post: operations["checkStockRebuild"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/product-images/{key}": {
         parameters: {
             query?: never;
@@ -6968,6 +6988,51 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["StockUnitHistory"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        StockRebuildCheckInput: {
+            /**
+             * Format: uuid
+             * @description Scan only the units that touched this organization and its product stock rows.
+             */
+            organization_uuid?: string | null;
+        };
+        StockRebuildDiff: {
+            /** @enum {string} */
+            table: "units" | "unit_current_state" | "fixed_barcode_holdings" | "bin_product_stocks" | "organization_product_stocks";
+            /** @description unit:<id>, location:<id>/product:<id> or organization:<id>/product:<id> */
+            key: string;
+            /** Format: int64 */
+            unit_id?: number;
+            barcode?: string;
+            /** @description Column name; `row` when the whole row is missing or extra */
+            field: string;
+            /** @description Value replayed from the ledger */
+            expected: string;
+            /** @description Stored projection value */
+            actual: string;
+        };
+        StockRebuildReport: {
+            /** Format: int64 */
+            organization_id?: number;
+            /** @description Always false for the HTTP check */
+            applied: boolean;
+            units_scanned: number;
+            movements_replayed: number;
+            diff_count: number;
+            diffs: components["schemas"]["StockRebuildDiff"][];
+            /** @description Breaks in a unit's movement chain (from_status / from_owner not equal to the replayed state) */
+            anomalies: string[];
+            /** Format: date-time */
+            started_at: string;
+            /** Format: date-time */
+            finished_at: string;
+            diffs_truncated: boolean;
+        };
+        EnvelopeStockRebuildReport: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["StockRebuildReport"];
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeStockProductPage: {
@@ -13091,6 +13156,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeStockProductPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    checkStockRebuild: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["StockRebuildCheckInput"];
+            };
+        };
+        responses: {
+            /** @description Drift report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockRebuildReport"];
                 };
             };
             400: components["responses"]["BadRequest"];

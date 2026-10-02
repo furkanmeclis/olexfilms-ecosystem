@@ -57,6 +57,7 @@ type Worker struct {
 	fetchRates           FetchRatesFunc
 	purgeNotifications   NotificationPurgeFunc
 	pollWhatsApp         WhatsAppPollFunc
+	inventoryRebuild     InventoryRebuildFunc
 }
 
 // NewWorker builds a worker that handles known task types on every queue.
@@ -118,6 +119,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskRatesFetch, w.handleRatesFetch)
 	mux.HandleFunc(TaskNotificationPurge, w.handleNotificationPurge)
 	mux.HandleFunc(TaskWhatsAppStatusPoll, w.handleWhatsAppPoll)
+	mux.HandleFunc(TaskInventoryRebuild, w.handleInventoryRebuild)
 	return w
 }
 

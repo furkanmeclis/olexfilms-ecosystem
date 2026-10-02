@@ -27,7 +27,7 @@ endef
 
 DB_URL ?= postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
 
-.PHONY: tools run dev worker ping-job search-reindex roles-sync normalize-org-phones build test lint fmt tidy sqlc migrate-up migrate-down migrate-create health create-super-admin openapi-lint
+.PHONY: tools run dev worker ping-job search-reindex inventory-rebuild roles-sync normalize-org-phones build test lint fmt tidy sqlc migrate-up migrate-down migrate-create health create-super-admin openapi-lint
 
 tools:
 	@echo "go:            $$(go version)"
@@ -51,6 +51,11 @@ ping-job:
 
 search-reindex:
 	@$(load_env) go run ./cmd/search-reindex
+
+# TEC-156: replay stock_movements and report projection drift (dry run).
+# ARGS="-org 5 -json"; ARGS=-apply repairs in one locked transaction.
+inventory-rebuild:
+	@$(load_env) go run ./cmd/inventory-rebuild $(ARGS)
 
 # Reconcile permissions and system role packages with the Go catalog.
 roles-sync:

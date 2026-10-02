@@ -4967,6 +4967,43 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/platform/stock/rebuild-check:
+    post:
+      tags: [Stock]
+      operationId: checkStockRebuild
+      summary: Stock projection drift check (super_admin, dry run)
+      description: >-
+        Replays `stock_movements` chronologically, rebuilds the expected
+        projections (unit_current_state, fixed_barcode_holdings,
+        units.status / remaining_meters, bin and organization product
+        stocks) and reports every value that differs from the stored
+        projection. Never writes; the repair runs from
+        `cmd/inventory-rebuild -apply` (one locked transaction plus an audit
+        row). Without `organization_uuid` every organization is scanned. At
+        most 1000 differences are returned (`diffs_truncated`).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockRebuildCheckInput" }
+      responses:
+        "200":
+          description: Drift report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockRebuildReport"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/public/product-images/{key}:
     get:
       tags: [Catalog]
@@ -11964,6 +12001,58 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/StockUnitHistory" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    StockRebuildCheckInput:
+      type: object
+      additionalProperties: false
+      properties:
+        organization_uuid:
+          type: string
+          format: uuid
+          nullable: true
+          description: Scan only the units that touched this organization and its product stock rows.
+
+    StockRebuildDiff:
+      type: object
+      required: [table, key, field, expected, actual]
+      properties:
+        table:
+          type: string
+          enum: [units, unit_current_state, fixed_barcode_holdings, bin_product_stocks, organization_product_stocks]
+        key: { type: string, description: "unit:<id>, location:<id>/product:<id> or organization:<id>/product:<id>" }
+        unit_id: { type: integer, format: int64 }
+        barcode: { type: string }
+        field: { type: string, description: "Column name; `row` when the whole row is missing or extra" }
+        expected: { type: string, description: Value replayed from the ledger }
+        actual: { type: string, description: Stored projection value }
+
+    StockRebuildReport:
+      type: object
+      required: [applied, units_scanned, movements_replayed, diff_count, diffs, anomalies, started_at, finished_at, diffs_truncated]
+      properties:
+        organization_id: { type: integer, format: int64 }
+        applied: { type: boolean, description: Always false for the HTTP check }
+        units_scanned: { type: integer }
+        movements_replayed: { type: integer }
+        diff_count: { type: integer }
+        diffs:
+          type: array
+          items: { $ref: "#/components/schemas/StockRebuildDiff" }
+        anomalies:
+          type: array
+          description: Breaks in a unit's movement chain (from_status / from_owner not equal to the replayed state)
+          items: { type: string }
+        started_at: { type: string, format: date-time }
+        finished_at: { type: string, format: date-time }
+        diffs_truncated: { type: boolean }
+
+    EnvelopeStockRebuildReport:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/StockRebuildReport" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeStockProductPage:
