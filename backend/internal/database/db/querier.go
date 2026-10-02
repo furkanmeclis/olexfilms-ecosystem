@@ -399,6 +399,9 @@ type Querier interface {
 	GetServiceImage(ctx context.Context, arg GetServiceImageParams) (ServiceImage, error)
 	GetServiceItem(ctx context.Context, arg GetServiceItemParams) (ServiceItem, error)
 	GetServiceItemByUUID(ctx context.Context, arg GetServiceItemByUUIDParams) (ServiceItem, error)
+	// Display references of one service (organization, customer, vehicle and
+	// the car brand / model snapshot) for the API view (TEC-179).
+	GetServiceRefs(ctx context.Context, id int64) (GetServiceRefsRow, error)
 	GetStepupSettings(ctx context.Context) (StepupSetting, error)
 	GetStockImportBatch(ctx context.Context, arg GetStockImportBatchParams) (StockImportBatch, error)
 	GetStockMovement(ctx context.Context, id int64) (StockMovement, error)
@@ -663,7 +666,9 @@ type Querier interface {
 	// customer detail).
 	ListServicesByCustomer(ctx context.Context, arg ListServicesByCustomerParams) ([]Service, error)
 	// Scope list: org_ids NULL = whole brand (brand/all scope); created_by for
-	// scope own, customer_user_id for scope customer (portal).
+	// scope own, customer_user_id for scope customer (portal). q matches the
+	// service number, plate, VIN and the customer's name or phone (TEC-179;
+	// anonymized customers are not searchable by name).
 	ListServicesInScope(ctx context.Context, arg ListServicesInScopeParams) ([]Service, error)
 	ListSharedKeys(ctx context.Context, keys []string) ([]string, error)
 	ListStockImportBatches(ctx context.Context, organizationID int64) ([]StockImportBatch, error)

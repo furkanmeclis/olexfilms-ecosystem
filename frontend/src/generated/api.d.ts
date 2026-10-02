@@ -4367,6 +4367,169 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Services inside the services.read scope
+         * @description Dealer: its own organization (own scope: services it created), distributor: its subtree, center: the domain brand (K20). q matches the service number, plate, VIN and the customer's name or phone. List rows carry no items, images or status logs.
+         */
+        get: operations["listServices"];
+        put?: never;
+        /**
+         * Open a draft service of the active organization
+         * @description Needs services.write. The customer must be linked to an organization of the services.write scope and the vehicle must belong to the customer (domain brand) and carry a car brand and model; plate, VIN, car brand/model and year are copied into the service (TEC-97 decision 3). The brand is the organization's brand (decision 2) and the number is DS + 8 alphanumerics. has_measurement needs the vehicle VIN. A read-only organization (K23: no contract yet) gets 403 ORGANIZATION_READ_ONLY on every write.
+         */
+        post: operations["createService"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/services/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * One service with its items, images and status logs
+         * @description Services outside the services.read scope answer 404.
+         */
+        get: operations["getService"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Edit km, package, notes and the measurement answer
+         * @description Needs services.write reaching the service. Completed and cancelled services are locked except for the center (409 SERVICE_NOT_EDITABLE).
+         */
+        patch: operations["updateService"];
+        trace?: never;
+    };
+    "/v1/services/{uuid}/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a stock unit to a service (by barcode)
+         * @description Only while the service is draft, pending or processing (409 SERVICE_NOT_EDITABLE). The unit must be held by the service organization (serial: available or placed; fixed barcode: enough pieces on hand), else 409 SERVICE_UNIT_NOT_AVAILABLE. A serial unit already in an open service (this one included) is 409 SERVICE_UNIT_IN_USE; a roll may be cut (partial, meters) for several services but a whole roll excludes other uses. applied_parts must be in the product category's available_parts.
+         */
+        post: operations["addServiceItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/services/{uuid}/items/{item}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                item: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove an item (draft, pending or processing only) */
+        delete: operations["removeServiceItem"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/services/{uuid}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move a service to another status
+         * @description Legacy state machine without stock (TEC-179): draft -> pending -> processing -> ready (services.write); center shortcuts draft -> processing and pending -> ready; draft | pending | processing | ready -> cancelled (services.cancel, center only; a dealer gets 403). Completed and cancelled are final (409 SERVICE_INVALID_TRANSITION). completed answers 409 SERVICE_COMPLETION_UNAVAILABLE until TEC-180 (stock consumption). A request for the current status is a no-op. Every move writes a status log and a service.* outbox event.
+         */
+        post: operations["transitionService"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/services/{uuid}/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload a service image
+         * @description Needs services.write reaching the service and an editable form. The type is detected from the content: JPEG, PNG or WebP only (400), at most 5 MiB (413) and 30 images per service (422 SERVICE_TOO_MANY_IMAGES).
+         */
+        post: operations["uploadServiceImage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/services/{uuid}/images/{image}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                image: string;
+            };
+            cookie?: never;
+        };
+        /** Download a service image (services.read scope) */
+        get: operations["downloadServiceImage"];
+        put?: never;
+        post?: never;
+        /** Delete a service image */
+        delete: operations["deleteServiceImage"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/orders": {
         parameters: {
             query?: never;
@@ -7892,6 +8055,175 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["AccountingBalanceReport"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        ServiceStatus: "draft" | "pending" | "processing" | "ready" | "completed" | "cancelled";
+        ServiceRef: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+        };
+        ServiceOrgRef: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            type: string;
+        };
+        ServiceCustomerRef: {
+            /** Format: uuid */
+            uuid: string;
+            /** @description The anonymized label when anonymized (K19) */
+            name: string;
+            surname: string;
+            phone: string | null;
+            anonymized: boolean;
+        };
+        ServiceItem: {
+            /** Format: uuid */
+            uuid: string;
+            product: {
+                /** Format: uuid */
+                uuid: string;
+                sku: string;
+                name: string;
+                unit_type: string;
+            };
+            barcode: string;
+            /** @enum {string} */
+            unit_kind: "serial" | "fixed";
+            /** @enum {string} */
+            kind: "full" | "partial";
+            /** @description Pieces of a fixed barcode */
+            quantity: number | null;
+            /** @description Meters cut from a roll (partial) */
+            meters: string | null;
+            applied_parts: string[];
+            notes: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        ServiceImage: {
+            /** Format: uuid */
+            uuid: string;
+            title: string | null;
+            sort_order: number;
+            /** @description Authenticated download path */
+            url: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        ServiceStatusLog: {
+            from_status: string | null;
+            to_status: components["schemas"]["ServiceStatus"];
+            note: string | null;
+            /** @description The change was made by another organization (e.g. the center) */
+            by_other_organization: boolean;
+            /** Format: date-time */
+            created_at: string;
+        };
+        Service: {
+            /** Format: uuid */
+            uuid: string;
+            /** @description DS + 8 alphanumerics */
+            service_no: string;
+            status: components["schemas"]["ServiceStatus"];
+            status_label: string;
+            organization: components["schemas"]["ServiceOrgRef"];
+            customer: components["schemas"]["ServiceCustomerRef"];
+            /** Format: uuid */
+            vehicle_uuid: string;
+            car_brand: components["schemas"]["ServiceRef"];
+            car_model: components["schemas"]["ServiceRef"];
+            model_year: number | null;
+            plate: string | null;
+            plate_country: string | null;
+            vin: string | null;
+            km: number | null;
+            package: string | null;
+            notes: string | null;
+            has_measurement: boolean;
+            cancel_reason: string | null;
+            /** Format: date-time */
+            completed_at: string | null;
+            /** Format: date-time */
+            cancelled_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** @description The caller may edit the form and images */
+            editable: boolean;
+            /** @description The caller may add or remove items */
+            items_editable: boolean;
+            available_transitions: components["schemas"]["ServiceStatus"][];
+            items?: components["schemas"]["ServiceItem"][];
+            images?: components["schemas"]["ServiceImage"][];
+            status_logs?: components["schemas"]["ServiceStatusLog"][];
+        };
+        ServiceCreateInput: {
+            /** Format: uuid */
+            customer_uuid: string;
+            /** Format: uuid */
+            vehicle_uuid: string;
+            km?: number;
+            package?: string;
+            notes?: string;
+            /** @default false */
+            has_measurement: boolean;
+        };
+        ServiceUpdateInput: {
+            km?: number | null;
+            package?: string | null;
+            notes?: string | null;
+            has_measurement?: boolean;
+        };
+        ServiceItemInput: {
+            barcode: string;
+            /**
+             * Format: uuid
+             * @description Optional check of the unit's product
+             */
+            product_uuid?: string;
+            /**
+             * @default full
+             * @enum {string}
+             */
+            kind: "full" | "partial";
+            /** @description Pieces of a fixed barcode */
+            quantity?: number;
+            /** @description Meters cut from a roll (partial, 2 decimals) */
+            meters?: number;
+            applied_parts?: string[];
+            notes?: string;
+        };
+        ServiceTransitionInput: {
+            status: components["schemas"]["ServiceStatus"];
+            /** @description Kept in the status log; the cancel reason for cancelled */
+            note?: string;
+        };
+        EnvelopeService: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Service"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeServiceImage: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ServiceImage"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeServicePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["Service"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
@@ -16101,6 +16433,306 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    listServices: {
+        parameters: {
+            query?: {
+                q?: string;
+                status?: components["schemas"]["ServiceStatus"];
+                customer_uuid?: string;
+                vehicle_uuid?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Services */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServicePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceCreateInput"];
+            };
+        };
+        responses: {
+            /** @description Draft service */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeService"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeService"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceUpdateInput"];
+            };
+        };
+        responses: {
+            /** @description Updated service */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeService"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    addServiceItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceItemInput"];
+            };
+        };
+        responses: {
+            /** @description Service with the new item */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeService"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    removeServiceItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                item: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service without the item */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeService"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    transitionService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceTransitionInput"];
+            };
+        };
+        responses: {
+            /** @description Service after the transition */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeService"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    uploadServiceImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    image: string;
+                    title?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Image added */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceImage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            413: components["responses"]["PayloadTooLarge"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    downloadServiceImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                image: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Image bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                    "image/jpeg": string;
+                    "image/webp": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteServiceImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                image: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Image deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     listOrders: {
