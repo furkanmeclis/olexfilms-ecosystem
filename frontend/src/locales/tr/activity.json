@@ -184,5 +184,10 @@
   "resources.plate_formats": "Plaka formatları",
   "resources.exchange_rates": "Döviz kurları",
   "resources.platform.legal_texts": "Yasal metinler",
-  "actions.legal_texts.published": "Yasal metin sürümü yayımlandı"
+  "actions.legal_texts.published": "Yasal metin sürümü yayımlandı",
+  "actions.stock.reclassification.requested": "Yeniden sınıflandırma talep edildi",
+  "actions.stock.reclassification.approved": "Yeniden sınıflandırma onaylandı",
+  "actions.stock.reclassification.rejected": "Yeniden sınıflandırma reddedildi",
+  "actions.stock.reclassification.cancelled": "Yeniden sınıflandırma talebi geri çekildi",
+  "resources.stock.reclassification": "Stok yeniden sınıflandırma"
 }

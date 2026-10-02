@@ -70,5 +70,17 @@
   "back_to_login": "Обратно към входа",
   "continue": "Продължи",
   "area_requires": "Този раздел изисква достъп до {{area}}.",
-  "feature_disabled": "Тази функция не е включена за вашата организация."
+  "feature_disabled": "Тази функция не е включена за вашата организация.",
+  "codes.STOCK_RECLASSIFICATION_BRAND_MISMATCH": "Целевият продукт принадлежи на друга марка.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_TYPE_MISMATCH": "Целевият продукт има различна мерна единица (ролка и брой не могат да се заменят).",
+  "codes.STOCK_RECLASSIFICATION_SAME_PRODUCT": "Единицата вече е с този продукт.",
+  "codes.STOCK_RECLASSIFICATION_PRODUCT_INACTIVE": "Целевият продукт е неактивен.",
+  "codes.STOCK_RECLASSIFICATION_FIXED_BARCODE": "Фиксираните баркодове не могат да бъдат прекласифицирани.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_CONSUMED": "Единицата е изразходвана или анулирана.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_ELSEWHERE": "Единицата не е в наличността на тази организация.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_IN_USE": "Единицата се използва в отворена услуга или поръчка.",
+  "codes.STOCK_RECLASSIFICATION_PRODUCT_CHANGED": "Продуктът на единицата се е променил след заявката.",
+  "codes.STOCK_RECLASSIFICATION_NOT_PENDING": "Тази заявка за прекласификация вече е решена.",
+  "codes.STOCK_RECLASSIFICATION_PENDING_EXISTS": "За тази единица вече има чакаща заявка за прекласификация.",
+  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Не можете да одобрите собствената си заявка."
 }

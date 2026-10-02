@@ -70,5 +70,17 @@
   "back_to_login": "Girişe dön",
   "continue": "Devam et",
   "area_requires": "Bu alan yalnızca {{area}} erişimi gerektirir.",
-  "feature_disabled": "Bu özellik organizasyonunuz için açık değil."
+  "feature_disabled": "Bu özellik organizasyonunuz için açık değil.",
+  "codes.STOCK_RECLASSIFICATION_BRAND_MISMATCH": "Hedef ürün başka bir markaya ait.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_TYPE_MISMATCH": "Hedef ürünün birim tipi farklı (rulo ve adet birbirine çevrilemez).",
+  "codes.STOCK_RECLASSIFICATION_SAME_PRODUCT": "Birim zaten bu üründe.",
+  "codes.STOCK_RECLASSIFICATION_PRODUCT_INACTIVE": "Hedef ürün pasif.",
+  "codes.STOCK_RECLASSIFICATION_FIXED_BARCODE": "Sabit barkodlar yeniden sınıflandırılamaz.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_CONSUMED": "Birim tüketilmiş ya da iptal edilmiş.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_ELSEWHERE": "Birim bu işletmenin stoğunda değil.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_IN_USE": "Birim açık bir hizmette ya da siparişte kullanılıyor.",
+  "codes.STOCK_RECLASSIFICATION_PRODUCT_CHANGED": "Talepten sonra birimin ürünü değişmiş.",
+  "codes.STOCK_RECLASSIFICATION_NOT_PENDING": "Bu yeniden sınıflandırma talebi zaten sonuçlanmış.",
+  "codes.STOCK_RECLASSIFICATION_PENDING_EXISTS": "Bu birim için bekleyen bir yeniden sınıflandırma talebi var.",
+  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Kendi talebinizi onaylayamazsınız."
 }

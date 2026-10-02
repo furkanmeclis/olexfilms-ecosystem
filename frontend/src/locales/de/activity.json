@@ -184,5 +184,10 @@
   "resources.plate_formats": "Kennzeichenformate",
   "resources.exchange_rates": "Wechselkurse",
   "resources.platform.legal_texts": "Rechtstexte",
-  "actions.legal_texts.published": "Neue Fassung eines Rechtstexts veröffentlicht"
+  "actions.legal_texts.published": "Neue Fassung eines Rechtstexts veröffentlicht",
+  "actions.stock.reclassification.requested": "Umklassifizierung angefragt",
+  "actions.stock.reclassification.approved": "Umklassifizierung genehmigt",
+  "actions.stock.reclassification.rejected": "Umklassifizierung abgelehnt",
+  "actions.stock.reclassification.cancelled": "Umklassifizierungsanfrage zurückgezogen",
+  "resources.stock.reclassification": "Bestandsumklassifizierung"
 }

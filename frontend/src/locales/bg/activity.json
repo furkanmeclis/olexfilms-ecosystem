@@ -184,5 +184,10 @@
   "resources.plate_formats": "Формати на номера",
   "resources.exchange_rates": "Валутни курсове",
   "resources.platform.legal_texts": "Правни текстове",
-  "actions.legal_texts.published": "Публикувана версия на правен текст"
+  "actions.legal_texts.published": "Публикувана версия на правен текст",
+  "actions.stock.reclassification.requested": "Заявена прекласификация",
+  "actions.stock.reclassification.approved": "Одобрена прекласификация",
+  "actions.stock.reclassification.rejected": "Отхвърлена прекласификация",
+  "actions.stock.reclassification.cancelled": "Оттеглена заявка за прекласификация",
+  "resources.stock.reclassification": "Прекласификация на наличност"
 }
