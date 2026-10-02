@@ -249,3 +249,42 @@ func (c *Client) Stats(ctx context.Context, spec string) (int64, error) {
 	}
 	return stats.NumberOfDocuments, nil
 }
+
+// SearchIDs queries one spec index with a filter and returns the matching
+// document ids in rank order plus the estimated total hit count. List
+// endpoints use it (TEC-164) and load the records from Postgres with their
+// own scope filter, so the index is never the only access check.
+func (c *Client) SearchIDs(ctx context.Context, spec, q, filter string, limit, offset int) ([]string, int64, error) {
+	if !c.Enabled() {
+		return nil, 0, nil
+	}
+	q = strings.TrimSpace(q)
+	if q == "" {
+		return nil, 0, nil
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	req := &meilisearch.SearchRequest{
+		Limit:                int64(limit),
+		Offset:               int64(offset),
+		AttributesToRetrieve: []string{"id"},
+	}
+	if filter = strings.TrimSpace(filter); filter != "" {
+		req.Filter = filter
+	}
+	resp, err := c.client.Index(c.indexUID(spec)).SearchWithContext(ctx, q, req)
+	if err != nil {
+		return nil, 0, fmt.Errorf("searchengine: search %q: %w", spec, err)
+	}
+	ids := make([]string, 0, len(resp.Hits))
+	for _, hit := range resp.Hits {
+		if h := mapHit(spec, hit); h.ID != "" {
+			ids = append(ids, h.ID)
+		}
+	}
+	return ids, resp.EstimatedTotalHits, nil
+}

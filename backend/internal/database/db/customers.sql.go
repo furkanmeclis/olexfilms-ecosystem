@@ -436,6 +436,50 @@ func (q *Queries) FindVehiclesByVIN(ctx context.Context, arg FindVehiclesByVINPa
 	return items, nil
 }
 
+const getCustomerForIndex = `-- name: GetCustomerForIndex :one
+SELECT u.uuid, u.name, u.surname, u.email, u.phone_e164, u.status,
+       cp.company_name,
+       array_agg(DISTINCT co.organization_id)::bigint[] AS organization_ids,
+       array_agg(DISTINCT co.brand_id)::bigint[] AS brand_ids
+FROM users u
+JOIN customer_organizations co ON co.user_id = u.id
+LEFT JOIN customer_profiles cp ON cp.user_id = u.id
+WHERE u.uuid = $1
+  AND u.deleted_at IS NULL
+  AND u.status <> 'anonymized'
+  AND u.merged_into_user_id IS NULL
+GROUP BY u.id, cp.user_id
+`
+
+type GetCustomerForIndexRow struct {
+	Uuid            uuid.UUID   `json:"uuid"`
+	Name            string      `json:"name"`
+	Surname         string      `json:"surname"`
+	Email           pgtype.Text `json:"email"`
+	PhoneE164       pgtype.Text `json:"phone_e164"`
+	Status          string      `json:"status"`
+	CompanyName     pgtype.Text `json:"company_name"`
+	OrganizationIds []int64     `json:"organization_ids"`
+	BrandIds        []int64     `json:"brand_ids"`
+}
+
+func (q *Queries) GetCustomerForIndex(ctx context.Context, argUuid uuid.UUID) (GetCustomerForIndexRow, error) {
+	row := q.db.QueryRow(ctx, getCustomerForIndex, argUuid)
+	var i GetCustomerForIndexRow
+	err := row.Scan(
+		&i.Uuid,
+		&i.Name,
+		&i.Surname,
+		&i.Email,
+		&i.PhoneE164,
+		&i.Status,
+		&i.CompanyName,
+		&i.OrganizationIds,
+		&i.BrandIds,
+	)
+	return i, err
+}
+
 const getCustomerOrganization = `-- name: GetCustomerOrganization :one
 SELECT id, user_id, organization_id, brand_id, first_service_at, created_at FROM customer_organizations
 WHERE user_id = $1 AND organization_id = $2
@@ -767,6 +811,66 @@ func (q *Queries) ListCustomerOrganizationsByUser(ctx context.Context, arg ListC
 	return items, nil
 }
 
+const listCustomersForIndex = `-- name: ListCustomersForIndex :many
+SELECT u.uuid, u.name, u.surname, u.email, u.phone_e164, u.status,
+       cp.company_name,
+       array_agg(DISTINCT co.organization_id)::bigint[] AS organization_ids,
+       array_agg(DISTINCT co.brand_id)::bigint[] AS brand_ids
+FROM users u
+JOIN customer_organizations co ON co.user_id = u.id
+LEFT JOIN customer_profiles cp ON cp.user_id = u.id
+WHERE u.deleted_at IS NULL
+  AND u.status <> 'anonymized'
+  AND u.merged_into_user_id IS NULL
+GROUP BY u.id, cp.user_id
+ORDER BY u.id
+`
+
+type ListCustomersForIndexRow struct {
+	Uuid            uuid.UUID   `json:"uuid"`
+	Name            string      `json:"name"`
+	Surname         string      `json:"surname"`
+	Email           pgtype.Text `json:"email"`
+	PhoneE164       pgtype.Text `json:"phone_e164"`
+	Status          string      `json:"status"`
+	CompanyName     pgtype.Text `json:"company_name"`
+	OrganizationIds []int64     `json:"organization_ids"`
+	BrandIds        []int64     `json:"brand_ids"`
+}
+
+// TEC-164: Meilisearch customers index. One document per customer linked to
+// at least one organization; anonymized, merged and deleted users never
+// enter the index. organization_ids / brand_ids drive the scope filter.
+func (q *Queries) ListCustomersForIndex(ctx context.Context) ([]ListCustomersForIndexRow, error) {
+	rows, err := q.db.Query(ctx, listCustomersForIndex)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListCustomersForIndexRow{}
+	for rows.Next() {
+		var i ListCustomersForIndexRow
+		if err := rows.Scan(
+			&i.Uuid,
+			&i.Name,
+			&i.Surname,
+			&i.Email,
+			&i.PhoneE164,
+			&i.Status,
+			&i.CompanyName,
+			&i.OrganizationIds,
+			&i.BrandIds,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listOrganizationCustomers = `-- name: ListOrganizationCustomers :many
 SELECT u.id, u.uuid, u.name, u.surname, u.email, u.phone_e164, u.status, u.locale, u.created_at,
        cp.type AS customer_type, cp.company_name,
@@ -787,9 +891,11 @@ WHERE u.deleted_at IS NULL
     OR u.phone_e164 LIKE '%' || $4 || '%'
     OR cp.company_name ILIKE '%' || $4 || '%'
   )
+  -- TEC-164: Meilisearch hits; the scope filter above still applies.
+  AND ($5::uuid[] IS NULL OR u.uuid = ANY ($5::uuid[]))
 GROUP BY u.id, cp.user_id
 ORDER BY linked_at DESC, u.id DESC
-LIMIT $6 OFFSET $5
+LIMIT $7 OFFSET $6
 `
 
 type ListOrganizationCustomersParams struct {
@@ -797,6 +903,7 @@ type ListOrganizationCustomersParams struct {
 	BrandID     pgtype.Int8 `json:"brand_id"`
 	Status      pgtype.Text `json:"status"`
 	Q           pgtype.Text `json:"q"`
+	Uuids       []uuid.UUID `json:"uuids"`
 	OffsetCount int32       `json:"offset_count"`
 	LimitCount  int32       `json:"limit_count"`
 }
@@ -824,6 +931,7 @@ func (q *Queries) ListOrganizationCustomers(ctx context.Context, arg ListOrganiz
 		arg.BrandID,
 		arg.Status,
 		arg.Q,
+		arg.Uuids,
 		arg.OffsetCount,
 		arg.LimitCount,
 	)

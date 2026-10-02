@@ -3245,7 +3245,7 @@ export interface paths {
         };
         /**
          * Customers linked to the organizations in scope
-         * @description customers.read. A dealer sees the customers linked to its organization (customer_organizations), a distributor its subtree, the center the brand; always the domain brand (K20). Anonymized customers are listed masked (`anonymized: true`, localized name, no contact data).
+         * @description customers.read. A dealer sees the customers linked to its organization (customer_organizations), a distributor its subtree, the center the brand; always the domain brand (K20). Anonymized customers are listed masked (`anonymized: true`, localized name, no contact data). TEC-164: `q` searches the Meilisearch customers index when it is up (filtered on the scope's organizations and the brand, ranked by relevance; the hits are reloaded from Postgres with the same scope) and falls back to the SQL search otherwise. Anonymized customers are never indexed, so `status=anonymized` always uses the SQL search.
          */
         get: operations["listCustomers"];
         put?: never;
@@ -3358,6 +3358,63 @@ export interface paths {
          * @description customers.merge (center roles) in a center organization, plus a fresh step-up (403 STEP_UP_REQUIRED). One transaction: vehicles, services (following their vehicle), warranties (holder), organization links (duplicates folded into the target's link), consents and the profile move to target_uuid; the phone / e-mail the target lacks is handed over. Nothing is deleted: the source keeps its row with merged_into_user_id = target and status disabled, its refresh tokens are revoked and it can no longer sign in. Customer cari accounts are not moved (reported). Writes the audit row customers.merged and the outbox event customer.merged. Same refusals as the preview.
          */
         post: operations["mergeCustomer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/customers/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a customer list export (CSV, XLSX or PDF)
+         * @description TEC-164. customers.read with the list's scope: the job (worker-docs, exports queue) exports the customers of the scope with the list filters (`q`, `status`), masked like the list (anonymized customers show the anonymized label; identity numbers are not exported). The worker re-authorizes the stored scope against the job organization. The request is written to the activity log (customers.list_exported). Poll and download through /v1/customer-list-exports/{uuid}.
+         */
+        post: operations["requestCustomerListExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/customer-list-exports/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A customer list export job of the active organization
+         * @description download_url points at /v1/customer-list-exports/{uuid}/download once completed.
+         */
+        get: operations["getCustomerListExport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/customer-list-exports/{uuid}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download a completed customer list export (audited) */
+        get: operations["downloadCustomerListExport"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -7139,6 +7196,18 @@ export interface components {
             success: true;
             data: components["schemas"]["CustomerMergeResult"];
             meta: components["schemas"]["ResponseMeta"];
+        };
+        CustomerListExportInput: {
+            /** @enum {string} */
+            format: "csv" | "xlsx" | "pdf";
+            /** @description List filters (same as GET /v1/customers). */
+            query?: {
+                q?: string;
+                /** @enum {string} */
+                status?: "active" | "disabled" | "pending" | "anonymized";
+            };
+            /** @description Document language (defaults to the request locale). */
+            locale?: string;
         };
         CustomerDataExportInput: {
             /** @enum {string} */
@@ -15869,6 +15938,85 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    requestCustomerListExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomerListExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getCustomerListExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Export job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    downloadCustomerListExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description File bytes (text/csv, XLSX or application/pdf) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     requestCustomerDataExport: {

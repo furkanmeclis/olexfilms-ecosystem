@@ -180,6 +180,10 @@ func (s *Service) merge(ctx context.Context, c Caller, sourceID, targetID uuid.U
 	if s.search != nil {
 		s.search.EnqueueUpsert(ctx, adapters.SpecUsers, res.SourceUUID.String())
 		s.search.EnqueueUpsert(ctx, adapters.SpecUsers, res.TargetUUID.String())
+		// TEC-164: the merged source leaves the customers index (not
+		// indexable any more), the target gains the source's links.
+		s.search.EnqueueDelete(ctx, SearchSpec, res.SourceUUID.String())
+		s.indexCustomer(ctx, res.TargetUUID)
 	}
 	return res, nil
 }
