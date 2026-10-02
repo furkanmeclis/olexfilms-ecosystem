@@ -163,5 +163,9 @@
   "groups.orders": "Orders",
   "groups.transfers": "Transfers",
   "labels.services.complete": "Complete services",
-  "labels.services.cancel": "Cancel services"
+  "labels.services.cancel": "Cancel services",
+  "labels.warranties.read": "Read warranties",
+  "labels.warranties.void": "Void warranties",
+  "labels.vehicles.transfer": "Transfer vehicles",
+  "groups.warranties": "Warranties"
 }

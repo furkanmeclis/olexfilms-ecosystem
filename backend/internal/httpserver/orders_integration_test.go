@@ -86,7 +86,7 @@ func (it *itest) setListPrice(p db.Product, currency, sale string) {
 // effective purchase price (client prices are ignored); approval freezes the
 // rate and re-locks the prices; later price list changes leave the order
 // alone; organizations outside the order get 404; invalid transitions and
-// the TEC-168 statuses answer 409. A distributor -> dealer order is invisible to the
+// delivered answers 409. A distributor -> dealer order is invisible to the
 // distributor's other dealers.
 func TestIntegrationOrdersCenterToDistributor(t *testing.T) {
 	it := newIntegration(t)
@@ -219,14 +219,12 @@ func TestIntegrationOrdersCenterToDistributor(t *testing.T) {
 		t.Fatalf("frozen order moved: %+v", b)
 	}
 
-	// 6. delivered, received and cancelling are not available yet
-	// (TEC-168); ready and shipped do not follow approved.
-	for _, st := range []string{"received", "cancelling", "delivered"} {
-		if code, ec := it.transition(staffTok, o.UUID, st); code != http.StatusConflict || ec != "ORDER_TRANSITION_UNAVAILABLE" {
-			t.Fatalf("%s = %d %s", st, code, ec)
-		}
+	// 6. delivered is not used (TEC-168 receives straight from shipped);
+	// ready, shipped, received and cancelling do not follow approved.
+	if code, ec := it.transition(staffTok, o.UUID, "delivered"); code != http.StatusConflict || ec != "ORDER_TRANSITION_UNAVAILABLE" {
+		t.Fatalf("delivered = %d %s", code, ec)
 	}
-	for _, st := range []string{"ready", "shipped"} {
+	for _, st := range []string{"ready", "shipped", "received", "cancelling"} {
 		if code, ec := it.transition(staffTok, o.UUID, st); code != http.StatusConflict || ec != "ORDER_INVALID_TRANSITION" {
 			t.Fatalf("approved -> %s = %d %s", st, code, ec)
 		}

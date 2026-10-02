@@ -99,11 +99,17 @@ tags:
       Accounting core (TEC-99/TEC-172): cash/bank accounts, cari balances,
       manual entries, collections/payments and voids. The ledger is
       append-only; dealers read only (accounting.read) in F1.
+  - name: Services
+    description: >-
+      Vehicle services (TEC-97/TEC-179): draft by the serving organization,
+      items from its stock, the legacy status flow and images. Completion
+      with stock consumption arrives with TEC-180.
   - name: Orders
     description: >-
       Product orders down the tree (TEC-96/TEC-166, K6): draft by the buyer,
-      server-side prices (K8), rate frozen at seller approval (K7) and the
-      stock-free status transitions.
+      server-side prices (K8), rate frozen at seller approval (K7), barcode
+      assignment and shipping (TEC-167), receipt and cancel after shipping
+      (TEC-168).
   - name: Mobile
     description: |
       Mobile app API (TEC-91). `/v1/mobile/*` is reached through the BFF
@@ -8133,6 +8139,345 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/services:
+    get:
+      tags: [Services]
+      operationId: listServices
+      summary: Services inside the services.read scope
+      description: >-
+        Dealer: its own organization (own scope: services it created),
+        distributor: its subtree, center: the domain brand (K20). q matches
+        the service number, plate, VIN and the customer's name or phone.
+        List rows carry no items, images or status logs.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string, maxLength: 100 }
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/ServiceStatus" }
+        - name: customer_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - name: vehicle_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Services
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeServicePage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Services]
+      operationId: createService
+      summary: Open a draft service of the active organization
+      description: >-
+        Needs services.write. The customer must be linked to an organization
+        of the services.write scope and the vehicle must belong to the
+        customer (domain brand) and carry a car brand and model; plate, VIN,
+        car brand/model and year are copied into the service (TEC-97
+        decision 3). The brand is the organization's brand (decision 2) and
+        the number is DS + 8 alphanumerics. has_measurement needs the
+        vehicle VIN. A read-only organization (K23: no contract yet) gets
+        403 ORGANIZATION_READ_ONLY on every write.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceCreateInput"
+      responses:
+        "201":
+          description: Draft service
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeService"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/services/{uuid}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    get:
+      tags: [Services]
+      operationId: getService
+      summary: One service with its items, images and status logs
+      description: Services outside the services.read scope answer 404.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Service
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeService"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Services]
+      operationId: updateService
+      summary: Edit km, package, notes and the measurement answer
+      description: >-
+        Needs services.write reaching the service. Completed and cancelled
+        services are locked except for the center (409 SERVICE_NOT_EDITABLE).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceUpdateInput"
+      responses:
+        "200":
+          description: Updated service
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeService"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/services/{uuid}/items:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    post:
+      tags: [Services]
+      operationId: addServiceItem
+      summary: Add a stock unit to a service (by barcode)
+      description: >-
+        Only while the service is draft, pending or processing (409
+        SERVICE_NOT_EDITABLE). The unit must be held by the service
+        organization (serial: available or placed; fixed barcode: enough
+        pieces on hand), else 409 SERVICE_UNIT_NOT_AVAILABLE. A serial unit
+        already in an open service (this one included) is 409
+        SERVICE_UNIT_IN_USE; a roll may be cut (partial, meters) for several
+        services but a whole roll excludes other uses. applied_parts must be
+        in the product category's available_parts.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceItemInput"
+      responses:
+        "201":
+          description: Service with the new item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeService"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/services/{uuid}/items/{item}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+      - name: item
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    delete:
+      tags: [Services]
+      operationId: removeServiceItem
+      summary: Remove an item (draft, pending or processing only)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Service without the item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeService"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/services/{uuid}/transitions:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    post:
+      tags: [Services]
+      operationId: transitionService
+      summary: Move a service to another status
+      description: >-
+        Legacy state machine without stock (TEC-179): draft -> pending ->
+        processing -> ready (services.write); center shortcuts draft ->
+        processing and pending -> ready; draft | pending | processing |
+        ready -> cancelled (services.cancel, center only; a dealer gets
+        403). Completed and cancelled are final (409
+        SERVICE_INVALID_TRANSITION). completed answers 409
+        SERVICE_COMPLETION_UNAVAILABLE until TEC-180 (stock consumption). A
+        request for the current status is a no-op. Every move writes a
+        status log and a service.* outbox event.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceTransitionInput"
+      responses:
+        "200":
+          description: Service after the transition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeService"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/services/{uuid}/images:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    post:
+      tags: [Services]
+      operationId: uploadServiceImage
+      summary: Upload a service image
+      description: >-
+        Needs services.write reaching the service and an editable form. The
+        type is detected from the content: JPEG, PNG or WebP only (400),
+        at most 5 MiB (413) and 30 images per service (422
+        SERVICE_TOO_MANY_IMAGES).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image: { type: string, format: binary }
+                title: { type: string, maxLength: 255 }
+      responses:
+        "201":
+          description: Image added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeServiceImage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/services/{uuid}/images/{image}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+      - name: image
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Services]
+      operationId: downloadServiceImage
+      summary: Download a service image (services.read scope)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Image bytes
+          content:
+            image/png: { schema: { type: string, format: binary } }
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Services]
+      operationId: deleteServiceImage
+      summary: Delete a service image
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Image deleted
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   /v1/orders:
     get:
       tags: [Orders]
@@ -8292,12 +8637,23 @@ paths:
         serial units go in_transit owned by the buyer, reservations are
         consumed; 409 ORDER_STOCK_UNAVAILABLE when the ledger refuses);
         draft | submitted | approved | preparing | ready -> cancelled
-        (either side, orders.cancel; active reservations are released). A
-        request for the current status is a no-op (a repeated ship writes no
-        movement). Other moves answer 409 ORDER_INVALID_TRANSITION;
-        delivered, received and cancelling answer 409
-        ORDER_TRANSITION_UNAVAILABLE until TEC-168. Every move writes the
-        status history and an orders.* outbox event.
+        (either side, orders.cancel; active reservations are released).
+        After shipping (TEC-168): shipped -> received (buyer,
+        orders.receive; the whole shipment, no partial receipt: one ledger
+        received per shipped unit with idempotency key
+        order:order_item_unit:<id>:received:<barcode>, the units become
+        available at the buyer organization; orders.received);
+        shipped -> cancelling (either side, orders.cancel; nothing moves,
+        the reason is kept; orders.cancel_requested); cancelling ->
+        cancelled (seller, orders.cancel or orders.ship, once the goods are
+        back: one ledger order_cancel_restore per shipped unit returns it to
+        the seller's source owner and status). A received order cannot be
+        cancelled (409 ORDER_INVALID_TRANSITION; returns are a separate
+        flow). A request for the current status is a no-op (a repeated
+        ship, receipt or cancel writes no movement). Other moves answer 409
+        ORDER_INVALID_TRANSITION; delivered is not used (received follows
+        shipped) and answers 409 ORDER_TRANSITION_UNAVAILABLE. Every move
+        writes the status history and an orders.* outbox event.
       security:
         - bearerAuth: []
       parameters:
@@ -13306,6 +13662,220 @@ components:
         data: { $ref: "#/components/schemas/AccountingBalanceReport" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
+    ServiceStatus:
+      type: string
+      enum: [draft, pending, processing, ready, completed, cancelled]
+
+    ServiceRef:
+      type: object
+      required: [uuid, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+
+    ServiceOrgRef:
+      type: object
+      required: [uuid, name, type]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        type: { type: string }
+
+    ServiceCustomerRef:
+      type: object
+      required: [uuid, name, surname, phone, anonymized]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string, description: The anonymized label when anonymized (K19) }
+        surname: { type: string }
+        phone: { type: [string, "null"] }
+        anonymized: { type: boolean }
+
+    ServiceItem:
+      type: object
+      required: [uuid, product, barcode, unit_kind, kind, quantity, meters, applied_parts, notes, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        product:
+          type: object
+          required: [uuid, sku, name, unit_type]
+          properties:
+            uuid: { type: string, format: uuid }
+            sku: { type: string }
+            name: { type: string }
+            unit_type: { type: string }
+        barcode: { type: string }
+        unit_kind: { type: string, enum: [serial, fixed] }
+        kind: { type: string, enum: [full, partial] }
+        quantity: { type: [integer, "null"], description: Pieces of a fixed barcode }
+        meters: { type: [string, "null"], description: Meters cut from a roll (partial) }
+        applied_parts:
+          type: array
+          items: { type: string }
+        notes: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+
+    ServiceImage:
+      type: object
+      required: [uuid, title, sort_order, url, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        title: { type: [string, "null"] }
+        sort_order: { type: integer }
+        url: { type: string, description: Authenticated download path }
+        created_at: { type: string, format: date-time }
+
+    ServiceStatusLog:
+      type: object
+      required: [from_status, to_status, note, by_other_organization, created_at]
+      properties:
+        from_status: { type: [string, "null"] }
+        to_status: { $ref: "#/components/schemas/ServiceStatus" }
+        note: { type: [string, "null"] }
+        by_other_organization:
+          type: boolean
+          description: The change was made by another organization (e.g. the center)
+        created_at: { type: string, format: date-time }
+
+    Service:
+      type: object
+      required:
+        - uuid
+        - service_no
+        - status
+        - status_label
+        - organization
+        - customer
+        - vehicle_uuid
+        - car_brand
+        - car_model
+        - model_year
+        - plate
+        - plate_country
+        - vin
+        - km
+        - package
+        - notes
+        - has_measurement
+        - cancel_reason
+        - completed_at
+        - cancelled_at
+        - created_at
+        - updated_at
+        - editable
+        - items_editable
+        - available_transitions
+      properties:
+        uuid: { type: string, format: uuid }
+        service_no: { type: string, description: DS + 8 alphanumerics }
+        status: { $ref: "#/components/schemas/ServiceStatus" }
+        status_label: { type: string }
+        organization: { $ref: "#/components/schemas/ServiceOrgRef" }
+        customer: { $ref: "#/components/schemas/ServiceCustomerRef" }
+        vehicle_uuid: { type: string, format: uuid }
+        car_brand: { $ref: "#/components/schemas/ServiceRef" }
+        car_model: { $ref: "#/components/schemas/ServiceRef" }
+        model_year: { type: [integer, "null"] }
+        plate: { type: [string, "null"] }
+        plate_country: { type: [string, "null"] }
+        vin: { type: [string, "null"] }
+        km: { type: [integer, "null"] }
+        package: { type: [string, "null"] }
+        notes: { type: [string, "null"] }
+        has_measurement: { type: boolean }
+        cancel_reason: { type: [string, "null"] }
+        completed_at: { type: [string, "null"], format: date-time }
+        cancelled_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        editable: { type: boolean, description: The caller may edit the form and images }
+        items_editable: { type: boolean, description: The caller may add or remove items }
+        available_transitions:
+          type: array
+          items: { $ref: "#/components/schemas/ServiceStatus" }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ServiceItem" }
+        images:
+          type: array
+          items: { $ref: "#/components/schemas/ServiceImage" }
+        status_logs:
+          type: array
+          items: { $ref: "#/components/schemas/ServiceStatusLog" }
+
+    ServiceCreateInput:
+      type: object
+      required: [customer_uuid, vehicle_uuid]
+      properties:
+        customer_uuid: { type: string, format: uuid }
+        vehicle_uuid: { type: string, format: uuid }
+        km: { type: integer, minimum: 0, maximum: 5000000 }
+        package: { type: string, maxLength: 255 }
+        notes: { type: string, maxLength: 5000 }
+        has_measurement: { type: boolean, default: false }
+
+    ServiceUpdateInput:
+      type: object
+      properties:
+        km: { type: [integer, "null"], minimum: 0, maximum: 5000000 }
+        package: { type: [string, "null"], maxLength: 255 }
+        notes: { type: [string, "null"], maxLength: 5000 }
+        has_measurement: { type: boolean }
+
+    ServiceItemInput:
+      type: object
+      required: [barcode]
+      properties:
+        barcode: { type: string, maxLength: 64 }
+        product_uuid: { type: string, format: uuid, description: Optional check of the unit's product }
+        kind: { type: string, enum: [full, partial], default: full }
+        quantity: { type: integer, minimum: 1, description: Pieces of a fixed barcode }
+        meters: { type: number, description: "Meters cut from a roll (partial, 2 decimals)" }
+        applied_parts:
+          type: array
+          items: { type: string }
+        notes: { type: string, maxLength: 5000 }
+
+    ServiceTransitionInput:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: "#/components/schemas/ServiceStatus" }
+        note: { type: string, maxLength: 5000, description: Kept in the status log; the cancel reason for cancelled }
+
+    EnvelopeService:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Service" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeServiceImage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ServiceImage" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeServicePage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/Service" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
     OrderStatus:
       type: string
       enum: [draft, submitted, approved, preparing, ready, processing, shipped, delivered, received, cancelling, cancelled]
@@ -13505,7 +14075,7 @@ components:
       required: [status]
       properties:
         status: { $ref: "#/components/schemas/OrderStatus" }
-        reason: { type: string, description: Kept in the history; the cancel reason for cancelled }
+        reason: { type: string, description: Kept in the history; the cancel reason for cancelling and cancelled }
 
     EnvelopeOrder:
       type: object

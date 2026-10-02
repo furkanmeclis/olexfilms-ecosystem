@@ -24,7 +24,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PREFIX="drill-$$"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/olex-dr-drill.XXXXXX")"
-PG_PORT="${DRILL_PG_PORT:-$((20000 + RANDOM % 20000))}"
+# Stay below the Linux ephemeral range (32768+): a random port there can
+# already be the source port of an outgoing connection (bind: address in use).
+PG_PORT="${DRILL_PG_PORT:-$((20000 + RANDOM % 12000))}"
 S3_PORT="$((PG_PORT + 1))"
 REDIS_PORT="$((PG_PORT + 2))"
 API_PORT="$((PG_PORT + 3))"

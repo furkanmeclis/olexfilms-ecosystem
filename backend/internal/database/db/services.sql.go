@@ -133,6 +133,15 @@ WHERE brand_id = $1
     OR service_no ILIKE '%' || $7 || '%'
     OR plate ILIKE '%' || $7 || '%'
     OR vin ILIKE '%' || $7 || '%'
+    OR EXISTS (
+      SELECT 1 FROM users cu
+      WHERE cu.id = services.customer_user_id
+        AND cu.status <> 'anonymized'
+        AND (
+          (cu.name || ' ' || cu.surname) ILIKE '%' || $7 || '%'
+          OR cu.phone_e164 LIKE '%' || $7 || '%'
+        )
+    )
   )
 `
 
@@ -686,6 +695,61 @@ func (q *Queries) GetServiceItemByUUID(ctx context.Context, arg GetServiceItemBy
 	return i, err
 }
 
+const getServiceRefs = `-- name: GetServiceRefs :one
+SELECT o.uuid AS organization_uuid, o.name AS organization_name, o.type AS organization_type,
+       u.uuid AS customer_uuid, u.name AS customer_name, u.surname AS customer_surname,
+       u.phone_e164 AS customer_phone, u.status AS customer_status,
+       v.uuid AS vehicle_uuid,
+       cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
+       cm.uuid AS car_model_uuid, cm.name AS car_model_name
+FROM services s
+JOIN organizations o ON o.id = s.organization_id
+JOIN users u ON u.id = s.customer_user_id
+JOIN vehicles v ON v.id = s.vehicle_id
+JOIN car_brands cb ON cb.id = s.car_brand_id
+JOIN car_models cm ON cm.id = s.car_model_id
+WHERE s.id = $1
+`
+
+type GetServiceRefsRow struct {
+	OrganizationUuid uuid.UUID   `json:"organization_uuid"`
+	OrganizationName string      `json:"organization_name"`
+	OrganizationType string      `json:"organization_type"`
+	CustomerUuid     uuid.UUID   `json:"customer_uuid"`
+	CustomerName     string      `json:"customer_name"`
+	CustomerSurname  string      `json:"customer_surname"`
+	CustomerPhone    pgtype.Text `json:"customer_phone"`
+	CustomerStatus   string      `json:"customer_status"`
+	VehicleUuid      uuid.UUID   `json:"vehicle_uuid"`
+	CarBrandUuid     uuid.UUID   `json:"car_brand_uuid"`
+	CarBrandName     string      `json:"car_brand_name"`
+	CarModelUuid     uuid.UUID   `json:"car_model_uuid"`
+	CarModelName     string      `json:"car_model_name"`
+}
+
+// Display references of one service (organization, customer, vehicle and
+// the car brand / model snapshot) for the API view (TEC-179).
+func (q *Queries) GetServiceRefs(ctx context.Context, id int64) (GetServiceRefsRow, error) {
+	row := q.db.QueryRow(ctx, getServiceRefs, id)
+	var i GetServiceRefsRow
+	err := row.Scan(
+		&i.OrganizationUuid,
+		&i.OrganizationName,
+		&i.OrganizationType,
+		&i.CustomerUuid,
+		&i.CustomerName,
+		&i.CustomerSurname,
+		&i.CustomerPhone,
+		&i.CustomerStatus,
+		&i.VehicleUuid,
+		&i.CarBrandUuid,
+		&i.CarBrandName,
+		&i.CarModelUuid,
+		&i.CarModelName,
+	)
+	return i, err
+}
+
 const insertServiceStatusLog = `-- name: InsertServiceStatusLog :one
 
 INSERT INTO service_status_logs (
@@ -999,6 +1063,15 @@ WHERE brand_id = $1
     OR service_no ILIKE '%' || $7 || '%'
     OR plate ILIKE '%' || $7 || '%'
     OR vin ILIKE '%' || $7 || '%'
+    OR EXISTS (
+      SELECT 1 FROM users cu
+      WHERE cu.id = services.customer_user_id
+        AND cu.status <> 'anonymized'
+        AND (
+          (cu.name || ' ' || cu.surname) ILIKE '%' || $7 || '%'
+          OR cu.phone_e164 LIKE '%' || $7 || '%'
+        )
+    )
   )
 ORDER BY created_at DESC, id DESC
 LIMIT $9 OFFSET $8
@@ -1017,7 +1090,9 @@ type ListServicesInScopeParams struct {
 }
 
 // Scope list: org_ids NULL = whole brand (brand/all scope); created_by for
-// scope own, customer_user_id for scope customer (portal).
+// scope own, customer_user_id for scope customer (portal). q matches the
+// service number, plate, VIN and the customer's name or phone (TEC-179;
+// anonymized customers are not searchable by name).
 func (q *Queries) ListServicesInScope(ctx context.Context, arg ListServicesInScopeParams) ([]Service, error) {
 	rows, err := q.db.Query(ctx, listServicesInScope,
 		arg.BrandID,

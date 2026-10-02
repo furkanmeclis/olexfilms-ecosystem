@@ -413,11 +413,7 @@ func (s *Service) ship(ctx context.Context, q *db.Queries, tx pgx.Tx, c Caller, 
 	if len(units) == 0 {
 		return nil, ErrNotFullyAssigned
 	}
-	var actor *int64
-	if c.Principal.UserInternal != 0 {
-		v := c.Principal.UserInternal
-		actor = &v
-	}
+	actor := actorOf(c)
 	buyer := ledger.Owner{Type: ledger.OwnerOrganization, ID: o.BuyerOrgID, OrgID: o.BuyerOrgID}
 	movements := 0
 	for _, a := range units {
@@ -451,11 +447,7 @@ func (s *Service) ship(ctx context.Context, q *db.Queries, tx pgx.Tx, c Caller, 
 		}
 		r, err := s.ledger.Post(ctx, tx, m)
 		if err != nil {
-			if errors.Is(err, ledger.ErrInsufficientStock) || errors.Is(err, ledger.ErrTransitionNotAllowed) ||
-				errors.Is(err, ledger.ErrOwnerMismatch) || errors.Is(err, ledger.ErrOwnerNotAllowed) {
-				return nil, fmt.Errorf("%w: %s: %v", ErrStockUnavailable, a.Barcode, err)
-			}
-			return nil, fmt.Errorf("orders: order_out %s: %w", a.Barcode, err)
+			return nil, stockErr("order_out", a.Barcode, err)
 		}
 		if !r.Replayed {
 			movements++

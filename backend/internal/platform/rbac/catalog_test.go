@@ -258,3 +258,27 @@ func TestServiceGrants(t *testing.T) {
 		t.Fatalf("super_admin services.cancel = %q", g[PermServicesCancel])
 	}
 }
+
+// TEC-185: only center roles (and super_admin) void warranties; every role
+// that reads services reads warranties at the same scope, and every role
+// that writes vehicles may transfer them at the same scope.
+func TestWarrantyGrants(t *testing.T) {
+	for _, r := range Roles {
+		if r.Slug == RoleSuperAdmin {
+			continue
+		}
+		if _, ok := r.Grants[PermWarrantiesVoid]; ok && r.OrgType != OrgTypeCenter {
+			t.Fatalf("%s must not hold warranties.void", r.Slug)
+		}
+		if sc, ok := r.Grants[PermServicesRead]; ok && r.Grants[PermWarrantiesRead] != sc {
+			t.Fatalf("%s warranties.read = %q, want services.read scope %q", r.Slug, r.Grants[PermWarrantiesRead], sc)
+		}
+		if sc, ok := r.Grants[PermVehiclesWrite]; ok && r.Grants[PermVehiclesTransfer] != sc {
+			t.Fatalf("%s vehicles.transfer = %q, want vehicles.write scope %q", r.Slug, r.Grants[PermVehiclesTransfer], sc)
+		}
+	}
+	g := RoleGrants(RoleDef{Slug: RoleSuperAdmin})
+	if g[PermWarrantiesVoid] != ScopeAll || g[PermWarrantiesRead] != ScopeAll || g[PermVehiclesTransfer] != ScopeAll {
+		t.Fatalf("super_admin warranty grants = %q %q %q", g[PermWarrantiesRead], g[PermWarrantiesVoid], g[PermVehiclesTransfer])
+	}
+}

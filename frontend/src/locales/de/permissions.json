@@ -163,5 +163,9 @@
   "groups.orders": "Bestellungen",
   "groups.transfers": "Umlagerungen",
   "labels.services.complete": "Services abschließen",
-  "labels.services.cancel": "Services stornieren"
+  "labels.services.cancel": "Services stornieren",
+  "labels.warranties.read": "Garantien anzeigen",
+  "labels.warranties.void": "Garantien stornieren",
+  "labels.vehicles.transfer": "Fahrzeuge übertragen",
+  "groups.warranties": "Garantien"
 }

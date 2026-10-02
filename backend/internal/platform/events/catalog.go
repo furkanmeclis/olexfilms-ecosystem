@@ -239,6 +239,27 @@ const (
 	ServiceNoteAdded    = "service.note_added"
 )
 
+// Warranty domain events (TEC-98 / TEC-185). warranty.created is written
+// by the service.completed consumer, expiring_soon (payload days: 30 or 7)
+// and expired by the daily cron, holder_changed by a completed vehicle
+// transfer, voided by the center.
+const (
+	WarrantyCreated       = "warranty.created"
+	WarrantyExpiringSoon  = "warranty.expiring_soon"
+	WarrantyExpired       = "warranty.expired"
+	WarrantyVoided        = "warranty.voided"
+	WarrantyHolderChanged = "warranty.holder_changed"
+)
+
+// Vehicle ownership transfer events (TEC-98 decision 6): two codes, one
+// for the current owner and one for the new owner.
+const (
+	VehicleTransferStarted   = "vehicle.transfer_started"
+	VehicleTransferCompleted = "vehicle.transfer_completed"
+	VehicleTransferCancelled = "vehicle.transfer_cancelled"
+	VehicleTransferExpired   = "vehicle.transfer_expired"
+)
+
 // Contracts domain events.
 const (
 	ContractsInstanceSigned = "contracts.instance_signed"
@@ -478,6 +499,15 @@ func catalogConstants() []string {
 		ServiceImageAdded,
 		ServiceImageRemoved,
 		ServiceNoteAdded,
+		WarrantyCreated,
+		WarrantyExpiringSoon,
+		WarrantyExpired,
+		WarrantyVoided,
+		WarrantyHolderChanged,
+		VehicleTransferStarted,
+		VehicleTransferCompleted,
+		VehicleTransferCancelled,
+		VehicleTransferExpired,
 		ContractsInstanceSigned,
 		AuthWelcome,
 		AuthEmailVerification,
