@@ -72,6 +72,16 @@ ON CONFLICT ON CONSTRAINT notification_templates_key_uq DO UPDATE SET
     updated_by_user_id = EXCLUDED.updated_by_user_id
 RETURNING *;
 
+-- Default templates of code-registered events (TEC-187): inserted once,
+-- an existing row (admin edit) is never overwritten.
+-- name: InsertNotificationTemplateIfMissing :execrows
+INSERT INTO notification_templates (code, role, channel, language, subject, body, format, active)
+VALUES (
+    sqlc.arg(code), sqlc.arg(role), sqlc.arg(channel), sqlc.arg(language),
+    sqlc.arg(subject), sqlc.arg(body), sqlc.arg(format), TRUE
+)
+ON CONFLICT ON CONSTRAINT notification_templates_key_uq DO NOTHING;
+
 -- name: ListNotificationPreferenceRows :many
 SELECT * FROM notification_preferences
 WHERE user_id = $1

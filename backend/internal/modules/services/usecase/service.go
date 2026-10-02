@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	custuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/customers/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
@@ -399,6 +400,26 @@ type UpdateInput struct {
 	Package        Optional[string]
 	Notes          Optional[string]
 	HasMeasurement Optional[bool]
+	// VIN replaces the service's VIN snapshot (wizard step 3, TEC-181); the
+	// vehicle record is not touched. Same rules as the vehicle VIN.
+	VIN Optional[string]
+}
+
+// vinOrNull normalizes a VIN with the vehicle rules (customers.NormalizeVIN:
+// 17 letters or digits, no I, O, Q; spaces and dashes dropped); nil or ""
+// clears it.
+func vinOrNull(p *string) (pgtype.Text, error) {
+	if p == nil {
+		return pgtype.Text{}, nil
+	}
+	v, err := custuc.NormalizeVIN(*p)
+	if err != nil {
+		return pgtype.Text{}, invalid("vin", "must be 17 letters or digits (no I, O or Q)")
+	}
+	if v == "" {
+		return pgtype.Text{}, nil
+	}
+	return pgtype.Text{String: v, Valid: true}, nil
 }
 
 // formEditable: completed and cancelled services are locked for everyone
@@ -440,7 +461,8 @@ func (s *Service) lockWritable(ctx context.Context, q *db.Queries, c Caller, id 
 	return svc, nil
 }
 
-// Update edits km, package, notes and the measurement answer.
+// Update edits km, package, notes, the measurement answer and the VIN
+// snapshot.
 func (s *Service) Update(ctx context.Context, c Caller, id uuid.UUID, in UpdateInput) (ServiceView, error) {
 	if err := checkLen("package", in.Package.Value, MaxPackageLen); err != nil {
 		return ServiceView{}, err
@@ -472,6 +494,11 @@ func (s *Service) Update(ctx context.Context, c Caller, id uuid.UUID, in UpdateI
 		}
 		if in.Notes.Set {
 			p.Notes = textOrNull(in.Notes.Value)
+		}
+		if in.VIN.Set {
+			if p.Vin, err = vinOrNull(in.VIN.Value); err != nil {
+				return err
+			}
 		}
 		if in.HasMeasurement.Set {
 			p.HasMeasurement = in.HasMeasurement.Value != nil && *in.HasMeasurement.Value

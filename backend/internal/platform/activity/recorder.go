@@ -32,6 +32,36 @@ func (r *Recorder) Record(ctx context.Context, actorID *int64, action, resource 
 	if r == nil || r.q == nil {
 		return
 	}
+	if err := Write(ctx, r.q, actorID, action, resource, resourceUUID, payload, MetaFromRequest(rreq)); err != nil {
+		r.log.Warn("activity_record_failed", "action", action, "error", err)
+	}
+}
+
+// Meta is the request origin of an event (client IP and user agent).
+type Meta struct {
+	IP        *netip.Addr
+	UserAgent string
+}
+
+// MetaFromRequest extracts the client IP and user agent (nil request: none).
+func MetaFromRequest(rreq *http.Request) Meta {
+	var m Meta
+	if rreq == nil {
+		return m
+	}
+	if host, _, err := net.SplitHostPort(rreq.RemoteAddr); err == nil {
+		if parsed, err := netip.ParseAddr(host); err == nil {
+			m.IP = &parsed
+		}
+	}
+	m.UserAgent = rreq.UserAgent()
+	return m
+}
+
+// Write inserts an activity event with q and returns the error. Use it with
+// transaction queries when the audit row must commit (or roll back) together
+// with the change it describes (e.g. KVKK anonymization, TEC-161).
+func Write(ctx context.Context, q *db.Queries, actorID *int64, action, resource string, resourceUUID *uuid.UUID, payload map[string]any, meta Meta) error {
 	payload = withOriginPayload(ctx, payload)
 	body, err := json.Marshal(payload)
 	if err != nil || payload == nil {
@@ -41,30 +71,17 @@ func (r *Recorder) Record(ctx context.Context, actorID *int64, action, resource 
 	if resourceUUID != nil {
 		ru = pgtype.UUID{Bytes: *resourceUUID, Valid: true}
 	}
-	var ip *netip.Addr
-	var ua pgtype.Text
-	if rreq != nil {
-		if host, _, err := net.SplitHostPort(rreq.RemoteAddr); err == nil {
-			if parsed, err := netip.ParseAddr(host); err == nil {
-				ip = &parsed
-			}
-		}
-		if rreq.UserAgent() != "" {
-			ua = pgtype.Text{String: rreq.UserAgent(), Valid: true}
-		}
-	}
-	_, err = r.q.InsertActivityEvent(ctx, db.InsertActivityEventParams{
+	ua := pgtype.Text{String: meta.UserAgent, Valid: meta.UserAgent != ""}
+	_, err = q.InsertActivityEvent(ctx, db.InsertActivityEventParams{
 		ActorUserID:  pgtypeInt8(actorID),
 		Action:       action,
 		Resource:     resource,
 		ResourceUuid: ru,
 		Payload:      body,
-		IpAddress:    ip,
+		IpAddress:    meta.IP,
 		UserAgent:    ua,
 	})
-	if err != nil {
-		r.log.Warn("activity_record_failed", "action", action, "error", err)
-	}
+	return err
 }
 
 func pgtypeInt8(id *int64) pgtype.Int8 {

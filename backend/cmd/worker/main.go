@@ -15,6 +15,7 @@ import (
 	accountingusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting/usecase"
 	bulkusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/bulk/usecase"
 	catalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/catalog/usecase"
+	customersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/customers/usecase"
 	docusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/usecase"
 	exportusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/usecase"
 	importusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/imports/usecase"
@@ -23,6 +24,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/providers"
 	notifusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/usecase"
 	stockrebuild "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/rebuild"
+	warrantymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty"
 	whatsappmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine"
@@ -114,6 +116,7 @@ func main() {
 	catalogSvc := catalogusecase.New(queries, searchIndexer)
 	// Exports only read the ledger: no poster, no feature checker.
 	accountingSvc := accountingusecase.New(pool, queries, nil, nil)
+	customersExportSvc := customersusecase.New(pool, queries, nil, nil)
 	ioReg := ioengine.NewRegistry(
 		catalogusecase.NewIOAdapter(catalogSvc, queries),
 		ioadapters.NewUsers(queries),
@@ -123,6 +126,10 @@ func main() {
 		// TEC-175: cari statement and balance report exports (read only).
 		accountingusecase.NewStatementAdapter(accountingSvc),
 		accountingusecase.NewBalancesAdapter(accountingSvc),
+		// TEC-161: personal data export (read only; identity numbers stay
+		// masked, so no PII key is needed here).
+		customersusecase.NewDataExportAdapter(customersExportSvc),
+		customersusecase.NewPortalDataExportAdapter(customersExportSvc),
 	)
 	exportSvc := exportusecase.New(queries, store, ioReg, nil, notifSvc, activityRec, log)
 	pdfClient := pdfrender.NewWithOptions(cfg.Gotenberg.URL, pdfrender.Options{MaxConnsPerHost: cfg.Queue.Concurrency})
@@ -137,6 +144,7 @@ func main() {
 	bulkSvc := bulkusecase.New(queries, bulkReg, nil, notifSvc, activityRec, cfg.Bulk, log)
 	logsSvc := logsusecase.New(queries)
 	ratesSvc := fxrates.New(queries, fxrates.NewFetcher(cfg.Rates.TCMBURL, cfg.Rates.ECBURL), log)
+	warrantyCron := warrantymodule.NewCron(pool, queries, cfg.Auth.FrontendURL)
 
 	persist := logging.Attach(log, logsSvc)
 	log = persist.Logger()
@@ -164,6 +172,7 @@ func main() {
 		WithNotificationPurge(notifSvc.PurgeExpired).
 		WithDocsRender(docSvc.ProcessRender).
 		WithRatesFetch(ratesSvc.FetchTask).
+		WithWarrantyCron(warrantyCron.ExpireTask, warrantyCron.ExpiringScanTask).
 		// TEC-156: nightly projection drift scan; report only, no repair.
 		WithInventoryRebuild(stockrebuild.New(pool, queries).ScanTask(log)).
 		WithSearch(

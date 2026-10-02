@@ -3,6 +3,7 @@ package notifications
 import (
 	"context"
 	"log/slog"
+	"strconv"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/catalog"
 	notifmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/model"
@@ -102,6 +103,18 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 			},
 		}, len(ids) > 0
 	})
+	// TEC-187: warranty cron events go to the warranty holder (WhatsApp +
+	// in-app by default); the event id keeps a replay from sending twice.
+	on(events.WarrantyExpiringSoon, func(event events.Event) (notifmodel.DispatchInput, bool) {
+		days, ok := int64FromPayload(event.Payload, "days")
+		if !ok || days <= 0 {
+			return notifmodel.DispatchInput{}, false
+		}
+		return warrantyDispatch(event, catalog.EventWarrantyExpiringSoon, days)
+	})
+	on(events.WarrantyExpired, func(event events.Event) (notifmodel.DispatchInput, bool) {
+		return warrantyDispatch(event, catalog.EventWarrantyExpired, 0)
+	})
 	on(events.AIDraftCreated, func(event events.Event) (notifmodel.DispatchInput, bool) {
 		ids := userIDsFromAIEvent(event)
 		return notifmodel.DispatchInput{
@@ -112,6 +125,37 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 			},
 		}, len(ids) > 0
 	})
+}
+
+// warrantyDispatch maps a warranty cron event to a dispatch for the holder;
+// the brand comes from the warranty (K20), the variables from the payload.
+func warrantyDispatch(event events.Event, code string, days int64) (notifmodel.DispatchInput, bool) {
+	holder, ok := int64FromPayload(event.Payload, "holder_user_id")
+	if !ok || holder <= 0 {
+		return notifmodel.DispatchInput{}, false
+	}
+	vars := map[string]string{}
+	for _, k := range []string{"plate", "product_name", "end_date", "organization_name", "verify_url"} {
+		vars[k] = stringFromPayload(event.Payload, k)
+	}
+	payload := map[string]any{
+		"warranty_uuid": stringFromPayload(event.Payload, "warranty_uuid"),
+		"public_code":   stringFromPayload(event.Payload, "public_code"),
+	}
+	if days > 0 {
+		vars["days"] = strconv.FormatInt(days, 10)
+		payload["days"] = days
+	}
+	in := notifmodel.DispatchInput{
+		EventCode: code, UserIDs: []int64{holder}, Vars: vars, Payload: payload,
+	}
+	if brand, ok := int64FromPayload(event.Payload, "brand_id"); ok && brand > 0 {
+		in.BrandID = &brand
+	}
+	if u := vars["verify_url"]; u != "" {
+		in.ActionURL = &u
+	}
+	return in, true
 }
 
 // userIDsFromAIEvent prefers assigned_user_id, else notify_user_ids slice in payload.

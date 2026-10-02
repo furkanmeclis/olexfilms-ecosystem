@@ -97,6 +97,7 @@ import (
 	vehiclecatalogmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/vehiclecatalog"
 	vehiclecataloghandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/vehiclecatalog/handler"
 	vehiclecatalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/vehiclecatalog/usecase"
+	warrantymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty"
 	whatsappmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp"
 	whatsapphandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/handler"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
@@ -333,9 +334,14 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		customerPII = nil
 		log.Warn("customer_pii_disabled", "error", piiErr)
 	}
-	customershandler.RegisterRoutes(mux,
-		customershandler.New(customersusecase.New(deps.DB, deps.Queries, customerPII, geoSvc), activityRec),
-		tokens, loader, deps.Queries, featureSvc)
+	customersSvc := customersusecase.New(deps.DB, deps.Queries, customerPII, geoSvc)
+	// TEC-161: anonymization cuts live sessions and refreshes the users index.
+	if deps.Redis != nil {
+		customersSvc.SetRevoker(authrevoke.New(deps.Redis, cfg.App.Env, cfg.JWT.AccessTTL))
+	}
+	customersSvc.SetSearchIndexer(searchIndexer)
+	customersH := customershandler.New(customersSvc, activityRec)
+	customershandler.RegisterRoutes(mux, customersH, tokens, loader, deps.Queries, featureSvc, stepUpSvc)
 	ratesmodule.RegisterRoutes(mux, rateshandler.New(ratesSvc, activityRec), tokens, loader)
 	// TEC-146: price list and effective price views (K8).
 	pricingmodule.RegisterRoutes(mux, pricinghandler.New(pricingusecase.New(deps.Queries), activityRec),
@@ -371,10 +377,14 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		// TEC-175: cari statement and balance report exports.
 		accountingusecase.NewStatementAdapter(accountingSvc),
 		accountingusecase.NewBalancesAdapter(accountingSvc),
+		// TEC-161: personal data export (center and portal).
+		customersusecase.NewDataExportAdapter(customersSvc),
+		customersusecase.NewPortalDataExportAdapter(customersSvc),
 	)
 	exportSvc := exportusecase.New(deps.Queries, deps.Storage, ioReg, deps.Queue, notifSvc, activityRec, log)
 	exportSvc.SetDocumentPDF(pdfClient)
 	accountingH.WithExports(exportSvc)
+	customersH.WithExports(exportSvc)
 	importSvc := importusecase.New(deps.Queries, deps.Storage, ioReg, deps.Queue, notifSvc, activityRec, log)
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(deps.Queries),
@@ -383,11 +393,13 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	bulkSvc := bulkusecase.New(deps.Queries, bulkReg, deps.Queue, notifSvc, activityRec, cfg.Bulk, log)
 	logsSvc := logsusecase.New(deps.Queries)
 	if s.worker != nil {
+		warrantyCron := warrantymodule.NewCron(deps.DB, deps.Queries, cfg.Auth.FrontendURL)
 		s.worker.WithExport(exportSvc.ProcessExport).
 			WithImport(importSvc.ProcessImport).
 			WithBulk(bulkSvc.ProcessBulk).
 			WithLogPurge(logsSvc.ApplyDueRules).
 			WithRatesFetch(ratesSvc.FetchTask).
+			WithWarrantyCron(warrantyCron.ExpireTask, warrantyCron.ExpiringScanTask).
 			WithNotificationPurge(notifSvc.PurgeExpired).
 			WithWhatsAppPoll(waSvc.PollStatus)
 		if searchIndexer != nil {

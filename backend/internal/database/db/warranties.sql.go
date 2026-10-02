@@ -1118,6 +1118,51 @@ func (q *Queries) ListWarrantiesInScope(ctx context.Context, arg ListWarrantiesI
 	return items, nil
 }
 
+const listWarrantyNoticeContexts = `-- name: ListWarrantyNoticeContexts :many
+SELECT w.id, v.plate, p.name AS product_name, o.name AS organization_name, o.timezone
+FROM warranties w
+JOIN vehicles v ON v.id = w.vehicle_id
+JOIN products p ON p.id = w.product_id
+JOIN organizations o ON o.id = w.organization_id
+WHERE w.id = ANY ($1::bigint[])
+`
+
+type ListWarrantyNoticeContextsRow struct {
+	ID               int64       `json:"id"`
+	Plate            pgtype.Text `json:"plate"`
+	ProductName      string      `json:"product_name"`
+	OrganizationName string      `json:"organization_name"`
+	Timezone         string      `json:"timezone"`
+}
+
+// Notification context of the cron events (TEC-187): plate, product and the
+// organization's name and time zone (end date is shown in the org zone).
+func (q *Queries) ListWarrantyNoticeContexts(ctx context.Context, ids []int64) ([]ListWarrantyNoticeContextsRow, error) {
+	rows, err := q.db.Query(ctx, listWarrantyNoticeContexts, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListWarrantyNoticeContextsRow{}
+	for rows.Next() {
+		var i ListWarrantyNoticeContextsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Plate,
+			&i.ProductName,
+			&i.OrganizationName,
+			&i.Timezone,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const lockVehicleTransferByUUID = `-- name: LockVehicleTransferByUUID :one
 SELECT id, uuid, organization_id, brand_id, vehicle_id, from_user_id, to_user_id, to_phone, from_code_hash, to_code_hash, from_verified_at, to_verified_at, attempts, expires_at, status, initiated_by_user_id, completed_at, cancelled_at, created_at, updated_at FROM vehicle_transfers
 WHERE uuid = $1 AND brand_id = $2

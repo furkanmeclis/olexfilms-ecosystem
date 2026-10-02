@@ -32,6 +32,7 @@ import realtime from "./realtime.json";
 import register from "./register.json";
 import roles from "./roles.json";
 import search from "./search.json";
+import services from "./services.json";
 import settings from "./settings.json";
 import stepup from "./stepup.json";
 import storage from "./storage.json";
@@ -71,6 +72,7 @@ const catalog: LocaleCatalog = {
   register,
   roles,
   search,
+  services,
   settings,
   stepup,
   storage,
