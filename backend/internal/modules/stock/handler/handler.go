@@ -4,10 +4,12 @@ package handler
 import (
 	"errors"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/model"
 	stockusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/usecase"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
@@ -107,6 +109,53 @@ func (h *Handler) OrganizationStock(w http.ResponseWriter, r *http.Request) {
 	h.list(w, r, func(f scopefilter.Filter, id uuid.UUID, in model.StockFilter) ([]model.ProductStock, int64, error) {
 		return h.svc.OrganizationStock(r.Context(), f, id, in)
 	})
+}
+
+// OrganizationUnits serves GET /v1/stock/organizations/{uuid}/units (TEC-216).
+func (h *Handler) OrganizationUnits(w http.ResponseWriter, r *http.Request) {
+	f, ok := filterFrom(w, r)
+	if !ok {
+		return
+	}
+	p, ok := authctx.PrincipalFrom(r.Context())
+	if !ok {
+		response.Unauthorized(w, r, "Authentication is required")
+		return
+	}
+	id, err := uuid.Parse(r.PathValue("uuid"))
+	if err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, "uuid is invalid")
+		return
+	}
+	q := apiquery.Parse(r.URL.Query())
+	in := model.UnitFilter{
+		Q: q.Q, Limit: q.Limit, Offset: q.Offset,
+		Barcode: strings.TrimSpace(r.URL.Query().Get("barcode")),
+		Status:  strings.TrimSpace(r.URL.Query().Get("status")),
+	}
+	if len(in.Barcode) > 64 {
+		response.BadRequest(w, r, response.CodeValidationError, "barcode is too long")
+		return
+	}
+	if in.Status != "" && !slices.Contains(model.UnitStatuses, in.Status) {
+		response.BadRequest(w, r, response.CodeValidationError, "status must be one of "+strings.Join(model.UnitStatuses, ", "))
+		return
+	}
+	if raw := strings.TrimSpace(r.URL.Query().Get("product_uuid")); raw != "" {
+		pid, err := uuid.Parse(raw)
+		if err != nil {
+			response.BadRequest(w, r, response.CodeValidationError, "product_uuid is invalid")
+			return
+		}
+		in.ProductUUID = &pid
+	}
+	v := stockusecase.UnitViewer{Principal: p, Org: orgctx.MustScope(r.Context()), Filter: f}
+	items, total, err := h.svc.OrganizationUnits(r.Context(), v, id, in)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, in.Limit, in.Offset))
 }
 
 // LocationStock serves GET /v1/stock/locations/{uuid}/products.

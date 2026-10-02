@@ -102,6 +102,7 @@ type Querier interface {
 	CountOrganizationCustomers(ctx context.Context, arg CountOrganizationCustomersParams) (int64, error)
 	CountOrganizationMembershipsByUser(ctx context.Context, userID int64) (int64, error)
 	CountOrganizationProductStockRows(ctx context.Context, arg CountOrganizationProductStockRowsParams) (int64, error)
+	CountOrganizationStockUnitRows(ctx context.Context, arg CountOrganizationStockUnitRowsParams) (int64, error)
 	CountOrganizations(ctx context.Context, arg CountOrganizationsParams) (int64, error)
 	CountOutboxByStatus(ctx context.Context, status string) (int64, error)
 	// Open (pending) vehicle transfers that involve the user; the transfer's
@@ -801,6 +802,12 @@ type Querier interface {
 	ListOrganizationProductStockRows(ctx context.Context, arg ListOrganizationProductStockRowsParams) ([]ListOrganizationProductStockRowsRow, error)
 	ListOrganizationProductStocks(ctx context.Context, arg ListOrganizationProductStocksParams) ([]OrganizationProductStock, error)
 	ListOrganizationProductStocksForRebuild(ctx context.Context, organizationID pgtype.Int8) ([]OrganizationProductStock, error)
+	// TEC-216 (F1-12a): unit list of an organization. Serial units come from
+	// unit_current_state, fixed barcodes from fixed_barcode_holdings (summed
+	// per unit); both narrowed on holder_org_id. Without a status filter the
+	// list holds the units counted as stock (available, placed); a status
+	// filter lists exactly that status.
+	ListOrganizationStockUnitRows(ctx context.Context, arg ListOrganizationStockUnitRowsParams) ([]ListOrganizationStockUnitRowsRow, error)
 	ListOrganizationsByIDs(ctx context.Context, ids []int64) ([]Organization, error)
 	ListOrganizationsFiltered(ctx context.Context, arg ListOrganizationsFilteredParams) ([]ListOrganizationsFilteredRow, error)
 	// Organizations reachable by a scope filter: an explicit id set
