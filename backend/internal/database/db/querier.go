@@ -501,6 +501,9 @@ type Querier interface {
 	GetUserByUUID(ctx context.Context, argUuid uuid.UUID) (User, error)
 	GetUserTOTPByUserID(ctx context.Context, userID int64) (UserTotp, error)
 	GetValidRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
+	// Vehicle of a transfer (TEC-190): scope check and response of the verify /
+	// cancel endpoints, which address the transfer, not the vehicle.
+	GetVehicleByID(ctx context.Context, id int64) (Vehicle, error)
 	GetVehicleByUUID(ctx context.Context, argUuid uuid.UUID) (Vehicle, error)
 	GetVehicleByUUIDForUpdate(ctx context.Context, argUuid uuid.UUID) (Vehicle, error)
 	GetVehicleTransfer(ctx context.Context, arg GetVehicleTransferParams) (VehicleTransfer, error)
@@ -863,6 +866,11 @@ type Querier interface {
 	// connection and brand, and whether the unit ever left the system through
 	// an external_outbound movement (no warranty for those, K2).
 	ListWarrantyCandidatesByService(ctx context.Context, serviceID int64) ([]ListWarrantyCandidatesByServiceRow, error)
+	// Warranty certificate (TEC-188, one PDF per service, decision 2): the
+	// active warranties of a service with the covered product, unit and item.
+	// holder_user_id narrows to the portal customer's own warranties (a
+	// transferred vehicle's warranties belong to the new holder).
+	ListWarrantyCertificateItems(ctx context.Context, arg ListWarrantyCertificateItemsParams) ([]ListWarrantyCertificateItemsRow, error)
 	// Notification context of the cron events (TEC-187): plate, product and the
 	// organization's name and time zone (end date is shown in the org zone).
 	ListWarrantyNoticeContexts(ctx context.Context, ids []int64) ([]ListWarrantyNoticeContextsRow, error)

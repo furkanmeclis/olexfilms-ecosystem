@@ -91,5 +91,15 @@
   "codes.ENTRY_NOT_DISPUTABLE": "Може да се възрази само срещу отворен запис, въведен от горестоящата организация по тази текуща сметка.",
   "codes.DISPUTE_ALREADY_OPEN": "За този запис вече има отворено възражение.",
   "codes.DISPUTE_NOT_OPEN": "Това възражение вече е решено или отхвърлено.",
-  "codes.DISPUTE_NOT_RESOLVABLE": "Оспореният запис вече не е отворен; отхвърлете възражението или сторнирайте записа."
+  "codes.DISPUTE_NOT_RESOLVABLE": "Оспореният запис вече не е отворен; отхвърлете възражението или сторнирайте записа.",
+  "codes.VEHICLE_TRANSFER_UNAVAILABLE": "Прехвърлянето на автомобил в момента не е достъпно.",
+  "codes.VEHICLE_TRANSFER_PENDING": "За този автомобил вече има чакащо прехвърляне; първо го завършете или отменете.",
+  "codes.VEHICLE_TRANSFER_SAME_OWNER": "Новият собственик е настоящият собственик.",
+  "codes.VEHICLE_TRANSFER_OWNER_NO_PHONE": "Настоящият собственик няма телефон; не може да се изпрати код.",
+  "codes.VEHICLE_TRANSFER_NOT_PENDING": "Прехвърлянето вече не е в изчакване.",
+  "codes.VEHICLE_TRANSFER_EXPIRED": "Прехвърлянето изтече; започнете ново.",
+  "codes.VEHICLE_TRANSFER_INVALID_CODE": "Кодът е грешен.",
+  "codes.VEHICLE_TRANSFER_LOCKED": "Твърде много грешни кодове; прехвърлянето беше отменено.",
+  "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "Кодовете не можаха да бъдат изпратени. Опитайте по-късно.",
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Собственикът на автомобила се смени; започнете ново прехвърляне."
 }

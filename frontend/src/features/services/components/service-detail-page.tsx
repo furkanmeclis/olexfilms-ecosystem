@@ -25,6 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { routes } from "@/config/routes";
 import {
   canContinueWizard,
+  canDownloadWarrantyCertificate,
   resolveServiceListAccess,
 } from "@/features/services/lib/access";
 import { isKnownPart } from "@/features/services/lib/car-parts";
@@ -42,6 +43,8 @@ import {
   serviceWizardService,
   type Service,
 } from "@/features/services/services/service-wizard.service";
+import { WarrantyCertificateButton } from "@/features/warranty/components/warranty-certificate-button";
+import { panelCertificateClient } from "@/features/warranty/services/certificate.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
@@ -360,7 +363,7 @@ export function ServiceDetailPage({
   slug: string;
   uuid: string;
 }) {
-  const { t, format } = useLocale();
+  const { t, format, locale } = useLocale();
   const { can } = usePermission();
   const access = resolveServiceListAccess(can);
 
@@ -410,6 +413,12 @@ export function ServiceDetailPage({
                   {t("services.detail.continue_wizard")}
                 </Link>
               </Button>
+            ) : null}
+            {canDownloadWarrantyCertificate(can, s) ? (
+              <WarrantyCertificateButton
+                client={panelCertificateClient(s.uuid)}
+                locale={locale}
+              />
             ) : null}
             {/* TEC-196: service PDF; disabled until the document lands. */}
             <Button

@@ -98,6 +98,8 @@ import (
 	vehiclecataloghandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/vehiclecatalog/handler"
 	vehiclecatalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/vehiclecatalog/usecase"
 	warrantymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty"
+	warrantyhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty/handler"
+	warrantyusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty/usecase"
 	whatsappmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp"
 	whatsapphandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/handler"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
@@ -341,7 +343,13 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	}
 	customersSvc.SetSearchIndexer(searchIndexer)
 	customersSvc.SetOutbox(outbox.NewStore(deps.DB, deps.Queries)) // TEC-193: customer.merged
-	customersH := customershandler.New(customersSvc, activityRec)
+	// TEC-190: vehicle transfer codes go out like the phone OTP (WhatsApp,
+	// SMS fallback), synchronously and never through the outbox.
+	customersSvc.SetTransfers(
+		&whatsapp.Sender{WhatsApp: waSvc.Provider(), SMS: sms.Noop{Log: log}, SMSFallback: waSvc.SMSFallbackEnabled},
+		customersusecase.TransferConfig{Key: otp.DeriveKey(cfg.Encryption.Key), AppName: cfg.App.Name},
+	)
+	customersH := customershandler.New(customersSvc, activityRec).WithLimiter(ratelimit.New(deps.Redis, cfg.App.Env))
 	customershandler.RegisterRoutes(mux, customersH, tokens, loader, deps.Queries, featureSvc, stepUpSvc)
 	ratesmodule.RegisterRoutes(mux, rateshandler.New(ratesSvc, activityRec), tokens, loader)
 	// TEC-146: price list and effective price views (K8).
@@ -378,6 +386,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 
 	// TEC-145: product catalog (brand scoped, center writes).
 	catalogSvc := catalogusecase.New(deps.Queries, searchIndexer)
+	warrantyCert := warrantymodule.NewCertificate(deps.Queries, deps.Storage, cfg.Auth.FrontendURL, log)
 	ioReg := ioengine.NewRegistry(
 		catalogusecase.NewIOAdapter(catalogSvc, deps.Queries),
 		ioadapters.NewUsers(deps.Queries),
@@ -392,11 +401,15 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		customersusecase.NewPortalDataExportAdapter(customersSvc),
 		// TEC-158: staged stock import (writes through ledger.Post).
 		stockusecase.NewImporter(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)),
+		// TEC-188: warranty certificate PDF (panel and portal).
+		warrantyusecase.NewCertificateAdapter(warrantyCert),
+		warrantyusecase.NewPortalCertificateAdapter(warrantyCert),
 	)
 	exportSvc := exportusecase.New(deps.Queries, deps.Storage, ioReg, deps.Queue, notifSvc, activityRec, log)
 	exportSvc.SetDocumentPDF(pdfClient)
 	accountingH.WithExports(exportSvc)
 	customersH.WithExports(exportSvc)
+	warrantymodule.RegisterCertificateRoutes(mux, warrantyhandler.NewCertificate(warrantyCert, exportSvc), tokens, loader, deps.Queries, featureSvc)
 	// A nil *queue.Client must reach the import service as a nil Enqueuer
 	// (sync mode); a typed nil would fail every confirm.
 	var importQueue importusecase.Enqueuer
@@ -419,6 +432,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 			WithRatesFetch(ratesSvc.FetchTask).
 			WithWarrantyCron(warrantyCron.ExpireTask, warrantyCron.ExpiringScanTask).
 			WithWarrantyRepairScan(warrantymodule.NewRepairScanner(deps.DB, deps.Queries, cfg.Auth.FrontendURL, cfg.Warranty.RepairScanDays, log).Task).
+			WithVehicleTransferExpire(customersSvc.ExpireTransfersTask).
 			WithNotificationPurge(notifSvc.PurgeExpired).
 			WithWhatsAppPoll(waSvc.PollStatus)
 		if searchIndexer != nil {

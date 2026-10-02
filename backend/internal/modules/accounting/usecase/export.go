@@ -360,19 +360,8 @@ func documentHTML(loc i18n.Locale, lh *ioengine.Letterhead, title string, info [
 	color := ""
 	if lh != nil {
 		color = lh.PrimaryColor
-		b.WriteString(`<header class="doc-header"><div class="doc-logo">`)
-		b.WriteString(pdfrender.ImageTag(lh.LogoMIME, lh.LogoBytes, lh.CompanyName))
-		b.WriteString(`</div><div class="doc-company"><strong>`)
-		b.WriteString(esc(lh.CompanyName))
-		b.WriteString(`</strong>`)
-		for _, line := range []string{lh.Tagline, lh.Address, joinNonEmpty(" · ", lh.Phone, lh.Email), lh.Website} {
-			if strings.TrimSpace(line) != "" {
-				b.WriteString(`<br>`)
-				b.WriteString(esc(line))
-			}
-		}
-		b.WriteString(`</div></header>`)
 	}
+	b.WriteString(ioengine.LetterheadHeaderHTML(lh))
 	b.WriteString(`<h1 class="doc-title">`)
 	b.WriteString(esc(title))
 	b.WriteString(`</h1><table class="doc-meta">`)
@@ -398,22 +387,8 @@ func documentHTML(loc i18n.Locale, lh *ioengine.Letterhead, title string, info [
 	b.WriteString(`: `)
 	b.WriteString(esc(generated.UTC().Format("2006-01-02 15:04 UTC")))
 	b.WriteString(`</p>`)
-	if lh != nil && strings.TrimSpace(lh.FooterText) != "" {
-		b.WriteString(`<p class="doc-footer">`)
-		b.WriteString(esc(lh.FooterText))
-		b.WriteString(`</p>`)
-	}
+	b.WriteString(ioengine.LetterheadFooterHTML(lh))
 	return pdfrender.Document{
 		Lang: string(loc), Title: title, Body: b.String(), PrimaryColor: color,
 	}.HTML()
-}
-
-func joinNonEmpty(sep string, parts ...string) string {
-	out := make([]string, 0, len(parts))
-	for _, p := range parts {
-		if s := strings.TrimSpace(p); s != "" {
-			out = append(out, s)
-		}
-	}
-	return strings.Join(out, sep)
 }

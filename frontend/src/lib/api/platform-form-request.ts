@@ -30,7 +30,9 @@ export async function platformDownloadRequest(
   return blob;
 }
 
-function parseContentDispositionFilename(header: string | null): string | null {
+export function parseContentDispositionFilename(
+  header: string | null,
+): string | null {
   if (!header) return null;
   const star = /filename\*=UTF-8''([^;]+)/i.exec(header);
   if (star?.[1]) {

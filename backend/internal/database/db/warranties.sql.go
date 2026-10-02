@@ -573,6 +573,36 @@ func (q *Queries) GetPublicWarrantyByCode(ctx context.Context, arg GetPublicWarr
 	return i, err
 }
 
+const getVehicleByID = `-- name: GetVehicleByID :one
+SELECT id, uuid, user_id, organization_id, brand_id, car_brand_id, car_model_id, model_year, plate, plate_normalized, plate_country, vin, created_at, updated_at, deleted_at FROM vehicles
+WHERE id = $1
+`
+
+// Vehicle of a transfer (TEC-190): scope check and response of the verify /
+// cancel endpoints, which address the transfer, not the vehicle.
+func (q *Queries) GetVehicleByID(ctx context.Context, id int64) (Vehicle, error) {
+	row := q.db.QueryRow(ctx, getVehicleByID, id)
+	var i Vehicle
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.UserID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.CarBrandID,
+		&i.CarModelID,
+		&i.ModelYear,
+		&i.Plate,
+		&i.PlateNormalized,
+		&i.PlateCountry,
+		&i.Vin,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const getVehicleTransfer = `-- name: GetVehicleTransfer :one
 SELECT id, uuid, organization_id, brand_id, vehicle_id, from_user_id, to_user_id, to_phone, from_code_hash, to_code_hash, from_verified_at, to_verified_at, attempts, expires_at, status, initiated_by_user_id, completed_at, cancelled_at, created_at, updated_at FROM vehicle_transfers
 WHERE id = $1 AND brand_id = $2
@@ -1298,6 +1328,75 @@ func (q *Queries) ListWarrantyCandidatesByService(ctx context.Context, serviceID
 			&i.UnitConnectionID,
 			&i.UnitBrandSlug,
 			&i.ExternalOutbound,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWarrantyCertificateItems = `-- name: ListWarrantyCertificateItems :many
+SELECT w.id, w.uuid, w.public_code, w.item_kind, w.start_at, w.end_at, w.holder_user_id,
+       p.name AS product_name, p.sku AS product_sku,
+       u.barcode AS unit_barcode, si.meters
+FROM warranties w
+JOIN products p ON p.id = w.product_id
+JOIN units u ON u.id = w.unit_id
+JOIN service_items si ON si.id = w.service_item_id
+WHERE w.service_id = $1 AND w.brand_id = $2 AND w.status = 'active'
+  AND ($3::bigint IS NULL OR w.holder_user_id = $3::bigint)
+ORDER BY w.id
+`
+
+type ListWarrantyCertificateItemsParams struct {
+	ServiceID    int64       `json:"service_id"`
+	BrandID      int64       `json:"brand_id"`
+	HolderUserID pgtype.Int8 `json:"holder_user_id"`
+}
+
+type ListWarrantyCertificateItemsRow struct {
+	ID           int64              `json:"id"`
+	Uuid         uuid.UUID          `json:"uuid"`
+	PublicCode   string             `json:"public_code"`
+	ItemKind     string             `json:"item_kind"`
+	StartAt      pgtype.Timestamptz `json:"start_at"`
+	EndAt        pgtype.Timestamptz `json:"end_at"`
+	HolderUserID int64              `json:"holder_user_id"`
+	ProductName  string             `json:"product_name"`
+	ProductSku   string             `json:"product_sku"`
+	UnitBarcode  string             `json:"unit_barcode"`
+	Meters       pgtype.Numeric     `json:"meters"`
+}
+
+// Warranty certificate (TEC-188, one PDF per service, decision 2): the
+// active warranties of a service with the covered product, unit and item.
+// holder_user_id narrows to the portal customer's own warranties (a
+// transferred vehicle's warranties belong to the new holder).
+func (q *Queries) ListWarrantyCertificateItems(ctx context.Context, arg ListWarrantyCertificateItemsParams) ([]ListWarrantyCertificateItemsRow, error) {
+	rows, err := q.db.Query(ctx, listWarrantyCertificateItems, arg.ServiceID, arg.BrandID, arg.HolderUserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListWarrantyCertificateItemsRow{}
+	for rows.Next() {
+		var i ListWarrantyCertificateItemsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.PublicCode,
+			&i.ItemKind,
+			&i.StartAt,
+			&i.EndAt,
+			&i.HolderUserID,
+			&i.ProductName,
+			&i.ProductSku,
+			&i.UnitBarcode,
+			&i.Meters,
 		); err != nil {
 			return nil, err
 		}

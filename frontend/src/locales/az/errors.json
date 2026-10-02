@@ -91,5 +91,15 @@
   "codes.ENTRY_NOT_DISPUTABLE": "Yalnız üst təşkilatınızın bu cari hesaba yazdığı açıq qeydə etiraz etmək olar.",
   "codes.DISPUTE_ALREADY_OPEN": "Bu qeyddə artıq açıq etiraz var.",
   "codes.DISPUTE_NOT_OPEN": "Bu etiraz artıq həll edilib və ya rədd edilib.",
-  "codes.DISPUTE_NOT_RESOLVABLE": "Etiraz edilən qeyd artıq açıq deyil; etirazı rədd edin və ya tərs qeydlə həll edin."
+  "codes.DISPUTE_NOT_RESOLVABLE": "Etiraz edilən qeyd artıq açıq deyil; etirazı rədd edin və ya tərs qeydlə həll edin.",
+  "codes.VEHICLE_TRANSFER_UNAVAILABLE": "Avtomobil təhvili hazırda mümkün deyil.",
+  "codes.VEHICLE_TRANSFER_PENDING": "Bu avtomobil üçün artıq gözləyən təhvil var; əvvəlcə onu tamamlayın və ya ləğv edin.",
+  "codes.VEHICLE_TRANSFER_SAME_OWNER": "Yeni sahib hazırkı sahiblə eynidir.",
+  "codes.VEHICLE_TRANSFER_OWNER_NO_PHONE": "Hazırkı sahibin telefonu yoxdur; kod göndərilə bilməz.",
+  "codes.VEHICLE_TRANSFER_NOT_PENDING": "Təhvil artıq gözləmədə deyil.",
+  "codes.VEHICLE_TRANSFER_EXPIRED": "Təhvilin müddəti bitdi; yeni təhvil başladın.",
+  "codes.VEHICLE_TRANSFER_INVALID_CODE": "Kod səhvdir.",
+  "codes.VEHICLE_TRANSFER_LOCKED": "Həddindən çox səhv kod daxil edildi; təhvil ləğv edildi.",
+  "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "Kodlar göndərilə bilmədi. Sonra yenidən cəhd edin.",
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Avtomobilin sahibi dəyişdi; yeni təhvil başladın."
 }

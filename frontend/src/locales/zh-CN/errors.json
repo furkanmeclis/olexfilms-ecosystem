@@ -91,5 +91,15 @@
   "codes.ENTRY_NOT_DISPUTABLE": "只能对上级组织记入此往来账户且未冲销的分录提出异议。",
   "codes.DISPUTE_ALREADY_OPEN": "此分录已有待处理的异议。",
   "codes.DISPUTE_NOT_OPEN": "此异议已处理或已驳回。",
-  "codes.DISPUTE_NOT_RESOLVABLE": "被异议的分录已不再有效；请驳回异议或进行冲销。"
+  "codes.DISPUTE_NOT_RESOLVABLE": "被异议的分录已不再有效；请驳回异议或进行冲销。",
+  "codes.VEHICLE_TRANSFER_UNAVAILABLE": "车辆过户暂不可用。",
+  "codes.VEHICLE_TRANSFER_PENDING": "该车辆已有待处理的过户；请先完成或取消。",
+  "codes.VEHICLE_TRANSFER_SAME_OWNER": "新车主与现车主相同。",
+  "codes.VEHICLE_TRANSFER_OWNER_NO_PHONE": "现车主没有电话号码，无法发送验证码。",
+  "codes.VEHICLE_TRANSFER_NOT_PENDING": "该过户已不再处于待处理状态。",
+  "codes.VEHICLE_TRANSFER_EXPIRED": "过户已过期，请重新发起。",
+  "codes.VEHICLE_TRANSFER_INVALID_CODE": "验证码错误。",
+  "codes.VEHICLE_TRANSFER_LOCKED": "错误验证码次数过多，过户已取消。",
+  "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "验证码发送失败，请稍后重试。",
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "车辆车主已变更，请重新发起过户。"
 }

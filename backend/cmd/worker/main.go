@@ -26,6 +26,7 @@ import (
 	stockrebuild "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/rebuild"
 	stockusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/usecase"
 	warrantymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty"
+	warrantyusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty/usecase"
 	whatsappmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine"
@@ -120,6 +121,7 @@ func main() {
 	// Exports only read the ledger: no poster, no feature checker.
 	accountingSvc := accountingusecase.New(pool, queries, nil, nil)
 	customersExportSvc := customersusecase.New(pool, queries, nil, nil)
+	warrantyCert := warrantymodule.NewCertificate(queries, store, cfg.Auth.FrontendURL, log)
 	ioReg := ioengine.NewRegistry(
 		catalogusecase.NewIOAdapter(catalogSvc, queries),
 		ioadapters.NewUsers(queries),
@@ -135,6 +137,9 @@ func main() {
 		customersusecase.NewPortalDataExportAdapter(customersExportSvc),
 		// TEC-158: stock import batches are applied here (import queue).
 		stockusecase.NewImporter(pool, queries, outboxStore),
+		// TEC-188: warranty certificate PDF (panel and portal, read only).
+		warrantyusecase.NewCertificateAdapter(warrantyCert),
+		warrantyusecase.NewPortalCertificateAdapter(warrantyCert),
 	)
 	exportSvc := exportusecase.New(queries, store, ioReg, nil, notifSvc, activityRec, log)
 	pdfClient := pdfrender.NewWithOptions(cfg.Gotenberg.URL, pdfrender.Options{MaxConnsPerHost: cfg.Queue.Concurrency})
@@ -150,6 +155,9 @@ func main() {
 	logsSvc := logsusecase.New(queries)
 	ratesSvc := fxrates.New(queries, fxrates.NewFetcher(cfg.Rates.TCMBURL, cfg.Rates.ECBURL), log)
 	warrantyCron := warrantymodule.NewCron(pool, queries, cfg.Auth.FrontendURL)
+	// TEC-190: only the transfer expiry of the customers service runs here.
+	transferExpirer := customersusecase.New(pool, queries, nil, nil)
+	transferExpirer.SetOutbox(outbox.NewStore(pool, queries))
 
 	persist := logging.Attach(log, logsSvc)
 	log = persist.Logger()
@@ -179,6 +187,8 @@ func main() {
 		WithRatesFetch(ratesSvc.FetchTask).
 		WithWarrantyCron(warrantyCron.ExpireTask, warrantyCron.ExpiringScanTask).
 		WithWarrantyRepairScan(warrantymodule.NewRepairScanner(pool, queries, cfg.Auth.FrontendURL, cfg.Warranty.RepairScanDays, log).Task).
+		// TEC-190: expire pending vehicle transfers (5 min).
+		WithVehicleTransferExpire(transferExpirer.ExpireTransfersTask).
 		// TEC-156: nightly projection drift scan; report only, no repair.
 		WithInventoryRebuild(stockrebuild.New(pool, queries).ScanTask(log)).
 		WithSearch(

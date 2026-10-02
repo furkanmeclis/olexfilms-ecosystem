@@ -746,6 +746,83 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/services/{uuid}/warranty-certificate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue the warranty certificate PDF of a service
+         * @description TEC-188. One PDF per service listing every active warranty (product, unit / barcode, start and end day in the organization's time zone) with its own QR code pointing at PUBLIC_FRONTEND_URL/garanti/{public_code}, the dealer letterhead, the vehicle (full plate and VIN, the certificate is handed to the owner) and the warranty terms. The job runs on worker-docs (exports queue) and is rendered by Gotenberg in the requested language (RTL for ar). Needs warranties.read; a service outside the scope answers 404, a service without an active warranty 409 NO_ACTIVE_WARRANTY. Poll and download through /v1/warranty-certificates/{uuid}.
+         */
+        post: operations["requestServiceWarrantyCertificate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warranty-certificates/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A warranty certificate job of the active organization
+         * @description download_url points at /v1/warranty-certificates/{uuid}/download once completed.
+         */
+        get: operations["getWarrantyCertificateJob"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warranty-certificates/{uuid}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download a completed warranty certificate PDF */
+        get: operations["downloadWarrantyCertificate"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/services/{uuid}/warranty-certificate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue the signed-in customer's warranty certificate PDF of a service
+         * @description TEC-188. Portal session (warranties.read, scope customer). Lists only the active warranties the customer holds (domain brand); a service without such a warranty answers 404. Poll and download through /v1/portal/exports/{uuid}.
+         */
+        post: operations["requestPortalWarrantyCertificate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/organizations": {
         parameters: {
             query?: never;
@@ -3390,6 +3467,70 @@ export interface paths {
         patch: operations["updateVehicle"];
         trace?: never;
     };
+    "/v1/vehicles/{uuid}/transfers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ownership transfers of a vehicle, newest first (TEC-190)
+         * @description vehicles.transfer; the vehicle's customer must be in scope (else 404). A pending transfer past expires_at is shown as expired.
+         */
+        get: operations["listVehicleTransfers"];
+        put?: never;
+        /**
+         * Start a vehicle ownership transfer with two codes (TEC-190)
+         * @description vehicles.transfer. The new owner is given by phone (E.164, national numbers use the organization's country). Two random 6 digit codes are generated, one for the current owner and one for the new owner, and sent over WhatsApp (SMS fallback when enabled); only salted, keyed hashes are stored. The transfer expires after 15 minutes. A failed delivery saves nothing (502 VEHICLE_TRANSFER_DELIVERY_FAILED). Refusals (409): VEHICLE_TRANSFER_PENDING (one open transfer per vehicle), VEHICLE_TRANSFER_SAME_OWNER, VEHICLE_TRANSFER_OWNER_NO_PHONE, CUSTOMER_ANONYMIZED / CUSTOMER_INACTIVE. Writes vehicle.transfer_started and the audit row vehicles.transfer_started. Rate limited per user (429).
+         */
+        post: operations["startVehicleTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/vehicle-transfers/{uuid}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Enter transfer codes; completes the transfer when both are verified
+         * @description vehicles.transfer. Codes can be entered together or one by one. A wrong code counts one attempt (422 VEHICLE_TRANSFER_INVALID_CODE, details[].code = attempts left); at 5 attempts the transfer is cancelled (409 VEHICLE_TRANSFER_LOCKED). A transfer past expires_at is marked expired (409 VEHICLE_TRANSFER_EXPIRED). When both codes are verified, one transaction moves the vehicle and its active warranties to the new owner (one warranty.holder_changed event per warranty), links the new owner to the organization and writes vehicle.transfer_completed and the audit row; services keep their customer. A new owner without an account is created at completion and needs new_owner_name (400 VALIDATION_ERROR, nothing is verified then). Rate limited per transfer and user (429).
+         */
+        post: operations["verifyVehicleTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/vehicle-transfers/{uuid}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel a pending vehicle transfer
+         * @description vehicles.transfer. Writes vehicle.transfer_cancelled (reason cancelled) and the audit row. A transfer that is no longer pending answers 409 VEHICLE_TRANSFER_NOT_PENDING (expired: VEHICLE_TRANSFER_EXPIRED).
+         */
+        post: operations["cancelVehicleTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portal/vehicle-catalog/brands": {
         parameters: {
             query?: never;
@@ -5494,6 +5635,61 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["Vehicle"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @description A vehicle ownership transfer (TEC-190). Codes and hashes never leave the server; the new owner's phone is masked. */
+        VehicleTransfer: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            vehicle_uuid: string;
+            /** @enum {string} */
+            status: "pending" | "completed" | "cancelled" | "expired";
+            to_phone_masked: string;
+            /** @description The new owner has an account (false = created at completion, name required). */
+            new_owner_known: boolean;
+            from_verified: boolean;
+            to_verified: boolean;
+            /** Format: int32 */
+            attempts: number;
+            /** Format: int32 */
+            max_attempts: number;
+            /** Format: date-time */
+            expires_at: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            completed_at: string | null;
+            /** Format: date-time */
+            cancelled_at: string | null;
+            /** @description Active warranties moved to the new owner (set on the completing call, else 0). */
+            warranties_moved: number;
+        };
+        VehicleTransferStartInput: {
+            /** @description New owner's phone (E.164 or national for the organization's country). */
+            phone: string;
+        };
+        VehicleTransferVerifyInput: {
+            /** @description Code sent to the current owner. */
+            from_code?: string;
+            /** @description Code sent to the new owner. */
+            to_code?: string;
+            /** @description Required when the new owner has no account. */
+            new_owner_name?: string;
+            new_owner_surname?: string;
+        };
+        EnvelopeVehicleTransfer: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["VehicleTransfer"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeVehicleTransferList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["VehicleTransfer"][];
+            };
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeVehiclePage: {
@@ -8919,6 +9115,13 @@ export interface components {
             /** Format: date-time */
             generated_at: string;
         };
+        WarrantyCertificateInput: {
+            /**
+             * @description Certificate language override (default the user language)
+             * @example ar
+             */
+            locale?: string;
+        };
         AccountingExportInput: {
             /** @enum {string} */
             format: "pdf" | "xlsx" | "csv";
@@ -10822,6 +11025,121 @@ export interface operations {
                 };
             };
             500: components["responses"]["InternalError"];
+        };
+    };
+    requestServiceWarrantyCertificate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["WarrantyCertificateInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getWarrantyCertificateJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Export job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    downloadWarrantyCertificate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    requestPortalWarrantyCertificate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["WarrantyCertificateInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getMeOrganizations: {
@@ -15604,6 +15922,152 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listVehicleTransfers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Transfers */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeVehicleTransferList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    startVehicleTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VehicleTransferStartInput"];
+            };
+        };
+        responses: {
+            /** @description Started; both codes sent */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeVehicleTransfer"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
+            /** @description VEHICLE_TRANSFER_DELIVERY_FAILED (a code could not be delivered; nothing saved) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description VEHICLE_TRANSFER_UNAVAILABLE (no message sender configured) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    verifyVehicleTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VehicleTransferVerifyInput"];
+            };
+        };
+        responses: {
+            /** @description Codes accepted (status completed when both sides are verified) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeVehicleTransfer"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            /** @description VEHICLE_TRANSFER_INVALID_CODE (details[].field names the wrong code, details[].code the attempts left) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    cancelVehicleTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancelled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeVehicleTransfer"];
+                };
+            };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
