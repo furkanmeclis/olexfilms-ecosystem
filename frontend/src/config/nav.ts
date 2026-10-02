@@ -392,6 +392,37 @@ export function tenantNav(slug: string) {
         ],
       },
       {
+        // TEC-163: customers need customers.read and the customers module
+        // (same gates as /v1/customers); a new customer customers.write.
+        id: "customers",
+        labelKey: "customers.nav",
+        icon: Users,
+        defaultOpen: true,
+        permission: permissions.customers.read,
+        feature: "customers",
+        items: [
+          {
+            id: "customers-list",
+            titleKey: "customers.nav_list",
+            href: routes.tenant.customers.list(slug),
+            icon: Users,
+            permission: permissions.customers.read,
+            feature: "customers",
+          },
+          {
+            id: "customers-new",
+            titleKey: "customers.nav_new",
+            href: routes.tenant.customers.create(slug),
+            icon: UserRound,
+            permission: [
+              permissions.customers.read,
+              permissions.customers.write,
+            ],
+            feature: "customers",
+          },
+        ],
+      },
+      {
         // TEC-170: the order list needs orders.read and the orders module
         // (same gates as /v1/orders). A new order needs orders.write plus
         // the catalog to pick from, and a supplier: the center buys from

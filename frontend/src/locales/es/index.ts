@@ -11,6 +11,7 @@ import catalogMessages from "./catalog.json";
 import chart from "./chart.json";
 import cms from "./cms.json";
 import common from "./common.json";
+import customers from "./customers.json";
 import dashboard from "./dashboard.json";
 import documents from "./documents.json";
 import editor from "./editor.json";
@@ -54,6 +55,7 @@ const catalog: LocaleCatalog = {
   chart,
   cms,
   common,
+  customers,
   dashboard,
   documents,
   editor,

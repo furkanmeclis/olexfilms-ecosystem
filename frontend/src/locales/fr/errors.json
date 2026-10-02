@@ -116,5 +116,10 @@
   "codes.ORDER_STOCK_UNAVAILABLE": "Le mouvement de stock de cet envoi a été refusé.",
   "codes.PRICE_NOT_FOUND": "Aucun prix pour ce produit dans la devise de la commande.",
   "codes.RATE_NOT_FOUND": "Aucun taux de change disponible à figer pour la devise de la commande.",
-  "codes.ROLL_CUT_UNSUPPORTED": "Les rouleaux partent entiers ; les mètres doivent égaler la longueur restante."
+  "codes.ROLL_CUT_UNSUPPORTED": "Les rouleaux partent entiers ; les mètres doivent égaler la longueur restante.",
+  "codes.CUSTOMER_ANONYMIZED": "Le client est anonymisé et ne peut pas être modifié.",
+  "codes.CUSTOMER_INACTIVE": "Le compte client n'est pas actif.",
+  "codes.ALREADY_MEMBER": "Le client est déjà membre de ce revendeur.",
+  "codes.PII_ENCRYPTION_UNAVAILABLE": "Les numéros d'identité ne peuvent pas être enregistrés pour le moment (clé de chiffrement manquante).",
+  "codes.INVALID_PLATE": "La plaque ne correspond pas au format de son pays."
 }

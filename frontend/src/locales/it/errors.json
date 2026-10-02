@@ -116,5 +116,10 @@
   "codes.ORDER_STOCK_UNAVAILABLE": "Il movimento di magazzino per questa spedizione è stato rifiutato.",
   "codes.PRICE_NOT_FOUND": "Nessun prezzo per questo prodotto nella valuta dell'ordine.",
   "codes.RATE_NOT_FOUND": "Nessun tasso di cambio disponibile da congelare per la valuta dell'ordine.",
-  "codes.ROLL_CUT_UNSUPPORTED": "I rotoli si spediscono interi; i metri devono corrispondere alla lunghezza residua."
+  "codes.ROLL_CUT_UNSUPPORTED": "I rotoli si spediscono interi; i metri devono corrispondere alla lunghezza residua.",
+  "codes.CUSTOMER_ANONYMIZED": "Il cliente è anonimizzato e non può essere modificato.",
+  "codes.CUSTOMER_INACTIVE": "L'account cliente non è attivo.",
+  "codes.ALREADY_MEMBER": "Il cliente è già membro di questo rivenditore.",
+  "codes.PII_ENCRYPTION_UNAVAILABLE": "I numeri di identità non possono essere salvati ora (chiave di cifratura mancante).",
+  "codes.INVALID_PLATE": "La targa non corrisponde al formato del suo paese."
 }
