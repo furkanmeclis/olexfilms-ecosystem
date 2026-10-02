@@ -163,5 +163,9 @@
   "groups.orders": "Siparişler",
   "groups.transfers": "Transferler",
   "labels.services.complete": "Hizmetleri tamamla",
-  "labels.services.cancel": "Hizmetleri iptal et"
+  "labels.services.cancel": "Hizmetleri iptal et",
+  "labels.warranties.read": "Garantileri görüntüle",
+  "labels.warranties.void": "Garantileri iptal et",
+  "labels.vehicles.transfer": "Araç devret",
+  "groups.warranties": "Garantiler"
 }

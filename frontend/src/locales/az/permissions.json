@@ -163,5 +163,9 @@
   "groups.orders": "Sifarişlər",
   "groups.transfers": "Transferlər",
   "labels.services.complete": "Xidmətləri tamamlamaq",
-  "labels.services.cancel": "Xidmətləri ləğv etmək"
+  "labels.services.cancel": "Xidmətləri ləğv etmək",
+  "labels.warranties.read": "Zəmanətlərə baxmaq",
+  "labels.warranties.void": "Zəmanətləri ləğv etmək",
+  "labels.vehicles.transfer": "Avtomobili təhvil vermək",
+  "groups.warranties": "Zəmanətlər"
 }

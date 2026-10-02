@@ -163,5 +163,9 @@
   "groups.orders": "Поръчки",
   "groups.transfers": "Прехвърляния",
   "labels.services.complete": "Завършване на услуги",
-  "labels.services.cancel": "Анулиране на услуги"
+  "labels.services.cancel": "Анулиране на услуги",
+  "labels.warranties.read": "Преглед на гаранции",
+  "labels.warranties.void": "Анулиране на гаранции",
+  "labels.vehicles.transfer": "Прехвърляне на автомобили",
+  "groups.warranties": "Гаранции"
 }

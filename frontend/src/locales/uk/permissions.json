@@ -163,5 +163,9 @@
   "groups.orders": "Замовлення",
   "groups.transfers": "Переміщення",
   "labels.services.complete": "Завершення послуг",
-  "labels.services.cancel": "Скасування послуг"
+  "labels.services.cancel": "Скасування послуг",
+  "labels.warranties.read": "Перегляд гарантій",
+  "labels.warranties.void": "Анулювання гарантій",
+  "labels.vehicles.transfer": "Передача автомобілів",
+  "groups.warranties": "Гарантії"
 }

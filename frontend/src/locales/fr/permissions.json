@@ -163,5 +163,9 @@
   "groups.orders": "Commandes",
   "groups.transfers": "Transferts",
   "labels.services.complete": "Terminer les prestations",
-  "labels.services.cancel": "Annuler les prestations"
+  "labels.services.cancel": "Annuler les prestations",
+  "labels.warranties.read": "Consulter les garanties",
+  "labels.warranties.void": "Annuler les garanties",
+  "labels.vehicles.transfer": "Transférer des véhicules",
+  "groups.warranties": "Garanties"
 }
