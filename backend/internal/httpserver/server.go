@@ -502,6 +502,11 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-184: roll split (meters cut off a roll as a new unit).
 	stockmodule.RegisterSplitRoutes(mux, stockhandler.NewSplit(stockusecase.NewSplits(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries))),
 		featureSvc, tokens, loader, deps.Queries)
+	// TEC-202: barcode batches (center), label templates and label PDFs.
+	stockmodule.RegisterLabelRoutes(mux, stockhandler.NewLabels(
+		stockusecase.NewBarcodes(deps.DB, deps.Queries), stockusecase.NewLabelTemplates(deps.Queries),
+		stockusecase.NewLabels(deps.Queries, pdfClient)),
+		featureSvc, tokens, loader, deps.Queries)
 	// TEC-158: stock import upload (preview/confirm/undo on /v1/tenant/imports).
 	stockmodule.RegisterImportRoutes(mux, stockhandler.NewImport(importSvc), featureSvc, tokens, loader, deps.Queries)
 	// TEC-156: super_admin projection drift check (dry run).
