@@ -348,6 +348,13 @@ var Permissions = []PermissionDef{
 		Slug: PermVehiclesTransfer, Name: "Transfer vehicles", Module: "vehicles", Scopes: scopesRecordsInt,
 		Description: "Transfer a vehicle and its active warranties to a new owner with two codes.",
 	},
+
+	// TEC-174: dispute resolution (K24). Appended last; migration 000052
+	// seeds it. The parent organization the disputed row came from resolves.
+	{
+		Slug: PermAccountingResolve, Name: "Resolve accounting disputes", Module: "accounting", Scopes: scopesTree,
+		Description: "Resolve a dispute on an entry posted to a child: reversal, revision or rejection (K24).",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -462,6 +469,7 @@ var Roles = []RoleDef{
 			PermOrganizationsRead:       ScopeBrand,
 			PermAccountingRead:          ScopeBrand,
 			PermAccountingWrite:         ScopeBrand,
+			PermAccountingResolve:       ScopeBrand, // TEC-174 (000052)
 			PermPricingPurchaseRead:     ScopeBrand,
 			PermPricingSaleRead:         ScopeBrand,
 			PermPricingSaleWrite:        ScopeBrand,
@@ -509,6 +517,7 @@ var Roles = []RoleDef{
 			PermPricingRecommendedRead: ScopeManaged,
 			PermAccountingRead:         ScopeManaged,
 			PermAccountingWrite:        ScopeManaged,
+			PermAccountingResolve:      ScopeManaged, // TEC-174 (000052)
 			PermAccountingDispute:      ScopeManaged,
 			PermWarehouseRead:          ScopeManaged,
 			PermWarehouseWrite:         ScopeManaged,
@@ -574,6 +583,7 @@ var Roles = []RoleDef{
 			PermCatalogRead:            ScopeManaged,
 			PermAccountingRead:         ScopeManaged,
 			PermAccountingWrite:        ScopeManaged,
+			PermAccountingResolve:      ScopeManaged, // TEC-174 (000052)
 			PermAccountingDispute:      ScopeManaged,
 			PermPricingPurchaseRead:    ScopeManaged,
 			PermPricingSaleRead:        ScopeManaged,

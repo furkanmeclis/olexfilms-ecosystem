@@ -141,6 +141,18 @@ func TestAccountingGrants(t *testing.T) {
 		if _, ok := r.Grants[PermAccountingWrite]; ok {
 			t.Fatalf("%s must not hold accounting.write", r.Slug)
 		}
+		// TEC-174: a dealer has no child to resolve disputes for.
+		if _, ok := r.Grants[PermAccountingResolve]; ok {
+			t.Fatalf("%s must not hold accounting.resolve", r.Slug)
+		}
+	}
+	for slug, want := range map[string]Scope{
+		RoleCenterAccounting: ScopeBrand, RoleDistributorOwner: ScopeManaged, RoleDistributorAccounting: ScopeManaged,
+	} {
+		r, _ := RoleBySlug(slug)
+		if r.Grants[PermAccountingResolve] != want {
+			t.Fatalf("%s accounting.resolve = %q, want %q", slug, r.Grants[PermAccountingResolve], want)
+		}
 	}
 	for _, slug := range []string{RoleDealerOwner, RoleDealerAccounting, RoleDistributorOwner, RoleDistributorAccounting} {
 		r, _ := RoleBySlug(slug)
