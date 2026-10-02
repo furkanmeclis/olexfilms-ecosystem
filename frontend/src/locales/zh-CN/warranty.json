@@ -1,0 +1,23 @@
+{
+  "public.page_title": "质保查询",
+  "public.status.active": "有效",
+  "public.status.expired": "已过期",
+  "public.status.void": "已作废",
+  "public.days_remaining": "剩余天数",
+  "public.start": "开始日期",
+  "public.end": "结束日期",
+  "public.vehicle": "车辆",
+  "public.plate": "车牌",
+  "public.vin": "VIN（后4位）",
+  "public.model_year": "车型年份",
+  "public.dealer": "施工门店",
+  "public.privacy_note": "为保护个人信息，车牌和 VIN 已部分隐藏。",
+  "public.not_found_title": "未找到质保",
+  "public.not_found_body": "没有与此代码匹配的质保。请重新扫描二维码或核对代码。",
+  "public.rate_limited_title": "请求过多",
+  "public.rate_limited_body": "短时间内查询次数过多，请稍后再试。",
+  "public.retry_after": "请在 {{seconds}} 秒后重试。",
+  "public.error_title": "暂时无法显示质保信息",
+  "public.error_body": "请稍后再试。",
+  "public.language": "语言"
+}

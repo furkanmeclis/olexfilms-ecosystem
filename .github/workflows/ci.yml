@@ -124,6 +124,12 @@ jobs:
         run: pnpm test
       - name: Build
         run: pnpm build
+      # TEC-183: mocked end-to-end run on the build above; page.route
+      # answers the BFF calls, so no backend or database is needed.
+      - name: Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: E2E (mocked API)
+        run: pnpm test:e2e
 
   # Generated contracts must be committed: OpenAPI embed copy, frontend API
   # types, and i18n catalogs in parity.

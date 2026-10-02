@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
@@ -262,6 +263,17 @@ func TestIntegrationServicesFlow(t *testing.T) {
 		!it.svcList(aTok, "?q="+s1.ServiceNo).has(s1.UUID) ||
 		it.svcList(aTok, "?q="+s1.ServiceNo).has(s2.UUID) {
 		t.Fatal("search misses the service")
+	}
+	// Created date filter (TEC-183): a day is a whole UTC day, to is exclusive.
+	yesterday := time.Now().UTC().AddDate(0, 0, -1).Format("2006-01-02")
+	tomorrow := time.Now().UTC().AddDate(0, 0, 1).Format("2006-01-02")
+	if !it.svcList(aTok, "?created_from="+yesterday+"&created_to="+tomorrow).has(s1.UUID) ||
+		it.svcList(aTok, "?created_from="+tomorrow).has(s1.UUID) ||
+		it.svcList(aTok, "?created_to="+yesterday).has(s1.UUID) {
+		t.Fatal("created date filter")
+	}
+	if code, env := it.do("GET", "/v1/services?created_from=02.10.2026", hostOlex, aTok, nil); code != http.StatusBadRequest {
+		t.Fatalf("invalid created_from = %d %s", code, errCode(env))
 	}
 	var n int
 	if err := it.pool.QueryRow(ctx, `SELECT COUNT(*) FROM outbox_events

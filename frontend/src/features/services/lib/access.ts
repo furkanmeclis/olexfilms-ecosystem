@@ -26,3 +26,32 @@ export function resolveServiceWizardAccess(can: Can): ServiceWizardAccess {
     canCreateVehicle: canStart && can(permissions.vehicles.write),
   };
 }
+
+export type ServiceListAccess = {
+  /** The list and detail open (GET /v1/services needs services.read). */
+  canRead: boolean;
+  /** "New service" opens the wizard. */
+  canCreate: boolean;
+};
+
+export function resolveServiceListAccess(can: Can): ServiceListAccess {
+  return {
+    canRead: can(permissions.services.read),
+    canCreate: resolveServiceWizardAccess(can).canStart,
+  };
+}
+
+/**
+ * "Continue in wizard" on the detail page: a draft whose items the caller
+ * may still change, and the wizard itself opens for the caller.
+ */
+export function canContinueWizard(
+  can: Can,
+  service: { status: string; items_editable: boolean },
+): boolean {
+  return (
+    service.status === "draft" &&
+    service.items_editable &&
+    resolveServiceWizardAccess(can).canStart
+  );
+}

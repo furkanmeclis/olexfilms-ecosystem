@@ -717,6 +717,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/warranties/{public_code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public warranty lookup (QR page /garanti/{public_code})
+         * @description TEC-189. No authentication. Looks up a warranty by its random public
+         *     code inside the brand of the request domain (K20). Returns no personal
+         *     data: no holder name, phone, e-mail or address; the plate is masked
+         *     (e.g. `34 *** 12`) and only the last four VIN characters are shown.
+         *     The warranty of an anonymized customer is still returned (K19).
+         *     Malformed codes (outside `^[A-Za-z0-9_-]{12,32}$`) are 404 without a
+         *     database lookup; malformed, unknown and other-brand codes share the same
+         *     404 body. Rate limited per client IP (WARRANTY_PUBLIC_RATE_LIMIT per
+         *     WARRANTY_PUBLIC_RATE_WINDOW); over the limit 429 with Retry-After.
+         *     Responses carry `Cache-Control: no-store` and `X-Robots-Tag: noindex`.
+         */
+        get: operations["getPublicWarranty"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/organizations": {
         parameters: {
             query?: never;
@@ -5517,6 +5546,48 @@ export interface components {
             /** @enum {string} */
             status: "active" | "inactive";
         };
+        /** @description Public warranty projection (TEC-189); never carries personal data. */
+        PublicWarranty: {
+            public_code: string;
+            /**
+             * @description An active warranty past end_at reads expired before the nightly cron runs.
+             * @enum {string}
+             */
+            status: "active" | "expired" | "void";
+            /** Format: date-time */
+            start_at: string;
+            /** Format: date-time */
+            end_at: string;
+            /** @description Whole days left (rounded up) while active, else 0. */
+            days_remaining: number;
+            product: {
+                name: string;
+            };
+            /** @description Brand of the request domain. */
+            brand: {
+                name: string;
+                slug: string;
+            };
+            /** @description Organization that performed the service. */
+            dealer: {
+                name: string;
+                city: string;
+            };
+            vehicle: {
+                brand_name: string;
+                /**
+                 * Format: uuid
+                 * @description Car brand with a logo, served at /brand-logos/{uuid}.
+                 */
+                brand_logo_uuid: string | null;
+                model_name: string;
+                model_year: number | null;
+                /** @example 34 *** 12 */
+                plate_masked: string | null;
+                /** @example 6752 */
+                vin_last4: string | null;
+            };
+        };
         PublicOrganization: {
             /** Format: uuid */
             uuid: string;
@@ -6382,6 +6453,12 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["PublicBrand"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePublicWarranty: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PublicWarranty"];
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeTokens: {
@@ -8868,6 +8945,27 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        /** @description A warranty the completed service issued (TEC-186), detail only. */
+        ServiceWarranty: {
+            /** Format: uuid */
+            uuid: string;
+            public_code: string;
+            /** Format: uuid */
+            service_item_uuid: string;
+            product_name: string;
+            /** @enum {string} */
+            item_kind: "full" | "partial";
+            /** @enum {string} */
+            status: "active" | "expired" | "void";
+            /** Format: date-time */
+            start_at: string;
+            /** Format: date-time */
+            end_at: string;
+            /** Format: date-time */
+            expired_at: string | null;
+            /** Format: date-time */
+            voided_at: string | null;
+        };
         Service: {
             /** Format: uuid */
             uuid: string;
@@ -8906,6 +9004,7 @@ export interface components {
             items?: components["schemas"]["ServiceItem"][];
             images?: components["schemas"]["ServiceImage"][];
             status_logs?: components["schemas"]["ServiceStatusLog"][];
+            warranties?: components["schemas"]["ServiceWarranty"][];
         };
         ServiceCreateInput: {
             /** Format: uuid */
@@ -10506,6 +10605,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopePublicBrand"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getPublicWarranty: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Warranty */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePublicWarranty"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description Rate limited per client IP */
+            429: {
+                headers: {
+                    /** @description Seconds until the window resets */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
                 };
             };
             500: components["responses"]["InternalError"];
@@ -17834,6 +17968,10 @@ export interface operations {
                 status?: components["schemas"]["ServiceStatus"];
                 customer_uuid?: string;
                 vehicle_uuid?: string;
+                /** @description Inclusive lower bound of created_at (TEC-183): RFC3339, or a YYYY-MM-DD day in UTC. */
+                created_from?: string;
+                /** @description Exclusive upper bound of created_at: RFC3339, or a YYYY-MM-DD day in UTC that covers the whole day. Must be after created_from. */
+                created_to?: string;
                 limit?: number;
                 offset?: number;
             };

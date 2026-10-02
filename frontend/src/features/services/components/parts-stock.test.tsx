@@ -560,7 +560,7 @@ describe("Wizard flow: parts, roll and pieces, completion", () => {
 
     await click($('[data-testid="complete-service"]'));
     expect(api.transition).toHaveBeenCalledWith("s1", "completed");
-    expect(router.push).toHaveBeenCalledWith("/t/acme");
+    expect(router.push).toHaveBeenCalledWith("/t/acme/services/s1");
     expect(window.sessionStorage.getItem("service-wizard-parts:s1")).toBeNull();
   });
 });
