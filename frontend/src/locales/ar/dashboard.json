@@ -18,5 +18,20 @@
   "pipeline.expiring": "عروض أسعار تنتهي خلال 3 أيام: {{count}}",
   "pipeline.awaiting": "عروض أسعار بانتظار الرد: {{count}}",
   "tenant.welcome_title": "مرحبًا",
-  "tenant.welcome_description": "لوحة المنشأة. ستظهر الوحدات هنا عند إضافتها."
+  "tenant.welcome_description": "لوحة المنشأة. ستظهر الوحدات هنا عند إضافتها.",
+  "top_vehicles.title": "المركبات الأكثر خدمة",
+  "top_vehicles.description": "أفضل 10 علامات تجارية أو طرازات حسب الخدمات المكتملة.",
+  "top_vehicles.period_label": "الفترة",
+  "top_vehicles.period.30d": "30 يومًا",
+  "top_vehicles.period.90d": "90 يومًا",
+  "top_vehicles.period.12m": "12 شهرًا",
+  "top_vehicles.period.all": "الكل",
+  "top_vehicles.group_label": "التجميع حسب",
+  "top_vehicles.group.brand": "العلامة التجارية",
+  "top_vehicles.group.model": "الطراز",
+  "top_vehicles.count": "الخدمات",
+  "top_vehicles.empty": "لا توجد خدمات مكتملة في هذه الفترة.",
+  "top_vehicles.error": "تعذر تحميل الإحصائيات.",
+  "top_vehicles.rank": "الترتيب",
+  "top_vehicles.name": "المركبة"
 }

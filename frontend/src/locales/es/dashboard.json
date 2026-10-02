@@ -18,5 +18,20 @@
   "pipeline.expiring": "Presupuestos que vencen en 3 días: {{count}}",
   "pipeline.awaiting": "Presupuestos pendientes de respuesta: {{count}}",
   "tenant.welcome_title": "Bienvenido",
-  "tenant.welcome_description": "Panel de la organización. Los módulos aparecerán aquí a medida que se añadan."
+  "tenant.welcome_description": "Panel de la organización. Los módulos aparecerán aquí a medida que se añadan.",
+  "top_vehicles.title": "Vehículos más atendidos",
+  "top_vehicles.description": "Top 10 de marcas o modelos por servicios completados.",
+  "top_vehicles.period_label": "Período",
+  "top_vehicles.period.30d": "30 días",
+  "top_vehicles.period.90d": "90 días",
+  "top_vehicles.period.12m": "12 meses",
+  "top_vehicles.period.all": "Todo",
+  "top_vehicles.group_label": "Agrupar por",
+  "top_vehicles.group.brand": "Marca",
+  "top_vehicles.group.model": "Modelo",
+  "top_vehicles.count": "Servicios",
+  "top_vehicles.empty": "No hay servicios completados en este período.",
+  "top_vehicles.error": "No se pudieron cargar las estadísticas.",
+  "top_vehicles.rank": "Puesto",
+  "top_vehicles.name": "Vehículo"
 }

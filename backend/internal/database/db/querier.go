@@ -1114,6 +1114,14 @@ type Querier interface {
 	SupplierOf(ctx context.Context, id int64) (Organization, error)
 	// The target takes over the phone / e-mail it does not have yet.
 	TakeOverMergedIdentity(ctx context.Context, arg TakeOverMergedIdentityParams) error
+	// TEC-151 (F1-09c): top-10 car brands / models by completed services of one
+	// domain brand. Both queries read idx_services_brand_car
+	// (brand_id, car_brand_id, car_model_id, completed_at). completed_at is set
+	// exactly when status = 'completed' (chk_services_completed), so
+	// "completed_at IS NOT NULL" is the completed filter and stays inside the
+	// index. since NULL means all time. Ties sort by name.
+	TopServicedCarBrands(ctx context.Context, arg TopServicedCarBrandsParams) ([]TopServicedCarBrandsRow, error)
+	TopServicedCarModels(ctx context.Context, arg TopServicedCarModelsParams) ([]TopServicedCarModelsRow, error)
 	UpdateAppSettings(ctx context.Context, arg UpdateAppSettingsParams) (AppSetting, error)
 	UpdateAuthSettings(ctx context.Context, arg UpdateAuthSettingsParams) (AuthSetting, error)
 	// Full replacement of the editable fields (read-modify-write in the use case).

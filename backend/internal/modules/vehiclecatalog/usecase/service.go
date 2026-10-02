@@ -155,6 +155,11 @@ func brandLogoURL(id uuid.UUID, key string) string {
 	return withVersion(BrandLogoPath+id.String(), key)
 }
 
+// BrandLogoURL is the stable public logo URL of a car brand with its ?v=
+// cache-buster (logo object key; empty = placeholder, no version). Other
+// modules (TEC-151 statistics) embed it next to brand names.
+func BrandLogoURL(id uuid.UUID, key string) string { return brandLogoURL(id, key) }
+
 func brandHeroURL(id uuid.UUID, key string) string {
 	if key == "" {
 		return DefaultHeroURL
