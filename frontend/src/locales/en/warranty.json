@@ -19,5 +19,10 @@
   "public.retry_after": "Try again in {{seconds}} seconds.",
   "public.error_title": "The warranty cannot be shown right now",
   "public.error_body": "Please try again later.",
-  "public.language": "Language"
+  "public.language": "Language",
+  "certificate.download": "Warranty PDF",
+  "certificate.preparing": "Preparing the warranty certificate…",
+  "certificate.ready": "Warranty certificate downloaded.",
+  "certificate.failed": "The warranty certificate could not be created. Please try again.",
+  "certificate.none": "This service has no active warranty."
 }

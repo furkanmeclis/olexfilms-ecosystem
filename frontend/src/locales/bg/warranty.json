@@ -19,5 +19,10 @@
   "public.retry_after": "Опитайте отново след {{seconds}} секунди.",
   "public.error_title": "Гаранцията не може да бъде показана в момента",
   "public.error_body": "Моля, опитайте отново по-късно.",
-  "public.language": "Език"
+  "public.language": "Език",
+  "certificate.download": "Гаранция (PDF)",
+  "certificate.preparing": "Гаранционната карта се подготвя…",
+  "certificate.ready": "Гаранционната карта е изтеглена.",
+  "certificate.failed": "Гаранционната карта не можа да бъде създадена. Моля, опитайте отново.",
+  "certificate.none": "Тази услуга няма активна гаранция."
 }

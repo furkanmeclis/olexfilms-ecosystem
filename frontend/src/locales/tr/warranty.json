@@ -19,5 +19,10 @@
   "public.retry_after": "{{seconds}} saniye sonra tekrar deneyin.",
   "public.error_title": "Garanti şu anda gösterilemiyor",
   "public.error_body": "Lütfen daha sonra tekrar deneyin.",
-  "public.language": "Dil"
+  "public.language": "Dil",
+  "certificate.download": "Garanti PDF'i",
+  "certificate.preparing": "Garanti belgesi hazırlanıyor…",
+  "certificate.ready": "Garanti belgesi indirildi.",
+  "certificate.failed": "Garanti belgesi oluşturulamadı. Lütfen tekrar deneyin.",
+  "certificate.none": "Bu hizmette aktif garanti yok."
 }
