@@ -146,7 +146,7 @@ func TestIntegrationStockTransferRequests(t *testing.T) {
 	// A unit the sender does not hold.
 	other := chain.unit(center, piece, 1973)
 	chain.post(ledger.TypeEntry, other, chain.nextRef(), loc)
-	if _, ec := create(aTok, dealerB, other.Barcode, http.StatusUnprocessableEntity); ec != "VALIDATION_ERROR" {
+	if _, ec := create(aTok, dealerB, other.Barcode, http.StatusBadRequest); ec != "VALIDATION_ERROR" {
 		t.Fatalf("foreign unit = %s", ec)
 	}
 
@@ -161,7 +161,7 @@ func TestIntegrationStockTransferRequests(t *testing.T) {
 	}
 	it.transferCall("GET", "/v1/stock-transfers/"+r1.UUID, cTok, nil, http.StatusNotFound)
 	// The same unit cannot be on two open requests.
-	if _, ec := create(aTok, dealerB, u1.Barcode, http.StatusUnprocessableEntity); ec != "VALIDATION_ERROR" {
+	if _, ec := create(aTok, dealerB, u1.Barcode, http.StatusBadRequest); ec != "VALIDATION_ERROR" {
 		t.Fatalf("double request = %s", ec)
 	}
 	if code, _ := it.transferMove(aTok, r1.UUID, "approved"); code != http.StatusForbidden {
