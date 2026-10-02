@@ -68,6 +68,18 @@ vi.mock("@/features/warranty/services/certificate.service", () => ({
     return { request: cert.request, get: cert.get, download: cert.download };
   },
 }));
+const pdf = vi.hoisted(() => ({
+  request: vi.fn(),
+  get: vi.fn(),
+  download: vi.fn(),
+  forService: vi.fn(),
+}));
+vi.mock("@/features/services/services/service-pdf.service", () => ({
+  servicePdfClient: (uuid: string) => {
+    pdf.forService(uuid);
+    return { request: pdf.request, get: pdf.get, download: pdf.download };
+  },
+}));
 vi.mock("@/lib/api/platform-form-request", async (orig) => ({
   ...(await orig<object>()),
   triggerBrowserDownload: cert.trigger,
@@ -396,9 +408,79 @@ describe("ServiceDetailPage (TEC-183)", () => {
     expect(logs[0].textContent).toContain("Teslim edildi");
     expect(logs[0].textContent).toContain("services.detail.history_other_org");
 
-    // Completed: no wizard link; the PDF (TEC-196) is a disabled placeholder.
+    // Completed: no wizard link; the service PDF (TEC-196) is available;
+    // the vehicle page link needs vehicles.read.
     expect($("[data-testid=continue-wizard]")).toBeNull();
-    expect($("[data-testid=service-pdf]")?.hasAttribute("disabled")).toBe(true);
+    expect($("[data-testid=service-pdf]")?.hasAttribute("disabled")).toBe(
+      false,
+    );
+    expect($("[data-testid=detail-vehicle-link]")?.getAttribute("href")).toBe(
+      "/t/acme/vehicles/v1",
+    );
+  });
+
+  it("downloads the service PDF (TEC-196)", async () => {
+    state.grants = new Set(["services.read"]);
+    const svc = service();
+    api.getService.mockResolvedValue(svc);
+    const done = {
+      uuid: "j2",
+      resource: "tenant.services.pdf",
+      format: "pdf",
+      status: "completed",
+      row_count: 1,
+      created_at: "2026-10-02T09:00:00Z",
+    };
+    pdf.request.mockResolvedValue(done);
+    pdf.download.mockResolvedValue({
+      blob: new Blob(["%PDF"]),
+      filename: null,
+    });
+    await render(
+      createElement(ServiceDetailPage, { slug: "acme", uuid: "s1" }),
+    );
+    // Without vehicles.read there is no vehicle page link.
+    expect($("[data-testid=detail-vehicle-link]")).toBeNull();
+
+    const button = $("[data-testid=service-pdf]") as HTMLButtonElement;
+    expect(button.textContent).toBe("services.detail.pdf");
+    await act(async () => {
+      button.click();
+    });
+    await flush();
+    expect(pdf.forService).toHaveBeenCalledWith("s1");
+    expect(pdf.request).toHaveBeenCalled();
+    expect(pdf.download).toHaveBeenCalledWith(done);
+    expect(cert.trigger).toHaveBeenCalledWith(
+      expect.any(Blob),
+      `${svc.service_no}.pdf`,
+    );
+    expect(cert.toast.success).toHaveBeenCalledWith(
+      "services.detail.pdf_ready",
+    );
+  });
+
+  it("reports a failed service PDF job", async () => {
+    state.grants = new Set(["services.read"]);
+    api.getService.mockResolvedValue(service());
+    pdf.request.mockResolvedValue({
+      uuid: "j3",
+      resource: "tenant.services.pdf",
+      format: "pdf",
+      status: "failed",
+      error: "boom",
+      row_count: 0,
+      created_at: "2026-10-02T09:00:00Z",
+    });
+    await render(
+      createElement(ServiceDetailPage, { slug: "acme", uuid: "s1" }),
+    );
+    await act(async () => {
+      ($("[data-testid=service-pdf]") as HTMLButtonElement).click();
+    });
+    await flush();
+    expect(pdf.download).not.toHaveBeenCalled();
+    expect(cert.toast.error).toHaveBeenCalledWith("services.detail.pdf_failed");
   });
 
   it("downloads the warranty PDF with warranties.read (TEC-188)", async () => {

@@ -61,6 +61,11 @@ export const routes = {
       wizard: (slug: string, uuid: string) =>
         `/t/${slug}/services/${uuid}/wizard`,
     },
+    /** TEC-191 warranty list and detail. */
+    warranties: {
+      list: (slug: string) => `/t/${slug}/warranties`,
+      detail: (slug: string, uuid: string) => `/t/${slug}/warranties/${uuid}`,
+    },
     /** TEC-190 vehicle detail with the ownership transfer. */
     vehicles: {
       detail: (slug: string, uuid: string) => `/t/${slug}/vehicles/${uuid}`,
@@ -71,6 +76,8 @@ export const routes = {
     home: "/portal",
     login: "/portal/login",
     forgotPassword: "/portal/forgot-password",
+    /** TEC-191: the user's warranties. */
+    warranties: "/portal/warranties",
   },
   guest: {
     login: "/platform/login",

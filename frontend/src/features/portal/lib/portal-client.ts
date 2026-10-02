@@ -4,6 +4,8 @@
  * (/api/portal-auth), never to the panel endpoints, so the panel session
  * cookie is never read or written from the portal.
  */
+import type { components } from "@/generated/api";
+
 export const PORTAL_API_BASE = "/api/portal/v1";
 export const PORTAL_AUTH_BASE = "/api/portal-auth";
 
@@ -171,6 +173,15 @@ export type PendingLegalText = {
   body: string;
 };
 
+export type PortalWarranty = components["schemas"]["Warranty"];
+
+export type PortalWarrantyPage = {
+  items: PortalWarranty[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
 export const portalApi = {
   requestOTP(phone: string, country: string, locale: string) {
     return portalRequest<OTPRequestResult>("auth/otp/request", {
@@ -198,6 +209,22 @@ export const portalApi = {
         accepted,
       },
     });
+  },
+  /** Warranties the signed-in user holds (TEC-191). */
+  listWarranties(query: Record<string, string | number | undefined>) {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(query)) {
+      if (value !== undefined && value !== "") params.set(key, String(value));
+    }
+    const qs = params.toString();
+    return portalRequest<PortalWarrantyPage>(
+      `portal/warranties${qs ? `?${qs}` : ""}`,
+    );
+  },
+  getWarranty(uuid: string) {
+    return portalRequest<PortalWarranty>(
+      `portal/warranties/${encodeURIComponent(uuid)}`,
+    );
   },
   forgotPassword(email: string) {
     return portalRequest("auth/password/forgot", {

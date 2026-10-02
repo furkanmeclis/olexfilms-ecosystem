@@ -24,6 +24,7 @@ import {
   ScrollText,
   Settings2,
   Shield,
+  ShieldCheck,
   Upload,
   UserRound,
   Users,
@@ -354,7 +355,13 @@ export function tenantNav(slug: string) {
         labelKey: "services.nav",
         icon: Wrench,
         defaultOpen: true,
-        anyPermission: [permissions.services.read, permissions.services.write],
+        // TEC-191: the warranty list needs warranties.read (same scopes as
+        // services.read).
+        anyPermission: [
+          permissions.services.read,
+          permissions.services.write,
+          permissions.warranties.read,
+        ],
         feature: "services",
         items: [
           {
@@ -371,6 +378,14 @@ export function tenantNav(slug: string) {
             href: routes.tenant.services.create(slug),
             icon: Wrench,
             permission: SERVICE_WIZARD_PERMISSIONS,
+            feature: "services",
+          },
+          {
+            id: "warranties-list",
+            titleKey: "warranty.nav_list",
+            href: routes.tenant.warranties.list(slug),
+            icon: ShieldCheck,
+            permission: permissions.warranties.read,
             feature: "services",
           },
         ],

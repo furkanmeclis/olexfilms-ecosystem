@@ -118,7 +118,7 @@ test("wizard: customer/vehicle → parts → VIN → stock → complete → deta
   );
   await expect(page.getByTestId("detail-images-empty")).toBeVisible();
   await expect(page.getByTestId("continue-wizard")).toHaveCount(0);
-  await expect(page.getByTestId("service-pdf")).toBeDisabled();
+  await expect(page.getByTestId("service-pdf")).toBeEnabled();
 });
 
 test("list: filters, then a draft continues in the wizard", async ({

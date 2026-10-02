@@ -117,6 +117,7 @@ type Querier interface {
 	CountUsers(ctx context.Context, arg CountUsersParams) (int64, error)
 	CountUsersWithRole(ctx context.Context, roleSlug string) (int64, error)
 	CountWarrantiesInScope(ctx context.Context, arg CountWarrantiesInScopeParams) (int64, error)
+	CountWarrantyRows(ctx context.Context, arg CountWarrantyRowsParams) (int64, error)
 	CreateBulkJob(ctx context.Context, arg CreateBulkJobParams) (BulkJob, error)
 	// TEC-149: vehicle catalog (car brands and models). Global reference data:
 	// no organization/brand filter; only super_admin writes (use case + route).
@@ -885,6 +886,17 @@ type Querier interface {
 	// as ListWarrantyCandidatesByService for those items. The page is cut by
 	// service, so every missing item of a listed service is returned.
 	ListWarrantyRepairCandidates(ctx context.Context, arg ListWarrantyRepairCandidatesParams) ([]ListWarrantyRepairCandidatesRow, error)
+	// TEC-191 (F1-06g): panel and portal warranty list, detail and void.
+	// Brand-bound (K20). Scope arguments, all optional:
+	//   org_ids            NULL = whole brand (brand / all scope), else the
+	//                      organizations in scope (dealer own, distributor subtree);
+	//   holder_user_id     portal / customer scope: the holder only;
+	//   service_created_by own / assigned scope: services the caller created.
+	// Filters: status, product, vehicle, end_at window (days left), q (warranty
+	// public code, service number, product name or plate; q_plate is the
+	// normalized plate, geo.NormalizePlate), warranty_uuid (detail).
+	// Order: active first by the soonest end, then the rest by the latest end.
+	ListWarrantyRows(ctx context.Context, arg ListWarrantyRowsParams) ([]ListWarrantyRowsRow, error)
 	ListWebAuthnCredentialsByUserID(ctx context.Context, userID int64) ([]WebauthnCredential, error)
 	ListWebAuthnCredentialsForUserIDs(ctx context.Context, userIds []int64) ([]WebauthnCredential, error)
 	ListWhatsAppAlarmRecipients(ctx context.Context) ([]ListWhatsAppAlarmRecipientsRow, error)
@@ -1193,6 +1205,11 @@ type Querier interface {
 	UserHasRoleSlug(ctx context.Context, arg UserHasRoleSlugParams) (bool, error)
 	// Center void (warranties.void). Expired warranties may be voided too.
 	VoidWarranty(ctx context.Context, arg VoidWarrantyParams) (Warranty, error)
+	// Center void (warranties.void, step-up). An expired warranty may be voided
+	// too: chk_warranties_expired ties expired_at to status 'expired', so the
+	// expiry stamp is cleared with the status change (the voided_at stamp and
+	// the activity log keep the history).
+	VoidWarrantyWithReason(ctx context.Context, arg VoidWarrantyWithReasonParams) (Warranty, error)
 }
 
 var _ Querier = (*Queries)(nil)

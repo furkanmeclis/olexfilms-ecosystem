@@ -104,6 +104,10 @@ tags:
       Vehicle services (TEC-97/TEC-179): draft by the serving organization,
       items from its stock, the legacy status flow and images. Completion
       with stock consumption arrives with TEC-180.
+  - name: Warranties
+    description: >-
+      Warranties opened from completed services (TEC-98): panel and portal
+      list and detail, center void (TEC-191).
   - name: Orders
     description: >-
       Product orders down the tree (TEC-96/TEC-166, K6): draft by the buyer,
@@ -1317,6 +1321,97 @@ paths:
                 $ref: "#/components/schemas/Error"
         "500":
           $ref: "#/components/responses/InternalError"
+
+  /v1/services/{uuid}/pdf:
+    post:
+      tags: [Services]
+      operationId: requestServicePdf
+      summary: Queue the PDF of a service
+      description: >-
+        TEC-196. One PDF per service on the letterhead of the organization
+        that performed it: service number, created / completed day and
+        status, the customer (phone masked, anonymized customers labelled),
+        the vehicle (brand, model, year, plate, VIN), every item with its
+        unit barcode, amount (pieces / metres / whole unit) and applied parts,
+        and the warranty summary with a QR code per warranty pointing at
+        PUBLIC_FRONTEND_URL/garanti/{public_code}. The job runs on
+        worker-docs (exports queue) and is rendered by Gotenberg in the
+        requested language (RTL for ar). Needs services.read; a service
+        outside the scope answers 404. Poll and download through
+        /v1/service-pdfs/{uuid}.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServicePdfInput"
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/service-pdfs/{uuid}:
+    get:
+      tags: [Services]
+      operationId: getServicePdfJob
+      summary: A service PDF job of the active organization
+      description: download_url points at /v1/service-pdfs/{uuid}/download once completed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Export job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/service-pdfs/{uuid}/download:
+    get:
+      tags: [Services]
+      operationId: downloadServicePdf
+      summary: Download a completed service PDF
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: PDF bytes
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /v1/services/{uuid}/warranty-certificate:
     post:
@@ -9260,6 +9355,188 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/warranties:
+    get:
+      tags: [Warranties]
+      operationId: listWarranties
+      summary: Warranties inside the warranties.read scope
+      description: >-
+        TEC-191. Center: the domain brand (K20), distributor: its subtree,
+        dealer: its organization (own / assigned scope: services the caller
+        created). Needs the services module. Active warranties come first by
+        the soonest end, then the rest by the latest end. q matches the
+        warranty public code, service number, product name and the plate
+        (spaces / dashes ignored). days_left_min / days_left_max bound the end
+        to (now + min days, now + max days]; with only days_left_max the
+        lower bound is now ("ends within N days").
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/WarrantyStatus" }
+        - name: q
+          in: query
+          schema: { type: string, maxLength: 100 }
+        - name: product_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - name: vehicle_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - name: days_left_min
+          in: query
+          schema: { type: integer, minimum: 0, maximum: 3650 }
+        - name: days_left_max
+          in: query
+          schema: { type: integer, minimum: 0, maximum: 3650 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Warranties
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarrantyPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/warranties/{uuid}:
+    get:
+      tags: [Warranties]
+      operationId: getWarranty
+      summary: One warranty inside the warranties.read scope
+      description: Out of scope or another brand's warranty answers 404 (TEC-191).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Warranty
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarranty"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/warranties/{uuid}/void:
+    post:
+      tags: [Warranties]
+      operationId: voidWarranty
+      summary: Void a warranty (center, step-up)
+      description: >-
+        TEC-191. Needs warranties.void (center roles only) and a fresh
+        step-up (403 STEP_UP_REQUIRED otherwise). Active and expired
+        warranties become void with a reason (3-500 characters); the void
+        writes a warranty.voided outbox event and an activity log row in the
+        same transaction. An already void warranty answers 409
+        WARRANTY_ALREADY_VOID.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WarrantyVoidInput"
+      responses:
+        "200":
+          description: Voided warranty
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarranty"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /v1/portal/warranties:
+    get:
+      tags: [Warranties]
+      operationId: listPortalWarranties
+      summary: The portal user's warranties
+      description: >-
+        TEC-191. Portal session (aud=portal) with warranties.read: only the
+        warranties the signed-in customer / fleet user holds in the domain
+        brand. Same filters as GET /v1/warranties; rows carry no holder.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/WarrantyStatus" }
+        - name: q
+          in: query
+          schema: { type: string, maxLength: 100 }
+        - name: days_left_min
+          in: query
+          schema: { type: integer, minimum: 0, maximum: 3650 }
+        - name: days_left_max
+          in: query
+          schema: { type: integer, minimum: 0, maximum: 3650 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Warranties
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarrantyPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/portal/warranties/{uuid}:
+    get:
+      tags: [Warranties]
+      operationId: getPortalWarranty
+      summary: One warranty the portal user holds
+      description: Another holder's warranty answers 404 (TEC-191).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Warranty
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarranty"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /v1/services:
     get:
       tags: [Services]
@@ -15306,6 +15583,12 @@ components:
             accounts: { $ref: "#/components/schemas/AccountingAmount" }
         generated_at: { type: string, format: date-time }
 
+    ServicePdfInput:
+      type: object
+      additionalProperties: false
+      properties:
+        locale: { type: string, description: PDF language override (default the user language), example: ar }
+
     WarrantyCertificateInput:
       type: object
       additionalProperties: false
@@ -15601,6 +15884,115 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/ServiceImage" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    WarrantyStatus:
+      type: string
+      enum: [active, expired, void]
+
+    Warranty:
+      type: object
+      description: >-
+        A warranty in the panel / portal list and detail (TEC-191). The plate
+        is the service snapshot, then the vehicle. holder is panel only
+        (masked when the customer is anonymized, K19).
+      required:
+        - uuid
+        - public_code
+        - status
+        - item_kind
+        - start_at
+        - end_at
+        - expired_at
+        - voided_at
+        - void_reason
+        - created_at
+        - product
+        - service
+        - organization
+        - vehicle
+        - can_void
+      properties:
+        uuid: { type: string, format: uuid }
+        public_code: { type: string }
+        status: { $ref: "#/components/schemas/WarrantyStatus" }
+        item_kind: { type: string, enum: [full, partial] }
+        start_at: { type: string, format: date-time }
+        end_at: { type: string, format: date-time }
+        expired_at: { type: [string, "null"], format: date-time }
+        voided_at: { type: [string, "null"], format: date-time }
+        void_reason: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+        product:
+          type: object
+          required: [uuid, sku, name]
+          properties:
+            uuid: { type: string, format: uuid }
+            sku: { type: string }
+            name: { type: string }
+        service:
+          type: object
+          required: [uuid, service_no]
+          properties:
+            uuid: { type: string, format: uuid }
+            service_no: { type: string }
+        organization:
+          type: object
+          required: [uuid, name, type]
+          properties:
+            uuid: { type: string, format: uuid }
+            name: { type: string }
+            type: { type: string }
+        vehicle:
+          type: object
+          required: [uuid, brand_name, model_name, model_year, plate]
+          properties:
+            uuid: { type: string, format: uuid }
+            brand_name: { type: string }
+            model_name: { type: string }
+            model_year: { type: [integer, "null"] }
+            plate: { type: [string, "null"] }
+        holder:
+          type: object
+          required: [uuid, name, surname, anonymized]
+          properties:
+            uuid: { type: string, format: uuid }
+            name: { type: string }
+            surname: { type: string }
+            anonymized: { type: boolean }
+        can_void:
+          type: boolean
+          description: The caller may void it (warranties.void and an active or expired status).
+
+    WarrantyVoidInput:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 3, maxLength: 500 }
+
+    EnvelopeWarranty:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Warranty" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeWarrantyPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/Warranty" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeServicePage:

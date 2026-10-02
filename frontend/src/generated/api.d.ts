@@ -746,6 +746,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/services/{uuid}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue the PDF of a service
+         * @description TEC-196. One PDF per service on the letterhead of the organization that performed it: service number, created / completed day and status, the customer (phone masked, anonymized customers labelled), the vehicle (brand, model, year, plate, VIN), every item with its unit barcode, amount (pieces / metres / whole unit) and applied parts, and the warranty summary with a QR code per warranty pointing at PUBLIC_FRONTEND_URL/garanti/{public_code}. The job runs on worker-docs (exports queue) and is rendered by Gotenberg in the requested language (RTL for ar). Needs services.read; a service outside the scope answers 404. Poll and download through /v1/service-pdfs/{uuid}.
+         */
+        post: operations["requestServicePdf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/service-pdfs/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A service PDF job of the active organization
+         * @description download_url points at /v1/service-pdfs/{uuid}/download once completed.
+         */
+        get: operations["getServicePdfJob"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/service-pdfs/{uuid}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download a completed service PDF */
+        get: operations["downloadServicePdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/services/{uuid}/warranty-certificate": {
         parameters: {
             query?: never;
@@ -4965,6 +5022,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/warranties": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Warranties inside the warranties.read scope
+         * @description TEC-191. Center: the domain brand (K20), distributor: its subtree, dealer: its organization (own / assigned scope: services the caller created). Needs the services module. Active warranties come first by the soonest end, then the rest by the latest end. q matches the warranty public code, service number, product name and the plate (spaces / dashes ignored). days_left_min / days_left_max bound the end to (now + min days, now + max days]; with only days_left_max the lower bound is now ("ends within N days").
+         */
+        get: operations["listWarranties"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warranties/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One warranty inside the warranties.read scope
+         * @description Out of scope or another brand's warranty answers 404 (TEC-191).
+         */
+        get: operations["getWarranty"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warranties/{uuid}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Void a warranty (center, step-up)
+         * @description TEC-191. Needs warranties.void (center roles only) and a fresh step-up (403 STEP_UP_REQUIRED otherwise). Active and expired warranties become void with a reason (3-500 characters); the void writes a warranty.voided outbox event and an activity log row in the same transaction. An already void warranty answers 409 WARRANTY_ALREADY_VOID.
+         */
+        post: operations["voidWarranty"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/warranties": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The portal user's warranties
+         * @description TEC-191. Portal session (aud=portal) with warranties.read: only the warranties the signed-in customer / fleet user holds in the domain brand. Same filters as GET /v1/warranties; rows carry no holder.
+         */
+        get: operations["listPortalWarranties"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/warranties/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One warranty the portal user holds
+         * @description Another holder's warranty answers 404 (TEC-191).
+         */
+        get: operations["getPortalWarranty"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/services": {
         parameters: {
             query?: never;
@@ -9054,6 +9211,13 @@ export interface components {
             /** Format: date-time */
             generated_at: string;
         };
+        ServicePdfInput: {
+            /**
+             * @description PDF language override (default the user language)
+             * @example ar
+             */
+            locale?: string;
+        };
         WarrantyCertificateInput: {
             /**
              * @description Certificate language override (default the user language)
@@ -9311,6 +9475,83 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["ServiceImage"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        WarrantyStatus: "active" | "expired" | "void";
+        /** @description A warranty in the panel / portal list and detail (TEC-191). The plate is the service snapshot, then the vehicle. holder is panel only (masked when the customer is anonymized, K19). */
+        Warranty: {
+            /** Format: uuid */
+            uuid: string;
+            public_code: string;
+            status: components["schemas"]["WarrantyStatus"];
+            /** @enum {string} */
+            item_kind: "full" | "partial";
+            /** Format: date-time */
+            start_at: string;
+            /** Format: date-time */
+            end_at: string;
+            /** Format: date-time */
+            expired_at: string | null;
+            /** Format: date-time */
+            voided_at: string | null;
+            void_reason: string | null;
+            /** Format: date-time */
+            created_at: string;
+            product: {
+                /** Format: uuid */
+                uuid: string;
+                sku: string;
+                name: string;
+            };
+            service: {
+                /** Format: uuid */
+                uuid: string;
+                service_no: string;
+            };
+            organization: {
+                /** Format: uuid */
+                uuid: string;
+                name: string;
+                type: string;
+            };
+            vehicle: {
+                /** Format: uuid */
+                uuid: string;
+                brand_name: string;
+                model_name: string;
+                model_year: number | null;
+                plate: string | null;
+            };
+            holder?: {
+                /** Format: uuid */
+                uuid: string;
+                name: string;
+                surname: string;
+                anonymized: boolean;
+            };
+            /** @description The caller may void it (warranties.void and an active or expired status). */
+            can_void: boolean;
+        };
+        WarrantyVoidInput: {
+            reason: string;
+        };
+        EnvelopeWarranty: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Warranty"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWarrantyPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["Warranty"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeServicePage: {
@@ -10887,6 +11128,89 @@ export interface operations {
                 };
             };
             500: components["responses"]["InternalError"];
+        };
+    };
+    requestServicePdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ServicePdfInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getServicePdfJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Export job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    downloadServicePdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     requestServiceWarrantyCertificate: {
@@ -18498,6 +18822,152 @@ export interface operations {
                 };
                 content: {
                     "application/octet-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listWarranties: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["WarrantyStatus"];
+                q?: string;
+                product_uuid?: string;
+                vehicle_uuid?: string;
+                days_left_min?: number;
+                days_left_max?: number;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Warranties */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarrantyPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getWarranty: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Warranty */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarranty"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    voidWarranty: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarrantyVoidInput"];
+            };
+        };
+        responses: {
+            /** @description Voided warranty */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarranty"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listPortalWarranties: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["WarrantyStatus"];
+                q?: string;
+                days_left_min?: number;
+                days_left_max?: number;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Warranties */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarrantyPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getPortalWarranty: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Warranty */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarranty"];
                 };
             };
             401: components["responses"]["Unauthenticated"];
