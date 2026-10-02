@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveServiceWizardAccess } from "./access";
+import {
+  canContinueWizard,
+  resolveServiceListAccess,
+  resolveServiceWizardAccess,
+} from "./access";
 
 const canOf = (grants: string[]) => (p: string) => grants.includes(p);
 
@@ -46,5 +50,35 @@ describe("resolveServiceWizardAccess", () => {
       canCreateCustomer: false,
       canCreateVehicle: false,
     });
+  });
+});
+
+describe("service list / detail access (TEC-183)", () => {
+  const wizard = ["services.write", "customers.read", "vehicles.read"];
+
+  it("reads with services.read, creates with the wizard grants", () => {
+    expect(resolveServiceListAccess(canOf([]))).toEqual({
+      canRead: false,
+      canCreate: false,
+    });
+    expect(resolveServiceListAccess(canOf(["services.read"]))).toEqual({
+      canRead: true,
+      canCreate: false,
+    });
+    expect(
+      resolveServiceListAccess(canOf(["services.read", ...wizard])),
+    ).toEqual({ canRead: true, canCreate: true });
+  });
+
+  it("continues only an editable draft with the wizard grants", () => {
+    const draft = { status: "draft", items_editable: true };
+    expect(canContinueWizard(canOf(wizard), draft)).toBe(true);
+    expect(canContinueWizard(canOf(["services.read"]), draft)).toBe(false);
+    expect(
+      canContinueWizard(canOf(wizard), { ...draft, items_editable: false }),
+    ).toBe(false);
+    expect(
+      canContinueWizard(canOf(wizard), { ...draft, status: "pending" }),
+    ).toBe(false);
   });
 });

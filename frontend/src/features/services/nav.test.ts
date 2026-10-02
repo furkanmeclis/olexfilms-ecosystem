@@ -47,3 +47,19 @@ describe("tenant nav: service wizard (TEC-181)", () => {
     expect(visibleIds(wizardGrants)).toContain("services-new");
   });
 });
+
+describe("tenant nav: service list (TEC-183)", () => {
+  it("links to the service list with services.read alone", () => {
+    const item = tenantNav("acme")
+      .groups.flatMap((g) => g.items)
+      .find((i) => i.id === "services-list");
+    expect(item?.href).toBe(routes.tenant.services.list("acme"));
+    expect(visibleIds([Permission.ServicesRead])).toContain("services-list");
+    expect(visibleIds([Permission.ServicesRead])).not.toContain("services-new");
+  });
+
+  it("is hidden without services.read", () => {
+    expect(visibleIds([])).not.toContain("services-list");
+    expect(visibleIds(wizardGrants)).not.toContain("services-list");
+  });
+});

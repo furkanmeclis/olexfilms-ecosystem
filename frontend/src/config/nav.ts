@@ -2,6 +2,7 @@ import {
   Activity,
   Bell,
   BellRing,
+  ClipboardList,
   Building2,
   Car,
   Blocks,
@@ -344,13 +345,22 @@ export function tenantNav(slug: string) {
       {
         // TEC-181: the service wizard needs services.write plus reading the
         // customers and vehicles it picks from (same gates as the API).
+        // TEC-183: the list needs services.read only.
         id: "services",
         labelKey: "services.nav",
         icon: Wrench,
         defaultOpen: true,
-        permission: SERVICE_WIZARD_PERMISSIONS,
+        anyPermission: [permissions.services.read, permissions.services.write],
         feature: "services",
         items: [
+          {
+            id: "services-list",
+            titleKey: "services.nav_list",
+            href: routes.tenant.services.list(slug),
+            icon: ClipboardList,
+            permission: permissions.services.read,
+            feature: "services",
+          },
           {
             id: "services-new",
             titleKey: "services.nav_new",
