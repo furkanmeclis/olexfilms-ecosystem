@@ -284,6 +284,11 @@ const (
 	CustomerMerged = "customer.merged"
 )
 
+// CustomerCreated (TEC-164) is written when an organization creates a new
+// customer user; the notification module sends the WhatsApp welcome with
+// the portal link.
+const CustomerCreated = "customer.created"
+
 // Contracts domain events.
 const (
 	ContractsInstanceSigned = "contracts.instance_signed"
@@ -538,6 +543,7 @@ func catalogConstants() []string {
 		VehicleTransferCancelled,
 		VehicleTransferExpired,
 		CustomerMerged,
+		CustomerCreated,
 		ContractsInstanceSigned,
 		AuthWelcome,
 		AuthEmailVerification,
