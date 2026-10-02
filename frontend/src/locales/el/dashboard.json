@@ -18,5 +18,20 @@
   "pipeline.expiring": "Προσφορές που λήγουν σε 3 ημέρες: {{count}}",
   "pipeline.awaiting": "Προσφορές σε αναμονή απάντησης: {{count}}",
   "tenant.welcome_title": "Καλώς ήρθατε",
-  "tenant.welcome_description": "Πίνακας οργανισμού. Οι ενότητες θα εμφανίζονται εδώ καθώς προστίθενται."
+  "tenant.welcome_description": "Πίνακας οργανισμού. Οι ενότητες θα εμφανίζονται εδώ καθώς προστίθενται.",
+  "top_vehicles.title": "Οχήματα με τις περισσότερες υπηρεσίες",
+  "top_vehicles.description": "Τοπ 10 μάρκες ή μοντέλα κατά ολοκληρωμένες υπηρεσίες.",
+  "top_vehicles.period_label": "Περίοδος",
+  "top_vehicles.period.30d": "30 ημέρες",
+  "top_vehicles.period.90d": "90 ημέρες",
+  "top_vehicles.period.12m": "12 μήνες",
+  "top_vehicles.period.all": "Όλα",
+  "top_vehicles.group_label": "Ομαδοποίηση κατά",
+  "top_vehicles.group.brand": "Μάρκα",
+  "top_vehicles.group.model": "Μοντέλο",
+  "top_vehicles.count": "Υπηρεσίες",
+  "top_vehicles.empty": "Δεν υπάρχουν ολοκληρωμένες υπηρεσίες σε αυτή την περίοδο.",
+  "top_vehicles.error": "Δεν ήταν δυνατή η φόρτωση των στατιστικών.",
+  "top_vehicles.rank": "Θέση",
+  "top_vehicles.name": "Όχημα"
 }

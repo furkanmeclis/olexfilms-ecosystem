@@ -18,5 +18,20 @@
   "pipeline.expiring": "Devis expirant sous 3 jours : {{count}}",
   "pipeline.awaiting": "Devis en attente de réponse : {{count}}",
   "tenant.welcome_title": "Bienvenue",
-  "tenant.welcome_description": "Espace de l'organisation. Les modules apparaîtront ici à mesure de leur ajout."
+  "tenant.welcome_description": "Espace de l'organisation. Les modules apparaîtront ici à mesure de leur ajout.",
+  "top_vehicles.title": "Véhicules les plus traités",
+  "top_vehicles.description": "Top 10 des marques ou modèles par services terminés.",
+  "top_vehicles.period_label": "Période",
+  "top_vehicles.period.30d": "30 jours",
+  "top_vehicles.period.90d": "90 jours",
+  "top_vehicles.period.12m": "12 mois",
+  "top_vehicles.period.all": "Tout",
+  "top_vehicles.group_label": "Regrouper par",
+  "top_vehicles.group.brand": "Marque",
+  "top_vehicles.group.model": "Modèle",
+  "top_vehicles.count": "Prestations",
+  "top_vehicles.empty": "Aucune prestation terminée sur cette période.",
+  "top_vehicles.error": "Impossible de charger les statistiques.",
+  "top_vehicles.rank": "Rang",
+  "top_vehicles.name": "Véhicule"
 }

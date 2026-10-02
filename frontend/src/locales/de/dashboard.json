@@ -18,5 +18,20 @@
   "pipeline.expiring": "Innerhalb von 3 Tagen ablaufende Angebote: {{count}}",
   "pipeline.awaiting": "Angebote ohne Antwort: {{count}}",
   "tenant.welcome_title": "Willkommen",
-  "tenant.welcome_description": "Organisationsbereich. Module erscheinen hier, sobald sie hinzugefügt werden."
+  "tenant.welcome_description": "Organisationsbereich. Module erscheinen hier, sobald sie hinzugefügt werden.",
+  "top_vehicles.title": "Am häufigsten bediente Fahrzeuge",
+  "top_vehicles.description": "Top 10 Marken oder Modelle nach abgeschlossenen Services.",
+  "top_vehicles.period_label": "Zeitraum",
+  "top_vehicles.period.30d": "30 Tage",
+  "top_vehicles.period.90d": "90 Tage",
+  "top_vehicles.period.12m": "12 Monate",
+  "top_vehicles.period.all": "Gesamt",
+  "top_vehicles.group_label": "Gruppieren nach",
+  "top_vehicles.group.brand": "Marke",
+  "top_vehicles.group.model": "Modell",
+  "top_vehicles.count": "Services",
+  "top_vehicles.empty": "Keine abgeschlossenen Services in diesem Zeitraum.",
+  "top_vehicles.error": "Statistiken konnten nicht geladen werden.",
+  "top_vehicles.rank": "Rang",
+  "top_vehicles.name": "Fahrzeug"
 }
