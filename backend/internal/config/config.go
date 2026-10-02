@@ -35,6 +35,7 @@ type Config struct {
 	Wuzapi     WuzapiConfig
 	Rates      RatesConfig
 	Mobile     MobileConfig
+	Warranty   WarrantyConfig
 }
 
 // MobileConfig is the mobile API contract (TEC-91): the supported range of
@@ -44,6 +45,12 @@ type MobileConfig struct {
 	MinAPIVersion int
 	MaxAPIVersion int
 	QRLoginTTL    time.Duration
+}
+
+// WarrantyConfig tunes the periodic warranty tasks. RepairScanDays is the
+// look-back window of warranty:repair_scan (TEC-194), by completed_at.
+type WarrantyConfig struct {
+	RepairScanDays int
 }
 
 // RatesConfig points the daily exchange rate fetch (TEC-84) at TCMB and ECB.
@@ -339,6 +346,9 @@ func Load() (Config, error) {
 		Rates: RatesConfig{
 			TCMBURL: getEnv("RATES_TCMB_URL", "https://www.tcmb.gov.tr/kurlar/today.xml"),
 			ECBURL:  getEnv("RATES_ECB_URL", "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml"),
+		},
+		Warranty: WarrantyConfig{
+			RepairScanDays: getInt("WARRANTY_REPAIR_SCAN_DAYS", 30),
 		},
 		Mobile: MobileConfig{
 			MinAPIVersion: getInt("MOBILE_API_MIN_VERSION", 1),

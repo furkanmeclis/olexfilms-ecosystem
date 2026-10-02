@@ -171,18 +171,17 @@ func (l *Listener) CreateForService(ctx context.Context, serviceID int64) (Creat
 	return res, nil
 }
 
-// skipReason applies the rules that need no write: Glorian, external
-// units and the warranty period of the product.
+// skipReason applies the shared write-free rules (SkipReason) to a
+// listener row.
 func skipReason(svc db.GetWarrantyServiceContextRow, it db.ListWarrantyCandidatesByServiceRow) string {
-	switch {
-	case strings.EqualFold(svc.BrandSlug, GlorianBrandSlug) || strings.EqualFold(it.UnitBrandSlug, GlorianBrandSlug):
-		return SkipGlorian
-	case it.ExternalOutbound || it.UnitSource == "external" || it.UnitConnectionID.Valid:
-		return SkipExternal
-	case !it.WarrantyDurationMonths.Valid || it.WarrantyDurationMonths.Int32 <= 0:
-		return SkipNoPeriod
-	}
-	return ""
+	return SkipReason(Eligibility{
+		ServiceBrandSlug:       svc.BrandSlug,
+		UnitBrandSlug:          it.UnitBrandSlug,
+		UnitSource:             it.UnitSource,
+		UnitConnectionID:       it.UnitConnectionID,
+		ExternalOutbound:       it.ExternalOutbound,
+		WarrantyDurationMonths: it.WarrantyDurationMonths,
+	})
 }
 
 // createOne inserts the warranty of one item. It returns a skip reason

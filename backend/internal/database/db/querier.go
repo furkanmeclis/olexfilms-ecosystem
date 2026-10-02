@@ -835,6 +835,12 @@ type Querier interface {
 	// Notification context of the cron events (TEC-187): plate, product and the
 	// organization's name and time zone (end date is shown in the org zone).
 	ListWarrantyNoticeContexts(ctx context.Context, ids []int64) ([]ListWarrantyNoticeContextsRow, error)
+	// TEC-194: repair scan. One page of completed services (completed in
+	// [since, until], id > after_service_id, organization_id = 0 for all) that
+	// still have an item without a warranty, with the same eligibility columns
+	// as ListWarrantyCandidatesByService for those items. The page is cut by
+	// service, so every missing item of a listed service is returned.
+	ListWarrantyRepairCandidates(ctx context.Context, arg ListWarrantyRepairCandidatesParams) ([]ListWarrantyRepairCandidatesRow, error)
 	ListWebAuthnCredentialsByUserID(ctx context.Context, userID int64) ([]WebauthnCredential, error)
 	ListWebAuthnCredentialsForUserIDs(ctx context.Context, userIds []int64) ([]WebauthnCredential, error)
 	ListWhatsAppAlarmRecipients(ctx context.Context) ([]ListWhatsAppAlarmRecipientsRow, error)
