@@ -87,5 +87,9 @@
   "codes.STOCK_RECLASSIFICATION_PRODUCT_CHANGED": "Le produit de l'unité a changé depuis la demande.",
   "codes.STOCK_RECLASSIFICATION_NOT_PENDING": "Cette demande de reclassement a déjà été traitée.",
   "codes.STOCK_RECLASSIFICATION_PENDING_EXISTS": "Cette unité a déjà une demande de reclassement en attente.",
-  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Vous ne pouvez pas approuver votre propre demande."
+  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Vous ne pouvez pas approuver votre propre demande.",
+  "codes.ENTRY_NOT_DISPUTABLE": "Seule une écriture ouverte passée par votre organisation parente sur ce compte de tiers peut être contestée.",
+  "codes.DISPUTE_ALREADY_OPEN": "Cette écriture a déjà une contestation ouverte.",
+  "codes.DISPUTE_NOT_OPEN": "Cette contestation est déjà résolue ou rejetée.",
+  "codes.DISPUTE_NOT_RESOLVABLE": "L'écriture contestée n'est plus ouverte ; rejetez la contestation ou contrepassez-la."
 }

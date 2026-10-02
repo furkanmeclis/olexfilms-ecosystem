@@ -87,5 +87,9 @@
   "codes.STOCK_RECLASSIFICATION_PRODUCT_CHANGED": "Το προϊόν της μονάδας άλλαξε μετά το αίτημα.",
   "codes.STOCK_RECLASSIFICATION_NOT_PENDING": "Αυτό το αίτημα επαναταξινόμησης έχει ήδη κριθεί.",
   "codes.STOCK_RECLASSIFICATION_PENDING_EXISTS": "Υπάρχει ήδη εκκρεμές αίτημα επαναταξινόμησης για αυτή τη μονάδα.",
-  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Δεν μπορείτε να εγκρίνετε το δικό σας αίτημα."
+  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Δεν μπορείτε να εγκρίνετε το δικό σας αίτημα.",
+  "codes.ENTRY_NOT_DISPUTABLE": "Ένσταση επιτρέπεται μόνο σε ανοιχτή εγγραφή που καταχώρισε ο ανώτερος οργανισμός σας σε αυτόν τον τρεχούμενο λογαριασμό.",
+  "codes.DISPUTE_ALREADY_OPEN": "Αυτή η εγγραφή έχει ήδη ανοιχτή ένσταση.",
+  "codes.DISPUTE_NOT_OPEN": "Αυτή η ένσταση έχει ήδη επιλυθεί ή απορριφθεί.",
+  "codes.DISPUTE_NOT_RESOLVABLE": "Η εγγραφή υπό ένσταση δεν είναι πλέον ανοιχτή· απορρίψτε την ένσταση ή κάντε αντιλογισμό."
 }

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
+import { StatusChip } from "@/components/common/status-chip";
 import { Loading } from "@/components/common/loading";
 import { EntityPage } from "@/components/entity";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import {
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { counterpartyKind } from "@/features/accounting/components/cari-page";
+import { DisputeButton } from "@/features/accounting/components/dispute-dialog";
 import { SettlementDialog } from "@/features/accounting/components/settlement-dialog";
 import {
   BalanceLabel,
@@ -28,9 +30,14 @@ import {
   useCategoryLabels,
 } from "@/features/accounting/components/shared";
 import {
+  ReadOnlyNotice,
+  useOpenDisputeEntries,
+} from "@/features/accounting/components/statement-page";
+import {
   accountingKeys,
   useAccountingAccess,
 } from "@/features/accounting/hooks/use-accounting-access";
+import { isEntryDisputable } from "@/features/accounting/lib/disputes";
 import {
   accountingService,
   type SettlementKind,
@@ -41,8 +48,9 @@ import { useLocale } from "@/providers/locale-provider";
 const RECENT_LIMIT = 10;
 
 /**
- * Cari detail: balance and the latest rows. The statement (PDF/Excel) and
- * disputes come with TEC-195; the statement button is a placeholder.
+ * Cari detail: balance, the latest rows and the statement link (TEC-195).
+ * A child organization disputes a row its parent posted from here or from
+ * the statement; a read-only dealer sees no write button.
  */
 export function CariDetailPage({ slug, uuid }: { slug: string; uuid: string }) {
   const { t, format } = useLocale();
@@ -50,6 +58,10 @@ export function CariDetailPage({ slug, uuid }: { slug: string; uuid: string }) {
   const [settle, setSettle] = useState<SettlementKind | null>(null);
   const enabled = access.canRead && Boolean(access.orgUuid);
   const categories = useCategoryLabels(access.orgUuid, enabled);
+  const openDisputes = useOpenDisputeEntries(
+    access.orgUuid,
+    enabled && access.canDispute,
+  );
 
   const cari = useQuery({
     queryKey: accountingKeys.cari(access.orgUuid, uuid),
@@ -103,14 +115,11 @@ export function CariDetailPage({ slug, uuid }: { slug: string; uuid: string }) {
               </Button>
             </>
           ) : null}
-          <Button
-            variant="outline"
-            disabled
-            title={t("accounting.cari.statement_soon")}
-            data-testid="cari-statement"
-          >
-            <FileText className="size-4" />
-            {t("accounting.cari.statement")}
+          <Button asChild variant="outline" data-testid="cari-statement">
+            <Link href={routes.tenant.accounting.statement(slug, uuid)}>
+              <FileText className="size-4" />
+              {t("accounting.cari.statement")}
+            </Link>
           </Button>
         </div>
       }
@@ -128,6 +137,7 @@ export function CariDetailPage({ slug, uuid }: { slug: string; uuid: string }) {
         />
       ) : (
         <div className="space-y-6">
+          {access.readOnlyDealer ? <ReadOnlyNotice /> : null}
           <div className="grid gap-4 sm:grid-cols-3">
             <Card>
               <CardHeader>
@@ -205,7 +215,24 @@ export function CariDetailPage({ slug, uuid }: { slug: string; uuid: string }) {
                         </p>
                         <EntryStatus entry={e} />
                       </div>
-                      <EntryAmount entry={e} />
+                      <div className="flex flex-wrap items-center gap-2">
+                        {openDisputes.has(e.uuid) ? (
+                          <span data-testid="entry-disputed">
+                            <StatusChip
+                              label={t("accounting.disputes.statuses.open")}
+                              tone="warning"
+                            />
+                          </span>
+                        ) : access.canDispute &&
+                          isEntryDisputable(e, access.parentUuid) ? (
+                          <DisputeButton
+                            orgUuid={access.orgUuid}
+                            entryUuid={e.uuid}
+                            summary={`${format.dateTime(e.created_at)} · ${categories.get(e.category) ?? e.category}`}
+                          />
+                        ) : null}
+                        <EntryAmount entry={e} />
+                      </div>
                     </li>
                   ))}
                 </ul>

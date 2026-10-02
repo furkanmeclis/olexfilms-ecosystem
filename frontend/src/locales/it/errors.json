@@ -87,5 +87,9 @@
   "codes.STOCK_RECLASSIFICATION_PRODUCT_CHANGED": "Il prodotto dell'unità è cambiato dopo la richiesta.",
   "codes.STOCK_RECLASSIFICATION_NOT_PENDING": "Questa richiesta di riclassificazione è già stata decisa.",
   "codes.STOCK_RECLASSIFICATION_PENDING_EXISTS": "Per questa unità esiste già una richiesta di riclassificazione in attesa.",
-  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Non puoi approvare la tua richiesta."
+  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Non puoi approvare la tua richiesta.",
+  "codes.ENTRY_NOT_DISPUTABLE": "Si può contestare solo una registrazione aperta che l'organizzazione superiore ha registrato su questo partitario.",
+  "codes.DISPUTE_ALREADY_OPEN": "Questa registrazione ha già una contestazione aperta.",
+  "codes.DISPUTE_NOT_OPEN": "Questa contestazione è già stata risolta o rifiutata.",
+  "codes.DISPUTE_NOT_RESOLVABLE": "La registrazione contestata non è più aperta; rifiuti la contestazione o la storni."
 }
