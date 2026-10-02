@@ -43,6 +43,8 @@
   "columns.status": "Статус",
   "columns.rows": "Кількість рядків",
   "columns.created_at": "Створено",
+  "columns.actor": "Запитав",
+  "columns.file": "Файл",
   "columns.actions": "Дії",
   "resources.platform.users": "Користувачі",
   "resources.platform.roles": "Ролі",

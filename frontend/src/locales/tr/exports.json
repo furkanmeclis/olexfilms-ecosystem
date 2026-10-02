@@ -43,6 +43,8 @@
   "columns.status": "Durum",
   "columns.rows": "Satır sayısı",
   "columns.created_at": "Oluşturulma",
+  "columns.actor": "Talep eden",
+  "columns.file": "Dosya",
   "columns.actions": "İşlemler",
   "resources.platform.users": "Kullanıcılar",
   "resources.platform.roles": "Roller",

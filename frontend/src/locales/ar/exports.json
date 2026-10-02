@@ -43,6 +43,8 @@
   "columns.status": "الحالة",
   "columns.rows": "عدد الصفوف",
   "columns.created_at": "تاريخ الإنشاء",
+  "columns.actor": "طلب بواسطة",
+  "columns.file": "الملف",
   "columns.actions": "الإجراءات",
   "resources.platform.users": "المستخدمون",
   "resources.platform.roles": "الأدوار",

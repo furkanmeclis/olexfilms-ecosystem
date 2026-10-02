@@ -48,9 +48,12 @@ LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 SELECT COUNT(*)::bigint FROM export_jobs;
 
 -- name: ListExportJobsForOrganization :many
-SELECT * FROM export_jobs
-WHERE organization_id = $1
-ORDER BY created_at DESC
+-- TEC-211: the organization list carries who requested each job.
+SELECT sqlc.embed(export_jobs), u.uuid AS actor_uuid, u.name AS actor_name, u.surname AS actor_surname
+FROM export_jobs
+JOIN users u ON u.id = export_jobs.actor_id
+WHERE export_jobs.organization_id = $1
+ORDER BY export_jobs.created_at DESC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
 -- name: CountExportJobsForOrganization :one

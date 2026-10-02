@@ -164,3 +164,10 @@ RETURNING id, product_id, brand_id, distributor_org_id, currency, price::text AS
 DELETE FROM distributor_dealer_prices
 WHERE product_id = sqlc.arg(product_id) AND brand_id = sqlc.arg(brand_id)
   AND distributor_org_id = sqlc.arg(distributor_org_id) AND currency = sqlc.arg(currency);
+
+-- name: ListProductsByUUIDs :many
+-- TEC-211: product refs of the brand for the catalog export price columns.
+SELECT id, uuid, sku, name
+FROM products
+WHERE brand_id = sqlc.arg(brand_id) AND uuid = ANY(sqlc.arg(uuids)::uuid[])
+ORDER BY id ASC;

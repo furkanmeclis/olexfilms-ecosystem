@@ -240,6 +240,8 @@ var ruCatalog = map[string]string{
 	"catalog.products.uuid":                    "UUID",
 	"catalog.products.warranty_months":         "Гарантия (мес.)",
 	"catalog.products.micron_thickness":        "Толщина (микрон)",
+	"catalog.products.purchase_price":          "Закупочная цена",
+	"catalog.products.recommended_price":       "Рекомендуемая цена продажи",
 	"catalog.products.uses_fixed_barcode":      "Фиксированный штрихкод",
 	"catalog.services.name":                    "Название услуги",
 	"catalog.services.category":                "Категория",

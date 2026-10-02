@@ -92,6 +92,60 @@ func (q *Queries) CountOrganizationProductStockRows(ctx context.Context, arg Cou
 	return column_1, err
 }
 
+const countOrganizationStockUnitRows = `-- name: CountOrganizationStockUnitRows :one
+WITH held AS (
+    SELECT s.unit_id
+    FROM unit_current_state s
+    WHERE s.holder_org_id = $6
+      AND s.owner_type IN ('organization', 'warehouse_location')
+    UNION ALL
+    SELECT h.unit_id
+    FROM fixed_barcode_holdings h
+    WHERE h.holder_org_id = $6
+      AND h.owner_type IN ('organization', 'warehouse_location')
+    GROUP BY h.unit_id
+    HAVING SUM(h.quantity_on_hand) > 0
+)
+SELECT COUNT(*)::bigint
+FROM held
+JOIN units u ON u.id = held.unit_id
+JOIN products p ON p.id = u.product_id
+WHERE ($1::bigint IS NULL OR u.brand_id = $1::bigint)
+  AND ($2::bigint IS NULL OR u.product_id = $2::bigint)
+  AND (($3::text IS NULL AND u.status IN ('available', 'placed'))
+       OR u.status = $3::text)
+  AND ($4::text IS NULL OR u.barcode = $4::text)
+  AND (
+    $5::text IS NULL
+    OR p.name ILIKE '%' || $5::text || '%'
+    OR p.sku ILIKE '%' || $5::text || '%'
+    OR u.barcode ILIKE '%' || $5::text || '%'
+  )
+`
+
+type CountOrganizationStockUnitRowsParams struct {
+	BrandID        pgtype.Int8 `json:"brand_id"`
+	ProductID      pgtype.Int8 `json:"product_id"`
+	Status         pgtype.Text `json:"status"`
+	Barcode        pgtype.Text `json:"barcode"`
+	Q              pgtype.Text `json:"q"`
+	OrganizationID int64       `json:"organization_id"`
+}
+
+func (q *Queries) CountOrganizationStockUnitRows(ctx context.Context, arg CountOrganizationStockUnitRowsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countOrganizationStockUnitRows,
+		arg.BrandID,
+		arg.ProductID,
+		arg.Status,
+		arg.Barcode,
+		arg.Q,
+		arg.OrganizationID,
+	)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const countStockMovementsByUnit = `-- name: CountStockMovementsByUnit :one
 SELECT COUNT(*)::bigint FROM stock_movements WHERE unit_id = $1
 `
@@ -399,6 +453,132 @@ func (q *Queries) ListOrganizationProductStockRows(ctx context.Context, arg List
 			&i.ProductActive,
 			&i.CategoryUuid,
 			&i.CategoryName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listOrganizationStockUnitRows = `-- name: ListOrganizationStockUnitRows :many
+
+WITH held AS (
+    SELECT s.unit_id, 1::int AS quantity, s.owner_type, s.owner_id, s.updated_at
+    FROM unit_current_state s
+    WHERE s.holder_org_id = $8
+      AND s.owner_type IN ('organization', 'warehouse_location')
+    UNION ALL
+    SELECT h.unit_id, SUM(h.quantity_on_hand)::int AS quantity,
+           NULL::varchar AS owner_type, NULL::bigint AS owner_id, MAX(h.updated_at) AS updated_at
+    FROM fixed_barcode_holdings h
+    WHERE h.holder_org_id = $8
+      AND h.owner_type IN ('organization', 'warehouse_location')
+    GROUP BY h.unit_id
+    HAVING SUM(h.quantity_on_hand) > 0
+)
+SELECT u.id, u.uuid, u.barcode, u.unit_kind, u.status,
+       u.initial_meters, u.remaining_meters,
+       held.quantity, held.updated_at,
+       p.id AS product_id, p.uuid AS product_uuid, p.sku, p.name AS product_name,
+       p.unit_type, p.uses_fixed_barcode,
+       l.uuid AS location_uuid, l.code AS location_code, l.name AS location_name
+FROM held
+JOIN units u ON u.id = held.unit_id
+JOIN products p ON p.id = u.product_id
+LEFT JOIN warehouse_locations l ON held.owner_type = 'warehouse_location' AND l.id = held.owner_id
+WHERE ($1::bigint IS NULL OR u.brand_id = $1::bigint)
+  AND ($2::bigint IS NULL OR u.product_id = $2::bigint)
+  AND (($3::text IS NULL AND u.status IN ('available', 'placed'))
+       OR u.status = $3::text)
+  AND ($4::text IS NULL OR u.barcode = $4::text)
+  AND (
+    $5::text IS NULL
+    OR p.name ILIKE '%' || $5::text || '%'
+    OR p.sku ILIKE '%' || $5::text || '%'
+    OR u.barcode ILIKE '%' || $5::text || '%'
+  )
+ORDER BY p.name, u.barcode, u.id
+LIMIT $7 OFFSET $6
+`
+
+type ListOrganizationStockUnitRowsParams struct {
+	BrandID        pgtype.Int8 `json:"brand_id"`
+	ProductID      pgtype.Int8 `json:"product_id"`
+	Status         pgtype.Text `json:"status"`
+	Barcode        pgtype.Text `json:"barcode"`
+	Q              pgtype.Text `json:"q"`
+	OffsetCount    int32       `json:"offset_count"`
+	LimitCount     int32       `json:"limit_count"`
+	OrganizationID int64       `json:"organization_id"`
+}
+
+type ListOrganizationStockUnitRowsRow struct {
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	Barcode          string             `json:"barcode"`
+	UnitKind         string             `json:"unit_kind"`
+	Status           string             `json:"status"`
+	InitialMeters    pgtype.Numeric     `json:"initial_meters"`
+	RemainingMeters  pgtype.Numeric     `json:"remaining_meters"`
+	Quantity         int32              `json:"quantity"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	ProductID        int64              `json:"product_id"`
+	ProductUuid      uuid.UUID          `json:"product_uuid"`
+	Sku              string             `json:"sku"`
+	ProductName      string             `json:"product_name"`
+	UnitType         string             `json:"unit_type"`
+	UsesFixedBarcode bool               `json:"uses_fixed_barcode"`
+	LocationUuid     pgtype.UUID        `json:"location_uuid"`
+	LocationCode     pgtype.Text        `json:"location_code"`
+	LocationName     pgtype.Text        `json:"location_name"`
+}
+
+// TEC-216 (F1-12a): unit list of an organization. Serial units come from
+// unit_current_state, fixed barcodes from fixed_barcode_holdings (summed
+// per unit); both narrowed on holder_org_id. Without a status filter the
+// list holds the units counted as stock (available, placed); a status
+// filter lists exactly that status.
+func (q *Queries) ListOrganizationStockUnitRows(ctx context.Context, arg ListOrganizationStockUnitRowsParams) ([]ListOrganizationStockUnitRowsRow, error) {
+	rows, err := q.db.Query(ctx, listOrganizationStockUnitRows,
+		arg.BrandID,
+		arg.ProductID,
+		arg.Status,
+		arg.Barcode,
+		arg.Q,
+		arg.OffsetCount,
+		arg.LimitCount,
+		arg.OrganizationID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListOrganizationStockUnitRowsRow{}
+	for rows.Next() {
+		var i ListOrganizationStockUnitRowsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.Barcode,
+			&i.UnitKind,
+			&i.Status,
+			&i.InitialMeters,
+			&i.RemainingMeters,
+			&i.Quantity,
+			&i.UpdatedAt,
+			&i.ProductID,
+			&i.ProductUuid,
+			&i.Sku,
+			&i.ProductName,
+			&i.UnitType,
+			&i.UsesFixedBarcode,
+			&i.LocationUuid,
+			&i.LocationCode,
+			&i.LocationName,
 		); err != nil {
 			return nil, err
 		}

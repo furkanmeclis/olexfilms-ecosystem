@@ -82,6 +82,8 @@ func writeReclassError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, stockusecase.ErrNotFound), errors.Is(err, ledger.ErrUnitNotFound):
 		response.NotFound(w, r, "Reclassification not found")
+	case errors.Is(err, stockusecase.ErrWriteOutOfReach):
+		response.Forbidden(w, r, "stock.write does not reach the unit's organization")
 	case errors.Is(err, ledger.ErrConcurrentUpdate):
 		response.Conflict(w, r, response.CodeConflict, "The unit changed concurrently, retry")
 	default:

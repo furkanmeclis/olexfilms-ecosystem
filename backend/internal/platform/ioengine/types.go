@@ -27,6 +27,9 @@ type Column struct {
 	AlignRight bool `json:"align_right,omitempty"`
 	// Weight overrides the relative PDF column width (0 = type default).
 	Weight float64 `json:"weight,omitempty"`
+	// Permission is the slug the requester must hold for the column to be
+	// exported (TEC-211); empty means always visible. See visibility.go.
+	Permission string `json:"permission,omitempty"`
 }
 
 // InfoLine is a labelled value printed under the document title (PDF/XLSX).

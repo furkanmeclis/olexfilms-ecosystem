@@ -43,6 +43,8 @@
   "columns.status": "Статус",
   "columns.rows": "Брой редове",
   "columns.created_at": "Създаден",
+  "columns.actor": "Заявено от",
+  "columns.file": "Файл",
   "columns.actions": "Действия",
   "resources.platform.users": "Потребители",
   "resources.platform.roles": "Роли",

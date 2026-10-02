@@ -129,6 +129,24 @@ func TestStockGrants(t *testing.T) {
 	if _, ok := dealer.Grants[PermStockWrite]; ok {
 		t.Fatal("dealer_owner must not hold stock.write")
 	}
+	// TEC-216 (000061): the distributor reads dealer stock (subtree) but
+	// writes and adjusts only its own (managed); other distributor roles
+	// and dealer_staff hold no stock grant.
+	for _, slug := range []string{RoleDistributorOwner, RoleDistributorWarehouseStaff} {
+		r, _ := RoleBySlug(slug)
+		if r.Grants[PermStockRead] != ScopeSubtree {
+			t.Fatalf("%s stock.read = %q, want subtree", slug, r.Grants[PermStockRead])
+		}
+		if r.Grants[PermStockWrite] != ScopeManaged || r.Grants[PermStockAdjust] != ScopeManaged {
+			t.Fatalf("%s stock.write/adjust must stay managed: %v", slug, r.Grants)
+		}
+	}
+	for _, slug := range []string{RoleDistributorStaff, RoleDistributorAccounting, RoleDealerStaff} {
+		r, _ := RoleBySlug(slug)
+		if _, ok := r.Grants[PermStockRead]; ok {
+			t.Fatalf("%s must not hold stock.read", slug)
+		}
+	}
 }
 
 // TEC-171 (TEC-99 decision 7, K9/K24): dealer roles read their ledger and

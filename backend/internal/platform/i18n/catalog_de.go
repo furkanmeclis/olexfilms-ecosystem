@@ -240,6 +240,8 @@ var deCatalog = map[string]string{
 	"catalog.products.uuid":                    "UUID",
 	"catalog.products.warranty_months":         "Garantie (Monate)",
 	"catalog.products.micron_thickness":        "Dicke (Mikron)",
+	"catalog.products.purchase_price":          "Einkaufspreis",
+	"catalog.products.recommended_price":       "Empfohlener Verkaufspreis",
 	"catalog.products.uses_fixed_barcode":      "Fester Barcode",
 	"catalog.services.name":                    "Leistungsname",
 	"catalog.services.category":                "Kategorie",

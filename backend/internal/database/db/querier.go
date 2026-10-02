@@ -103,6 +103,7 @@ type Querier interface {
 	CountOrganizationCustomers(ctx context.Context, arg CountOrganizationCustomersParams) (int64, error)
 	CountOrganizationMembershipsByUser(ctx context.Context, userID int64) (int64, error)
 	CountOrganizationProductStockRows(ctx context.Context, arg CountOrganizationProductStockRowsParams) (int64, error)
+	CountOrganizationStockUnitRows(ctx context.Context, arg CountOrganizationStockUnitRowsParams) (int64, error)
 	CountOrganizations(ctx context.Context, arg CountOrganizationsParams) (int64, error)
 	CountOutboxByStatus(ctx context.Context, status string) (int64, error)
 	// Open (pending) vehicle transfers that involve the user; the transfer's
@@ -733,7 +734,8 @@ type Querier interface {
 	ListEnabledLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
 	ListExchangeRatesByDate(ctx context.Context, arg ListExchangeRatesByDateParams) ([]ListExchangeRatesByDateRow, error)
 	ListExportJobsForActor(ctx context.Context, arg ListExportJobsForActorParams) ([]ExportJob, error)
-	ListExportJobsForOrganization(ctx context.Context, arg ListExportJobsForOrganizationParams) ([]ExportJob, error)
+	// TEC-211: the organization list carries who requested each job.
+	ListExportJobsForOrganization(ctx context.Context, arg ListExportJobsForOrganizationParams) ([]ListExportJobsForOrganizationRow, error)
 	ListFinanceAccountBalances(ctx context.Context, organizationID int64) ([]FinanceAccountBalance, error)
 	// ListFinanceAccountBalancesAsOf is every cash/bank account of the book with
 	// its balance over the rows written before created_to (NULL = all rows).
@@ -759,7 +761,8 @@ type Querier interface {
 	ListGrantsByRoleSlugs(ctx context.Context, roleSlugs []string) ([]ListGrantsByRoleSlugsRow, error)
 	ListImportChangesForJob(ctx context.Context, jobID int64) ([]ImportChange, error)
 	ListImportJobsForActor(ctx context.Context, arg ListImportJobsForActorParams) ([]ImportJob, error)
-	ListImportJobsForOrganization(ctx context.Context, arg ListImportJobsForOrganizationParams) ([]ImportJob, error)
+	// TEC-211: the organization list carries who uploaded each job.
+	ListImportJobsForOrganization(ctx context.Context, arg ListImportJobsForOrganizationParams) ([]ListImportJobsForOrganizationRow, error)
 	ListLatestKVKKNotices(ctx context.Context) ([]KvkkNotice, error)
 	ListLatestLegalTexts(ctx context.Context, kind string) ([]LegalText, error)
 	ListLegalTextVersions(ctx context.Context, arg ListLegalTextVersionsParams) ([]LegalText, error)
@@ -809,6 +812,12 @@ type Querier interface {
 	ListOrganizationProductStockRows(ctx context.Context, arg ListOrganizationProductStockRowsParams) ([]ListOrganizationProductStockRowsRow, error)
 	ListOrganizationProductStocks(ctx context.Context, arg ListOrganizationProductStocksParams) ([]OrganizationProductStock, error)
 	ListOrganizationProductStocksForRebuild(ctx context.Context, organizationID pgtype.Int8) ([]OrganizationProductStock, error)
+	// TEC-216 (F1-12a): unit list of an organization. Serial units come from
+	// unit_current_state, fixed barcodes from fixed_barcode_holdings (summed
+	// per unit); both narrowed on holder_org_id. Without a status filter the
+	// list holds the units counted as stock (available, placed); a status
+	// filter lists exactly that status.
+	ListOrganizationStockUnitRows(ctx context.Context, arg ListOrganizationStockUnitRowsParams) ([]ListOrganizationStockUnitRowsRow, error)
 	ListOrganizationsByIDs(ctx context.Context, ids []int64) ([]Organization, error)
 	ListOrganizationsFiltered(ctx context.Context, arg ListOrganizationsFilteredParams) ([]ListOrganizationsFilteredRow, error)
 	// Organizations reachable by a scope filter: an explicit id set
@@ -834,6 +843,8 @@ type Querier interface {
 	ListProductPrices(ctx context.Context, arg ListProductPricesParams) ([]ProductPrice, error)
 	ListProductPricesForProducts(ctx context.Context, arg ListProductPricesForProductsParams) ([]ListProductPricesForProductsRow, error)
 	ListProducts(ctx context.Context, arg ListProductsParams) ([]Product, error)
+	// TEC-211: product refs of the brand for the catalog export price columns.
+	ListProductsByUUIDs(ctx context.Context, arg ListProductsByUUIDsParams) ([]ListProductsByUUIDsRow, error)
 	// Search indexer only (full reindex across brands).
 	ListProductsForIndex(ctx context.Context) ([]Product, error)
 	ListProvincesByCountry(ctx context.Context, countryID int64) ([]ListProvincesByCountryRow, error)

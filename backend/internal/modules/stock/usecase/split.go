@@ -76,6 +76,9 @@ func (s *Splits) Split(ctx context.Context, c Caller, in SplitInput) (model.Spli
 	if err != nil {
 		return model.Split{}, false, err
 	}
+	if err := checkWriteReach(ctx, s.q, c, unitID); err != nil {
+		return model.Split{}, false, err
+	}
 
 	var res ledger.SplitResult
 	err = s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {

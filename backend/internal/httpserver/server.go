@@ -372,7 +372,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	customershandler.RegisterRoutes(mux, customersH, tokens, loader, deps.Queries, featureSvc, stepUpSvc)
 	ratesmodule.RegisterRoutes(mux, rateshandler.New(ratesSvc, activityRec), tokens, loader)
 	// TEC-146: price list and effective price views (K8).
-	pricingmodule.RegisterRoutes(mux, pricinghandler.New(pricingusecase.New(deps.Queries), activityRec),
+	pricingSvc := pricingusecase.New(deps.Queries)
+	pricingmodule.RegisterRoutes(mux, pricinghandler.New(pricingSvc, activityRec),
 		tokens, loader, deps.Queries, stepUpSvc, featureSvc)
 	// TEC-172: accounting accounts, cari, manual entries and settlements.
 	accountingPoster := accountingposting.New(deps.Queries, outbox.NewStore(deps.DB, deps.Queries), ratesSvc)
@@ -419,7 +420,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	warrantyCert := warrantymodule.NewCertificate(deps.Queries, deps.Storage, cfg.Auth.FrontendURL, log)
 	servicePDF := servicesusecase.NewPDF(servicesSvc, warrantyCert, deps.Storage, log)
 	ioReg := ioengine.NewRegistry(
-		catalogusecase.NewIOAdapter(catalogSvc, deps.Queries),
+		// TEC-211: price columns behind pricing.* grants.
+		catalogusecase.NewIOAdapter(catalogSvc, deps.Queries).WithPrices(pricingSvc),
 		ioadapters.NewUsers(deps.Queries),
 		ioadapters.NewRoles(deps.Queries),
 		ioadapters.NewNotifications(deps.Queries),

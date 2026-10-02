@@ -73,6 +73,8 @@
   "columns.format": "Formato",
   "columns.status": "Stato",
   "columns.created_at": "Creata",
+  "columns.actor": "Caricato da",
+  "columns.file": "File",
   "columns.actions": "Azioni",
   "resources.platform.users": "Utenti",
   "resources.platform.roles": "Ruoli",

@@ -39,6 +39,7 @@ type Querier interface {
 	SupplierOf(ctx context.Context, id int64) (db.Organization, error)
 
 	ListPricedProducts(ctx context.Context, arg db.ListPricedProductsParams) ([]db.ListPricedProductsRow, error)
+	ListProductsByUUIDs(ctx context.Context, arg db.ListProductsByUUIDsParams) ([]db.ListProductsByUUIDsRow, error)
 	CountPricedProducts(ctx context.Context, arg db.CountPricedProductsParams) (int64, error)
 	ListProductPricesForProducts(ctx context.Context, arg db.ListProductPricesForProductsParams) ([]db.ListProductPricesForProductsRow, error)
 	ListDistributorOverridesForProducts(ctx context.Context, arg db.ListDistributorOverridesForProductsParams) ([]db.ListDistributorOverridesForProductsRow, error)
@@ -359,6 +360,27 @@ type ListFilter struct {
 	Active *bool
 	Limit  int32
 	Offset int32
+}
+
+// ViewsByUUIDs returns the effective price views of the given products of
+// the viewer's brand (TEC-211: catalog export price columns). Unknown or
+// foreign products are left out.
+func (s *Service) ViewsByUUIDs(ctx context.Context, v Viewer, uuids []uuid.UUID) ([]ProductPriceView, error) {
+	if err := checkViewerType(v); err != nil {
+		return nil, err
+	}
+	if len(uuids) == 0 {
+		return []ProductPriceView{}, nil
+	}
+	rows, err := s.q.ListProductsByUUIDs(ctx, db.ListProductsByUUIDsParams{BrandID: v.BrandID, Uuids: uuids})
+	if err != nil {
+		return nil, fmt.Errorf("list products: %w", err)
+	}
+	refs := make([]productRef, 0, len(rows))
+	for _, r := range rows {
+		refs = append(refs, productRef{ID: r.ID, UUID: r.Uuid, SKU: r.Sku, Name: r.Name})
+	}
+	return s.views(ctx, v, refs)
 }
 
 // ListViews returns a page of effective price views of the brand's products.

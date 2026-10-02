@@ -24,6 +24,12 @@ export type ResourceMeta = {
   bulk_actions?: BulkActionMeta[];
 };
 
+/** The user who requested an export or uploaded an import (TEC-211). */
+export type IoJobActor = {
+  uuid: string;
+  name: string;
+};
+
 export type ExportJob = {
   uuid: string;
   resource: string;
@@ -32,6 +38,8 @@ export type ExportJob = {
   row_count: number;
   error?: string | null;
   download_url?: string | null;
+  filename?: string;
+  actor?: IoJobActor | null;
   created_at: string;
 };
 
@@ -46,6 +54,8 @@ export type ImportJob = {
   error?: string | null;
   rollback_until?: string | null;
   applied_at?: string | null;
+  source_filename?: string;
+  actor?: IoJobActor | null;
   created_at: string;
 };
 

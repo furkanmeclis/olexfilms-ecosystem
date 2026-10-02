@@ -172,6 +172,9 @@ func (s *Reclassifications) Request(ctx context.Context, c Caller, in RequestInp
 	if err != nil {
 		return model.Reclassification{}, err
 	}
+	if err := checkWriteReach(ctx, s.q, c, unitID); err != nil {
+		return model.Reclassification{}, err
+	}
 
 	var row db.StockReclassification
 	err = s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {

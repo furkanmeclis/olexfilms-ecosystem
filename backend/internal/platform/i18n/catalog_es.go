@@ -240,6 +240,8 @@ var esCatalog = map[string]string{
 	"catalog.products.uuid":                    "UUID",
 	"catalog.products.warranty_months":         "Garantía (meses)",
 	"catalog.products.micron_thickness":        "Espesor (micras)",
+	"catalog.products.purchase_price":          "Precio de compra",
+	"catalog.products.recommended_price":       "Precio de venta recomendado",
 	"catalog.products.uses_fixed_barcode":      "Código de barras fijo",
 	"catalog.services.name":                    "Nombre del servicio",
 	"catalog.services.category":                "Categoría",

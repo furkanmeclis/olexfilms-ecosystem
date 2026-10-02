@@ -46,9 +46,9 @@ func (q *Queries) CountImportJobsForOrganization(ctx context.Context, organizati
 }
 
 const createImportJob = `-- name: CreateImportJob :one
-INSERT INTO import_jobs (resource, actor_id, format, locale, status, file_key, organization_id)
-VALUES ($1, $2, $3, $4, 'uploaded', $5, $6)
-RETURNING id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id
+INSERT INTO import_jobs (resource, actor_id, format, locale, status, file_key, organization_id, source_filename)
+VALUES ($1, $2, $3, $4, 'uploaded', $5, $6, $7)
+RETURNING id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id, source_filename
 `
 
 type CreateImportJobParams struct {
@@ -58,6 +58,7 @@ type CreateImportJobParams struct {
 	Locale         string      `json:"locale"`
 	FileKey        pgtype.Text `json:"file_key"`
 	OrganizationID pgtype.Int8 `json:"organization_id"`
+	SourceFilename string      `json:"source_filename"`
 }
 
 func (q *Queries) CreateImportJob(ctx context.Context, arg CreateImportJobParams) (ImportJob, error) {
@@ -68,6 +69,7 @@ func (q *Queries) CreateImportJob(ctx context.Context, arg CreateImportJobParams
 		arg.Locale,
 		arg.FileKey,
 		arg.OrganizationID,
+		arg.SourceFilename,
 	)
 	var i ImportJob
 	err := row.Scan(
@@ -88,12 +90,13 @@ func (q *Queries) CreateImportJob(ctx context.Context, arg CreateImportJobParams
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.OrganizationID,
+		&i.SourceFilename,
 	)
 	return i, err
 }
 
 const getImportJobByID = `-- name: GetImportJobByID :one
-SELECT id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id FROM import_jobs WHERE id = $1
+SELECT id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id, source_filename FROM import_jobs WHERE id = $1
 `
 
 func (q *Queries) GetImportJobByID(ctx context.Context, id int64) (ImportJob, error) {
@@ -117,12 +120,13 @@ func (q *Queries) GetImportJobByID(ctx context.Context, id int64) (ImportJob, er
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.OrganizationID,
+		&i.SourceFilename,
 	)
 	return i, err
 }
 
 const getImportJobByUUID = `-- name: GetImportJobByUUID :one
-SELECT id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id FROM import_jobs WHERE uuid = $1
+SELECT id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id, source_filename FROM import_jobs WHERE uuid = $1
 `
 
 func (q *Queries) GetImportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ImportJob, error) {
@@ -146,6 +150,7 @@ func (q *Queries) GetImportJobByUUID(ctx context.Context, argUuid uuid.UUID) (Im
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.OrganizationID,
+		&i.SourceFilename,
 	)
 	return i, err
 }
@@ -187,7 +192,7 @@ func (q *Queries) InsertImportChange(ctx context.Context, arg InsertImportChange
 }
 
 const listAllImportJobs = `-- name: ListAllImportJobs :many
-SELECT id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id FROM import_jobs
+SELECT id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id, source_filename FROM import_jobs
 WHERE organization_id IS NULL
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $1
@@ -225,6 +230,7 @@ func (q *Queries) ListAllImportJobs(ctx context.Context, arg ListAllImportJobsPa
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.OrganizationID,
+			&i.SourceFilename,
 		); err != nil {
 			return nil, err
 		}
@@ -272,7 +278,7 @@ func (q *Queries) ListImportChangesForJob(ctx context.Context, jobID int64) ([]I
 }
 
 const listImportJobsForActor = `-- name: ListImportJobsForActor :many
-SELECT id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id FROM import_jobs
+SELECT id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id, source_filename FROM import_jobs
 WHERE actor_id = $1 AND organization_id IS NULL
 ORDER BY created_at DESC
 LIMIT $3 OFFSET $2
@@ -311,6 +317,7 @@ func (q *Queries) ListImportJobsForActor(ctx context.Context, arg ListImportJobs
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.OrganizationID,
+			&i.SourceFilename,
 		); err != nil {
 			return nil, err
 		}
@@ -323,9 +330,11 @@ func (q *Queries) ListImportJobsForActor(ctx context.Context, arg ListImportJobs
 }
 
 const listImportJobsForOrganization = `-- name: ListImportJobsForOrganization :many
-SELECT id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id FROM import_jobs
-WHERE organization_id = $1::bigint
-ORDER BY created_at DESC
+SELECT import_jobs.id, import_jobs.uuid, import_jobs.resource, import_jobs.actor_id, import_jobs.format, import_jobs.locale, import_jobs.status, import_jobs.file_key, import_jobs.mapping_json, import_jobs.defaults_json, import_jobs.preview_json, import_jobs.error, import_jobs.rollback_until, import_jobs.applied_at, import_jobs.created_at, import_jobs.updated_at, import_jobs.organization_id, import_jobs.source_filename, u.uuid AS actor_uuid, u.name AS actor_name, u.surname AS actor_surname
+FROM import_jobs
+JOIN users u ON u.id = import_jobs.actor_id
+WHERE import_jobs.organization_id = $1::bigint
+ORDER BY import_jobs.created_at DESC
 LIMIT $3 OFFSET $2
 `
 
@@ -335,33 +344,45 @@ type ListImportJobsForOrganizationParams struct {
 	LimitCount     int32 `json:"limit_count"`
 }
 
-func (q *Queries) ListImportJobsForOrganization(ctx context.Context, arg ListImportJobsForOrganizationParams) ([]ImportJob, error) {
+type ListImportJobsForOrganizationRow struct {
+	ImportJob    ImportJob `json:"import_job"`
+	ActorUuid    uuid.UUID `json:"actor_uuid"`
+	ActorName    string    `json:"actor_name"`
+	ActorSurname string    `json:"actor_surname"`
+}
+
+// TEC-211: the organization list carries who uploaded each job.
+func (q *Queries) ListImportJobsForOrganization(ctx context.Context, arg ListImportJobsForOrganizationParams) ([]ListImportJobsForOrganizationRow, error) {
 	rows, err := q.db.Query(ctx, listImportJobsForOrganization, arg.OrganizationID, arg.OffsetCount, arg.LimitCount)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ImportJob{}
+	items := []ListImportJobsForOrganizationRow{}
 	for rows.Next() {
-		var i ImportJob
+		var i ListImportJobsForOrganizationRow
 		if err := rows.Scan(
-			&i.ID,
-			&i.Uuid,
-			&i.Resource,
-			&i.ActorID,
-			&i.Format,
-			&i.Locale,
-			&i.Status,
-			&i.FileKey,
-			&i.MappingJson,
-			&i.DefaultsJson,
-			&i.PreviewJson,
-			&i.Error,
-			&i.RollbackUntil,
-			&i.AppliedAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.OrganizationID,
+			&i.ImportJob.ID,
+			&i.ImportJob.Uuid,
+			&i.ImportJob.Resource,
+			&i.ImportJob.ActorID,
+			&i.ImportJob.Format,
+			&i.ImportJob.Locale,
+			&i.ImportJob.Status,
+			&i.ImportJob.FileKey,
+			&i.ImportJob.MappingJson,
+			&i.ImportJob.DefaultsJson,
+			&i.ImportJob.PreviewJson,
+			&i.ImportJob.Error,
+			&i.ImportJob.RollbackUntil,
+			&i.ImportJob.AppliedAt,
+			&i.ImportJob.CreatedAt,
+			&i.ImportJob.UpdatedAt,
+			&i.ImportJob.OrganizationID,
+			&i.ImportJob.SourceFilename,
+			&i.ActorUuid,
+			&i.ActorName,
+			&i.ActorSurname,
 		); err != nil {
 			return nil, err
 		}
@@ -380,7 +401,7 @@ SET status = 'applied',
     rollback_until = NOW() + INTERVAL '24 hours',
     preview_json = $2
 WHERE id = $1
-RETURNING id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id
+RETURNING id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id, source_filename
 `
 
 type MarkImportJobAppliedParams struct {
@@ -409,6 +430,7 @@ func (q *Queries) MarkImportJobApplied(ctx context.Context, arg MarkImportJobApp
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.OrganizationID,
+		&i.SourceFilename,
 	)
 	return i, err
 }
@@ -417,7 +439,7 @@ const markImportJobApplying = `-- name: MarkImportJobApplying :one
 UPDATE import_jobs
 SET status = 'applying'
 WHERE id = $1 AND status = 'queued'
-RETURNING id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id
+RETURNING id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id, source_filename
 `
 
 func (q *Queries) MarkImportJobApplying(ctx context.Context, id int64) (ImportJob, error) {
@@ -441,6 +463,7 @@ func (q *Queries) MarkImportJobApplying(ctx context.Context, id int64) (ImportJo
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.OrganizationID,
+		&i.SourceFilename,
 	)
 	return i, err
 }
@@ -450,7 +473,7 @@ UPDATE import_jobs
 SET status = 'failed',
     error = $2
 WHERE id = $1
-RETURNING id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id
+RETURNING id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id, source_filename
 `
 
 type MarkImportJobFailedParams struct {
@@ -479,6 +502,7 @@ func (q *Queries) MarkImportJobFailed(ctx context.Context, arg MarkImportJobFail
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.OrganizationID,
+		&i.SourceFilename,
 	)
 	return i, err
 }
@@ -487,7 +511,7 @@ const markImportJobRolledBack = `-- name: MarkImportJobRolledBack :one
 UPDATE import_jobs
 SET status = 'rolled_back'
 WHERE id = $1 AND status = 'applied'
-RETURNING id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id
+RETURNING id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id, source_filename
 `
 
 func (q *Queries) MarkImportJobRolledBack(ctx context.Context, id int64) (ImportJob, error) {
@@ -511,6 +535,7 @@ func (q *Queries) MarkImportJobRolledBack(ctx context.Context, id int64) (Import
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.OrganizationID,
+		&i.SourceFilename,
 	)
 	return i, err
 }
@@ -519,7 +544,7 @@ const queueImportJob = `-- name: QueueImportJob :one
 UPDATE import_jobs
 SET status = 'queued'
 WHERE uuid = $1 AND status = 'previewed'
-RETURNING id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id
+RETURNING id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id, source_filename
 `
 
 func (q *Queries) QueueImportJob(ctx context.Context, argUuid uuid.UUID) (ImportJob, error) {
@@ -543,6 +568,7 @@ func (q *Queries) QueueImportJob(ctx context.Context, argUuid uuid.UUID) (Import
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.OrganizationID,
+		&i.SourceFilename,
 	)
 	return i, err
 }
@@ -551,7 +577,7 @@ const setImportJobPreview = `-- name: SetImportJobPreview :one
 UPDATE import_jobs
 SET preview_json = $2
 WHERE id = $1
-RETURNING id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id
+RETURNING id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id, source_filename
 `
 
 type SetImportJobPreviewParams struct {
@@ -581,6 +607,7 @@ func (q *Queries) SetImportJobPreview(ctx context.Context, arg SetImportJobPrevi
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.OrganizationID,
+		&i.SourceFilename,
 	)
 	return i, err
 }
@@ -589,7 +616,7 @@ const updateImportJobFileKey = `-- name: UpdateImportJobFileKey :one
 UPDATE import_jobs
 SET file_key = $2
 WHERE uuid = $1
-RETURNING id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id
+RETURNING id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id, source_filename
 `
 
 type UpdateImportJobFileKeyParams struct {
@@ -618,6 +645,7 @@ func (q *Queries) UpdateImportJobFileKey(ctx context.Context, arg UpdateImportJo
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.OrganizationID,
+		&i.SourceFilename,
 	)
 	return i, err
 }
@@ -628,7 +656,7 @@ SET mapping_json = $2,
     defaults_json = $3,
     status = 'mapped'
 WHERE uuid = $1 AND status IN ('uploaded', 'mapped', 'previewed')
-RETURNING id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id
+RETURNING id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id, source_filename
 `
 
 type UpdateImportJobMappingParams struct {
@@ -658,6 +686,7 @@ func (q *Queries) UpdateImportJobMapping(ctx context.Context, arg UpdateImportJo
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.OrganizationID,
+		&i.SourceFilename,
 	)
 	return i, err
 }
@@ -667,7 +696,7 @@ UPDATE import_jobs
 SET preview_json = $2,
     status = 'previewed'
 WHERE uuid = $1 AND status IN ('mapped', 'previewed')
-RETURNING id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id
+RETURNING id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id, source_filename
 `
 
 type UpdateImportJobPreviewParams struct {
@@ -696,6 +725,7 @@ func (q *Queries) UpdateImportJobPreview(ctx context.Context, arg UpdateImportJo
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.OrganizationID,
+		&i.SourceFilename,
 	)
 	return i, err
 }

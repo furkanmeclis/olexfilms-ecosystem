@@ -43,6 +43,8 @@
   "columns.status": "Vəziyyət",
   "columns.rows": "Sətir sayı",
   "columns.created_at": "Yaradılıb",
+  "columns.actor": "Tələb edən",
+  "columns.file": "Fayl",
   "columns.actions": "Əməliyyatlar",
   "resources.platform.users": "İstifadəçilər",
   "resources.platform.roles": "Rollar",
