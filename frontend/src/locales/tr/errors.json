@@ -116,5 +116,10 @@
   "codes.ORDER_STOCK_UNAVAILABLE": "Bu sevkiyat için stok hareketi reddedildi.",
   "codes.PRICE_NOT_FOUND": "Bu ürün için sipariş para biriminde fiyat yok.",
   "codes.RATE_NOT_FOUND": "Sipariş para birimi için dondurulacak kur bulunamadı.",
-  "codes.ROLL_CUT_UNSUPPORTED": "Rulolar bütün sevk edilir; metre kalan uzunluğa eşit olmalı."
+  "codes.ROLL_CUT_UNSUPPORTED": "Rulolar bütün sevk edilir; metre kalan uzunluğa eşit olmalı.",
+  "codes.CUSTOMER_ANONYMIZED": "Müşteri anonimleştirilmiş, değiştirilemez.",
+  "codes.CUSTOMER_INACTIVE": "Müşteri hesabı aktif değil.",
+  "codes.ALREADY_MEMBER": "Müşteri zaten bu bayinin üyesi.",
+  "codes.PII_ENCRYPTION_UNAVAILABLE": "Kimlik numaraları şu an saklanamıyor (şifreleme anahtarı eksik).",
+  "codes.INVALID_PLATE": "Plaka ülkesinin biçimine uymuyor."
 }
