@@ -22,6 +22,14 @@ const (
 	CodeTransitionUnavailable = "ORDER_TRANSITION_UNAVAILABLE"
 	CodeNotEditable           = "ORDER_NOT_EDITABLE"
 	CodeNoSupplier            = "ORDER_NO_SUPPLIER"
+	CodeNotAssignable         = "ORDER_NOT_ASSIGNABLE"
+	CodeUnitAlreadyAssigned   = "ORDER_UNIT_ALREADY_ASSIGNED"
+	CodeUnitReserved          = "ORDER_UNIT_RESERVED"
+	CodeUnitNotAvailable      = "ORDER_UNIT_NOT_AVAILABLE"
+	CodeInsufficientStock     = "ORDER_INSUFFICIENT_STOCK"
+	CodeOverAssigned          = "ORDER_ITEM_OVER_ASSIGNED"
+	CodeNotFullyAssigned      = "ORDER_NOT_FULLY_ASSIGNED"
+	CodeStockUnavailable      = "ORDER_STOCK_UNAVAILABLE"
 	CodePriceNotFound         = ord.CodePriceNotFound
 )
 
@@ -45,6 +53,26 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.ValidationError(w, r, []response.Detail{{Field: ve.Field, Message: ve.Message, Code: ve.Code}})
 	case errors.Is(err, ord.ErrNotFound):
 		response.NotFound(w, r, "Order not found")
+	case errors.Is(err, ord.ErrItemNotFound):
+		response.NotFound(w, r, "Order line not found")
+	case errors.Is(err, ord.ErrAssignmentNotFound):
+		response.NotFound(w, r, "The unit is not assigned to this order line")
+	case errors.Is(err, ord.ErrNotAssignable):
+		response.Conflict(w, r, CodeNotAssignable, "Units can be assigned only while the order is preparing")
+	case errors.Is(err, ord.ErrUnitAlreadyAssigned):
+		response.Conflict(w, r, CodeUnitAlreadyAssigned, "The unit is already assigned to this order line")
+	case errors.Is(err, ord.ErrUnitReserved):
+		response.Conflict(w, r, CodeUnitReserved, "The unit is reserved by another order")
+	case errors.Is(err, ord.ErrUnitNotAvailable):
+		response.Conflict(w, r, CodeUnitNotAvailable, "The unit is not in the seller's stock")
+	case errors.Is(err, ord.ErrInsufficientStock):
+		response.Conflict(w, r, CodeInsufficientStock, "Not enough unreserved stock for this barcode")
+	case errors.Is(err, ord.ErrOverAssigned):
+		response.Conflict(w, r, CodeOverAssigned, "The assignment exceeds the order line amount")
+	case errors.Is(err, ord.ErrNotFullyAssigned):
+		response.Conflict(w, r, CodeNotFullyAssigned, "Every order line must be fully assigned")
+	case errors.Is(err, ord.ErrStockUnavailable):
+		response.Conflict(w, r, CodeStockUnavailable, "The stock movement for this shipment was refused")
 	case errors.Is(err, ord.ErrForbidden):
 		response.Forbidden(w, r, "This organization cannot perform this order action")
 	case errors.Is(err, ord.ErrNoSupplier):
@@ -191,6 +219,70 @@ func (h *Handler) Transition(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	o, err := h.svc.Transition(r.Context(), caller(r), id, ord.TransitionInput{Status: body.Status, Reason: body.Reason})
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, o)
+}
+
+type assignBody struct {
+	Barcode  string       `json:"barcode"`
+	UnitUUID string       `json:"unit_uuid"`
+	Quantity *int64       `json:"quantity"`
+	Meters   *json.Number `json:"meters"`
+}
+
+func pathItem(w http.ResponseWriter, r *http.Request) (uuid.UUID, uuid.UUID, bool) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return uuid.Nil, uuid.Nil, false
+	}
+	item, err := uuid.Parse(r.PathValue("item_uuid"))
+	if err != nil {
+		response.NotFound(w, r, "Order line not found")
+		return uuid.Nil, uuid.Nil, false
+	}
+	return id, item, true
+}
+
+// AssignUnit (POST /v1/orders/{uuid}/items/{item_uuid}/units): the seller
+// assigns a unit it holds (barcode scan or pick) and reserves it.
+func (h *Handler) AssignUnit(w http.ResponseWriter, r *http.Request) {
+	id, item, ok := pathItem(w, r)
+	if !ok {
+		return
+	}
+	var body assignBody
+	if !decode(w, r, &body) {
+		return
+	}
+	in := ord.AssignInput{Barcode: body.Barcode, UnitUUID: body.UnitUUID, Quantity: body.Quantity}
+	if body.Meters != nil {
+		m := body.Meters.String()
+		in.Meters = &m
+	}
+	o, err := h.svc.AssignUnit(r.Context(), caller(r), id, item, in)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, o)
+}
+
+// UnassignUnit (DELETE /v1/orders/{uuid}/items/{item_uuid}/units/{unit_uuid}):
+// the reservation is released.
+func (h *Handler) UnassignUnit(w http.ResponseWriter, r *http.Request) {
+	id, item, ok := pathItem(w, r)
+	if !ok {
+		return
+	}
+	unit, err := uuid.Parse(r.PathValue("unit_uuid"))
+	if err != nil {
+		response.NotFound(w, r, "The unit is not assigned to this order line")
+		return
+	}
+	o, err := h.svc.UnassignUnit(r.Context(), caller(r), id, item, unit)
 	if err != nil {
 		writeError(w, r, err)
 		return

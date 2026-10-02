@@ -17,6 +17,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	pricingusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/pricing/usecase"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/fxrates"
@@ -38,7 +39,7 @@ var (
 	ErrNoSupplier = errors.New("orders: organization cannot place orders")
 	// ErrInvalidTransition: the order's status does not allow the move.
 	ErrInvalidTransition = errors.New("orders: invalid status transition")
-	// ErrTransitionUnavailable: a stock-bound transition (TEC-167/168).
+	// ErrTransitionUnavailable: delivered, received, cancelling (TEC-168).
 	ErrTransitionUnavailable = errors.New("orders: transition not available yet")
 	// ErrNotEditable: lines change only while the order is a draft.
 	ErrNotEditable = errors.New("orders: order is not a draft")
@@ -107,12 +108,14 @@ type Service struct {
 	q     *db.Queries
 	out   outbox.Enqueuer
 	rates RateResolver
-	now   func() time.Time
+	// ledger writes the order_out movements at shipping (TEC-167).
+	ledger *ledger.Ledger
+	now    func() time.Time
 }
 
 // New creates the service.
 func New(pool TxBeginner, q *db.Queries, out outbox.Enqueuer, rates RateResolver) *Service {
-	return &Service{pool: pool, q: q, out: out, rates: rates, now: time.Now}
+	return &Service{pool: pool, q: q, out: out, rates: rates, ledger: ledger.New(q, out), now: time.Now}
 }
 
 func (s *Service) inTx(ctx context.Context, fn func(q *db.Queries, tx pgx.Tx) error) error {
@@ -450,8 +453,8 @@ func (s *Service) lockVisible(ctx context.Context, q *db.Queries, c Caller, id u
 	return o, nil
 }
 
-// Transition moves an order along the stock-free state machine. A repeated
-// request for the current status is a no-op.
+// Transition moves an order along the state machine. A repeated request
+// for the current status is a no-op (a second ship writes no movement).
 func (s *Service) Transition(ctx context.Context, c Caller, orderUUID uuid.UUID, in TransitionInput) (OrderView, error) {
 	to := strings.TrimSpace(in.Status)
 	if !IsStatus(to) {
@@ -482,6 +485,20 @@ func (s *Service) Transition(ctx context.Context, c Caller, orderUUID uuid.UUID,
 		switch to {
 		case StatusApproved:
 			o, meta, err = s.approve(ctx, q, c, o)
+		case StatusReady:
+			if err = checkFullyAssigned(ctx, q, o); err == nil {
+				o, err = q.UpdateOrderStatus(ctx, db.UpdateOrderStatusParams{ID: o.ID, Status: to})
+			}
+		case StatusShipped:
+			if meta, err = s.ship(ctx, q, tx, c, o); err == nil {
+				o, err = q.UpdateOrderStatus(ctx, db.UpdateOrderStatusParams{ID: o.ID, Status: to})
+			}
+		case StatusCancelled:
+			// Before shipping a cancel frees every active reservation
+			// (TEC-96 decision 1).
+			if _, err = q.ReleaseReservationsByOrder(ctx, o.ID); err == nil {
+				o, err = q.UpdateOrderStatus(ctx, db.UpdateOrderStatusParams{ID: o.ID, Status: to})
+			}
 		default:
 			o, err = q.UpdateOrderStatus(ctx, db.UpdateOrderStatusParams{ID: o.ID, Status: to})
 		}
