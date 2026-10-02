@@ -43,6 +43,21 @@ func TestQRCodePNGDecodesToURL(t *testing.T) {
 	if b := img.Bounds(); b.Dx() != DefaultQRSize || b.Dy() != DefaultQRSize {
 		t.Fatalf("size = %v", b)
 	}
+	// Quiet zone: the border is white; the symbol has dark modules.
+	if r, _, _, _ := img.At(2, 2).RGBA(); r < 0x8000 {
+		t.Fatal("quiet zone corner is not white")
+	}
+	dark := 0
+	for y := 0; y < DefaultQRSize; y++ {
+		for x := 0; x < DefaultQRSize; x++ {
+			if r, _, _, _ := img.At(x, y).RGBA(); r < 0x8000 {
+				dark++
+			}
+		}
+	}
+	if dark == 0 || dark > DefaultQRSize*DefaultQRSize*3/4 {
+		t.Fatalf("dark pixels = %d", dark)
+	}
 	if got := decodeQR(t, data); got != url {
 		t.Fatalf("decoded %q, want %q", got, url)
 	}
