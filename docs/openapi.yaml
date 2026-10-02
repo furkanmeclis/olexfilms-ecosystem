@@ -5479,6 +5479,97 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /v1/customers/{uuid}/merge/preview:
+    post:
+      tags: [Customers]
+      operationId: previewCustomerMerge
+      summary: Dry run of a customer merge (writes nothing)
+      description: >-
+        customers.merge (center roles) in a center organization. Runs the
+        same statements as the merge in a transaction that is rolled back
+        and reports what would move from this customer (source) to
+        target_uuid: vehicles, services, warranties, organization links and
+        consents, the unique-key conflicts that are folded (a link to the
+        same organization on both users) and the records that stay with the
+        source. No audit row, no event. Refusals (409):
+        CUSTOMER_MERGE_SELF, CUSTOMER_ALREADY_MERGED (source or target was
+        already merged), CUSTOMER_MERGE_ANONYMIZED,
+        CUSTOMER_HAS_PANEL_ACCOUNT (either user is an organization user),
+        CUSTOMER_MERGE_PENDING_TRANSFER (open vehicle transfer of the
+        source), CUSTOMER_INACTIVE (target disabled).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerMergeInput"
+      responses:
+        "200":
+          description: What the merge would move
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCustomerMergeResult"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/customers/{uuid}/merge:
+    post:
+      tags: [Customers]
+      operationId: mergeCustomer
+      summary: Merge this customer (source) into another one (irreversible)
+      description: >-
+        customers.merge (center roles) in a center organization, plus a
+        fresh step-up (403 STEP_UP_REQUIRED). One transaction: vehicles,
+        services (following their vehicle), warranties (holder),
+        organization links (duplicates folded into the target's link),
+        consents and the profile move to target_uuid; the phone / e-mail the
+        target lacks is handed over. Nothing is deleted: the source keeps
+        its row with merged_into_user_id = target and status disabled, its
+        refresh tokens are revoked and it can no longer sign in. Customer
+        cari accounts are not moved (reported). Writes the audit row
+        customers.merged and the outbox event customer.merged. Same
+        refusals as the preview.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerMergeInput"
+      responses:
+        "200":
+          description: Merged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCustomerMergeResult"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   /v1/customers/{uuid}/data-export:
     post:
       tags: [Customers]
@@ -11536,6 +11627,65 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/CustomerAnonymizeResult" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    CustomerMergeInput:
+      type: object
+      required: [target_uuid]
+      additionalProperties: false
+      properties:
+        target_uuid:
+          type: string
+          format: uuid
+          description: The customer that remains (receives the records).
+
+    CustomerMergeResult:
+      type: object
+      required: [source_uuid, target_uuid, dry_run, moved, conflicts, profile, phone_moved, email_moved, sessions_revoked]
+      properties:
+        source_uuid: { type: string, format: uuid }
+        target_uuid: { type: string, format: uuid }
+        dry_run: { type: boolean }
+        moved:
+          type: object
+          required: [vehicles, services, warranties, organization_links, consents]
+          properties:
+            vehicles: { type: integer }
+            services: { type: integer }
+            warranties: { type: integer }
+            organization_links: { type: integer }
+            consents: { type: integer }
+        conflicts:
+          type: object
+          required: [organization_links, consents_kept, services_kept, cari_accounts_kept]
+          properties:
+            organization_links:
+              type: integer
+              description: Source links folded into the target's link of the same organization.
+            consents_kept:
+              type: integer
+              description: Source consents for a legal text the target already decided (stay on the source).
+            services_kept:
+              type: integer
+              description: Services whose vehicle now belongs to a third person (stay on the source).
+            cari_accounts_kept:
+              type: integer
+              description: Customer cari accounts of the source (ledgers are not moved).
+        profile:
+          type: string
+          enum: [moved, merged, kept, none]
+          description: moved = target had no profile; merged = target filled its empty fields.
+        phone_moved: { type: boolean }
+        email_moved: { type: boolean }
+        sessions_revoked: { type: integer }
+        merged_at: { type: string, format: date-time, description: Set when applied. }
+
+    EnvelopeCustomerMergeResult:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/CustomerMergeResult" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     CustomerDataExportInput:

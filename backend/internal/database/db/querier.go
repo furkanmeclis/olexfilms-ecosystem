@@ -46,6 +46,11 @@ type Querier interface {
 	ClaimOutboxEvents(ctx context.Context, arg ClaimOutboxEventsParams) ([]OutboxEvent, error)
 	ClearAppSettingsLogo(ctx context.Context) (AppSetting, error)
 	ClearOrganizationLogo(ctx context.Context, argUuid uuid.UUID) (Organization, error)
+	// Closes the source account. phone_e164/email are the values it keeps (the
+	// caller clears the ones handed to the target; the e-mail is a placeholder
+	// when nothing is left, chk_users_email_or_phone). Runs before the target
+	// takes the identifiers over (unique indexes are checked per statement).
+	CloseMergedUser(ctx context.Context, arg CloseMergedUserParams) (User, error)
 	CompleteService(ctx context.Context, arg CompleteServiceParams) (Service, error)
 	CompleteStockTransferRequest(ctx context.Context, id int64) (StockTransferRequest, error)
 	CompleteVehicleTransfer(ctx context.Context, arg CompleteVehicleTransferParams) (VehicleTransfer, error)
@@ -55,6 +60,7 @@ type Querier interface {
 	ConsumeQRLoginChallenge(ctx context.Context, code string) (QrLoginChallenge, error)
 	ConsumeStockReservation(ctx context.Context, id int64) (StockReservation, error)
 	CountAccountingDisputes(ctx context.Context, arg CountAccountingDisputesParams) (int64, error)
+	CountActiveRefreshTokensForUser(ctx context.Context, userID int64) (int64, error)
 	CountActivityEvents(ctx context.Context, arg CountActivityEventsParams) (int64, error)
 	CountAllBulkJobs(ctx context.Context) (int64, error)
 	CountAllExportJobs(ctx context.Context) (int64, error)
@@ -67,6 +73,7 @@ type Querier interface {
 	CountCarModels(ctx context.Context, arg CountCarModelsParams) (int64, error)
 	CountCarModelsByBrand(ctx context.Context, carBrandID int64) (int64, error)
 	CountCariAccountsWithBalance(ctx context.Context, arg CountCariAccountsWithBalanceParams) (int64, error)
+	CountConsentsOfUser(ctx context.Context, userID int64) (int64, error)
 	CountCustomerOrganizationLinks(ctx context.Context, arg CountCustomerOrganizationLinksParams) (CountCustomerOrganizationLinksRow, error)
 	CountDistributorPriceOverrides(ctx context.Context, arg CountDistributorPriceOverridesParams) (int64, error)
 	CountDocumentTemplates(ctx context.Context, arg CountDocumentTemplatesParams) (int64, error)
@@ -85,6 +92,9 @@ type Querier interface {
 	CountOrganizationProductStockRows(ctx context.Context, arg CountOrganizationProductStockRowsParams) (int64, error)
 	CountOrganizations(ctx context.Context, arg CountOrganizationsParams) (int64, error)
 	CountOutboxByStatus(ctx context.Context, status string) (int64, error)
+	// Open (pending) vehicle transfers that involve the user; the transfer's
+	// current owner is immutable, so a merge waits until they are closed.
+	CountPendingVehicleTransfersForUser(ctx context.Context, userID int64) (int64, error)
 	CountPermissions(ctx context.Context, q_ pgtype.Text) (int64, error)
 	CountPhoneOTPsSince(ctx context.Context, arg CountPhoneOTPsSinceParams) (int64, error)
 	CountPlatformNotifications(ctx context.Context, arg CountPlatformNotificationsParams) (int64, error)
@@ -95,10 +105,14 @@ type Querier interface {
 	CountScopedVehicles(ctx context.Context, arg CountScopedVehiclesParams) (int64, error)
 	CountSearchFinanceEntries(ctx context.Context, arg CountSearchFinanceEntriesParams) (int64, error)
 	CountServicesInScope(ctx context.Context, arg CountServicesInScopeParams) (int64, error)
+	CountServicesOfUser(ctx context.Context, customerUserID int64) (int64, error)
 	CountStockMovementsByUnit(ctx context.Context, unitID int64) (int64, error)
 	CountStorageActivity(ctx context.Context, objectKey string) (int64, error)
 	CountStorageTrash(ctx context.Context) (int64, error)
 	CountUnreadInappForUser(ctx context.Context, userID pgtype.Int8) (int64, error)
+	// Customer cari accounts are ledgers (append-only spirit): they are not
+	// moved, only reported.
+	CountUserCariAccounts(ctx context.Context, userID pgtype.Int8) (int64, error)
 	CountUsers(ctx context.Context, arg CountUsersParams) (int64, error)
 	CountUsersWithRole(ctx context.Context, roleSlug string) (int64, error)
 	CountWarrantiesInScope(ctx context.Context, arg CountWarrantiesInScopeParams) (int64, error)
@@ -244,6 +258,8 @@ type Querier interface {
 	DeleteLogPurgeRule(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	DeleteManualExchangeRate(ctx context.Context, arg DeleteManualExchangeRateParams) (int64, error)
 	DeleteMemberRoles(ctx context.Context, memberID int64) error
+	// The duplicate link of the source is folded into the target's (above).
+	DeleteMergedCustomerOrganizations(ctx context.Context, arg DeleteMergedCustomerOrganizationsParams) (int64, error)
 	DeleteNotificationPreferenceRow(ctx context.Context, arg DeleteNotificationPreferenceRowParams) error
 	DeleteOAuthAccountByProviderAccount(ctx context.Context, arg DeleteOAuthAccountByProviderAccountParams) error
 	DeleteOAuthAccountByUserProvider(ctx context.Context, arg DeleteOAuthAccountByUserProviderParams) error
@@ -295,6 +311,9 @@ type Querier interface {
 	// Fill-only identity: a customer created by another organization keeps its
 	// name, e-mail and locale; only empty values are filled.
 	FillCustomerIdentity(ctx context.Context, arg FillCustomerIdentityParams) (User, error)
+	// Both have a profile: the target keeps its values and only fills its empty
+	// fields from the source (an identity number moves with its mask).
+	FillCustomerProfileFromSource(ctx context.Context, arg FillCustomerProfileFromSourceParams) (int64, error)
 	// The rate of a pair (either direction) on the latest day within
 	// [min_date, on_date]; on that day manual > tcmb > ecb, direct before inverse.
 	FindPairRate(ctx context.Context, arg FindPairRateParams) (FindPairRateRow, error)
@@ -859,6 +878,13 @@ type Querier interface {
 	// (K19, TEC-100 decision 2). Nothing here deletes a row: users, vehicles,
 	// services and warranties stay; only personal fields are overwritten.
 	LockUserByUUID(ctx context.Context, argUuid uuid.UUID) (User, error)
+	// TEC-193 (F1-08c2): admin customer merge (TEC-100 decision 2). The source
+	// user is never deleted: it keeps its id, gets merged_into_user_id, status
+	// disabled and an unusable password; its customer records move to the
+	// target user. The warranty holder move lives here (not in warranties.sql)
+	// because it belongs to the customer merge.
+	// Locks both users in id order (no deadlock between two opposite merges).
+	LockUsersForMerge(ctx context.Context, ids []int64) ([]User, error)
 	LockVehicleTransferByUUID(ctx context.Context, arg LockVehicleTransferByUUIDParams) (VehicleTransfer, error)
 	LockWarranty(ctx context.Context, arg LockWarrantyParams) (Warranty, error)
 	MarkAllNotificationsReadForUser(ctx context.Context, userID pgtype.Int8) (int64, error)
@@ -897,6 +923,23 @@ type Querier interface {
 	// Stamped in the notification transaction; a second run is a no-op.
 	MarkWarrantyNotified30(ctx context.Context, arg MarkWarrantyNotified30Params) (int64, error)
 	MarkWarrantyNotified7(ctx context.Context, arg MarkWarrantyNotified7Params) (int64, error)
+	// Organization links the target already has: the target row keeps the
+	// earliest dates of both rows.
+	MergeConflictingCustomerOrganizations(ctx context.Context, arg MergeConflictingCustomerOrganizationsParams) (int64, error)
+	// Consents the target has not decided yet; a decision the target already
+	// made for the same legal text wins and the source's stays as a record.
+	MoveConsentsToUser(ctx context.Context, arg MoveConsentsToUserParams) (int64, error)
+	MoveCustomerOrganizations(ctx context.Context, arg MoveCustomerOrganizationsParams) (int64, error)
+	// The source's profile becomes the target's when the target has none.
+	MoveCustomerProfile(ctx context.Context, arg MoveCustomerProfileParams) (int64, error)
+	// Services follow their vehicle. A service whose vehicle was transferred to
+	// a third person stays with the source (services_check_row requires the
+	// vehicle to belong to the customer).
+	MoveServicesToUser(ctx context.Context, arg MoveServicesToUserParams) (int64, error)
+	// Every vehicle (also soft-deleted ones, so their services can follow).
+	MoveVehiclesToUser(ctx context.Context, arg MoveVehiclesToUserParams) (int64, error)
+	// Warranty holder (warranties_check_row keeps the holder writable).
+	MoveWarrantiesToHolder(ctx context.Context, arg MoveWarrantiesToHolderParams) (int64, error)
 	NextDocumentTemplateVersion(ctx context.Context, arg NextDocumentTemplateVersionParams) (int32, error)
 	PingDB(ctx context.Context) (int32, error)
 	PublishDocumentTemplate(ctx context.Context, id int64) (DocumentTemplate, error)
@@ -989,6 +1032,8 @@ type Querier interface {
 	// The supplier of an organization is its parent in the tree (K9).
 	// Returns no rows for a center.
 	SupplierOf(ctx context.Context, id int64) (Organization, error)
+	// The target takes over the phone / e-mail it does not have yet.
+	TakeOverMergedIdentity(ctx context.Context, arg TakeOverMergedIdentityParams) error
 	UpdateAppSettings(ctx context.Context, arg UpdateAppSettingsParams) (AppSetting, error)
 	UpdateAuthSettings(ctx context.Context, arg UpdateAuthSettingsParams) (AuthSetting, error)
 	// Full replacement of the editable fields (read-modify-write in the use case).

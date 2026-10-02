@@ -270,6 +270,12 @@ const (
 	VehicleTransferExpired   = "vehicle.transfer_expired"
 )
 
+// Customer merge (TEC-193): the center folded a duplicate user (entity) into
+// another; payload carries both uuids and the moved record counts.
+const (
+	CustomerMerged = "customer.merged"
+)
+
 // Contracts domain events.
 const (
 	ContractsInstanceSigned = "contracts.instance_signed"
@@ -521,6 +527,7 @@ func catalogConstants() []string {
 		VehicleTransferCompleted,
 		VehicleTransferCancelled,
 		VehicleTransferExpired,
+		CustomerMerged,
 		ContractsInstanceSigned,
 		AuthWelcome,
 		AuthEmailVerification,
