@@ -101,5 +101,20 @@
   "codes.VEHICLE_TRANSFER_INVALID_CODE": "Неверный код.",
   "codes.VEHICLE_TRANSFER_LOCKED": "Слишком много неверных кодов; передача отменена.",
   "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "Не удалось отправить коды. Попробуйте позже.",
-  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Владелец автомобиля изменился; начните новую передачу."
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Владелец автомобиля изменился; начните новую передачу.",
+  "codes.ORDER_INVALID_TRANSITION": "Статус заказа не позволяет выполнить это действие.",
+  "codes.ORDER_TRANSITION_UNAVAILABLE": "Этот шаг пока недоступен.",
+  "codes.ORDER_NOT_EDITABLE": "Изменять можно только черновики заказов.",
+  "codes.ORDER_NO_SUPPLIER": "Заказывать товары может только дистрибьютор (у центра) или дилер (у своего дистрибьютора).",
+  "codes.ORDER_NOT_ASSIGNABLE": "Единицы можно назначать только во время комплектации.",
+  "codes.ORDER_UNIT_ALREADY_ASSIGNED": "Эта единица уже в позиции.",
+  "codes.ORDER_UNIT_RESERVED": "Эта единица зарезервирована другим заказом.",
+  "codes.ORDER_UNIT_NOT_AVAILABLE": "Этой единицы нет на вашем складе или она относится к другому товару.",
+  "codes.ORDER_INSUFFICIENT_STOCK": "Недостаточно свободного остатка по этому штрихкоду.",
+  "codes.ORDER_ITEM_OVER_ASSIGNED": "Назначение превышает количество позиции.",
+  "codes.ORDER_NOT_FULLY_ASSIGNED": "Сначала все позиции должны быть полностью назначены.",
+  "codes.ORDER_STOCK_UNAVAILABLE": "Складское движение для этой отгрузки отклонено.",
+  "codes.PRICE_NOT_FOUND": "Для этого товара нет цены в валюте заказа.",
+  "codes.RATE_NOT_FOUND": "Нет курса для фиксации в валюте заказа.",
+  "codes.ROLL_CUT_UNSUPPORTED": "Рулоны отгружаются целиком; метраж должен равняться остатку."
 }

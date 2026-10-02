@@ -18,5 +18,20 @@
   "pipeline.expiring": "3 gün ərzində bitən təkliflər: {{count}}",
   "pipeline.awaiting": "Cavab gözləyən təkliflər: {{count}}",
   "tenant.welcome_title": "Xoş gəlmisiniz",
-  "tenant.welcome_description": "Təşkilat paneli. Modullar əlavə olunduqca burada görünəcək."
+  "tenant.welcome_description": "Təşkilat paneli. Modullar əlavə olunduqca burada görünəcək.",
+  "top_vehicles.title": "Ən çox xidmət göstərilən avtomobillər",
+  "top_vehicles.description": "Tamamlanmış xidmətlərə görə ilk 10 marka və ya model.",
+  "top_vehicles.period_label": "Dövr",
+  "top_vehicles.period.30d": "30 gün",
+  "top_vehicles.period.90d": "90 gün",
+  "top_vehicles.period.12m": "12 ay",
+  "top_vehicles.period.all": "Hamısı",
+  "top_vehicles.group_label": "Qruplaşdır",
+  "top_vehicles.group.brand": "Marka",
+  "top_vehicles.group.model": "Model",
+  "top_vehicles.count": "Xidmətlər",
+  "top_vehicles.empty": "Bu dövrdə tamamlanmış xidmət yoxdur.",
+  "top_vehicles.error": "Statistika yüklənə bilmədi.",
+  "top_vehicles.rank": "Sıra",
+  "top_vehicles.name": "Avtomobil"
 }

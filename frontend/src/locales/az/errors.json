@@ -101,5 +101,20 @@
   "codes.VEHICLE_TRANSFER_INVALID_CODE": "Kod səhvdir.",
   "codes.VEHICLE_TRANSFER_LOCKED": "Həddindən çox səhv kod daxil edildi; təhvil ləğv edildi.",
   "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "Kodlar göndərilə bilmədi. Sonra yenidən cəhd edin.",
-  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Avtomobilin sahibi dəyişdi; yeni təhvil başladın."
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Avtomobilin sahibi dəyişdi; yeni təhvil başladın.",
+  "codes.ORDER_INVALID_TRANSITION": "Sifarişin statusu bu əməliyyata icazə vermir.",
+  "codes.ORDER_TRANSITION_UNAVAILABLE": "Bu addım hələ əlçatan deyil.",
+  "codes.ORDER_NOT_EDITABLE": "Yalnız qaralama sifarişlər redaktə edilə bilər.",
+  "codes.ORDER_NO_SUPPLIER": "Məhsul sifarişini yalnız distribyutor (mərkəzdən) və ya diler (öz distribyutorundan) verə bilər.",
+  "codes.ORDER_NOT_ASSIGNABLE": "Vahidlər yalnız sifariş hazırlanarkən təyin edilə bilər.",
+  "codes.ORDER_UNIT_ALREADY_ASSIGNED": "Bu vahid artıq bu sətirdədir.",
+  "codes.ORDER_UNIT_RESERVED": "Bu vahid başqa sifariş üçün ayrılıb.",
+  "codes.ORDER_UNIT_NOT_AVAILABLE": "Bu vahid anbarınızda deyil və ya başqa məhsula aiddir.",
+  "codes.ORDER_INSUFFICIENT_STOCK": "Bu barkod üçün kifayət qədər sərbəst qalıq yoxdur.",
+  "codes.ORDER_ITEM_OVER_ASSIGNED": "Təyinat sətir miqdarını aşır.",
+  "codes.ORDER_NOT_FULLY_ASSIGNED": "Əvvəlcə hər sətir tam qarşılanmalıdır.",
+  "codes.ORDER_STOCK_UNAVAILABLE": "Bu göndəriş üçün anbar hərəkəti rədd edildi.",
+  "codes.PRICE_NOT_FOUND": "Bu məhsul üçün sifariş valyutasında qiymət yoxdur.",
+  "codes.RATE_NOT_FOUND": "Sifariş valyutası üçün dondurulacaq məzənnə tapılmadı.",
+  "codes.ROLL_CUT_UNSUPPORTED": "Rulonlar bütöv göndərilir; metr qalan uzunluğa bərabər olmalıdır."
 }

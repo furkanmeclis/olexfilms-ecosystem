@@ -18,5 +18,20 @@
   "pipeline.expiring": "Пропозиції, що спливають протягом 3 днів: {{count}}",
   "pipeline.awaiting": "Пропозиції без відповіді: {{count}}",
   "tenant.welcome_title": "Ласкаво просимо",
-  "tenant.welcome_description": "Панель організації. Модулі з'являтимуться тут у міру додавання."
+  "tenant.welcome_description": "Панель організації. Модулі з'являтимуться тут у міру додавання.",
+  "top_vehicles.title": "Найчастіше обслуговувані автомобілі",
+  "top_vehicles.description": "Топ-10 марок або моделей за завершеними послугами.",
+  "top_vehicles.period_label": "Період",
+  "top_vehicles.period.30d": "30 днів",
+  "top_vehicles.period.90d": "90 днів",
+  "top_vehicles.period.12m": "12 місяців",
+  "top_vehicles.period.all": "Увесь час",
+  "top_vehicles.group_label": "Групувати за",
+  "top_vehicles.group.brand": "Марка",
+  "top_vehicles.group.model": "Модель",
+  "top_vehicles.count": "Послуги",
+  "top_vehicles.empty": "За цей період немає завершених послуг.",
+  "top_vehicles.error": "Не вдалося завантажити статистику.",
+  "top_vehicles.rank": "Місце",
+  "top_vehicles.name": "Автомобіль"
 }

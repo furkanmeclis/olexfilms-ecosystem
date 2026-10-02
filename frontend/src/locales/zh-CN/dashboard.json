@@ -18,5 +18,20 @@
   "pipeline.expiring": "{{count}} 份报价将在 3 天内到期",
   "pipeline.awaiting": "{{count}} 份报价等待回复",
   "tenant.welcome_title": "欢迎",
-  "tenant.welcome_description": "组织面板。新增的模块将显示在这里。"
+  "tenant.welcome_description": "组织面板。新增的模块将显示在这里。",
+  "top_vehicles.title": "服务最多的车辆",
+  "top_vehicles.description": "按已完成服务统计的前 10 个品牌或车型。",
+  "top_vehicles.period_label": "时间段",
+  "top_vehicles.period.30d": "30 天",
+  "top_vehicles.period.90d": "90 天",
+  "top_vehicles.period.12m": "12 个月",
+  "top_vehicles.period.all": "全部",
+  "top_vehicles.group_label": "分组方式",
+  "top_vehicles.group.brand": "品牌",
+  "top_vehicles.group.model": "车型",
+  "top_vehicles.count": "服务",
+  "top_vehicles.empty": "此时间段内没有已完成的服务。",
+  "top_vehicles.error": "无法加载统计数据。",
+  "top_vehicles.rank": "排名",
+  "top_vehicles.name": "车辆"
 }

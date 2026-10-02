@@ -5365,6 +5365,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/stats/top-vehicle-models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Top-10 car brands or models by completed services (center dashboard)
+         * @description TEC-151 (F1-09c). Counts completed services only (completed_at in the period) of the domain brand (K20): a center organization with a brand-wide services.read grant sees its own brand, super_admin the brand of the selected organization. Dealers and distributors get 403. At most 10 rows, highest count first; ties sort by name. car_brand.uuid is also the logo id (/brand-logos/{uuid}).
+         */
+        get: operations["getTopVehicleModels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/orders": {
         parameters: {
             query?: never;
@@ -9633,6 +9653,47 @@ export interface components {
                 limit: number;
                 offset: number;
             };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /**
+         * @description 30d / 90d days, 12m twelve calendar months, all = all time.
+         * @default 30d
+         * @enum {string}
+         */
+        StatsPeriod: "30d" | "90d" | "12m" | "all";
+        /**
+         * @default model
+         * @enum {string}
+         */
+        StatsGroup: "brand" | "model";
+        TopVehicle: {
+            /** Format: int64 */
+            service_count: number;
+            car_brand: {
+                /** Format: uuid */
+                uuid: string;
+                name: string;
+                has_logo: boolean;
+                /** @description /brand-logos/{uuid} with a ?v= cache-buster when a logo exists. */
+                logo_url: string;
+            };
+            /** @description Set for group=model, null for group=brand. */
+            car_model: components["schemas"]["VehicleCatalogRef"] | null;
+        };
+        TopVehicles: {
+            period: components["schemas"]["StatsPeriod"];
+            group: components["schemas"]["StatsGroup"];
+            /**
+             * Format: date-time
+             * @description Lower completed_at bound; null for all.
+             */
+            since: string | null;
+            items: components["schemas"]["TopVehicle"][];
+        };
+        EnvelopeTopVehicles: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["TopVehicles"];
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
@@ -19458,6 +19519,32 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getTopVehicleModels: {
+        parameters: {
+            query?: {
+                period?: components["schemas"]["StatsPeriod"];
+                group?: components["schemas"]["StatsGroup"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Top list */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTopVehicles"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
         };
     };
@@ -19466,6 +19553,10 @@ export interface operations {
             query?: {
                 side?: "seller" | "buyer";
                 status?: components["schemas"]["OrderStatus"];
+                /** @description Inclusive lower bound of created_at (TEC-170): RFC3339, or a YYYY-MM-DD day in UTC. */
+                created_from?: string;
+                /** @description Exclusive upper bound of created_at: RFC3339, or a YYYY-MM-DD day in UTC that covers the whole day. Must be after created_from. */
+                created_to?: string;
                 limit?: number;
                 offset?: number;
             };

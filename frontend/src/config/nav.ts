@@ -24,6 +24,7 @@ import {
   ScrollText,
   Settings2,
   Shield,
+  ShoppingCart,
   ShieldCheck,
   Upload,
   UserRound,
@@ -387,6 +388,37 @@ export function tenantNav(slug: string) {
             icon: ShieldCheck,
             permission: permissions.warranties.read,
             feature: "services",
+          },
+        ],
+      },
+      {
+        // TEC-170: the order list needs orders.read and the orders module
+        // (same gates as /v1/orders). A new order needs orders.write plus
+        // the catalog to pick from, and a supplier: the center buys from
+        // nobody (K6).
+        id: "orders",
+        labelKey: "orders.nav",
+        icon: ShoppingCart,
+        defaultOpen: true,
+        permission: permissions.orders.read,
+        feature: "orders",
+        items: [
+          {
+            id: "orders-list",
+            titleKey: "orders.nav_list",
+            href: routes.tenant.orders.list(slug),
+            icon: ClipboardList,
+            permission: permissions.orders.read,
+            feature: "orders",
+          },
+          {
+            id: "orders-new",
+            titleKey: "orders.nav_new",
+            href: routes.tenant.orders.create(slug),
+            icon: ShoppingCart,
+            permission: [permissions.orders.write, permissions.catalog.read],
+            orgTypes: ["distributor", "dealer"],
+            feature: "orders",
           },
         ],
       },

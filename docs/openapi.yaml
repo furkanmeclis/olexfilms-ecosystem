@@ -10035,6 +10035,40 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /v1/stats/top-vehicle-models:
+    get:
+      tags: [Services]
+      operationId: getTopVehicleModels
+      summary: Top-10 car brands or models by completed services (center dashboard)
+      description: >-
+        TEC-151 (F1-09c). Counts completed services only (completed_at in
+        the period) of the domain brand (K20): a center organization with a
+        brand-wide services.read grant sees its own brand, super_admin the
+        brand of the selected organization. Dealers and distributors get
+        403. At most 10 rows, highest count first; ties sort by name.
+        car_brand.uuid is also the logo id (/brand-logos/{uuid}).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema: { $ref: "#/components/schemas/StatsPeriod" }
+        - name: group
+          in: query
+          schema: { $ref: "#/components/schemas/StatsGroup" }
+      responses:
+        "200":
+          description: Top list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTopVehicles"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
 
@@ -10058,6 +10092,18 @@ paths:
         - name: status
           in: query
           schema: { $ref: "#/components/schemas/OrderStatus" }
+        - name: created_from
+          in: query
+          description: >-
+            Inclusive lower bound of created_at (TEC-170): RFC3339, or a
+            YYYY-MM-DD day in UTC.
+          schema: { type: string }
+        - name: created_to
+          in: query
+          description: >-
+            Exclusive upper bound of created_at: RFC3339, or a YYYY-MM-DD day
+            in UTC that covers the whole day. Must be after created_from.
+          schema: { type: string }
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
@@ -16114,6 +16160,61 @@ components:
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    StatsPeriod:
+      type: string
+      enum: [30d, 90d, 12m, all]
+      default: 30d
+      description: 30d / 90d days, 12m twelve calendar months, all = all time.
+
+    StatsGroup:
+      type: string
+      enum: [brand, model]
+      default: model
+
+    TopVehicle:
+      type: object
+      required: [service_count, car_brand, car_model]
+      properties:
+        service_count: { type: integer, format: int64 }
+        car_brand:
+          type: object
+          required: [uuid, name, has_logo, logo_url]
+          properties:
+            uuid: { type: string, format: uuid }
+            name: { type: string }
+            has_logo: { type: boolean }
+            logo_url:
+              type: string
+              description: /brand-logos/{uuid} with a ?v= cache-buster when a logo exists.
+        car_model:
+          description: Set for group=model, null for group=brand.
+          oneOf:
+            - $ref: "#/components/schemas/VehicleCatalogRef"
+            - type: "null"
+
+    TopVehicles:
+      type: object
+      required: [period, group, since, items]
+      properties:
+        period: { $ref: "#/components/schemas/StatsPeriod" }
+        group: { $ref: "#/components/schemas/StatsGroup" }
+        since:
+          type: [string, "null"]
+          format: date-time
+          description: Lower completed_at bound; null for all.
+        items:
+          type: array
+          maxItems: 10
+          items: { $ref: "#/components/schemas/TopVehicle" }
+
+    EnvelopeTopVehicles:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/TopVehicles" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     OrderStatus:

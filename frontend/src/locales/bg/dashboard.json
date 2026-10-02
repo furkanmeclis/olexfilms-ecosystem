@@ -18,5 +18,20 @@
   "pipeline.expiring": "Оферти, изтичащи до 3 дни: {{count}}",
   "pipeline.awaiting": "Оферти, чакащи отговор: {{count}}",
   "tenant.welcome_title": "Добре дошли",
-  "tenant.welcome_description": "Панел на организацията. Модулите ще се появяват тук, когато бъдат добавени."
+  "tenant.welcome_description": "Панел на организацията. Модулите ще се появяват тук, когато бъдат добавени.",
+  "top_vehicles.title": "Най-обслужвани автомобили",
+  "top_vehicles.description": "Топ 10 марки или модели по завършени услуги.",
+  "top_vehicles.period_label": "Период",
+  "top_vehicles.period.30d": "30 дни",
+  "top_vehicles.period.90d": "90 дни",
+  "top_vehicles.period.12m": "12 месеца",
+  "top_vehicles.period.all": "Всичко",
+  "top_vehicles.group_label": "Групиране по",
+  "top_vehicles.group.brand": "Марка",
+  "top_vehicles.group.model": "Модел",
+  "top_vehicles.count": "Услуги",
+  "top_vehicles.empty": "Няма завършени услуги за този период.",
+  "top_vehicles.error": "Статистиката не можа да се зареди.",
+  "top_vehicles.rank": "Място",
+  "top_vehicles.name": "Автомобил"
 }

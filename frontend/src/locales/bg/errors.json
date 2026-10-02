@@ -101,5 +101,20 @@
   "codes.VEHICLE_TRANSFER_INVALID_CODE": "Кодът е грешен.",
   "codes.VEHICLE_TRANSFER_LOCKED": "Твърде много грешни кодове; прехвърлянето беше отменено.",
   "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "Кодовете не можаха да бъдат изпратени. Опитайте по-късно.",
-  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Собственикът на автомобила се смени; започнете ново прехвърляне."
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Собственикът на автомобила се смени; започнете ново прехвърляне.",
+  "codes.ORDER_INVALID_TRANSITION": "Статусът на поръчката не позволява това действие.",
+  "codes.ORDER_TRANSITION_UNAVAILABLE": "Тази стъпка все още не е налична.",
+  "codes.ORDER_NOT_EDITABLE": "Само чернови на поръчки могат да се редактират.",
+  "codes.ORDER_NO_SUPPLIER": "Само дистрибутор (към центъра) или дилър (към своя дистрибутор) може да поръчва продукти.",
+  "codes.ORDER_NOT_ASSIGNABLE": "Единици могат да се назначават само по време на подготовката.",
+  "codes.ORDER_UNIT_ALREADY_ASSIGNED": "Тази единица вече е на реда.",
+  "codes.ORDER_UNIT_RESERVED": "Тази единица е резервирана от друга поръчка.",
+  "codes.ORDER_UNIT_NOT_AVAILABLE": "Тази единица не е във вашата наличност или е на друг продукт.",
+  "codes.ORDER_INSUFFICIENT_STOCK": "Няма достатъчно свободна наличност за този баркод.",
+  "codes.ORDER_ITEM_OVER_ASSIGNED": "Назначението надвишава количеството на реда.",
+  "codes.ORDER_NOT_FULLY_ASSIGNED": "Първо всеки ред трябва да бъде изцяло назначен.",
+  "codes.ORDER_STOCK_UNAVAILABLE": "Складовото движение за тази пратка е отказано.",
+  "codes.PRICE_NOT_FOUND": "Няма цена за този продукт във валутата на поръчката.",
+  "codes.RATE_NOT_FOUND": "Няма наличен валутен курс за замразяване във валутата на поръчката.",
+  "codes.ROLL_CUT_UNSUPPORTED": "Ролките се експедират цели; метрите трябва да са равни на оставащата дължина."
 }
