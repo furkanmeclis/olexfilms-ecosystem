@@ -18,21 +18,36 @@ import (
 func RegisterRoutes(
 	mux *http.ServeMux,
 	h *stockhandler.Handler,
+	rh *stockhandler.Reclassify,
 	checker middleware.FeatureChecker,
 	tokens *jwt.Manager,
 	loader middleware.IdentityLoader,
 	q *db.Queries,
+	stepUp middleware.StepUpChecker,
 ) {
 	authn := middleware.Authenticate(tokens, loader)
 	org := middleware.RequireOrganization(tokens, q)
 	module := middleware.RequireFeature(checker, features.ModuleStock)
-	read := func(fn http.HandlerFunc) http.Handler {
-		return middleware.Chain(fn, authn, org, module, middleware.RequireScope(q, rbac.PermStockRead))
+	scoped := func(fn http.HandlerFunc, slug string, extra ...func(http.Handler) http.Handler) http.Handler {
+		mws := append([]func(http.Handler) http.Handler{authn, org, module, middleware.RequireScope(q, slug)}, extra...)
+		return middleware.Chain(fn, mws...)
 	}
+	read := func(fn http.HandlerFunc) http.Handler { return scoped(fn, rbac.PermStockRead) }
 
 	mux.Handle("GET /v1/stock/units/by-barcode/{barcode}", read(h.UnitHistory))
 	mux.Handle("GET /v1/stock/organizations/{uuid}/products", read(h.OrganizationStock))
 	mux.Handle("GET /v1/stock/locations/{uuid}/products", read(h.LocationStock))
+
+	// TEC-157 reclassification: the holding organization requests
+	// (stock.write), the center approves (stock.reclassify, sensitive:
+	// step-up) and the approval applies it through the ledger.
+	mux.Handle("GET /v1/stock/reclassifications", read(rh.List))
+	mux.Handle("POST /v1/stock/reclassifications", scoped(rh.Create, rbac.PermStockWrite))
+	mux.Handle("GET /v1/stock/reclassifications/{uuid}", read(rh.Get))
+	mux.Handle("POST /v1/stock/reclassifications/{uuid}/approve",
+		scoped(rh.Approve, rbac.PermStockReclassify, middleware.RequireStepUp(stepUp)))
+	mux.Handle("POST /v1/stock/reclassifications/{uuid}/reject", scoped(rh.Reject, rbac.PermStockReclassify))
+	mux.Handle("POST /v1/stock/reclassifications/{uuid}/cancel", scoped(rh.Cancel, rbac.PermStockWrite))
 }
 
 // RegisterPlatformRoutes mounts the super_admin stock maintenance routes

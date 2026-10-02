@@ -413,7 +413,10 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	bulkmodule.RegisterRoutes(mux, bulkhandler.New(bulkSvc), tokens, loader)
 	catalogmodule.RegisterRoutes(mux, cataloghandler.New(catalogSvc, exportSvc, importSvc, deps.Storage, activityRec), featureSvc, tokens, loader, deps.Queries)
 	// TEC-155: stock read API (barcode history, organization/bin stock).
-	stockmodule.RegisterRoutes(mux, stockhandler.New(stockusecase.New(deps.Queries)), featureSvc, tokens, loader, deps.Queries)
+	// TEC-157: reclassification (request, approval applies it via the ledger).
+	stockmodule.RegisterRoutes(mux, stockhandler.New(stockusecase.New(deps.Queries)),
+		stockhandler.NewReclassify(stockusecase.NewReclassifications(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries))),
+		featureSvc, tokens, loader, deps.Queries, stepUpSvc)
 	// TEC-156: super_admin projection drift check (dry run).
 	stockmodule.RegisterPlatformRoutes(mux, stockhandler.NewRebuild(stockrebuild.New(deps.DB, deps.Queries), deps.Queries), tokens, loader)
 	// TEC-149: vehicle catalog (global car brands/models, super_admin writes).

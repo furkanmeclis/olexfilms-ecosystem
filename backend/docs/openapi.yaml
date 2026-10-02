@@ -5010,6 +5010,231 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/stock/reclassifications:
+    get:
+      tags: [Stock]
+      operationId: listStockReclassifications
+      summary: Reclassification requests (barcode kept, product changed)
+      description: >-
+        Needs `stock.read`; requests of the organizations inside the
+        viewer's reach (the requesting organization is the one holding the
+        unit), newest first. `status` filters pending, approved, rejected or
+        cancelled requests (TEC-157).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: "#/components/schemas/StockReclassificationStatus" }
+      responses:
+        "200":
+          description: Reclassification requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockReclassificationPage"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+    post:
+      tags: [Stock]
+      operationId: createStockReclassification
+      summary: Request a reclassification of a unit
+      description: >-
+        Needs `stock.write`. The unit (by `barcode` or `unit_uuid`) must be
+        on hand (available or placed) at the caller's active organization.
+        The routing is checked at once and again on approval; each wrong
+        routing has its own code: target of another brand (422
+        STOCK_RECLASSIFICATION_BRAND_MISMATCH), another unit type, roll vs
+        piece or fixed vs serial (422
+        STOCK_RECLASSIFICATION_UNIT_TYPE_MISMATCH), the same product (422
+        STOCK_RECLASSIFICATION_SAME_PRODUCT), a passive product (422
+        STOCK_RECLASSIFICATION_PRODUCT_INACTIVE), a fixed barcode (422
+        STOCK_RECLASSIFICATION_FIXED_BARCODE), a used or void unit (409
+        STOCK_RECLASSIFICATION_UNIT_CONSUMED), a unit held by another
+        organization, in transit or not in stock yet (409
+        STOCK_RECLASSIFICATION_UNIT_ELSEWHERE), a unit on an open service or
+        reserved for an order (409 STOCK_RECLASSIFICATION_UNIT_IN_USE). At
+        most one pending request per unit (409
+        STOCK_RECLASSIFICATION_PENDING_EXISTS). Nothing moves until a center
+        user approves; the request is written to the audit log
+        (`stock.reclassification.requested`).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockReclassificationInput" }
+      responses:
+        "201":
+          description: Pending request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockReclassification"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/stock/reclassifications/{uuid}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    get:
+      tags: [Stock]
+      operationId: getStockReclassification
+      summary: One reclassification request
+      description: Needs `stock.read`; the requesting organization must be inside the viewer's reach (404 otherwise).
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Reclassification request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockReclassification"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/stock/reclassifications/{uuid}/approve:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    post:
+      tags: [Stock]
+      operationId: approveStockReclassification
+      summary: Approve and apply a reclassification
+      description: >-
+        Needs `stock.reclassify` (center, sensitive: 403 STEP_UP_REQUIRED
+        without a recent step-up) with a scope reaching the request. The
+        requester cannot approve its own request (403
+        STOCK_RECLASSIFICATION_SELF_APPROVAL). In one transaction the
+        routing is checked again under the unit lock (same codes as the
+        request; 409 STOCK_RECLASSIFICATION_PRODUCT_CHANGED when the unit no
+        longer has the requested source product), one `reclassification`
+        ledger movement is written (same owner and status, the new product,
+        idempotency key
+        `reclassification:stock_reclassification:<id>:reclassification:<barcode>`),
+        the unit keeps its barcode and moves to the target product in the
+        product stock projections, the request becomes approved with its
+        movement, a `stock.reclassification` outbox event and an audit row
+        (`stock.reclassification.approved`) are written. Approving an
+        approved request again returns it and writes nothing; a rejected or
+        cancelled request answers 409 STOCK_RECLASSIFICATION_NOT_PENDING.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockReclassificationDecisionInput" }
+      responses:
+        "200":
+          description: Approved request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockReclassification"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/stock/reclassifications/{uuid}/reject:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    post:
+      tags: [Stock]
+      operationId: rejectStockReclassification
+      summary: Reject a pending reclassification
+      description: >-
+        Needs `stock.reclassify` with a scope reaching the request. Nothing
+        moves; repeating the rejection is a no-op, an approved or cancelled
+        request answers 409 STOCK_RECLASSIFICATION_NOT_PENDING. Audit:
+        `stock.reclassification.rejected`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockReclassificationDecisionInput" }
+      responses:
+        "200":
+          description: Rejected request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockReclassification"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/stock/reclassifications/{uuid}/cancel:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    post:
+      tags: [Stock]
+      operationId: cancelStockReclassification
+      summary: Withdraw a pending reclassification
+      description: >-
+        Needs `stock.write`; only the requesting organization (404
+        otherwise). Nothing moves; repeating is a no-op, a decided request
+        answers 409 STOCK_RECLASSIFICATION_NOT_PENDING. Audit:
+        `stock.reclassification.cancelled`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockReclassificationDecisionInput" }
+      responses:
+        "200":
+          description: Cancelled request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockReclassification"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   /v1/public/product-images/{key}:
     get:
       tags: [Catalog]
@@ -12452,7 +12677,7 @@ components:
           items: { $ref: "#/components/schemas/StockRebuildDiff" }
         anomalies:
           type: array
-          description: Breaks in a unit's movement chain (from_status / from_owner not equal to the replayed state)
+          description: Breaks in a unit's movement chain (from_status / from_owner not equal to the replayed state; a product break around a reclassification)
           items: { type: string }
         started_at: { type: string, format: date-time }
         finished_at: { type: string, format: date-time }
@@ -12478,6 +12703,98 @@ components:
             items:
               type: array
               items: { $ref: "#/components/schemas/StockProduct" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    StockReclassificationStatus:
+      type: string
+      enum: [pending, approved, rejected, cancelled]
+
+    StockReclassificationInput:
+      type: object
+      additionalProperties: false
+      required: [to_product_uuid, reason]
+      properties:
+        barcode: { type: string, maxLength: 64, description: "The unit's barcode (or unit_uuid)" }
+        unit_uuid: { type: string, format: uuid }
+        to_product_uuid: { type: string, format: uuid }
+        reason: { type: string, minLength: 1, maxLength: 2000 }
+
+    StockReclassificationDecisionInput:
+      type: object
+      additionalProperties: false
+      properties:
+        note: { type: string, maxLength: 2000 }
+
+    StockReclassificationProduct:
+      type: object
+      required: [uuid, sku, name, unit_type, uses_fixed_barcode]
+      properties:
+        uuid: { type: string, format: uuid }
+        sku: { type: string }
+        name: { type: string }
+        unit_type: { $ref: "#/components/schemas/CatalogUnitType" }
+        uses_fixed_barcode: { type: boolean }
+
+    StockUserRef:
+      type: object
+      required: [uuid, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+
+    StockReclassification:
+      type: object
+      required: [uuid, status, unit, organization, from_product, to_product, reason, requested_by, decided_by,
+        decided_at, decision_note, movement_uuid, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        status: { $ref: "#/components/schemas/StockReclassificationStatus" }
+        unit:
+          type: object
+          required: [uuid, barcode]
+          properties:
+            uuid: { type: string, format: uuid }
+            barcode: { type: string }
+        organization: { $ref: "#/components/schemas/StockOrgRef" }
+        from_product: { $ref: "#/components/schemas/StockReclassificationProduct" }
+        to_product: { $ref: "#/components/schemas/StockReclassificationProduct" }
+        reason: { type: string }
+        requested_by:
+          oneOf:
+            - $ref: "#/components/schemas/StockUserRef"
+            - type: "null"
+        decided_by:
+          oneOf:
+            - $ref: "#/components/schemas/StockUserRef"
+            - type: "null"
+        decided_at: { type: [string, "null"], format: date-time }
+        decision_note: { type: [string, "null"] }
+        movement_uuid: { type: [string, "null"], format: uuid, description: The reclassification movement of an approved request }
+        created_at: { type: string, format: date-time }
+
+    EnvelopeStockReclassification:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/StockReclassification" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeStockReclassificationPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/StockReclassification" }
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }
