@@ -19,5 +19,10 @@
   "public.retry_after": "Повторите попытку через {{seconds}} с.",
   "public.error_title": "Сейчас невозможно показать гарантию",
   "public.error_body": "Попробуйте позже.",
-  "public.language": "Язык"
+  "public.language": "Язык",
+  "certificate.download": "Гарантия (PDF)",
+  "certificate.preparing": "Готовим гарантийный сертификат…",
+  "certificate.ready": "Гарантийный сертификат загружен.",
+  "certificate.failed": "Не удалось создать гарантийный сертификат. Попробуйте ещё раз.",
+  "certificate.none": "У этой услуги нет активной гарантии."
 }

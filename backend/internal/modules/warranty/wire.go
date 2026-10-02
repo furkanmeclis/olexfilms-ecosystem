@@ -10,6 +10,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -40,4 +41,10 @@ func RegisterEventHandlers(bus events.Bus, pool *pgxpool.Pool, q *db.Queries, fr
 	}
 	l := NewListener(pool, q, frontendURL, log)
 	bus.Subscribe(events.ServiceCompleted, l.HandleServiceCompleted)
+}
+
+// NewCertificate wires the warranty certificate service (TEC-188); store
+// loads the dealer logo, frontendURL is the public origin of the QR links.
+func NewCertificate(q *db.Queries, store storage.Driver, frontendURL string, log *slog.Logger) *usecase.CertificateService {
+	return usecase.NewCertificate(q, store, frontendURL, log)
 }

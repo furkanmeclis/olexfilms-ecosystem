@@ -135,9 +135,11 @@ SELECT e.id, e.uuid, e.created_at, e.direction, e.category, e.description,
             WHEN 'expense' THEN -e.amount
             WHEN 'collection' THEN -e.amount
         END)::NUMERIC(18,2) AS signed_amount,
-       ro.uuid AS reversal_of_uuid
+       ro.uuid AS reversal_of_uuid,
+       (rv.id IS NOT NULL)::boolean AS reversed
 FROM finance_entries e
 LEFT JOIN finance_entries ro ON ro.id = e.reversal_of_id
+LEFT JOIN finance_entries rv ON rv.reversal_of_id = e.id
 WHERE e.cari_id = $1
   AND e.organization_id = $2
   AND ($3::timestamptz IS NULL OR e.created_at >= $3::timestamptz)
@@ -166,6 +168,7 @@ type ListCariStatementLinesRow struct {
 	Currency       string             `json:"currency"`
 	SignedAmount   pgtype.Numeric     `json:"signed_amount"`
 	ReversalOfUuid pgtype.UUID        `json:"reversal_of_uuid"`
+	Reversed       bool               `json:"reversed"`
 }
 
 // ListCariStatementLines returns the period rows of a cari in ledger order
@@ -198,6 +201,7 @@ func (q *Queries) ListCariStatementLines(ctx context.Context, arg ListCariStatem
 			&i.Currency,
 			&i.SignedAmount,
 			&i.ReversalOfUuid,
+			&i.Reversed,
 		); err != nil {
 			return nil, err
 		}

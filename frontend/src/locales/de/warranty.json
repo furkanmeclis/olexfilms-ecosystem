@@ -19,5 +19,10 @@
   "public.retry_after": "Versuchen Sie es in {{seconds}} Sekunden erneut.",
   "public.error_title": "Die Garantie kann derzeit nicht angezeigt werden",
   "public.error_body": "Bitte versuchen Sie es später erneut.",
-  "public.language": "Sprache"
+  "public.language": "Sprache",
+  "certificate.download": "Garantie-PDF",
+  "certificate.preparing": "Garantiezertifikat wird erstellt…",
+  "certificate.ready": "Garantiezertifikat heruntergeladen.",
+  "certificate.failed": "Das Garantiezertifikat konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
+  "certificate.none": "Dieser Service hat keine aktive Garantie."
 }

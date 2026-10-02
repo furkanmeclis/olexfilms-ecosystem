@@ -746,6 +746,83 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/services/{uuid}/warranty-certificate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue the warranty certificate PDF of a service
+         * @description TEC-188. One PDF per service listing every active warranty (product, unit / barcode, start and end day in the organization's time zone) with its own QR code pointing at PUBLIC_FRONTEND_URL/garanti/{public_code}, the dealer letterhead, the vehicle (full plate and VIN, the certificate is handed to the owner) and the warranty terms. The job runs on worker-docs (exports queue) and is rendered by Gotenberg in the requested language (RTL for ar). Needs warranties.read; a service outside the scope answers 404, a service without an active warranty 409 NO_ACTIVE_WARRANTY. Poll and download through /v1/warranty-certificates/{uuid}.
+         */
+        post: operations["requestServiceWarrantyCertificate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warranty-certificates/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A warranty certificate job of the active organization
+         * @description download_url points at /v1/warranty-certificates/{uuid}/download once completed.
+         */
+        get: operations["getWarrantyCertificateJob"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warranty-certificates/{uuid}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download a completed warranty certificate PDF */
+        get: operations["downloadWarrantyCertificate"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/services/{uuid}/warranty-certificate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue the signed-in customer's warranty certificate PDF of a service
+         * @description TEC-188. Portal session (warranties.read, scope customer). Lists only the active warranties the customer holds (domain brand); a service without such a warranty answers 404. Poll and download through /v1/portal/exports/{uuid}.
+         */
+        post: operations["requestPortalWarrantyCertificate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/organizations": {
         parameters: {
             query?: never;
@@ -8874,6 +8951,8 @@ export interface components {
             source_label: string;
             /** Format: uuid */
             reversal_of_uuid: string | null;
+            /** @description A later row reverses this one (no longer disputable) */
+            reversed: boolean;
             orig_currency: string;
             orig_amount: components["schemas"]["AccountingAmount"];
             debit: components["schemas"]["AccountingAmount"];
@@ -8935,6 +9014,13 @@ export interface components {
             };
             /** Format: date-time */
             generated_at: string;
+        };
+        WarrantyCertificateInput: {
+            /**
+             * @description Certificate language override (default the user language)
+             * @example ar
+             */
+            locale?: string;
         };
         AccountingExportInput: {
             /** @enum {string} */
@@ -10762,6 +10848,121 @@ export interface operations {
                 };
             };
             500: components["responses"]["InternalError"];
+        };
+    };
+    requestServiceWarrantyCertificate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["WarrantyCertificateInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getWarrantyCertificateJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Export job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    downloadWarrantyCertificate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    requestPortalWarrantyCertificate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["WarrantyCertificateInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getMeOrganizations: {

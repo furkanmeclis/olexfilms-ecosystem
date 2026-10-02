@@ -1318,6 +1318,134 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /v1/services/{uuid}/warranty-certificate:
+    post:
+      tags: [Services]
+      operationId: requestServiceWarrantyCertificate
+      summary: Queue the warranty certificate PDF of a service
+      description: >-
+        TEC-188. One PDF per service listing every active warranty (product,
+        unit / barcode, start and end day in the organization's time zone)
+        with its own QR code pointing at PUBLIC_FRONTEND_URL/garanti/{public_code},
+        the dealer letterhead, the vehicle (full plate and VIN, the
+        certificate is handed to the owner) and the warranty terms. The job
+        runs on worker-docs (exports queue) and is rendered by Gotenberg in
+        the requested language (RTL for ar). Needs warranties.read; a
+        service outside the scope answers 404, a service without an active
+        warranty 409 NO_ACTIVE_WARRANTY. Poll and download through
+        /v1/warranty-certificates/{uuid}.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WarrantyCertificateInput"
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warranty-certificates/{uuid}:
+    get:
+      tags: [Services]
+      operationId: getWarrantyCertificateJob
+      summary: A warranty certificate job of the active organization
+      description: download_url points at /v1/warranty-certificates/{uuid}/download once completed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Export job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/warranty-certificates/{uuid}/download:
+    get:
+      tags: [Services]
+      operationId: downloadWarrantyCertificate
+      summary: Download a completed warranty certificate PDF
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: PDF bytes
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/portal/services/{uuid}/warranty-certificate:
+    post:
+      tags: [Portal]
+      operationId: requestPortalWarrantyCertificate
+      summary: Queue the signed-in customer's warranty certificate PDF of a service
+      description: >-
+        TEC-188. Portal session (warranties.read, scope customer). Lists only
+        the active warranties the customer holds (domain brand); a service
+        without such a warranty answers 404. Poll and download through
+        /v1/portal/exports/{uuid}.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WarrantyCertificateInput"
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/me/organizations:
     get:
       tags: [Auth]
@@ -15002,6 +15130,7 @@ components:
         - source_uuid
         - source_label
         - reversal_of_uuid
+        - reversed
         - orig_currency
         - orig_amount
         - debit
@@ -15018,6 +15147,7 @@ components:
         source_uuid: { type: [string, "null"], format: uuid }
         source_label: { type: string, example: Manual entry }
         reversal_of_uuid: { type: [string, "null"], format: uuid }
+        reversed: { type: boolean, description: A later row reverses this one (no longer disputable) }
         orig_currency: { type: string, minLength: 3, maxLength: 3 }
         orig_amount: { $ref: "#/components/schemas/AccountingAmount" }
         debit: { $ref: "#/components/schemas/AccountingAmount" }
@@ -15100,6 +15230,12 @@ components:
             bank: { $ref: "#/components/schemas/AccountingAmount" }
             accounts: { $ref: "#/components/schemas/AccountingAmount" }
         generated_at: { type: string, format: date-time }
+
+    WarrantyCertificateInput:
+      type: object
+      additionalProperties: false
+      properties:
+        locale: { type: string, description: Certificate language override (default the user language), example: ar }
 
     AccountingExportInput:
       type: object

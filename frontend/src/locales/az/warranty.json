@@ -19,5 +19,10 @@
   "public.retry_after": "{{seconds}} saniyədən sonra yenidən cəhd edin.",
   "public.error_title": "Zəmanət hazırda göstərilə bilmir",
   "public.error_body": "Zəhmət olmasa, sonra yenidən cəhd edin.",
-  "public.language": "Dil seçimi"
+  "public.language": "Dil seçimi",
+  "certificate.download": "Zəmanət PDF",
+  "certificate.preparing": "Zəmanət sertifikatı hazırlanır…",
+  "certificate.ready": "Zəmanət sertifikatı yükləndi.",
+  "certificate.failed": "Zəmanət sertifikatı yaradıla bilmədi. Yenidən cəhd edin.",
+  "certificate.none": "Bu xidmətin aktiv zəmanəti yoxdur."
 }

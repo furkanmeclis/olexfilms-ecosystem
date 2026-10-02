@@ -19,5 +19,10 @@
   "public.retry_after": "حاول مرة أخرى بعد {{seconds}} ثانية.",
   "public.error_title": "لا يمكن عرض الضمان حاليًا",
   "public.error_body": "يُرجى المحاولة لاحقًا.",
-  "public.language": "اللغة"
+  "public.language": "اللغة",
+  "certificate.download": "ملف الضمان PDF",
+  "certificate.preparing": "جارٍ تجهيز شهادة الضمان…",
+  "certificate.ready": "تم تنزيل شهادة الضمان.",
+  "certificate.failed": "تعذّر إنشاء شهادة الضمان. يرجى المحاولة مرة أخرى.",
+  "certificate.none": "لا يوجد ضمان ساري لهذه الخدمة."
 }
