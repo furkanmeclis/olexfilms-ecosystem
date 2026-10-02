@@ -422,12 +422,16 @@ func (s *Service) PurgeBefore(ctx context.Context, cutoff time.Time) (int64, err
 	return total, nil
 }
 
-// CatalogStore mirrors the event catalog into notification_events.
+// CatalogStore mirrors the event catalog into notification_events and
+// inserts the catalog's default templates.
 type CatalogStore interface {
 	UpsertNotificationEvent(ctx context.Context, arg db.UpsertNotificationEventParams) error
+	InsertNotificationTemplateIfMissing(ctx context.Context, arg db.InsertNotificationTemplateIfMissingParams) (int64, error)
 }
 
-// SyncCatalog upserts every catalog event into notification_events.
+// SyncCatalog upserts every catalog event into notification_events and
+// inserts its default templates (TEC-187) where no row exists yet, so an
+// admin-edited template is never overwritten.
 func SyncCatalog(ctx context.Context, q CatalogStore) error {
 	for _, e := range catalog.All() {
 		placeholders, _ := json.Marshal(e.Placeholders)
@@ -437,6 +441,14 @@ func SyncCatalog(ctx context.Context, q CatalogStore) error {
 			UserConfigurable: e.UserConfigurable,
 		}); err != nil {
 			return fmt.Errorf("sync notification event %s: %w", e.Code, err)
+		}
+		for _, t := range e.Templates {
+			if _, err := q.InsertNotificationTemplateIfMissing(ctx, db.InsertNotificationTemplateIfMissingParams{
+				Code: e.Code, Role: t.Role, Channel: t.Channel, Language: t.Language,
+				Subject: t.Subject, Body: t.Body, Format: t.Format,
+			}); err != nil {
+				return fmt.Errorf("sync notification template %s/%s/%s: %w", e.Code, t.Channel, t.Language, err)
+			}
 		}
 	}
 	return nil

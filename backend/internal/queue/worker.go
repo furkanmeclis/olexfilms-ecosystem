@@ -57,6 +57,8 @@ type Worker struct {
 	fetchRates           FetchRatesFunc
 	purgeNotifications   NotificationPurgeFunc
 	pollWhatsApp         WhatsAppPollFunc
+	warrantyExpire       WarrantyTaskFunc
+	warrantyExpiringScan WarrantyTaskFunc
 	inventoryRebuild     InventoryRebuildFunc
 }
 
@@ -119,6 +121,8 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskRatesFetch, w.handleRatesFetch)
 	mux.HandleFunc(TaskNotificationPurge, w.handleNotificationPurge)
 	mux.HandleFunc(TaskWhatsAppStatusPoll, w.handleWhatsAppPoll)
+	mux.HandleFunc(TaskWarrantyExpire, w.handleWarrantyExpire)
+	mux.HandleFunc(TaskWarrantyExpiringScan, w.handleWarrantyExpiringScan)
 	mux.HandleFunc(TaskInventoryRebuild, w.handleInventoryRebuild)
 	return w
 }

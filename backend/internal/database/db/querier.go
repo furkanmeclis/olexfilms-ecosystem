@@ -506,6 +506,9 @@ type Querier interface {
 	// Idempotent on (event_id, user_id, channel): a replayed event returns no row.
 	InsertNotificationDelivery(ctx context.Context, arg InsertNotificationDeliveryParams) (NotificationDelivery, error)
 	InsertNotificationHistory(ctx context.Context, arg InsertNotificationHistoryParams) (NotificationHistory, error)
+	// Default templates of code-registered events (TEC-187): inserted once,
+	// an existing row (admin edit) is never overwritten.
+	InsertNotificationTemplateIfMissing(ctx context.Context, arg InsertNotificationTemplateIfMissingParams) (int64, error)
 	// ---------------------------------------------------------------------------
 	// Status history (append-only).
 	InsertOrderStatusHistory(ctx context.Context, arg InsertOrderStatusHistoryParams) (OrderStatusHistory, error)
@@ -799,6 +802,9 @@ type Querier interface {
 	// Scope list: org_ids NULL = whole brand (brand/all scope);
 	// holder_user_id for scope customer (portal).
 	ListWarrantiesInScope(ctx context.Context, arg ListWarrantiesInScopeParams) ([]Warranty, error)
+	// Notification context of the cron events (TEC-187): plate, product and the
+	// organization's name and time zone (end date is shown in the org zone).
+	ListWarrantyNoticeContexts(ctx context.Context, ids []int64) ([]ListWarrantyNoticeContextsRow, error)
 	ListWebAuthnCredentialsByUserID(ctx context.Context, userID int64) ([]WebauthnCredential, error)
 	ListWebAuthnCredentialsForUserIDs(ctx context.Context, userIds []int64) ([]WebauthnCredential, error)
 	ListWhatsAppAlarmRecipients(ctx context.Context) ([]ListWhatsAppAlarmRecipientsRow, error)
