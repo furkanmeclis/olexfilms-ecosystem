@@ -728,6 +728,48 @@ func (q *Queries) GetOrganizationTreeByUUID(ctx context.Context, argUuid uuid.UU
 	return i, err
 }
 
+const insertOrganizationParentChange = `-- name: InsertOrganizationParentChange :one
+INSERT INTO organization_parent_changes (
+    organization_id, brand_id, old_parent_id, new_parent_id, actor_user_id
+) VALUES (
+    $1, $2, $3,
+    $4, $5
+)
+RETURNING id, uuid, organization_id, brand_id, old_parent_id, new_parent_id, actor_user_id, created_at
+`
+
+type InsertOrganizationParentChangeParams struct {
+	OrganizationID int64       `json:"organization_id"`
+	BrandID        int64       `json:"brand_id"`
+	OldParentID    int64       `json:"old_parent_id"`
+	NewParentID    int64       `json:"new_parent_id"`
+	ActorUserID    pgtype.Int8 `json:"actor_user_id"`
+}
+
+// InsertOrganizationParentChange records one re-parenting (K25, TEC-198);
+// its uuid is the change id the cari transfer rows are sourced by.
+func (q *Queries) InsertOrganizationParentChange(ctx context.Context, arg InsertOrganizationParentChangeParams) (OrganizationParentChange, error) {
+	row := q.db.QueryRow(ctx, insertOrganizationParentChange,
+		arg.OrganizationID,
+		arg.BrandID,
+		arg.OldParentID,
+		arg.NewParentID,
+		arg.ActorUserID,
+	)
+	var i OrganizationParentChange
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.OldParentID,
+		&i.NewParentID,
+		&i.ActorUserID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const listMemberRolesByOrganization = `-- name: ListMemberRolesByOrganization :many
 SELECT om.id AS member_id, r.slug
 FROM organization_members om
