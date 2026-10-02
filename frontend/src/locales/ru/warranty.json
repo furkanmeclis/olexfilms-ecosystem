@@ -1,0 +1,23 @@
+{
+  "public.page_title": "Проверка гарантии",
+  "public.status.active": "Активна",
+  "public.status.expired": "Истекла",
+  "public.status.void": "Аннулирована",
+  "public.days_remaining": "Осталось дней",
+  "public.start": "Дата начала",
+  "public.end": "Дата окончания",
+  "public.vehicle": "Автомобиль",
+  "public.plate": "Госномер",
+  "public.vin": "VIN (последние 4)",
+  "public.model_year": "Год модели",
+  "public.dealer": "Исполнитель",
+  "public.privacy_note": "Госномер и VIN частично скрыты для защиты персональных данных.",
+  "public.not_found_title": "Гарантия не найдена",
+  "public.not_found_body": "Гарантии с таким кодом нет. Отсканируйте QR-код ещё раз или проверьте код.",
+  "public.rate_limited_title": "Слишком много запросов",
+  "public.rate_limited_body": "Слишком много проверок за короткое время. Попробуйте ещё раз чуть позже.",
+  "public.retry_after": "Повторите попытку через {{seconds}} с.",
+  "public.error_title": "Сейчас невозможно показать гарантию",
+  "public.error_body": "Попробуйте позже.",
+  "public.language": "Язык"
+}

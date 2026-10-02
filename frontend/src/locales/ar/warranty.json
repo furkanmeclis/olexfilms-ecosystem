@@ -1,0 +1,23 @@
+{
+  "public.page_title": "التحقق من الضمان",
+  "public.status.active": "نشط",
+  "public.status.expired": "منتهي",
+  "public.status.void": "ملغى",
+  "public.days_remaining": "الأيام المتبقية",
+  "public.start": "تاريخ البدء",
+  "public.end": "تاريخ الانتهاء",
+  "public.vehicle": "المركبة",
+  "public.plate": "لوحة الأرقام",
+  "public.vin": "رقم VIN (آخر 4)",
+  "public.model_year": "سنة الطراز",
+  "public.dealer": "نُفّذ بواسطة",
+  "public.privacy_note": "تم إخفاء لوحة الأرقام ورقم VIN جزئيًا لحماية البيانات الشخصية.",
+  "public.not_found_title": "لم يتم العثور على الضمان",
+  "public.not_found_body": "لا يوجد ضمان مطابق لهذا الرمز. امسح رمز QR مرة أخرى أو تحقق من الرمز.",
+  "public.rate_limited_title": "طلبات كثيرة جدًا",
+  "public.rate_limited_body": "تم إجراء عمليات بحث كثيرة في وقت قصير. يُرجى المحاولة مرة أخرى بعد قليل.",
+  "public.retry_after": "حاول مرة أخرى بعد {{seconds}} ثانية.",
+  "public.error_title": "لا يمكن عرض الضمان حاليًا",
+  "public.error_body": "يُرجى المحاولة لاحقًا.",
+  "public.language": "اللغة"
+}

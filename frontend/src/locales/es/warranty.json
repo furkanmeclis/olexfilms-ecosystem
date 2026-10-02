@@ -1,0 +1,23 @@
+{
+  "public.page_title": "Consulta de garantía",
+  "public.status.active": "Activa",
+  "public.status.expired": "Vencida",
+  "public.status.void": "Anulada",
+  "public.days_remaining": "Días restantes",
+  "public.start": "Fecha de inicio",
+  "public.end": "Fecha de fin",
+  "public.vehicle": "Vehículo",
+  "public.plate": "Matrícula",
+  "public.vin": "VIN (últimos 4)",
+  "public.model_year": "Año del modelo",
+  "public.dealer": "Aplicado por",
+  "public.privacy_note": "La matrícula y el VIN se ocultan parcialmente para proteger los datos personales.",
+  "public.not_found_title": "Garantía no encontrada",
+  "public.not_found_body": "Ninguna garantía coincide con este código. Vuelva a escanear el código QR o revise el código.",
+  "public.rate_limited_title": "Demasiadas solicitudes",
+  "public.rate_limited_body": "Demasiadas consultas en poco tiempo. Vuelva a intentarlo en breve.",
+  "public.retry_after": "Vuelva a intentarlo en {{seconds}} segundos.",
+  "public.error_title": "La garantía no se puede mostrar en este momento",
+  "public.error_body": "Vuelva a intentarlo más tarde.",
+  "public.language": "Idioma"
+}

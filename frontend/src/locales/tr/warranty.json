@@ -1,0 +1,23 @@
+{
+  "public.page_title": "Garanti sorgulama",
+  "public.status.active": "Aktif",
+  "public.status.expired": "Süresi doldu",
+  "public.status.void": "İptal edildi",
+  "public.days_remaining": "Kalan gün",
+  "public.start": "Başlangıç",
+  "public.end": "Bitiş",
+  "public.vehicle": "Araç",
+  "public.plate": "Plaka",
+  "public.vin": "Şasi no (son 4)",
+  "public.model_year": "Model yılı",
+  "public.dealer": "Uygulayan bayi",
+  "public.privacy_note": "Kişisel verilerin korunması için plaka ve şasi numarası kısmen gizlenmiştir.",
+  "public.not_found_title": "Garanti bulunamadı",
+  "public.not_found_body": "Bu kodla eşleşen bir garanti yok. QR kodu yeniden okutun veya kodu kontrol edin.",
+  "public.rate_limited_title": "Çok fazla deneme",
+  "public.rate_limited_body": "Kısa sürede çok fazla sorgu yapıldı. Lütfen biraz sonra tekrar deneyin.",
+  "public.retry_after": "{{seconds}} saniye sonra tekrar deneyin.",
+  "public.error_title": "Garanti şu anda gösterilemiyor",
+  "public.error_body": "Lütfen daha sonra tekrar deneyin.",
+  "public.language": "Dil"
+}

@@ -1,0 +1,23 @@
+{
+  "public.page_title": "Vérification de garantie",
+  "public.status.active": "Active",
+  "public.status.expired": "Expirée",
+  "public.status.void": "Annulée",
+  "public.days_remaining": "Jours restants",
+  "public.start": "Date de début",
+  "public.end": "Date de fin",
+  "public.vehicle": "Véhicule",
+  "public.plate": "Immatriculation",
+  "public.vin": "VIN (4 derniers)",
+  "public.model_year": "Année du modèle",
+  "public.dealer": "Posé par",
+  "public.privacy_note": "L'immatriculation et le VIN sont partiellement masqués pour protéger les données personnelles.",
+  "public.not_found_title": "Garantie introuvable",
+  "public.not_found_body": "Aucune garantie ne correspond à ce code. Scannez à nouveau le QR code ou vérifiez le code.",
+  "public.rate_limited_title": "Trop de requêtes",
+  "public.rate_limited_body": "Trop de recherches en peu de temps. Veuillez réessayer dans un instant.",
+  "public.retry_after": "Réessayez dans {{seconds}} secondes.",
+  "public.error_title": "La garantie ne peut pas être affichée pour le moment",
+  "public.error_body": "Veuillez réessayer plus tard.",
+  "public.language": "Langue"
+}

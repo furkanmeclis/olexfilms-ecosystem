@@ -53,8 +53,10 @@ export const routes = {
       disputeDetail: (slug: string, uuid: string) =>
         `/t/${slug}/accounting/disputes/${uuid}`,
     },
-    /** TEC-181 service wizard; the detail page comes with TEC-183. */
+    /** TEC-181 service wizard, TEC-183 list and detail. */
     services: {
+      list: (slug: string) => `/t/${slug}/services`,
+      detail: (slug: string, uuid: string) => `/t/${slug}/services/${uuid}`,
       create: (slug: string) => `/t/${slug}/services/new`,
       wizard: (slug: string, uuid: string) =>
         `/t/${slug}/services/${uuid}/wizard`,

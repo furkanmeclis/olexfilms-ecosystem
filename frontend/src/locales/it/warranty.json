@@ -1,0 +1,23 @@
+{
+  "public.page_title": "Verifica garanzia",
+  "public.status.active": "Attiva",
+  "public.status.expired": "Scaduta",
+  "public.status.void": "Annullata",
+  "public.days_remaining": "Giorni rimanenti",
+  "public.start": "Data di inizio",
+  "public.end": "Data di fine",
+  "public.vehicle": "Veicolo",
+  "public.plate": "Targa",
+  "public.vin": "VIN (ultimi 4)",
+  "public.model_year": "Anno modello",
+  "public.dealer": "Applicato da",
+  "public.privacy_note": "La targa e il VIN sono parzialmente nascosti per proteggere i dati personali.",
+  "public.not_found_title": "Garanzia non trovata",
+  "public.not_found_body": "Nessuna garanzia corrisponde a questo codice. Scansiona di nuovo il codice QR o controlla il codice.",
+  "public.rate_limited_title": "Troppe richieste",
+  "public.rate_limited_body": "Troppe ricerche in poco tempo. Riprova tra poco.",
+  "public.retry_after": "Riprova tra {{seconds}} secondi.",
+  "public.error_title": "Al momento non è possibile mostrare la garanzia",
+  "public.error_body": "Riprova più tardi.",
+  "public.language": "Lingua"
+}
