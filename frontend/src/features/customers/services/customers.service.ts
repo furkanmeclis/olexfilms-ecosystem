@@ -22,6 +22,10 @@ export type VehicleCreateInput = Schemas["VehicleCreateInput"];
 export type VehicleUpdateInput = Schemas["VehicleUpdateInput"];
 export type ExportJob = Schemas["ExportJob"];
 export type DataExportFormat = Schemas["CustomerDataExportInput"]["format"];
+export type ListExportFormat = Schemas["CustomerListExportInput"]["format"];
+export type ListExportQuery = NonNullable<
+  Schemas["CustomerListExportInput"]["query"]
+>;
 
 /** GET /v1/customers filters (TEC-163). */
 export type CustomerListQuery = {
@@ -102,6 +106,34 @@ export const customersService = {
       filename ?? `customer-data-${job.uuid}.${job.format}`,
     );
   },
+  /**
+   * Customer list export (TEC-164/TEC-199): queues a CSV / XLSX / PDF job
+   * with the list filters (q, status); paging is not part of the export.
+   */
+  requestListExport(format: ListExportFormat, query: ListExportQuery) {
+    const filters: ListExportQuery = {
+      ...(query.q ? { q: query.q } : {}),
+      ...(query.status ? { status: query.status } : {}),
+    };
+    return platformRequest<ExportJob>("POST", "/v1/customers/export", {
+      body: { format, query: filters },
+    });
+  },
+  getListExport(uuid: string) {
+    return platformRequest<ExportJob>(
+      "GET",
+      `/v1/customer-list-exports/${enc(uuid)}`,
+    );
+  },
+  async downloadListExport(job: ExportJob) {
+    const { blob, filename } = await platformDownloadFile(
+      `/v1/customer-list-exports/${enc(job.uuid)}/download`,
+    );
+    triggerBrowserDownload(
+      blob,
+      filename ?? `customers-${job.uuid}.${job.format}`,
+    );
+  },
   /** Dealers in the organizations.read scope (upgrade target picker). */
   async listDealers(): Promise<DealerOption[]> {
     const data = await platformRequest<{
@@ -132,4 +164,5 @@ export const customerKeys = {
   detail: (uuid: string) => ["customers", "detail", uuid] as const,
   vehicles: (uuid: string) => ["customers", "vehicles", uuid] as const,
   dealers: ["customers", "dealers"] as const,
+  listExport: (uuid: string) => ["customers", "list-export", uuid] as const,
 };

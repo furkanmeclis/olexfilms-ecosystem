@@ -9,12 +9,16 @@ export type CustomerListAccess = {
   canRead: boolean;
   /** POST /v1/customers needs customers.write. */
   canCreate: boolean;
+  /** POST /v1/customers/export (TEC-164) needs customers.read. */
+  canExport: boolean;
 };
 
 export function resolveCustomerListAccess(can: Can): CustomerListAccess {
+  const read = can(permissions.customers.read);
   return {
-    canRead: can(permissions.customers.read),
+    canRead: read,
     canCreate: can(permissions.customers.write),
+    canExport: read,
   };
 }
 
