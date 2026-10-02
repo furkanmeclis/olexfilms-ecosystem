@@ -116,6 +116,11 @@ tags:
       server-side prices (K8), rate frozen at seller approval (K7), barcode
       assignment and shipping (TEC-167), receipt and cancel after shipping
       (TEC-168).
+  - name: StockTransfers
+    description: >-
+      Stock transfer requests between sibling dealers or sibling
+      distributors (TEC-197, K13): request, approval or rejection, shipping
+      and receipt through the stock ledger.
   - name: Mobile
     description: |
       Mobile app API (TEC-91). `/v1/mobile/*` is reached through the BFF
@@ -5353,6 +5358,59 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/stock/splits:
+    post:
+      tags: [Stock]
+      operationId: createStockSplit
+      summary: Split a roll (cut meters off as a new unit)
+      description: >-
+        Needs `stock.write` (TEC-184). The roll (by `barcode` or
+        `unit_uuid`) must be on hand (available or placed) at the caller's
+        active organization (409 STOCK_SPLIT_UNIT_ELSEWHERE) and not on an
+        open service or order reservation (409 STOCK_SPLIT_UNIT_IN_USE).
+        The meters leave as a new unit of the same product with the barcode
+        `<roll barcode>-S<n>` at the roll's owner; the roll keeps the rest
+        and is used up at 0 m. Both split movements are written in one
+        transaction; product stock totals do not change. Pieces and fixed
+        barcodes are not split (422 STOCK_SPLIT_NOT_ROLL); more meters than
+        the roll has answer 422 STOCK_SPLIT_INSUFFICIENT_METERS. The same
+        `idempotency_key` returns the earlier split with 200 and writes
+        nothing; reused for another roll or meters it answers 409
+        STOCK_SPLIT_KEY_CONFLICT. Label printing: TEC-95.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StockSplitInput"
+      responses:
+        "200":
+          description: The earlier split of this key (nothing written)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockSplit"
+        "201":
+          description: Split written
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockSplit"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
   /v1/stock/reclassifications:
     get:
       tags: [Stock]
@@ -6393,7 +6451,12 @@ paths:
         customers.read. A dealer sees the customers linked to its organization
         (customer_organizations), a distributor its subtree, the center the
         brand; always the domain brand (K20). Anonymized customers are listed
-        masked (`anonymized: true`, localized name, no contact data).
+        masked (`anonymized: true`, localized name, no contact data). TEC-164:
+        `q` searches the Meilisearch customers index when it is up (filtered
+        on the scope's organizations and the brand, ranked by relevance; the
+        hits are reloaded from Postgres with the same scope) and falls back to
+        the SQL search otherwise. Anonymized customers are never indexed, so
+        `status=anonymized` always uses the SQL search.
       security:
         - bearerAuth: []
       parameters:
@@ -6692,6 +6755,89 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "409":
           $ref: "#/components/responses/Conflict"
+
+  /v1/customers/export:
+    post:
+      tags: [Customers]
+      operationId: requestCustomerListExport
+      summary: Queue a customer list export (CSV, XLSX or PDF)
+      description: >-
+        TEC-164. customers.read with the list's scope: the job (worker-docs,
+        exports queue) exports the customers of the scope with the list
+        filters (`q`, `status`), masked like the list (anonymized customers
+        show the anonymized label; identity numbers are not exported). The
+        worker re-authorizes the stored scope against the job organization.
+        The request is written to the activity log (customers.list_exported).
+        Poll and download through /v1/customer-list-exports/{uuid}.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerListExportInput"
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/customer-list-exports/{uuid}:
+    get:
+      tags: [Customers]
+      operationId: getCustomerListExport
+      summary: A customer list export job of the active organization
+      description: download_url points at /v1/customer-list-exports/{uuid}/download once completed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Export job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/customer-list-exports/{uuid}/download:
+    get:
+      tags: [Customers]
+      operationId: downloadCustomerListExport
+      summary: Download a completed customer list export (audited)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: File bytes (text/csv, XLSX or application/pdf)
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /v1/customers/{uuid}/data-export:
     post:
@@ -9237,6 +9383,57 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/accounting/accounts/{uuid}/opening-balance:
+    post:
+      tags: [Accounting]
+      operationId: createAccountingAccountOpening
+      summary: Book the one-off opening balance of a cash/bank account (step-up)
+      description: >-
+        TEC-198. Writes the balance a cash or bank account of the active
+        organization carries over, once per account: direction opening,
+        account only (no cari), in the account's currency, dated at
+        opening_date. It raises the account balance and never reaches
+        income or expense (P&L). The same opening balance again answers 200
+        with the earlier entry; other values while one is open answer 409
+        OPENING_BALANCE_EXISTS. Correct it by reversing the entry (POST
+        /v1/accounting/entries/{uuid}/void), then book it again. Needs
+        accounting.write (dealer roles answer 403) and a recent step-up
+        (403 STEP_UP_REQUIRED). Writes finance.entry_posted to the outbox
+        and accounting.account_opening_posted to the audit log.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinanceAccountOpeningInput"
+      responses:
+        "200":
+          description: Replayed (the same opening balance is already booked)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFinanceEntry"
+        "201":
+          description: Created opening balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFinanceEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   /v1/accounting/cari:
     get:
       tags: [Accounting]
@@ -9418,10 +9615,11 @@ paths:
       summary: Reverse a manual entry or an opening balance (step-up)
       description: >-
         Appends the mirror row (reversal_of_uuid, negated amounts); the
-        ledger is append-only. Only open manual entries and opening
-        balances (TEC-177) of the active organization (409
-        ENTRY_NOT_VOIDABLE otherwise). Reversing an opening balance writes
-        accounting.opening_balance_voided to the audit log; a new opening
+        ledger is append-only. Only open manual entries, cari opening
+        balances (TEC-177) and cash/bank opening balances (TEC-198) of the
+        active organization (409 ENTRY_NOT_VOIDABLE otherwise). Reversing
+        an opening balance writes accounting.opening_balance_voided (or
+        accounting.account_opening_voided) to the audit log; a new opening
         balance may then be booked. Needs a recent step-up (403
         STEP_UP_REQUIRED).
       security:
@@ -10773,8 +10971,14 @@ paths:
         line's product and in the seller's stock (409
         ORDER_UNIT_NOT_AVAILABLE). Serial pieces count as 1; a serial unit
         reserved by another order answers 409 ORDER_UNIT_RESERVED. Rolls
-        ship whole: meters, when given, must equal the roll's remaining
-        meters (400 ROLL_CUT_UNSUPPORTED). Fixed barcodes take a quantity;
+        take meters: without meters (or with the remaining meters) the
+        whole roll is assigned; fewer meters first split the roll (TEC-184):
+        the meters leave as a new unit with its own barcode
+        (<roll barcode>-S<n>), which is assigned and returned in `split`
+        (label printing: TEC-95), while the roll keeps the rest. More meters
+        than the roll has answer 422 ROLL_METERS_EXCEED_REMAINING. An
+        `idempotency_key` makes a split assignment retry-safe (a retry
+        returns the same split, `split.replayed` = true). Fixed barcodes take a quantity;
         the seller's active reservations may not exceed what it holds (409
         ORDER_INSUFFICIENT_STOCK). The line amount may not be exceeded (409
         ORDER_ITEM_OVER_ASSIGNED); a unit already on the line answers 409
@@ -10813,6 +11017,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
 
   /v1/orders/{uuid}/items/{item_uuid}/units/{unit_uuid}:
     delete:
@@ -10844,6 +11050,185 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeOrder"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/stock-transfers:
+    get:
+      tags: [StockTransfers]
+      operationId: listStockTransfers
+      summary: Stock transfer requests of the active organization
+      description: >-
+        Requests where the active organization is the giver (outgoing), the
+        receiver (incoming) or the common parent (approval); direction
+        narrows the list. Needs transfers.request or transfers.approve and
+        the dealer_transfers module. List rows carry no items.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: direction
+          in: query
+          schema: { type: string, enum: [outgoing, incoming, approval] }
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/StockTransferStatus" }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Transfer requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockTransferPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [StockTransfers]
+      operationId: createStockTransfer
+      summary: Request a stock transfer to a sibling organization (K13)
+      description: >-
+        The active organization (dealer or distributor) gives units it holds
+        to a sibling: same brand, same type, same parent. Any other target
+        (another parent, brand or type, the parent itself) is 422
+        TRANSFER_NOT_SIBLING. Units are named by barcode; a fixed barcode
+        needs a quantity, pieces and rolls move whole. A unit not in the
+        giver's stock, reserved by an order or on another open request is
+        400 with detail code TRANSFER_UNIT_NOT_AVAILABLE,
+        TRANSFER_UNIT_RESERVED or TRANSFER_INSUFFICIENT_STOCK. Needs
+        transfers.request. Writes transfers.requested; no stock moves yet.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StockTransferCreateInput"
+      responses:
+        "201":
+          description: Requested transfer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockTransfer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/stock-transfers/targets:
+    get:
+      tags: [StockTransfers]
+      operationId: listStockTransferTargets
+      summary: Siblings the active organization may transfer to
+      description: >-
+        Live organizations of the same brand, type and parent as the active
+        organization (empty for the center). Needs transfers.request.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Sibling organizations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockTransferTargets"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/stock-transfers/{uuid}:
+    get:
+      tags: [StockTransfers]
+      operationId: getStockTransfer
+      summary: One stock transfer request with its units
+      description: >-
+        Visible to its parties only (giver, receiver, common parent); others
+        get 404. available_transitions lists the statuses the caller may
+        move the request to.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Transfer request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockTransfer"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/stock-transfers/{uuid}/transitions:
+    post:
+      tags: [StockTransfers]
+      operationId: transitionStockTransfer
+      summary: Move a stock transfer request to another status
+      description: >-
+        requested -> approved | rejected (receiver with transfers.request or
+        the common parent with transfers.approve; approval freezes the
+        giver's purchase price per unit, K13; a rejection writes no stock
+        movement); requested -> cancelled (giver or parent); approved ->
+        shipped (giver: one ledger transfer_out per unit with idempotency key
+        transfer:transfer_item:<id>:transfer_out:<barcode>, serial units go
+        in_transit owned by the receiver; 409 TRANSFER_STOCK_UNAVAILABLE when
+        the ledger refuses); approved -> cancelled (any party, no movement);
+        shipped -> received (receiver: one transfer_in per unit, available at
+        the receiver); shipped -> cancelled (giver, once the goods are back:
+        one transfer_cancel_restore per unit). rejected, received and
+        cancelled are final. A request for the current status is a no-op;
+        other moves answer 409 TRANSFER_INVALID_TRANSITION. Every move writes
+        a transfers.* outbox event. No accounting entry is booked.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StockTransferTransitionInput"
+      responses:
+        "200":
+          description: Transfer request after the transition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockTransfer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "403":
@@ -11990,7 +12375,18 @@ components:
         parent_uuid:
           type: string
           format: uuid
-          description: Moves the organization in the tree (platform only).
+          description: >-
+            Moves the organization in the tree (platform only, K25, step-up).
+            In the same transaction the move is recorded
+            (organization_parent_changes, audit organization.parent_changed)
+            and the open cari with the old parent is carried over (TEC-198):
+            closed on the old parent's book (category cari_transfer) and
+            opened with the same amount on the new parent's book (category
+            opening_balance), on both the parents' and the organization's
+            own book; no income/expense, no cash. A zero balance writes
+            nothing; moving to the current parent is a no-op. A missing
+            exchange rate (parents in different currencies) answers 400 and
+            nothing moves.
         country_id:
           type: [integer, "null"]
           format: int64
@@ -13412,6 +13808,22 @@ components:
         data: { $ref: "#/components/schemas/CustomerMergeResult" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
+    CustomerListExportInput:
+      type: object
+      required: [format]
+      properties:
+        format:
+          type: string
+          enum: [csv, xlsx, pdf]
+        query:
+          type: object
+          description: List filters (same as GET /v1/customers).
+          properties:
+            q: { type: string, maxLength: 100 }
+            status: { type: string, enum: [active, disabled, pending, anonymized] }
+        locale:
+          type: string
+          description: Document language (defaults to the request locale).
     CustomerDataExportInput:
       type: object
       required: [format]
@@ -14615,7 +15027,7 @@ components:
           type: string
           enum: [entry, placement, transfer_out, transfer_in, transfer_cancel_restore, order_out,
             order_cancel_restore, received, consumption, partial_consumption, return,
-            reclassification, count_adjustment, void, external_outbound]
+            reclassification, count_adjustment, void, external_outbound, split]
         quantity_delta: { type: integer }
         meters_delta: { type: string, description: "Decimal string, 2 places" }
         from_status:
@@ -15049,6 +15461,51 @@ components:
         decision_note: { type: [string, "null"] }
         movement_uuid: { type: [string, "null"], format: uuid, description: The reclassification movement of an approved request }
         created_at: { type: string, format: date-time }
+
+    StockSplitInput:
+      type: object
+      required: [meters, idempotency_key]
+      description: Give either barcode or unit_uuid of the roll.
+      properties:
+        barcode: { type: string }
+        unit_uuid: { type: string, format: uuid }
+        meters:
+          type: string
+          pattern: '^[0-9]{1,8}(\.[0-9]{1,2})?$'
+          description: Meters to cut off (> 0, at most the remaining meters)
+        idempotency_key:
+          type: string
+          maxLength: 100
+          description: One split per key and organization; the Idempotency-Key header is accepted too
+        reason: { type: string, maxLength: 2000 }
+
+    StockSplitUnit:
+      type: object
+      required: [uuid, barcode, status, remaining_meters]
+      properties:
+        uuid: { type: string, format: uuid }
+        barcode: { type: string }
+        status: { $ref: "#/components/schemas/StockUnitStatus" }
+        remaining_meters: { type: string, example: "38.00" }
+
+    StockSplit:
+      type: object
+      required: [uuid, meters, source, new_unit, replayed, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        meters: { type: string, example: "12.00" }
+        source: { $ref: "#/components/schemas/StockSplitUnit" }
+        new_unit: { $ref: "#/components/schemas/StockSplitUnit" }
+        replayed: { type: boolean, description: The key was already used; nothing was written }
+        created_at: { type: string, format: date-time }
+
+    EnvelopeStockSplit:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/StockSplit" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeStockReclassification:
       type: object
@@ -15904,7 +16361,10 @@ components:
 
     AccountingDirection:
       type: string
-      enum: [income, expense, charge, collection, payment]
+      enum: [income, expense, charge, collection, payment, opening]
+      description: >-
+        opening (TEC-198) is a cash/bank opening balance: account only, never
+        income or expense (not P&L).
 
     AccountingAmount:
       type: string
@@ -16087,6 +16547,18 @@ components:
           description: debit = the counterparty owes us; credit = we owe the counterparty.
         amount: { $ref: "#/components/schemas/AccountingAmountInput" }
         currency: { type: string, minLength: 3, maxLength: 3 }
+        opening_date:
+          type: string
+          format: date
+          description: Opening date (2000-01-01 .. today); the row is dated here.
+        description: { type: string, maxLength: 1000 }
+
+    FinanceAccountOpeningInput:
+      type: object
+      required: [amount, opening_date]
+      additionalProperties: false
+      properties:
+        amount: { $ref: "#/components/schemas/AccountingAmountInput" }
         opening_date:
           type: string
           format: date
@@ -16919,7 +17391,11 @@ components:
         meters:
           type: string
           pattern: '^[0-9]{1,8}(\.[0-9]{1,2})?$'
-          description: Rolls only; must equal the remaining meters (a roll ships whole); a JSON number is accepted too
+          description: Rolls only; at most the remaining meters (fewer meters split the roll, TEC-184); a JSON number is accepted too
+        idempotency_key:
+          type: string
+          maxLength: 64
+          description: Optional; a retried split assignment with the same key returns the earlier split
 
     OrderItem:
       type: object
@@ -17035,6 +17511,25 @@ components:
           type: array
           description: Status history (detail responses only)
           items: { $ref: "#/components/schemas/OrderHistoryEntry" }
+        split:
+          $ref: "#/components/schemas/OrderRollSplit"
+
+    OrderRollSplit:
+      type: object
+      description: >-
+        Set on an assignment response when the assignment split the roll
+        (TEC-184): the new unit and its barcode to label.
+      required: [uuid, meters, source_unit_uuid, source_barcode, source_remaining_meters,
+        new_unit_uuid, new_barcode, replayed]
+      properties:
+        uuid: { type: string, format: uuid }
+        meters: { type: string, example: "12.00" }
+        source_unit_uuid: { type: string, format: uuid }
+        source_barcode: { type: string }
+        source_remaining_meters: { type: string, example: "38.00" }
+        new_unit_uuid: { type: string, format: uuid }
+        new_barcode: { type: string }
+        replayed: { type: boolean }
 
     OrderItemInput:
       type: object
@@ -17100,4 +17595,121 @@ components:
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    StockTransferStatus:
+      type: string
+      enum: [requested, approved, rejected, shipped, received, cancelled]
+
+    StockTransferItem:
+      type: object
+      required: [uuid, unit_uuid, barcode, unit_kind, product, quantity, meters, unit_price, line_total, shipped, received, restored]
+      properties:
+        uuid: { type: string, format: uuid }
+        unit_uuid: { type: string, format: uuid }
+        barcode: { type: string }
+        unit_kind: { type: string, enum: [serial, fixed] }
+        product: { $ref: "#/components/schemas/OrderProductRef" }
+        quantity: { type: [integer, "null"], description: Fixed barcode quantity }
+        meters: { type: [string, "null"], description: Remaining meters of a roll when requested }
+        unit_price: { type: [string, "null"], description: Giver's purchase price frozen at approval (K13) }
+        line_total: { type: [string, "null"] }
+        shipped: { type: boolean, description: The transfer_out movement is written }
+        received: { type: boolean, description: The transfer_in movement is written }
+        restored: { type: boolean, description: The transfer_cancel_restore movement is written }
+
+    StockTransfer:
+      type: object
+      required: [uuid, transfer_no, status, role, sender, receiver, parent, currency, total, note, decision_note, cancel_reason, item_count, decided_at, shipped_at, received_at, cancelled_at, created_at, updated_at, available_transitions]
+      properties:
+        uuid: { type: string, format: uuid }
+        transfer_no: { type: string }
+        status: { $ref: "#/components/schemas/StockTransferStatus" }
+        role: { type: string, enum: [sender, receiver, parent], description: Side of the active organization }
+        sender: { $ref: "#/components/schemas/OrderOrgRef" }
+        receiver: { $ref: "#/components/schemas/OrderOrgRef" }
+        parent: { $ref: "#/components/schemas/OrderOrgRef" }
+        currency: { type: string }
+        total: { type: [string, "null"], description: Sum of the frozen line totals (null until approval or with an unpriced unit) }
+        note: { type: [string, "null"] }
+        decision_note: { type: [string, "null"] }
+        cancel_reason: { type: [string, "null"] }
+        item_count: { type: integer, format: int64 }
+        decided_at: { type: [string, "null"], format: date-time }
+        shipped_at: { type: [string, "null"], format: date-time }
+        received_at: { type: [string, "null"], format: date-time }
+        cancelled_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        available_transitions:
+          type: array
+          items: { $ref: "#/components/schemas/StockTransferStatus" }
+        items:
+          type: array
+          description: Detail only
+          items: { $ref: "#/components/schemas/StockTransferItem" }
+
+    StockTransferItemInput:
+      type: object
+      required: [barcode]
+      properties:
+        barcode: { type: string }
+        quantity: { type: integer, minimum: 1, description: Required for fixed barcodes; pieces and rolls move whole }
+
+    StockTransferCreateInput:
+      type: object
+      required: [to_org_uuid, items]
+      properties:
+        to_org_uuid: { type: string, format: uuid }
+        note: { type: string }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 200
+          items: { $ref: "#/components/schemas/StockTransferItemInput" }
+
+    StockTransferTransitionInput:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: "#/components/schemas/StockTransferStatus" }
+        reason: { type: string, description: Decision note (approved/rejected) or cancel reason }
+
+    EnvelopeStockTransfer:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/StockTransfer" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeStockTransferPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/StockTransfer" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeStockTransferTargets:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/OrderOrgRef" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }

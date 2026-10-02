@@ -284,6 +284,7 @@ var frCatalog = map[string]string{
 	"accounting.category.other_expense":   "Autres charges",
 	"accounting.category.opening_balance": "Solde d'ouverture",
 	"accounting.category.adjustment":      "Ajustement",
+	"accounting.category.cari_transfer":   "Transfert du compte de tiers",
 	"accounting.category.collection":      "Encaissement",
 	"accounting.category.payment":         "Paiement",
 	"accounting.direction.income":         "Recette",
@@ -291,6 +292,7 @@ var frCatalog = map[string]string{
 	"accounting.direction.charge":         "Imputation",
 	"accounting.direction.collection":     "Encaissement",
 	"accounting.direction.payment":        "Paiement",
+	"accounting.direction.opening":        "Ouverture",
 	"accounting.account_type.cash":        "Caisse",
 	"accounting.account_type.bank":        "Banque",
 	// TEC-175: cari statement, balance report and export titles.
@@ -345,6 +347,9 @@ var frCatalog = map[string]string{
 	"export.title.portal.customer_data_export": "Export des données personnelles",
 	"resources.customers.data_export":          "Données personnelles du client",
 	"resources.portal.customer_data_export":    "Mes données personnelles",
+	// TEC-164: customer list export.
+	"export.title.customers.list":              "Liste des clients",
+	"resources.customers.list":                 "Clients",
 	"customers.export.section":                 "Rubrique",
 	"customers.export.item":                    "Enregistrement",
 	"customers.export.field":                   "Champ",

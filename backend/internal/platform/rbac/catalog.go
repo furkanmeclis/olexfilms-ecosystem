@@ -542,6 +542,8 @@ var Roles = []RoleDef{
 			// TEC-185 (000051).
 			PermWarrantiesRead:   ScopeSubtree,
 			PermVehiclesTransfer: ScopeSubtree,
+			// TEC-197 (000055): transfers to sibling distributors.
+			PermTransfersRequest: ScopeManaged,
 		}),
 	},
 	{

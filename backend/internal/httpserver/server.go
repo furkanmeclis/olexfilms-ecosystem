@@ -95,6 +95,9 @@ import (
 	storagemodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/storage"
 	storagehandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/storage/handler"
 	storageusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/storage/usecase"
+	transfersmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/transfers"
+	transfershandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/transfers/handler"
+	transfersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/transfers/usecase"
 	vehiclecatalogmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/vehiclecatalog"
 	vehiclecataloghandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/vehiclecatalog/handler"
 	vehiclecatalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/vehiclecatalog/usecase"
@@ -234,6 +237,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		searchadapters.NewUsers(deps.Queries),
 		searchadapters.NewRoles(deps.Queries),
 		catalogusecase.NewSearchAdapter(deps.Queries),
+		customersusecase.NewSearchAdapter(deps.Queries), // TEC-164
 	)
 	searchClient := searchengine.NewClient(cfg.Search, log)
 	searchIndexer := searchengine.NewIndexer(searchClient, searchReg, deps.Queue, log)
@@ -346,6 +350,11 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		customersSvc.SetRevoker(authrevoke.New(deps.Redis, cfg.App.Env, cfg.JWT.AccessTTL))
 	}
 	customersSvc.SetSearchIndexer(searchIndexer)
+	// TEC-164: q searches the customers index; customer.created links /portal.
+	if searchClient != nil {
+		customersSvc.SetFinder(searchClient)
+	}
+	customersSvc.SetPortalURL(cfg.Auth.FrontendURL)
 	customersSvc.SetOutbox(outbox.NewStore(deps.DB, deps.Queries)) // TEC-193: customer.merged
 	// TEC-190: vehicle transfer codes go out like the phone OTP (WhatsApp,
 	// SMS fallback), synchronously and never through the outbox.
@@ -363,6 +372,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	accountingPoster := accountingposting.New(deps.Queries, outbox.NewStore(deps.DB, deps.Queries), ratesSvc)
 	accountingSvc := accountingusecase.New(deps.DB, deps.Queries, accountingPoster, featureSvc).
 		WithOutbox(outbox.NewStore(deps.DB, deps.Queries)) // TEC-174: dispute events
+	// TEC-198: re-parenting carries the open cari over (K25).
+	orgSvc.SetParentChangeHook(reparentHook(accountingSvc))
 	accountingH := accountinghandler.New(accountingSvc)
 	accountinghandler.RegisterRoutes(mux, accountingH, tokens, loader, deps.Queries, stepUpSvc, featureSvc)
 	// TEC-166: orders (draft, server-side prices, rate frozen at approval).
@@ -370,6 +381,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	ordersSvc := ordersusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries), ratesSvc).
 		WithReceiptHook(ordersusecase.NewAccountingBridge(accountingPoster))
 	ordersmodule.RegisterRoutes(mux, ordershandler.New(ordersSvc), tokens, loader, deps.Queries, featureSvc)
+	// TEC-197: stock transfer requests between siblings (K13).
+	transfersSvc := transfersusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries))
+	transfersmodule.RegisterRoutes(mux, transfershandler.New(transfersSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-179: services (draft, items from stock, stock-free transitions, images).
 	servicesSvc := servicesusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries))
 	servicesmodule.RegisterRoutes(mux, serviceshandler.New(servicesSvc, deps.Storage), tokens, loader, deps.Queries, featureSvc)
@@ -410,6 +424,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		// TEC-161: personal data export (center and portal).
 		customersusecase.NewDataExportAdapter(customersSvc),
 		customersusecase.NewPortalDataExportAdapter(customersSvc),
+		// TEC-164: customer list export.
+		customersusecase.NewListExportAdapter(customersSvc),
 		// TEC-158: staged stock import (writes through ledger.Post).
 		stockusecase.NewImporter(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)),
 		// TEC-188: warranty certificate PDF (panel and portal).
@@ -477,6 +493,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	stockmodule.RegisterRoutes(mux, stockhandler.New(stockusecase.New(deps.Queries)),
 		stockhandler.NewReclassify(stockusecase.NewReclassifications(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries))),
 		featureSvc, tokens, loader, deps.Queries, stepUpSvc)
+	// TEC-184: roll split (meters cut off a roll as a new unit).
+	stockmodule.RegisterSplitRoutes(mux, stockhandler.NewSplit(stockusecase.NewSplits(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries))),
+		featureSvc, tokens, loader, deps.Queries)
 	// TEC-158: stock import upload (preview/confirm/undo on /v1/tenant/imports).
 	stockmodule.RegisterImportRoutes(mux, stockhandler.NewImport(importSvc), featureSvc, tokens, loader, deps.Queries)
 	// TEC-156: super_admin projection drift check (dry run).

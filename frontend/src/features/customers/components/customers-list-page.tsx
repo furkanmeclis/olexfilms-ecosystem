@@ -13,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { routes } from "@/config/routes";
+import { CustomerListExportButton } from "@/features/customers/components/customer-list-export";
 import { resolveCustomerListAccess } from "@/features/customers/lib/access";
 import { customerDisplayName } from "@/features/customers/lib/form";
 import {
@@ -90,16 +91,28 @@ export function CustomersListPage({ slug }: { slug: string }) {
         { label: title },
       ]}
       actions={
-        access.canCreate ? (
-          <Button asChild>
-            <Link
-              href={routes.tenant.customers.create(slug)}
-              data-testid="new-customer"
-            >
-              <Plus className="size-4" />
-              {t("customers.nav_new")}
-            </Link>
-          </Button>
+        access.canExport || access.canCreate ? (
+          <div className="flex flex-wrap gap-2">
+            {access.canExport ? (
+              <CustomerListExportButton
+                filters={{
+                  ...(q ? { q } : {}),
+                  ...(status ? { status } : {}),
+                }}
+              />
+            ) : null}
+            {access.canCreate ? (
+              <Button asChild>
+                <Link
+                  href={routes.tenant.customers.create(slug)}
+                  data-testid="new-customer"
+                >
+                  <Plus className="size-4" />
+                  {t("customers.nav_new")}
+                </Link>
+              </Button>
+            ) : null}
+          </div>
         ) : null
       }
     />

@@ -148,7 +148,7 @@
   "actions.complete_cancel.description": "أكّد عودة الوحدات المشحونة؛ ستعود إلى مخزونك.",
   "actions.complete_cancel.confirm": "إتمام الإلغاء",
   "actions.complete_cancel.success": "تم إلغاء الطلب.",
-  "assign.hint": "امسح أو اكتب باركود كل وحدة مراد شحنها. الباركود الثابت يحتاج إلى كمية؛ اللفائف تُشحن كاملة.",
+  "assign.hint": "امسح أو اكتب باركود كل وحدة مراد شحنها. الباركود الثابت يحتاج إلى كمية؛ للفائف أدخل الأمتار: اتركه فارغًا للفة كاملة، والأمتار الأقل تقسم اللفة بباركود جديد.",
   "assign.complete": "كل البنود مغطاة. يمكنك تعيين الطلب كجاهز.",
   "assign.not_complete": "عيّن الوحدات لكل بند أولًا.",
   "assign.assigned": "المعيَّن",
@@ -158,5 +158,8 @@
   "assign.submit": "تعيين",
   "assign.remove": "إزالة الوحدة",
   "assign.success": "تم تعيين الوحدة.",
-  "assign.failed": "تعذّر تعيين الوحدة."
+  "assign.failed": "تعذّر تعيين الوحدة.",
+  "assign.meters": "الأمتار",
+  "assign.meters_placeholder": "الكل",
+  "assign.split_success": "قُسّمت اللفة: باركود جديد {{barcode}}، وتبقّى {{rest}} م في اللفة."
 }

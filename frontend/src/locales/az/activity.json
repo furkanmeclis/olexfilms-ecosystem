@@ -189,5 +189,7 @@
   "actions.stock.reclassification.approved": "Yenidən təsnifat təsdiqləndi",
   "actions.stock.reclassification.rejected": "Yenidən təsnifat rədd edildi",
   "actions.stock.reclassification.cancelled": "Yenidən təsnifat sorğusu geri çəkildi",
-  "resources.stock.reclassification": "Anbar yenidən təsnifatı"
+  "resources.stock.reclassification": "Anbar yenidən təsnifatı",
+  "actions.stock.split.created": "Rulon bölündü",
+  "resources.stock.split": "Rulon bölmə"
 }

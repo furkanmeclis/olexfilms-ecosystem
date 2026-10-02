@@ -1,5 +1,6 @@
 import {
   Activity,
+  ArrowLeftRight,
   Bell,
   BellRing,
   BookOpen,
@@ -497,6 +498,44 @@ export function tenantNav(slug: string) {
             icon: MessageSquareWarning,
             permission: permissions.accounting.read,
             feature: "accounting",
+          },
+        ],
+      },
+      {
+        // TEC-197: stock transfer requests between sibling dealers or
+        // distributors (K13); same gates as /v1/stock-transfers (the
+        // dealer_transfers module and transfers.request or
+        // transfers.approve). A new request needs transfers.request and is
+        // made by a dealer or a distributor.
+        id: "transfers",
+        labelKey: "transfers.nav",
+        icon: ArrowLeftRight,
+        defaultOpen: true,
+        anyPermission: [
+          permissions.transfers.request,
+          permissions.transfers.approve,
+        ],
+        feature: "dealer_transfers",
+        items: [
+          {
+            id: "transfers-list",
+            titleKey: "transfers.nav_list",
+            href: routes.tenant.transfers.list(slug),
+            icon: ArrowLeftRight,
+            anyPermission: [
+              permissions.transfers.request,
+              permissions.transfers.approve,
+            ],
+            feature: "dealer_transfers",
+          },
+          {
+            id: "transfers-new",
+            titleKey: "transfers.nav_new",
+            href: routes.tenant.transfers.create(slug),
+            icon: Package,
+            permission: permissions.transfers.request,
+            orgTypes: ["distributor", "dealer"],
+            feature: "dealer_transfers",
           },
         ],
       },

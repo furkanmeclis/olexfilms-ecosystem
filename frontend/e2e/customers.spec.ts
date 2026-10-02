@@ -10,7 +10,7 @@ import { signIn } from "./support/mock-api";
 /**
  * TEC-163: customers against a mocked BFF — a center admin creates a
  * customer, adds a vehicle (plate format checked in the browser), finds
- * the customer by search and anonymizes it.
+ * the customer by search, exports the filtered list and anonymizes it.
  */
 
 test.beforeEach(async ({ context, baseURL }) => {
@@ -72,6 +72,19 @@ test("customer: create → vehicle → search → anonymize", async ({ page }) =
   await expect
     .poll(() => api.calls.some((c) => /\/v1\/customers\?.*q=/.test(c)))
     .toBe(true);
+
+  // List export (TEC-199): queued with the current filters, then downloaded.
+  await page.getByTestId("customer-list-export").click();
+  await page.locator("#list-export-format").selectOption("csv");
+  await page.getByTestId("list-export-confirm").click();
+  await expect
+    .poll(() => api.bodies["POST /v1/customers/export"]?.[0])
+    .toEqual({ format: "csv", query: { q: "ayşe" } });
+  const download = page.waitForEvent("download");
+  await page.getByTestId("list-export-download").click();
+  expect((await download).suggestedFilename()).toBe("customers.csv");
+  await page.keyboard.press("Escape");
+
   await page.getByTestId("customer-row").getByRole("link").click();
   await expect(page).toHaveURL(detailUrl);
 

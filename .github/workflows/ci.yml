@@ -6,10 +6,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# One run per ref. PRs cancel superseded runs; main runs always finish so
-# every green main commit gets its v0.N tag.
+# One run per PR (or ref). PRs cancel superseded runs; main runs always
+# finish so every green main commit gets its v0.N tag.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
@@ -21,7 +21,64 @@ env:
   MIGRATE_VERSION: v4.19.1
 
 jobs:
+  # Decides which heavy jobs a PR needs (plain git diff, no third-party
+  # action). Push to main, tags, workflow_dispatch and PRs labelled
+  # "ci-full" run everything (full=true), as does a PR touching .github/.
+  #   frontend/**                 -> frontend, contracts
+  #   backend/**, db/**           -> backend, contracts
+  #   docs/openapi.yaml,
+  #   backend/docs/openapi.yaml   -> backend, frontend, contracts
+  #   docs/**, *.md (alone)       -> nothing heavy
+  #   .github/**                  -> everything (incl. image-build, dr-drill)
+  #   Makefile, scripts/, other   -> backend, frontend, contracts
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      contracts: ${{ steps.filter.outputs.contracts }}
+      full: ${{ steps.filter.outputs.full }}
+    steps:
+      - uses: actions/checkout@v7
+        if: github.event_name == 'pull_request'
+        with:
+          # PR checkout is the merge commit; HEAD^1 is the current base.
+          fetch-depth: 2
+      - name: Changed areas
+        id: filter
+        env:
+          EVENT: ${{ github.event_name }}
+          CI_FULL: ${{ contains(github.event.pull_request.labels.*.name, 'ci-full') }}
+        run: |
+          backend=false; frontend=false; contracts=false; full=false
+          if [ "$EVENT" != "pull_request" ] || [ "$CI_FULL" = "true" ]; then
+            full=true
+          else
+            files=$(git diff --name-only HEAD^1 HEAD)
+            printf '%s\n' "$files"
+            while IFS= read -r f; do
+              [ -z "$f" ] && continue
+              case "$f" in
+                docs/openapi.yaml|backend/docs/openapi.yaml)
+                  backend=true; frontend=true; contracts=true ;;
+                # Markdown anywhere is never built, embedded or tested.
+                *.md|docs/*) ;;
+                frontend/*) frontend=true; contracts=true ;;
+                backend/*|db/*) backend=true; contracts=true ;;
+                .github/*) full=true ;;
+                *) backend=true; frontend=true; contracts=true ;;
+              esac
+            done <<< "$files"
+          fi
+          if [ "$full" = "true" ]; then backend=true; frontend=true; contracts=true; fi
+          {
+            echo "backend=$backend"; echo "frontend=$frontend"
+            echo "contracts=$contracts"; echo "full=$full"
+          } | tee -a "$GITHUB_OUTPUT"
+
   backend:
+    needs: [changes]
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -92,6 +149,8 @@ jobs:
         run: make openapi-lint
 
   frontend:
+    needs: [changes]
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -134,6 +193,8 @@ jobs:
   # Generated contracts must be committed: OpenAPI embed copy, frontend API
   # types, and i18n catalogs in parity.
   contracts:
+    needs: [changes]
+    if: needs.changes.outputs.contracts == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -159,7 +220,11 @@ jobs:
 
   # Builds the production images exactly as Dokploy does (compose.prod.yml),
   # without pushing. A throw-away env file satisfies the required (:?) vars.
+  # Not on PRs (minutes): main push, tags, workflow_dispatch, a PR labelled
+  # "ci-full" or a PR changing .github/ (changes.full).
   image-build:
+    needs: [changes]
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -178,9 +243,11 @@ jobs:
             --set '*.cache-to=type=gha,scope=prod-images,mode=max'
 
   # Backups are only real if they restore: backup.sh, drop everything,
-  # restore.sh, compare every table/file/index, sign in. About a minute,
-  # so it runs on every PR too.
+  # restore.sh, compare every table/file/index, sign in. Same triggers as
+  # image-build (changes.full).
   dr-drill:
+    needs: [changes]
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -192,20 +259,25 @@ jobs:
         run: scripts/dr-drill.sh
 
   # Single required status check. Branch protection and auto-merge wait on
-  # "ci"; it fails when any job above failed, was cancelled or skipped.
+  # "ci"; it fails when any job above failed or was cancelled. Jobs the
+  # path filter skipped count as passed; the filter itself must succeed.
   ci:
     name: ci
     if: always()
-    needs: [backend, frontend, contracts, image-build, dr-drill]
+    needs: [changes, backend, frontend, contracts, image-build, dr-drill]
     runs-on: ubuntu-latest
     steps:
       - name: All jobs green
         env:
           RESULTS: ${{ toJSON(needs.*.result) }}
+          CHANGES: ${{ needs.changes.result }}
         run: |
           echo "$RESULTS"
-          if ! echo "$RESULTS" | jq -e 'all(. == "success")' >/dev/null; then
-            echo "::error::a required CI job did not succeed"; exit 1
+          if [ "$CHANGES" != "success" ]; then
+            echo "::error::path filter job did not succeed"; exit 1
+          fi
+          if ! echo "$RESULTS" | jq -e 'all(. == "success" or . == "skipped")' >/dev/null; then
+            echo "::error::a required CI job failed or was cancelled"; exit 1
           fi
 
   # Every green push to main gets the next v0.N tag (first one: v0.1);

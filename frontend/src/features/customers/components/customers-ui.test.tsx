@@ -14,6 +14,9 @@ const api = vi.hoisted(() => ({
   requestDataExport: vi.fn(),
   getDataExport: vi.fn(),
   downloadDataExport: vi.fn(),
+  requestListExport: vi.fn(),
+  getListExport: vi.fn(),
+  downloadListExport: vi.fn(),
   listDealers: vi.fn(),
   listVehicles: vi.fn(),
   createVehicle: vi.fn(),
@@ -278,6 +281,89 @@ describe("customers list (TEC-163)", () => {
       "/t/acme/customers/new",
     );
     expect($("[data-testid=customers-empty]")).not.toBeNull();
+  });
+});
+
+describe("customer list export (TEC-199)", () => {
+  const job = {
+    uuid: "le1",
+    resource: "customers",
+    format: "csv",
+    row_count: 3,
+    created_at: "2026-10-02T09:00:00Z",
+  };
+
+  it("is hidden without customers.read", async () => {
+    state.grants = new Set([Permission.CustomersWrite]);
+    await render(createElement(CustomersListPage, { slug: "acme" }));
+    expect($("[data-testid=customer-list-export]")).toBeNull();
+  });
+
+  it("is shown with customers.read", async () => {
+    state.grants = new Set([Permission.CustomersRead]);
+    api.list.mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 });
+    await render(createElement(CustomersListPage, { slug: "acme" }));
+    expect($("[data-testid=customer-list-export]")).not.toBeNull();
+  });
+
+  it("queues the job with the list filters and downloads once ready", async () => {
+    state.grants = new Set([Permission.CustomersRead]);
+    api.list.mockResolvedValue({
+      items: [customer()],
+      total: 1,
+      limit: 20,
+      offset: 0,
+    });
+    api.requestListExport.mockResolvedValue({ ...job, status: "queued" });
+    api.getListExport.mockResolvedValue({ ...job, status: "completed" });
+    await render(createElement(CustomersListPage, { slug: "acme" }));
+    await type($("#customer-search"), "ayşe");
+    await click($("[data-status=active]"));
+
+    await click($("[data-testid=customer-list-export]"));
+    const select = $("#list-export-format");
+    if (!(select instanceof HTMLSelectElement)) throw new Error("no select");
+    expect(Array.from(select.options).map((o) => o.value)).toEqual([
+      "csv",
+      "xlsx",
+      "pdf",
+    ]);
+    await act(async () => {
+      select.value = "csv";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await click($("[data-testid=list-export-confirm]"));
+    expect(api.requestListExport).toHaveBeenCalledWith("csv", {
+      q: "ayşe",
+      status: "active",
+    });
+    expect(api.getListExport).toHaveBeenCalledWith("le1");
+    expect(
+      $("[data-testid=list-export-status]")?.getAttribute("data-status"),
+    ).toBe("completed");
+    await click($("[data-testid=list-export-download]"));
+    expect(api.downloadListExport).toHaveBeenCalledWith({
+      ...job,
+      status: "completed",
+    });
+  });
+
+  it("keeps polling while the job is processing", async () => {
+    state.grants = new Set([Permission.CustomersRead]);
+    api.list.mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 });
+    api.requestListExport.mockResolvedValue({ ...job, status: "queued" });
+    api.getListExport.mockResolvedValue({ ...job, status: "processing" });
+    await render(createElement(CustomersListPage, { slug: "acme" }));
+    await click($("[data-testid=customer-list-export]"));
+    await click($("[data-testid=list-export-confirm]"));
+    expect(api.requestListExport).toHaveBeenCalledWith("xlsx", {});
+    expect(
+      $("[data-testid=list-export-status]")?.getAttribute("data-status"),
+    ).toBe("processing");
+    expect($("[data-testid=list-export-download]")).toBeNull();
+    expect(
+      ($("[data-testid=list-export-confirm]") as HTMLButtonElement).disabled,
+    ).toBe(true);
   });
 });
 

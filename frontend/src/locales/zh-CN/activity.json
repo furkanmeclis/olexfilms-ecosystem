@@ -189,5 +189,7 @@
   "actions.stock.reclassification.approved": "重新分类已批准",
   "actions.stock.reclassification.rejected": "重新分类已拒绝",
   "actions.stock.reclassification.cancelled": "重新分类申请已撤回",
-  "resources.stock.reclassification": "库存重新分类"
+  "resources.stock.reclassification": "库存重新分类",
+  "actions.stock.split.created": "卷材已分切",
+  "resources.stock.split": "卷材分切"
 }

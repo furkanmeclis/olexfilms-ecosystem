@@ -144,8 +144,10 @@ func (s *Service) Children(ctx context.Context, id uuid.UUID) ([]Organization, e
 	return out, nil
 }
 
-// ChangeParent moves an organization under another parent. Platform-only (K25);
-// the open-balance transfer record arrives with the accounting module.
+// ChangeParent moves an organization under another parent. Platform-only
+// (K25). The move, its organization_parent_changes row, the open cari
+// transfer (ParentChangeHook, TEC-198) and the audit row share one
+// transaction; moving to the current parent is a no-op.
 func (s *Service) ChangeParent(ctx context.Context, id, parentUUID uuid.UUID) error {
 	child, err := s.brandOrg(ctx, id)
 	if err != nil {
@@ -177,10 +179,23 @@ func (s *Service) ChangeParent(ctx context.Context, id, parentUUID uuid.UUID) er
 			return fmt.Errorf("%w: parent cannot be a descendant", ErrInvalidRequest)
 		}
 	}
-	_, err = s.q.UpdateOrganizationParent(ctx, db.UpdateOrganizationParentParams{
-		ID: child.Organization.ID, ParentID: pgtype.Int8{Int64: parent.Organization.ID, Valid: true},
-	})
-	return err
+	cur := child.Organization.ParentID
+	if cur.Valid && cur.Int64 == parent.Organization.ID {
+		return nil // already there: nothing moves, nothing is written
+	}
+	if !cur.Valid {
+		// No old parent, so no cari to carry over (not reachable for a
+		// non-center today).
+		_, err = s.q.UpdateOrganizationParent(ctx, db.UpdateOrganizationParentParams{
+			ID: child.Organization.ID, ParentID: pgtype.Int8{Int64: parent.Organization.ID, Valid: true},
+		})
+		return err
+	}
+	oldParent, err := s.q.GetOrganizationByID(ctx, cur.Int64)
+	if err != nil {
+		return fmt.Errorf("organizations: old parent: %w", err)
+	}
+	return s.moveTx(ctx, child.Organization, oldParent, parent.Organization)
 }
 
 func mapTree(row db.Organization, brandSlug string, parentUUID pgtype.UUID, parentName pgtype.Text) Organization {

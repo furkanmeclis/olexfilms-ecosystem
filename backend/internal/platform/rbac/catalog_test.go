@@ -215,7 +215,7 @@ func TestOrderGrants(t *testing.T) {
 		t.Fatalf("center_staff orders.approve = %q", staff.Grants[PermOrdersApprove])
 	}
 	dist, _ := RoleBySlug(RoleDistributorOwner)
-	for _, slug := range []string{PermOrdersApprove, PermOrdersShip, PermOrdersReceive, PermTransfersApprove} {
+	for _, slug := range []string{PermOrdersApprove, PermOrdersShip, PermOrdersReceive, PermTransfersApprove, PermTransfersRequest} {
 		if dist.Grants[slug] != ScopeManaged {
 			t.Fatalf("distributor_owner %s = %q", slug, dist.Grants[slug])
 		}

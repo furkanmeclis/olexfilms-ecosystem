@@ -117,6 +117,8 @@ WHERE u.deleted_at IS NULL
     OR u.phone_e164 LIKE '%' || sqlc.narg(q) || '%'
     OR cp.company_name ILIKE '%' || sqlc.narg(q) || '%'
   )
+  -- TEC-164: Meilisearch hits; the scope filter above still applies.
+  AND (sqlc.narg(uuids)::uuid[] IS NULL OR u.uuid = ANY (sqlc.narg(uuids)::uuid[]))
 GROUP BY u.id, cp.user_id
 ORDER BY linked_at DESC, u.id DESC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
@@ -333,3 +335,34 @@ WHERE v.deleted_at IS NULL
   )
   AND (sqlc.narg(plate_normalized)::text IS NULL OR v.plate_normalized LIKE sqlc.narg(plate_normalized) || '%')
   AND (sqlc.narg(vin)::text IS NULL OR v.vin = sqlc.narg(vin));
+
+-- TEC-164: Meilisearch customers index. One document per customer linked to
+-- at least one organization; anonymized, merged and deleted users never
+-- enter the index. organization_ids / brand_ids drive the scope filter.
+-- name: ListCustomersForIndex :many
+SELECT u.uuid, u.name, u.surname, u.email, u.phone_e164, u.status,
+       cp.company_name,
+       array_agg(DISTINCT co.organization_id)::bigint[] AS organization_ids,
+       array_agg(DISTINCT co.brand_id)::bigint[] AS brand_ids
+FROM users u
+JOIN customer_organizations co ON co.user_id = u.id
+LEFT JOIN customer_profiles cp ON cp.user_id = u.id
+WHERE u.deleted_at IS NULL
+  AND u.status <> 'anonymized'
+  AND u.merged_into_user_id IS NULL
+GROUP BY u.id, cp.user_id
+ORDER BY u.id;
+
+-- name: GetCustomerForIndex :one
+SELECT u.uuid, u.name, u.surname, u.email, u.phone_e164, u.status,
+       cp.company_name,
+       array_agg(DISTINCT co.organization_id)::bigint[] AS organization_ids,
+       array_agg(DISTINCT co.brand_id)::bigint[] AS brand_ids
+FROM users u
+JOIN customer_organizations co ON co.user_id = u.id
+LEFT JOIN customer_profiles cp ON cp.user_id = u.id
+WHERE u.uuid = sqlc.arg(uuid)
+  AND u.deleted_at IS NULL
+  AND u.status <> 'anonymized'
+  AND u.merged_into_user_id IS NULL
+GROUP BY u.id, cp.user_id;

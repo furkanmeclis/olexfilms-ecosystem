@@ -284,6 +284,7 @@ var ukCatalog = map[string]string{
 	"accounting.category.other_expense":   "Інші витрати",
 	"accounting.category.opening_balance": "Початковий залишок",
 	"accounting.category.adjustment":      "Коригування",
+	"accounting.category.cari_transfer":   "Перенесення розрахунків з контрагентом",
 	"accounting.category.collection":      "Надходження оплати",
 	"accounting.category.payment":         "Платіж",
 	"accounting.direction.income":         "Дохід",
@@ -291,6 +292,7 @@ var ukCatalog = map[string]string{
 	"accounting.direction.charge":         "Нарахування",
 	"accounting.direction.collection":     "Надходження оплати",
 	"accounting.direction.payment":        "Платіж",
+	"accounting.direction.opening":        "Відкриття",
 	"accounting.account_type.cash":        "Каса",
 	"accounting.account_type.bank":        "Банк",
 	// TEC-175: cari statement, balance report and export titles.
@@ -345,6 +347,9 @@ var ukCatalog = map[string]string{
 	"export.title.portal.customer_data_export": "Вивантаження персональних даних",
 	"resources.customers.data_export":          "Персональні дані клієнта",
 	"resources.portal.customer_data_export":    "Мої персональні дані",
+	// TEC-164: customer list export.
+	"export.title.customers.list":              "Список клієнтів",
+	"resources.customers.list":                 "Клієнти",
 	"customers.export.section":                 "Розділ",
 	"customers.export.item":                    "Запис",
 	"customers.export.field":                   "Поле",
