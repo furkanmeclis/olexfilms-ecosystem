@@ -39,9 +39,11 @@ func TestRegisterSchedulesIncludesRatesFetch(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := map[registered]bool{
-		{cron: logPurgeCron, taskType: TaskLogPurgeSweep, queue: QueueMaintenance}:       false,
-		{cron: ratesFetchCron, taskType: TaskRatesFetch, queue: QueueMaintenance}:        false,
-		{cron: ratesFetchCatchUpCron, taskType: TaskRatesFetch, queue: QueueMaintenance}: false,
+		{cron: logPurgeCron, taskType: TaskLogPurgeSweep, queue: QueueMaintenance}:                    false,
+		{cron: ratesFetchCron, taskType: TaskRatesFetch, queue: QueueMaintenance}:                     false,
+		{cron: ratesFetchCatchUpCron, taskType: TaskRatesFetch, queue: QueueMaintenance}:              false,
+		{cron: warrantyExpireCron, taskType: TaskWarrantyExpire, queue: QueueMaintenance}:             false,
+		{cron: warrantyExpiringScanCron, taskType: TaskWarrantyExpiringScan, queue: QueueMaintenance}: false,
 	}
 	for _, e := range r.entries {
 		if _, ok := want[e]; !ok {

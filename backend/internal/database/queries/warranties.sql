@@ -137,6 +137,16 @@ UPDATE warranties
 SET notified_7_at = sqlc.arg(now)
 WHERE id = sqlc.arg(id) AND status = 'active' AND notified_7_at IS NULL;
 
+-- Notification context of the cron events (TEC-187): plate, product and the
+-- organization's name and time zone (end date is shown in the org zone).
+-- name: ListWarrantyNoticeContexts :many
+SELECT w.id, v.plate, p.name AS product_name, o.name AS organization_name, o.timezone
+FROM warranties w
+JOIN vehicles v ON v.id = w.vehicle_id
+JOIN products p ON p.id = w.product_id
+JOIN organizations o ON o.id = w.organization_id
+WHERE w.id = ANY (sqlc.arg(ids)::bigint[]);
+
 -- ---------------------------------------------------------------------------
 -- Vehicle transfers.
 

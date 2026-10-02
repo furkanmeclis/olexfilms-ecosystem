@@ -75,6 +75,20 @@ type Event struct {
 	Placeholders  []msgtemplate.Placeholder `json:"placeholders"`
 	// UserConfigurable events appear in the user preference matrix.
 	UserConfigurable bool `json:"user_configurable"`
+	// Templates are default rows inserted at start-up when missing (an
+	// admin edit is never overwritten). Events seeded by migrations leave
+	// it empty.
+	Templates []DefaultTemplate `json:"-"`
+}
+
+// DefaultTemplate is one default notification_templates row.
+type DefaultTemplate struct {
+	Role     string
+	Channel  string
+	Language string
+	Subject  string
+	Body     string
+	Format   string
 }
 
 // Spec returns the msgtemplate type spec used to validate placeholders.

@@ -233,6 +233,43 @@ func (q *Queries) InsertNotificationDelivery(ctx context.Context, arg InsertNoti
 	return i, err
 }
 
+const insertNotificationTemplateIfMissing = `-- name: InsertNotificationTemplateIfMissing :execrows
+INSERT INTO notification_templates (code, role, channel, language, subject, body, format, active)
+VALUES (
+    $1, $2, $3, $4,
+    $5, $6, $7, TRUE
+)
+ON CONFLICT ON CONSTRAINT notification_templates_key_uq DO NOTHING
+`
+
+type InsertNotificationTemplateIfMissingParams struct {
+	Code     string `json:"code"`
+	Role     string `json:"role"`
+	Channel  string `json:"channel"`
+	Language string `json:"language"`
+	Subject  string `json:"subject"`
+	Body     string `json:"body"`
+	Format   string `json:"format"`
+}
+
+// Default templates of code-registered events (TEC-187): inserted once,
+// an existing row (admin edit) is never overwritten.
+func (q *Queries) InsertNotificationTemplateIfMissing(ctx context.Context, arg InsertNotificationTemplateIfMissingParams) (int64, error) {
+	result, err := q.db.Exec(ctx, insertNotificationTemplateIfMissing,
+		arg.Code,
+		arg.Role,
+		arg.Channel,
+		arg.Language,
+		arg.Subject,
+		arg.Body,
+		arg.Format,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const listActiveDevicePushTokens = `-- name: ListActiveDevicePushTokens :many
 SELECT id, uuid, user_id, device_id, platform, expo_token, app_version, last_seen_at, revoked_at, created_at, updated_at FROM device_push_tokens
 WHERE user_id = $1 AND revoked_at IS NULL
