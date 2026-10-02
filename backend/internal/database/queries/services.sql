@@ -316,3 +316,48 @@ RETURNING *;
 SELECT * FROM service_status_logs
 WHERE service_id = sqlc.arg(service_id)
 ORDER BY created_at, id;
+
+-- ---------------------------------------------------------------------------
+-- Stock picker (TEC-180): units the service organization can add as items.
+-- Serial units held (available / placed) by the organization in its own
+-- organization or location owners, minus pieces already in an open service
+-- and rolls taken whole by an open service; fixed barcodes with pieces on
+-- hand (summed over the organization's owners). Filters: exact barcode,
+-- product, and remaining meters of a roll (min_meters: rolls only).
+
+-- name: ListServiceStockUnits :many
+WITH stock AS (
+    SELECT s.unit_id, 1::int AS quantity_on_hand
+    FROM unit_current_state s
+    WHERE s.holder_org_id = sqlc.arg(organization_id)
+      AND s.brand_id = sqlc.arg(brand_id)
+      AND s.status IN ('available', 'placed')
+      AND s.owner_type IN ('organization', 'warehouse_location')
+    UNION ALL
+    SELECT h.unit_id, SUM(h.quantity_on_hand)::int AS quantity_on_hand
+    FROM fixed_barcode_holdings h
+    WHERE h.holder_org_id = sqlc.arg(organization_id)
+      AND h.brand_id = sqlc.arg(brand_id)
+      AND h.owner_type IN ('organization', 'warehouse_location')
+    GROUP BY h.unit_id
+    HAVING SUM(h.quantity_on_hand) > 0
+)
+SELECT u.id, u.uuid, u.barcode, u.unit_kind, u.initial_meters, u.remaining_meters,
+       st.quantity_on_hand,
+       p.id AS product_id, p.uuid AS product_uuid, p.sku AS product_sku,
+       p.name AS product_name, p.unit_type AS product_unit_type
+FROM stock st
+JOIN units u ON u.id = st.unit_id
+JOIN products p ON p.id = u.product_id AND p.brand_id = u.brand_id
+WHERE (sqlc.narg(barcode)::text IS NULL OR u.barcode = sqlc.narg(barcode)::text)
+  AND (sqlc.narg(product_id)::bigint IS NULL OR u.product_id = sqlc.narg(product_id)::bigint)
+  AND (sqlc.narg(min_meters)::numeric IS NULL OR u.remaining_meters >= sqlc.narg(min_meters)::numeric)
+  AND (u.unit_kind = 'fixed' OR NOT EXISTS (
+        SELECT 1 FROM service_items i
+        JOIN services sv ON sv.id = i.service_id
+        WHERE i.unit_id = u.id
+          AND sv.status NOT IN ('completed', 'cancelled')
+          AND (u.initial_meters IS NULL OR i.kind = 'full')
+  ))
+ORDER BY p.name, u.barcode, u.id
+LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);

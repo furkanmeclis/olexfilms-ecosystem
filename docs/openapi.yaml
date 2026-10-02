@@ -8307,6 +8307,55 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /v1/services/{uuid}/stock-units:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    get:
+      tags: [Services]
+      operationId: listServiceStockUnits
+      summary: Stock picker of the service organization
+      description: >-
+        Units the service organization can add as items (TEC-180): serial
+        units it holds (available or placed) that no open service has taken
+        (a roll that is only cut stays listed) and fixed barcodes with
+        pieces on hand. barcode is an exact barcode (scanner lookup),
+        product_uuid narrows to one product, min_meters lists only rolls
+        with at least that many meters left. Needs services.write on the
+        service; a service outside the read scope is 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: barcode
+          in: query
+          schema: { type: string, maxLength: 64 }
+        - name: product_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - name: min_meters
+          in: query
+          schema: { type: string, pattern: "^[0-9]{1,8}(\\.[0-9]{1,2})?$" }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Units of the service organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeServiceStockUnitList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/services/{uuid}/transitions:
     parameters:
       - $ref: "#/components/parameters/ResourceUUID"
@@ -8315,15 +8364,22 @@ paths:
       operationId: transitionService
       summary: Move a service to another status
       description: >-
-        Legacy state machine without stock (TEC-179): draft -> pending ->
-        processing -> ready (services.write); center shortcuts draft ->
-        processing and pending -> ready; draft | pending | processing |
-        ready -> cancelled (services.cancel, center only; a dealer gets
-        403). Completed and cancelled are final (409
-        SERVICE_INVALID_TRANSITION). completed answers 409
-        SERVICE_COMPLETION_UNAVAILABLE until TEC-180 (stock consumption). A
-        request for the current status is a no-op. Every move writes a
-        status log and a service.* outbox event.
+        Legacy state machine (TEC-179): draft -> pending -> processing ->
+        ready (services.write); center shortcuts draft -> processing and
+        pending -> ready; draft | pending | processing | ready -> cancelled
+        (services.cancel, center only; a dealer gets 403). draft |
+        processing | ready -> completed (services.complete, TEC-180)
+        consumes the stock of every item in the same transaction
+        (consumption for a whole unit, partial_consumption for a cut;
+        idempotency key service:service_item:<id>), links each item to its
+        stock movement and writes one service.completed outbox event. A
+        service without items answers 400; a unit that is no longer held or
+        a cut longer than the rest of the roll answers 409
+        SERVICE_UNIT_NOT_AVAILABLE and nothing is written. Completed and
+        cancelled are final (409 SERVICE_INVALID_TRANSITION). A request for
+        the current status is a no-op (completing a completed service
+        consumes nothing and emits nothing). Every move writes a status log
+        and a service.* outbox event.
       security:
         - bearerAuth: []
       requestBody:
@@ -13615,6 +13671,25 @@ components:
         notes: { type: [string, "null"] }
         created_at: { type: string, format: date-time }
 
+    ServiceStockUnit:
+      type: object
+      required: [uuid, barcode, unit_kind, product, quantity_on_hand, initial_meters, remaining_meters]
+      properties:
+        uuid: { type: string, format: uuid }
+        barcode: { type: string }
+        unit_kind: { type: string, enum: [serial, fixed] }
+        product:
+          type: object
+          required: [uuid, sku, name, unit_type]
+          properties:
+            uuid: { type: string, format: uuid }
+            sku: { type: string }
+            name: { type: string }
+            unit_type: { type: string }
+        quantity_on_hand: { type: integer, description: "1 for a serial unit, pieces on hand for a fixed barcode" }
+        initial_meters: { type: [string, "null"], description: Roll length }
+        remaining_meters: { type: [string, "null"], description: Meters left on the roll }
+
     ServiceImage:
       type: object
       required: [uuid, title, sort_order, url, created_at]
@@ -13749,6 +13824,20 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/Service" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeServiceStockUnitList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/ServiceStockUnit" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeServiceImage:

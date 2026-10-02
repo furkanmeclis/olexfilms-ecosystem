@@ -974,6 +974,118 @@ func (q *Queries) ListServiceStatusLogs(ctx context.Context, serviceID int64) ([
 	return items, nil
 }
 
+const listServiceStockUnits = `-- name: ListServiceStockUnits :many
+
+WITH stock AS (
+    SELECT s.unit_id, 1::int AS quantity_on_hand
+    FROM unit_current_state s
+    WHERE s.holder_org_id = $6
+      AND s.brand_id = $7
+      AND s.status IN ('available', 'placed')
+      AND s.owner_type IN ('organization', 'warehouse_location')
+    UNION ALL
+    SELECT h.unit_id, SUM(h.quantity_on_hand)::int AS quantity_on_hand
+    FROM fixed_barcode_holdings h
+    WHERE h.holder_org_id = $6
+      AND h.brand_id = $7
+      AND h.owner_type IN ('organization', 'warehouse_location')
+    GROUP BY h.unit_id
+    HAVING SUM(h.quantity_on_hand) > 0
+)
+SELECT u.id, u.uuid, u.barcode, u.unit_kind, u.initial_meters, u.remaining_meters,
+       st.quantity_on_hand,
+       p.id AS product_id, p.uuid AS product_uuid, p.sku AS product_sku,
+       p.name AS product_name, p.unit_type AS product_unit_type
+FROM stock st
+JOIN units u ON u.id = st.unit_id
+JOIN products p ON p.id = u.product_id AND p.brand_id = u.brand_id
+WHERE ($1::text IS NULL OR u.barcode = $1::text)
+  AND ($2::bigint IS NULL OR u.product_id = $2::bigint)
+  AND ($3::numeric IS NULL OR u.remaining_meters >= $3::numeric)
+  AND (u.unit_kind = 'fixed' OR NOT EXISTS (
+        SELECT 1 FROM service_items i
+        JOIN services sv ON sv.id = i.service_id
+        WHERE i.unit_id = u.id
+          AND sv.status NOT IN ('completed', 'cancelled')
+          AND (u.initial_meters IS NULL OR i.kind = 'full')
+  ))
+ORDER BY p.name, u.barcode, u.id
+LIMIT $5 OFFSET $4
+`
+
+type ListServiceStockUnitsParams struct {
+	Barcode        pgtype.Text    `json:"barcode"`
+	ProductID      pgtype.Int8    `json:"product_id"`
+	MinMeters      pgtype.Numeric `json:"min_meters"`
+	RowOffset      int32          `json:"row_offset"`
+	RowLimit       int32          `json:"row_limit"`
+	OrganizationID int64          `json:"organization_id"`
+	BrandID        int64          `json:"brand_id"`
+}
+
+type ListServiceStockUnitsRow struct {
+	ID              int64          `json:"id"`
+	Uuid            uuid.UUID      `json:"uuid"`
+	Barcode         string         `json:"barcode"`
+	UnitKind        string         `json:"unit_kind"`
+	InitialMeters   pgtype.Numeric `json:"initial_meters"`
+	RemainingMeters pgtype.Numeric `json:"remaining_meters"`
+	QuantityOnHand  int32          `json:"quantity_on_hand"`
+	ProductID       int64          `json:"product_id"`
+	ProductUuid     uuid.UUID      `json:"product_uuid"`
+	ProductSku      string         `json:"product_sku"`
+	ProductName     string         `json:"product_name"`
+	ProductUnitType string         `json:"product_unit_type"`
+}
+
+// ---------------------------------------------------------------------------
+// Stock picker (TEC-180): units the service organization can add as items.
+// Serial units held (available / placed) by the organization in its own
+// organization or location owners, minus pieces already in an open service
+// and rolls taken whole by an open service; fixed barcodes with pieces on
+// hand (summed over the organization's owners). Filters: exact barcode,
+// product, and remaining meters of a roll (min_meters: rolls only).
+func (q *Queries) ListServiceStockUnits(ctx context.Context, arg ListServiceStockUnitsParams) ([]ListServiceStockUnitsRow, error) {
+	rows, err := q.db.Query(ctx, listServiceStockUnits,
+		arg.Barcode,
+		arg.ProductID,
+		arg.MinMeters,
+		arg.RowOffset,
+		arg.RowLimit,
+		arg.OrganizationID,
+		arg.BrandID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListServiceStockUnitsRow{}
+	for rows.Next() {
+		var i ListServiceStockUnitsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.Barcode,
+			&i.UnitKind,
+			&i.InitialMeters,
+			&i.RemainingMeters,
+			&i.QuantityOnHand,
+			&i.ProductID,
+			&i.ProductUuid,
+			&i.ProductSku,
+			&i.ProductName,
+			&i.ProductUnitType,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listServicesByCustomer = `-- name: ListServicesByCustomer :many
 SELECT id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at FROM services
 WHERE customer_user_id = $1

@@ -1,6 +1,7 @@
 // Package services mounts the service routes (TEC-179, F1-05b): draft
 // services of the active organization, items from its stock, the stock-free
-// part of the state machine (completion arrives with TEC-180) and images.
+// state machine (completion consumes the stock, TEC-180), the stock picker
+// and images.
 package services
 
 import (
@@ -23,7 +24,8 @@ import (
 // own organization, distributor: subtree, center: brand; out of scope =
 // 404). Create resolves services.write (the customer must be in that
 // scope); the other writes check the action's permission against the
-// service in the use case (services.write, services.cancel for cancel).
+// service in the use case (services.write, services.cancel for cancel,
+// services.complete for completion).
 func RegisterRoutes(
 	mux *http.ServeMux,
 	h *serviceshandler.Handler,
@@ -41,7 +43,7 @@ func RegisterRoutes(
 		return middleware.Chain(fn, mws...)
 	}
 	write := middleware.RequirePermission(rbac.PermServicesWrite)
-	act := middleware.RequireAnyPermission(rbac.PermServicesWrite, rbac.PermServicesCancel)
+	act := middleware.RequireAnyPermission(rbac.PermServicesWrite, rbac.PermServicesCancel, rbac.PermServicesComplete)
 	create := middleware.Chain(http.HandlerFunc(h.Create), authn, org, module,
 		middleware.RequireScope(q, rbac.PermServicesWrite))
 
@@ -51,6 +53,7 @@ func RegisterRoutes(
 	mux.Handle("PATCH /v1/services/{uuid}", route(h.Update, write))
 	mux.Handle("POST /v1/services/{uuid}/items", route(h.AddItem, write))
 	mux.Handle("DELETE /v1/services/{uuid}/items/{item}", route(h.RemoveItem, write))
+	mux.Handle("GET /v1/services/{uuid}/stock-units", route(h.StockUnits, write))
 	mux.Handle("POST /v1/services/{uuid}/transitions", route(h.Transition, act))
 	mux.Handle("POST /v1/services/{uuid}/images", route(h.UploadImage, write))
 	mux.Handle("GET /v1/services/{uuid}/images/{image}", route(h.DownloadImage))
