@@ -513,6 +513,11 @@ func (p *post) publish(ctx context.Context, mv db.StockMovement, holder int64) (
 			payload["from_product_id"] = p.m.Metadata["from_product_id"]
 			payload["to_product_id"] = mv.ProductID
 		}
+		if MovementType(mv.Type) == TypeSplit {
+			for _, k := range []string{"split_role", "split_uuid", "counterpart_unit_id", "counterpart_barcode"} {
+				payload[k] = p.m.Metadata[k]
+			}
+		}
 		ev := events.New(EventName(MovementType(mv.Type))).
 			WithTenant(mv.OrganizationID).
 			WithEntity("stock_movement", &id, &uid).
@@ -543,6 +548,7 @@ var eventNames = map[MovementType]string{
 	TypeCountAdjustment:       events.StockCountAdjustment,
 	TypeVoid:                  events.StockVoid,
 	TypeExternalOutbound:      events.StockExternalOutbound,
+	TypeSplit:                 events.StockSplit,
 }
 
 // EventName is the outbox event of a movement type.

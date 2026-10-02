@@ -189,5 +189,7 @@
   "actions.stock.reclassification.approved": "Reclassement approuvé",
   "actions.stock.reclassification.rejected": "Reclassement refusé",
   "actions.stock.reclassification.cancelled": "Demande de reclassement retirée",
-  "resources.stock.reclassification": "Reclassement de stock"
+  "resources.stock.reclassification": "Reclassement de stock",
+  "actions.stock.split.created": "Rouleau découpé",
+  "resources.stock.split": "Découpe de rouleau"
 }

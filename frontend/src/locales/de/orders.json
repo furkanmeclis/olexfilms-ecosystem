@@ -148,7 +148,7 @@
   "actions.complete_cancel.description": "Bestätigen Sie, dass die versendeten Einheiten zurück sind; sie kehren in Ihren Bestand zurück.",
   "actions.complete_cancel.confirm": "Stornierung abschließen",
   "actions.complete_cancel.success": "Bestellung storniert.",
-  "assign.hint": "Scannen oder tippen Sie den Barcode jeder zu versendenden Einheit. Feste Barcodes erhalten eine Menge; Rollen werden vollständig versendet.",
+  "assign.hint": "Scannen oder tippen Sie den Barcode jeder zu versendenden Einheit. Feste Barcodes erhalten eine Menge; bei Rollen Meter angeben: leer lassen für die ganze Rolle, weniger Meter teilen die Rolle unter einem neuen Barcode.",
   "assign.complete": "Alle Positionen sind abgedeckt. Sie können die Bestellung als versandbereit markieren.",
   "assign.not_complete": "Weisen Sie zuerst jeder Position Einheiten zu.",
   "assign.assigned": "Zugewiesen",
@@ -158,5 +158,8 @@
   "assign.submit": "Zuweisen",
   "assign.remove": "Einheit entfernen",
   "assign.success": "Einheit zugewiesen.",
-  "assign.failed": "Die Einheit konnte nicht zugewiesen werden."
+  "assign.failed": "Die Einheit konnte nicht zugewiesen werden.",
+  "assign.meters": "Meter",
+  "assign.meters_placeholder": "Alles",
+  "assign.split_success": "Rolle geteilt: neuer Barcode {{barcode}}, {{rest}} m verbleiben auf der Rolle."
 }

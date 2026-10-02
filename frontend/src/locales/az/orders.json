@@ -148,7 +148,7 @@
   "actions.complete_cancel.description": "Göndərilən vahidlərin geri gəldiyini təsdiqləyin; anbarınıza qayıdırlar.",
   "actions.complete_cancel.confirm": "Ləğvi tamamla",
   "actions.complete_cancel.success": "Sifariş ləğv edildi.",
-  "assign.hint": "Göndəriləcək hər vahidin barkodunu oxudun və ya yazın. Sabit barkodlara miqdar daxil edilir; rulonlar bütöv göndərilir.",
+  "assign.hint": "Göndəriləcək hər vahidin barkodunu oxudun və ya yazın. Sabit barkodlara miqdar daxil edilir; rulonlarda metr yazın: boş qalsa rulonun hamısı, daha az metr rulonu yeni barkodla bölür.",
   "assign.complete": "Bütün sətirlər qarşılanıb. Sifarişi hazır kimi işarələyə bilərsiniz.",
   "assign.not_complete": "Əvvəlcə hər sətrə vahid təyin edin.",
   "assign.assigned": "Təyin edilib",
@@ -158,5 +158,8 @@
   "assign.submit": "Təyin et",
   "assign.remove": "Vahidi çıxar",
   "assign.success": "Vahid təyin edildi.",
-  "assign.failed": "Vahid təyin edilə bilmədi."
+  "assign.failed": "Vahid təyin edilə bilmədi.",
+  "assign.meters": "Metr",
+  "assign.meters_placeholder": "Hamısı",
+  "assign.split_success": "Rulon bölündü: yeni barkod {{barcode}}, rulonda {{rest}} m qaldı."
 }

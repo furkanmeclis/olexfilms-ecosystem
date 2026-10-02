@@ -5356,6 +5356,59 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/stock/splits:
+    post:
+      tags: [Stock]
+      operationId: createStockSplit
+      summary: Split a roll (cut meters off as a new unit)
+      description: >-
+        Needs `stock.write` (TEC-184). The roll (by `barcode` or
+        `unit_uuid`) must be on hand (available or placed) at the caller's
+        active organization (409 STOCK_SPLIT_UNIT_ELSEWHERE) and not on an
+        open service or order reservation (409 STOCK_SPLIT_UNIT_IN_USE).
+        The meters leave as a new unit of the same product with the barcode
+        `<roll barcode>-S<n>` at the roll's owner; the roll keeps the rest
+        and is used up at 0 m. Both split movements are written in one
+        transaction; product stock totals do not change. Pieces and fixed
+        barcodes are not split (422 STOCK_SPLIT_NOT_ROLL); more meters than
+        the roll has answer 422 STOCK_SPLIT_INSUFFICIENT_METERS. The same
+        `idempotency_key` returns the earlier split with 200 and writes
+        nothing; reused for another roll or meters it answers 409
+        STOCK_SPLIT_KEY_CONFLICT. Label printing: TEC-95.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StockSplitInput"
+      responses:
+        "200":
+          description: The earlier split of this key (nothing written)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockSplit"
+        "201":
+          description: Split written
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockSplit"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
   /v1/stock/reclassifications:
     get:
       tags: [Stock]
@@ -10361,8 +10414,14 @@ paths:
         line's product and in the seller's stock (409
         ORDER_UNIT_NOT_AVAILABLE). Serial pieces count as 1; a serial unit
         reserved by another order answers 409 ORDER_UNIT_RESERVED. Rolls
-        ship whole: meters, when given, must equal the roll's remaining
-        meters (400 ROLL_CUT_UNSUPPORTED). Fixed barcodes take a quantity;
+        take meters: without meters (or with the remaining meters) the
+        whole roll is assigned; fewer meters first split the roll (TEC-184):
+        the meters leave as a new unit with its own barcode
+        (<roll barcode>-S<n>), which is assigned and returned in `split`
+        (label printing: TEC-95), while the roll keeps the rest. More meters
+        than the roll has answer 422 ROLL_METERS_EXCEED_REMAINING. An
+        `idempotency_key` makes a split assignment retry-safe (a retry
+        returns the same split, `split.replayed` = true). Fixed barcodes take a quantity;
         the seller's active reservations may not exceed what it holds (409
         ORDER_INSUFFICIENT_STOCK). The line amount may not be exceeded (409
         ORDER_ITEM_OVER_ASSIGNED); a unit already on the line answers 409
@@ -10401,6 +10460,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
 
   /v1/orders/{uuid}/items/{item_uuid}/units/{unit_uuid}:
     delete:
@@ -14409,7 +14470,7 @@ components:
           type: string
           enum: [entry, placement, transfer_out, transfer_in, transfer_cancel_restore, order_out,
             order_cancel_restore, received, consumption, partial_consumption, return,
-            reclassification, count_adjustment, void, external_outbound]
+            reclassification, count_adjustment, void, external_outbound, split]
         quantity_delta: { type: integer }
         meters_delta: { type: string, description: "Decimal string, 2 places" }
         from_status:
@@ -14637,6 +14698,51 @@ components:
         decision_note: { type: [string, "null"] }
         movement_uuid: { type: [string, "null"], format: uuid, description: The reclassification movement of an approved request }
         created_at: { type: string, format: date-time }
+
+    StockSplitInput:
+      type: object
+      required: [meters, idempotency_key]
+      description: Give either barcode or unit_uuid of the roll.
+      properties:
+        barcode: { type: string }
+        unit_uuid: { type: string, format: uuid }
+        meters:
+          type: string
+          pattern: '^[0-9]{1,8}(\.[0-9]{1,2})?$'
+          description: Meters to cut off (> 0, at most the remaining meters)
+        idempotency_key:
+          type: string
+          maxLength: 100
+          description: One split per key and organization; the Idempotency-Key header is accepted too
+        reason: { type: string, maxLength: 2000 }
+
+    StockSplitUnit:
+      type: object
+      required: [uuid, barcode, status, remaining_meters]
+      properties:
+        uuid: { type: string, format: uuid }
+        barcode: { type: string }
+        status: { $ref: "#/components/schemas/StockUnitStatus" }
+        remaining_meters: { type: string, example: "38.00" }
+
+    StockSplit:
+      type: object
+      required: [uuid, meters, source, new_unit, replayed, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        meters: { type: string, example: "12.00" }
+        source: { $ref: "#/components/schemas/StockSplitUnit" }
+        new_unit: { $ref: "#/components/schemas/StockSplitUnit" }
+        replayed: { type: boolean, description: The key was already used; nothing was written }
+        created_at: { type: string, format: date-time }
+
+    EnvelopeStockSplit:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/StockSplit" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeStockReclassification:
       type: object
@@ -16522,7 +16628,11 @@ components:
         meters:
           type: string
           pattern: '^[0-9]{1,8}(\.[0-9]{1,2})?$'
-          description: Rolls only; must equal the remaining meters (a roll ships whole); a JSON number is accepted too
+          description: Rolls only; at most the remaining meters (fewer meters split the roll, TEC-184); a JSON number is accepted too
+        idempotency_key:
+          type: string
+          maxLength: 64
+          description: Optional; a retried split assignment with the same key returns the earlier split
 
     OrderItem:
       type: object
@@ -16638,6 +16748,25 @@ components:
           type: array
           description: Status history (detail responses only)
           items: { $ref: "#/components/schemas/OrderHistoryEntry" }
+        split:
+          $ref: "#/components/schemas/OrderRollSplit"
+
+    OrderRollSplit:
+      type: object
+      description: >-
+        Set on an assignment response when the assignment split the roll
+        (TEC-184): the new unit and its barcode to label.
+      required: [uuid, meters, source_unit_uuid, source_barcode, source_remaining_meters,
+        new_unit_uuid, new_barcode, replayed]
+      properties:
+        uuid: { type: string, format: uuid }
+        meters: { type: string, example: "12.00" }
+        source_unit_uuid: { type: string, format: uuid }
+        source_barcode: { type: string }
+        source_remaining_meters: { type: string, example: "38.00" }
+        new_unit_uuid: { type: string, format: uuid }
+        new_barcode: { type: string }
+        replayed: { type: boolean }
 
     OrderItemInput:
       type: object

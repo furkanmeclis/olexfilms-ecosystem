@@ -182,34 +182,58 @@ function ActionDialog({
   );
 }
 
+function newSplitKey(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 /** Barcode scan (or typed) assignment of a unit to a line (seller). */
 function AssignForm({ order, item }: { order: Order; item: OrderItem }) {
   const { t } = useLocale();
   const store = useStoreOrder();
   const [barcode, setBarcode] = useState("");
   const [quantity, setQuantity] = useState("");
+  const [meters, setMeters] = useState("");
+  // One key per typed assignment: a retry of the same roll cut (TEC-184)
+  // returns the earlier split instead of cutting the roll again.
+  const [splitKey, setSplitKey] = useState(newSplitKey);
   const roll = isRoll(item.product.unit_type);
   const mutation = useMutation({
     mutationFn: () => {
       const q = Number(quantity);
+      const m = meters.trim().replace(",", ".");
       return ordersService.assignUnit(order.uuid, item.uuid, {
         barcode: barcode.trim(),
         ...(!roll && quantity.trim() && Number.isInteger(q) && q > 0
           ? { quantity: q }
           : {}),
+        ...(roll && m ? { meters: m, idempotency_key: splitKey } : {}),
       });
     },
     onSuccess: (updated) => {
       store(updated);
       setBarcode("");
       setQuantity("");
-      toast.success(t("orders.assign.success"));
+      setMeters("");
+      setSplitKey(newSplitKey());
+      if (updated.split) {
+        toast.success(
+          t("orders.assign.split_success", {
+            barcode: updated.split.new_barcode,
+            rest: updated.split.source_remaining_meters,
+          }),
+        );
+      } else {
+        toast.success(t("orders.assign.success"));
+      }
     },
     onError: (err) =>
       toast.error(orderErrorMessage(err, t, t("orders.assign.failed"))),
   });
   const bid = `barcode-${item.uuid}`;
   const qid = `qty-${item.uuid}`;
+  const mid = `meters-${item.uuid}`;
   return (
     <form
       className="flex flex-wrap items-end gap-2"
@@ -231,9 +255,31 @@ function AssignForm({ order, item }: { order: Order; item: OrderItem }) {
           value={barcode}
           maxLength={64}
           placeholder={t("orders.assign.barcode_placeholder")}
-          onChange={(e) => setBarcode(e.target.value)}
+          onChange={(e) => {
+            setBarcode(e.target.value);
+            setSplitKey(newSplitKey());
+          }}
         />
       </div>
+      {roll ? (
+        <div className="w-28 space-y-1">
+          <Label htmlFor={mid} className="text-xs">
+            {t("orders.assign.meters")}
+          </Label>
+          <Input
+            id={mid}
+            name="meters"
+            inputMode="decimal"
+            dir="ltr"
+            value={meters}
+            placeholder={t("orders.assign.meters_placeholder")}
+            onChange={(e) => {
+              setMeters(e.target.value);
+              setSplitKey(newSplitKey());
+            }}
+          />
+        </div>
+      ) : null}
       {!roll ? (
         <div className="w-28 space-y-1">
           <Label htmlFor={qid} className="text-xs">

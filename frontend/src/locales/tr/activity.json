@@ -189,5 +189,7 @@
   "actions.stock.reclassification.approved": "Yeniden sınıflandırma onaylandı",
   "actions.stock.reclassification.rejected": "Yeniden sınıflandırma reddedildi",
   "actions.stock.reclassification.cancelled": "Yeniden sınıflandırma talebi geri çekildi",
-  "resources.stock.reclassification": "Stok yeniden sınıflandırma"
+  "resources.stock.reclassification": "Stok yeniden sınıflandırma",
+  "actions.stock.split.created": "Rulo bölündü",
+  "resources.stock.split": "Rulo bölme"
 }

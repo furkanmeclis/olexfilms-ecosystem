@@ -148,7 +148,7 @@
   "actions.complete_cancel.description": "Sevk edilen birimlerin geri geldiğini onaylayın; stoğunuza geri döner.",
   "actions.complete_cancel.confirm": "İptali tamamla",
   "actions.complete_cancel.success": "Sipariş iptal edildi.",
-  "assign.hint": "Sevk edilecek her birimin barkodunu okutun veya yazın. Sabit barkodlarda miktar girilir; rulolar bütün sevk edilir.",
+  "assign.hint": "Sevk edilecek her birimin barkodunu okutun veya yazın. Sabit barkodlarda miktar girilir; rulolarda metre girin, boş bırakırsanız rulonun tamamı atanır, daha az metre ruloyu yeni barkodla böler.",
   "assign.complete": "Tüm kalemler karşılandı. Siparişi hazır işaretleyebilirsiniz.",
   "assign.not_complete": "Önce her kaleme birim atayın.",
   "assign.assigned": "Atanan",
@@ -158,5 +158,8 @@
   "assign.submit": "Ata",
   "assign.remove": "Birimi kaldır",
   "assign.success": "Birim atandı.",
-  "assign.failed": "Birim atanamadı."
+  "assign.failed": "Birim atanamadı.",
+  "assign.meters": "Metre",
+  "assign.meters_placeholder": "Tümü",
+  "assign.split_success": "Rulo bölündü: yeni barkod {{barcode}}, ruloda {{rest}} m kaldı."
 }

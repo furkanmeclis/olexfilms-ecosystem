@@ -1270,6 +1270,22 @@ type StockReservation struct {
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
+type StockSplit struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	ProductID       int64              `json:"product_id"`
+	SourceUnitID    int64              `json:"source_unit_id"`
+	NewUnitID       int64              `json:"new_unit_id"`
+	Meters          pgtype.Numeric     `json:"meters"`
+	IdempotencyKey  string             `json:"idempotency_key"`
+	ReferenceType   pgtype.Text        `json:"reference_type"`
+	ReferenceID     pgtype.Int8        `json:"reference_id"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+}
+
 type StockTransferRequest struct {
 	ID                int64              `json:"id"`
 	Uuid              uuid.UUID          `json:"uuid"`

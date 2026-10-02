@@ -116,10 +116,15 @@
   "codes.ORDER_STOCK_UNAVAILABLE": "The stock movement for this shipment was refused.",
   "codes.PRICE_NOT_FOUND": "There is no price for this product in the order currency.",
   "codes.RATE_NOT_FOUND": "No exchange rate is available to freeze for the order currency.",
-  "codes.ROLL_CUT_UNSUPPORTED": "Rolls ship whole; the meters must equal the remaining length.",
   "codes.CUSTOMER_ANONYMIZED": "The customer is anonymized and cannot be changed.",
   "codes.CUSTOMER_INACTIVE": "The customer account is not active.",
   "codes.ALREADY_MEMBER": "The customer is already a member of this dealer.",
   "codes.PII_ENCRYPTION_UNAVAILABLE": "Identity numbers cannot be stored right now (encryption key missing).",
-  "codes.INVALID_PLATE": "The plate does not match the format of its country."
+  "codes.INVALID_PLATE": "The plate does not match the format of its country.",
+  "codes.ROLL_METERS_EXCEED_REMAINING": "The roll has fewer meters left than requested.",
+  "codes.STOCK_SPLIT_NOT_ROLL": "Only rolls can be split; pieces and fixed barcodes cannot.",
+  "codes.STOCK_SPLIT_INSUFFICIENT_METERS": "The roll has fewer meters left than requested.",
+  "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "The roll is not in this organization's stock.",
+  "codes.STOCK_SPLIT_UNIT_IN_USE": "The roll is on an open service or order.",
+  "codes.STOCK_SPLIT_KEY_CONFLICT": "This idempotency key was used for another split."
 }

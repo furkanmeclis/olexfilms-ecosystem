@@ -189,5 +189,7 @@
   "actions.stock.reclassification.approved": "Εγκρίθηκε επαναταξινόμηση",
   "actions.stock.reclassification.rejected": "Απορρίφθηκε επαναταξινόμηση",
   "actions.stock.reclassification.cancelled": "Αποσύρθηκε αίτημα επαναταξινόμησης",
-  "resources.stock.reclassification": "Επαναταξινόμηση αποθέματος"
+  "resources.stock.reclassification": "Επαναταξινόμηση αποθέματος",
+  "actions.stock.split.created": "Το ρολό χωρίστηκε",
+  "resources.stock.split": "Χωρισμός ρολού"
 }
