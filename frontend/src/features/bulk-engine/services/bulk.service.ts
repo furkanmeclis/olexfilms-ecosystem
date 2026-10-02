@@ -1,11 +1,12 @@
 import type {
   BulkExecuteSyncResult,
   BulkJob,
+  BulkOperation,
   BulkResource,
   BulkTarget,
   ListJobsResult,
 } from "@/features/bulk-engine/types";
-import { BULK_PATHS } from "@/features/bulk-engine/types";
+import { BULK_PATHS, bulkUndoPath } from "@/features/bulk-engine/types";
 import { platformRequest } from "@/lib/api/platform-request";
 
 export const bulkService = {
@@ -28,6 +29,14 @@ export const bulkService = {
     return platformRequest<BulkJob>(
       "POST",
       `/v1/platform/bulk/${uuid}/rollback`,
+    );
+  },
+
+  /** Undo a logged operation (TEC-212); 409 when already undone or expired. */
+  async undo(resource: string, operationUuid: string) {
+    return platformRequest<BulkOperation>(
+      "POST",
+      bulkUndoPath(resource, operationUuid),
     );
   },
 

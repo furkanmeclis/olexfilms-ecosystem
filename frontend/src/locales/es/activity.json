@@ -16,6 +16,7 @@
   "actions.bulk.completed": "Acción masiva completada",
   "actions.bulk.failed": "Acción masiva fallida",
   "actions.bulk.rolled_back": "Acción masiva deshecha",
+  "actions.bulk.undone": "Acción masiva deshecha",
   "actions.settings.updated": "Configuración actualizada",
   "actions.access.settings.updated": "Configuración de acceso actualizada",
   "actions.stepup.verified": "Verificación de identidad completada",

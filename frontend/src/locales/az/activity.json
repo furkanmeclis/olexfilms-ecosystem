@@ -16,6 +16,7 @@
   "actions.bulk.completed": "Toplu əməliyyat tamamlandı",
   "actions.bulk.failed": "Toplu əməliyyat uğursuz oldu",
   "actions.bulk.rolled_back": "Toplu əməliyyat geri alındı",
+  "actions.bulk.undone": "Toplu əməliyyat geri alındı",
   "actions.settings.updated": "Ayarlar yeniləndi",
   "actions.access.settings.updated": "Giriş ayarları yeniləndi",
   "actions.stepup.verified": "Əlavə təsdiqləmə tamamlandı",

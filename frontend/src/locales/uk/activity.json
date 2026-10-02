@@ -16,6 +16,7 @@
   "actions.bulk.completed": "Масову дію завершено",
   "actions.bulk.failed": "Помилка масової дії",
   "actions.bulk.rolled_back": "Масову дію скасовано",
+  "actions.bulk.undone": "Масову дію скасовано",
   "actions.settings.updated": "Налаштування оновлено",
   "actions.access.settings.updated": "Налаштування доступу оновлено",
   "actions.stepup.verified": "Підтвердження особи виконано",

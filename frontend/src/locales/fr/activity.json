@@ -16,6 +16,7 @@
   "actions.bulk.completed": "Action groupée terminée",
   "actions.bulk.failed": "Échec de l'action groupée",
   "actions.bulk.rolled_back": "Action groupée annulée",
+  "actions.bulk.undone": "Action groupée annulée",
   "actions.settings.updated": "Paramètres mis à jour",
   "actions.access.settings.updated": "Paramètres d'accès mis à jour",
   "actions.stepup.verified": "Confirmation d'identité effectuée",

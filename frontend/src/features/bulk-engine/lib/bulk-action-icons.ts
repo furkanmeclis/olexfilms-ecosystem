@@ -1,4 +1,12 @@
-import { Trash2, UserCheck, UserX, type LucideIcon } from "lucide-react";
+import {
+  CircleCheck,
+  CircleOff,
+  Trash2,
+  UserCheck,
+  UserPlus,
+  UserX,
+  type LucideIcon,
+} from "lucide-react";
 
 import type {
   BulkActionDef,
@@ -16,6 +24,13 @@ const bulkActionIconCatalog: Record<
   },
   "platform.roles": {
     delete: Trash2,
+  },
+  "catalog.products": {
+    activate: CircleCheck,
+    deactivate: CircleOff,
+  },
+  tasks: {
+    assign: UserPlus,
   },
 };
 
