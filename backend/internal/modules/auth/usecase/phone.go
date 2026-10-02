@@ -118,5 +118,6 @@ func unusablePasswordHash() (string, error) {
 	if _, err := rand.Read(b); err != nil {
 		return "", err
 	}
-	return password.Hash(base64.RawURLEncoding.EncodeToString(b))
+	// The "Aa1" prefix keeps the random value inside the password policy.
+	return password.Hash("Aa1" + base64.RawURLEncoding.EncodeToString(b))
 }
