@@ -119,6 +119,11 @@ tags:
       Stock transfer requests between sibling dealers or sibling
       distributors (TEC-197, K13): request, approval or rejection, shipping
       and receipt through the stock ledger.
+  - name: Tasks
+    description: >-
+      Center tasks (TEC-214): follow-ups about a distributor or dealer of the
+      brand, assigned to a center member, with priority, due date and
+      comments. tasks.* are held by center roles only.
   - name: Mobile
     description: |
       Mobile app API (TEC-91). `/v1/mobile/*` is reached through the BFF
@@ -10681,6 +10686,194 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /v1/tasks:
+    get:
+      tags: [Tasks]
+      operationId: listTasks
+      summary: Center tasks of the active brand, newest first
+      description: >-
+        Needs tasks.read (center roles only; distributor and dealer members
+        get 403). The active organization must be the brand center.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          description: A status, or `active` for open and in_progress
+          schema:
+            type: string
+            enum: [open, in_progress, done, cancelled, active]
+        - name: priority
+          in: query
+          schema: { $ref: "#/components/schemas/TaskPriority" }
+        - name: subject_organization_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - name: assignee_user_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - name: mine
+          in: query
+          description: Only tasks assigned to the caller
+          schema: { type: boolean }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Tasks
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTaskPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Tasks]
+      operationId: createTask
+      summary: Open a manual task about a distributor or dealer of the brand
+      description: >-
+        Needs tasks.write. The subject must be a distributor or dealer of the
+        active brand and the assignee a member of the center (400
+        VALIDATION_ERROR otherwise). Writes tasks.created (and tasks.assigned
+        with an assignee).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskCreateInput"
+      responses:
+        "201":
+          description: Task opened
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTask"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/tasks/{uuid}:
+    get:
+      tags: [Tasks]
+      operationId: getTask
+      summary: One task of the active brand
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTask"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Tasks]
+      operationId: updateTask
+      summary: Update, assign, close or reopen a task
+      description: >-
+        Needs tasks.write. Absent fields stay; `assignee_user_uuid: null` and
+        `due_at: null` clear them. Status done or cancelled closes the task
+        (closed_at); open or in_progress reopens it. Writes tasks.updated,
+        tasks.assigned and tasks.status_changed as they apply.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskUpdateInput"
+      responses:
+        "200":
+          description: Updated task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTask"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/tasks/{uuid}/comments:
+    get:
+      tags: [Tasks]
+      operationId: listTaskComments
+      summary: Comments of a task, oldest first
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Comments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTaskCommentPage"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Tasks]
+      operationId: addTaskComment
+      summary: Comment on a task
+      description: Needs tasks.write. Comments are append-only. Writes tasks.comment_added.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskCommentInput"
+      responses:
+        "201":
+          description: Comment added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTaskComment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -16949,4 +17142,160 @@ components:
             items:
               type: array
               items: { $ref: "#/components/schemas/OrderOrgRef" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    TaskStatus:
+      type: string
+      enum: [open, in_progress, done, cancelled]
+
+    TaskPriority:
+      type: string
+      enum: [low, normal, high, urgent]
+
+    TaskUserRef:
+      type: object
+      required: [uuid, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+
+    Task:
+      type: object
+      required:
+        - uuid
+        - title
+        - description
+        - subject_organization
+        - assignee
+        - created_by
+        - priority
+        - status
+        - source
+        - due_at
+        - closed_at
+        - comment_count
+        - created_at
+        - updated_at
+      properties:
+        uuid: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string }
+        subject_organization:
+          type: object
+          required: [uuid, name, type]
+          properties:
+            uuid: { type: string, format: uuid }
+            name: { type: string }
+            type: { type: string, enum: [distributor, dealer] }
+        assignee:
+          oneOf:
+            - $ref: "#/components/schemas/TaskUserRef"
+            - type: "null"
+        created_by:
+          oneOf:
+            - $ref: "#/components/schemas/TaskUserRef"
+            - type: "null"
+        priority: { $ref: "#/components/schemas/TaskPriority" }
+        status: { $ref: "#/components/schemas/TaskStatus" }
+        source:
+          type: string
+          enum: [manual, auto]
+          description: auto is reserved for the F5 performance panel (TEC-130)
+        due_at: { type: [string, "null"], format: date-time }
+        closed_at: { type: [string, "null"], format: date-time }
+        comment_count: { type: integer, format: int64 }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    TaskCreateInput:
+      type: object
+      required: [subject_organization_uuid, title]
+      additionalProperties: false
+      properties:
+        subject_organization_uuid: { type: string, format: uuid, description: A distributor or dealer of the brand }
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, maxLength: 10000 }
+        assignee_user_uuid: { type: [string, "null"], format: uuid, description: A member of the center }
+        priority: { $ref: "#/components/schemas/TaskPriority" }
+        due_at: { type: [string, "null"], format: date-time }
+
+    TaskUpdateInput:
+      type: object
+      additionalProperties: false
+      properties:
+        subject_organization_uuid: { type: string, format: uuid }
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, maxLength: 10000 }
+        assignee_user_uuid: { type: [string, "null"], format: uuid }
+        priority: { $ref: "#/components/schemas/TaskPriority" }
+        status: { $ref: "#/components/schemas/TaskStatus" }
+        due_at: { type: [string, "null"], format: date-time }
+
+    TaskComment:
+      type: object
+      required: [uuid, body, author, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        body: { type: string }
+        author:
+          oneOf:
+            - $ref: "#/components/schemas/TaskUserRef"
+            - type: "null"
+        created_at: { type: string, format: date-time }
+
+    TaskCommentInput:
+      type: object
+      required: [body]
+      additionalProperties: false
+      properties:
+        body: { type: string, minLength: 1, maxLength: 4000 }
+
+    EnvelopeTask:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Task" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeTaskPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/Task" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeTaskComment:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/TaskComment" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeTaskCommentPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/TaskComment" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
         meta: { $ref: "#/components/schemas/ResponseMeta" }

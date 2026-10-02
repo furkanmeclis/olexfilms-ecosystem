@@ -188,6 +188,11 @@ const (
 	// TEC-174 (000052): the parent resolves a dispute opened with
 	// accounting.dispute (reversal, revision or rejection, K24).
 	PermAccountingResolve = "accounting.resolve"
+
+	// TEC-214 (000058): center tasks about distributors and dealers; held
+	// by center roles only (brand scope) and super_admin.
+	PermTasksRead  = "tasks.read"
+	PermTasksWrite = "tasks.write"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

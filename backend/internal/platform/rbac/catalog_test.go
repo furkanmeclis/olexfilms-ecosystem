@@ -294,3 +294,27 @@ func TestWarrantyGrants(t *testing.T) {
 		t.Fatalf("super_admin warranty grants = %q %q %q", g[PermWarrantiesRead], g[PermWarrantiesVoid], g[PermVehiclesTransfer])
 	}
 }
+
+// TEC-214: tasks.* are center-only (brand scope); every center role holds
+// both, no distributor or dealer role holds either.
+func TestTaskGrants(t *testing.T) {
+	for _, r := range Roles {
+		if r.Slug == RoleSuperAdmin {
+			continue
+		}
+		for _, slug := range []string{PermTasksRead, PermTasksWrite} {
+			sc, ok := r.Grants[slug]
+			if r.OrgType == OrgTypeCenter {
+				if sc != ScopeBrand {
+					t.Fatalf("%s %s = %q, want brand", r.Slug, slug, sc)
+				}
+			} else if ok {
+				t.Fatalf("%s must not hold %s", r.Slug, slug)
+			}
+		}
+	}
+	g := RoleGrants(RoleDef{Slug: RoleSuperAdmin})
+	if g[PermTasksRead] != ScopeAll || g[PermTasksWrite] != ScopeAll {
+		t.Fatalf("super_admin task grants = %q %q", g[PermTasksRead], g[PermTasksWrite])
+	}
+}
