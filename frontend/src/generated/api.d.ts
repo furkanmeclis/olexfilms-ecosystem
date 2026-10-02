@@ -4845,7 +4845,7 @@ export interface paths {
         };
         /**
          * Stock picker of the service organization
-         * @description Units the service organization can add as items (TEC-180): serial units it holds (available or placed) that no open service has taken (a roll that is only cut stays listed) and fixed barcodes with pieces on hand. barcode is an exact barcode (scanner lookup), product_uuid narrows to one product, min_meters lists only rolls with at least that many meters left. Needs services.write on the service; a service outside the read scope is 404.
+         * @description Units the service organization can add as items (TEC-180): serial units it holds (available or placed) that no open service has taken (a roll that is only cut stays listed) and fixed barcodes with pieces on hand. barcode is an exact barcode (scanner lookup), product_uuid narrows to one product, min_meters lists only rolls with at least that many meters left, q matches a part of the product name, SKU or barcode (TEC-182 product search). Each product carries its category's available_parts, the parts a new item may apply. Needs services.write on the service; a service outside the read scope is 404.
          */
         get: operations["listServiceStockUnits"];
         put?: never;
@@ -8766,6 +8766,8 @@ export interface components {
                 sku: string;
                 name: string;
                 unit_type: string;
+                /** @description Parts of the product category (allowed applied_parts) */
+                available_parts: string[];
             };
             /** @description 1 for a serial unit, pieces on hand for a fixed barcode */
             quantity_on_hand: number;
@@ -17869,6 +17871,7 @@ export interface operations {
         parameters: {
             query?: {
                 barcode?: string;
+                q?: string;
                 product_uuid?: string;
                 min_meters?: string;
                 limit?: number;

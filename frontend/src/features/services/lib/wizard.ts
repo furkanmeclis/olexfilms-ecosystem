@@ -1,6 +1,6 @@
 /**
- * Service wizard steps (TEC-97, F1-05). TEC-181 builds steps 1 and 3;
- * steps 2 (parts) and 4 (stock) are placeholders filled by TEC-182.
+ * Service wizard steps (TEC-97, F1-05). TEC-181 built steps 1 and 3,
+ * TEC-182 steps 2 (parts) and 4 (stock, completion).
  */
 export const WIZARD_STEPS = [
   "customer_vehicle",
@@ -10,12 +10,6 @@ export const WIZARD_STEPS = [
 ] as const;
 
 export type WizardStep = (typeof WIZARD_STEPS)[number];
-
-/** Steps whose content is not built yet (TEC-182). */
-export const PLACEHOLDER_STEPS: ReadonlySet<WizardStep> = new Set([
-  "parts",
-  "stock",
-]);
 
 /**
  * Whether a step may be opened: step 1 always; every later step needs the

@@ -777,7 +777,9 @@ type Querier interface {
 	// organization or location owners, minus pieces already in an open service
 	// and rolls taken whole by an open service; fixed barcodes with pieces on
 	// hand (summed over the organization's owners). Filters: exact barcode,
-	// product, and remaining meters of a roll (min_meters: rolls only).
+	// product, and remaining meters of a roll (min_meters: rolls only); q
+	// matches the product name, SKU or barcode (TEC-182). The category's
+	// available_parts feeds the part list of the new item.
 	ListServiceStockUnits(ctx context.Context, arg ListServiceStockUnitsParams) ([]ListServiceStockUnitsRow, error)
 	// Services of a customer across brands' organizations in scope (portal and
 	// customer detail).
