@@ -12,6 +12,7 @@ import (
 func RegisterRoutes(
 	mux *http.ServeMux,
 	h *settingshandler.Handler,
+	sys *settingshandler.SystemHandler,
 	tokens *jwt.Manager,
 	loader middleware.IdentityLoader,
 ) {
@@ -34,5 +35,19 @@ func RegisterRoutes(
 	))
 	mux.Handle("GET /v1/platform/settings/logo", middleware.Chain(
 		http.HandlerFunc(h.StreamLogo), authn,
+	))
+
+	// TEC-215: global system settings store (catalog-validated JSON values).
+	mux.Handle("GET /v1/platform/system-settings", middleware.Chain(
+		http.HandlerFunc(sys.List), authn, require(rbac.PermPlatformSettingsRead),
+	))
+	mux.Handle("GET /v1/platform/system-settings/{key}", middleware.Chain(
+		http.HandlerFunc(sys.Get), authn, require(rbac.PermPlatformSettingsRead),
+	))
+	mux.Handle("PUT /v1/platform/system-settings/{key}", middleware.Chain(
+		http.HandlerFunc(sys.Put), authn, require(rbac.PermPlatformSettingsWrite),
+	))
+	mux.Handle("DELETE /v1/platform/system-settings/{key}", middleware.Chain(
+		http.HandlerFunc(sys.Reset), authn, require(rbac.PermPlatformSettingsWrite),
 	))
 }
