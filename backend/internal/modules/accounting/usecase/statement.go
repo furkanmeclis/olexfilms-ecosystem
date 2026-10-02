@@ -37,11 +37,14 @@ type StatementLine struct {
 	SourceUUID     *uuid.UUID `json:"source_uuid"`
 	SourceLabel    string     `json:"source_label"`
 	ReversalOfUUID *uuid.UUID `json:"reversal_of_uuid"`
-	OrigCurrency   string     `json:"orig_currency"`
-	OrigAmount     string     `json:"orig_amount"`
-	Debit          string     `json:"debit"`
-	Credit         string     `json:"credit"`
-	Balance        string     `json:"balance"`
+	// Reversed: a later row reverses this one (TEC-195: such a row is no
+	// longer disputable).
+	Reversed     bool   `json:"reversed"`
+	OrigCurrency string `json:"orig_currency"`
+	OrigAmount   string `json:"orig_amount"`
+	Debit        string `json:"debit"`
+	Credit       string `json:"credit"`
+	Balance      string `json:"balance"`
 }
 
 // Statement is the cari statement of one period. From/To are calendar days
@@ -169,6 +172,7 @@ func statementLineOf(r db.ListCariStatementLinesRow, m lineMoney, loc i18n.Local
 		CategoryLabel:  i18n.Translate(loc, "accounting.category."+r.Category),
 		SourceUUID:     uuidPtr(r.SourceUuid),
 		ReversalOfUUID: uuidPtr(r.ReversalOfUuid),
+		Reversed:       r.Reversed,
 		OrigCurrency:   r.OrigCurrency, OrigAmount: posting.FormatNumeric(r.OrigAmount),
 		Debit: m.debit, Credit: m.credit, Balance: m.balance,
 	}

@@ -32,9 +32,11 @@ SELECT e.id, e.uuid, e.created_at, e.direction, e.category, e.description,
             WHEN 'expense' THEN -e.amount
             WHEN 'collection' THEN -e.amount
         END)::NUMERIC(18,2) AS signed_amount,
-       ro.uuid AS reversal_of_uuid
+       ro.uuid AS reversal_of_uuid,
+       (rv.id IS NOT NULL)::boolean AS reversed
 FROM finance_entries e
 LEFT JOIN finance_entries ro ON ro.id = e.reversal_of_id
+LEFT JOIN finance_entries rv ON rv.reversal_of_id = e.id
 WHERE e.cari_id = sqlc.arg(cari_id)
   AND e.organization_id = sqlc.arg(organization_id)
   AND (sqlc.narg(created_from)::timestamptz IS NULL OR e.created_at >= sqlc.narg(created_from)::timestamptz)
