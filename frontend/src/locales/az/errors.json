@@ -87,5 +87,9 @@
   "codes.STOCK_RECLASSIFICATION_PRODUCT_CHANGED": "Sorğudan sonra vahidin məhsulu dəyişib.",
   "codes.STOCK_RECLASSIFICATION_NOT_PENDING": "Bu yenidən təsnifat sorğusu artıq həll olunub.",
   "codes.STOCK_RECLASSIFICATION_PENDING_EXISTS": "Bu vahid üçün gözləyən yenidən təsnifat sorğusu var.",
-  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Öz sorğunuzu təsdiq edə bilməzsiniz."
+  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Öz sorğunuzu təsdiq edə bilməzsiniz.",
+  "codes.ENTRY_NOT_DISPUTABLE": "Yalnız üst təşkilatınızın bu cari hesaba yazdığı açıq qeydə etiraz etmək olar.",
+  "codes.DISPUTE_ALREADY_OPEN": "Bu qeyddə artıq açıq etiraz var.",
+  "codes.DISPUTE_NOT_OPEN": "Bu etiraz artıq həll edilib və ya rədd edilib.",
+  "codes.DISPUTE_NOT_RESOLVABLE": "Etiraz edilən qeyd artıq açıq deyil; etirazı rədd edin və ya tərs qeydlə həll edin."
 }

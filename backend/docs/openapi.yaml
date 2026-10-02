@@ -14770,6 +14770,7 @@ components:
         - source_uuid
         - source_label
         - reversal_of_uuid
+        - reversed
         - orig_currency
         - orig_amount
         - debit
@@ -14786,6 +14787,7 @@ components:
         source_uuid: { type: [string, "null"], format: uuid }
         source_label: { type: string, example: Manual entry }
         reversal_of_uuid: { type: [string, "null"], format: uuid }
+        reversed: { type: boolean, description: A later row reverses this one (no longer disputable) }
         orig_currency: { type: string, minLength: 3, maxLength: 3 }
         orig_amount: { $ref: "#/components/schemas/AccountingAmount" }
         debit: { $ref: "#/components/schemas/AccountingAmount" }

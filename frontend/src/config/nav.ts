@@ -18,6 +18,7 @@ import {
   LogIn,
   MapPinned,
   MessageCircle,
+  MessageSquareWarning,
   Package,
   RectangleHorizontal,
   ScrollText,
@@ -406,6 +407,16 @@ export function tenantNav(slug: string) {
             titleKey: "accounting.nav_entries",
             href: routes.tenant.accounting.entries(slug),
             icon: ScrollText,
+            permission: permissions.accounting.read,
+            feature: "accounting",
+          },
+          {
+            // TEC-195: a child sees the disputes it opened, the parent the
+            // ones addressed to it (K24).
+            id: "accounting-disputes",
+            titleKey: "accounting.nav_disputes",
+            href: routes.tenant.accounting.disputes(slug),
+            icon: MessageSquareWarning,
             permission: permissions.accounting.read,
             feature: "accounting",
           },

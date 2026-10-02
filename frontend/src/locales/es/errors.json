@@ -87,5 +87,9 @@
   "codes.STOCK_RECLASSIFICATION_PRODUCT_CHANGED": "El producto de la unidad cambió después de la solicitud.",
   "codes.STOCK_RECLASSIFICATION_NOT_PENDING": "Esta solicitud de reclasificación ya se ha resuelto.",
   "codes.STOCK_RECLASSIFICATION_PENDING_EXISTS": "Esta unidad ya tiene una solicitud de reclasificación pendiente.",
-  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "No puede aprobar su propia solicitud."
+  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "No puede aprobar su propia solicitud.",
+  "codes.ENTRY_NOT_DISPUTABLE": "Solo se puede reclamar un asiento abierto que su organización superior registró en esta cuenta corriente.",
+  "codes.DISPUTE_ALREADY_OPEN": "Este asiento ya tiene una reclamación abierta.",
+  "codes.DISPUTE_NOT_OPEN": "Esta reclamación ya fue resuelta o rechazada.",
+  "codes.DISPUTE_NOT_RESOLVABLE": "El asiento reclamado ya no está abierto; rechace la reclamación o registre un contraasiento."
 }

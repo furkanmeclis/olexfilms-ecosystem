@@ -87,5 +87,9 @@
   "codes.STOCK_RECLASSIFICATION_PRODUCT_CHANGED": "Продуктът на единицата се е променил след заявката.",
   "codes.STOCK_RECLASSIFICATION_NOT_PENDING": "Тази заявка за прекласификация вече е решена.",
   "codes.STOCK_RECLASSIFICATION_PENDING_EXISTS": "За тази единица вече има чакаща заявка за прекласификация.",
-  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Не можете да одобрите собствената си заявка."
+  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Не можете да одобрите собствената си заявка.",
+  "codes.ENTRY_NOT_DISPUTABLE": "Може да се възрази само срещу отворен запис, въведен от горестоящата организация по тази текуща сметка.",
+  "codes.DISPUTE_ALREADY_OPEN": "За този запис вече има отворено възражение.",
+  "codes.DISPUTE_NOT_OPEN": "Това възражение вече е решено или отхвърлено.",
+  "codes.DISPUTE_NOT_RESOLVABLE": "Оспореният запис вече не е отворен; отхвърлете възражението или сторнирайте записа."
 }

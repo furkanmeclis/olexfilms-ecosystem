@@ -87,5 +87,9 @@
   "codes.STOCK_RECLASSIFICATION_PRODUCT_CHANGED": "申请提交后该单位的产品已变更。",
   "codes.STOCK_RECLASSIFICATION_NOT_PENDING": "此重新分类申请已处理。",
   "codes.STOCK_RECLASSIFICATION_PENDING_EXISTS": "该单位已有待处理的重新分类申请。",
-  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "您不能批准自己的申请。"
+  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "您不能批准自己的申请。",
+  "codes.ENTRY_NOT_DISPUTABLE": "只能对上级组织记入此往来账户且未冲销的分录提出异议。",
+  "codes.DISPUTE_ALREADY_OPEN": "此分录已有待处理的异议。",
+  "codes.DISPUTE_NOT_OPEN": "此异议已处理或已驳回。",
+  "codes.DISPUTE_NOT_RESOLVABLE": "被异议的分录已不再有效；请驳回异议或进行冲销。"
 }
