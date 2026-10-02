@@ -66,6 +66,12 @@ export const routes = {
       list: (slug: string) => `/t/${slug}/warranties`,
       detail: (slug: string, uuid: string) => `/t/${slug}/warranties/${uuid}`,
     },
+    /** TEC-197 stock transfer requests between siblings: list, new, detail. */
+    transfers: {
+      list: (slug: string) => `/t/${slug}/transfers`,
+      create: (slug: string) => `/t/${slug}/transfers/new`,
+      detail: (slug: string, uuid: string) => `/t/${slug}/transfers/${uuid}`,
+    },
     /** TEC-190 vehicle detail with the ownership transfer. */
     vehicles: {
       detail: (slug: string, uuid: string) => `/t/${slug}/vehicles/${uuid}`,
