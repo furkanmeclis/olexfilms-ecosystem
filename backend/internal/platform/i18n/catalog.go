@@ -285,6 +285,7 @@ var trCatalog = map[string]string{
 	"accounting.category.other_expense":   "Diğer gider",
 	"accounting.category.opening_balance": "Açılış bakiyesi",
 	"accounting.category.adjustment":      "Düzeltme",
+	"accounting.category.cari_transfer":   "Cari devri",
 	"accounting.category.collection":      "Tahsilat",
 	"accounting.category.payment":         "Ödeme",
 	"accounting.direction.income":         "Gelir",
@@ -292,6 +293,7 @@ var trCatalog = map[string]string{
 	"accounting.direction.charge":         "Borçlandırma",
 	"accounting.direction.collection":     "Tahsilat",
 	"accounting.direction.payment":        "Ödeme",
+	"accounting.direction.opening":        "Açılış",
 	"accounting.account_type.cash":        "Kasa",
 	"accounting.account_type.bank":        "Banka",
 	// TEC-175: cari statement, balance report and export titles.
@@ -346,6 +348,9 @@ var trCatalog = map[string]string{
 	"export.title.portal.customer_data_export": "Kişisel veri dökümü",
 	"resources.customers.data_export":          "Müşteri kişisel verileri",
 	"resources.portal.customer_data_export":    "Kişisel verilerim",
+	// TEC-164: customer list export.
+	"export.title.customers.list":              "Müşteri listesi",
+	"resources.customers.list":                 "Müşteriler",
 	"customers.export.section":                 "Bölüm",
 	"customers.export.item":                    "Kayıt",
 	"customers.export.field":                   "Alan",
@@ -739,6 +744,7 @@ var enCatalog = map[string]string{
 	"accounting.category.other_expense":   "Other expenses",
 	"accounting.category.opening_balance": "Opening balance",
 	"accounting.category.adjustment":      "Adjustment",
+	"accounting.category.cari_transfer":   "Current account transfer",
 	"accounting.category.collection":      "Collection",
 	"accounting.category.payment":         "Payment",
 	"accounting.direction.income":         "Income",
@@ -746,6 +752,7 @@ var enCatalog = map[string]string{
 	"accounting.direction.charge":         "Charge",
 	"accounting.direction.collection":     "Collection",
 	"accounting.direction.payment":        "Payment",
+	"accounting.direction.opening":        "Opening",
 	"accounting.account_type.cash":        "Cash",
 	"accounting.account_type.bank":        "Bank",
 	// TEC-175: cari statement, balance report and export titles.
@@ -800,6 +807,9 @@ var enCatalog = map[string]string{
 	"export.title.portal.customer_data_export": "Personal data export",
 	"resources.customers.data_export":          "Customer personal data",
 	"resources.portal.customer_data_export":    "My personal data",
+	// TEC-164: customer list export.
+	"export.title.customers.list":              "Customer list",
+	"resources.customers.list":                 "Customers",
 	"customers.export.section":                 "Section",
 	"customers.export.item":                    "Record",
 	"customers.export.field":                   "Field",

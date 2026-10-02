@@ -77,3 +77,40 @@ func TestServiceReviewDispatch(t *testing.T) {
 		t.Fatal("no customer: want no dispatch")
 	}
 }
+
+// TEC-164: customer.created (as the outbox redelivers it: JSON numbers)
+// becomes the welcome dispatch with the portal link; no phone, no message.
+func TestCustomerWelcomeDispatch(t *testing.T) {
+	payload := map[string]any{
+		"customer_user_id": float64(42), "brand_id": float64(3), "customer_uuid": "u-1",
+		"customer_name": "Ahmet Yilmaz", "organization_name": "Tech Oto",
+		"portal_url": "https://olexfilms.app/portal", "has_phone": true,
+	}
+	in, ok := customerWelcomeDispatch(events.New(events.CustomerCreated).WithPayload(payload))
+	if !ok {
+		t.Fatal("want a dispatch")
+	}
+	if in.EventCode != catalog.EventCustomerWelcome || len(in.UserIDs) != 1 || in.UserIDs[0] != 42 {
+		t.Fatalf("dispatch = %+v", in)
+	}
+	if in.BrandID == nil || *in.BrandID != 3 || in.ActionURL == nil || *in.ActionURL != "https://olexfilms.app/portal" {
+		t.Fatalf("brand/action = %v %v", in.BrandID, in.ActionURL)
+	}
+	if in.Vars["portal_url"] != "https://olexfilms.app/portal" || in.Vars["customer_name"] != "Ahmet Yilmaz" ||
+		in.Vars["organization_name"] != "Tech Oto" {
+		t.Fatalf("vars = %v", in.Vars)
+	}
+	noPhone := map[string]any{}
+	for k, v := range payload {
+		noPhone[k] = v
+	}
+	noPhone["has_phone"] = false
+	if _, ok := customerWelcomeDispatch(events.New(events.CustomerCreated).WithPayload(noPhone)); ok {
+		t.Fatal("no phone: want no dispatch")
+	}
+	if _, ok := customerWelcomeDispatch(events.New(events.CustomerCreated).WithPayload(map[string]any{
+		"customer_user_id": int64(42), "has_phone": true,
+	})); ok {
+		t.Fatal("no portal_url: want no dispatch")
+	}
+}

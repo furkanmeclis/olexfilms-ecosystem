@@ -284,6 +284,7 @@ var zhCNCatalog = map[string]string{
 	"accounting.category.other_expense":   "其他支出",
 	"accounting.category.opening_balance": "期初余额",
 	"accounting.category.adjustment":      "调整",
+	"accounting.category.cari_transfer":   "往来账户转移",
 	"accounting.category.collection":      "收款",
 	"accounting.category.payment":         "付款",
 	"accounting.direction.income":         "收入",
@@ -291,6 +292,7 @@ var zhCNCatalog = map[string]string{
 	"accounting.direction.charge":         "挂账",
 	"accounting.direction.collection":     "收款",
 	"accounting.direction.payment":        "付款",
+	"accounting.direction.opening":        "期初",
 	"accounting.account_type.cash":        "现金",
 	"accounting.account_type.bank":        "银行",
 	// TEC-175: cari statement, balance report and export titles.
@@ -345,6 +347,9 @@ var zhCNCatalog = map[string]string{
 	"export.title.portal.customer_data_export": "个人数据导出",
 	"resources.customers.data_export":          "客户个人数据",
 	"resources.portal.customer_data_export":    "我的个人数据",
+	// TEC-164: customer list export.
+	"export.title.customers.list":              "客户列表",
+	"resources.customers.list":                 "客户",
 	"customers.export.section":                 "部分",
 	"customers.export.item":                    "记录",
 	"customers.export.field":                   "字段",

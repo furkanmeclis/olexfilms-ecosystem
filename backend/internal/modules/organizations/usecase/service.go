@@ -39,6 +39,8 @@ type Service struct {
 	pool *pgxpool.Pool
 	q    *db.Queries
 	geo  GeoResolver
+	// parentHook runs inside the re-parenting transaction (K25, TEC-198).
+	parentHook ParentChangeHook
 }
 
 // New creates an organizations service.

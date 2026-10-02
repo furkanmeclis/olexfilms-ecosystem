@@ -284,6 +284,7 @@ var bgCatalog = map[string]string{
 	"accounting.category.other_expense":   "Други разходи",
 	"accounting.category.opening_balance": "Начално салдо",
 	"accounting.category.adjustment":      "Корекция",
+	"accounting.category.cari_transfer":   "Прехвърляне на текуща сметка",
 	"accounting.category.collection":      "Инкасиране",
 	"accounting.category.payment":         "Плащане",
 	"accounting.direction.income":         "Приход",
@@ -291,6 +292,7 @@ var bgCatalog = map[string]string{
 	"accounting.direction.charge":         "Начисление",
 	"accounting.direction.collection":     "Инкасиране",
 	"accounting.direction.payment":        "Плащане",
+	"accounting.direction.opening":        "Откриване",
 	"accounting.account_type.cash":        "Каса",
 	"accounting.account_type.bank":        "Банка",
 	// TEC-175: cari statement, balance report and export titles.
@@ -345,6 +347,9 @@ var bgCatalog = map[string]string{
 	"export.title.portal.customer_data_export": "Извлечение на лични данни",
 	"resources.customers.data_export":          "Лични данни на клиента",
 	"resources.portal.customer_data_export":    "Моите лични данни",
+	// TEC-164: customer list export.
+	"export.title.customers.list":              "Списък с клиенти",
+	"resources.customers.list":                 "Клиенти",
 	"customers.export.section":                 "Раздел",
 	"customers.export.item":                    "Запис",
 	"customers.export.field":                   "Поле",

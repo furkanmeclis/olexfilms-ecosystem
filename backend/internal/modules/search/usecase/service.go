@@ -47,6 +47,9 @@ func (s *Service) ListSpecs(ctx context.Context) []searchengine.Spec {
 	tenant := s.tenantScope(ctx, p)
 	out := make([]searchengine.Spec, 0, len(s.reg.Specs()))
 	for _, spec := range s.reg.Specs() {
+		if spec.ListScoped {
+			continue // TEC-164: only the module list applies its scope
+		}
 		if spec.Permission != "" && !p.HasPermission(spec.Permission) {
 			continue
 		}

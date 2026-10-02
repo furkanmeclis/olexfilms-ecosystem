@@ -31,6 +31,10 @@ import (
 //
 // TEC-190: the vehicle transfer endpoints need vehicles.transfer; the
 // transfer's current owner must be a customer in scope.
+//
+// TEC-164: GET /v1/customers?q= searches the Meilisearch customers index
+// (filtered on the scope) when it is up; the list export needs
+// customers.read with the list's scope.
 func RegisterRoutes(
 	mux *http.ServeMux,
 	h *Handler,
@@ -67,6 +71,10 @@ func RegisterRoutes(
 
 	mux.Handle("GET /v1/customers", readC(h.ListCustomers))
 	mux.Handle("POST /v1/customers", writeC(h.CreateCustomer))
+	// TEC-164: list export (I/O engine), same permission and scope as the list.
+	mux.Handle("POST /v1/customers/export", readC(h.RequestListExport))
+	mux.Handle("GET /v1/customer-list-exports/{uuid}", readC(h.GetListExport))
+	mux.Handle("GET /v1/customer-list-exports/{uuid}/download", readC(h.DownloadListExport))
 	mux.Handle("GET /v1/customers/{uuid}", readC(h.GetCustomer))
 	mux.Handle("PATCH /v1/customers/{uuid}", writeC(h.UpdateCustomer))
 	mux.Handle("POST /v1/customers/{uuid}/upgrade-to-dealer", writeC(h.UpgradeToDealer))

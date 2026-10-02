@@ -15,6 +15,7 @@ export type FinanceAccountUpdateInput = Schemas["FinanceAccountUpdateInput"];
 export type CariAccount = Schemas["CariAccount"];
 export type FinanceEntry = Schemas["FinanceEntry"];
 export type FinanceSettlementInput = Schemas["FinanceSettlementInput"];
+export type FinanceAccountOpeningInput = Schemas["FinanceAccountOpeningInput"];
 export type Currency = Schemas["Currency"];
 export type CariStatement = Schemas["CariStatement"];
 export type CariStatementLine = Schemas["CariStatementLine"];
@@ -48,6 +49,7 @@ export const ACCOUNTING_DIRECTIONS: AccountingDirection[] = [
   "charge",
   "collection",
   "payment",
+  "opening",
 ];
 
 /** Settlement directions (POST /v1/accounting/collections | payments). */
@@ -177,6 +179,19 @@ export const accountingService = {
   },
 
   /** Collection or payment; a repeated idempotency_key answers the same row. */
+  /**
+   * One-off cash/bank opening balance (TEC-198, step-up): moves the
+   * account balance only, never income/expense. 409 OPENING_BALANCE_EXISTS
+   * while one is open.
+   */
+  createAccountOpening(uuid: string, body: FinanceAccountOpeningInput) {
+    return platformRequest<FinanceEntry>(
+      "POST",
+      `/v1/accounting/accounts/${encodeURIComponent(uuid)}/opening-balance`,
+      { body },
+    );
+  },
+
   settle(kind: SettlementKind, body: FinanceSettlementInput) {
     return platformRequest<FinanceEntry>(
       "POST",

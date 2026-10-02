@@ -48,6 +48,9 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/accounting/accounts", write(h.CreateAccount))
 	mux.Handle("GET /v1/accounting/accounts/{uuid}", read(h.GetAccount))
 	mux.Handle("PATCH /v1/accounting/accounts/{uuid}", write(h.UpdateAccount))
+	// TEC-198: one-off cash/bank opening balance (step-up, no cari, no P&L);
+	// reversed through POST /v1/accounting/entries/{uuid}/void.
+	mux.Handle("POST /v1/accounting/accounts/{uuid}/opening-balance", sensitive(h.CreateAccountOpening))
 
 	mux.Handle("GET /v1/accounting/cari", read(h.ListCari))
 	mux.Handle("GET /v1/accounting/cari/{uuid}", read(h.GetCari))

@@ -119,6 +119,7 @@ func main() {
 		searchadapters.NewUsers(queries),
 		searchadapters.NewRoles(queries),
 		catalogusecase.NewSearchAdapter(queries),
+		customersusecase.NewSearchAdapter(queries), // TEC-164
 	)
 	searchClient := searchengine.NewClient(cfg.Search, log)
 	searchIndexer := searchengine.NewIndexer(searchClient, searchReg, nil, log)
@@ -143,6 +144,8 @@ func main() {
 		// masked, so no PII key is needed here).
 		customersusecase.NewDataExportAdapter(customersExportSvc),
 		customersusecase.NewPortalDataExportAdapter(customersExportSvc),
+		// TEC-164: customer list export (read only, same masking as the list).
+		customersusecase.NewListExportAdapter(customersExportSvc),
 		// TEC-158: stock import batches are applied here (import queue).
 		stockusecase.NewImporter(pool, queries, outboxStore),
 		// TEC-188: warranty certificate PDF (panel and portal, read only).
