@@ -291,7 +291,8 @@ func (u *AuthUseCase) RegisterOAuthUser(ctx context.Context, email, name, surnam
 	if _, err := rand.Read(random); err != nil {
 		return model.AdapterUser{}, err
 	}
-	hash, err := password.Hash(base64.RawURLEncoding.EncodeToString(random))
+	// The "Aa1" prefix keeps the random value inside the password policy.
+	hash, err := password.Hash("Aa1" + base64.RawURLEncoding.EncodeToString(random))
 	if err != nil {
 		return model.AdapterUser{}, err
 	}

@@ -355,6 +355,17 @@ var Permissions = []PermissionDef{
 		Slug: PermAccountingResolve, Name: "Resolve accounting disputes", Module: "accounting", Scopes: scopesTree,
 		Description: "Resolve a dispute on an entry posted to a child: reversal, revision or rejection (K24).",
 	},
+
+	// TEC-214: center tasks. Appended last; migration 000058 seeds them.
+	// Center roles only, so the scopes start at brand.
+	{
+		Slug: PermTasksRead, Name: "Read tasks", Module: "tasks", Scopes: scopesSupplier,
+		Description: "Center tasks about distributors and dealers of the brand, with their comments.",
+	},
+	{
+		Slug: PermTasksWrite, Name: "Write tasks", Module: "tasks", Scopes: scopesSupplier,
+		Description: "Create, assign, update and close center tasks; comment on them (center only).",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -438,6 +449,9 @@ var Roles = []RoleDef{
 			PermWarrantiesRead:   ScopeBrand,
 			PermWarrantiesVoid:   ScopeBrand,
 			PermVehiclesTransfer: ScopeBrand,
+			// TEC-214 (000058).
+			PermTasksRead:  ScopeBrand,
+			PermTasksWrite: ScopeBrand,
 		}),
 	},
 	{
@@ -461,6 +475,9 @@ var Roles = []RoleDef{
 			// TEC-165 (000049): orders stay brand-bound (K20).
 			PermOrdersRead: ScopeBrand,
 			PermOrdersShip: ScopeBrand,
+			// TEC-214 (000058).
+			PermTasksRead:  ScopeBrand,
+			PermTasksWrite: ScopeBrand,
 		}),
 	},
 	{
@@ -479,6 +496,8 @@ var Roles = []RoleDef{
 			PermPricingRecommendedRead:  ScopeBrand,
 			PermPricingRecommendedWrite: ScopeBrand,
 			PermOrdersRead:              ScopeBrand,
+			PermTasksRead:               ScopeBrand, // TEC-214 (000058)
+			PermTasksWrite:              ScopeBrand,
 		}),
 	},
 	{
@@ -496,6 +515,8 @@ var Roles = []RoleDef{
 			PermLeadsWrite:         ScopeBrand,
 			PermSocialRead:         ScopeBrand,
 			PermSocialWrite:        ScopeBrand,
+			PermTasksRead:          ScopeBrand, // TEC-214 (000058)
+			PermTasksWrite:         ScopeBrand,
 		}),
 	},
 	{

@@ -95,6 +95,9 @@ import (
 	storagemodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/storage"
 	storagehandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/storage/handler"
 	storageusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/storage/usecase"
+	tasksmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/tasks"
+	taskshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/tasks/handler"
+	tasksusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/tasks/usecase"
 	transfersmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/transfers"
 	transfershandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/transfers/handler"
 	transfersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/transfers/usecase"
@@ -503,6 +506,10 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-201: warehouse tree (warehouses, rooms, aisle/shelf/bin locations).
 	warehousemodule.RegisterRoutes(mux, warehousehandler.New(warehouseusecase.New(deps.DB, deps.Queries)),
 		featureSvc, tokens, loader, deps.Queries)
+
+	// TEC-214: center tasks (center roles only; brand scoped).
+	tasksmodule.RegisterRoutes(mux, taskshandler.New(tasksusecase.New(deps.DB, deps.Queries,
+		outbox.NewStore(deps.DB, deps.Queries))), tokens, loader, deps.Queries)
 	// TEC-149: vehicle catalog (global car brands/models, super_admin writes).
 	vehiclecatalogmodule.RegisterRoutes(mux, vehiclecataloghandler.New(
 		vehiclecatalogusecase.New(deps.Queries), deps.Storage, activityRec), tokens, loader)

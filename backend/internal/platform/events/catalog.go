@@ -290,6 +290,17 @@ const (
 	CustomerMerged = "customer.merged"
 )
 
+// Center task events (TEC-214): written to the outbox in the transaction
+// that changes the task; the notification catalog (TEC-221) reaches the
+// assignee.
+const (
+	TasksCreated       = "tasks.created"
+	TasksUpdated       = "tasks.updated"
+	TasksAssigned      = "tasks.assigned"
+	TasksStatusChanged = "tasks.status_changed"
+	TasksCommentAdded  = "tasks.comment_added"
+)
+
 // CustomerCreated (TEC-164) is written when an organization creates a new
 // customer user; the notification module sends the WhatsApp welcome with
 // the portal link.
@@ -565,5 +576,10 @@ func catalogConstants() []string {
 		NotificationsFailed,
 		NotificationsRead,
 		NotificationsCancelled,
+		TasksCreated,
+		TasksUpdated,
+		TasksAssigned,
+		TasksStatusChanged,
+		TasksCommentAdded,
 	}
 }

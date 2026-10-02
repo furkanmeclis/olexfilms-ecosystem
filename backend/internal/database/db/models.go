@@ -1411,6 +1411,37 @@ type StorageTrash struct {
 	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
 }
 
+type Task struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	SubjectOrgID    int64              `json:"subject_org_id"`
+	Title           string             `json:"title"`
+	Description     string             `json:"description"`
+	AssigneeUserID  pgtype.Int8        `json:"assignee_user_id"`
+	Priority        string             `json:"priority"`
+	DueAt           pgtype.Timestamptz `json:"due_at"`
+	Status          string             `json:"status"`
+	Source          string             `json:"source"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	ClosedByUserID  pgtype.Int8        `json:"closed_by_user_id"`
+	ClosedAt        pgtype.Timestamptz `json:"closed_at"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type TaskComment struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	TaskID         int64              `json:"task_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	AuthorUserID   pgtype.Int8        `json:"author_user_id"`
+	Body           string             `json:"body"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
 type Territory struct {
 	ID              int64              `json:"id"`
 	Uuid            uuid.UUID          `json:"uuid"`

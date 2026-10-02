@@ -5900,6 +5900,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Center tasks of the active brand, newest first
+         * @description Needs tasks.read (center roles only; distributor and dealer members get 403). The active organization must be the brand center.
+         */
+        get: operations["listTasks"];
+        put?: never;
+        /**
+         * Open a manual task about a distributor or dealer of the brand
+         * @description Needs tasks.write. The subject must be a distributor or dealer of the active brand and the assignee a member of the center (400 VALIDATION_ERROR otherwise). Writes tasks.created (and tasks.assigned with an assignee).
+         */
+        post: operations["createTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tasks/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One task of the active brand */
+        get: operations["getTask"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update, assign, close or reopen a task
+         * @description Needs tasks.write. Absent fields stay; `assignee_user_uuid: null` and `due_at: null` clear them. Status done or cancelled closes the task (closed_at); open or in_progress reopens it. Writes tasks.updated, tasks.assigned and tasks.status_changed as they apply.
+         */
+        patch: operations["updateTask"];
+        trace?: never;
+    };
+    "/v1/tasks/{uuid}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Comments of a task, oldest first */
+        get: operations["listTaskComments"];
+        put?: never;
+        /**
+         * Comment on a task
+         * @description Needs tasks.write. Comments are append-only. Writes tasks.comment_added.
+         */
+        post: operations["addTaskComment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -10594,6 +10660,123 @@ export interface components {
             success: true;
             data: {
                 items: components["schemas"]["OrderOrgRef"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        TaskStatus: "open" | "in_progress" | "done" | "cancelled";
+        /** @enum {string} */
+        TaskPriority: "low" | "normal" | "high" | "urgent";
+        TaskUserRef: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+        };
+        Task: {
+            /** Format: uuid */
+            uuid: string;
+            title: string;
+            description: string;
+            subject_organization: {
+                /** Format: uuid */
+                uuid: string;
+                name: string;
+                /** @enum {string} */
+                type: "distributor" | "dealer";
+            };
+            assignee: components["schemas"]["TaskUserRef"] | null;
+            created_by: components["schemas"]["TaskUserRef"] | null;
+            priority: components["schemas"]["TaskPriority"];
+            status: components["schemas"]["TaskStatus"];
+            /**
+             * @description auto is reserved for the F5 performance panel (TEC-130)
+             * @enum {string}
+             */
+            source: "manual" | "auto";
+            /** Format: date-time */
+            due_at: string | null;
+            /** Format: date-time */
+            closed_at: string | null;
+            /** Format: int64 */
+            comment_count: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        TaskCreateInput: {
+            /**
+             * Format: uuid
+             * @description A distributor or dealer of the brand
+             */
+            subject_organization_uuid: string;
+            title: string;
+            description?: string;
+            /**
+             * Format: uuid
+             * @description A member of the center
+             */
+            assignee_user_uuid?: string | null;
+            priority?: components["schemas"]["TaskPriority"];
+            /** Format: date-time */
+            due_at?: string | null;
+        };
+        TaskUpdateInput: {
+            /** Format: uuid */
+            subject_organization_uuid?: string;
+            title?: string;
+            description?: string;
+            /** Format: uuid */
+            assignee_user_uuid?: string | null;
+            priority?: components["schemas"]["TaskPriority"];
+            status?: components["schemas"]["TaskStatus"];
+            /** Format: date-time */
+            due_at?: string | null;
+        };
+        TaskComment: {
+            /** Format: uuid */
+            uuid: string;
+            body: string;
+            author: components["schemas"]["TaskUserRef"] | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        TaskCommentInput: {
+            body: string;
+        };
+        EnvelopeTask: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Task"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeTaskPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["Task"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeTaskComment: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["TaskComment"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeTaskCommentPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["TaskComment"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -21221,6 +21404,183 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    listTasks: {
+        parameters: {
+            query?: {
+                /** @description A status, or `active` for open and in_progress */
+                status?: "open" | "in_progress" | "done" | "cancelled" | "active";
+                priority?: components["schemas"]["TaskPriority"];
+                subject_organization_uuid?: string;
+                assignee_user_uuid?: string;
+                /** @description Only tasks assigned to the caller */
+                mine?: boolean;
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tasks */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTaskPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskCreateInput"];
+            };
+        };
+        responses: {
+            /** @description Task opened */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTask"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Task */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTask"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskUpdateInput"];
+            };
+        };
+        responses: {
+            /** @description Updated task */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTask"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listTaskComments: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Comments */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTaskCommentPage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    addTaskComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskCommentInput"];
+            };
+        };
+        responses: {
+            /** @description Comment added */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTaskComment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
 }
