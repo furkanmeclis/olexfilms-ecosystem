@@ -231,6 +231,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		searchadapters.NewUsers(deps.Queries),
 		searchadapters.NewRoles(deps.Queries),
 		catalogusecase.NewSearchAdapter(deps.Queries),
+		customersusecase.NewSearchAdapter(deps.Queries), // TEC-164
 	)
 	searchClient := searchengine.NewClient(cfg.Search, log)
 	searchIndexer := searchengine.NewIndexer(searchClient, searchReg, deps.Queue, log)
@@ -343,6 +344,11 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		customersSvc.SetRevoker(authrevoke.New(deps.Redis, cfg.App.Env, cfg.JWT.AccessTTL))
 	}
 	customersSvc.SetSearchIndexer(searchIndexer)
+	// TEC-164: q searches the customers index; customer.created links /portal.
+	if searchClient != nil {
+		customersSvc.SetFinder(searchClient)
+	}
+	customersSvc.SetPortalURL(cfg.Auth.FrontendURL)
 	customersSvc.SetOutbox(outbox.NewStore(deps.DB, deps.Queries)) // TEC-193: customer.merged
 	// TEC-190: vehicle transfer codes go out like the phone OTP (WhatsApp,
 	// SMS fallback), synchronously and never through the outbox.
@@ -407,6 +413,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		// TEC-161: personal data export (center and portal).
 		customersusecase.NewDataExportAdapter(customersSvc),
 		customersusecase.NewPortalDataExportAdapter(customersSvc),
+		// TEC-164: customer list export.
+		customersusecase.NewListExportAdapter(customersSvc),
 		// TEC-158: staged stock import (writes through ledger.Post).
 		stockusecase.NewImporter(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)),
 		// TEC-188: warranty certificate PDF (panel and portal).

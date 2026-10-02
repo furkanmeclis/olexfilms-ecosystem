@@ -345,6 +345,9 @@ var zhCNCatalog = map[string]string{
 	"export.title.portal.customer_data_export": "个人数据导出",
 	"resources.customers.data_export":          "客户个人数据",
 	"resources.portal.customer_data_export":    "我的个人数据",
+	// TEC-164: customer list export.
+	"export.title.customers.list":              "客户列表",
+	"resources.customers.list":                 "客户",
 	"customers.export.section":                 "部分",
 	"customers.export.item":                    "记录",
 	"customers.export.field":                   "字段",
