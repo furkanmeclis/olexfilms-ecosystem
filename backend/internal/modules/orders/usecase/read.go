@@ -242,11 +242,14 @@ const (
 )
 
 // ListFilter narrows the order list.
+// CreatedFrom is inclusive, CreatedTo exclusive (TEC-170).
 type ListFilter struct {
-	Side   string
-	Status string
-	Limit  int32
-	Offset int32
+	Side        string
+	Status      string
+	CreatedFrom *time.Time
+	CreatedTo   *time.Time
+	Limit       int32
+	Offset      int32
 }
 
 // List returns orders inside the caller's orders.read scope: every order
@@ -261,6 +264,16 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]OrderView
 		}
 		status = pgtype.Text{String: st, Valid: true}
 	}
+	from, to := pgtype.Timestamptz{}, pgtype.Timestamptz{}
+	if f.CreatedFrom != nil {
+		from = pgtype.Timestamptz{Time: *f.CreatedFrom, Valid: true}
+	}
+	if f.CreatedTo != nil {
+		if f.CreatedFrom != nil && !f.CreatedTo.After(*f.CreatedFrom) {
+			return nil, 0, invalid("created_to", "must be after created_from")
+		}
+		to = pgtype.Timestamptz{Time: *f.CreatedTo, Valid: true}
+	}
 	brand := c.Org.BrandID
 	var (
 		rows  []db.Order
@@ -271,10 +284,10 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]OrderView
 	case SideAll:
 		orgIDs := c.Filter.OrgIDsArg()
 		rows, err = s.q.ListOrdersInScope(ctx, db.ListOrdersInScopeParams{
-			BrandID: brand, OrgIds: orgIDs, Status: status, RowLimit: f.Limit, RowOffset: f.Offset,
+			BrandID: brand, OrgIds: orgIDs, Status: status, CreatedFrom: from, CreatedTo: to, RowLimit: f.Limit, RowOffset: f.Offset,
 		})
 		if err == nil {
-			total, err = s.q.CountOrdersInScope(ctx, db.CountOrdersInScopeParams{BrandID: brand, OrgIds: orgIDs, Status: status})
+			total, err = s.q.CountOrdersInScope(ctx, db.CountOrdersInScopeParams{BrandID: brand, OrgIds: orgIDs, Status: status, CreatedFrom: from, CreatedTo: to})
 		}
 	case SideSeller, SideBuyer:
 		if !c.Filter.AllowsOrg(c.Org.InternalID, brand) {
@@ -282,17 +295,17 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]OrderView
 		}
 		if f.Side == SideSeller {
 			rows, err = s.q.ListOrdersBySeller(ctx, db.ListOrdersBySellerParams{
-				BrandID: brand, SellerOrgID: c.Org.InternalID, Status: status, RowLimit: f.Limit, RowOffset: f.Offset,
+				BrandID: brand, SellerOrgID: c.Org.InternalID, Status: status, CreatedFrom: from, CreatedTo: to, RowLimit: f.Limit, RowOffset: f.Offset,
 			})
 			if err == nil {
-				total, err = s.q.CountOrdersBySeller(ctx, db.CountOrdersBySellerParams{BrandID: brand, SellerOrgID: c.Org.InternalID, Status: status})
+				total, err = s.q.CountOrdersBySeller(ctx, db.CountOrdersBySellerParams{BrandID: brand, SellerOrgID: c.Org.InternalID, Status: status, CreatedFrom: from, CreatedTo: to})
 			}
 		} else {
 			rows, err = s.q.ListOrdersByBuyer(ctx, db.ListOrdersByBuyerParams{
-				BrandID: brand, BuyerOrgID: c.Org.InternalID, Status: status, RowLimit: f.Limit, RowOffset: f.Offset,
+				BrandID: brand, BuyerOrgID: c.Org.InternalID, Status: status, CreatedFrom: from, CreatedTo: to, RowLimit: f.Limit, RowOffset: f.Offset,
 			})
 			if err == nil {
-				total, err = s.q.CountOrdersByBuyer(ctx, db.CountOrdersByBuyerParams{BrandID: brand, BuyerOrgID: c.Org.InternalID, Status: status})
+				total, err = s.q.CountOrdersByBuyer(ctx, db.CountOrdersByBuyerParams{BrandID: brand, BuyerOrgID: c.Org.InternalID, Status: status, CreatedFrom: from, CreatedTo: to})
 			}
 		}
 	default:
