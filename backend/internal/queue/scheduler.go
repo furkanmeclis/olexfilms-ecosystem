@@ -40,6 +40,8 @@ func Schedules() []Periodic {
 		{Cron: logPurgeCron, Type: TaskLogPurgeSweep, Queue: QueueMaintenance, New: NewLogPurgeSweepTask},
 		{Cron: ratesFetchCron, Type: TaskRatesFetch, Queue: QueueMaintenance, Opts: rateOpts, New: NewRatesFetchTask},
 		{Cron: ratesFetchCatchUpCron, Type: TaskRatesFetch, Queue: QueueMaintenance, Opts: rateOpts, New: NewRatesFetchTask},
+		// TEC-156: nightly stock projection drift scan (report only).
+		{Cron: inventoryRebuildCron, Type: TaskInventoryRebuild, Queue: QueueMaintenance, New: newNightlyInventoryRebuildTask},
 	}
 }
 

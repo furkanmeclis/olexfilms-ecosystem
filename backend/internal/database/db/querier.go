@@ -229,6 +229,7 @@ type Querier interface {
 	DeleteDistrict(ctx context.Context, id int64) (int64, error)
 	// Draft deletion (items, images and logs must be gone first).
 	DeleteDraftService(ctx context.Context, arg DeleteDraftServiceParams) (int64, error)
+	DeleteFixedBarcodeHoldingForRepair(ctx context.Context, id int64) error
 	DeleteLogPurgeRule(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	DeleteManualExchangeRate(ctx context.Context, arg DeleteManualExchangeRateParams) (int64, error)
 	DeleteMemberRoles(ctx context.Context, memberID int64) error
@@ -258,6 +259,7 @@ type Querier interface {
 	DeleteStorageTrashByUUID(ctx context.Context, argUuid uuid.UUID) error
 	DeleteSystemModuleFlag(ctx context.Context, moduleKey string) (int64, error)
 	DeleteTerritory(ctx context.Context, arg DeleteTerritoryParams) (int64, error)
+	DeleteUnitCurrentStateForRepair(ctx context.Context, unitID int64) error
 	DeleteUserTOTP(ctx context.Context, userID int64) error
 	DeleteWebAuthnCredentialByCredentialID(ctx context.Context, credentialID string) error
 	DeleteWebAuthnCredentialByUUID(ctx context.Context, arg DeleteWebAuthnCredentialByUUIDParams) error
@@ -545,6 +547,7 @@ type Querier interface {
 	ListBinProductStockRows(ctx context.Context, arg ListBinProductStockRowsParams) ([]ListBinProductStockRowsRow, error)
 	ListBinProductStocksByLocation(ctx context.Context, locationID int64) ([]BinProductStock, error)
 	ListBinProductStocksByOrganization(ctx context.Context, organizationID int64) ([]BinProductStock, error)
+	ListBinProductStocksForRebuild(ctx context.Context, organizationID pgtype.Int8) ([]BinProductStock, error)
 	ListBrandDomains(ctx context.Context) ([]ListBrandDomainsRow, error)
 	ListBrands(ctx context.Context) ([]Brand, error)
 	ListBulkChangesForJob(ctx context.Context, jobID int64) ([]BulkChange, error)
@@ -598,6 +601,7 @@ type Querier interface {
 	ListFinanceEntriesBySource(ctx context.Context, arg ListFinanceEntriesBySourceParams) ([]FinanceEntry, error)
 	ListFixedBarcodeHoldingsByHolder(ctx context.Context, holderOrgID int64) ([]FixedBarcodeHolding, error)
 	ListFixedBarcodeHoldingsByUnit(ctx context.Context, unitID int64) ([]FixedBarcodeHolding, error)
+	ListFixedBarcodeHoldingsByUnitIDs(ctx context.Context, ids []int64) ([]FixedBarcodeHolding, error)
 	// Fixed barcode quantities on hand at an organization (its locations and
 	// the organization owner itself), per barcode, for the listed products.
 	ListFixedBarcodeQuantitiesByHolder(ctx context.Context, arg ListFixedBarcodeQuantitiesByHolderParams) ([]ListFixedBarcodeQuantitiesByHolderRow, error)
@@ -654,6 +658,7 @@ type Querier interface {
 	// quantity or meters above zero, false = both zero.
 	ListOrganizationProductStockRows(ctx context.Context, arg ListOrganizationProductStockRowsParams) ([]ListOrganizationProductStockRowsRow, error)
 	ListOrganizationProductStocks(ctx context.Context, arg ListOrganizationProductStocksParams) ([]OrganizationProductStock, error)
+	ListOrganizationProductStocksForRebuild(ctx context.Context, organizationID pgtype.Int8) ([]OrganizationProductStock, error)
 	ListOrganizationsByIDs(ctx context.Context, ids []int64) ([]Organization, error)
 	ListOrganizationsFiltered(ctx context.Context, arg ListOrganizationsFilteredParams) ([]ListOrganizationsFilteredRow, error)
 	// Organizations reachable by a scope filter: an explicit id set
@@ -683,6 +688,16 @@ type Querier interface {
 	ListProductsForIndex(ctx context.Context) ([]Product, error)
 	ListProvincesByCountry(ctx context.Context, countryID int64) ([]ListProvincesByCountryRow, error)
 	ListPushSubscriptionsByUser(ctx context.Context, userID int64) ([]PushSubscription, error)
+	// TEC-156 (F1-02d): projection rebuild, drift scan and repair.
+	// Movements are read only (append-only ledger); the repair writes the
+	// projections (unit_current_state, fixed_barcode_holdings, units.status /
+	// remaining_meters, bin_product_stocks, organization_product_stocks).
+	// Every unit that has a movement or a projection row.
+	ListRebuildUnitIDs(ctx context.Context) ([]int64, error)
+	// Units that touched the organization: a movement recorded on it or into it
+	// as organization/trash owner (every later owner of the unit at that
+	// organization follows from such a movement), or a projection row it holds.
+	ListRebuildUnitIDsByOrganization(ctx context.Context, organizationID int64) ([]int64, error)
 	ListReservationsByOrder(ctx context.Context, orderID int64) ([]StockReservation, error)
 	ListRoleGrantsByRoleID(ctx context.Context, roleID int64) ([]ListRoleGrantsByRoleIDRow, error)
 	ListRoleGrantsByRoleUUID(ctx context.Context, argUuid uuid.UUID) ([]ListRoleGrantsByRoleUUIDRow, error)
@@ -720,6 +735,9 @@ type Querier interface {
 	ListStockMovementsByReference(ctx context.Context, arg ListStockMovementsByReferenceParams) ([]StockMovement, error)
 	// Barcode history in ledger order.
 	ListStockMovementsByUnit(ctx context.Context, unitID int64) ([]StockMovement, error)
+	// Chronological per unit: the unit row lock serialises a unit's movements,
+	// so id order is commit order.
+	ListStockMovementsByUnitIDs(ctx context.Context, ids []int64) ([]StockMovement, error)
 	// TEC-155 (F1-02c): stock read API. Read-only queries over the ledger and
 	// its projections; scope narrowing happens in modules/stock/usecase on
 	// holder_org_id (TEC-94 decision 4).
@@ -739,9 +757,11 @@ type Querier interface {
 	ListStuckProcessingNotificationIDs(ctx context.Context, staleMinutes int32) ([]int64, error)
 	ListTerritories(ctx context.Context, arg ListTerritoriesParams) ([]ListTerritoriesRow, error)
 	ListUnitCurrentStatesByHolder(ctx context.Context, arg ListUnitCurrentStatesByHolderParams) ([]ListUnitCurrentStatesByHolderRow, error)
+	ListUnitCurrentStatesByUnitIDs(ctx context.Context, ids []int64) ([]UnitCurrentState, error)
 	// Brand-independent barcode lookup for the warehouse scanner (K20): the
 	// caller narrows the result by scope.
 	ListUnitsByBarcode(ctx context.Context, barcode string) ([]Unit, error)
+	ListUnitsByIDs(ctx context.Context, ids []int64) ([]Unit, error)
 	ListUserIDsByRoleSlug(ctx context.Context, slug string) ([]int64, error)
 	ListUserRoleSlugs(ctx context.Context, userID int64) ([]string, error)
 	ListUserRolesByUserID(ctx context.Context, userID int64) ([]Role, error)
@@ -799,6 +819,8 @@ type Querier interface {
 	// Serialises every ledger write on one unit (double owner / double
 	// consumption guard).
 	LockUnitCurrentState(ctx context.Context, unitID int64) (UnitCurrentState, error)
+	// Same first lock as ledger.Post (the unit row), in id order.
+	LockUnitsByIDs(ctx context.Context, ids []int64) ([]int64, error)
 	LockVehicleTransferByUUID(ctx context.Context, arg LockVehicleTransferByUUIDParams) (VehicleTransfer, error)
 	LockWarranty(ctx context.Context, arg LockWarrantyParams) (Warranty, error)
 	MarkAllNotificationsReadForUser(ctx context.Context, userID pgtype.Int8) (int64, error)
@@ -910,6 +932,8 @@ type Querier interface {
 	// Written in the completion transaction before the status flips.
 	SetServiceItemMovement(ctx context.Context, arg SetServiceItemMovementParams) (ServiceItem, error)
 	SetServiceReviewRequestSent(ctx context.Context, id int64) (Service, error)
+	SetUnitRemainingMetersForRepair(ctx context.Context, arg SetUnitRemainingMetersForRepairParams) error
+	SetUnitStatusForRepair(ctx context.Context, arg SetUnitStatusForRepairParams) error
 	SetUserEmailVerified(ctx context.Context, id int64) (User, error)
 	// Vehicle owner change in the transfer transaction (services keep their
 	// customer snapshot, 000050).
@@ -991,6 +1015,7 @@ type Querier interface {
 	UpdateWebAuthnCredentialCounter(ctx context.Context, arg UpdateWebAuthnCredentialCounterParams) error
 	UpdateWebAuthnCredentialName(ctx context.Context, arg UpdateWebAuthnCredentialNameParams) (WebauthnCredential, error)
 	UpdateWhatsAppStatus(ctx context.Context, arg UpdateWhatsAppStatusParams) (WhatsappSetting, error)
+	UpsertBinProductStockForRepair(ctx context.Context, arg UpsertBinProductStockForRepairParams) error
 	UpsertConversation(ctx context.Context, arg UpsertConversationParams) (Conversation, error)
 	UpsertDevicePushToken(ctx context.Context, arg UpsertDevicePushTokenParams) (DevicePushToken, error)
 	// The database refuses an owner that is not a distributor of the brand.
@@ -1000,6 +1025,7 @@ type Querier interface {
 	// One row per cache key: a repeated request returns the existing row.
 	UpsertDocumentRender(ctx context.Context, arg UpsertDocumentRenderParams) (DocumentRender, error)
 	UpsertExchangeRate(ctx context.Context, arg UpsertExchangeRateParams) error
+	UpsertFixedBarcodeHoldingForRepair(ctx context.Context, arg UpsertFixedBarcodeHoldingForRepairParams) error
 	// Catalog sync: level and sort order follow the Go catalog; admin-edited
 	// default_enabled / is_paid survive (a core module is always on).
 	UpsertModuleCatalog(ctx context.Context, arg UpsertModuleCatalogParams) error
@@ -1007,6 +1033,7 @@ type Querier interface {
 	UpsertNotificationPreferenceRow(ctx context.Context, arg UpsertNotificationPreferenceRowParams) (NotificationPreference, error)
 	UpsertNotificationTemplate(ctx context.Context, arg UpsertNotificationTemplateParams) (NotificationTemplate, error)
 	UpsertOrgModuleFlag(ctx context.Context, arg UpsertOrgModuleFlagParams) (ModuleFlag, error)
+	UpsertOrganizationProductStockForRepair(ctx context.Context, arg UpsertOrganizationProductStockForRepairParams) error
 	UpsertPermission(ctx context.Context, arg UpsertPermissionParams) error
 	// TEC-144: product price list and distributor-specific prices (K8). Prices
 	// go in as text so no precision is lost between NUMERIC and Go. Nullable
@@ -1017,6 +1044,7 @@ type Querier interface {
 	UpsertPushSubscription(ctx context.Context, arg UpsertPushSubscriptionParams) (PushSubscription, error)
 	UpsertSystemModuleFlag(ctx context.Context, arg UpsertSystemModuleFlagParams) (ModuleFlag, error)
 	UpsertSystemRole(ctx context.Context, arg UpsertSystemRoleParams) (Role, error)
+	UpsertUnitCurrentStateForRepair(ctx context.Context, arg UpsertUnitCurrentStateForRepairParams) error
 	UpsertUserTOTPSetup(ctx context.Context, arg UpsertUserTOTPSetupParams) (UserTotp, error)
 	UserHasRoleSlug(ctx context.Context, arg UserHasRoleSlugParams) (bool, error)
 	// Center void (warranties.void). Expired warranties may be voided too.
