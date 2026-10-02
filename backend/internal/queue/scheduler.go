@@ -43,6 +43,8 @@ func Schedules() []Periodic {
 		// TEC-187: warranty expiry and 30 / 7 day reminders (idempotent).
 		{Cron: warrantyExpireCron, Type: TaskWarrantyExpire, Queue: QueueMaintenance, Opts: warrantyTaskOpts(), New: NewWarrantyExpireTask},
 		{Cron: warrantyExpiringScanCron, Type: TaskWarrantyExpiringScan, Queue: QueueMaintenance, Opts: warrantyTaskOpts(), New: NewWarrantyExpiringScanTask},
+		// TEC-194: daily repair scan for warranties the listener missed.
+		{Cron: warrantyRepairScanCron, Type: TaskWarrantyRepairScan, Queue: QueueMaintenance, Opts: warrantyTaskOpts(), New: NewWarrantyRepairScanTask},
 		// TEC-156: nightly stock projection drift scan (report only).
 		{Cron: inventoryRebuildCron, Type: TaskInventoryRebuild, Queue: QueueMaintenance, New: newNightlyInventoryRebuildTask},
 	}

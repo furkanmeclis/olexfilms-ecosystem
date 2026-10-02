@@ -21,7 +21,8 @@ type stockUnitPage struct {
 		QuantityOnHand  int32   `json:"quantity_on_hand"`
 		RemainingMeters *string `json:"remaining_meters"`
 		Product         struct {
-			UUID string `json:"uuid"`
+			UUID           string   `json:"uuid"`
+			AvailableParts []string `json:"available_parts"`
 		} `json:"product"`
 	} `json:"items"`
 }
@@ -117,6 +118,11 @@ func TestIntegrationServiceCompletion(t *testing.T) {
 	if _, err := it.pool.Exec(ctx, `UPDATE products SET unit_type = 'roll_meter' WHERE id = $1`, roll.ID); err != nil {
 		t.Fatalf("roll product: %v", err)
 	}
+	// TEC-182: the picker returns the category's parts for the item parts.
+	if _, err := it.pool.Exec(ctx, `UPDATE product_categories SET available_parts = '["body_kaput"]'::jsonb
+		WHERE id = (SELECT category_id FROM products WHERE id = $1)`, roll.ID); err != nil {
+		t.Fatalf("roll parts: %v", err)
+	}
 	// units_check_integrity: a fixed barcode needs a uses_fixed_barcode product.
 	if _, err := it.pool.Exec(ctx, `UPDATE products SET uses_fixed_barcode = TRUE WHERE id = $1`, fixed.ID); err != nil {
 		t.Fatalf("fixed product: %v", err)
@@ -152,6 +158,13 @@ func TestIntegrationServiceCompletion(t *testing.T) {
 	byBarcode := it.stockUnits(aTok, s1.UUID, url.Values{"barcode": {ur.Barcode}}, http.StatusOK)
 	if len(byBarcode.Items) != 1 || byBarcode.Items[0].RemainingMeters == nil || *byBarcode.Items[0].RemainingMeters != "50.00" {
 		t.Fatalf("picker by barcode = %+v", byBarcode.Items)
+	}
+	if ap := byBarcode.Items[0].Product.AvailableParts; len(ap) != 1 || ap[0] != "body_kaput" {
+		t.Fatalf("picker available_parts = %v", ap)
+	}
+	// TEC-182: q searches the product name, SKU or barcode (case-insensitive).
+	if m := it.stockUnits(aTok, s1.UUID, url.Values{"q": {"film t180p"}}, http.StatusOK).barcodes(); len(m) != 1 || !m[up.Barcode] {
+		t.Fatalf("picker q = %v", m)
 	}
 	byProduct := it.stockUnits(aTok, s1.UUID, url.Values{"product_uuid": {piece.Uuid.String()}}, http.StatusOK).barcodes()
 	if len(byProduct) != 1 || !byProduct[up.Barcode] {

@@ -323,7 +323,9 @@ ORDER BY created_at, id;
 -- organization or location owners, minus pieces already in an open service
 -- and rolls taken whole by an open service; fixed barcodes with pieces on
 -- hand (summed over the organization's owners). Filters: exact barcode,
--- product, and remaining meters of a roll (min_meters: rolls only).
+-- product, and remaining meters of a roll (min_meters: rolls only); q
+-- matches the product name, SKU or barcode (TEC-182). The category's
+-- available_parts feeds the part list of the new item.
 
 -- name: ListServiceStockUnits :many
 WITH stock AS (
@@ -345,11 +347,17 @@ WITH stock AS (
 SELECT u.id, u.uuid, u.barcode, u.unit_kind, u.initial_meters, u.remaining_meters,
        st.quantity_on_hand,
        p.id AS product_id, p.uuid AS product_uuid, p.sku AS product_sku,
-       p.name AS product_name, p.unit_type AS product_unit_type
+       p.name AS product_name, p.unit_type AS product_unit_type,
+       c.available_parts AS product_available_parts
 FROM stock st
 JOIN units u ON u.id = st.unit_id
 JOIN products p ON p.id = u.product_id AND p.brand_id = u.brand_id
+JOIN product_categories c ON c.id = p.category_id AND c.brand_id = p.brand_id
 WHERE (sqlc.narg(barcode)::text IS NULL OR u.barcode = sqlc.narg(barcode)::text)
+  AND (sqlc.narg(q)::text IS NULL
+       OR p.name ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR p.sku ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR u.barcode ILIKE '%' || sqlc.narg(q)::text || '%')
   AND (sqlc.narg(product_id)::bigint IS NULL OR u.product_id = sqlc.narg(product_id)::bigint)
   AND (sqlc.narg(min_meters)::numeric IS NULL OR u.remaining_meters >= sqlc.narg(min_meters)::numeric)
   AND (u.unit_kind = 'fixed' OR NOT EXISTS (

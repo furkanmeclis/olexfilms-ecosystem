@@ -1271,6 +1271,108 @@ func (q *Queries) ListWarrantyNoticeContexts(ctx context.Context, ids []int64) (
 	return items, nil
 }
 
+const listWarrantyRepairCandidates = `-- name: ListWarrantyRepairCandidates :many
+WITH page AS (
+    SELECT s.id
+    FROM services s
+    WHERE s.status = 'completed'
+      AND s.completed_at >= $1
+      AND s.completed_at <= $2
+      AND s.id > $3::bigint
+      AND ($4::bigint = 0 OR s.organization_id = $4::bigint)
+      AND EXISTS (
+          SELECT 1 FROM service_items si
+          WHERE si.service_id = s.id
+            AND NOT EXISTS (SELECT 1 FROM warranties w WHERE w.service_item_id = si.id)
+      )
+    ORDER BY s.id
+    LIMIT $5
+)
+SELECT s.id AS service_id, b.slug AS service_brand_slug,
+       si.id, si.kind, si.product_id, si.unit_id,
+       p.warranty_duration_months,
+       u.source AS unit_source, u.connection_id AS unit_connection_id,
+       ub.slug AS unit_brand_slug,
+       EXISTS (
+           SELECT 1 FROM stock_movements m
+           WHERE m.unit_id = si.unit_id AND m.type = 'external_outbound'
+       )::boolean AS external_outbound
+FROM page
+JOIN services s ON s.id = page.id
+JOIN brands b ON b.id = s.brand_id
+JOIN service_items si ON si.service_id = s.id
+JOIN products p ON p.id = si.product_id
+JOIN units u ON u.id = si.unit_id
+JOIN brands ub ON ub.id = u.brand_id
+WHERE NOT EXISTS (SELECT 1 FROM warranties w WHERE w.service_item_id = si.id)
+ORDER BY s.id, si.id
+`
+
+type ListWarrantyRepairCandidatesParams struct {
+	Since          pgtype.Timestamptz `json:"since"`
+	Until          pgtype.Timestamptz `json:"until"`
+	AfterServiceID int64              `json:"after_service_id"`
+	OrganizationID int64              `json:"organization_id"`
+	ServiceLimit   int32              `json:"service_limit"`
+}
+
+type ListWarrantyRepairCandidatesRow struct {
+	ServiceID              int64       `json:"service_id"`
+	ServiceBrandSlug       string      `json:"service_brand_slug"`
+	ID                     int64       `json:"id"`
+	Kind                   string      `json:"kind"`
+	ProductID              int64       `json:"product_id"`
+	UnitID                 int64       `json:"unit_id"`
+	WarrantyDurationMonths pgtype.Int4 `json:"warranty_duration_months"`
+	UnitSource             string      `json:"unit_source"`
+	UnitConnectionID       pgtype.Int8 `json:"unit_connection_id"`
+	UnitBrandSlug          string      `json:"unit_brand_slug"`
+	ExternalOutbound       bool        `json:"external_outbound"`
+}
+
+// TEC-194: repair scan. One page of completed services (completed in
+// [since, until], id > after_service_id, organization_id = 0 for all) that
+// still have an item without a warranty, with the same eligibility columns
+// as ListWarrantyCandidatesByService for those items. The page is cut by
+// service, so every missing item of a listed service is returned.
+func (q *Queries) ListWarrantyRepairCandidates(ctx context.Context, arg ListWarrantyRepairCandidatesParams) ([]ListWarrantyRepairCandidatesRow, error) {
+	rows, err := q.db.Query(ctx, listWarrantyRepairCandidates,
+		arg.Since,
+		arg.Until,
+		arg.AfterServiceID,
+		arg.OrganizationID,
+		arg.ServiceLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListWarrantyRepairCandidatesRow{}
+	for rows.Next() {
+		var i ListWarrantyRepairCandidatesRow
+		if err := rows.Scan(
+			&i.ServiceID,
+			&i.ServiceBrandSlug,
+			&i.ID,
+			&i.Kind,
+			&i.ProductID,
+			&i.UnitID,
+			&i.WarrantyDurationMonths,
+			&i.UnitSource,
+			&i.UnitConnectionID,
+			&i.UnitBrandSlug,
+			&i.ExternalOutbound,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const lockVehicleTransferByUUID = `-- name: LockVehicleTransferByUUID :one
 SELECT id, uuid, organization_id, brand_id, vehicle_id, from_user_id, to_user_id, to_phone, from_code_hash, to_code_hash, from_verified_at, to_verified_at, attempts, expires_at, status, initiated_by_user_id, completed_at, cancelled_at, created_at, updated_at FROM vehicle_transfers
 WHERE uuid = $1 AND brand_id = $2

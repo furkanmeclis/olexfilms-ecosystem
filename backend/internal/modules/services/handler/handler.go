@@ -225,7 +225,7 @@ func (h *Handler) RemoveItem(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, v)
 }
 
-// StockUnits (GET /v1/services/{uuid}/stock-units?barcode&product_uuid&min_meters&limit&offset):
+// StockUnits (GET /v1/services/{uuid}/stock-units?barcode&q&product_uuid&min_meters&limit&offset):
 // the stock picker of the service organization (TEC-180).
 func (h *Handler) StockUnits(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathUUID(w, r, "uuid")
@@ -235,7 +235,7 @@ func (h *Handler) StockUnits(w http.ResponseWriter, r *http.Request) {
 	q := apiquery.Parse(r.URL.Query())
 	v := r.URL.Query()
 	items, err := h.svc.StockUnits(r.Context(), caller(r), id, svcuc.StockFilter{
-		Barcode: v.Get("barcode"), ProductUUID: v.Get("product_uuid"), MinMeters: v.Get("min_meters"),
+		Barcode: v.Get("barcode"), Q: v.Get("q"), ProductUUID: v.Get("product_uuid"), MinMeters: v.Get("min_meters"),
 		Limit: q.Limit, Offset: q.Offset,
 	})
 	if err != nil {
