@@ -3,6 +3,7 @@ package db_test
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -347,46 +348,113 @@ func TestStockReservationConstraints(t *testing.T) {
 func TestStockTransferRequestConstraints(t *testing.T) {
 	f := newOrderFixture(t)
 	ctx := f.ctx
-	arg := db.CreateStockTransferRequestParams{
+	// TEC-197 (000055): header plus one item per unit, siblings of one
+	// parent (dealers or distributors), shipped/received steps.
+	arg := db.InsertTransferRequestParams{
 		FromOrgID: f.dealer.ID, BrandID: f.brandID, ToOrgID: f.dealer2.ID, ApproverOrgID: f.dist.ID,
-		ProductID: f.fixed.ID, Quantity: pgtype.Int4{Int32: 2, Valid: true}, Currency: f.currency,
+		Currency: f.currency,
 	}
-	req, err := f.q.CreateStockTransferRequest(ctx, arg)
-	if err != nil || req.Status != "requested" || req.OrganizationID != f.dealer.ID {
+	req, err := f.q.InsertTransferRequest(ctx, arg)
+	if err != nil || req.Status != "requested" || req.OrganizationID != f.dealer.ID ||
+		!strings.HasPrefix(req.TransferNo, "TRF-") {
 		t.Fatalf("transfer = %+v, %v", req, err)
 	}
 
 	f.expectCode(t, "approver is not the parent", func(sp pgx.Tx) error {
 		bad := arg
 		bad.ApproverOrgID = f.centerID
-		_, err := db.New(sp).CreateStockTransferRequest(ctx, bad)
+		_, err := db.New(sp).InsertTransferRequest(ctx, bad)
+		return err
+	}, "23514")
+	dist2 := f.org(t, "dist2", "distributor", f.centerID)
+	other := f.org(t, "dealer3", "dealer", dist2.ID)
+	f.expectCode(t, "dealer under another parent", func(sp pgx.Tx) error {
+		bad := arg
+		bad.ToOrgID = other.ID
+		_, err := db.New(sp).InsertTransferRequest(ctx, bad)
+		return err
+	}, "23514")
+	f.expectCode(t, "dealer to distributor", func(sp pgx.Tx) error {
+		bad := db.InsertTransferRequestParams{
+			FromOrgID: f.dealer.ID, BrandID: f.brandID, ToOrgID: dist2.ID, ApproverOrgID: f.centerID, Currency: f.currency,
+		}
+		_, err := db.New(sp).InsertTransferRequest(ctx, bad)
 		return err
 	}, "23514")
 	f.expectConstraint(t, "to self", "23514", "chk_stock_transfer_requests_parties", func(sp pgx.Tx) error {
 		bad := arg
 		bad.ToOrgID = f.dealer.ID
-		_, err := db.New(sp).CreateStockTransferRequest(ctx, bad)
+		_, err := db.New(sp).InsertTransferRequest(ctx, bad)
 		return err
 	})
 	f.expectConstraint(t, "invalid status", "23514", "chk_stock_transfer_requests_status", func(sp pgx.Tx) error {
-		_, err := sp.Exec(ctx, `UPDATE stock_transfer_requests SET status = 'bogus' WHERE id = $1`, req.ID)
+		_, err := sp.Exec(ctx, `UPDATE stock_transfer_requests SET status = 'completed' WHERE id = $1`, req.ID)
+		return err
+	})
+	f.expectConstraint(t, "shipped without timestamp", "23514", "chk_stock_transfer_requests_shipped", func(sp pgx.Tx) error {
+		_, err := sp.Exec(ctx, `UPDATE stock_transfer_requests SET status = 'shipped', decided_at = NOW() WHERE id = $1`, req.ID)
 		return err
 	})
 
-	ok, err := f.q.ApproveStockTransferRequest(ctx, db.ApproveStockTransferRequestParams{
-		ID: req.ID, UnitPrice: numeric(t, "10.0000"), LineTotal: numeric(t, "20.00"),
+	// Sibling distributors under the center are allowed.
+	if _, err := f.q.InsertTransferRequest(ctx, db.InsertTransferRequestParams{
+		FromOrgID: f.dist.ID, BrandID: f.brandID, ToOrgID: dist2.ID, ApproverOrgID: f.centerID, Currency: f.currency,
+	}); err != nil {
+		t.Fatalf("sibling distributors: %v", err)
+	}
+
+	u, err := f.q.CreateUnit(ctx, f.unitParams(t, f.fixed, "", ""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	item, err := f.q.InsertTransferRequestItem(ctx, db.InsertTransferRequestItemParams{
+		RequestID: req.ID, OrganizationID: req.OrganizationID, BrandID: req.BrandID,
+		UnitID: u.ID, ProductID: f.fixed.ID, Quantity: pgtype.Int4{Int32: 2, Valid: true},
 	})
+	if err != nil {
+		t.Fatalf("item: %v", err)
+	}
+	f.expectConstraint(t, "same unit twice", "23505", "uq_stock_transfer_request_items_unit", func(sp pgx.Tx) error {
+		_, err := db.New(sp).InsertTransferRequestItem(ctx, db.InsertTransferRequestItemParams{
+			RequestID: req.ID, OrganizationID: req.OrganizationID, BrandID: req.BrandID,
+			UnitID: u.ID, ProductID: f.fixed.ID, Quantity: pgtype.Int4{Int32: 1, Valid: true},
+		})
+		return err
+	})
+	if n, err := f.q.CountOpenTransferItemsByUnit(ctx, db.CountOpenTransferItemsByUnitParams{UnitID: u.ID}); err != nil || n != 1 {
+		t.Fatalf("open items = %d, %v", n, err)
+	}
+
+	ok, err := f.q.DecideTransferRequest(ctx, db.DecideTransferRequestParams{ID: req.ID, Status: "approved"})
 	if err != nil || ok.Status != "approved" || !ok.DecidedAt.Valid {
 		t.Fatalf("approve = %+v, %v", ok, err)
 	}
-	done, err := f.q.CompleteStockTransferRequest(ctx, req.ID)
-	if err != nil || done.Status != "completed" {
-		t.Fatalf("complete = %+v, %v", done, err)
+	if err := f.q.SetTransferItemPrice(ctx, db.SetTransferItemPriceParams{
+		ID: item.ID, UnitPrice: numeric(t, "10.0000"), LineTotal: numeric(t, "20.00"),
+	}); err != nil {
+		t.Fatal(err)
 	}
-	list, err := f.q.ListStockTransferRequestsInScope(ctx, db.ListStockTransferRequestsInScopeParams{
-		BrandID: f.brandID, OrgIds: []int64{f.dist.ID}, RowLimit: 10,
+	shipped, err := f.q.ShipTransferRequest(ctx, db.ShipTransferRequestParams{ID: req.ID})
+	if err != nil || shipped.Status != "shipped" || !shipped.ShippedAt.Valid {
+		t.Fatalf("ship = %+v, %v", shipped, err)
+	}
+	done, err := f.q.ReceiveTransferRequest(ctx, db.ReceiveTransferRequestParams{ID: req.ID})
+	if err != nil || done.Status != "received" || !done.ReceivedAt.Valid {
+		t.Fatalf("receive = %+v, %v", done, err)
+	}
+	if n, err := f.q.CountOpenTransferItemsByUnit(ctx, db.CountOpenTransferItemsByUnitParams{UnitID: u.ID}); err != nil || n != 0 {
+		t.Fatalf("open items after receipt = %d, %v", n, err)
+	}
+	list, err := f.q.ListTransferRequestsForOrg(ctx, db.ListTransferRequestsForOrgParams{
+		BrandID: f.brandID, Direction: "approval", OrgID: f.dist.ID, RowLimit: 10,
 	})
-	if err != nil || len(list) != 1 {
-		t.Fatalf("scope list = %+v, %v", list, err)
+	if err != nil || len(list) != 1 || list[0].ID != req.ID {
+		t.Fatalf("approval list = %+v, %v", list, err)
+	}
+	incoming, err := f.q.CountTransferRequestsForOrg(ctx, db.CountTransferRequestsForOrgParams{
+		BrandID: f.brandID, Direction: "incoming", OrgID: f.dealer2.ID,
+	})
+	if err != nil || incoming != 1 {
+		t.Fatalf("incoming = %d, %v", incoming, err)
 	}
 }

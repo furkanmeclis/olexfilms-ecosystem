@@ -95,6 +95,9 @@ import (
 	storagemodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/storage"
 	storagehandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/storage/handler"
 	storageusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/storage/usecase"
+	transfersmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/transfers"
+	transfershandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/transfers/handler"
+	transfersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/transfers/usecase"
 	vehiclecatalogmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/vehiclecatalog"
 	vehiclecataloghandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/vehiclecatalog/handler"
 	vehiclecatalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/vehiclecatalog/usecase"
@@ -373,6 +376,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	ordersSvc := ordersusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries), ratesSvc).
 		WithReceiptHook(ordersusecase.NewAccountingBridge(accountingPoster))
 	ordersmodule.RegisterRoutes(mux, ordershandler.New(ordersSvc), tokens, loader, deps.Queries, featureSvc)
+	// TEC-197: stock transfer requests between siblings (K13).
+	transfersSvc := transfersusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries))
+	transfersmodule.RegisterRoutes(mux, transfershandler.New(transfersSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-179: services (draft, items from stock, stock-free transitions, images).
 	servicesSvc := servicesusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries))
 	servicesmodule.RegisterRoutes(mux, serviceshandler.New(servicesSvc, deps.Storage), tokens, loader, deps.Queries, featureSvc)

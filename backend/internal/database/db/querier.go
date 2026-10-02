@@ -39,6 +39,7 @@ type Querier interface {
 	AttachNotificationDelivery(ctx context.Context, arg AttachNotificationDeliveryParams) error
 	CancelService(ctx context.Context, arg CancelServiceParams) (Service, error)
 	CancelStockTransferRequest(ctx context.Context, id int64) (StockTransferRequest, error)
+	CancelTransferRequest(ctx context.Context, arg CancelTransferRequestParams) (StockTransferRequest, error)
 	CancelVehicleTransfer(ctx context.Context, id int64) (VehicleTransfer, error)
 	// Vehicle transfer (decision 6): the active warranties of the vehicle move
 	// to the new owner in the transfer transaction.
@@ -92,6 +93,9 @@ type Querier interface {
 	CountMessagesByExternalID(ctx context.Context, arg CountMessagesByExternalIDParams) (int64, error)
 	CountNotificationDeliveries(ctx context.Context, arg CountNotificationDeliveriesParams) (int64, error)
 	CountNotificationsForUser(ctx context.Context, arg CountNotificationsForUserParams) (int64, error)
+	// A unit is on at most one open (requested or approved) request; the
+	// caller holds the unit row lock.
+	CountOpenTransferItemsByUnit(ctx context.Context, arg CountOpenTransferItemsByUnitParams) (int64, error)
 	CountOrdersByBuyer(ctx context.Context, arg CountOrdersByBuyerParams) (int64, error)
 	CountOrdersBySeller(ctx context.Context, arg CountOrdersBySellerParams) (int64, error)
 	CountOrdersInScope(ctx context.Context, arg CountOrdersInScopeParams) (int64, error)
@@ -118,6 +122,8 @@ type Querier interface {
 	CountStockReclassificationsScoped(ctx context.Context, arg CountStockReclassificationsScopedParams) (int64, error)
 	CountStorageActivity(ctx context.Context, objectKey string) (int64, error)
 	CountStorageTrash(ctx context.Context) (int64, error)
+	CountTransferRequestItems(ctx context.Context, requestID int64) (int64, error)
+	CountTransferRequestsForOrg(ctx context.Context, arg CountTransferRequestsForOrgParams) (int64, error)
 	CountUnreadInappForUser(ctx context.Context, userID pgtype.Int8) (int64, error)
 	// Customer cari accounts are ledgers (append-only spirit): they are not
 	// moved, only reported.
@@ -246,6 +252,7 @@ type Querier interface {
 	DeactivateDocumentTemplates(ctx context.Context, arg DeactivateDocumentTemplatesParams) error
 	DecideQRLoginChallenge(ctx context.Context, arg DecideQRLoginChallengeParams) (QrLoginChallenge, error)
 	DecideStockReclassification(ctx context.Context, arg DecideStockReclassificationParams) (StockReclassification, error)
+	DecideTransferRequest(ctx context.Context, arg DecideTransferRequestParams) (StockTransferRequest, error)
 	// Rebuild only (TEC-94d).
 	DeleteAllBinProductStocks(ctx context.Context) (int64, error)
 	// Rebuild only (TEC-94d).
@@ -504,6 +511,7 @@ type Querier interface {
 	GetStorageLinkByUUID(ctx context.Context, argUuid uuid.UUID) (StorageLink, error)
 	GetStorageTrashByOriginalKey(ctx context.Context, originalKey string) (StorageTrash, error)
 	GetStorageTrashByUUID(ctx context.Context, argUuid uuid.UUID) (StorageTrash, error)
+	GetTransferRequestByUUID(ctx context.Context, arg GetTransferRequestByUUIDParams) (StockTransferRequest, error)
 	GetUnit(ctx context.Context, id int64) (Unit, error)
 	GetUnitByBarcode(ctx context.Context, arg GetUnitByBarcodeParams) (Unit, error)
 	GetUnitByUUID(ctx context.Context, argUuid uuid.UUID) (Unit, error)
@@ -597,6 +605,11 @@ type Querier interface {
 	InsertStorageShare(ctx context.Context, arg InsertStorageShareParams) (StorageShare, error)
 	InsertStorageStar(ctx context.Context, arg InsertStorageStarParams) (StorageStar, error)
 	InsertStorageTrash(ctx context.Context, arg InsertStorageTrashParams) (StorageTrash, error)
+	// Stock transfer requests between siblings (TEC-197, K13). The giver
+	// (from_org_id = organization_id) requests, the receiver or the common
+	// parent (approver_org_id) decides, the giver ships, the receiver receives.
+	InsertTransferRequest(ctx context.Context, arg InsertTransferRequestParams) (StockTransferRequest, error)
+	InsertTransferRequestItem(ctx context.Context, arg InsertTransferRequestItemParams) (StockTransferRequestItem, error)
 	// ---------------------------------------------------------------------------
 	// Unit current state (serial units; one active owner).
 	InsertUnitCurrentState(ctx context.Context, arg InsertUnitCurrentStateParams) (UnitCurrentState, error)
@@ -850,6 +863,13 @@ type Querier interface {
 	ListStorageTrash(ctx context.Context, arg ListStorageTrashParams) ([]StorageTrash, error)
 	ListStuckProcessingNotificationIDs(ctx context.Context, staleMinutes int32) ([]int64, error)
 	ListTerritories(ctx context.Context, arg ListTerritoriesParams) ([]ListTerritoriesRow, error)
+	ListTransferRequestItems(ctx context.Context, requestID int64) ([]ListTransferRequestItemsRow, error)
+	// Requests where org is the giver, the receiver or the common parent.
+	// direction: '' (all), 'outgoing' (giver), 'incoming' (receiver),
+	// 'approval' (parent).
+	ListTransferRequestsForOrg(ctx context.Context, arg ListTransferRequestsForOrgParams) ([]StockTransferRequest, error)
+	// Active organizations of the same type, brand and parent (K13 siblings).
+	ListTransferSiblings(ctx context.Context, arg ListTransferSiblingsParams) ([]Organization, error)
 	ListUnitCurrentStatesByHolder(ctx context.Context, arg ListUnitCurrentStatesByHolderParams) ([]ListUnitCurrentStatesByHolderRow, error)
 	ListUnitCurrentStatesByUnitIDs(ctx context.Context, ids []int64) ([]UnitCurrentState, error)
 	// Brand-independent barcode lookup for the warehouse scanner (K20): the
@@ -947,6 +967,7 @@ type Querier interface {
 	LockStockTransferRequest(ctx context.Context, arg LockStockTransferRequestParams) (StockTransferRequest, error)
 	// Serializes territory writes of one (brand, country) inside a transaction.
 	LockTerritoryArea(ctx context.Context, arg LockTerritoryAreaParams) error
+	LockTransferRequestByUUID(ctx context.Context, arg LockTransferRequestByUUIDParams) (StockTransferRequest, error)
 	// Locks the unit row for meters/status/product changes in ledger.Post.
 	LockUnit(ctx context.Context, id int64) (Unit, error)
 	// Serialises every ledger write on one unit (double owner / double
@@ -1029,6 +1050,7 @@ type Querier interface {
 	QueueImportJob(ctx context.Context, argUuid uuid.UUID) (ImportJob, error)
 	// Recomputes the subtotal from the lines (total = subtotal + tax_total).
 	RecalculateOrderTotals(ctx context.Context, id int64) (Order, error)
+	ReceiveTransferRequest(ctx context.Context, arg ReceiveTransferRequestParams) (StockTransferRequest, error)
 	RejectStockTransferRequest(ctx context.Context, arg RejectStockTransferRequestParams) (StockTransferRequest, error)
 	// Cancel: releases every active reservation of the order.
 	ReleaseReservationsByOrder(ctx context.Context, orderID int64) (int64, error)
@@ -1099,6 +1121,10 @@ type Querier interface {
 	SetServiceReviewRequestSent(ctx context.Context, id int64) (Service, error)
 	SetStockImportBatchState(ctx context.Context, arg SetStockImportBatchStateParams) (StockImportBatch, error)
 	SetStockImportRowErrors(ctx context.Context, arg SetStockImportRowErrorsParams) (StockImportRow, error)
+	SetTransferItemInMovement(ctx context.Context, arg SetTransferItemInMovementParams) error
+	SetTransferItemOutMovement(ctx context.Context, arg SetTransferItemOutMovementParams) error
+	SetTransferItemPrice(ctx context.Context, arg SetTransferItemPriceParams) error
+	SetTransferItemRestoreMovement(ctx context.Context, arg SetTransferItemRestoreMovementParams) error
 	SetUnitRemainingMetersForRepair(ctx context.Context, arg SetUnitRemainingMetersForRepairParams) error
 	SetUnitStatusForRepair(ctx context.Context, arg SetUnitStatusForRepairParams) error
 	SetUserEmailVerified(ctx context.Context, id int64) (User, error)
@@ -1108,12 +1134,15 @@ type Querier interface {
 	SetVehicleTransferVerified(ctx context.Context, arg SetVehicleTransferVerifiedParams) (VehicleTransfer, error)
 	SetWhatsAppInstance(ctx context.Context, arg SetWhatsAppInstanceParams) (WhatsappSetting, error)
 	SetWhatsAppSMSFallback(ctx context.Context, smsFallbackEnabled bool) (WhatsappSetting, error)
+	ShipTransferRequest(ctx context.Context, arg ShipTransferRequestParams) (StockTransferRequest, error)
 	SlugExists(ctx context.Context, slug string) (bool, error)
 	SoftDeleteVehicle(ctx context.Context, id int64) (int64, error)
 	// Fixed barcodes: total quantity actively reserved by the seller
 	// organization, checked against what that organization holds by the use
 	// case (sum <= on hand, under the unit row lock).
 	SumActiveReservedQuantityByUnit(ctx context.Context, arg SumActiveReservedQuantityByUnitParams) (int64, error)
+	// Fixed barcode quantity on open requests of the giver (excluding one).
+	SumOpenTransferQuantityByUnit(ctx context.Context, arg SumOpenTransferQuantityByUnitParams) (int64, error)
 	// The supplier of an organization is its parent in the tree (K9).
 	// Returns no rows for a center.
 	SupplierOf(ctx context.Context, id int64) (Organization, error)
