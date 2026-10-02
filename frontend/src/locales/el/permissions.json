@@ -161,5 +161,7 @@
   "labels.transfers.request": "Αίτημα μεταφοράς αποθέματος",
   "labels.transfers.approve": "Έγκριση μεταφορών αποθέματος",
   "groups.orders": "Παραγγελίες",
-  "groups.transfers": "Μεταφορές"
+  "groups.transfers": "Μεταφορές",
+  "labels.services.complete": "Ολοκλήρωση υπηρεσιών",
+  "labels.services.cancel": "Ακύρωση υπηρεσιών"
 }

@@ -161,5 +161,7 @@
   "labels.transfers.request": "Запит на переміщення залишків",
   "labels.transfers.approve": "Затвердження переміщень залишків",
   "groups.orders": "Замовлення",
-  "groups.transfers": "Переміщення"
+  "groups.transfers": "Переміщення",
+  "labels.services.complete": "Завершення послуг",
+  "labels.services.cancel": "Скасування послуг"
 }

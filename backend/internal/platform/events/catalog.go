@@ -222,6 +222,23 @@ const (
 	TransfersCancelled = "transfers.cancelled"
 )
 
+// Service domain events (TEC-97 / TEC-178): one per status transition,
+// written to the outbox in the transition's transaction. service.completed
+// is written in the completion transaction together with the stock
+// consumption; TEC-98 opens the warranty from it (decision 7).
+const (
+	ServiceCreated      = "service.created"
+	ServiceUpdated      = "service.updated"
+	ServicePending      = "service.pending"
+	ServiceProcessing   = "service.processing"
+	ServiceReady        = "service.ready"
+	ServiceCompleted    = "service.completed"
+	ServiceCancelled    = "service.cancelled"
+	ServiceImageAdded   = "service.image_added"
+	ServiceImageRemoved = "service.image_removed"
+	ServiceNoteAdded    = "service.note_added"
+)
+
 // Contracts domain events.
 const (
 	ContractsInstanceSigned = "contracts.instance_signed"
@@ -451,6 +468,16 @@ func catalogConstants() []string {
 		TransfersRejected,
 		TransfersCompleted,
 		TransfersCancelled,
+		ServiceCreated,
+		ServiceUpdated,
+		ServicePending,
+		ServiceProcessing,
+		ServiceReady,
+		ServiceCompleted,
+		ServiceCancelled,
+		ServiceImageAdded,
+		ServiceImageRemoved,
+		ServiceNoteAdded,
 		ContractsInstanceSigned,
 		AuthWelcome,
 		AuthEmailVerification,

@@ -161,5 +161,7 @@
   "labels.transfers.request": "Запрос перемещения остатков",
   "labels.transfers.approve": "Утверждение перемещений остатков",
   "groups.orders": "Заказы",
-  "groups.transfers": "Перемещения"
+  "groups.transfers": "Перемещения",
+  "labels.services.complete": "Завершение услуг",
+  "labels.services.cancel": "Отмена услуг"
 }

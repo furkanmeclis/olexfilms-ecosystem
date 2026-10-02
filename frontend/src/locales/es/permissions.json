@@ -161,5 +161,7 @@
   "labels.transfers.request": "Solicitar transferencia de existencias",
   "labels.transfers.approve": "Aprobar transferencias de existencias",
   "groups.orders": "Pedidos",
-  "groups.transfers": "Transferencias"
+  "groups.transfers": "Transferencias",
+  "labels.services.complete": "Completar servicios",
+  "labels.services.cancel": "Cancelar servicios"
 }
