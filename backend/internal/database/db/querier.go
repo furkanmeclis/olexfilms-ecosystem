@@ -179,6 +179,7 @@ type Querier interface {
 	// ---------------------------------------------------------------------------
 	// Stock import staging.
 	CreateStockImportBatch(ctx context.Context, arg CreateStockImportBatchParams) (StockImportBatch, error)
+	CreateStockImportBatchForJob(ctx context.Context, arg CreateStockImportBatchForJobParams) (StockImportBatch, error)
 	// ---------------------------------------------------------------------------
 	// Reclassification requests.
 	CreateStockReclassification(ctx context.Context, arg CreateStockReclassificationParams) (StockReclassification, error)
@@ -266,6 +267,7 @@ type Querier interface {
 	DeleteServiceItem(ctx context.Context, arg DeleteServiceItemParams) (int64, error)
 	DeleteServiceItemsByService(ctx context.Context, serviceID int64) (int64, error)
 	DeleteStaleQRLoginChallenges(ctx context.Context) (int64, error)
+	DeleteStockImportRows(ctx context.Context, batchID int64) (int64, error)
 	DeleteStorageShare(ctx context.Context, argUuid uuid.UUID) error
 	DeleteStorageStar(ctx context.Context, arg DeleteStorageStarParams) error
 	DeleteStorageTrashByUUID(ctx context.Context, argUuid uuid.UUID) error
@@ -451,6 +453,7 @@ type Querier interface {
 	GetServiceRefs(ctx context.Context, id int64) (GetServiceRefsRow, error)
 	GetStepupSettings(ctx context.Context) (StepupSetting, error)
 	GetStockImportBatch(ctx context.Context, arg GetStockImportBatchParams) (StockImportBatch, error)
+	GetStockImportBatchByJob(ctx context.Context, importJobID pgtype.Int8) (StockImportBatch, error)
 	GetStockMovement(ctx context.Context, id int64) (StockMovement, error)
 	GetStockMovementByIdempotencyKey(ctx context.Context, idempotencyKey string) (StockMovement, error)
 	GetStockReclassification(ctx context.Context, arg GetStockReclassificationParams) (StockReclassification, error)
@@ -480,6 +483,7 @@ type Querier interface {
 	// Vehicle with its customer and car brand/model, for API responses.
 	GetVehicleViewByUUID(ctx context.Context, argUuid uuid.UUID) (GetVehicleViewByUUIDRow, error)
 	GetWarehouseLocation(ctx context.Context, arg GetWarehouseLocationParams) (WarehouseLocation, error)
+	GetWarehouseLocationByCode(ctx context.Context, arg GetWarehouseLocationByCodeParams) (WarehouseLocation, error)
 	GetWarehouseLocationByUUID(ctx context.Context, argUuid uuid.UUID) (WarehouseLocation, error)
 	GetWarranty(ctx context.Context, arg GetWarrantyParams) (Warranty, error)
 	// Public page /garanti/{public_code} (decision 1).
@@ -862,6 +866,10 @@ type Querier interface {
 	// completions sharing a unit).
 	LockServiceItems(ctx context.Context, serviceID int64) ([]ServiceItem, error)
 	LockStockImportBatch(ctx context.Context, id int64) (StockImportBatch, error)
+	// TEC-158: safe bulk stock import (staging, dry run, batch, undo). The
+	// batch belongs to one ioengine import job; rows are staged by the preview
+	// and applied/undone through ledger.Post in one transaction.
+	LockStockImportBatchByJob(ctx context.Context, importJobID pgtype.Int8) (StockImportBatch, error)
 	LockStockReclassification(ctx context.Context, arg LockStockReclassificationParams) (StockReclassification, error)
 	LockStockReclassificationByUUID(ctx context.Context, argUuid uuid.UUID) (StockReclassification, error)
 	LockStockReservation(ctx context.Context, id int64) (StockReservation, error)
@@ -913,6 +921,7 @@ type Querier interface {
 	MarkOutboxPublished(ctx context.Context, id int64) error
 	MarkOutboxRetry(ctx context.Context, arg MarkOutboxRetryParams) error
 	MarkQRLoginChallengeScanned(ctx context.Context, code string) (QrLoginChallenge, error)
+	MarkStockImportRowUndone(ctx context.Context, arg MarkStockImportRowUndoneParams) (StockImportRow, error)
 	MarkUserPhoneVerified(ctx context.Context, id int64) error
 	// Stamped in the notification transaction; a second run is a no-op.
 	MarkWarrantyNotified30(ctx context.Context, arg MarkWarrantyNotified30Params) (int64, error)
@@ -972,6 +981,8 @@ type Querier interface {
 	// Ciphertext and mask are written together; NULL/NULL clears the value.
 	SetCustomerNationalID(ctx context.Context, arg SetCustomerNationalIDParams) (CustomerProfile, error)
 	SetCustomerTaxNo(ctx context.Context, arg SetCustomerTaxNoParams) (CustomerProfile, error)
+	// TEC-158: staged importers keep their apply/undo report in preview_json.
+	SetImportJobPreview(ctx context.Context, arg SetImportJobPreviewParams) (ImportJob, error)
 	SetNotificationChannelEnabled(ctx context.Context, arg SetNotificationChannelEnabledParams) (NotificationChannelSetting, error)
 	SetOrderCancelReason(ctx context.Context, arg SetOrderCancelReasonParams) (Order, error)
 	SetOrderExternalReference(ctx context.Context, arg SetOrderExternalReferenceParams) (Order, error)
@@ -991,6 +1002,8 @@ type Querier interface {
 	// Written in the completion transaction before the status flips.
 	SetServiceItemMovement(ctx context.Context, arg SetServiceItemMovementParams) (ServiceItem, error)
 	SetServiceReviewRequestSent(ctx context.Context, id int64) (Service, error)
+	SetStockImportBatchState(ctx context.Context, arg SetStockImportBatchStateParams) (StockImportBatch, error)
+	SetStockImportRowErrors(ctx context.Context, arg SetStockImportRowErrorsParams) (StockImportRow, error)
 	SetUnitRemainingMetersForRepair(ctx context.Context, arg SetUnitRemainingMetersForRepairParams) error
 	SetUnitStatusForRepair(ctx context.Context, arg SetUnitStatusForRepairParams) error
 	SetUserEmailVerified(ctx context.Context, id int64) (User, error)

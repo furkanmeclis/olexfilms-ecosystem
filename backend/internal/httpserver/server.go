@@ -383,12 +383,20 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		// TEC-161: personal data export (center and portal).
 		customersusecase.NewDataExportAdapter(customersSvc),
 		customersusecase.NewPortalDataExportAdapter(customersSvc),
+		// TEC-158: staged stock import (writes through ledger.Post).
+		stockusecase.NewImporter(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)),
 	)
 	exportSvc := exportusecase.New(deps.Queries, deps.Storage, ioReg, deps.Queue, notifSvc, activityRec, log)
 	exportSvc.SetDocumentPDF(pdfClient)
 	accountingH.WithExports(exportSvc)
 	customersH.WithExports(exportSvc)
-	importSvc := importusecase.New(deps.Queries, deps.Storage, ioReg, deps.Queue, notifSvc, activityRec, log)
+	// A nil *queue.Client must reach the import service as a nil Enqueuer
+	// (sync mode); a typed nil would fail every confirm.
+	var importQueue importusecase.Enqueuer
+	if deps.Queue != nil {
+		importQueue = deps.Queue
+	}
+	importSvc := importusecase.New(deps.Queries, deps.Storage, ioReg, importQueue, notifSvc, activityRec, log)
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(deps.Queries),
 		bulkadapters.NewRoles(deps.Queries),
@@ -432,6 +440,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	stockmodule.RegisterRoutes(mux, stockhandler.New(stockusecase.New(deps.Queries)),
 		stockhandler.NewReclassify(stockusecase.NewReclassifications(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries))),
 		featureSvc, tokens, loader, deps.Queries, stepUpSvc)
+	// TEC-158: stock import upload (preview/confirm/undo on /v1/tenant/imports).
+	stockmodule.RegisterImportRoutes(mux, stockhandler.NewImport(importSvc), featureSvc, tokens, loader, deps.Queries)
 	// TEC-156: super_admin projection drift check (dry run).
 	stockmodule.RegisterPlatformRoutes(mux, stockhandler.NewRebuild(stockrebuild.New(deps.DB, deps.Queries), deps.Queries), tokens, loader)
 	// TEC-149: vehicle catalog (global car brands/models, super_admin writes).
