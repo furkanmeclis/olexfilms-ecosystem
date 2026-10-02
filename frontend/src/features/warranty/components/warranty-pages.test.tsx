@@ -24,6 +24,9 @@ vi.mock("next/link", () => ({
     createElement("a", { href, ...rest }, children as never),
 }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("@/providers/toast-provider", () => ({
+  appToast: { success: vi.fn(), error: vi.fn() },
+}));
 vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({
     t: (key: string, params?: Record<string, string | number>) =>
@@ -256,6 +259,10 @@ describe("WarrantyDetailPage", () => {
     );
     expect(container.textContent).toContain("Film PPF");
     expect(container.querySelector("[data-testid=void-open]")).toBeNull();
+    // TEC-188: the certificate PDF of an active warranty's service.
+    expect(
+      container.querySelector("[data-testid=warranty-pdf]"),
+    ).not.toBeNull();
   });
 
   it("voids with a reason", async () => {
@@ -317,6 +324,13 @@ describe("PortalWarranties", () => {
     expect(items[0].querySelector("a")?.getAttribute("href")).toBe(
       "/garanti/PUBCODE123456",
     );
+    // PDF only for the active warranty.
+    expect(
+      container.querySelector("[data-testid=warranty-pdf-w-1]"),
+    ).not.toBeNull();
+    expect(
+      container.querySelector("[data-testid=warranty-pdf-w-2]"),
+    ).toBeNull();
     // No product filter in the portal.
     expect(container.querySelector("#warranty-product")).toBeNull();
 

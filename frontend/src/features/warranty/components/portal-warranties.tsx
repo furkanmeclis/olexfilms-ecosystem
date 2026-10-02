@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { routes } from "@/config/routes";
 import { portalApi } from "@/features/portal/lib/portal-client";
 import { WarrantyFilterBar } from "@/features/warranty/components/warranty-filter-bar";
+import { WarrantyCertificateButton } from "@/features/warranty/components/warranty-certificate-button";
 import { WarrantyProgressBar } from "@/features/warranty/components/warranty-progress";
 import {
   buildWarrantyListQuery,
@@ -22,6 +23,7 @@ import {
   warrantyVehicleTitle,
   type WarrantyListFilters,
 } from "@/features/warranty/lib/warranty-list";
+import { portalCertificateClient } from "@/features/warranty/services/certificate.service";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useLocale } from "@/providers/locale-provider";
 
@@ -33,7 +35,7 @@ export const PORTAL_WARRANTY_PAGE_SIZE = 10;
  * and the elapsed-period bar.
  */
 export function PortalWarranties() {
-  const { t, format } = useLocale();
+  const { t, format, locale } = useLocale();
   const [filters, setFilters] = useState<WarrantyListFilters>(
     EMPTY_WARRANTY_FILTERS,
   );
@@ -135,6 +137,13 @@ export function PortalWarranties() {
                     />
                   </div>
                   <WarrantyProgressBar warranty={w} />
+                  {w.status === "active" ? (
+                    <WarrantyCertificateButton
+                      client={portalCertificateClient(w.service.uuid)}
+                      locale={locale}
+                      testId={`warranty-pdf-${w.uuid}`}
+                    />
+                  ) : null}
                   <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-2 text-xs">
                     <span>
                       {format.date(w.start_at)} – {format.date(w.end_at)} ·{" "}

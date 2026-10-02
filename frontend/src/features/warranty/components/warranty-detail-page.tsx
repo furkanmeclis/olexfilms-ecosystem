@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import { WarrantyCertificateButton } from "@/features/warranty/components/warranty-certificate-button";
 import { WarrantyProgressBar } from "@/features/warranty/components/warranty-progress";
 import {
   warrantyHolderName,
@@ -30,6 +31,7 @@ import {
   warrantyVehicleTitle,
   type Warranty,
 } from "@/features/warranty/lib/warranty-list";
+import { panelCertificateClient } from "@/features/warranty/services/certificate.service";
 import {
   warrantyKeys,
   warrantyService,
@@ -144,7 +146,7 @@ export function WarrantyDetailPage({
   slug: string;
   uuid: string;
 }) {
-  const { t, format } = useLocale();
+  const { t, format, locale } = useLocale();
   const { can } = usePermission();
   const canRead = can(Permission.WarrantiesRead);
   const [voidOpen, setVoidOpen] = useState(false);
@@ -170,16 +172,27 @@ export function WarrantyDetailPage({
         { label: w ? w.public_code : t("warranty.detail.title") },
       ]}
       actions={
-        w?.can_void && can(Permission.WarrantiesVoid) ? (
-          <Button
-            type="button"
-            variant="destructive"
-            data-testid="void-open"
-            onClick={() => setVoidOpen(true)}
-          >
-            <ShieldOff className="size-4" />
-            {t("warranty.void.open")}
-          </Button>
+        w ? (
+          <div className="flex flex-wrap gap-2">
+            {/* TEC-188: the certificate PDF of the service (active only). */}
+            {w.status === "active" ? (
+              <WarrantyCertificateButton
+                client={panelCertificateClient(w.service.uuid)}
+                locale={locale}
+              />
+            ) : null}
+            {w.can_void && can(Permission.WarrantiesVoid) ? (
+              <Button
+                type="button"
+                variant="destructive"
+                data-testid="void-open"
+                onClick={() => setVoidOpen(true)}
+              >
+                <ShieldOff className="size-4" />
+                {t("warranty.void.open")}
+              </Button>
+            ) : null}
+          </div>
         ) : null
       }
     />
