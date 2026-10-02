@@ -9,6 +9,14 @@ const api = vi.hoisted(() => ({
   getService: vi.fn(),
 }));
 const state = vi.hoisted(() => ({ grants: new Set<string>() }));
+const cert = vi.hoisted(() => ({
+  request: vi.fn(),
+  get: vi.fn(),
+  download: vi.fn(),
+  forService: vi.fn(),
+  trigger: vi.fn(),
+  toast: { success: vi.fn(), error: vi.fn() },
+}));
 
 vi.mock("next/link", () => ({
   default: ({
@@ -54,6 +62,17 @@ vi.mock("@/components/ui/date-picker", () => ({
         onChange?.(e.target.value),
     }),
 }));
+vi.mock("@/features/warranty/services/certificate.service", () => ({
+  panelCertificateClient: (uuid: string) => {
+    cert.forService(uuid);
+    return { request: cert.request, get: cert.get, download: cert.download };
+  },
+}));
+vi.mock("@/lib/api/platform-form-request", async (orig) => ({
+  ...(await orig<object>()),
+  triggerBrowserDownload: cert.trigger,
+}));
+vi.mock("@/providers/toast-provider", () => ({ appToast: cert.toast }));
 vi.mock("@/hooks/use-debounce", () => ({
   useDebounce: <T,>(value: T) => value,
 }));
@@ -380,6 +399,48 @@ describe("ServiceDetailPage (TEC-183)", () => {
     // Completed: no wizard link; the PDF (TEC-196) is a disabled placeholder.
     expect($("[data-testid=continue-wizard]")).toBeNull();
     expect($("[data-testid=service-pdf]")?.hasAttribute("disabled")).toBe(true);
+  });
+
+  it("downloads the warranty PDF with warranties.read (TEC-188)", async () => {
+    state.grants = new Set(["services.read"]);
+    api.getService.mockResolvedValue(service());
+    await render(
+      createElement(ServiceDetailPage, { slug: "acme", uuid: "s1" }),
+    );
+    expect($("[data-testid=warranty-pdf]")).toBeNull();
+    act(() => root.unmount());
+
+    root = createRoot(container);
+    state.grants = new Set(["services.read", "warranties.read"]);
+    const done = {
+      uuid: "j1",
+      resource: "tenant.warranty.certificate",
+      format: "pdf",
+      status: "completed",
+      row_count: 1,
+      created_at: "2026-10-02T09:00:00Z",
+    };
+    cert.request.mockResolvedValue(done);
+    cert.download.mockResolvedValue({
+      blob: new Blob(["%PDF"]),
+      filename: "garanti.pdf",
+    });
+    await render(
+      createElement(ServiceDetailPage, { slug: "acme", uuid: "s1" }),
+    );
+    const button = $("[data-testid=warranty-pdf]") as HTMLButtonElement;
+    expect(button.textContent).toBe("warranty.certificate.download");
+    await act(async () => {
+      button.click();
+    });
+    await flush();
+    expect(cert.forService).toHaveBeenCalledWith("s1");
+    expect(cert.request).toHaveBeenCalled();
+    expect(cert.download).toHaveBeenCalledWith(done);
+    expect(cert.trigger).toHaveBeenCalledWith(expect.any(Blob), "garanti.pdf");
+    expect(cert.toast.success).toHaveBeenCalledWith(
+      "warranty.certificate.ready",
+    );
   });
 
   it("links a draft back to the wizard", async () => {

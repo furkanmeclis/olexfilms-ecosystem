@@ -64,6 +64,22 @@ JOIN car_models cm ON cm.id = s.car_model_id
 JOIN vehicles v ON v.id = w.vehicle_id
 WHERE w.public_code = sqlc.arg(public_code) AND w.brand_id = sqlc.arg(brand_id);
 
+-- Warranty certificate (TEC-188, one PDF per service, decision 2): the
+-- active warranties of a service with the covered product, unit and item.
+-- holder_user_id narrows to the portal customer's own warranties (a
+-- transferred vehicle's warranties belong to the new holder).
+-- name: ListWarrantyCertificateItems :many
+SELECT w.id, w.uuid, w.public_code, w.item_kind, w.start_at, w.end_at, w.holder_user_id,
+       p.name AS product_name, p.sku AS product_sku,
+       u.barcode AS unit_barcode, si.meters
+FROM warranties w
+JOIN products p ON p.id = w.product_id
+JOIN units u ON u.id = w.unit_id
+JOIN service_items si ON si.id = w.service_item_id
+WHERE w.service_id = sqlc.arg(service_id) AND w.brand_id = sqlc.arg(brand_id) AND w.status = 'active'
+  AND (sqlc.narg(holder_user_id)::bigint IS NULL OR w.holder_user_id = sqlc.narg(holder_user_id)::bigint)
+ORDER BY w.id;
+
 -- name: LockWarranty :one
 SELECT * FROM warranties
 WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id)

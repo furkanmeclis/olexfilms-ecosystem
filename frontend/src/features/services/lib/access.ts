@@ -55,3 +55,22 @@ export function canContinueWizard(
     resolveServiceWizardAccess(can).canStart
   );
 }
+
+/**
+ * "Warranty PDF" on the detail page (TEC-188): warranties.read and a
+ * completed service with at least one active warranty (the API answers 409
+ * NO_ACTIVE_WARRANTY otherwise).
+ */
+export function canDownloadWarrantyCertificate(
+  can: Can,
+  service: {
+    status: string;
+    warranties?: readonly { status: string }[] | null;
+  },
+): boolean {
+  return (
+    can(permissions.warranties.read) &&
+    service.status === "completed" &&
+    (service.warranties ?? []).some((w) => w.status === "active")
+  );
+}
