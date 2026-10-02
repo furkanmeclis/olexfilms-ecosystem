@@ -12008,9 +12008,8 @@ components:
       additionalProperties: false
       properties:
         organization_uuid:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: Scan only the units that touched this organization and its product stock rows.
 
     StockRebuildDiff:
