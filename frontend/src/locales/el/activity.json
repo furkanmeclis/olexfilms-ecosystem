@@ -184,5 +184,10 @@
   "resources.plate_formats": "Μορφές πινακίδων",
   "resources.exchange_rates": "Συναλλαγματικές ισοτιμίες",
   "resources.platform.legal_texts": "Νομικά κείμενα",
-  "actions.legal_texts.published": "Δημοσιεύτηκε έκδοση νομικού κειμένου"
+  "actions.legal_texts.published": "Δημοσιεύτηκε έκδοση νομικού κειμένου",
+  "actions.stock.reclassification.requested": "Ζητήθηκε επαναταξινόμηση",
+  "actions.stock.reclassification.approved": "Εγκρίθηκε επαναταξινόμηση",
+  "actions.stock.reclassification.rejected": "Απορρίφθηκε επαναταξινόμηση",
+  "actions.stock.reclassification.cancelled": "Αποσύρθηκε αίτημα επαναταξινόμησης",
+  "resources.stock.reclassification": "Επαναταξινόμηση αποθέματος"
 }

@@ -192,9 +192,16 @@ func (s *CronService) noticeContexts(ctx context.Context, q *db.Queries, rows []
 	return out, nil
 }
 
-// event builds the outbox event; the payload carries everything the
-// notification handler needs (recipient, brand, template variables).
+// event builds the outbox event of a cron task.
 func (s *CronService) event(name string, w db.Warranty, nc db.ListWarrantyNoticeContextsRow, days int) events.Event {
+	return warrantyEvent(name, w, nc, s.VerifyURL(w.PublicCode), days, nil)
+}
+
+// warrantyEvent builds a warranty outbox event; the payload carries
+// everything the notification handler needs (recipient, brand, template
+// variables). extra adds event specific keys.
+func warrantyEvent(name string, w db.Warranty, nc db.ListWarrantyNoticeContextsRow, verifyURL string, days int,
+	extra map[string]any) events.Event {
 	id, u := w.ID, w.Uuid
 	payload := map[string]any{
 		"warranty_uuid":     w.Uuid.String(),
@@ -210,10 +217,13 @@ func (s *CronService) event(name string, w db.Warranty, nc db.ListWarrantyNotice
 		"plate":             nc.Plate.String,
 		"product_name":      nc.ProductName,
 		"organization_name": nc.OrganizationName,
-		"verify_url":        s.VerifyURL(w.PublicCode),
+		"verify_url":        verifyURL,
 	}
 	if days > 0 {
 		payload["days"] = days
+	}
+	for k, v := range extra {
+		payload[k] = v
 	}
 	return events.New(name).
 		WithTenant(w.OrganizationID).
@@ -223,10 +233,14 @@ func (s *CronService) event(name string, w db.Warranty, nc db.ListWarrantyNotice
 
 // VerifyURL is the public warranty page of a public code.
 func (s *CronService) VerifyURL(publicCode string) string {
-	if s.verifyBaseURL == "" || publicCode == "" {
+	return verifyURL(s.verifyBaseURL, publicCode)
+}
+
+func verifyURL(base, publicCode string) string {
+	if base == "" || publicCode == "" {
 		return ""
 	}
-	return s.verifyBaseURL + "/garanti/" + publicCode
+	return base + "/garanti/" + publicCode
 }
 
 // EndDate formats the last covered day in the organization's zone. end_at

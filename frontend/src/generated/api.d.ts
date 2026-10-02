@@ -2749,6 +2749,122 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/stock/reclassifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Reclassification requests (barcode kept, product changed)
+         * @description Needs `stock.read`; requests of the organizations inside the viewer's reach (the requesting organization is the one holding the unit), newest first. `status` filters pending, approved, rejected or cancelled requests (TEC-157).
+         */
+        get: operations["listStockReclassifications"];
+        put?: never;
+        /**
+         * Request a reclassification of a unit
+         * @description Needs `stock.write`. The unit (by `barcode` or `unit_uuid`) must be on hand (available or placed) at the caller's active organization. The routing is checked at once and again on approval; each wrong routing has its own code: target of another brand (422 STOCK_RECLASSIFICATION_BRAND_MISMATCH), another unit type, roll vs piece or fixed vs serial (422 STOCK_RECLASSIFICATION_UNIT_TYPE_MISMATCH), the same product (422 STOCK_RECLASSIFICATION_SAME_PRODUCT), a passive product (422 STOCK_RECLASSIFICATION_PRODUCT_INACTIVE), a fixed barcode (422 STOCK_RECLASSIFICATION_FIXED_BARCODE), a used or void unit (409 STOCK_RECLASSIFICATION_UNIT_CONSUMED), a unit held by another organization, in transit or not in stock yet (409 STOCK_RECLASSIFICATION_UNIT_ELSEWHERE), a unit on an open service or reserved for an order (409 STOCK_RECLASSIFICATION_UNIT_IN_USE). At most one pending request per unit (409 STOCK_RECLASSIFICATION_PENDING_EXISTS). Nothing moves until a center user approves; the request is written to the audit log (`stock.reclassification.requested`).
+         */
+        post: operations["createStockReclassification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock/reclassifications/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * One reclassification request
+         * @description Needs `stock.read`; the requesting organization must be inside the viewer's reach (404 otherwise).
+         */
+        get: operations["getStockReclassification"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock/reclassifications/{uuid}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve and apply a reclassification
+         * @description Needs `stock.reclassify` (center, sensitive: 403 STEP_UP_REQUIRED without a recent step-up) with a scope reaching the request. The requester cannot approve its own request (403 STOCK_RECLASSIFICATION_SELF_APPROVAL). In one transaction the routing is checked again under the unit lock (same codes as the request; 409 STOCK_RECLASSIFICATION_PRODUCT_CHANGED when the unit no longer has the requested source product), one `reclassification` ledger movement is written (same owner and status, the new product, idempotency key `reclassification:stock_reclassification:<id>:reclassification:<barcode>`), the unit keeps its barcode and moves to the target product in the product stock projections, the request becomes approved with its movement, a `stock.reclassification` outbox event and an audit row (`stock.reclassification.approved`) are written. Approving an approved request again returns it and writes nothing; a rejected or cancelled request answers 409 STOCK_RECLASSIFICATION_NOT_PENDING.
+         */
+        post: operations["approveStockReclassification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock/reclassifications/{uuid}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a pending reclassification
+         * @description Needs `stock.reclassify` with a scope reaching the request. Nothing moves; repeating the rejection is a no-op, an approved or cancelled request answers 409 STOCK_RECLASSIFICATION_NOT_PENDING. Audit: `stock.reclassification.rejected`.
+         */
+        post: operations["rejectStockReclassification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock/reclassifications/{uuid}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Withdraw a pending reclassification
+         * @description Needs `stock.write`; only the requesting organization (404 otherwise). Nothing moves; repeating is a no-op, a decided request answers 409 STOCK_RECLASSIFICATION_NOT_PENDING. Audit: `stock.reclassification.cancelled`.
+         */
+        post: operations["cancelStockReclassification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/product-images/{key}": {
         parameters: {
             query?: never;
@@ -7514,7 +7630,7 @@ export interface components {
             movements_replayed: number;
             diff_count: number;
             diffs: components["schemas"]["StockRebuildDiff"][];
-            /** @description Breaks in a unit's movement chain (from_status / from_owner not equal to the replayed state) */
+            /** @description Breaks in a unit's movement chain (from_status / from_owner not equal to the replayed state; a product break around a reclassification) */
             anomalies: string[];
             /** Format: date-time */
             started_at: string;
@@ -7533,6 +7649,77 @@ export interface components {
             success: true;
             data: {
                 items: components["schemas"]["StockProduct"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        StockReclassificationStatus: "pending" | "approved" | "rejected" | "cancelled";
+        StockReclassificationInput: {
+            /** @description The unit's barcode (or unit_uuid) */
+            barcode?: string;
+            /** Format: uuid */
+            unit_uuid?: string;
+            /** Format: uuid */
+            to_product_uuid: string;
+            reason: string;
+        };
+        StockReclassificationDecisionInput: {
+            note?: string;
+        };
+        StockReclassificationProduct: {
+            /** Format: uuid */
+            uuid: string;
+            sku: string;
+            name: string;
+            unit_type: components["schemas"]["CatalogUnitType"];
+            uses_fixed_barcode: boolean;
+        };
+        StockUserRef: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+        };
+        StockReclassification: {
+            /** Format: uuid */
+            uuid: string;
+            status: components["schemas"]["StockReclassificationStatus"];
+            unit: {
+                /** Format: uuid */
+                uuid: string;
+                barcode: string;
+            };
+            organization: components["schemas"]["StockOrgRef"];
+            from_product: components["schemas"]["StockReclassificationProduct"];
+            to_product: components["schemas"]["StockReclassificationProduct"];
+            reason: string;
+            requested_by: components["schemas"]["StockUserRef"] | null;
+            decided_by: components["schemas"]["StockUserRef"] | null;
+            /** Format: date-time */
+            decided_at: string | null;
+            decision_note: string | null;
+            /**
+             * Format: uuid
+             * @description The reclassification movement of an approved request
+             */
+            movement_uuid: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        EnvelopeStockReclassification: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["StockReclassification"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeStockReclassificationPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["StockReclassification"][];
                 /** Format: int64 */
                 total: number;
                 limit: number;
@@ -13951,6 +14138,183 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    listStockReclassifications: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                status?: components["schemas"]["StockReclassificationStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reclassification requests */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockReclassificationPage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    createStockReclassification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockReclassificationInput"];
+            };
+        };
+        responses: {
+            /** @description Pending request */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockReclassification"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getStockReclassification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reclassification request */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockReclassification"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    approveStockReclassification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["StockReclassificationDecisionInput"];
+            };
+        };
+        responses: {
+            /** @description Approved request */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockReclassification"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    rejectStockReclassification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["StockReclassificationDecisionInput"];
+            };
+        };
+        responses: {
+            /** @description Rejected request */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockReclassification"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    cancelStockReclassification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["StockReclassificationDecisionInput"];
+            };
+        };
+        responses: {
+            /** @description Cancelled request */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockReclassification"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     getPublicProductImage: {

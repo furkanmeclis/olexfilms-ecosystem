@@ -184,5 +184,10 @@
   "resources.plate_formats": "车牌格式",
   "resources.exchange_rates": "汇率",
   "resources.platform.legal_texts": "法律文本",
-  "actions.legal_texts.published": "已发布法律文本版本"
+  "actions.legal_texts.published": "已发布法律文本版本",
+  "actions.stock.reclassification.requested": "已申请重新分类",
+  "actions.stock.reclassification.approved": "重新分类已批准",
+  "actions.stock.reclassification.rejected": "重新分类已拒绝",
+  "actions.stock.reclassification.cancelled": "重新分类申请已撤回",
+  "resources.stock.reclassification": "库存重新分类"
 }

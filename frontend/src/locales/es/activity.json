@@ -184,5 +184,10 @@
   "resources.plate_formats": "Formatos de matrícula",
   "resources.exchange_rates": "Tipos de cambio",
   "resources.platform.legal_texts": "Textos legales",
-  "actions.legal_texts.published": "Versión de texto legal publicada"
+  "actions.legal_texts.published": "Versión de texto legal publicada",
+  "actions.stock.reclassification.requested": "Reclasificación solicitada",
+  "actions.stock.reclassification.approved": "Reclasificación aprobada",
+  "actions.stock.reclassification.rejected": "Reclasificación rechazada",
+  "actions.stock.reclassification.cancelled": "Solicitud de reclasificación retirada",
+  "resources.stock.reclassification": "Reclasificación de stock"
 }

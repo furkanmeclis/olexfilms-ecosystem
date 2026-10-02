@@ -433,7 +433,13 @@ func (d *deltas) add(o Owner, qty int32, cm int64) {
 // across concurrent posts), Ensure then Add; the CHECK (>= 0) rejects
 // negative stock.
 func (p *post) applyProjections(ctx context.Context, d deltas) error {
-	product, brand := p.unit.ProductID, p.unit.BrandID
+	return p.applyProjectionsFor(ctx, d, p.unit.ProductID)
+}
+
+// applyProjectionsFor applies the deltas to the rows of product (a
+// reclassification touches the old and the new product).
+func (p *post) applyProjectionsFor(ctx context.Context, d deltas, product int64) error {
+	brand := p.unit.BrandID
 	for _, k := range sortedKeys(d.bin, func(a, b [2]int64) int { return cmp.Compare(a[0], b[0]) }) {
 		v := d.bin[k]
 		if v.qty == 0 && v.cm == 0 {
@@ -482,30 +488,35 @@ func sortedKeys[K comparable, V any](m map[K]V, less func(a, b K) int) []K {
 func (p *post) publish(ctx context.Context, mv db.StockMovement, holder int64) (Result, error) {
 	if p.l.out != nil {
 		id, uid := mv.ID, mv.Uuid
+		payload := map[string]any{
+			"movement_id":     mv.ID,
+			"unit_id":         p.unit.ID,
+			"unit_uuid":       p.unit.Uuid.String(),
+			"barcode":         p.unit.Barcode,
+			"brand_id":        mv.BrandID,
+			"product_id":      mv.ProductID,
+			"type":            mv.Type,
+			"quantity_delta":  mv.QuantityDelta,
+			"meters_delta":    FormatMeters(mustCm(mv.MetersDelta)),
+			"from_owner_type": mv.FromOwnerType.String,
+			"from_owner_id":   mv.FromOwnerID.Int64,
+			"to_owner_type":   mv.ToOwnerType.String,
+			"to_owner_id":     mv.ToOwnerID.Int64,
+			"from_status":     mv.FromStatus.String,
+			"to_status":       mv.ToStatus.String,
+			"holder_org_id":   holder,
+			"reference_type":  mv.ReferenceType.String,
+			"reference_id":    mv.ReferenceID.Int64,
+			"idempotency_key": mv.IdempotencyKey,
+		}
+		if MovementType(mv.Type) == TypeReclassification {
+			payload["from_product_id"] = p.m.Metadata["from_product_id"]
+			payload["to_product_id"] = mv.ProductID
+		}
 		ev := events.New(EventName(MovementType(mv.Type))).
 			WithTenant(mv.OrganizationID).
 			WithEntity("stock_movement", &id, &uid).
-			WithPayload(map[string]any{
-				"movement_id":     mv.ID,
-				"unit_id":         p.unit.ID,
-				"unit_uuid":       p.unit.Uuid.String(),
-				"barcode":         p.unit.Barcode,
-				"brand_id":        mv.BrandID,
-				"product_id":      mv.ProductID,
-				"type":            mv.Type,
-				"quantity_delta":  mv.QuantityDelta,
-				"meters_delta":    FormatMeters(mustCm(mv.MetersDelta)),
-				"from_owner_type": mv.FromOwnerType.String,
-				"from_owner_id":   mv.FromOwnerID.Int64,
-				"to_owner_type":   mv.ToOwnerType.String,
-				"to_owner_id":     mv.ToOwnerID.Int64,
-				"from_status":     mv.FromStatus.String,
-				"to_status":       mv.ToStatus.String,
-				"holder_org_id":   holder,
-				"reference_type":  mv.ReferenceType.String,
-				"reference_id":    mv.ReferenceID.Int64,
-				"idempotency_key": mv.IdempotencyKey,
-			})
+			WithPayload(payload)
 		if p.m.ActorUserID != nil {
 			ev = ev.WithActor(*p.m.ActorUserID)
 		}
@@ -528,7 +539,7 @@ var eventNames = map[MovementType]string{
 	TypeConsumption:           events.StockConsumption,
 	TypePartialConsumption:    events.StockPartialConsumption,
 	TypeReturn:                events.StockReturn,
-	"reclassification":        events.StockReclassification,
+	TypeReclassification:      events.StockReclassification,
 	TypeCountAdjustment:       events.StockCountAdjustment,
 	TypeVoid:                  events.StockVoid,
 	TypeExternalOutbound:      events.StockExternalOutbound,

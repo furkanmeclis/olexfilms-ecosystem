@@ -75,5 +75,17 @@
   "back_to_login": "Zurück zur Anmeldung",
   "continue": "Weiter",
   "area_requires": "Für diesen Bereich ist Zugriff auf {{area}} erforderlich.",
-  "feature_disabled": "Diese Funktion ist für Ihre Organisation nicht aktiviert."
+  "feature_disabled": "Diese Funktion ist für Ihre Organisation nicht aktiviert.",
+  "codes.STOCK_RECLASSIFICATION_BRAND_MISMATCH": "Das Zielprodukt gehört zu einer anderen Marke.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_TYPE_MISMATCH": "Das Zielprodukt hat eine andere Einheit (Rolle und Stück sind nicht austauschbar).",
+  "codes.STOCK_RECLASSIFICATION_SAME_PRODUCT": "Die Einheit hat dieses Produkt bereits.",
+  "codes.STOCK_RECLASSIFICATION_PRODUCT_INACTIVE": "Das Zielprodukt ist inaktiv.",
+  "codes.STOCK_RECLASSIFICATION_FIXED_BARCODE": "Feste Barcodes können nicht umklassifiziert werden.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_CONSUMED": "Die Einheit wurde verbraucht oder storniert.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_ELSEWHERE": "Die Einheit ist nicht im Bestand dieser Organisation.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_IN_USE": "Die Einheit wird in einem offenen Service oder Auftrag verwendet.",
+  "codes.STOCK_RECLASSIFICATION_PRODUCT_CHANGED": "Das Produkt der Einheit hat sich nach der Anfrage geändert.",
+  "codes.STOCK_RECLASSIFICATION_NOT_PENDING": "Über diese Umklassifizierungsanfrage wurde bereits entschieden.",
+  "codes.STOCK_RECLASSIFICATION_PENDING_EXISTS": "Für diese Einheit gibt es bereits eine offene Umklassifizierungsanfrage.",
+  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Sie können Ihre eigene Anfrage nicht genehmigen."
 }

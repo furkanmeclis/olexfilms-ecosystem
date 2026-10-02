@@ -75,5 +75,17 @@
   "back_to_login": "Girişə qayıt",
   "continue": "Davam et",
   "area_requires": "Bu bölmə {{area}} girişi tələb edir.",
-  "feature_disabled": "Bu funksiya təşkilatınız üçün aktiv deyil."
+  "feature_disabled": "Bu funksiya təşkilatınız üçün aktiv deyil.",
+  "codes.STOCK_RECLASSIFICATION_BRAND_MISMATCH": "Hədəf məhsul başqa brendə aiddir.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_TYPE_MISMATCH": "Hədəf məhsulun ölçü vahidi fərqlidir (rulon və ədəd bir-birinə çevrilə bilməz).",
+  "codes.STOCK_RECLASSIFICATION_SAME_PRODUCT": "Vahid artıq bu məhsuldadır.",
+  "codes.STOCK_RECLASSIFICATION_PRODUCT_INACTIVE": "Hədəf məhsul passivdir.",
+  "codes.STOCK_RECLASSIFICATION_FIXED_BARCODE": "Sabit barkodlar yenidən təsnif edilə bilməz.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_CONSUMED": "Vahid istifadə olunub və ya ləğv edilib.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_ELSEWHERE": "Vahid bu təşkilatın anbarında deyil.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_IN_USE": "Vahid açıq xidmətdə və ya sifarişdə istifadə olunur.",
+  "codes.STOCK_RECLASSIFICATION_PRODUCT_CHANGED": "Sorğudan sonra vahidin məhsulu dəyişib.",
+  "codes.STOCK_RECLASSIFICATION_NOT_PENDING": "Bu yenidən təsnifat sorğusu artıq həll olunub.",
+  "codes.STOCK_RECLASSIFICATION_PENDING_EXISTS": "Bu vahid üçün gözləyən yenidən təsnifat sorğusu var.",
+  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Öz sorğunuzu təsdiq edə bilməzsiniz."
 }

@@ -75,5 +75,17 @@
   "back_to_login": "Volver al inicio de sesión",
   "continue": "Continuar",
   "area_requires": "Esta área requiere acceso de {{area}}.",
-  "feature_disabled": "Esta función no está activada para su organización."
+  "feature_disabled": "Esta función no está activada para su organización.",
+  "codes.STOCK_RECLASSIFICATION_BRAND_MISMATCH": "El producto de destino pertenece a otra marca.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_TYPE_MISMATCH": "El producto de destino tiene otra unidad (rollo y pieza no son intercambiables).",
+  "codes.STOCK_RECLASSIFICATION_SAME_PRODUCT": "La unidad ya tiene este producto.",
+  "codes.STOCK_RECLASSIFICATION_PRODUCT_INACTIVE": "El producto de destino está inactivo.",
+  "codes.STOCK_RECLASSIFICATION_FIXED_BARCODE": "Los códigos de barras fijos no se pueden reclasificar.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_CONSUMED": "La unidad se ha consumido o anulado.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_ELSEWHERE": "La unidad no está en el stock de esta organización.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_IN_USE": "La unidad se usa en un servicio o pedido abierto.",
+  "codes.STOCK_RECLASSIFICATION_PRODUCT_CHANGED": "El producto de la unidad cambió después de la solicitud.",
+  "codes.STOCK_RECLASSIFICATION_NOT_PENDING": "Esta solicitud de reclasificación ya se ha resuelto.",
+  "codes.STOCK_RECLASSIFICATION_PENDING_EXISTS": "Esta unidad ya tiene una solicitud de reclasificación pendiente.",
+  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "No puede aprobar su propia solicitud."
 }

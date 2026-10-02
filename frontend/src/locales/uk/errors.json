@@ -75,5 +75,17 @@
   "back_to_login": "Повернутися до входу",
   "continue": "Продовжити",
   "area_requires": "Для цього розділу потрібен доступ «{{area}}».",
-  "feature_disabled": "Цю функцію не ввімкнено для вашої організації."
+  "feature_disabled": "Цю функцію не ввімкнено для вашої організації.",
+  "codes.STOCK_RECLASSIFICATION_BRAND_MISMATCH": "Цільовий товар належить іншому бренду.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_TYPE_MISMATCH": "Цільовий товар має іншу одиницю виміру (рулон і штуку не можна замінити).",
+  "codes.STOCK_RECLASSIFICATION_SAME_PRODUCT": "Одиниця вже має цей товар.",
+  "codes.STOCK_RECLASSIFICATION_PRODUCT_INACTIVE": "Цільовий товар неактивний.",
+  "codes.STOCK_RECLASSIFICATION_FIXED_BARCODE": "Фіксовані штрихкоди не можна перекласифікувати.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_CONSUMED": "Одиницю витрачено або анульовано.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_ELSEWHERE": "Одиниці немає на складі цієї організації.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_IN_USE": "Одиниця використовується у відкритій послузі або замовленні.",
+  "codes.STOCK_RECLASSIFICATION_PRODUCT_CHANGED": "Товар одиниці змінився після запиту.",
+  "codes.STOCK_RECLASSIFICATION_NOT_PENDING": "Цей запит на перекласифікацію вже вирішено.",
+  "codes.STOCK_RECLASSIFICATION_PENDING_EXISTS": "Для цієї одиниці вже є запит на перекласифікацію, що очікує.",
+  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Ви не можете схвалити власний запит."
 }

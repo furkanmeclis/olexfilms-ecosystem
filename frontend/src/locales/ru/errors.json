@@ -75,5 +75,17 @@
   "back_to_login": "Вернуться ко входу",
   "continue": "Продолжить",
   "area_requires": "Для этого раздела нужен доступ «{{area}}».",
-  "feature_disabled": "Эта функция не включена для вашей организации."
+  "feature_disabled": "Эта функция не включена для вашей организации.",
+  "codes.STOCK_RECLASSIFICATION_BRAND_MISMATCH": "Целевой товар принадлежит другому бренду.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_TYPE_MISMATCH": "У целевого товара другая единица измерения (рулон и штуку нельзя заменить).",
+  "codes.STOCK_RECLASSIFICATION_SAME_PRODUCT": "Единица уже относится к этому товару.",
+  "codes.STOCK_RECLASSIFICATION_PRODUCT_INACTIVE": "Целевой товар неактивен.",
+  "codes.STOCK_RECLASSIFICATION_FIXED_BARCODE": "Фиксированные штрихкоды нельзя переклассифицировать.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_CONSUMED": "Единица израсходована или аннулирована.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_ELSEWHERE": "Единицы нет на складе этой организации.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_IN_USE": "Единица используется в открытой услуге или заказе.",
+  "codes.STOCK_RECLASSIFICATION_PRODUCT_CHANGED": "Товар единицы изменился после запроса.",
+  "codes.STOCK_RECLASSIFICATION_NOT_PENDING": "По этому запросу на переклассификацию уже принято решение.",
+  "codes.STOCK_RECLASSIFICATION_PENDING_EXISTS": "Для этой единицы уже есть ожидающий запрос на переклассификацию.",
+  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Вы не можете одобрить собственный запрос."
 }

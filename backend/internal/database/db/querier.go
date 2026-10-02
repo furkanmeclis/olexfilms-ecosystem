@@ -107,6 +107,7 @@ type Querier interface {
 	CountServicesInScope(ctx context.Context, arg CountServicesInScopeParams) (int64, error)
 	CountServicesOfUser(ctx context.Context, customerUserID int64) (int64, error)
 	CountStockMovementsByUnit(ctx context.Context, unitID int64) (int64, error)
+	CountStockReclassificationsScoped(ctx context.Context, arg CountStockReclassificationsScopedParams) (int64, error)
 	CountStorageActivity(ctx context.Context, objectKey string) (int64, error)
 	CountStorageTrash(ctx context.Context) (int64, error)
 	CountUnreadInappForUser(ctx context.Context, userID pgtype.Int8) (int64, error)
@@ -430,8 +431,14 @@ type Querier interface {
 	GetPermissionBySlug(ctx context.Context, slug string) (Permission, error)
 	GetPlateFormatByCountry(ctx context.Context, iso2 string) (GetPlateFormatByCountryRow, error)
 	GetProduct(ctx context.Context, arg GetProductParams) (Product, error)
+	// TEC-157 (F1-02e): reclassification requests (barcode kept, product
+	// changed). Scope narrowing happens in modules/stock/usecase.
+	// Reclassification target check: a product of another brand must be told
+	// apart from a missing one (wrong routing, K1).
+	GetProductByIDAnyBrand(ctx context.Context, id int64) (Product, error)
 	GetProductBySKU(ctx context.Context, arg GetProductBySKUParams) (Product, error)
 	GetProductByUUID(ctx context.Context, arg GetProductByUUIDParams) (Product, error)
+	GetProductByUUIDAnyBrand(ctx context.Context, argUuid uuid.UUID) (Product, error)
 	// Search indexer only. Every document carries its brand_id and the search
 	// query filters on it (K1/K20).
 	GetProductByUUIDForIndex(ctx context.Context, argUuid uuid.UUID) (Product, error)
@@ -466,6 +473,7 @@ type Querier interface {
 	GetStockMovement(ctx context.Context, id int64) (StockMovement, error)
 	GetStockMovementByIdempotencyKey(ctx context.Context, idempotencyKey string) (StockMovement, error)
 	GetStockReclassification(ctx context.Context, arg GetStockReclassificationParams) (StockReclassification, error)
+	GetStockReclassificationByUUID(ctx context.Context, argUuid uuid.UUID) (StockReclassification, error)
 	GetStockReservation(ctx context.Context, id int64) (StockReservation, error)
 	GetStockTransferRequest(ctx context.Context, arg GetStockTransferRequestParams) (StockTransferRequest, error)
 	GetStockTransferRequestByUUID(ctx context.Context, arg GetStockTransferRequestByUUIDParams) (StockTransferRequest, error)
@@ -497,6 +505,10 @@ type Querier interface {
 	GetWarrantyByPublicCode(ctx context.Context, arg GetWarrantyByPublicCodeParams) (Warranty, error)
 	GetWarrantyByServiceItem(ctx context.Context, serviceItemID int64) (Warranty, error)
 	GetWarrantyByUUID(ctx context.Context, arg GetWarrantyByUUIDParams) (Warranty, error)
+	// service.completed consumer (TEC-186): the service, its organization's
+	// time zone (end_at is the end of the last day there, decision 4) and its
+	// brand slug (Glorian services get no warranty, K2).
+	GetWarrantyServiceContext(ctx context.Context, serviceID int64) (GetWarrantyServiceContextRow, error)
 	GetWebAuthnCredentialByCredentialID(ctx context.Context, credentialID string) (WebauthnCredential, error)
 	GetWebAuthnCredentialByUUID(ctx context.Context, arg GetWebAuthnCredentialByUUIDParams) (WebauthnCredential, error)
 	// WhatsApp gateway, KVKK notices, conversations and messages (TEC-92).
@@ -791,6 +803,7 @@ type Querier interface {
 	// Barcode history page in ledger order (oldest first).
 	ListStockMovementsByUnitPage(ctx context.Context, arg ListStockMovementsByUnitPageParams) ([]StockMovement, error)
 	ListStockReclassifications(ctx context.Context, arg ListStockReclassificationsParams) ([]StockReclassification, error)
+	ListStockReclassificationsScoped(ctx context.Context, arg ListStockReclassificationsScopedParams) ([]StockReclassification, error)
 	// Scope list: requests where any of org_ids is the giver, the receiver or
 	// the approver (org_ids NULL = whole brand).
 	ListStockTransferRequestsInScope(ctx context.Context, arg ListStockTransferRequestsInScopeParams) ([]StockTransferRequest, error)
@@ -814,6 +827,7 @@ type Querier interface {
 	ListUserRolesByUserID(ctx context.Context, userID int64) ([]Role, error)
 	ListUserRolesByUserUUID(ctx context.Context, argUuid uuid.UUID) ([]Role, error)
 	ListUserUUIDsForBulk(ctx context.Context, arg ListUserUUIDsForBulkParams) ([]uuid.UUID, error)
+	ListUsersByIDs(ctx context.Context, ids []int64) ([]ListUsersByIDsRow, error)
 	ListUsersFiltered(ctx context.Context, arg ListUsersFilteredParams) ([]User, error)
 	ListUsersForExport(ctx context.Context, arg ListUsersForExportParams) ([]User, error)
 	ListVehicleTransfersByVehicle(ctx context.Context, arg ListVehicleTransfersByVehicleParams) ([]VehicleTransfer, error)
@@ -832,6 +846,11 @@ type Querier interface {
 	// Scope list: org_ids NULL = whole brand (brand/all scope);
 	// holder_user_id for scope customer (portal).
 	ListWarrantiesInScope(ctx context.Context, arg ListWarrantiesInScopeParams) ([]Warranty, error)
+	// One row per service item with what the warranty rules need: the
+	// product's warranty period (NULL/0 = none), the unit's source, external
+	// connection and brand, and whether the unit ever left the system through
+	// an external_outbound movement (no warranty for those, K2).
+	ListWarrantyCandidatesByService(ctx context.Context, serviceID int64) ([]ListWarrantyCandidatesByServiceRow, error)
 	// Notification context of the cron events (TEC-187): plate, product and the
 	// organization's name and time zone (end date is shown in the org zone).
 	ListWarrantyNoticeContexts(ctx context.Context, ids []int64) ([]ListWarrantyNoticeContextsRow, error)
@@ -863,6 +882,7 @@ type Querier interface {
 	LockServiceItems(ctx context.Context, serviceID int64) ([]ServiceItem, error)
 	LockStockImportBatch(ctx context.Context, id int64) (StockImportBatch, error)
 	LockStockReclassification(ctx context.Context, arg LockStockReclassificationParams) (StockReclassification, error)
+	LockStockReclassificationByUUID(ctx context.Context, argUuid uuid.UUID) (StockReclassification, error)
 	LockStockReservation(ctx context.Context, id int64) (StockReservation, error)
 	LockStockTransferRequest(ctx context.Context, arg LockStockTransferRequestParams) (StockTransferRequest, error)
 	// Serializes territory writes of one (brand, country) inside a transaction.

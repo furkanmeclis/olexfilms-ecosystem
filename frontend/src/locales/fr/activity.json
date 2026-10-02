@@ -184,5 +184,10 @@
   "resources.plate_formats": "Formats de plaques",
   "resources.exchange_rates": "Taux de change",
   "resources.platform.legal_texts": "Textes juridiques",
-  "actions.legal_texts.published": "Version d'un texte juridique publiée"
+  "actions.legal_texts.published": "Version d'un texte juridique publiée",
+  "actions.stock.reclassification.requested": "Reclassement demandé",
+  "actions.stock.reclassification.approved": "Reclassement approuvé",
+  "actions.stock.reclassification.rejected": "Reclassement refusé",
+  "actions.stock.reclassification.cancelled": "Demande de reclassement retirée",
+  "resources.stock.reclassification": "Reclassement de stock"
 }

@@ -184,5 +184,10 @@
   "resources.plate_formats": "Форматы госномеров",
   "resources.exchange_rates": "Курсы валют",
   "resources.platform.legal_texts": "Юридические тексты",
-  "actions.legal_texts.published": "Опубликована версия юридического текста"
+  "actions.legal_texts.published": "Опубликована версия юридического текста",
+  "actions.stock.reclassification.requested": "Запрошена переклассификация",
+  "actions.stock.reclassification.approved": "Переклассификация одобрена",
+  "actions.stock.reclassification.rejected": "Переклассификация отклонена",
+  "actions.stock.reclassification.cancelled": "Запрос на переклассификацию отозван",
+  "resources.stock.reclassification": "Переклассификация запасов"
 }
