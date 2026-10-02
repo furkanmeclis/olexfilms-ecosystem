@@ -179,6 +179,89 @@ func (p *Poster) VoidBySourceTx(ctx context.Context, tx pgx.Tx, src Source, reas
 	return out, nil
 }
 
+// ReviseResult lists the rows written by ReviseBySourceTx: the reversals of
+// the open rows and their reposts (revision + 1) with the corrected amount.
+type ReviseResult struct {
+	Reversals []db.FinanceEntry
+	Reposts   []db.FinanceEntry
+}
+
+// ReviseBySourceTx corrects the amount of a source (TEC-174, K24): every
+// open row of the source is reversed (VoidBySourceTx) and reposted in the
+// same organization, direction, category, role and targets as revision + 1
+// with amount, in the original currency, at the row's frozen rate. All open
+// rows must share the original currency and amount (a hierarchical sale's
+// two sides do); anything else is ErrInvalid. Nothing open is ErrNothingOpen.
+func (p *Poster) ReviseBySourceTx(ctx context.Context, tx pgx.Tx, src Source, amount, reason string, actorUserID *int64) (ReviseResult, error) {
+	if tx == nil {
+		return ReviseResult{}, errors.New("posting: transaction required")
+	}
+	if err := src.validate(); err != nil {
+		return ReviseResult{}, err
+	}
+	corrected, err := parseAmount(amount)
+	if err != nil {
+		return ReviseResult{}, err
+	}
+	q := p.q.WithTx(tx)
+	open, err := q.ListOpenFinanceEntriesBySource(ctx, db.ListOpenFinanceEntriesBySourceParams{
+		SourceType: src.Type, SourceUuid: src.UUID,
+	})
+	if err != nil {
+		return ReviseResult{}, fmt.Errorf("posting: open entries: %w", err)
+	}
+	if len(open) == 0 {
+		return ReviseResult{}, fmt.Errorf("%w: %s/%s", ErrNothingOpen, src.Type, src.UUID)
+	}
+	first := open[0]
+	for _, e := range open[1:] {
+		if e.OrigCurrency != first.OrigCurrency || FormatNumeric(e.OrigAmount) != FormatNumeric(first.OrigAmount) {
+			return ReviseResult{}, fmt.Errorf("%w: rows of %s/%s differ in original amount", ErrInvalid, src.Type, src.UUID)
+		}
+	}
+	// Targets of the reposts, read before the reversals are written.
+	counterparties := make([]int64, len(open))
+	for i, e := range open {
+		if !e.CariID.Valid {
+			continue
+		}
+		c, err := q.GetCariAccount(ctx, db.GetCariAccountParams{ID: e.CariID.Int64, OrganizationID: e.OrganizationID})
+		if err != nil {
+			return ReviseResult{}, fmt.Errorf("posting: cari of entry %d: %w", e.ID, err)
+		}
+		if !c.CounterpartyOrgID.Valid {
+			return ReviseResult{}, fmt.Errorf("%w: entry %d is on a user cari", ErrInvalid, e.ID)
+		}
+		counterparties[i] = c.CounterpartyOrgID.Int64
+	}
+
+	voided, err := p.VoidBySourceTx(ctx, tx, src, reason, actorUserID)
+	if err != nil {
+		return ReviseResult{}, err
+	}
+	out := ReviseResult{Reversals: voided.Reversals, Reposts: make([]db.FinanceEntry, 0, len(open))}
+	value := corrected.FloatString(2)
+	for i, e := range open {
+		day := dateOnly(e.RateDate.Time)
+		res, err := p.post(ctx, tx, e.Direction, Entry{
+			OrganizationID: e.OrganizationID, Source: src,
+			Role: e.Role, Revision: e.Revision + 1, Category: e.Category,
+			Amount: value, Currency: e.OrigCurrency, RateDate: day,
+			Rate: &fxrates.Snapshot{
+				Base: e.OrigCurrency, Quote: e.Currency, Rate: FormatRate(e.Rate),
+				RateDate: day.Format(time.DateOnly), Source: "frozen",
+			},
+			AccountID: e.AccountID.Int64, CounterpartyOrgID: counterparties[i],
+			Description: reason, ActorUserID: actorUserID,
+		})
+		if err != nil {
+			return ReviseResult{}, fmt.Errorf("posting: repost entry %d: %w", e.ID, err)
+		}
+		out.Reposts = append(out.Reposts, res.Entry)
+	}
+	return out, nil
+}
+
 var codeRe = regexp.MustCompile(`^[a-z][a-z0-9_]{0,63}$`)
 var categoryRe = regexp.MustCompile(`^[a-z][a-z0-9_.]{0,63}$`)
 var roleRe = regexp.MustCompile(`^[a-z][a-z0-9_]{0,31}$`)

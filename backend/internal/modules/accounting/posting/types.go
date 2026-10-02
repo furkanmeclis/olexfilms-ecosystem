@@ -56,6 +56,8 @@ var (
 	ErrCrossBrand = errors.New("posting: counterparty belongs to another brand")
 	// ErrIdempotencyConflict: the source key already holds a different row.
 	ErrIdempotencyConflict = errors.New("posting: source already posted with different values")
+	// ErrNothingOpen: the source has no open (unreversed) row to revise.
+	ErrNothingOpen = errors.New("posting: source has no open entry")
 )
 
 // Source identifies the business record behind a ledger row.

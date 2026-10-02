@@ -342,7 +342,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		tokens, loader, deps.Queries, stepUpSvc, featureSvc)
 	// TEC-172: accounting accounts, cari, manual entries and settlements.
 	accountingPoster := accountingposting.New(deps.Queries, outbox.NewStore(deps.DB, deps.Queries), ratesSvc)
-	accountingSvc := accountingusecase.New(deps.DB, deps.Queries, accountingPoster, featureSvc)
+	accountingSvc := accountingusecase.New(deps.DB, deps.Queries, accountingPoster, featureSvc).
+		WithOutbox(outbox.NewStore(deps.DB, deps.Queries)) // TEC-174: dispute events
 	accountingH := accountinghandler.New(accountingSvc)
 	accountinghandler.RegisterRoutes(mux, accountingH, tokens, loader, deps.Queries, stepUpSvc, featureSvc)
 	// TEC-166: orders (draft, server-side prices, rate frozen at approval).
