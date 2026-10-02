@@ -147,6 +147,7 @@ type updateBody struct {
 	Package        svcuc.Optional[string] `json:"package"`
 	Notes          svcuc.Optional[string] `json:"notes"`
 	HasMeasurement svcuc.Optional[bool]   `json:"has_measurement"`
+	VIN            svcuc.Optional[string] `json:"vin"`
 }
 
 // Update (PATCH /v1/services/{uuid}).
@@ -161,6 +162,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	v, err := h.svc.Update(r.Context(), caller(r), id, svcuc.UpdateInput{
 		KM: b.KM, Package: b.Package, Notes: b.Notes, HasMeasurement: b.HasMeasurement,
+		VIN: b.VIN,
 	})
 	if err != nil {
 		writeError(w, r, err)

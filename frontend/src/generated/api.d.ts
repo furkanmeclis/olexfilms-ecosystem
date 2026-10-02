@@ -8441,6 +8441,8 @@ export interface components {
             package?: string | null;
             notes?: string | null;
             has_measurement?: boolean;
+            /** @description Replaces the VIN snapshot of the service (the vehicle record is not changed). Same rules as the vehicle VIN: 17 letters or digits without I, O, Q; spaces and dashes are dropped. null or "" clears it (400 while has_measurement is true). */
+            vin?: string | null;
         };
         ServiceItemInput: {
             barcode: string;

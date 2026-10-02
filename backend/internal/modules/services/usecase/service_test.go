@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"errors"
 	"regexp"
 	"slices"
 	"testing"
@@ -12,6 +13,40 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+func TestVINOrNull(t *testing.T) {
+	str := func(s string) *string { return &s }
+	cases := []struct {
+		in      *string
+		want    string
+		valid   bool
+		wantErr bool
+	}{
+		{in: nil},
+		{in: str("")},
+		{in: str("   ")},
+		{in: str("wvwzzz1jz3w386752"), want: "WVWZZZ1JZ3W386752", valid: true},
+		{in: str("WVW-ZZZ 1JZ3W386752"), want: "WVWZZZ1JZ3W386752", valid: true},
+		{in: str("WVWZZZ1JZ3W38675"), wantErr: true},
+		{in: str("WVWZZZ1JZ3W3867521"), wantErr: true},
+		{in: str("WVWZZZ1JZ3W38675I"), wantErr: true},
+		{in: str("WVWZZZ1JZ3W38675O"), wantErr: true},
+		{in: str("WVWZZZ1JZ3W38675Q"), wantErr: true},
+	}
+	for _, c := range cases {
+		got, err := vinOrNull(c.in)
+		if c.wantErr {
+			var ve *ValidationError
+			if !errors.As(err, &ve) || ve.Field != "vin" {
+				t.Fatalf("vinOrNull(%v): want vin validation error, got %v", c.in, err)
+			}
+			continue
+		}
+		if err != nil || got.Valid != c.valid || got.String != c.want {
+			t.Fatalf("vinOrNull(%v) = %+v, %v", c.in, got, err)
+		}
+	}
+}
 
 func TestServiceNoFormat(t *testing.T) {
 	re := regexp.MustCompile(`^DS[A-Z0-9]{8}$`)

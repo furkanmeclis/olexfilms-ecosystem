@@ -22,6 +22,7 @@ import {
   Shield,
   Upload,
   UserRound,
+  Wrench,
 } from "lucide-react";
 
 import { appleNavIcon } from "@/components/icons/apple-icon";
@@ -274,6 +275,12 @@ export const cmsNav = defineNav({
  * from GET /v1/features, hidden while the module is off); tenant I/O routes
  * are owner-only on the API (RequireOrgRole).
  */
+const SERVICE_WIZARD_PERMISSIONS = [
+  permissions.services.write,
+  permissions.customers.read,
+  permissions.vehicles.read,
+];
+
 export function tenantNav(slug: string) {
   return defineNav({
     id: "tenant",
@@ -331,6 +338,26 @@ export function tenantNav(slug: string) {
             icon: FolderTree,
             permission: permissions.catalog.read,
             feature: "catalog",
+          },
+        ],
+      },
+      {
+        // TEC-181: the service wizard needs services.write plus reading the
+        // customers and vehicles it picks from (same gates as the API).
+        id: "services",
+        labelKey: "services.nav",
+        icon: Wrench,
+        defaultOpen: true,
+        permission: SERVICE_WIZARD_PERMISSIONS,
+        feature: "services",
+        items: [
+          {
+            id: "services-new",
+            titleKey: "services.nav_new",
+            href: routes.tenant.services.create(slug),
+            icon: Wrench,
+            permission: SERVICE_WIZARD_PERMISSIONS,
+            feature: "services",
           },
         ],
       },

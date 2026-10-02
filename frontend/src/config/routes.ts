@@ -39,6 +39,12 @@ export const routes = {
         `/t/${slug}/catalog/products/${uuid}/edit`,
       categories: (slug: string) => `/t/${slug}/catalog/categories`,
     },
+    /** TEC-181 service wizard; the detail page comes with TEC-183. */
+    services: {
+      create: (slug: string) => `/t/${slug}/services/new`,
+      wizard: (slug: string, uuid: string) =>
+        `/t/${slug}/services/${uuid}/wizard`,
+    },
   },
   /** Customer / fleet portal (TEC-90): its own Auth.js instance and BFF. */
   portal: {
