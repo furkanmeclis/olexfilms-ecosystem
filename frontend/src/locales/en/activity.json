@@ -189,5 +189,7 @@
   "actions.stock.reclassification.approved": "Reclassification approved",
   "actions.stock.reclassification.rejected": "Reclassification rejected",
   "actions.stock.reclassification.cancelled": "Reclassification request withdrawn",
-  "resources.stock.reclassification": "Stock reclassification"
+  "resources.stock.reclassification": "Stock reclassification",
+  "actions.stock.split.created": "Roll split",
+  "resources.stock.split": "Roll split"
 }

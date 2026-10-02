@@ -189,5 +189,7 @@
   "actions.stock.reclassification.approved": "Переклассификация одобрена",
   "actions.stock.reclassification.rejected": "Переклассификация отклонена",
   "actions.stock.reclassification.cancelled": "Запрос на переклассификацию отозван",
-  "resources.stock.reclassification": "Переклассификация запасов"
+  "resources.stock.reclassification": "Переклассификация запасов",
+  "actions.stock.split.created": "Рулон разделён",
+  "resources.stock.split": "Разделение рулона"
 }

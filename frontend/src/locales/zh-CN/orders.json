@@ -148,7 +148,7 @@
   "actions.complete_cancel.description": "确认发货单元已退回，它们将回到您的库存。",
   "actions.complete_cancel.confirm": "完成取消",
   "actions.complete_cancel.success": "订单已取消。",
-  "assign.hint": "扫描或输入每个待发货单元的条码。固定条码需填写数量；卷材整卷发货。",
+  "assign.hint": "扫描或输入每个待发货单元的条码。固定条码需填写数量；卷材填写米数：留空为整卷，米数较少时卷材将以新条码分切。",
   "assign.complete": "所有行均已覆盖，可以将订单标记为待发货。",
   "assign.not_complete": "请先为每一行分配单元。",
   "assign.assigned": "已分配",
@@ -158,5 +158,8 @@
   "assign.submit": "分配",
   "assign.remove": "移除单元",
   "assign.success": "单元已分配。",
-  "assign.failed": "单元分配失败。"
+  "assign.failed": "单元分配失败。",
+  "assign.meters": "米数",
+  "assign.meters_placeholder": "整卷",
+  "assign.split_success": "卷材已分切：新条码 {{barcode}}，卷材剩余 {{rest}} 米。"
 }

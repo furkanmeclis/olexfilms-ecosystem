@@ -148,7 +148,7 @@
   "actions.complete_cancel.description": "Confermate il rientro delle unità spedite; tornano nel vostro magazzino.",
   "actions.complete_cancel.confirm": "Completa annullamento",
   "actions.complete_cancel.success": "Ordine annullato.",
-  "assign.hint": "Scansionate o digitate il codice a barre di ogni unità da spedire. I codici fissi richiedono una quantità; i rotoli si spediscono interi.",
+  "assign.hint": "Scansionate o digitate il codice a barre di ogni unità da spedire. I codici fissi richiedono una quantità; per i rotoli indicate i metri: vuoto per il rotolo intero, meno metri dividono il rotolo con un nuovo codice a barre.",
   "assign.complete": "Tutte le righe sono coperte. Potete segnare l'ordine come pronto.",
   "assign.not_complete": "Assegnate prima le unità a ogni riga.",
   "assign.assigned": "Assegnato",
@@ -158,5 +158,8 @@
   "assign.submit": "Assegna",
   "assign.remove": "Rimuovi unità",
   "assign.success": "Unità assegnata.",
-  "assign.failed": "Impossibile assegnare l'unità."
+  "assign.failed": "Impossibile assegnare l'unità.",
+  "assign.meters": "Metri",
+  "assign.meters_placeholder": "Tutto",
+  "assign.split_success": "Rotolo diviso: nuovo codice a barre {{barcode}}, restano {{rest}} m sul rotolo."
 }

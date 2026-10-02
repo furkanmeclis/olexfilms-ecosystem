@@ -189,5 +189,7 @@
   "actions.stock.reclassification.approved": "Riclassificazione approvata",
   "actions.stock.reclassification.rejected": "Riclassificazione rifiutata",
   "actions.stock.reclassification.cancelled": "Richiesta di riclassificazione ritirata",
-  "resources.stock.reclassification": "Riclassificazione dello stock"
+  "resources.stock.reclassification": "Riclassificazione dello stock",
+  "actions.stock.split.created": "Rotolo diviso",
+  "resources.stock.split": "Divisione del rotolo"
 }

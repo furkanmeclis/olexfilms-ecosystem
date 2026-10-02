@@ -148,7 +148,7 @@
   "actions.complete_cancel.description": "Confirmez le retour des unités expédiées ; elles reviennent dans votre stock.",
   "actions.complete_cancel.confirm": "Finaliser l'annulation",
   "actions.complete_cancel.success": "Commande annulée.",
-  "assign.hint": "Scannez ou saisissez le code-barres de chaque unité à expédier. Les codes-barres fixes prennent une quantité ; les rouleaux partent entiers.",
+  "assign.hint": "Scannez ou saisissez le code-barres de chaque unité à expédier. Les codes-barres fixes prennent une quantité ; pour les rouleaux, indiquez les mètres : vide pour le rouleau entier, moins de mètres découpent le rouleau sous un nouveau code-barres.",
   "assign.complete": "Toutes les lignes sont couvertes. Vous pouvez marquer la commande prête.",
   "assign.not_complete": "Attribuez d'abord des unités à chaque ligne.",
   "assign.assigned": "Attribué",
@@ -158,5 +158,8 @@
   "assign.submit": "Attribuer",
   "assign.remove": "Retirer l'unité",
   "assign.success": "Unité attribuée.",
-  "assign.failed": "L'unité n'a pas pu être attribuée."
+  "assign.failed": "L'unité n'a pas pu être attribuée.",
+  "assign.meters": "Mètres",
+  "assign.meters_placeholder": "Tout",
+  "assign.split_success": "Rouleau découpé : nouveau code-barres {{barcode}}, il reste {{rest}} m sur le rouleau."
 }

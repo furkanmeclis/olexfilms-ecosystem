@@ -116,5 +116,10 @@
   "codes.ORDER_STOCK_UNAVAILABLE": "Il movimento di magazzino per questa spedizione è stato rifiutato.",
   "codes.PRICE_NOT_FOUND": "Nessun prezzo per questo prodotto nella valuta dell'ordine.",
   "codes.RATE_NOT_FOUND": "Nessun tasso di cambio disponibile da congelare per la valuta dell'ordine.",
-  "codes.ROLL_CUT_UNSUPPORTED": "I rotoli si spediscono interi; i metri devono corrispondere alla lunghezza residua."
+  "codes.ROLL_METERS_EXCEED_REMAINING": "Sul rotolo restano meno metri di quelli richiesti.",
+  "codes.STOCK_SPLIT_NOT_ROLL": "Si possono dividere solo i rotoli; non pezzi né codici fissi.",
+  "codes.STOCK_SPLIT_INSUFFICIENT_METERS": "Sul rotolo restano meno metri di quelli richiesti.",
+  "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "Il rotolo non è nello stock di questa organizzazione.",
+  "codes.STOCK_SPLIT_UNIT_IN_USE": "Il rotolo è in un servizio o ordine aperto.",
+  "codes.STOCK_SPLIT_KEY_CONFLICT": "Questa chiave di idempotenza è stata usata per un'altra divisione."
 }

@@ -189,5 +189,7 @@
   "actions.stock.reclassification.approved": "Одобрена прекласификация",
   "actions.stock.reclassification.rejected": "Отхвърлена прекласификация",
   "actions.stock.reclassification.cancelled": "Оттеглена заявка за прекласификация",
-  "resources.stock.reclassification": "Прекласификация на наличност"
+  "resources.stock.reclassification": "Прекласификация на наличност",
+  "actions.stock.split.created": "Ролката е разделена",
+  "resources.stock.split": "Разделяне на ролка"
 }

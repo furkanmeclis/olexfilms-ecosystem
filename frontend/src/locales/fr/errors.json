@@ -116,5 +116,10 @@
   "codes.ORDER_STOCK_UNAVAILABLE": "Le mouvement de stock de cet envoi a été refusé.",
   "codes.PRICE_NOT_FOUND": "Aucun prix pour ce produit dans la devise de la commande.",
   "codes.RATE_NOT_FOUND": "Aucun taux de change disponible à figer pour la devise de la commande.",
-  "codes.ROLL_CUT_UNSUPPORTED": "Les rouleaux partent entiers ; les mètres doivent égaler la longueur restante."
+  "codes.ROLL_METERS_EXCEED_REMAINING": "Il reste moins de mètres sur le rouleau que demandé.",
+  "codes.STOCK_SPLIT_NOT_ROLL": "Seuls les rouleaux peuvent être découpés ; pas les pièces ni les codes-barres fixes.",
+  "codes.STOCK_SPLIT_INSUFFICIENT_METERS": "Il reste moins de mètres sur le rouleau que demandé.",
+  "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "Le rouleau n'est pas dans le stock de cette organisation.",
+  "codes.STOCK_SPLIT_UNIT_IN_USE": "Le rouleau est utilisé dans un service ou une commande en cours.",
+  "codes.STOCK_SPLIT_KEY_CONFLICT": "Cette clé d'idempotence a servi à un autre découpage."
 }

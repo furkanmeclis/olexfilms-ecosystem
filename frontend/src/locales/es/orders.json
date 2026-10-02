@@ -148,7 +148,7 @@
   "actions.complete_cancel.description": "Confirme que las unidades enviadas han vuelto; regresan a su stock.",
   "actions.complete_cancel.confirm": "Completar cancelación",
   "actions.complete_cancel.success": "Pedido cancelado.",
-  "assign.hint": "Escanee o escriba el código de barras de cada unidad a enviar. Los códigos fijos llevan una cantidad; los rollos se envían enteros.",
+  "assign.hint": "Escanee o escriba el código de barras de cada unidad a enviar. Los códigos fijos llevan una cantidad; en los rollos indique los metros: vacío para el rollo entero, menos metros dividen el rollo con un nuevo código de barras.",
   "assign.complete": "Todas las líneas están cubiertas. Puede marcar el pedido como listo.",
   "assign.not_complete": "Primero asigne unidades a cada línea.",
   "assign.assigned": "Asignado",
@@ -158,5 +158,8 @@
   "assign.submit": "Asignar",
   "assign.remove": "Quitar unidad",
   "assign.success": "Unidad asignada.",
-  "assign.failed": "No se pudo asignar la unidad."
+  "assign.failed": "No se pudo asignar la unidad.",
+  "assign.meters": "Metros",
+  "assign.meters_placeholder": "Todo",
+  "assign.split_success": "Rollo dividido: nuevo código de barras {{barcode}}, quedan {{rest}} m en el rollo."
 }
