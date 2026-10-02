@@ -116,6 +116,7 @@ type Querier interface {
 	CountServicesOfUser(ctx context.Context, customerUserID int64) (int64, error)
 	CountStockMovementsByUnit(ctx context.Context, unitID int64) (int64, error)
 	CountStockReclassificationsScoped(ctx context.Context, arg CountStockReclassificationsScopedParams) (int64, error)
+	CountStockSplitsBySource(ctx context.Context, sourceUnitID int64) (int64, error)
 	CountStorageActivity(ctx context.Context, objectKey string) (int64, error)
 	CountStorageTrash(ctx context.Context) (int64, error)
 	CountUnreadInappForUser(ctx context.Context, userID pgtype.Int8) (int64, error)
@@ -209,6 +210,8 @@ type Querier interface {
 	// ---------------------------------------------------------------------------
 	// Stock reservations (TEC-94 decision 2).
 	CreateStockReservation(ctx context.Context, arg CreateStockReservationParams) (StockReservation, error)
+	// TEC-184 roll split. Written by ledger.Split only.
+	CreateStockSplit(ctx context.Context, arg CreateStockSplitParams) (StockSplit, error)
 	// ---------------------------------------------------------------------------
 	// Sibling dealer transfer requests (K13).
 	CreateStockTransferRequest(ctx context.Context, arg CreateStockTransferRequestParams) (StockTransferRequest, error)
@@ -496,6 +499,7 @@ type Querier interface {
 	GetStockReclassification(ctx context.Context, arg GetStockReclassificationParams) (StockReclassification, error)
 	GetStockReclassificationByUUID(ctx context.Context, argUuid uuid.UUID) (StockReclassification, error)
 	GetStockReservation(ctx context.Context, id int64) (StockReservation, error)
+	GetStockSplitByKey(ctx context.Context, arg GetStockSplitByKeyParams) (StockSplit, error)
 	GetStockTransferRequest(ctx context.Context, arg GetStockTransferRequestParams) (StockTransferRequest, error)
 	GetStockTransferRequestByUUID(ctx context.Context, arg GetStockTransferRequestByUUIDParams) (StockTransferRequest, error)
 	GetStorageLinkBySlug(ctx context.Context, slug pgtype.Text) (StorageLink, error)

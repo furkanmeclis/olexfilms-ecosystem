@@ -81,6 +81,9 @@ var serialRules = map[MovementType]serialRule{
 		to: StatusVoid, target: targetTrash},
 	// Leaves the system (e.g. pushed to an external hub, K2).
 	TypeExternalOutbound: {from: stocked, to: StatusUsed, target: targetTrash},
+	// Meters cut off as a new unit (TEC-184, Ledger.Split); the roll stays
+	// where it is and is used up when nothing is left.
+	TypeSplit: {from: stocked, target: targetKeep, rollOnly: true},
 }
 
 // serialCurrent is the locked state of a serial unit.
@@ -197,6 +200,9 @@ func planSerial(m Movement, cur serialCurrent, prev *prevMovement) (serialPlan, 
 		return serialPlan{}, err
 	}
 	plan.metersDelta = delta
+	if m.Type == TypeSplit && cur.remaining+delta == 0 {
+		plan.toStatus = StatusUsed
+	}
 	plan.quantityDelta = b2i(counted(plan.toStatus)) - b2i(cur.hasState && counted(cur.status))
 	return plan, nil
 }
@@ -239,6 +245,15 @@ func serialMeters(m Movement, cur serialCurrent) (int64, error) {
 				ErrInvalidMovement, FormatMeters(cur.initial-cur.remaining))
 		}
 		return cm, nil
+	case TypeSplit:
+		switch {
+		case cm <= 0:
+			return 0, fmt.Errorf("%w: split needs meters > 0", ErrInvalidMovement)
+		case cm > cur.remaining:
+			return 0, fmt.Errorf("%w: %s m left, %s m requested",
+				ErrInsufficientMeters, FormatMeters(cur.remaining), FormatMeters(cm))
+		}
+		return -cm, nil
 	case TypeConsumption:
 		if cm != 0 {
 			return 0, fmt.Errorf("%w: consumption uses the whole roll", ErrInvalidMovement)

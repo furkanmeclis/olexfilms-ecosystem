@@ -206,6 +206,7 @@ const (
 	StockCountAdjustment       = "stock.count_adjustment"
 	StockVoid                  = "stock.void"
 	StockExternalOutbound      = "stock.external_outbound"
+	StockSplit                 = "stock.split"
 )
 
 // Order domain events (TEC-165): one per status transition, written to the
@@ -500,6 +501,7 @@ func catalogConstants() []string {
 		StockCountAdjustment,
 		StockVoid,
 		StockExternalOutbound,
+		StockSplit,
 		OrdersCreated,
 		OrdersUpdated,
 		OrdersSubmitted,

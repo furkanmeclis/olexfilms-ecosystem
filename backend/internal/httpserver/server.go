@@ -474,6 +474,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	stockmodule.RegisterRoutes(mux, stockhandler.New(stockusecase.New(deps.Queries)),
 		stockhandler.NewReclassify(stockusecase.NewReclassifications(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries))),
 		featureSvc, tokens, loader, deps.Queries, stepUpSvc)
+	// TEC-184: roll split (meters cut off a roll as a new unit).
+	stockmodule.RegisterSplitRoutes(mux, stockhandler.NewSplit(stockusecase.NewSplits(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries))),
+		featureSvc, tokens, loader, deps.Queries)
 	// TEC-158: stock import upload (preview/confirm/undo on /v1/tenant/imports).
 	stockmodule.RegisterImportRoutes(mux, stockhandler.NewImport(importSvc), featureSvc, tokens, loader, deps.Queries)
 	// TEC-156: super_admin projection drift check (dry run).

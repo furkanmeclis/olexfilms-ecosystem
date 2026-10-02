@@ -9,10 +9,12 @@ package usecase
 //
 //   - serial pieces: one unit = quantity 1; a second active reservation of
 //     the unit is refused (checked here and by uq_stock_reservations_active_serial).
-//   - rolls (roll_meter lines): the whole roll, its remaining meters. The
-//     ledger moves serial units whole (order_out carries no meters), so a
-//     roll cannot be cut for an order yet: the meters given must equal the
-//     roll's remaining meters.
+//   - rolls (roll_meter lines): the whole roll (its remaining meters), or
+//     fewer meters (TEC-184): the ledger first splits them off the roll as a
+//     new unit with its own barcode (ledger.Split, idempotency key
+//     order_item:<line uuid>:<client key or random>) and the new unit is
+//     assigned; the roll stays with the seller. More meters than the roll
+//     has is refused (ROLL_METERS_EXCEED_REMAINING).
 //   - fixed barcodes: a quantity; the seller's active reservations of the
 //     barcode never exceed what the seller holds. The check runs under the
 //     unit row lock (the lock ledger.Post takes as well).
@@ -60,6 +62,8 @@ var (
 	ErrOverAssigned = errors.New("orders: assignment exceeds the line amount")
 	// ErrNotFullyAssigned: preparing -> ready with an incompletely assigned line.
 	ErrNotFullyAssigned = errors.New("orders: every line must be fully assigned")
+	// ErrRollMetersExceed: more meters than the roll has left (TEC-184).
+	ErrRollMetersExceed = errors.New("orders: the roll has fewer meters left")
 	// ErrStockUnavailable: the ledger refused an order_out at shipping.
 	ErrStockUnavailable = errors.New("orders: stock movement refused")
 )
@@ -72,19 +76,26 @@ const (
 
 // Validation codes of an assignment.
 const (
-	CodeRollCutUnsupported = "ROLL_CUT_UNSUPPORTED"
-	CodeUnitNotFound       = "UNIT_NOT_FOUND"
+	CodeUnitNotFound = "UNIT_NOT_FOUND"
 )
 
 // AssignInput names the unit (barcode or unit UUID) and the amount: a
-// quantity for fixed barcodes (pieces are always 1), the roll's remaining
-// meters for rolls (optional; a different value is a cut and is refused).
+// quantity for fixed barcodes (pieces are always 1), meters for rolls
+// (optional: the whole roll; fewer meters split the roll). IdempotencyKey
+// optionally makes a split assignment retry-safe.
 type AssignInput struct {
-	Barcode  string
-	UnitUUID string
-	Quantity *int64
-	Meters   *string
+	Barcode        string
+	UnitUUID       string
+	Quantity       *int64
+	Meters         *string
+	IdempotencyKey string
 }
+
+// MaxAssignKeyLen bounds AssignInput.IdempotencyKey.
+const MaxAssignKeyLen = 64
+
+// SplitRefType is the ledger reference of a split made for an order line.
+const SplitRefType = "order_item"
 
 func ratEq(a, b *big.Rat) bool { return a.Cmp(b) == 0 }
 
@@ -184,6 +195,11 @@ func isUniqueViolation(err error) bool {
 // AssignUnit assigns a unit the seller holds to an order line and reserves it.
 func (s *Service) AssignUnit(ctx context.Context, c Caller, orderUUID, itemUUID uuid.UUID, in AssignInput) (OrderView, error) {
 	var result db.Order
+	var split *SplitView
+	in.IdempotencyKey = strings.TrimSpace(in.IdempotencyKey)
+	if len(in.IdempotencyKey) > MaxAssignKeyLen {
+		return OrderView{}, invalid("idempotency_key", fmt.Sprintf("at most %d characters", MaxAssignKeyLen))
+	}
 	err := s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		o, it, err := s.lockAssignable(ctx, q, c, orderUUID, itemUUID)
 		if err != nil {
@@ -205,6 +221,34 @@ func (s *Service) AssignUnit(ctx context.Context, c Caller, orderUUID, itemUUID 
 			return ErrUnitAlreadyAssigned
 		} else if !errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("orders: assignment: %w", err)
+		}
+
+		splitKey, err := assignSplitKey(it, in.IdempotencyKey)
+		if err != nil {
+			return err
+		}
+		// A retried split assignment: the split already happened.
+		if in.IdempotencyKey != "" && u.RemainingMeters.Valid {
+			prev, err := ledger.FindSplit(ctx, q, o.SellerOrgID, splitKey)
+			if err != nil {
+				return err
+			}
+			if prev != nil {
+				if prev.Split.SourceUnitID != u.ID {
+					return invalid("idempotency_key", "the key was used for another roll")
+				}
+				split = splitView(*prev)
+				if _, err := q.GetOrderItemUnit(ctx, db.GetOrderItemUnitParams{OrderItemID: it.ID, UnitID: prev.New.ID}); err == nil {
+					result = o
+					return nil
+				} else if !errors.Is(err, pgx.ErrNoRows) {
+					return fmt.Errorf("orders: assignment: %w", err)
+				}
+				if u, err = q.LockUnit(ctx, prev.New.ID); err != nil {
+					return fmt.Errorf("orders: lock unit: %w", err)
+				}
+				in.Meters = nil
+			}
 		}
 
 		var (
@@ -236,15 +280,44 @@ func (s *Service) AssignUnit(ctx context.Context, c Caller, orderUUID, itemUUID 
 				if rest == nil || rest.Sign() <= 0 {
 					return ErrUnitNotAvailable
 				}
+				want := rest
 				if in.Meters != nil {
 					m, ok := normalizeMeters(*in.Meters)
-					want, _ := parseRat(m)
-					if !ok || !ratEq(want, rest) {
-						return &ValidationError{Field: "meters", Code: CodeRollCutUnsupported,
-							Message: "a roll ships whole: meters must equal the remaining " + rest.FloatString(2) + " m"}
+					if !ok {
+						return invalid("meters", "meters must be a positive number with at most two decimals")
+					}
+					want, _ = parseRat(m)
+					if want.Cmp(rest) > 0 {
+						return fmt.Errorf("%w: %s m left", ErrRollMetersExceed, rest.FloatString(2))
 					}
 				}
-				meters, amount = u.RemainingMeters, rest
+				if want.Cmp(rest) < 0 {
+					// Check the line first: an over-assignment never splits.
+					done, err := reservedOnLine(ctx, q, it.ID)
+					if err != nil {
+						return err
+					}
+					if new(big.Rat).Add(done, want).Cmp(lineAmount(it)) > 0 {
+						return ErrOverAssigned
+					}
+					cm, err := ledger.ParseMeters(want.FloatString(2))
+					if err != nil {
+						return invalid("meters", "invalid meters")
+					}
+					res, err := s.ledger.Split(ctx, tx, ledger.SplitCommand{
+						SourceUnitID: u.ID, Centimeters: cm, HolderOrgID: o.SellerOrgID,
+						IdempotencyKey: splitKey, RefType: SplitRefType, RefID: it.ID, ActorUserID: actorOf(c),
+						Metadata: map[string]any{"order_uuid": o.Uuid.String(), "order_no": o.OrderNo},
+					})
+					if err != nil {
+						return splitErr(u.Barcode, err)
+					}
+					split = splitView(res)
+					if u, err = q.LockUnit(ctx, res.New.ID); err != nil {
+						return fmt.Errorf("orders: lock unit: %w", err)
+					}
+				}
+				meters, amount = u.RemainingMeters, numericRat(u.RemainingMeters)
 			} else {
 				if in.Meters != nil || (in.Quantity != nil && *in.Quantity != 1) {
 					return invalid("quantity", "a serial piece is assigned as quantity 1")
@@ -286,7 +359,54 @@ func (s *Service) AssignUnit(ctx context.Context, c Caller, orderUUID, itemUUID 
 	if err != nil {
 		return OrderView{}, err
 	}
-	return s.view(ctx, s.q, c, result)
+	v, err := s.view(ctx, s.q, c, result)
+	if err != nil {
+		return OrderView{}, err
+	}
+	v.Split = split
+	return v, nil
+}
+
+// assignSplitKey is the ledger split key of a split assignment: the
+// client's key (a retry finds the split) or a random one.
+func assignSplitKey(it db.OrderItem, clientKey string) (string, error) {
+	k := clientKey
+	if k == "" {
+		k = uuid.NewString()
+	}
+	if strings.ContainsAny(k, " \t\r\n") {
+		return "", invalid("idempotency_key", "must not contain whitespace")
+	}
+	return SplitRefType + ":" + it.Uuid.String() + ":" + k, nil
+}
+
+func splitView(r ledger.SplitResult) *SplitView {
+	return &SplitView{
+		UUID: r.Split.Uuid, Meters: ratString(numericRat(r.Split.Meters)),
+		SourceUnitUUID: r.Source.Uuid, SourceBarcode: r.Source.Barcode,
+		SourceRemainingMeters: ratString(numericRat(r.Source.RemainingMeters)),
+		NewUnitUUID:           r.New.Uuid, NewBarcode: r.New.Barcode, Replayed: r.Replayed,
+	}
+}
+
+func ratString(r *big.Rat) string {
+	if r == nil {
+		return ""
+	}
+	return r.FloatString(2)
+}
+
+// splitErr maps a split refusal of the order flow.
+func splitErr(barcode string, err error) error {
+	switch {
+	case errors.Is(err, ledger.ErrInsufficientMeters):
+		return fmt.Errorf("%w: %v", ErrRollMetersExceed, err)
+	case errors.Is(err, ledger.ErrSplitUnitElsewhere), errors.Is(err, ledger.ErrSplitNotRoll):
+		return ErrUnitNotAvailable
+	case errors.Is(err, ledger.ErrIdempotencyConflict):
+		return invalid("idempotency_key", "the key was used for another roll")
+	}
+	return fmt.Errorf("orders: split %s: %w", barcode, err)
 }
 
 // checkSerialStock: the seller holds the serial unit in stock and no other

@@ -43,3 +43,23 @@ type Reclassification struct {
 	MovementUUID *uuid.UUID `json:"movement_uuid"`
 	CreatedAt    time.Time  `json:"created_at"`
 }
+
+// SplitUnit is one side of a roll split.
+type SplitUnit struct {
+	UUID            uuid.UUID `json:"uuid"`
+	Barcode         string    `json:"barcode"`
+	Status          string    `json:"status"`
+	RemainingMeters string    `json:"remaining_meters"`
+}
+
+// Split is a roll split (TEC-184): meters cut off a roll as a new unit with
+// its own barcode. Replayed is true when the idempotency key was already
+// used (nothing new was written).
+type Split struct {
+	UUID      uuid.UUID `json:"uuid"`
+	Meters    string    `json:"meters"`
+	Source    SplitUnit `json:"source"`
+	NewUnit   SplitUnit `json:"new_unit"`
+	Replayed  bool      `json:"replayed"`
+	CreatedAt time.Time `json:"created_at"`
+}

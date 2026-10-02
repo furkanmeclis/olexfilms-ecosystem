@@ -29,6 +29,7 @@ const (
 	CodeUnitNotAvailable      = "ORDER_UNIT_NOT_AVAILABLE"
 	CodeInsufficientStock     = "ORDER_INSUFFICIENT_STOCK"
 	CodeOverAssigned          = "ORDER_ITEM_OVER_ASSIGNED"
+	CodeRollMetersExceed      = "ROLL_METERS_EXCEED_REMAINING"
 	CodeNotFullyAssigned      = "ORDER_NOT_FULLY_ASSIGNED"
 	CodeStockUnavailable      = "ORDER_STOCK_UNAVAILABLE"
 	CodePriceNotFound         = ord.CodePriceNotFound
@@ -68,6 +69,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Conflict(w, r, CodeUnitNotAvailable, "The unit is not in the seller's stock")
 	case errors.Is(err, ord.ErrInsufficientStock):
 		response.Conflict(w, r, CodeInsufficientStock, "Not enough unreserved stock for this barcode")
+	case errors.Is(err, ord.ErrRollMetersExceed):
+		response.Error(w, r, http.StatusUnprocessableEntity, CodeRollMetersExceed, "The roll has fewer meters left than requested")
 	case errors.Is(err, ord.ErrOverAssigned):
 		response.Conflict(w, r, CodeOverAssigned, "The assignment exceeds the order line amount")
 	case errors.Is(err, ord.ErrNotFullyAssigned):
@@ -260,10 +263,11 @@ func (h *Handler) Transition(w http.ResponseWriter, r *http.Request) {
 }
 
 type assignBody struct {
-	Barcode  string       `json:"barcode"`
-	UnitUUID string       `json:"unit_uuid"`
-	Quantity *int64       `json:"quantity"`
-	Meters   *json.Number `json:"meters"`
+	Barcode        string       `json:"barcode"`
+	UnitUUID       string       `json:"unit_uuid"`
+	Quantity       *int64       `json:"quantity"`
+	Meters         *json.Number `json:"meters"`
+	IdempotencyKey string       `json:"idempotency_key"`
 }
 
 func pathItem(w http.ResponseWriter, r *http.Request) (uuid.UUID, uuid.UUID, bool) {
@@ -290,7 +294,13 @@ func (h *Handler) AssignUnit(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &body) {
 		return
 	}
-	in := ord.AssignInput{Barcode: body.Barcode, UnitUUID: body.UnitUUID, Quantity: body.Quantity}
+	in := ord.AssignInput{
+		Barcode: body.Barcode, UnitUUID: body.UnitUUID, Quantity: body.Quantity,
+		IdempotencyKey: body.IdempotencyKey,
+	}
+	if in.IdempotencyKey == "" {
+		in.IdempotencyKey = r.Header.Get("Idempotency-Key")
+	}
 	if body.Meters != nil {
 		m := body.Meters.String()
 		in.Meters = &m
