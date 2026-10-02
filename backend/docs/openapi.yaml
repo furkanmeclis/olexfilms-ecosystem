@@ -8919,14 +8919,20 @@ paths:
         (a roll that is only cut stays listed) and fixed barcodes with
         pieces on hand. barcode is an exact barcode (scanner lookup),
         product_uuid narrows to one product, min_meters lists only rolls
-        with at least that many meters left. Needs services.write on the
-        service; a service outside the read scope is 404.
+        with at least that many meters left, q matches a part of the
+        product name, SKU or barcode (TEC-182 product search). Each
+        product carries its category's available_parts, the parts a new
+        item may apply. Needs services.write on the service; a service
+        outside the read scope is 404.
       security:
         - bearerAuth: []
       parameters:
         - name: barcode
           in: query
           schema: { type: string, maxLength: 64 }
+        - name: q
+          in: query
+          schema: { type: string, maxLength: 100 }
         - name: product_uuid
           in: query
           schema: { type: string, format: uuid }
@@ -14552,12 +14558,16 @@ components:
         unit_kind: { type: string, enum: [serial, fixed] }
         product:
           type: object
-          required: [uuid, sku, name, unit_type]
+          required: [uuid, sku, name, unit_type, available_parts]
           properties:
             uuid: { type: string, format: uuid }
             sku: { type: string }
             name: { type: string }
             unit_type: { type: string }
+            available_parts:
+              type: array
+              items: { type: string }
+              description: Parts of the product category (allowed applied_parts)
         quantity_on_hand: { type: integer, description: "1 for a serial unit, pieces on hand for a fixed barcode" }
         initial_meters: { type: [string, "null"], description: Roll length }
         remaining_meters: { type: [string, "null"], description: Meters left on the roll }
