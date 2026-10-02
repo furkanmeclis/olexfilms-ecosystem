@@ -163,5 +163,9 @@
   "groups.orders": "订单",
   "groups.transfers": "调拨",
   "labels.services.complete": "完成服务",
-  "labels.services.cancel": "取消服务"
+  "labels.services.cancel": "取消服务",
+  "labels.warranties.read": "查看质保",
+  "labels.warranties.void": "作废质保",
+  "labels.vehicles.transfer": "转让车辆",
+  "groups.warranties": "质保"
 }

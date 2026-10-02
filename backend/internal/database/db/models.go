@@ -819,6 +819,7 @@ type Organization struct {
 	ProvinceID         pgtype.Int8        `json:"province_id"`
 	DistrictID         pgtype.Int8        `json:"district_id"`
 	PhoneRaw           pgtype.Text        `json:"phone_raw"`
+	GoogleBusinessUrl  pgtype.Text        `json:"google_business_url"`
 }
 
 type OrganizationMember struct {
@@ -1421,6 +1422,29 @@ type Vehicle struct {
 	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
 }
 
+type VehicleTransfer struct {
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	VehicleID         int64              `json:"vehicle_id"`
+	FromUserID        int64              `json:"from_user_id"`
+	ToUserID          pgtype.Int8        `json:"to_user_id"`
+	ToPhone           string             `json:"to_phone"`
+	FromCodeHash      string             `json:"from_code_hash"`
+	ToCodeHash        string             `json:"to_code_hash"`
+	FromVerifiedAt    pgtype.Timestamptz `json:"from_verified_at"`
+	ToVerifiedAt      pgtype.Timestamptz `json:"to_verified_at"`
+	Attempts          int32              `json:"attempts"`
+	ExpiresAt         pgtype.Timestamptz `json:"expires_at"`
+	Status            string             `json:"status"`
+	InitiatedByUserID pgtype.Int8        `json:"initiated_by_user_id"`
+	CompletedAt       pgtype.Timestamptz `json:"completed_at"`
+	CancelledAt       pgtype.Timestamptz `json:"cancelled_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
 type WarehouseLocation struct {
 	ID             int64              `json:"id"`
 	Uuid           uuid.UUID          `json:"uuid"`
@@ -1429,6 +1453,32 @@ type WarehouseLocation struct {
 	Code           string             `json:"code"`
 	Name           string             `json:"name"`
 	Active         bool               `json:"active"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Warranty struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	PublicCode     string             `json:"public_code"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	ServiceID      int64              `json:"service_id"`
+	ServiceItemID  int64              `json:"service_item_id"`
+	ProductID      int64              `json:"product_id"`
+	UnitID         int64              `json:"unit_id"`
+	ItemKind       string             `json:"item_kind"`
+	VehicleID      int64              `json:"vehicle_id"`
+	HolderUserID   int64              `json:"holder_user_id"`
+	StartAt        pgtype.Timestamptz `json:"start_at"`
+	EndAt          pgtype.Timestamptz `json:"end_at"`
+	Status         string             `json:"status"`
+	ExpiredAt      pgtype.Timestamptz `json:"expired_at"`
+	VoidedAt       pgtype.Timestamptz `json:"voided_at"`
+	VoidedByUserID pgtype.Int8        `json:"voided_by_user_id"`
+	VoidReason     pgtype.Text        `json:"void_reason"`
+	Notified30At   pgtype.Timestamptz `json:"notified_30_at"`
+	Notified7At    pgtype.Timestamptz `json:"notified_7_at"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }

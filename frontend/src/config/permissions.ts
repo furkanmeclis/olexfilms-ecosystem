@@ -77,6 +77,9 @@ export const Permission = {
   CustomersMerge: "customers.merge",
   VehiclesRead: "vehicles.read",
   VehiclesWrite: "vehicles.write",
+  VehiclesTransfer: "vehicles.transfer",
+  WarrantiesRead: "warranties.read",
+  WarrantiesVoid: "warranties.void",
   PricingPurchaseRead: "pricing.purchase.read",
   PricingSaleRead: "pricing.sale.read",
   PricingSaleWrite: "pricing.sale.write",
@@ -323,6 +326,11 @@ export const permissions = {
   vehicles: {
     read: Permission.VehiclesRead,
     write: Permission.VehiclesWrite,
+    transfer: Permission.VehiclesTransfer,
+  },
+  warranties: {
+    read: Permission.WarrantiesRead,
+    void: Permission.WarrantiesVoid,
   },
   orders: {
     read: Permission.OrdersRead,

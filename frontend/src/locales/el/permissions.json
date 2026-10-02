@@ -163,5 +163,9 @@
   "groups.orders": "Παραγγελίες",
   "groups.transfers": "Μεταφορές",
   "labels.services.complete": "Ολοκλήρωση υπηρεσιών",
-  "labels.services.cancel": "Ακύρωση υπηρεσιών"
+  "labels.services.cancel": "Ακύρωση υπηρεσιών",
+  "labels.warranties.read": "Προβολή εγγυήσεων",
+  "labels.warranties.void": "Ακύρωση εγγυήσεων",
+  "labels.vehicles.transfer": "Μεταβίβαση οχημάτων",
+  "groups.warranties": "Εγγυήσεις"
 }

@@ -163,5 +163,9 @@
   "groups.orders": "الطلبات",
   "groups.transfers": "عمليات النقل",
   "labels.services.complete": "إكمال الخدمات",
-  "labels.services.cancel": "إلغاء الخدمات"
+  "labels.services.cancel": "إلغاء الخدمات",
+  "labels.warranties.read": "عرض الضمانات",
+  "labels.warranties.void": "إلغاء الضمانات",
+  "labels.vehicles.transfer": "نقل ملكية المركبات",
+  "groups.warranties": "الضمانات"
 }
