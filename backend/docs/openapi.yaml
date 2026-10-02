@@ -5443,6 +5443,208 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /v1/customers/{uuid}/anonymize:
+    post:
+      tags: [Customers]
+      operationId: anonymizeCustomer
+      summary: KVKK/GDPR anonymization of a customer (irreversible, idempotent)
+      description: >-
+        customers.anonymize (center roles) in a center organization, plus a
+        fresh step-up (403 STEP_UP_REQUIRED). No row is deleted: vehicles,
+        plates/VINs, services and warranties stay attached to the user.
+        Name, surname, e-mail, phone, timezone, address, company, tax office
+        and the encrypted identity numbers are overwritten; the account gets
+        status anonymized, its refresh tokens are revoked and it can no
+        longer sign in. A second call answers 200 with changed=false and
+        changes nothing. A customer who is also an organization user answers
+        409 CUSTOMER_HAS_PANEL_ACCOUNT. Every call is written to the audit
+        log (customers.anonymized).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Anonymized (or already anonymized)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCustomerAnonymizeResult"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/customers/{uuid}/data-export:
+    post:
+      tags: [Customers]
+      operationId: requestCustomerDataExport
+      summary: Queue a personal data export of a customer (JSON or PDF)
+      description: >-
+        customers.anonymize in a center organization, plus a fresh step-up.
+        The job runs on worker-docs (exports queue): JSON is one structured
+        document (profile, vehicles, services, warranties of the domain
+        brand), PDF is rendered by Gotenberg in the requested language.
+        Identity numbers are exported masked (last four characters). The
+        request is written to the audit log (customers.data_export_requested).
+        Poll and download through /v1/customer-data-exports/{uuid}.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerDataExportInput"
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/customer-data-exports/{uuid}:
+    get:
+      tags: [Customers]
+      operationId: getCustomerDataExport
+      summary: A customer data export job of the active organization
+      description: download_url points at /v1/customer-data-exports/{uuid}/download once completed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Export job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/customer-data-exports/{uuid}/download:
+    get:
+      tags: [Customers]
+      operationId: downloadCustomerDataExport
+      summary: Download a completed customer data export (audited)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: File bytes (application/json or application/pdf)
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/portal/me/data-export:
+    post:
+      tags: [Portal]
+      operationId: requestPortalDataExport
+      summary: Queue an export of the signed-in customer's own data (JSON or PDF)
+      description: >-
+        Portal session (customers.read). Same document as the center export,
+        limited to the domain brand. Poll and download through
+        /v1/portal/exports/{uuid}. The request is audited.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerDataExportInput"
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/portal/exports/{uuid}:
+    get:
+      tags: [Portal]
+      operationId: getPortalExport
+      summary: An export job of the signed-in customer
+      description: Other users' jobs answer 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Export job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/portal/exports/{uuid}/download:
+    get:
+      tags: [Portal]
+      operationId: downloadPortalExport
+      summary: Download a completed export of the signed-in customer
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: File bytes (application/json or application/pdf)
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/vehicles:
     get:
       tags: [Customers]
@@ -11184,6 +11386,33 @@ components:
             redis:
               type: string
               examples: [ok, down]
+
+    CustomerAnonymizeResult:
+      type: object
+      required: [uuid, status, changed, anonymized_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        status: { type: string, enum: [anonymized] }
+        changed: { type: boolean, description: false when the customer was already anonymized }
+        anonymized_at: { type: string, format: date-time }
+
+    EnvelopeCustomerAnonymizeResult:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/CustomerAnonymizeResult" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    CustomerDataExportInput:
+      type: object
+      required: [format]
+      additionalProperties: false
+      properties:
+        format: { type: string, enum: [json, pdf] }
+        locale:
+          type: string
+          description: Document language (default the request language).
 
     ExportJob:
       type: object

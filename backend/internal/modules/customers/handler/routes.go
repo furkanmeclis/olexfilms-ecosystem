@@ -19,6 +19,11 @@ import (
 // subtree, center = the brand. Out-of-scope records answer 404.
 // upgrade-to-dealer needs customers.write in a center or distributor
 // organization.
+//
+// TEC-161 (K19): anonymization and the personal data export need
+// customers.anonymize (center roles only, sensitive) and a fresh step-up;
+// the use case also requires a center organization. The portal export
+// (/v1/portal/me/data-export) is the signed-in customer's own data.
 func RegisterRoutes(
 	mux *http.ServeMux,
 	h *Handler,
@@ -26,6 +31,7 @@ func RegisterRoutes(
 	loader middleware.IdentityLoader,
 	q *db.Queries,
 	checker middleware.FeatureChecker,
+	stepUp middleware.StepUpChecker,
 ) {
 	authn := middleware.Authenticate(tokens, loader)
 	org := middleware.RequireOrganization(tokens, q)
@@ -37,12 +43,28 @@ func RegisterRoutes(
 	}
 	readC, writeC := with(rbac.PermCustomersRead), with(rbac.PermCustomersWrite)
 	readV, writeV := with(rbac.PermVehiclesRead), with(rbac.PermVehiclesWrite)
+	privacy := with(rbac.PermCustomersAnonymize)
+	privacyStepUp := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, authn, org, module, middleware.RequireScope(q, rbac.PermCustomersAnonymize),
+			middleware.RequireStepUp(stepUp))
+	}
+	portal := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, authn, middleware.RequirePermission(rbac.PermCustomersRead))
+	}
 
 	mux.Handle("GET /v1/customers", readC(h.ListCustomers))
 	mux.Handle("POST /v1/customers", writeC(h.CreateCustomer))
 	mux.Handle("GET /v1/customers/{uuid}", readC(h.GetCustomer))
 	mux.Handle("PATCH /v1/customers/{uuid}", writeC(h.UpdateCustomer))
 	mux.Handle("POST /v1/customers/{uuid}/upgrade-to-dealer", writeC(h.UpgradeToDealer))
+	mux.Handle("POST /v1/customers/{uuid}/anonymize", privacyStepUp(h.AnonymizeCustomer))
+	mux.Handle("POST /v1/customers/{uuid}/data-export", privacyStepUp(h.RequestDataExport))
+	mux.Handle("GET /v1/customer-data-exports/{uuid}", privacy(h.GetDataExport))
+	mux.Handle("GET /v1/customer-data-exports/{uuid}/download", privacy(h.DownloadDataExport))
+
+	mux.Handle("POST /v1/portal/me/data-export", portal(h.RequestPortalDataExport))
+	mux.Handle("GET /v1/portal/exports/{uuid}", portal(h.GetPortalExport))
+	mux.Handle("GET /v1/portal/exports/{uuid}/download", portal(h.DownloadPortalExport))
 
 	mux.Handle("GET /v1/vehicles", readV(h.ListVehicles))
 	mux.Handle("POST /v1/vehicles", writeV(h.CreateVehicle))
