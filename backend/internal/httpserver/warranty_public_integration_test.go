@@ -83,6 +83,13 @@ func TestIntegrationPublicWarranty(t *testing.T) {
 	it := newIntegration(t)
 	ctx := context.Background()
 	w, cust, dealer := it.publicWarrantyFixture("t189")
+	// svcCustomer derives the car brand name from its name argument, so the
+	// holder gets a distinct name and surname for the leak check.
+	holderName, holderSurname := "Holdername"+it.suffix, "Holdersurname"+it.suffix
+	if _, err := it.pool.Exec(ctx, `UPDATE users SET name = $2, surname = $3 WHERE id = $1`,
+		cust.ID, holderName, holderSurname); err != nil {
+		t.Fatalf("holder name: %v", err)
+	}
 
 	check := func(label string) {
 		t.Helper()
@@ -94,7 +101,7 @@ func TestIntegrationPublicWarranty(t *testing.T) {
 		if keys := warrantyusecase.FindPIIKeys(body); len(keys) > 0 {
 			t.Fatalf("%s: personal data keys %v in %s", label, keys, body)
 		}
-		for _, leak := range []string{cust.Name, cust.Email.String, "34ABC112", "34 ABC 112", "WVWZZZ1JZ3W386752"} {
+		for _, leak := range []string{holderName, holderSurname, cust.Email.String, "34ABC112", "34 ABC 112", "WVWZZZ1JZ3W386752"} {
 			if leak != "" && strings.Contains(string(body), leak) {
 				t.Fatalf("%s: %q leaked in %s", label, leak, body)
 			}
