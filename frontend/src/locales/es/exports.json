@@ -43,6 +43,8 @@
   "columns.status": "Estado",
   "columns.rows": "Número de filas",
   "columns.created_at": "Creado",
+  "columns.actor": "Solicitado por",
+  "columns.file": "Archivo",
   "columns.actions": "Acciones",
   "resources.platform.users": "Usuarios",
   "resources.platform.roles": "Roles de usuario",

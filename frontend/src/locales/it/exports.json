@@ -43,6 +43,8 @@
   "columns.status": "Stato",
   "columns.rows": "Numero di righe",
   "columns.created_at": "Creato",
+  "columns.actor": "Richiesto da",
+  "columns.file": "File",
   "columns.actions": "Azioni",
   "resources.platform.users": "Utenti",
   "resources.platform.roles": "Ruoli",

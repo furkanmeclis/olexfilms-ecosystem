@@ -240,6 +240,8 @@ var elCatalog = map[string]string{
 	"catalog.products.uuid":                    "UUID",
 	"catalog.products.warranty_months":         "Εγγύηση (μήνες)",
 	"catalog.products.micron_thickness":        "Πάχος (μικρά)",
+	"catalog.products.purchase_price":          "Τιμή αγοράς",
+	"catalog.products.recommended_price":       "Προτεινόμενη τιμή πώλησης",
 	"catalog.products.uses_fixed_barcode":      "Σταθερό barcode",
 	"catalog.services.name":                    "Όνομα υπηρεσίας",
 	"catalog.services.category":                "Κατηγορία",

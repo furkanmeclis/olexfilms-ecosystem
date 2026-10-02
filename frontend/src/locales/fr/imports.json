@@ -73,6 +73,8 @@
   "columns.format": "Type de fichier",
   "columns.status": "Statut",
   "columns.created_at": "Créé le",
+  "columns.actor": "Téléversé par",
+  "columns.file": "Fichier",
   "columns.actions": "Actions",
   "resources.platform.users": "Utilisateurs",
   "resources.platform.roles": "Rôles",

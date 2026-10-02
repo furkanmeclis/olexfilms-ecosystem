@@ -43,6 +43,8 @@
   "columns.status": "状态",
   "columns.rows": "行数",
   "columns.created_at": "创建时间",
+  "columns.actor": "申请人",
+  "columns.file": "文件",
   "columns.actions": "操作",
   "resources.platform.users": "用户",
   "resources.platform.roles": "角色",

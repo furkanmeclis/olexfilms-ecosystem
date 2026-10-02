@@ -73,6 +73,8 @@
   "columns.format": "格式",
   "columns.status": "状态",
   "columns.created_at": "创建时间",
+  "columns.actor": "上传人",
+  "columns.file": "文件",
   "columns.actions": "操作",
   "resources.platform.users": "用户",
   "resources.platform.roles": "角色",

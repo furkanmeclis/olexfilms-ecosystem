@@ -73,6 +73,8 @@
   "columns.format": "الصيغة",
   "columns.status": "الحالة",
   "columns.created_at": "تاريخ الإنشاء",
+  "columns.actor": "رفع بواسطة",
+  "columns.file": "الملف",
   "columns.actions": "الإجراءات",
   "resources.platform.users": "المستخدمون",
   "resources.platform.roles": "الأدوار",

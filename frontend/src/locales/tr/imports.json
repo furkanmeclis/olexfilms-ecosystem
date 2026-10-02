@@ -73,6 +73,8 @@
   "columns.format": "Biçim",
   "columns.status": "Durum",
   "columns.created_at": "Oluşturulma",
+  "columns.actor": "Yükleyen",
+  "columns.file": "Dosya",
   "columns.actions": "İşlemler",
   "resources.platform.users": "Kullanıcılar",
   "resources.platform.roles": "Roller",

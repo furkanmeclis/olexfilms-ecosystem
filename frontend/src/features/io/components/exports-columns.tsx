@@ -78,6 +78,26 @@ export function useExportsColumns(options: ExportsColumnsOptions = {}) {
         labelKey: "exports.columns.rows",
         enableColumnFilter: false,
       }),
+      // TEC-211: who requested the job and which file it produces.
+      createColumn<ExportJob>({
+        id: "actor",
+        labelKey: "exports.columns.actor",
+        enableColumnFilter: false,
+        enableSorting: false,
+        cell: ({ row }) => row.original.actor?.name || "—",
+      }),
+      createColumn<ExportJob>({
+        id: "filename",
+        accessorKey: "filename",
+        labelKey: "exports.columns.file",
+        enableColumnFilter: false,
+        enableSorting: false,
+        cell: ({ row }) => (
+          <span className="font-mono text-xs">
+            {row.original.filename || "—"}
+          </span>
+        ),
+      }),
       createColumn<ExportJob>({
         id: "created_at",
         accessorKey: "created_at",

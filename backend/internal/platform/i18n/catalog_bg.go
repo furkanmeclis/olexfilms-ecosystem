@@ -240,6 +240,8 @@ var bgCatalog = map[string]string{
 	"catalog.products.uuid":                    "UUID",
 	"catalog.products.warranty_months":         "Гаранция (месеци)",
 	"catalog.products.micron_thickness":        "Дебелина (микрона)",
+	"catalog.products.purchase_price":          "Покупна цена",
+	"catalog.products.recommended_price":       "Препоръчителна продажна цена",
 	"catalog.products.uses_fixed_barcode":      "Фиксиран баркод",
 	"catalog.services.name":                    "Име на услугата",
 	"catalog.services.category":                "Категория",

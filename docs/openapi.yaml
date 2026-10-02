@@ -14144,7 +14144,23 @@ components:
         row_count: { type: integer }
         error: { type: [string, "null"] }
         download_url: { type: [string, "null"] }
+        filename:
+          type: string
+          description: Download file name (TEC-211).
+        actor:
+          $ref: "#/components/schemas/IoJobActor"
         created_at: { type: string, format: date-time }
+
+    IoJobActor:
+      type: object
+      description: >-
+        The user who requested an export or uploaded an import (TEC-211).
+        Present on the organization job lists (GET /v1/tenant/exports,
+        GET /v1/tenant/imports).
+      required: [uuid, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
 
     EnvelopeExportJob:
       type: object
@@ -14188,6 +14204,11 @@ components:
         error: { type: [string, "null"] }
         rollback_until: { type: [string, "null"], format: date-time }
         applied_at: { type: [string, "null"], format: date-time }
+        source_filename:
+          type: string
+          description: Uploaded file name (TEC-211).
+        actor:
+          $ref: "#/components/schemas/IoJobActor"
         created_at: { type: string, format: date-time }
 
     ImportPreviewSummary:
