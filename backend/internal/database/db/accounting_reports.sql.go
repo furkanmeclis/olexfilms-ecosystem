@@ -37,8 +37,8 @@ type GetCariStatementOpeningParams struct {
 // resolves the book (one organization inside the request scope) and passes
 // its id. Signs follow 000047: cari balance = income + charge + payment -
 // expense - collection (receivable positive); cash/bank balance = income +
-// collection - expense - payment. Reversal rows carry negated amounts, so a
-// plain sum nets them out.
+// collection + opening - expense - payment (opening: TEC-198, 000056).
+// Reversal rows carry negated amounts, so a plain sum nets them out.
 // GetCariStatementOpening is the cari balance before created_before (the
 // opening balance of a statement period).
 func (q *Queries) GetCariStatementOpening(ctx context.Context, arg GetCariStatementOpeningParams) (pgtype.Numeric, error) {
@@ -218,6 +218,7 @@ SELECT a.uuid, a.type, a.name, a.currency, a.active,
        COALESCE(SUM(CASE e.direction
                         WHEN 'income' THEN e.amount
                         WHEN 'collection' THEN e.amount
+                        WHEN 'opening' THEN e.amount
                         WHEN 'expense' THEN -e.amount
                         WHEN 'payment' THEN -e.amount
                     END), 0)::NUMERIC(18,2) AS balance,

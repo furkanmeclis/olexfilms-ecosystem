@@ -12,6 +12,9 @@ const (
 	DirectionCharge     = "charge"
 	DirectionCollection = "collection"
 	DirectionPayment    = "payment"
+	// DirectionOpening is a cash/bank opening balance (TEC-198, 000056):
+	// account only, never income or expense.
+	DirectionOpening = "opening"
 )
 
 // Category is one entry of the F1 category catalog. F1 keeps the catalog in
@@ -35,6 +38,8 @@ const (
 	CategoryPurchase   = "purchase"
 	CategoryCollection = "collection"
 	CategoryPayment    = "payment"
+	// CategoryCariTransfer: keep in sync with posting.CategoryCariTransfer.
+	CategoryCariTransfer = "cari_transfer"
 )
 
 func cat(key, direction string, manual bool) Category {
@@ -61,6 +66,8 @@ var categories = []Category{
 	// Cari charge (non-P&L debit of the counterparty).
 	cat("opening_balance", DirectionCharge, true),
 	cat("adjustment", DirectionCharge, true),
+	// K25 re-parenting: closes the old parent's cari (TEC-198, system only).
+	cat(CategoryCariTransfer, DirectionCharge, false),
 	// Settlements (cash/bank movement + cari closing, never income).
 	cat(CategoryCollection, DirectionCollection, true),
 	cat(CategoryPayment, DirectionPayment, true),

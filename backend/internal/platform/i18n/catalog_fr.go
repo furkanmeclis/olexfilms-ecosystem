@@ -284,6 +284,7 @@ var frCatalog = map[string]string{
 	"accounting.category.other_expense":   "Autres charges",
 	"accounting.category.opening_balance": "Solde d'ouverture",
 	"accounting.category.adjustment":      "Ajustement",
+	"accounting.category.cari_transfer":   "Transfert du compte de tiers",
 	"accounting.category.collection":      "Encaissement",
 	"accounting.category.payment":         "Paiement",
 	"accounting.direction.income":         "Recette",
@@ -291,6 +292,7 @@ var frCatalog = map[string]string{
 	"accounting.direction.charge":         "Imputation",
 	"accounting.direction.collection":     "Encaissement",
 	"accounting.direction.payment":        "Paiement",
+	"accounting.direction.opening":        "Ouverture",
 	"accounting.account_type.cash":        "Caisse",
 	"accounting.account_type.bank":        "Banque",
 	// TEC-175: cari statement, balance report and export titles.

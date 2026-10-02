@@ -4752,6 +4752,26 @@ export interface paths {
         patch: operations["updateAccountingAccount"];
         trace?: never;
     };
+    "/v1/accounting/accounts/{uuid}/opening-balance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Book the one-off opening balance of a cash/bank account (step-up)
+         * @description TEC-198. Writes the balance a cash or bank account of the active organization carries over, once per account: direction opening, account only (no cari), in the account's currency, dated at opening_date. It raises the account balance and never reaches income or expense (P&L). The same opening balance again answers 200 with the earlier entry; other values while one is open answer 409 OPENING_BALANCE_EXISTS. Correct it by reversing the entry (POST /v1/accounting/entries/{uuid}/void), then book it again. Needs accounting.write (dealer roles answer 403) and a recent step-up (403 STEP_UP_REQUIRED). Writes finance.entry_posted to the outbox and accounting.account_opening_posted to the audit log.
+         */
+        post: operations["createAccountingAccountOpening"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/accounting/cari": {
         parameters: {
             query?: never;
@@ -4835,7 +4855,7 @@ export interface paths {
         put?: never;
         /**
          * Reverse a manual entry or an opening balance (step-up)
-         * @description Appends the mirror row (reversal_of_uuid, negated amounts); the ledger is append-only. Only open manual entries and opening balances (TEC-177) of the active organization (409 ENTRY_NOT_VOIDABLE otherwise). Reversing an opening balance writes accounting.opening_balance_voided to the audit log; a new opening balance may then be booked. Needs a recent step-up (403 STEP_UP_REQUIRED).
+         * @description Appends the mirror row (reversal_of_uuid, negated amounts); the ledger is append-only. Only open manual entries, cari opening balances (TEC-177) and cash/bank opening balances (TEC-198) of the active organization (409 ENTRY_NOT_VOIDABLE otherwise). Reversing an opening balance writes accounting.opening_balance_voided (or accounting.account_opening_voided) to the audit log; a new opening balance may then be booked. Needs a recent step-up (403 STEP_UP_REQUIRED).
          */
         post: operations["voidAccountingEntry"];
         delete?: never;
@@ -6248,7 +6268,7 @@ export interface components {
             timezone?: string;
             /**
              * Format: uuid
-             * @description Moves the organization in the tree (platform only).
+             * @description Moves the organization in the tree (platform only, K25, step-up). In the same transaction the move is recorded (organization_parent_changes, audit organization.parent_changed) and the open cari with the old parent is carried over (TEC-198): closed on the old parent's book (category cari_transfer) and opened with the same amount on the new parent's book (category opening_balance), on both the parents' and the organization's own book; no income/expense, no cash. A zero balance writes nothing; moving to the current parent is a no-op. A missing exchange rate (parents in different currencies) answers 400 and nothing moves.
              */
             parent_uuid?: string;
             /**
@@ -8996,8 +9016,11 @@ export interface components {
             };
             meta: components["schemas"]["ResponseMeta"];
         };
-        /** @enum {string} */
-        AccountingDirection: "income" | "expense" | "charge" | "collection" | "payment";
+        /**
+         * @description opening (TEC-198) is a cash/bank opening balance: account only, never income or expense (not P&L).
+         * @enum {string}
+         */
+        AccountingDirection: "income" | "expense" | "charge" | "collection" | "payment" | "opening";
         /**
          * @description Signed decimal (NUMERIC(18,2)) as a string; reversal rows are negative.
          * @example 1500.00
@@ -9164,6 +9187,15 @@ export interface components {
             side: "debit" | "credit";
             amount: components["schemas"]["AccountingAmountInput"];
             currency?: string;
+            /**
+             * Format: date
+             * @description Opening date (2000-01-01 .. today); the row is dated here.
+             */
+            opening_date: string;
+            description?: string;
+        };
+        FinanceAccountOpeningInput: {
+            amount: components["schemas"]["AccountingAmountInput"];
             /**
              * Format: date
              * @description Opening date (2000-01-01 .. today); the row is dated here.
@@ -18619,6 +18651,47 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    createAccountingAccountOpening: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FinanceAccountOpeningInput"];
+            };
+        };
+        responses: {
+            /** @description Replayed (the same opening balance is already booked) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFinanceEntry"];
+                };
+            };
+            /** @description Created opening balance */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFinanceEntry"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     listAccountingCari: {

@@ -21,6 +21,7 @@ import {
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { AccountFormDialog } from "@/features/accounting/components/account-form-dialog";
+import { AccountOpeningDialog } from "@/features/accounting/components/account-opening-dialog";
 import { Money } from "@/features/accounting/components/shared";
 import {
   accountingKeys,
@@ -34,6 +35,7 @@ import {
 import {
   accountingService,
   type FinanceAccount,
+  type FinanceAccountOpeningInput,
 } from "@/features/accounting/services/accounting.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
@@ -46,6 +48,7 @@ export function AccountsPage({ slug }: { slug: string }) {
   const access = useAccountingAccess(slug);
   const [editing, setEditing] = useState<FinanceAccount | null>(null);
   const [open, setOpen] = useState(false);
+  const [opening, setOpening] = useState<FinanceAccount | null>(null);
 
   const list = useQuery({
     queryKey: accountingKeys.accounts(access.orgUuid, {}),
@@ -71,6 +74,27 @@ export function AccountsPage({ slug }: { slug: string }) {
     onError: (error: unknown) =>
       appToast.error(
         isApiError(error) ? error.message : t("accounting.toast.failed"),
+      ),
+  });
+
+  // TEC-198: one-off opening balance (step-up via platformRequest).
+  const book = useMutation({
+    mutationFn: (body: FinanceAccountOpeningInput) =>
+      accountingService.createAccountOpening(opening?.uuid ?? "", body),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: accountingKeys.all(access.orgUuid),
+      });
+      appToast.success(t("accounting.opening.done"));
+      setOpening(null);
+    },
+    onError: (error: unknown) =>
+      appToast.error(
+        isApiError(error) && error.code === "OPENING_BALANCE_EXISTS"
+          ? t("accounting.opening.exists")
+          : isApiError(error)
+            ? error.message
+            : t("accounting.toast.failed"),
       ),
   });
 
@@ -179,6 +203,17 @@ export function AccountsPage({ slug }: { slug: string }) {
                     ? ` · ${format.dateTime(a.last_entry_at)}`
                     : ""}
                 </p>
+                {access.canWrite && a.active ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-2"
+                    data-testid="account-opening-action"
+                    onClick={() => setOpening(a)}
+                  >
+                    {t("accounting.opening.action")}
+                  </Button>
+                ) : null}
               </CardContent>
             </Card>
           ))}
@@ -190,6 +225,14 @@ export function AccountsPage({ slug }: { slug: string }) {
         pending={save.isPending}
         onOpenChange={setOpen}
         onSubmit={(values) => save.mutateAsync(values)}
+      />
+      <AccountOpeningDialog
+        account={opening}
+        pending={book.isPending}
+        onOpenChange={(v) => {
+          if (!v) setOpening(null);
+        }}
+        onSubmit={(body) => book.mutateAsync(body)}
       />
     </EntityPage>
   );

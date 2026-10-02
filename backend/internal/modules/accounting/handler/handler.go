@@ -65,7 +65,7 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, acc.ErrNotVoidable):
 		response.Conflict(w, r, CodeEntryNotVoidable, "Only an open manual entry or opening balance can be voided")
 	case errors.Is(err, acc.ErrOpeningBalanceExists):
-		response.Conflict(w, r, CodeOpeningExists, "This cari already has an opening balance; reverse it first")
+		response.Conflict(w, r, CodeOpeningExists, "An opening balance is already booked; reverse it first")
 	case errors.Is(err, acc.ErrIdempotencyConflict):
 		response.Conflict(w, r, CodeIdempotencyReused, "The idempotency key was used for a different entry")
 	case errors.Is(err, acc.ErrRateNotFound):
@@ -474,6 +474,32 @@ func (h *Handler) CreateOpeningBalance(w http.ResponseWriter, r *http.Request) {
 	e, replayed, err := h.svc.PostOpeningBalance(r.Context(), caller(r), acc.OpeningBalanceInput{
 		CariUUID: b.CariUUID, CounterpartyOrg: b.CounterpartyOrg, Side: b.Side, Amount: b.Amount,
 		Currency: b.Currency, Date: b.OpeningDate, Description: b.Description,
+	})
+	written(w, r, e, replayed, err)
+}
+
+type accountOpeningBody struct {
+	Amount      string `json:"amount"`
+	OpeningDate string `json:"opening_date"`
+	Description string `json:"description"`
+}
+
+// CreateAccountOpening books the one-off opening balance of a cash/bank
+// account (POST /v1/accounting/accounts/{uuid}/opening-balance, step-up,
+// TEC-198). It moves the account balance only (no cari, no P&L). The same
+// opening balance again answers 200 with the earlier entry; other values
+// while one is open answer 409 OPENING_BALANCE_EXISTS.
+func (h *Handler) CreateAccountOpening(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	var b accountOpeningBody
+	if !decode(w, r, &b) {
+		return
+	}
+	e, replayed, err := h.svc.PostAccountOpening(r.Context(), caller(r), id, acc.AccountOpeningInput{
+		Amount: b.Amount, Date: b.OpeningDate, Description: b.Description,
 	})
 	written(w, r, e, replayed, err)
 }

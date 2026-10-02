@@ -284,6 +284,7 @@ var itCatalog = map[string]string{
 	"accounting.category.other_expense":   "Altre spese",
 	"accounting.category.opening_balance": "Saldo di apertura",
 	"accounting.category.adjustment":      "Rettifica",
+	"accounting.category.cari_transfer":   "Trasferimento partitario",
 	"accounting.category.collection":      "Incasso",
 	"accounting.category.payment":         "Pagamento",
 	"accounting.direction.income":         "Ricavo",
@@ -291,6 +292,7 @@ var itCatalog = map[string]string{
 	"accounting.direction.charge":         "Addebito",
 	"accounting.direction.collection":     "Incasso",
 	"accounting.direction.payment":        "Pagamento",
+	"accounting.direction.opening":        "Apertura",
 	"accounting.account_type.cash":        "Cassa",
 	"accounting.account_type.bank":        "Banca",
 	// TEC-175: cari statement, balance report and export titles.

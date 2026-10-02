@@ -858,6 +858,17 @@ type OrganizationMemberRole struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
+type OrganizationParentChange struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	OldParentID    int64              `json:"old_parent_id"`
+	NewParentID    int64              `json:"new_parent_id"`
+	ActorUserID    pgtype.Int8        `json:"actor_user_id"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
 type OrganizationProductStock struct {
 	OrganizationID int64              `json:"organization_id"`
 	ProductID      int64              `json:"product_id"`

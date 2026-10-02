@@ -220,6 +220,17 @@ SET parent_id = $2
 WHERE id = $1 AND deleted_at IS NULL
 RETURNING *;
 
+-- InsertOrganizationParentChange records one re-parenting (K25, TEC-198);
+-- its uuid is the change id the cari transfer rows are sourced by.
+-- name: InsertOrganizationParentChange :one
+INSERT INTO organization_parent_changes (
+    organization_id, brand_id, old_parent_id, new_parent_id, actor_user_id
+) VALUES (
+    sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.arg(old_parent_id),
+    sqlc.arg(new_parent_id), sqlc.narg(actor_user_id)
+)
+RETURNING *;
+
 -- name: AssignMemberRoleBySlug :exec
 INSERT INTO organization_member_roles (member_id, role_id)
 SELECT sqlc.arg(member_id), r.id

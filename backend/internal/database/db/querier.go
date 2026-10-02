@@ -371,8 +371,8 @@ type Querier interface {
 	// resolves the book (one organization inside the request scope) and passes
 	// its id. Signs follow 000047: cari balance = income + charge + payment -
 	// expense - collection (receivable positive); cash/bank balance = income +
-	// collection - expense - payment. Reversal rows carry negated amounts, so a
-	// plain sum nets them out.
+	// collection + opening - expense - payment (opening: TEC-198, 000056).
+	// Reversal rows carry negated amounts, so a plain sum nets them out.
 	// GetCariStatementOpening is the cari balance before created_before (the
 	// opening balance of a statement period).
 	GetCariStatementOpening(ctx context.Context, arg GetCariStatementOpeningParams) (pgtype.Numeric, error)
@@ -589,6 +589,9 @@ type Querier interface {
 	// ---------------------------------------------------------------------------
 	// Status history (append-only).
 	InsertOrderStatusHistory(ctx context.Context, arg InsertOrderStatusHistoryParams) (OrderStatusHistory, error)
+	// InsertOrganizationParentChange records one re-parenting (K25, TEC-198);
+	// its uuid is the change id the cari transfer rows are sourced by.
+	InsertOrganizationParentChange(ctx context.Context, arg InsertOrganizationParentChangeParams) (OrganizationParentChange, error)
 	InsertOutboxEvent(ctx context.Context, arg InsertOutboxEventParams) (OutboxEvent, error)
 	InsertRolePermission(ctx context.Context, arg InsertRolePermissionParams) error
 	// ---------------------------------------------------------------------------
