@@ -347,6 +347,9 @@ var deCatalog = map[string]string{
 	"export.title.portal.customer_data_export": "Auszug personenbezogener Daten",
 	"resources.customers.data_export":          "Personenbezogene Kundendaten",
 	"resources.portal.customer_data_export":    "Meine personenbezogenen Daten",
+	// TEC-164: customer list export.
+	"export.title.customers.list":              "Kundenliste",
+	"resources.customers.list":                 "Kunden",
 	"customers.export.section":                 "Abschnitt",
 	"customers.export.item":                    "Datensatz",
 	"customers.export.field":                   "Feld",

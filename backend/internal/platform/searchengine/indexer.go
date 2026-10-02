@@ -2,6 +2,7 @@ package searchengine
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
@@ -136,6 +137,10 @@ func (i *Indexer) processUpsert(ctx context.Context, spec, id string) {
 		return
 	}
 	doc, err := adapter.Document(ctx, id)
+	if errors.Is(err, ErrSkipDocument) {
+		i.processDelete(ctx, spec, id)
+		return
+	}
 	if err != nil {
 		i.log.Warn("search_upsert_document_failed", "spec", spec, "id", id, "error", err)
 		return

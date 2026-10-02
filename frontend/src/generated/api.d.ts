@@ -3245,7 +3245,7 @@ export interface paths {
         };
         /**
          * Customers linked to the organizations in scope
-         * @description customers.read. A dealer sees the customers linked to its organization (customer_organizations), a distributor its subtree, the center the brand; always the domain brand (K20). Anonymized customers are listed masked (`anonymized: true`, localized name, no contact data).
+         * @description customers.read. A dealer sees the customers linked to its organization (customer_organizations), a distributor its subtree, the center the brand; always the domain brand (K20). Anonymized customers are listed masked (`anonymized: true`, localized name, no contact data). TEC-164: `q` searches the Meilisearch customers index when it is up (filtered on the scope's organizations and the brand, ranked by relevance; the hits are reloaded from Postgres with the same scope) and falls back to the SQL search otherwise. Anonymized customers are never indexed, so `status=anonymized` always uses the SQL search.
          */
         get: operations["listCustomers"];
         put?: never;
@@ -3358,6 +3358,63 @@ export interface paths {
          * @description customers.merge (center roles) in a center organization, plus a fresh step-up (403 STEP_UP_REQUIRED). One transaction: vehicles, services (following their vehicle), warranties (holder), organization links (duplicates folded into the target's link), consents and the profile move to target_uuid; the phone / e-mail the target lacks is handed over. Nothing is deleted: the source keeps its row with merged_into_user_id = target and status disabled, its refresh tokens are revoked and it can no longer sign in. Customer cari accounts are not moved (reported). Writes the audit row customers.merged and the outbox event customer.merged. Same refusals as the preview.
          */
         post: operations["mergeCustomer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/customers/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a customer list export (CSV, XLSX or PDF)
+         * @description TEC-164. customers.read with the list's scope: the job (worker-docs, exports queue) exports the customers of the scope with the list filters (`q`, `status`), masked like the list (anonymized customers show the anonymized label; identity numbers are not exported). The worker re-authorizes the stored scope against the job organization. The request is written to the activity log (customers.list_exported). Poll and download through /v1/customer-list-exports/{uuid}.
+         */
+        post: operations["requestCustomerListExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/customer-list-exports/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A customer list export job of the active organization
+         * @description download_url points at /v1/customer-list-exports/{uuid}/download once completed.
+         */
+        get: operations["getCustomerListExport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/customer-list-exports/{uuid}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download a completed customer list export (audited) */
+        get: operations["downloadCustomerListExport"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5472,6 +5529,90 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/stock-transfers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stock transfer requests of the active organization
+         * @description Requests where the active organization is the giver (outgoing), the receiver (incoming) or the common parent (approval); direction narrows the list. Needs transfers.request or transfers.approve and the dealer_transfers module. List rows carry no items.
+         */
+        get: operations["listStockTransfers"];
+        put?: never;
+        /**
+         * Request a stock transfer to a sibling organization (K13)
+         * @description The active organization (dealer or distributor) gives units it holds to a sibling: same brand, same type, same parent. Any other target (another parent, brand or type, the parent itself) is 422 TRANSFER_NOT_SIBLING. Units are named by barcode; a fixed barcode needs a quantity, pieces and rolls move whole. A unit not in the giver's stock, reserved by an order or on another open request is 400 with detail code TRANSFER_UNIT_NOT_AVAILABLE, TRANSFER_UNIT_RESERVED or TRANSFER_INSUFFICIENT_STOCK. Needs transfers.request. Writes transfers.requested; no stock moves yet.
+         */
+        post: operations["createStockTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock-transfers/targets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Siblings the active organization may transfer to
+         * @description Live organizations of the same brand, type and parent as the active organization (empty for the center). Needs transfers.request.
+         */
+        get: operations["listStockTransferTargets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock-transfers/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One stock transfer request with its units
+         * @description Visible to its parties only (giver, receiver, common parent); others get 404. available_transitions lists the statuses the caller may move the request to.
+         */
+        get: operations["getStockTransfer"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock-transfers/{uuid}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move a stock transfer request to another status
+         * @description requested -> approved | rejected (receiver with transfers.request or the common parent with transfers.approve; approval freezes the giver's purchase price per unit, K13; a rejection writes no stock movement); requested -> cancelled (giver or parent); approved -> shipped (giver: one ledger transfer_out per unit with idempotency key transfer:transfer_item:<id>:transfer_out:<barcode>, serial units go in_transit owned by the receiver; 409 TRANSFER_STOCK_UNAVAILABLE when the ledger refuses); approved -> cancelled (any party, no movement); shipped -> received (receiver: one transfer_in per unit, available at the receiver); shipped -> cancelled (giver, once the goods are back: one transfer_cancel_restore per unit). rejected, received and cancelled are final. A request for the current status is a no-op; other moves answer 409 TRANSFER_INVALID_TRANSITION. Every move writes a transfers.* outbox event. No accounting entry is booked.
+         */
+        post: operations["transitionStockTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -7159,6 +7300,18 @@ export interface components {
             success: true;
             data: components["schemas"]["CustomerMergeResult"];
             meta: components["schemas"]["ResponseMeta"];
+        };
+        CustomerListExportInput: {
+            /** @enum {string} */
+            format: "csv" | "xlsx" | "pdf";
+            /** @description List filters (same as GET /v1/customers). */
+            query?: {
+                q?: string;
+                /** @enum {string} */
+                status?: "active" | "disabled" | "pending" | "anonymized";
+            };
+            /** @description Document language (defaults to the request locale). */
+            locale?: string;
         };
         CustomerDataExportInput: {
             /** @enum {string} */
@@ -9834,6 +9987,110 @@ export interface components {
                 total: number;
                 limit: number;
                 offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        StockTransferStatus: "requested" | "approved" | "rejected" | "shipped" | "received" | "cancelled";
+        StockTransferItem: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            unit_uuid: string;
+            barcode: string;
+            /** @enum {string} */
+            unit_kind: "serial" | "fixed";
+            product: components["schemas"]["OrderProductRef"];
+            /** @description Fixed barcode quantity */
+            quantity: number | null;
+            /** @description Remaining meters of a roll when requested */
+            meters: string | null;
+            /** @description Giver's purchase price frozen at approval (K13) */
+            unit_price: string | null;
+            line_total: string | null;
+            /** @description The transfer_out movement is written */
+            shipped: boolean;
+            /** @description The transfer_in movement is written */
+            received: boolean;
+            /** @description The transfer_cancel_restore movement is written */
+            restored: boolean;
+        };
+        StockTransfer: {
+            /** Format: uuid */
+            uuid: string;
+            transfer_no: string;
+            status: components["schemas"]["StockTransferStatus"];
+            /**
+             * @description Side of the active organization
+             * @enum {string}
+             */
+            role: "sender" | "receiver" | "parent";
+            sender: components["schemas"]["OrderOrgRef"];
+            receiver: components["schemas"]["OrderOrgRef"];
+            parent: components["schemas"]["OrderOrgRef"];
+            currency: string;
+            /** @description Sum of the frozen line totals (null until approval or with an unpriced unit) */
+            total: string | null;
+            note: string | null;
+            decision_note: string | null;
+            cancel_reason: string | null;
+            /** Format: int64 */
+            item_count: number;
+            /** Format: date-time */
+            decided_at: string | null;
+            /** Format: date-time */
+            shipped_at: string | null;
+            /** Format: date-time */
+            received_at: string | null;
+            /** Format: date-time */
+            cancelled_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            available_transitions: components["schemas"]["StockTransferStatus"][];
+            /** @description Detail only */
+            items?: components["schemas"]["StockTransferItem"][];
+        };
+        StockTransferItemInput: {
+            barcode: string;
+            /** @description Required for fixed barcodes; pieces and rolls move whole */
+            quantity?: number;
+        };
+        StockTransferCreateInput: {
+            /** Format: uuid */
+            to_org_uuid: string;
+            note?: string;
+            items: components["schemas"]["StockTransferItemInput"][];
+        };
+        StockTransferTransitionInput: {
+            status: components["schemas"]["StockTransferStatus"];
+            /** @description Decision note (approved/rejected) or cancel reason */
+            reason?: string;
+        };
+        EnvelopeStockTransfer: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["StockTransfer"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeStockTransferPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["StockTransfer"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeStockTransferTargets: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["OrderOrgRef"][];
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -15903,6 +16160,85 @@ export interface operations {
             409: components["responses"]["Conflict"];
         };
     };
+    requestCustomerListExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomerListExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getCustomerListExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Export job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    downloadCustomerListExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description File bytes (text/csv, XLSX or application/pdf) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     requestCustomerDataExport: {
         parameters: {
             query?: never;
@@ -19675,6 +20011,140 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeOrder"];
                 };
             };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listStockTransfers: {
+        parameters: {
+            query?: {
+                direction?: "outgoing" | "incoming" | "approval";
+                status?: components["schemas"]["StockTransferStatus"];
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Transfer requests */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockTransferPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createStockTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockTransferCreateInput"];
+            };
+        };
+        responses: {
+            /** @description Requested transfer */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockTransfer"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    listStockTransferTargets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sibling organizations */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockTransferTargets"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getStockTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Transfer request */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockTransfer"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    transitionStockTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockTransferTransitionInput"];
+            };
+        };
+        responses: {
+            /** @description Transfer request after the transition */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockTransfer"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];

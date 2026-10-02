@@ -116,5 +116,10 @@
   "codes.ORDER_STOCK_UNAVAILABLE": "تم رفض حركة المخزون لهذه الشحنة.",
   "codes.PRICE_NOT_FOUND": "لا يوجد سعر لهذا المنتج بعملة الطلب.",
   "codes.RATE_NOT_FOUND": "لا يتوفر سعر صرف لتثبيته لعملة الطلب.",
-  "codes.ROLL_CUT_UNSUPPORTED": "تُشحن اللفائف كاملة؛ يجب أن تساوي الأمتار الطول المتبقي."
+  "codes.ROLL_CUT_UNSUPPORTED": "تُشحن اللفائف كاملة؛ يجب أن تساوي الأمتار الطول المتبقي.",
+  "codes.CUSTOMER_ANONYMIZED": "هوية العميل مجهّلة ولا يمكن تغييره.",
+  "codes.CUSTOMER_INACTIVE": "حساب العميل غير نشط.",
+  "codes.ALREADY_MEMBER": "العميل عضو بالفعل في هذا الوكيل.",
+  "codes.PII_ENCRYPTION_UNAVAILABLE": "لا يمكن حفظ أرقام الهوية حالياً (مفتاح التشفير غير متوفر).",
+  "codes.INVALID_PLATE": "رقم اللوحة لا يطابق صيغة بلده."
 }

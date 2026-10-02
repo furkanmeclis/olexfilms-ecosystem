@@ -347,6 +347,9 @@ var ukCatalog = map[string]string{
 	"export.title.portal.customer_data_export": "Вивантаження персональних даних",
 	"resources.customers.data_export":          "Персональні дані клієнта",
 	"resources.portal.customer_data_export":    "Мої персональні дані",
+	// TEC-164: customer list export.
+	"export.title.customers.list":              "Список клієнтів",
+	"resources.customers.list":                 "Клієнти",
 	"customers.export.section":                 "Розділ",
 	"customers.export.item":                    "Запис",
 	"customers.export.field":                   "Поле",

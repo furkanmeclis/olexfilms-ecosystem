@@ -347,6 +347,9 @@ var elCatalog = map[string]string{
 	"export.title.portal.customer_data_export": "Εξαγωγή προσωπικών δεδομένων",
 	"resources.customers.data_export":          "Προσωπικά δεδομένα πελάτη",
 	"resources.portal.customer_data_export":    "Τα προσωπικά μου δεδομένα",
+	// TEC-164: customer list export.
+	"export.title.customers.list":              "Λίστα πελατών",
+	"resources.customers.list":                 "Πελάτες",
 	"customers.export.section":                 "Ενότητα",
 	"customers.export.item":                    "Εγγραφή",
 	"customers.export.field":                   "Πεδίο",

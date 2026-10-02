@@ -347,6 +347,9 @@ var itCatalog = map[string]string{
 	"export.title.portal.customer_data_export": "Esportazione dei dati personali",
 	"resources.customers.data_export":          "Dati personali del cliente",
 	"resources.portal.customer_data_export":    "I miei dati personali",
+	// TEC-164: customer list export.
+	"export.title.customers.list":              "Elenco clienti",
+	"resources.customers.list":                 "Clienti",
 	"customers.export.section":                 "Sezione",
 	"customers.export.item":                    "Voce",
 	"customers.export.field":                   "Campo",

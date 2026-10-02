@@ -347,6 +347,9 @@ var ruCatalog = map[string]string{
 	"export.title.portal.customer_data_export": "Выгрузка персональных данных",
 	"resources.customers.data_export":          "Персональные данные клиента",
 	"resources.portal.customer_data_export":    "Мои персональные данные",
+	// TEC-164: customer list export.
+	"export.title.customers.list":              "Список клиентов",
+	"resources.customers.list":                 "Клиенты",
 	"customers.export.section":                 "Раздел",
 	"customers.export.item":                    "Запись",
 	"customers.export.field":                   "Поле",

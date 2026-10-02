@@ -347,6 +347,9 @@ var arCatalog = map[string]string{
 	"export.title.portal.customer_data_export": "تصدير البيانات الشخصية",
 	"resources.customers.data_export":          "البيانات الشخصية للعميل",
 	"resources.portal.customer_data_export":    "بياناتي الشخصية",
+	// TEC-164: customer list export.
+	"export.title.customers.list":              "قائمة العملاء",
+	"resources.customers.list":                 "العملاء",
 	"customers.export.section":                 "القسم",
 	"customers.export.item":                    "السجل",
 	"customers.export.field":                   "الحقل",

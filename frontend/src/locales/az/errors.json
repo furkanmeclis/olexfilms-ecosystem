@@ -116,5 +116,10 @@
   "codes.ORDER_STOCK_UNAVAILABLE": "Bu göndəriş üçün anbar hərəkəti rədd edildi.",
   "codes.PRICE_NOT_FOUND": "Bu məhsul üçün sifariş valyutasında qiymət yoxdur.",
   "codes.RATE_NOT_FOUND": "Sifariş valyutası üçün dondurulacaq məzənnə tapılmadı.",
-  "codes.ROLL_CUT_UNSUPPORTED": "Rulonlar bütöv göndərilir; metr qalan uzunluğa bərabər olmalıdır."
+  "codes.ROLL_CUT_UNSUPPORTED": "Rulonlar bütöv göndərilir; metr qalan uzunluğa bərabər olmalıdır.",
+  "codes.CUSTOMER_ANONYMIZED": "Müştəri anonimləşdirilib, dəyişdirilə bilməz.",
+  "codes.CUSTOMER_INACTIVE": "Müştəri hesabı aktiv deyil.",
+  "codes.ALREADY_MEMBER": "Müştəri artıq bu dilerin üzvüdür.",
+  "codes.PII_ENCRYPTION_UNAVAILABLE": "Şəxsiyyət nömrələri hazırda saxlanıla bilmir (şifrələmə açarı yoxdur).",
+  "codes.INVALID_PLATE": "Nömrə nişanı ölkəsinin formatına uyğun deyil."
 }

@@ -274,10 +274,15 @@ func (s *Service) CreateCustomer(ctx context.Context, c Caller, in CreateCustome
 		ignored  []string
 	)
 	for attempt := 0; ; attempt++ {
-		err = s.inTx(ctx, func(q *db.Queries) error {
+		err = s.inTxRaw(ctx, func(q *db.Queries, tx pgx.Tx) error {
 			var err error
 			user, existing, ignored, err = s.createOnce(ctx, q, c, d)
-			return err
+			if err != nil || existing {
+				return err
+			}
+			// TEC-164: a new customer gets the WhatsApp welcome with the
+			// portal link (outbox -> notifications bus).
+			return s.enqueueCreated(ctx, tx, c, user, d.profile)
 		})
 		// Two organizations creating the same new phone at once: the loser
 		// hits the unique phone index and retries as "existing user".
@@ -289,6 +294,7 @@ func (s *Service) CreateCustomer(ctx context.Context, c Caller, in CreateCustome
 	if err != nil {
 		return CustomerWrite{}, err
 	}
+	s.indexCustomer(ctx, user.Uuid) // TEC-164: new link or new customer
 	detail, err := s.detail(ctx, s.q, c, user)
 	if err != nil {
 		return CustomerWrite{}, err
@@ -590,18 +596,31 @@ func (s *Service) ListCustomers(ctx context.Context, c Caller, f ListFilter) ([]
 	if len(q) > 100 {
 		return nil, 0, invalid("q", "must be at most 100 characters")
 	}
-	rows, err := s.q.ListOrganizationCustomers(ctx, db.ListOrganizationCustomersParams{
-		OrgIds: c.orgIDs(), BrandID: c.brand(), Status: text(status), Q: text(q),
-		LimitCount: f.Limit, OffsetCount: f.Offset,
-	})
-	if err != nil {
-		return nil, 0, fmt.Errorf("customers: list: %w", err)
+	var (
+		rows    []db.ListOrganizationCustomersRow
+		total   int64
+		indexed bool
+	)
+	// TEC-164: a text search goes to the customers index when it is up
+	// (anonymized customers are not indexed, so that status stays on SQL).
+	if q != "" && status != StatusAnonymized && s.indexEnabled() {
+		rows, total, indexed = s.searchIndexed(ctx, c, status, q, f.Limit, f.Offset)
 	}
-	total, err := s.q.CountOrganizationCustomers(ctx, db.CountOrganizationCustomersParams{
-		OrgIds: c.orgIDs(), BrandID: c.brand(), Status: text(status), Q: text(q),
-	})
-	if err != nil {
-		return nil, 0, fmt.Errorf("customers: count: %w", err)
+	if !indexed {
+		var err error
+		rows, err = s.q.ListOrganizationCustomers(ctx, db.ListOrganizationCustomersParams{
+			OrgIds: c.orgIDs(), BrandID: c.brand(), Status: text(status), Q: text(q),
+			LimitCount: f.Limit, OffsetCount: f.Offset,
+		})
+		if err != nil {
+			return nil, 0, fmt.Errorf("customers: list: %w", err)
+		}
+		total, err = s.q.CountOrganizationCustomers(ctx, db.CountOrganizationCustomersParams{
+			OrgIds: c.orgIDs(), BrandID: c.brand(), Status: text(status), Q: text(q),
+		})
+		if err != nil {
+			return nil, 0, fmt.Errorf("customers: count: %w", err)
+		}
 	}
 	out := make([]CustomerSummary, 0, len(rows))
 	for _, r := range rows {
@@ -893,6 +912,7 @@ func (s *Service) UpdateCustomer(ctx context.Context, c Caller, id uuid.UUID, in
 	if err != nil {
 		return CustomerWrite{}, err
 	}
+	s.indexCustomer(ctx, user.Uuid) // TEC-164
 	detail, err := s.detail(ctx, s.q, c, user)
 	if err != nil {
 		return CustomerWrite{}, err

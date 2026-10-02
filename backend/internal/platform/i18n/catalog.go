@@ -348,6 +348,9 @@ var trCatalog = map[string]string{
 	"export.title.portal.customer_data_export": "Kişisel veri dökümü",
 	"resources.customers.data_export":          "Müşteri kişisel verileri",
 	"resources.portal.customer_data_export":    "Kişisel verilerim",
+	// TEC-164: customer list export.
+	"export.title.customers.list":              "Müşteri listesi",
+	"resources.customers.list":                 "Müşteriler",
 	"customers.export.section":                 "Bölüm",
 	"customers.export.item":                    "Kayıt",
 	"customers.export.field":                   "Alan",
@@ -804,6 +807,9 @@ var enCatalog = map[string]string{
 	"export.title.portal.customer_data_export": "Personal data export",
 	"resources.customers.data_export":          "Customer personal data",
 	"resources.portal.customer_data_export":    "My personal data",
+	// TEC-164: customer list export.
+	"export.title.customers.list":              "Customer list",
+	"resources.customers.list":                 "Customers",
 	"customers.export.section":                 "Section",
 	"customers.export.item":                    "Record",
 	"customers.export.field":                   "Field",
