@@ -4523,6 +4523,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/accounting/disputes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cari disputes inside the accounting.read scope, newest first
+         * @description A dispute is visible to the disputing organization and to the parent it addresses (K24); brand and all scopes see every dispute of the domain brand. A distributor sees the disputes of its dealers, another distributor does not.
+         */
+        get: operations["listAccountingDisputes"];
+        put?: never;
+        /**
+         * Dispute an entry the parent posted to the active organization (K24)
+         * @description Needs accounting.dispute. The entry must be an open (unreversed) sourced row on the active organization's cari with its parent (409 ENTRY_NOT_DISPUTABLE otherwise); one open dispute per entry (409 DISPUTE_ALREADY_OPEN). Writes accounting.dispute_opened.
+         */
+        post: operations["openAccountingDispute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/disputes/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One dispute inside the accounting.read scope */
+        get: operations["getAccountingDispute"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/disputes/{uuid}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve a dispute addressed to the active organization
+         * @description Needs accounting.resolve; only the parent the disputed entry came from resolves (other disputes read as 404). reversal reverses every open row of the source on both ledgers; revision reverses them and reposts corrected_amount (in the entry's orig_currency, at the frozen rate) as revision + 1 in the same transaction; reject needs a note and posts nothing. A final dispute answers 409 DISPUTE_NOT_OPEN. Writes accounting.dispute_resolved or accounting.dispute_rejected.
+         */
+        post: operations["resolveAccountingDispute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/accounting/cari/{uuid}/statement": {
         parameters: {
             query?: never;
@@ -8359,6 +8420,75 @@ export interface components {
             success: true;
             data: {
                 items: components["schemas"]["FinanceEntry"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        AccountingDisputeStatus: "open" | "resolved_reversal" | "resolved_revision" | "rejected";
+        AccountingDispute: {
+            /** Format: uuid */
+            uuid: string;
+            status: components["schemas"]["AccountingDisputeStatus"];
+            organization: components["schemas"]["AccountingRef"];
+            counterparty_organization: components["schemas"]["AccountingRef"];
+            entry: {
+                /** Format: uuid */
+                uuid: string;
+                direction: components["schemas"]["AccountingDirection"];
+                category: string;
+                category_label_key: string;
+                orig_currency: string;
+                orig_amount: components["schemas"]["AccountingAmount"];
+                currency: string;
+                amount: components["schemas"]["AccountingAmount"];
+                revision: number;
+                /** Format: date-time */
+                created_at: string;
+            };
+            /** @example order */
+            source_type: string;
+            /** Format: uuid */
+            source_uuid: string;
+            reason: string;
+            /** @description Revision amount in the entry's orig_currency */
+            corrected_amount: string | null;
+            resolution_note: string | null;
+            /** Format: uuid */
+            reversal_entry_uuid: string | null;
+            /** Format: uuid */
+            revision_entry_uuid: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            resolved_at: string | null;
+        };
+        AccountingDisputeInput: {
+            /** Format: uuid */
+            entry_uuid: string;
+            reason: string;
+        };
+        AccountingDisputeResolveInput: {
+            /** @enum {string} */
+            resolution: "reversal" | "revision" | "reject";
+            /** @description Required for reject */
+            note?: string;
+            corrected_amount?: components["schemas"]["AccountingAmountInput"];
+        };
+        EnvelopeAccountingDispute: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AccountingDispute"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAccountingDisputePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["AccountingDispute"][];
                 /** Format: int64 */
                 total: number;
                 limit: number;
@@ -17115,6 +17245,122 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    listAccountingDisputes: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["AccountingDisputeStatus"];
+                /** @description Only disputes opened by this organization */
+                organization_uuid?: string;
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Disputes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAccountingDisputePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    openAccountingDispute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountingDisputeInput"];
+            };
+        };
+        responses: {
+            /** @description Dispute opened */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAccountingDispute"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getAccountingDispute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dispute */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAccountingDispute"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    resolveAccountingDispute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountingDisputeResolveInput"];
+            };
+        };
+        responses: {
+            /** @description Resolved dispute */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAccountingDispute"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     getAccountingCariStatement: {

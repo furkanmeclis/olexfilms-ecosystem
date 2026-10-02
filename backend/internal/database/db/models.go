@@ -11,6 +11,28 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type AccountingDispute struct {
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	CounterpartyOrgID int64              `json:"counterparty_org_id"`
+	EntryID           int64              `json:"entry_id"`
+	SourceType        string             `json:"source_type"`
+	SourceUuid        uuid.UUID          `json:"source_uuid"`
+	Status            string             `json:"status"`
+	Reason            string             `json:"reason"`
+	CorrectedAmount   pgtype.Numeric     `json:"corrected_amount"`
+	ResolutionNote    pgtype.Text        `json:"resolution_note"`
+	ReversalEntryID   pgtype.Int8        `json:"reversal_entry_id"`
+	RevisionEntryID   pgtype.Int8        `json:"revision_entry_id"`
+	OpenedByUserID    pgtype.Int8        `json:"opened_by_user_id"`
+	ResolvedByUserID  pgtype.Int8        `json:"resolved_by_user_id"`
+	ResolvedAt        pgtype.Timestamptz `json:"resolved_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
 type ActivityEvent struct {
 	ID           int64              `json:"id"`
 	Uuid         uuid.UUID          `json:"uuid"`

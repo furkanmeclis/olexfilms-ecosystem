@@ -88,6 +88,7 @@
   "labels.accounting.read": "查看财务",
   "labels.accounting.write": "管理财务",
   "labels.accounting.dispute": "对财务记录提出异议",
+  "labels.accounting.resolve": "处理财务异议",
   "labels.warehouse.read": "查看仓库",
   "labels.warehouse.write": "管理仓库",
   "labels.campaigns.read": "查看营销活动",

@@ -20,6 +20,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting/posting"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -94,6 +95,8 @@ type Service struct {
 	q        *db.Queries
 	poster   *posting.Poster
 	features FeatureChecker
+	// out receives the dispute events (TEC-174); nil writes none.
+	out outbox.Enqueuer
 }
 
 // New creates the service. checker may be nil (dealer writes stay closed).

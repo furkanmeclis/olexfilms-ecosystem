@@ -88,6 +88,7 @@
   "labels.accounting.read": "Vedere la contabilità",
   "labels.accounting.write": "Gestire la contabilità",
   "labels.accounting.dispute": "Contestare registrazioni contabili",
+  "labels.accounting.resolve": "Risolvere le contestazioni contabili",
   "labels.warehouse.read": "Vedere il magazzino",
   "labels.warehouse.write": "Gestire il magazzino",
   "labels.campaigns.read": "Vedere le campagne",

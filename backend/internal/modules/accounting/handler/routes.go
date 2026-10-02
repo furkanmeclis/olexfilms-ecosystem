@@ -64,6 +64,19 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/accounting/entries/{uuid}", read(h.GetEntry))
 	mux.Handle("POST /v1/accounting/entries/{uuid}/void", sensitive(h.VoidEntry))
 
+	// TEC-174: disputes (K24). The child opens (accounting.dispute), both
+	// sides read (accounting.read), the parent resolves (accounting.resolve).
+	dispute := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, authn, org, module, middleware.RequireScope(q, rbac.PermAccountingDispute))
+	}
+	resolve := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, authn, org, module, middleware.RequireScope(q, rbac.PermAccountingResolve))
+	}
+	mux.Handle("GET /v1/accounting/disputes", read(h.ListDisputes))
+	mux.Handle("POST /v1/accounting/disputes", dispute(h.OpenDispute))
+	mux.Handle("GET /v1/accounting/disputes/{uuid}", read(h.GetDispute))
+	mux.Handle("POST /v1/accounting/disputes/{uuid}/resolve", resolve(h.ResolveDispute))
+
 	mux.Handle("POST /v1/accounting/collections", write(h.CreateCollection))
 	mux.Handle("POST /v1/accounting/payments", write(h.CreatePayment))
 }

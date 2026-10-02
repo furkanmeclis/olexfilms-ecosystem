@@ -8377,6 +8377,140 @@ paths:
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
+  /v1/accounting/disputes:
+    get:
+      tags: [Accounting]
+      operationId: listAccountingDisputes
+      summary: Cari disputes inside the accounting.read scope, newest first
+      description: >-
+        A dispute is visible to the disputing organization and to the parent
+        it addresses (K24); brand and all scopes see every dispute of the
+        domain brand. A distributor sees the disputes of its dealers, another
+        distributor does not.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/AccountingDisputeStatus" }
+        - name: organization_uuid
+          in: query
+          description: Only disputes opened by this organization
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Disputes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAccountingDisputePage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Accounting]
+      operationId: openAccountingDispute
+      summary: Dispute an entry the parent posted to the active organization (K24)
+      description: >-
+        Needs accounting.dispute. The entry must be an open (unreversed)
+        sourced row on the active organization's cari with its parent
+        (409 ENTRY_NOT_DISPUTABLE otherwise); one open dispute per entry
+        (409 DISPUTE_ALREADY_OPEN). Writes accounting.dispute_opened.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountingDisputeInput"
+      responses:
+        "201":
+          description: Dispute opened
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAccountingDispute"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/accounting/disputes/{uuid}:
+    get:
+      tags: [Accounting]
+      operationId: getAccountingDispute
+      summary: One dispute inside the accounting.read scope
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Dispute
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAccountingDispute"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/accounting/disputes/{uuid}/resolve:
+    post:
+      tags: [Accounting]
+      operationId: resolveAccountingDispute
+      summary: Resolve a dispute addressed to the active organization
+      description: >-
+        Needs accounting.resolve; only the parent the disputed entry came
+        from resolves (other disputes read as 404). reversal reverses every
+        open row of the source on both ledgers; revision reverses them and
+        reposts corrected_amount (in the entry's orig_currency, at the
+        frozen rate) as revision + 1 in the same transaction; reject needs a
+        note and posts nothing. A final dispute answers 409 DISPUTE_NOT_OPEN.
+        Writes accounting.dispute_resolved or accounting.dispute_rejected.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountingDisputeResolveInput"
+      responses:
+        "200":
+          description: Resolved dispute
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAccountingDispute"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   /v1/accounting/cari/{uuid}/statement:
     get:
       tags: [Accounting]
@@ -14116,6 +14250,98 @@ components:
             items:
               type: array
               items: { $ref: "#/components/schemas/FinanceEntry" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    AccountingDisputeStatus:
+      type: string
+      enum: [open, resolved_reversal, resolved_revision, rejected]
+
+    AccountingDispute:
+      type: object
+      required:
+        - uuid
+        - status
+        - organization
+        - counterparty_organization
+        - entry
+        - source_type
+        - source_uuid
+        - reason
+        - corrected_amount
+        - resolution_note
+        - reversal_entry_uuid
+        - revision_entry_uuid
+        - created_at
+        - resolved_at
+      properties:
+        uuid: { type: string, format: uuid }
+        status: { $ref: "#/components/schemas/AccountingDisputeStatus" }
+        organization: { $ref: "#/components/schemas/AccountingRef" }
+        counterparty_organization: { $ref: "#/components/schemas/AccountingRef" }
+        entry:
+          type: object
+          required: [uuid, direction, category, category_label_key, orig_currency, orig_amount, currency, amount, revision, created_at]
+          properties:
+            uuid: { type: string, format: uuid }
+            direction: { $ref: "#/components/schemas/AccountingDirection" }
+            category: { type: string }
+            category_label_key: { type: string }
+            orig_currency: { type: string, minLength: 3, maxLength: 3 }
+            orig_amount: { $ref: "#/components/schemas/AccountingAmount" }
+            currency: { type: string, minLength: 3, maxLength: 3 }
+            amount: { $ref: "#/components/schemas/AccountingAmount" }
+            revision: { type: integer }
+            created_at: { type: string, format: date-time }
+        source_type: { type: string, example: order }
+        source_uuid: { type: string, format: uuid }
+        reason: { type: string }
+        corrected_amount: { type: [string, "null"], description: Revision amount in the entry's orig_currency }
+        resolution_note: { type: [string, "null"] }
+        reversal_entry_uuid: { type: [string, "null"], format: uuid }
+        revision_entry_uuid: { type: [string, "null"], format: uuid }
+        created_at: { type: string, format: date-time }
+        resolved_at: { type: [string, "null"], format: date-time }
+
+    AccountingDisputeInput:
+      type: object
+      required: [entry_uuid, reason]
+      additionalProperties: false
+      properties:
+        entry_uuid: { type: string, format: uuid }
+        reason: { type: string, minLength: 1, maxLength: 2000 }
+
+    AccountingDisputeResolveInput:
+      type: object
+      required: [resolution]
+      additionalProperties: false
+      properties:
+        resolution: { type: string, enum: [reversal, revision, reject] }
+        note: { type: string, maxLength: 2000, description: Required for reject }
+        corrected_amount: { $ref: "#/components/schemas/AccountingAmountInput" }
+
+    EnvelopeAccountingDispute:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/AccountingDispute" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAccountingDisputePage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/AccountingDispute" }
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }

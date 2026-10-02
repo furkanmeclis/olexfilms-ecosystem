@@ -184,6 +184,10 @@ const (
 	PermWarrantiesRead   = "warranties.read"
 	PermWarrantiesVoid   = "warranties.void"
 	PermVehiclesTransfer = "vehicles.transfer"
+
+	// TEC-174 (000052): the parent resolves a dispute opened with
+	// accounting.dispute (reversal, revision or rejection, K24).
+	PermAccountingResolve = "accounting.resolve"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

@@ -88,6 +88,7 @@
   "labels.accounting.read": "View accounting",
   "labels.accounting.write": "Manage accounting",
   "labels.accounting.dispute": "Dispute accounting entries",
+  "labels.accounting.resolve": "Resolve accounting disputes",
   "labels.warehouse.read": "View warehouse",
   "labels.warehouse.write": "Manage warehouse",
   "labels.campaigns.read": "View campaigns",
