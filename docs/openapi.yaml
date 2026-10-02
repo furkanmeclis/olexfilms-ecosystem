@@ -114,6 +114,11 @@ tags:
       server-side prices (K8), rate frozen at seller approval (K7), barcode
       assignment and shipping (TEC-167), receipt and cancel after shipping
       (TEC-168).
+  - name: StockTransfers
+    description: >-
+      Stock transfer requests between sibling dealers or sibling
+      distributors (TEC-197, K13): request, approval or rejection, shipping
+      and receipt through the stock ledger.
   - name: Mobile
     description: |
       Mobile app API (TEC-91). `/v1/mobile/*` is reached through the BFF
@@ -10284,6 +10289,185 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /v1/stock-transfers:
+    get:
+      tags: [StockTransfers]
+      operationId: listStockTransfers
+      summary: Stock transfer requests of the active organization
+      description: >-
+        Requests where the active organization is the giver (outgoing), the
+        receiver (incoming) or the common parent (approval); direction
+        narrows the list. Needs transfers.request or transfers.approve and
+        the dealer_transfers module. List rows carry no items.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: direction
+          in: query
+          schema: { type: string, enum: [outgoing, incoming, approval] }
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/StockTransferStatus" }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Transfer requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockTransferPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [StockTransfers]
+      operationId: createStockTransfer
+      summary: Request a stock transfer to a sibling organization (K13)
+      description: >-
+        The active organization (dealer or distributor) gives units it holds
+        to a sibling: same brand, same type, same parent. Any other target
+        (another parent, brand or type, the parent itself) is 422
+        TRANSFER_NOT_SIBLING. Units are named by barcode; a fixed barcode
+        needs a quantity, pieces and rolls move whole. A unit not in the
+        giver's stock, reserved by an order or on another open request is
+        400 with detail code TRANSFER_UNIT_NOT_AVAILABLE,
+        TRANSFER_UNIT_RESERVED or TRANSFER_INSUFFICIENT_STOCK. Needs
+        transfers.request. Writes transfers.requested; no stock moves yet.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StockTransferCreateInput"
+      responses:
+        "201":
+          description: Requested transfer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockTransfer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/stock-transfers/targets:
+    get:
+      tags: [StockTransfers]
+      operationId: listStockTransferTargets
+      summary: Siblings the active organization may transfer to
+      description: >-
+        Live organizations of the same brand, type and parent as the active
+        organization (empty for the center). Needs transfers.request.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Sibling organizations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockTransferTargets"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/stock-transfers/{uuid}:
+    get:
+      tags: [StockTransfers]
+      operationId: getStockTransfer
+      summary: One stock transfer request with its units
+      description: >-
+        Visible to its parties only (giver, receiver, common parent); others
+        get 404. available_transitions lists the statuses the caller may
+        move the request to.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Transfer request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockTransfer"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/stock-transfers/{uuid}/transitions:
+    post:
+      tags: [StockTransfers]
+      operationId: transitionStockTransfer
+      summary: Move a stock transfer request to another status
+      description: >-
+        requested -> approved | rejected (receiver with transfers.request or
+        the common parent with transfers.approve; approval freezes the
+        giver's purchase price per unit, K13; a rejection writes no stock
+        movement); requested -> cancelled (giver or parent); approved ->
+        shipped (giver: one ledger transfer_out per unit with idempotency key
+        transfer:transfer_item:<id>:transfer_out:<barcode>, serial units go
+        in_transit owned by the receiver; 409 TRANSFER_STOCK_UNAVAILABLE when
+        the ledger refuses); approved -> cancelled (any party, no movement);
+        shipped -> received (receiver: one transfer_in per unit, available at
+        the receiver); shipped -> cancelled (giver, once the goods are back:
+        one transfer_cancel_restore per unit). rejected, received and
+        cancelled are final. A request for the current status is a no-op;
+        other moves answer 409 TRANSFER_INVALID_TRANSITION. Every move writes
+        a transfers.* outbox event. No accounting entry is booked.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StockTransferTransitionInput"
+      responses:
+        "200":
+          description: Transfer request after the transition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockTransfer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -16325,4 +16509,121 @@ components:
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    StockTransferStatus:
+      type: string
+      enum: [requested, approved, rejected, shipped, received, cancelled]
+
+    StockTransferItem:
+      type: object
+      required: [uuid, unit_uuid, barcode, unit_kind, product, quantity, meters, unit_price, line_total, shipped, received, restored]
+      properties:
+        uuid: { type: string, format: uuid }
+        unit_uuid: { type: string, format: uuid }
+        barcode: { type: string }
+        unit_kind: { type: string, enum: [serial, fixed] }
+        product: { $ref: "#/components/schemas/OrderProductRef" }
+        quantity: { type: [integer, "null"], description: Fixed barcode quantity }
+        meters: { type: [string, "null"], description: Remaining meters of a roll when requested }
+        unit_price: { type: [string, "null"], description: Giver's purchase price frozen at approval (K13) }
+        line_total: { type: [string, "null"] }
+        shipped: { type: boolean, description: The transfer_out movement is written }
+        received: { type: boolean, description: The transfer_in movement is written }
+        restored: { type: boolean, description: The transfer_cancel_restore movement is written }
+
+    StockTransfer:
+      type: object
+      required: [uuid, transfer_no, status, role, sender, receiver, parent, currency, total, note, decision_note, cancel_reason, item_count, decided_at, shipped_at, received_at, cancelled_at, created_at, updated_at, available_transitions]
+      properties:
+        uuid: { type: string, format: uuid }
+        transfer_no: { type: string }
+        status: { $ref: "#/components/schemas/StockTransferStatus" }
+        role: { type: string, enum: [sender, receiver, parent], description: Side of the active organization }
+        sender: { $ref: "#/components/schemas/OrderOrgRef" }
+        receiver: { $ref: "#/components/schemas/OrderOrgRef" }
+        parent: { $ref: "#/components/schemas/OrderOrgRef" }
+        currency: { type: string }
+        total: { type: [string, "null"], description: Sum of the frozen line totals (null until approval or with an unpriced unit) }
+        note: { type: [string, "null"] }
+        decision_note: { type: [string, "null"] }
+        cancel_reason: { type: [string, "null"] }
+        item_count: { type: integer, format: int64 }
+        decided_at: { type: [string, "null"], format: date-time }
+        shipped_at: { type: [string, "null"], format: date-time }
+        received_at: { type: [string, "null"], format: date-time }
+        cancelled_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        available_transitions:
+          type: array
+          items: { $ref: "#/components/schemas/StockTransferStatus" }
+        items:
+          type: array
+          description: Detail only
+          items: { $ref: "#/components/schemas/StockTransferItem" }
+
+    StockTransferItemInput:
+      type: object
+      required: [barcode]
+      properties:
+        barcode: { type: string }
+        quantity: { type: integer, minimum: 1, description: Required for fixed barcodes; pieces and rolls move whole }
+
+    StockTransferCreateInput:
+      type: object
+      required: [to_org_uuid, items]
+      properties:
+        to_org_uuid: { type: string, format: uuid }
+        note: { type: string }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 200
+          items: { $ref: "#/components/schemas/StockTransferItemInput" }
+
+    StockTransferTransitionInput:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: "#/components/schemas/StockTransferStatus" }
+        reason: { type: string, description: Decision note (approved/rejected) or cancel reason }
+
+    EnvelopeStockTransfer:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/StockTransfer" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeStockTransferPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/StockTransfer" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeStockTransferTargets:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/OrderOrgRef" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }

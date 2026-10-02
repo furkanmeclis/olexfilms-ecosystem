@@ -226,11 +226,16 @@ const (
 	OrdersCancelled       = "orders.cancelled"
 )
 
-// Sibling dealer transfer events (K13, TEC-165).
+// Sibling transfer events (K13, TEC-165; TEC-197): one per status
+// transition of a stock transfer request, written to the outbox in the
+// transition's transaction. transfers.completed is the 000049 name and is
+// not written since TEC-197 (shipped/received replace it).
 const (
 	TransfersRequested = "transfers.requested"
 	TransfersApproved  = "transfers.approved"
 	TransfersRejected  = "transfers.rejected"
+	TransfersShipped   = "transfers.shipped"
+	TransfersReceived  = "transfers.received"
 	TransfersCompleted = "transfers.completed"
 	TransfersCancelled = "transfers.cancelled"
 )
@@ -515,6 +520,8 @@ func catalogConstants() []string {
 		TransfersRequested,
 		TransfersApproved,
 		TransfersRejected,
+		TransfersShipped,
+		TransfersReceived,
 		TransfersCompleted,
 		TransfersCancelled,
 		ServiceCreated,
