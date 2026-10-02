@@ -118,6 +118,8 @@ type Querier interface {
 	CountStockReclassificationsScoped(ctx context.Context, arg CountStockReclassificationsScopedParams) (int64, error)
 	CountStorageActivity(ctx context.Context, objectKey string) (int64, error)
 	CountStorageTrash(ctx context.Context) (int64, error)
+	CountTaskComments(ctx context.Context, taskID int64) (int64, error)
+	CountTasks(ctx context.Context, arg CountTasksParams) (int64, error)
 	CountUnreadInappForUser(ctx context.Context, userID pgtype.Int8) (int64, error)
 	// Customer cari accounts are ledgers (append-only spirit): they are not
 	// moved, only reported.
@@ -369,6 +371,8 @@ type Querier interface {
 	// GetCariStatementOpening is the cari balance before created_before (the
 	// opening balance of a statement period).
 	GetCariStatementOpening(ctx context.Context, arg GetCariStatementOpeningParams) (pgtype.Numeric, error)
+	// A user that is a member of the given (center) organization.
+	GetCenterMemberByUUID(ctx context.Context, arg GetCenterMemberByUUIDParams) (GetCenterMemberByUUIDRow, error)
 	GetConsentForText(ctx context.Context, arg GetConsentForTextParams) (Consent, error)
 	GetCountryByID(ctx context.Context, id int64) (Country, error)
 	GetCountryByISO2(ctx context.Context, iso2 string) (Country, error)
@@ -503,6 +507,10 @@ type Querier interface {
 	GetStorageLinkByUUID(ctx context.Context, argUuid uuid.UUID) (StorageLink, error)
 	GetStorageTrashByOriginalKey(ctx context.Context, originalKey string) (StorageTrash, error)
 	GetStorageTrashByUUID(ctx context.Context, argUuid uuid.UUID) (StorageTrash, error)
+	GetTaskByUUID(ctx context.Context, arg GetTaskByUUIDParams) (Task, error)
+	// An organization of the brand by uuid (the use case checks the type).
+	GetTaskSubjectOrg(ctx context.Context, arg GetTaskSubjectOrgParams) (GetTaskSubjectOrgRow, error)
+	GetTaskView(ctx context.Context, arg GetTaskViewParams) (GetTaskViewRow, error)
 	GetUnit(ctx context.Context, id int64) (Unit, error)
 	GetUnitByBarcode(ctx context.Context, arg GetUnitByBarcodeParams) (Unit, error)
 	GetUnitByUUID(ctx context.Context, argUuid uuid.UUID) (Unit, error)
@@ -596,6 +604,10 @@ type Querier interface {
 	InsertStorageShare(ctx context.Context, arg InsertStorageShareParams) (StorageShare, error)
 	InsertStorageStar(ctx context.Context, arg InsertStorageStarParams) (StorageStar, error)
 	InsertStorageTrash(ctx context.Context, arg InsertStorageTrashParams) (StorageTrash, error)
+	// TEC-214 (F1-11a): center tasks (tasks, task_comments). Every read is
+	// bounded by the brand of the active center organization.
+	InsertTask(ctx context.Context, arg InsertTaskParams) (Task, error)
+	InsertTaskComment(ctx context.Context, arg InsertTaskCommentParams) (TaskComment, error)
 	// ---------------------------------------------------------------------------
 	// Unit current state (serial units; one active owner).
 	InsertUnitCurrentState(ctx context.Context, arg InsertUnitCurrentStateParams) (UnitCurrentState, error)
@@ -844,6 +856,8 @@ type Querier interface {
 	ListStorageStarsByUser(ctx context.Context, userID int64) ([]StorageStar, error)
 	ListStorageTrash(ctx context.Context, arg ListStorageTrashParams) ([]StorageTrash, error)
 	ListStuckProcessingNotificationIDs(ctx context.Context, staleMinutes int32) ([]int64, error)
+	ListTaskComments(ctx context.Context, arg ListTaskCommentsParams) ([]ListTaskCommentsRow, error)
+	ListTasks(ctx context.Context, arg ListTasksParams) ([]ListTasksRow, error)
 	ListTerritories(ctx context.Context, arg ListTerritoriesParams) ([]ListTerritoriesRow, error)
 	ListUnitCurrentStatesByHolder(ctx context.Context, arg ListUnitCurrentStatesByHolderParams) ([]ListUnitCurrentStatesByHolderRow, error)
 	ListUnitCurrentStatesByUnitIDs(ctx context.Context, ids []int64) ([]UnitCurrentState, error)
@@ -940,6 +954,7 @@ type Querier interface {
 	LockStockReclassificationByUUID(ctx context.Context, argUuid uuid.UUID) (StockReclassification, error)
 	LockStockReservation(ctx context.Context, id int64) (StockReservation, error)
 	LockStockTransferRequest(ctx context.Context, arg LockStockTransferRequestParams) (StockTransferRequest, error)
+	LockTask(ctx context.Context, arg LockTaskParams) (Task, error)
 	// Serializes territory writes of one (brand, country) inside a transaction.
 	LockTerritoryArea(ctx context.Context, arg LockTerritoryAreaParams) error
 	// Locks the unit row for meters/status/product changes in ledger.Post.
@@ -1165,6 +1180,7 @@ type Querier interface {
 	UpdateStepupSettings(ctx context.Context, arg UpdateStepupSettingsParams) (StepupSetting, error)
 	UpdateStockImportBatchStatus(ctx context.Context, arg UpdateStockImportBatchStatusParams) (StockImportBatch, error)
 	UpdateStockImportRowResult(ctx context.Context, arg UpdateStockImportRowResultParams) (StockImportRow, error)
+	UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, error)
 	// Optimistic check on version in addition to the row lock.
 	UpdateUnitCurrentState(ctx context.Context, arg UpdateUnitCurrentStateParams) (UnitCurrentState, error)
 	UpdateUnitExternal(ctx context.Context, arg UpdateUnitExternalParams) (Unit, error)
