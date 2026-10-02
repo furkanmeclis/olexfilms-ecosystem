@@ -16,9 +16,9 @@ UPDATE users
 SET merged_into_user_id = $1,
     status              = 'disabled',
     password_hash       = $2,
-    phone_e164          = $3,
+    phone_e164          = $3::text,
     phone_verified_at   = CASE WHEN $3::text IS NULL THEN NULL ELSE phone_verified_at END,
-    email               = $4,
+    email               = $4::text,
     email_verified_at   = CASE WHEN $4::text IS DISTINCT FROM email THEN NULL ELSE email_verified_at END
 WHERE id = $5 AND merged_into_user_id IS NULL
 RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, timezone, phone_e164, phone_verified_at, merged_into_user_id
@@ -388,10 +388,10 @@ func (q *Queries) MoveWarrantiesToHolder(ctx context.Context, arg MoveWarranties
 
 const takeOverMergedIdentity = `-- name: TakeOverMergedIdentity :exec
 UPDATE users
-SET phone_e164        = COALESCE(phone_e164, $1),
+SET phone_e164        = COALESCE(phone_e164, $1::text),
     phone_verified_at = CASE WHEN phone_e164 IS NULL AND $1::text IS NOT NULL
                              THEN $2 ELSE phone_verified_at END,
-    email             = COALESCE(email, $3),
+    email             = COALESCE(email, $3::text),
     email_verified_at = CASE WHEN email IS NULL AND $3::text IS NOT NULL
                              THEN $4 ELSE email_verified_at END
 WHERE id = $5

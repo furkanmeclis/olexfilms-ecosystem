@@ -121,9 +121,9 @@ UPDATE users
 SET merged_into_user_id = sqlc.arg(target_user_id),
     status              = 'disabled',
     password_hash       = sqlc.arg(password_hash),
-    phone_e164          = sqlc.narg(phone_e164),
+    phone_e164          = sqlc.narg(phone_e164)::text,
     phone_verified_at   = CASE WHEN sqlc.narg(phone_e164)::text IS NULL THEN NULL ELSE phone_verified_at END,
-    email               = sqlc.narg(email),
+    email               = sqlc.narg(email)::text,
     email_verified_at   = CASE WHEN sqlc.narg(email)::text IS DISTINCT FROM email THEN NULL ELSE email_verified_at END
 WHERE id = sqlc.arg(id) AND merged_into_user_id IS NULL
 RETURNING *;
@@ -131,10 +131,10 @@ RETURNING *;
 -- The target takes over the phone / e-mail it does not have yet.
 -- name: TakeOverMergedIdentity :exec
 UPDATE users
-SET phone_e164        = COALESCE(phone_e164, sqlc.narg(phone_e164)),
+SET phone_e164        = COALESCE(phone_e164, sqlc.narg(phone_e164)::text),
     phone_verified_at = CASE WHEN phone_e164 IS NULL AND sqlc.narg(phone_e164)::text IS NOT NULL
                              THEN sqlc.narg(phone_verified_at) ELSE phone_verified_at END,
-    email             = COALESCE(email, sqlc.narg(email)),
+    email             = COALESCE(email, sqlc.narg(email)::text),
     email_verified_at = CASE WHEN email IS NULL AND sqlc.narg(email)::text IS NOT NULL
                              THEN sqlc.narg(email_verified_at) ELSE email_verified_at END
 WHERE id = sqlc.arg(id);
