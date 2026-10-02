@@ -184,5 +184,10 @@
   "resources.plate_formats": "Formati targa",
   "resources.exchange_rates": "Tassi di cambio",
   "resources.platform.legal_texts": "Testi legali",
-  "actions.legal_texts.published": "Versione del testo legale pubblicata"
+  "actions.legal_texts.published": "Versione del testo legale pubblicata",
+  "actions.stock.reclassification.requested": "Riclassificazione richiesta",
+  "actions.stock.reclassification.approved": "Riclassificazione approvata",
+  "actions.stock.reclassification.rejected": "Riclassificazione rifiutata",
+  "actions.stock.reclassification.cancelled": "Richiesta di riclassificazione ritirata",
+  "resources.stock.reclassification": "Riclassificazione dello stock"
 }

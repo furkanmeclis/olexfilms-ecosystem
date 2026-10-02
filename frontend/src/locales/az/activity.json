@@ -184,5 +184,10 @@
   "resources.plate_formats": "Nömrə formatları",
   "resources.exchange_rates": "Valyuta məzənnələri",
   "resources.platform.legal_texts": "Hüquqi mətnlər",
-  "actions.legal_texts.published": "Hüquqi mətn versiyası dərc edildi"
+  "actions.legal_texts.published": "Hüquqi mətn versiyası dərc edildi",
+  "actions.stock.reclassification.requested": "Yenidən təsnifat sorğulandı",
+  "actions.stock.reclassification.approved": "Yenidən təsnifat təsdiqləndi",
+  "actions.stock.reclassification.rejected": "Yenidən təsnifat rədd edildi",
+  "actions.stock.reclassification.cancelled": "Yenidən təsnifat sorğusu geri çəkildi",
+  "resources.stock.reclassification": "Anbar yenidən təsnifatı"
 }

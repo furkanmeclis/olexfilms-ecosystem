@@ -70,5 +70,17 @@
   "back_to_login": "Επιστροφή στη σύνδεση",
   "continue": "Συνέχεια",
   "area_requires": "Αυτή η περιοχή απαιτεί πρόσβαση {{area}}.",
-  "feature_disabled": "Αυτή η λειτουργία δεν είναι ενεργή για τον οργανισμό σας."
+  "feature_disabled": "Αυτή η λειτουργία δεν είναι ενεργή για τον οργανισμό σας.",
+  "codes.STOCK_RECLASSIFICATION_BRAND_MISMATCH": "Το προϊόν προορισμού ανήκει σε άλλη μάρκα.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_TYPE_MISMATCH": "Το προϊόν προορισμού έχει διαφορετική μονάδα (ρολό και τεμάχιο δεν εναλλάσσονται).",
+  "codes.STOCK_RECLASSIFICATION_SAME_PRODUCT": "Η μονάδα έχει ήδη αυτό το προϊόν.",
+  "codes.STOCK_RECLASSIFICATION_PRODUCT_INACTIVE": "Το προϊόν προορισμού είναι ανενεργό.",
+  "codes.STOCK_RECLASSIFICATION_FIXED_BARCODE": "Οι σταθεροί γραμμωτοί κώδικες δεν μπορούν να επαναταξινομηθούν.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_CONSUMED": "Η μονάδα έχει καταναλωθεί ή ακυρωθεί.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_ELSEWHERE": "Η μονάδα δεν βρίσκεται στο απόθεμα αυτού του οργανισμού.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_IN_USE": "Η μονάδα χρησιμοποιείται σε ανοιχτή υπηρεσία ή παραγγελία.",
+  "codes.STOCK_RECLASSIFICATION_PRODUCT_CHANGED": "Το προϊόν της μονάδας άλλαξε μετά το αίτημα.",
+  "codes.STOCK_RECLASSIFICATION_NOT_PENDING": "Αυτό το αίτημα επαναταξινόμησης έχει ήδη κριθεί.",
+  "codes.STOCK_RECLASSIFICATION_PENDING_EXISTS": "Υπάρχει ήδη εκκρεμές αίτημα επαναταξινόμησης για αυτή τη μονάδα.",
+  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Δεν μπορείτε να εγκρίνετε το δικό σας αίτημα."
 }

@@ -184,5 +184,10 @@
   "resources.plate_formats": "Plate formats",
   "resources.exchange_rates": "Exchange rates",
   "resources.platform.legal_texts": "Legal texts",
-  "actions.legal_texts.published": "Legal text version published"
+  "actions.legal_texts.published": "Legal text version published",
+  "actions.stock.reclassification.requested": "Reclassification requested",
+  "actions.stock.reclassification.approved": "Reclassification approved",
+  "actions.stock.reclassification.rejected": "Reclassification rejected",
+  "actions.stock.reclassification.cancelled": "Reclassification request withdrawn",
+  "resources.stock.reclassification": "Stock reclassification"
 }

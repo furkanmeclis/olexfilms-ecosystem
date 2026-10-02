@@ -1,6 +1,7 @@
 package ledger
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
@@ -15,6 +16,12 @@ import (
 // applyProjections) instead of re-validating the transitions; a break in a
 // unit's chain (from_status / from_owner not equal to the replayed state)
 // is reported as an anomaly.
+//
+// Reclassification (TEC-157): the movement keeps owner and status and
+// carries the new product (product_id) and the old one
+// (metadata.from_product_id). Replay follows the product along the chain;
+// the unit's stock counts under the product of its last movement, which
+// must equal units.product_id (else an anomaly).
 
 // Projection is the expected state of every projection.
 type Projection struct {
@@ -47,6 +54,10 @@ type BinStockAmount struct {
 type UnitProjection struct {
 	Unit      db.Unit
 	Movements int
+	// ProductID is the product of the unit after its last movement
+	// (units.product_id; reclassification changes it). Without movements
+	// it is the unit's own product.
+	ProductID int64
 	// State is unit_current_state of a serial unit; nil before its first
 	// movement (and always nil for fixed barcodes).
 	State *UnitState
@@ -94,6 +105,7 @@ func (p *Projection) Replay(u db.Unit, mvs []db.StockMovement) (*UnitProjection,
 			return nil, fmt.Errorf("ledger: replay: movement %d is not of unit %d", mv.ID, u.ID)
 		}
 	}
+	up.ProductID = up.replayProduct(mvs)
 	var d deltas
 	var err error
 	if u.UnitKind == KindFixed {
@@ -106,7 +118,7 @@ func (p *Projection) Replay(u db.Unit, mvs []db.StockMovement) (*UnitProjection,
 	}
 	p.Units[u.ID] = up
 	for k, v := range d.bin {
-		key := BinStockKey{LocationID: k[0], ProductID: u.ProductID}
+		key := BinStockKey{LocationID: k[0], ProductID: up.ProductID}
 		cur := p.BinStocks[key]
 		cur.OrganizationID, cur.BrandID = k[1], u.BrandID
 		cur.Quantity += int64(v.qty)
@@ -114,7 +126,7 @@ func (p *Projection) Replay(u db.Unit, mvs []db.StockMovement) (*UnitProjection,
 		p.BinStocks[key] = cur
 	}
 	for org, v := range d.org {
-		key := OrgStockKey{OrganizationID: org, ProductID: u.ProductID}
+		key := OrgStockKey{OrganizationID: org, ProductID: up.ProductID}
 		cur := p.OrgStocks[key]
 		cur.BrandID = u.BrandID
 		cur.Quantity += int64(v.qty)
@@ -126,6 +138,45 @@ func (p *Projection) Replay(u db.Unit, mvs []db.StockMovement) (*UnitProjection,
 
 func (up *UnitProjection) anomaly(format string, args ...any) {
 	up.Anomalies = append(up.Anomalies, fmt.Sprintf(format, args...))
+}
+
+// replayProduct follows the unit's product through its movements: every
+// movement is recorded on the product the unit has at that time, a
+// reclassification moves it from metadata.from_product_id to product_id.
+func (up *UnitProjection) replayProduct(mvs []db.StockMovement) int64 {
+	if len(mvs) == 0 {
+		return up.Unit.ProductID
+	}
+	var product int64
+	for i := range mvs {
+		mv := &mvs[i]
+		from := mv.ProductID
+		if MovementType(mv.Type) == TypeReclassification {
+			var meta struct {
+				FromProductID int64 `json:"from_product_id"`
+			}
+			if err := json.Unmarshal(mv.Metadata, &meta); err != nil || meta.FromProductID == 0 {
+				up.anomaly("movement %d (%s): no from_product_id", mv.ID, mv.Type)
+				from = product // unknown source: reported once
+			} else {
+				from = meta.FromProductID
+			}
+			if mv.QuantityDelta != 0 || mustCm(mv.MetersDelta) != 0 {
+				up.anomaly("movement %d (%s): reclassification with a quantity or meters", mv.ID, mv.Type)
+			}
+			if mv.FromOwnerType != mv.ToOwnerType || mv.FromOwnerID != mv.ToOwnerID || mv.FromStatus != mv.ToStatus {
+				up.anomaly("movement %d (%s): reclassification changes owner or status", mv.ID, mv.Type)
+			}
+		}
+		if product != 0 && from != product {
+			up.anomaly("movement %d (%s): product %d, replayed %d", mv.ID, mv.Type, from, product)
+		}
+		product = mv.ProductID
+	}
+	if product != up.Unit.ProductID {
+		up.anomaly("units.product_id %d, ledger product %d", up.Unit.ProductID, product)
+	}
+	return product
 }
 
 func (up *UnitProjection) replaySerial(mvs []db.StockMovement, d *deltas) error {

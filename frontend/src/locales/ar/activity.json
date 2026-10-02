@@ -184,5 +184,10 @@
   "resources.plate_formats": "صيغ اللوحات",
   "resources.exchange_rates": "أسعار الصرف",
   "resources.platform.legal_texts": "النصوص القانونية",
-  "actions.legal_texts.published": "نُشر إصدار نص قانوني"
+  "actions.legal_texts.published": "نُشر إصدار نص قانوني",
+  "actions.stock.reclassification.requested": "تم طلب إعادة التصنيف",
+  "actions.stock.reclassification.approved": "تمت الموافقة على إعادة التصنيف",
+  "actions.stock.reclassification.rejected": "تم رفض إعادة التصنيف",
+  "actions.stock.reclassification.cancelled": "تم سحب طلب إعادة التصنيف",
+  "resources.stock.reclassification": "إعادة تصنيف المخزون"
 }

@@ -28,16 +28,26 @@ type mvRow struct {
 	fromSt, toSt Status
 	refType      string
 	refID        int64
+	// product overrides the unit's product (movements before a
+	// reclassification); meta is the metadata JSON.
+	product int64
+	meta    string
 }
 
-func rows(unit int64, in ...mvRow) []db.StockMovement {
+func rows(u db.Unit, in ...mvRow) []db.StockMovement {
 	out := make([]db.StockMovement, len(in))
 	for i, r := range in {
 		m := db.StockMovement{
-			ID: int64(100 + i), UnitID: unit, OrganizationID: r.org, Type: string(r.typ),
+			ID: int64(100 + i), UnitID: u.ID, ProductID: u.ProductID, OrganizationID: r.org, Type: string(r.typ),
 			QuantityDelta: r.qty, MetersDelta: cmToNumeric(r.cm),
 			FromStatus: text(string(r.fromSt)), ToStatus: text(string(r.toSt)),
 			ReferenceType: text(r.refType), ReferenceID: pgtype.Int8{Int64: r.refID, Valid: r.refID != 0},
+		}
+		if r.product != 0 {
+			m.ProductID = r.product
+		}
+		if r.meta != "" {
+			m.Metadata = []byte(r.meta)
 		}
 		if r.fromT != "" {
 			m.FromOwnerType, m.FromOwnerID = text(string(r.fromT)), i8(r.fromID)
@@ -53,7 +63,7 @@ func rows(unit int64, in ...mvRow) []db.StockMovement {
 func TestReplaySerialRollChain(t *testing.T) {
 	u := db.Unit{ID: 7, BrandID: 3, ProductID: 9, UnitKind: KindSerial, Status: "printed",
 		InitialMeters: cmToNumeric(1500), RemainingMeters: cmToNumeric(600)}
-	mvs := rows(u.ID,
+	mvs := rows(u,
 		mvRow{typ: TypeEntry, org: center, qty: 1, toT: OwnerWarehouseLocation, toID: cLoc, fromSt: StatusPrinted, toSt: StatusAvailable},
 		mvRow{typ: TypeTransferOut, org: center, qty: -1, fromT: OwnerWarehouseLocation, fromID: cLoc,
 			toT: OwnerOrganization, toID: dist, fromSt: StatusAvailable, toSt: StatusInTransit, refType: "t", refID: 1},
@@ -92,7 +102,7 @@ func TestReplaySerialRollChain(t *testing.T) {
 
 func TestReplayCancelRestoreGoesBackToSourceHolder(t *testing.T) {
 	u := db.Unit{ID: 8, BrandID: 3, ProductID: 9, UnitKind: KindSerial, Status: "printed"}
-	mvs := rows(u.ID,
+	mvs := rows(u,
 		mvRow{typ: TypeEntry, org: center, qty: 1, toT: OwnerWarehouseLocation, toID: cLoc, fromSt: StatusPrinted, toSt: StatusAvailable},
 		mvRow{typ: TypePlacement, org: center, fromT: OwnerWarehouseLocation, fromID: cLoc,
 			toT: OwnerWarehouseLocation, toID: cLoc + 1, fromSt: StatusAvailable, toSt: StatusPlaced},
@@ -120,7 +130,7 @@ func TestReplayCancelRestoreGoesBackToSourceHolder(t *testing.T) {
 
 func TestReplayFixedHoldings(t *testing.T) {
 	u := db.Unit{ID: 9, BrandID: 3, ProductID: 11, UnitKind: KindFixed, Status: "printed"}
-	mvs := rows(u.ID,
+	mvs := rows(u,
 		mvRow{typ: TypeEntry, org: center, qty: 10, toT: OwnerWarehouseLocation, toID: cLoc, fromSt: StatusPrinted, toSt: StatusAvailable},
 		mvRow{typ: TypeTransferOut, org: center, qty: -4, fromT: OwnerWarehouseLocation, fromID: cLoc,
 			fromSt: StatusAvailable, toSt: StatusAvailable, refType: "t", refID: 2},
@@ -154,7 +164,7 @@ func TestReplayFixedHoldings(t *testing.T) {
 
 func TestReplayReportsChainBreak(t *testing.T) {
 	u := db.Unit{ID: 10, BrandID: 3, ProductID: 9, UnitKind: KindSerial, Status: "printed"}
-	mvs := rows(u.ID,
+	mvs := rows(u,
 		mvRow{typ: TypeEntry, org: center, qty: 1, toT: OwnerWarehouseLocation, toID: cLoc, fromSt: StatusPrinted, toSt: StatusAvailable},
 		// Recorded as leaving a location it never reached.
 		mvRow{typ: TypeTransferOut, org: center, qty: -1, fromT: OwnerWarehouseLocation, fromID: cLoc + 5,
@@ -178,7 +188,81 @@ func TestReplayNoMovements(t *testing.T) {
 	if up.State != nil || up.Status != "" || len(p.OrgStocks) != 0 {
 		t.Fatalf("unit = %+v", up)
 	}
-	if _, err := p.Replay(db.Unit{ID: 12}, rows(13, mvRow{typ: TypeEntry})); err == nil {
+	if _, err := p.Replay(db.Unit{ID: 12}, rows(db.Unit{ID: 13}, mvRow{typ: TypeEntry})); err == nil {
 		t.Fatal("a movement of another unit must be rejected")
+	}
+}
+
+// TEC-157: a reclassification keeps owner and status; the unit's stock
+// counts under the new product and the movements after it carry the new
+// product.
+func reclassChain(newProduct int64) []mvRow {
+	return []mvRow{
+		{typ: TypeEntry, org: center, qty: 1, toT: OwnerWarehouseLocation, toID: cLoc, fromSt: StatusPrinted, toSt: StatusAvailable, product: 9},
+		{typ: TypeTransferOut, org: center, qty: -1, fromT: OwnerWarehouseLocation, fromID: cLoc,
+			toT: OwnerOrganization, toID: dist, fromSt: StatusAvailable, toSt: StatusInTransit, refType: "t", refID: 1, product: 9},
+		{typ: TypeTransferIn, org: dist, qty: 1, fromT: OwnerOrganization, fromID: dist,
+			toT: OwnerWarehouseLocation, toID: dLoc, fromSt: StatusInTransit, toSt: StatusAvailable, refType: "t", refID: 1, product: 9},
+		{typ: TypeReclassification, org: dist, fromT: OwnerWarehouseLocation, fromID: dLoc,
+			toT: OwnerWarehouseLocation, toID: dLoc, fromSt: StatusAvailable, toSt: StatusAvailable,
+			refType: ReclassificationRefType, refID: 4, product: newProduct, meta: `{"from_product_id": 9, "to_product_id": 12}`},
+		{typ: TypePartialConsumption, org: dist, cm: -300, fromT: OwnerWarehouseLocation, fromID: dLoc,
+			toT: OwnerWarehouseLocation, toID: dLoc, fromSt: StatusAvailable, toSt: StatusAvailable, product: newProduct},
+	}
+}
+
+func TestReplayReclassification(t *testing.T) {
+	u := db.Unit{ID: 14, BrandID: 3, ProductID: 12, UnitKind: KindSerial, Status: "available",
+		InitialMeters: cmToNumeric(1500), RemainingMeters: cmToNumeric(1200)}
+	p := NewProjection()
+	up, err := p.Replay(u, rows(u, reclassChain(12)...))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(up.Anomalies) != 0 {
+		t.Fatalf("anomalies: %v", up.Anomalies)
+	}
+	want := Owner{Type: OwnerWarehouseLocation, ID: dLoc, OrgID: dist}
+	if up.ProductID != 12 || up.State == nil || up.State.Owner != want || up.Status != StatusAvailable {
+		t.Fatalf("unit = %+v state %+v", up, up.State)
+	}
+	if up.RemainingCm == nil || *up.RemainingCm != 1200 {
+		t.Fatalf("remaining = %v", up.RemainingCm)
+	}
+	if got := p.OrgStocks[OrgStockKey{dist, 12}]; got.Quantity != 1 || got.Centimeters != 1200 || got.BrandID != 3 {
+		t.Fatalf("dist stock of the new product = %+v", got)
+	}
+	if got := p.BinStocks[BinStockKey{dLoc, 12}]; got.Quantity != 1 || got.OrganizationID != dist {
+		t.Fatalf("dist bin of the new product = %+v", got)
+	}
+	if _, ok := p.OrgStocks[OrgStockKey{dist, 9}]; ok {
+		t.Fatal("the old product keeps no stock of the unit")
+	}
+}
+
+func TestReplayReclassificationAnomalies(t *testing.T) {
+	// units.product_id was not changed with the movement.
+	u := db.Unit{ID: 15, BrandID: 3, ProductID: 9, UnitKind: KindSerial, Status: "available",
+		InitialMeters: cmToNumeric(1500), RemainingMeters: cmToNumeric(1200)}
+	up, err := NewProjection().Replay(u, rows(u, reclassChain(12)...))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(up.Anomalies) != 1 || up.ProductID != 12 {
+		t.Fatalf("anomalies = %v product %d, want the units.product_id break", up.Anomalies, up.ProductID)
+	}
+
+	// A movement after the reclassification still on the old product, and
+	// a reclassification without its source product.
+	chain := reclassChain(12)
+	chain[4].product = 9
+	chain[3].meta = `{}`
+	u.ID = 16
+	up, err = NewProjection().Replay(u, rows(u, chain...))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(up.Anomalies) != 2 {
+		t.Fatalf("anomalies = %v, want missing from_product_id and product break", up.Anomalies)
 	}
 }

@@ -70,5 +70,17 @@
   "back_to_login": "Back to sign in",
   "continue": "Continue",
   "area_requires": "This area requires {{area}} access.",
-  "feature_disabled": "This feature is not enabled for your organization."
+  "feature_disabled": "This feature is not enabled for your organization.",
+  "codes.STOCK_RECLASSIFICATION_BRAND_MISMATCH": "The target product belongs to another brand.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_TYPE_MISMATCH": "The target product has a different unit type (roll and piece can't be swapped).",
+  "codes.STOCK_RECLASSIFICATION_SAME_PRODUCT": "The unit already has this product.",
+  "codes.STOCK_RECLASSIFICATION_PRODUCT_INACTIVE": "The target product is inactive.",
+  "codes.STOCK_RECLASSIFICATION_FIXED_BARCODE": "Fixed barcodes can't be reclassified.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_CONSUMED": "The unit has been consumed or voided.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_ELSEWHERE": "The unit isn't in this organization's stock.",
+  "codes.STOCK_RECLASSIFICATION_UNIT_IN_USE": "The unit is in use on an open service or order.",
+  "codes.STOCK_RECLASSIFICATION_PRODUCT_CHANGED": "The unit's product changed after the request.",
+  "codes.STOCK_RECLASSIFICATION_NOT_PENDING": "This reclassification request has already been decided.",
+  "codes.STOCK_RECLASSIFICATION_PENDING_EXISTS": "This unit already has a pending reclassification request.",
+  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "You can't approve your own request."
 }
