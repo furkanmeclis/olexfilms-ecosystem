@@ -284,6 +284,17 @@ const (
 	CustomerMerged = "customer.merged"
 )
 
+// Center task events (TEC-214): written to the outbox in the transaction
+// that changes the task; the notification catalog (TEC-221) reaches the
+// assignee.
+const (
+	TasksCreated       = "tasks.created"
+	TasksUpdated       = "tasks.updated"
+	TasksAssigned      = "tasks.assigned"
+	TasksStatusChanged = "tasks.status_changed"
+	TasksCommentAdded  = "tasks.comment_added"
+)
+
 // Contracts domain events.
 const (
 	ContractsInstanceSigned = "contracts.instance_signed"
@@ -550,5 +561,10 @@ func catalogConstants() []string {
 		NotificationsFailed,
 		NotificationsRead,
 		NotificationsCancelled,
+		TasksCreated,
+		TasksUpdated,
+		TasksAssigned,
+		TasksStatusChanged,
+		TasksCommentAdded,
 	}
 }

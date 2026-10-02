@@ -95,6 +95,9 @@ import (
 	storagemodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/storage"
 	storagehandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/storage/handler"
 	storageusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/storage/usecase"
+	tasksmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/tasks"
+	taskshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/tasks/handler"
+	tasksusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/tasks/usecase"
 	vehiclecatalogmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/vehiclecatalog"
 	vehiclecataloghandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/vehiclecatalog/handler"
 	vehiclecatalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/vehiclecatalog/usecase"
@@ -478,6 +481,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	stockmodule.RegisterImportRoutes(mux, stockhandler.NewImport(importSvc), featureSvc, tokens, loader, deps.Queries)
 	// TEC-156: super_admin projection drift check (dry run).
 	stockmodule.RegisterPlatformRoutes(mux, stockhandler.NewRebuild(stockrebuild.New(deps.DB, deps.Queries), deps.Queries), tokens, loader)
+	// TEC-214: center tasks (center roles only; brand scoped).
+	tasksmodule.RegisterRoutes(mux, taskshandler.New(tasksusecase.New(deps.DB, deps.Queries,
+		outbox.NewStore(deps.DB, deps.Queries))), tokens, loader, deps.Queries)
 	// TEC-149: vehicle catalog (global car brands/models, super_admin writes).
 	vehiclecatalogmodule.RegisterRoutes(mux, vehiclecataloghandler.New(
 		vehiclecatalogusecase.New(deps.Queries), deps.Storage, activityRec), tokens, loader)
