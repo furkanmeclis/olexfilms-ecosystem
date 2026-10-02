@@ -22,6 +22,7 @@ import (
 	notifmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/providers"
 	notifusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/usecase"
+	stockrebuild "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/rebuild"
 	warrantymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty"
 	whatsappmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
@@ -166,6 +167,8 @@ func main() {
 		WithDocsRender(docSvc.ProcessRender).
 		WithRatesFetch(ratesSvc.FetchTask).
 		WithWarrantyCron(warrantyCron.ExpireTask, warrantyCron.ExpiringScanTask).
+		// TEC-156: nightly projection drift scan; report only, no repair.
+		WithInventoryRebuild(stockrebuild.New(pool, queries).ScanTask(log)).
 		WithSearch(
 			searchIndexer.ProcessUpsert,
 			searchIndexer.ProcessDelete,

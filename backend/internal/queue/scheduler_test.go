@@ -44,6 +44,7 @@ func TestRegisterSchedulesIncludesRatesFetch(t *testing.T) {
 		{cron: ratesFetchCatchUpCron, taskType: TaskRatesFetch, queue: QueueMaintenance}:              false,
 		{cron: warrantyExpireCron, taskType: TaskWarrantyExpire, queue: QueueMaintenance}:             false,
 		{cron: warrantyExpiringScanCron, taskType: TaskWarrantyExpiringScan, queue: QueueMaintenance}: false,
+		{cron: inventoryRebuildCron, taskType: TaskInventoryRebuild, queue: QueueMaintenance}:         false,
 	}
 	for _, e := range r.entries {
 		if _, ok := want[e]; !ok {
@@ -84,5 +85,25 @@ func TestRatesFetchTaskRetries(t *testing.T) {
 		if !retry {
 			t.Fatalf("rates fetch must retry: %+v", p)
 		}
+	}
+}
+
+func TestInventoryRebuildPayload(t *testing.T) {
+	task, err := NewInventoryRebuildTask(42)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if task.Type() != TaskInventoryRebuild {
+		t.Fatalf("type = %s", task.Type())
+	}
+	p, err := ParseInventoryRebuildPayload(task.Payload())
+	if err != nil || p.OrganizationID != 42 {
+		t.Fatalf("payload = %+v, %v", p, err)
+	}
+	if p, err := ParseInventoryRebuildPayload(nil); err != nil || p.OrganizationID != 0 {
+		t.Fatalf("empty payload = %+v, %v", p, err)
+	}
+	if _, err := ParseInventoryRebuildPayload([]byte(`{"organization_id":-1}`)); err == nil {
+		t.Fatal("negative organization must be rejected")
 	}
 }

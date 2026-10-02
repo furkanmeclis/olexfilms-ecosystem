@@ -59,6 +59,7 @@ type Worker struct {
 	pollWhatsApp         WhatsAppPollFunc
 	warrantyExpire       WarrantyTaskFunc
 	warrantyExpiringScan WarrantyTaskFunc
+	inventoryRebuild     InventoryRebuildFunc
 }
 
 // NewWorker builds a worker that handles known task types on every queue.
@@ -122,6 +123,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskWhatsAppStatusPoll, w.handleWhatsAppPoll)
 	mux.HandleFunc(TaskWarrantyExpire, w.handleWarrantyExpire)
 	mux.HandleFunc(TaskWarrantyExpiringScan, w.handleWarrantyExpiringScan)
+	mux.HandleFunc(TaskInventoryRebuild, w.handleInventoryRebuild)
 	return w
 }
 

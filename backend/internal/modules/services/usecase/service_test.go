@@ -87,11 +87,37 @@ func TestAvailableTransitions(t *testing.T) {
 			t.Errorf("%s: got %v want %v", tc.name, got, tc.want)
 		}
 	}
-	// Completion is never offered (TEC-180).
-	for from := range transitions {
-		if _, ok := transitions[from][StatusCompleted]; ok {
-			t.Fatalf("%s -> completed must not be in the stock-free machine", from)
+	// Completion (TEC-180): services.complete from draft, processing and
+	// ready; never from pending or a final status.
+	completer := dealerCaller(rbac.ScopeManaged, false)
+	completer.Principal.PermissionScopes[rbac.PermServicesComplete] = rbac.ScopeManaged
+	for status, want := range map[string]bool{
+		StatusDraft: true, StatusPending: false, StatusProcessing: true, StatusReady: true,
+		StatusCompleted: false, StatusCancelled: false,
+	} {
+		got := slices.Contains(availableTransitions(completer, svcRow(status, 10, 7)), StatusCompleted)
+		if got != want {
+			t.Errorf("completer %s -> completed = %v want %v", status, got, want)
 		}
+	}
+	if slices.Contains(availableTransitions(completer, svcRow(StatusReady, 11, 7)), StatusCompleted) {
+		t.Error("managed scope must not complete another organization's service")
+	}
+}
+
+func TestCentimeters(t *testing.T) {
+	for in, want := range map[string]int64{"1.50": 150, "50": 5000, "0.01": 1, "12345678.99": 1234567899} {
+		n, err := numeric(in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, err := centimeters(n)
+		if err != nil || got != want {
+			t.Fatalf("centimeters(%s) = %d %v want %d", in, got, err, want)
+		}
+	}
+	if _, err := centimeters(pgtype.Numeric{}); err == nil {
+		t.Fatal("NULL meters accepted")
 	}
 }
 

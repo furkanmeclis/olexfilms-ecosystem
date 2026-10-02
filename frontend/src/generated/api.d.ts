@@ -2729,6 +2729,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/platform/stock/rebuild-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stock projection drift check (super_admin, dry run)
+         * @description Replays `stock_movements` chronologically, rebuilds the expected projections (unit_current_state, fixed_barcode_holdings, units.status / remaining_meters, bin and organization product stocks) and reports every value that differs from the stored projection. Never writes; the repair runs from `cmd/inventory-rebuild -apply` (one locked transaction plus an audit row). Without `organization_uuid` every organization is scanned. At most 1000 differences are returned (`diffs_truncated`).
+         */
+        post: operations["checkStockRebuild"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/product-images/{key}": {
         parameters: {
             query?: never;
@@ -4462,6 +4482,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/services/{uuid}/stock-units": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Stock picker of the service organization
+         * @description Units the service organization can add as items (TEC-180): serial units it holds (available or placed) that no open service has taken (a roll that is only cut stays listed) and fixed barcodes with pieces on hand. barcode is an exact barcode (scanner lookup), product_uuid narrows to one product, min_meters lists only rolls with at least that many meters left. Needs services.write on the service; a service outside the read scope is 404.
+         */
+        get: operations["listServiceStockUnits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/services/{uuid}/transitions": {
         parameters: {
             query?: never;
@@ -4476,7 +4519,7 @@ export interface paths {
         put?: never;
         /**
          * Move a service to another status
-         * @description Legacy state machine without stock (TEC-179): draft -> pending -> processing -> ready (services.write); center shortcuts draft -> processing and pending -> ready; draft | pending | processing | ready -> cancelled (services.cancel, center only; a dealer gets 403). Completed and cancelled are final (409 SERVICE_INVALID_TRANSITION). completed answers 409 SERVICE_COMPLETION_UNAVAILABLE until TEC-180 (stock consumption). A request for the current status is a no-op. Every move writes a status log and a service.* outbox event.
+         * @description Legacy state machine (TEC-179): draft -> pending -> processing -> ready (services.write); center shortcuts draft -> processing and pending -> ready; draft | pending | processing | ready -> cancelled (services.cancel, center only; a dealer gets 403). draft | processing | ready -> completed (services.complete, TEC-180) consumes the stock of every item in the same transaction (consumption for a whole unit, partial_consumption for a cut; idempotency key service:service_item:<id>), links each item to its stock movement and writes one service.completed outbox event. A service without items answers 400; a unit that is no longer held or a cut longer than the rest of the roll answers 409 SERVICE_UNIT_NOT_AVAILABLE and nothing is written. Completed and cancelled are final (409 SERVICE_INVALID_TRANSITION). A request for the current status is a no-op (completing a completed service consumes nothing and emits nothing). Every move writes a status log and a service.* outbox event.
          */
         post: operations["transitionService"];
         delete?: never;
@@ -7133,6 +7176,51 @@ export interface components {
             data: components["schemas"]["StockUnitHistory"];
             meta: components["schemas"]["ResponseMeta"];
         };
+        StockRebuildCheckInput: {
+            /**
+             * Format: uuid
+             * @description Scan only the units that touched this organization and its product stock rows.
+             */
+            organization_uuid?: string | null;
+        };
+        StockRebuildDiff: {
+            /** @enum {string} */
+            table: "units" | "unit_current_state" | "fixed_barcode_holdings" | "bin_product_stocks" | "organization_product_stocks";
+            /** @description unit:<id>, location:<id>/product:<id> or organization:<id>/product:<id> */
+            key: string;
+            /** Format: int64 */
+            unit_id?: number;
+            barcode?: string;
+            /** @description Column name; `row` when the whole row is missing or extra */
+            field: string;
+            /** @description Value replayed from the ledger */
+            expected: string;
+            /** @description Stored projection value */
+            actual: string;
+        };
+        StockRebuildReport: {
+            /** Format: int64 */
+            organization_id?: number;
+            /** @description Always false for the HTTP check */
+            applied: boolean;
+            units_scanned: number;
+            movements_replayed: number;
+            diff_count: number;
+            diffs: components["schemas"]["StockRebuildDiff"][];
+            /** @description Breaks in a unit's movement chain (from_status / from_owner not equal to the replayed state) */
+            anomalies: string[];
+            /** Format: date-time */
+            started_at: string;
+            /** Format: date-time */
+            finished_at: string;
+            diffs_truncated: boolean;
+        };
+        EnvelopeStockRebuildReport: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["StockRebuildReport"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
         EnvelopeStockProductPage: {
             /** @enum {boolean} */
             success: true;
@@ -8103,6 +8191,26 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        ServiceStockUnit: {
+            /** Format: uuid */
+            uuid: string;
+            barcode: string;
+            /** @enum {string} */
+            unit_kind: "serial" | "fixed";
+            product: {
+                /** Format: uuid */
+                uuid: string;
+                sku: string;
+                name: string;
+                unit_type: string;
+            };
+            /** @description 1 for a serial unit, pieces on hand for a fixed barcode */
+            quantity_on_hand: number;
+            /** @description Roll length */
+            initial_meters: string | null;
+            /** @description Meters left on the roll */
+            remaining_meters: string | null;
+        };
         ServiceImage: {
             /** Format: uuid */
             uuid: string;
@@ -8206,6 +8314,14 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["Service"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeServiceStockUnitList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ServiceStockUnit"][];
+            };
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeServiceImage: {
@@ -13431,6 +13547,34 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    checkStockRebuild: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["StockRebuildCheckInput"];
+            };
+        };
+        responses: {
+            /** @description Drift report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockRebuildReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     getPublicProductImage: {
         parameters: {
             query?: never;
@@ -16608,6 +16752,39 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    listServiceStockUnits: {
+        parameters: {
+            query?: {
+                barcode?: string;
+                product_uuid?: string;
+                min_meters?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Units of the service organization */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceStockUnitList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     transitionService: {

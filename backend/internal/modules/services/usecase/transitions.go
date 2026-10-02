@@ -60,13 +60,13 @@ type rule struct {
 //	draft -> pending -> processing -> ready (services.write)
 //	draft -> processing, pending -> ready (center shortcuts)
 //	draft | pending | processing | ready -> cancelled (services.cancel, center only)
-//
-// Completion (ready / processing / draft -> completed) consumes stock and
-// arrives with TEC-180; until then it answers 409.
+//	draft | processing | ready -> completed (services.complete; consumes the
+//	  stock of the items in the same transaction, TEC-180)
 var transitions = map[string]map[string]rule{
 	StatusDraft: {
 		StatusPending:    {perm: rbac.PermServicesWrite},
 		StatusProcessing: {perm: rbac.PermServicesWrite, centerOnly: true},
+		StatusCompleted:  {perm: rbac.PermServicesComplete},
 		StatusCancelled:  {perm: rbac.PermServicesCancel},
 	},
 	StatusPending: {
@@ -76,9 +76,11 @@ var transitions = map[string]map[string]rule{
 	},
 	StatusProcessing: {
 		StatusReady:     {perm: rbac.PermServicesWrite},
+		StatusCompleted: {perm: rbac.PermServicesComplete},
 		StatusCancelled: {perm: rbac.PermServicesCancel},
 	},
 	StatusReady: {
+		StatusCompleted: {perm: rbac.PermServicesComplete},
 		StatusCancelled: {perm: rbac.PermServicesCancel},
 	},
 }
@@ -129,7 +131,9 @@ type TransitionInput struct {
 }
 
 // Transition moves a service along the state machine. A repeated request
-// for the current status is a no-op; completed and cancelled are final.
+// for the current status is a no-op (completing a completed service writes
+// no second consumption and no second event); completed and cancelled are
+// final.
 func (s *Service) Transition(ctx context.Context, c Caller, id uuid.UUID, in TransitionInput) (ServiceView, error) {
 	to := strings.TrimSpace(in.Status)
 	if !IsStatus(to) {
@@ -151,15 +155,16 @@ func (s *Service) Transition(ctx context.Context, c Caller, id uuid.UUID, in Tra
 		if IsFinal(svc.Status) {
 			return ErrInvalidTransition
 		}
-		if to == StatusCompleted {
-			return ErrCompletionUnavailable
-		}
 		r, ok := lookupTransition(svc.Status, to)
 		if !ok {
 			return ErrInvalidTransition
 		}
 		if !r.allows(c, svc) {
 			return ErrForbidden
+		}
+		if to == StatusCompleted {
+			result, err = s.complete(ctx, q, tx, svc, c, in.Note)
+			return err
 		}
 		from := svc.Status
 		if to == StatusCancelled {

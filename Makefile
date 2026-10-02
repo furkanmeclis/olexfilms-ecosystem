@@ -21,7 +21,7 @@ FRONTEND_PORT ?= 3000
 .PHONY: infra infra-down infra-logs infra-ps migrate-up backend-dev frontend-dev local-dev \
 	free-dev-ports prod-config prod-up prod-down prod-create-super-admin tools create-super-admin \
 	gen-env-server backup restore dr-drill \
-	search-reindex normalize-org-phones dev-pii-key check-i18n check-i18n-translations openapi-sync openapi-lint api-generate
+	search-reindex inventory-rebuild normalize-org-phones dev-pii-key check-i18n check-i18n-translations openapi-sync openapi-lint api-generate
 
 infra:
 	@if [ -n "$(ENV_FILE)" ]; then \
@@ -178,6 +178,11 @@ create-super-admin:
 
 search-reindex:
 	@$(load_env) $(MAKE) -C backend search-reindex
+
+# TEC-156: stock projection drift scan (dry run). ARGS="-org 5 -json" or
+# ARGS=-apply to repair (one locked transaction + audit row).
+inventory-rebuild:
+	@$(load_env) $(MAKE) -C backend inventory-rebuild ARGS="$(ARGS)"
 
 # K29 (TEC-159): organization phones to E.164. ARGS=--dry-run to preview.
 normalize-org-phones:

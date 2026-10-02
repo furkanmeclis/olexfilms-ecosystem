@@ -34,3 +34,17 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/stock/organizations/{uuid}/products", read(h.OrganizationStock))
 	mux.Handle("GET /v1/stock/locations/{uuid}/products", read(h.LocationStock))
 }
+
+// RegisterPlatformRoutes mounts the super_admin stock maintenance routes
+// (TEC-156): the projection drift check is a dry run.
+func RegisterPlatformRoutes(
+	mux *http.ServeMux,
+	h *stockhandler.Rebuild,
+	tokens *jwt.Manager,
+	loader middleware.IdentityLoader,
+) {
+	authn := middleware.Authenticate(tokens, loader)
+	mux.Handle("POST /v1/platform/stock/rebuild-check", middleware.Chain(
+		http.HandlerFunc(h.Check), authn, middleware.RequireSuperAdmin,
+	))
+}
