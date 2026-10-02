@@ -178,6 +178,47 @@ JOIN brands ub ON ub.id = u.brand_id
 WHERE si.service_id = sqlc.arg(service_id)
 ORDER BY si.id;
 
+-- TEC-194: repair scan. One page of completed services (completed in
+-- [since, until], id > after_service_id, organization_id = 0 for all) that
+-- still have an item without a warranty, with the same eligibility columns
+-- as ListWarrantyCandidatesByService for those items. The page is cut by
+-- service, so every missing item of a listed service is returned.
+-- name: ListWarrantyRepairCandidates :many
+WITH page AS (
+    SELECT s.id
+    FROM services s
+    WHERE s.status = 'completed'
+      AND s.completed_at >= sqlc.arg(since)
+      AND s.completed_at <= sqlc.arg(until)
+      AND s.id > sqlc.arg(after_service_id)::bigint
+      AND (sqlc.arg(organization_id)::bigint = 0 OR s.organization_id = sqlc.arg(organization_id)::bigint)
+      AND EXISTS (
+          SELECT 1 FROM service_items si
+          WHERE si.service_id = s.id
+            AND NOT EXISTS (SELECT 1 FROM warranties w WHERE w.service_item_id = si.id)
+      )
+    ORDER BY s.id
+    LIMIT sqlc.arg(service_limit)
+)
+SELECT s.id AS service_id, b.slug AS service_brand_slug,
+       si.id, si.kind, si.product_id, si.unit_id,
+       p.warranty_duration_months,
+       u.source AS unit_source, u.connection_id AS unit_connection_id,
+       ub.slug AS unit_brand_slug,
+       EXISTS (
+           SELECT 1 FROM stock_movements m
+           WHERE m.unit_id = si.unit_id AND m.type = 'external_outbound'
+       )::boolean AS external_outbound
+FROM page
+JOIN services s ON s.id = page.id
+JOIN brands b ON b.id = s.brand_id
+JOIN service_items si ON si.service_id = s.id
+JOIN products p ON p.id = si.product_id
+JOIN units u ON u.id = si.unit_id
+JOIN brands ub ON ub.id = u.brand_id
+WHERE NOT EXISTS (SELECT 1 FROM warranties w WHERE w.service_item_id = si.id)
+ORDER BY s.id, si.id;
+
 -- ---------------------------------------------------------------------------
 -- Vehicle transfers.
 

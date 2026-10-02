@@ -59,6 +59,7 @@ type Worker struct {
 	pollWhatsApp         WhatsAppPollFunc
 	warrantyExpire       WarrantyTaskFunc
 	warrantyExpiringScan WarrantyTaskFunc
+	warrantyRepairScan   WarrantyTaskFunc
 	inventoryRebuild     InventoryRebuildFunc
 }
 
@@ -123,6 +124,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskWhatsAppStatusPoll, w.handleWhatsAppPoll)
 	mux.HandleFunc(TaskWarrantyExpire, w.handleWarrantyExpire)
 	mux.HandleFunc(TaskWarrantyExpiringScan, w.handleWarrantyExpiringScan)
+	mux.HandleFunc(TaskWarrantyRepairScan, w.handleWarrantyRepairScan)
 	mux.HandleFunc(TaskInventoryRebuild, w.handleInventoryRebuild)
 	return w
 }

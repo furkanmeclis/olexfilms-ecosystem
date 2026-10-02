@@ -15,6 +15,9 @@ const (
 	// TaskWarrantyExpiringScan writes the 30 / 7 day warranty.expiring_soon
 	// reminders.
 	TaskWarrantyExpiringScan = "warranty:expiring_scan"
+	// TaskWarrantyRepairScan opens the warranties of completed services that
+	// the service.completed listener missed (TEC-194).
+	TaskWarrantyRepairScan = "warranty:repair_scan"
 )
 
 // end_at is the end of the last covered day in each organization's own
@@ -29,6 +32,11 @@ const (
 	warrantyExpiringScanCron = "17 10 * * *"
 )
 
+// The repair scan runs once a night (Istanbul), clear of the hourly expiry
+// (minute 7), the inventory drift scan (03:47) and the morning reminders,
+// so a repaired warranty is in place before the reminder pass.
+const warrantyRepairScanCron = "27 4 * * *"
+
 // WarrantyTaskFunc runs one warranty periodic task.
 type WarrantyTaskFunc func(ctx context.Context) error
 
@@ -40,6 +48,11 @@ func NewWarrantyExpireTask() (*asynq.Task, error) {
 // NewWarrantyExpiringScanTask builds the reminder scan task.
 func NewWarrantyExpiringScanTask() (*asynq.Task, error) {
 	return asynq.NewTask(TaskWarrantyExpiringScan, []byte("{}")), nil
+}
+
+// NewWarrantyRepairScanTask builds the repair scan task.
+func NewWarrantyRepairScanTask() (*asynq.Task, error) {
+	return asynq.NewTask(TaskWarrantyRepairScan, []byte("{}")), nil
 }
 
 func warrantyTaskOpts() []asynq.Option {
@@ -68,4 +81,18 @@ func (w *Worker) handleWarrantyExpiringScan(ctx context.Context, _ *asynq.Task) 
 		return nil
 	}
 	return w.warrantyExpiringScan(ctx)
+}
+
+// WithWarrantyRepairScan sets the warranty:repair_scan processor (TEC-194).
+func (w *Worker) WithWarrantyRepairScan(fn WarrantyTaskFunc) *Worker {
+	w.warrantyRepairScan = fn
+	return w
+}
+
+func (w *Worker) handleWarrantyRepairScan(ctx context.Context, _ *asynq.Task) error {
+	if w.warrantyRepairScan == nil {
+		w.log.Warn("warranty_repair_scan_handler_missing")
+		return nil
+	}
+	return w.warrantyRepairScan(ctx)
 }

@@ -24,6 +24,12 @@ func NewListener(pool *pgxpool.Pool, q *db.Queries, frontendURL string, log *slo
 	return usecase.NewListener(pool, q, outbox.NewStore(pool, q), frontendURL, log)
 }
 
+// NewRepairScanner wires the warranty:repair_scan handler (TEC-194) over
+// the same listener the bus uses; days is the look-back window.
+func NewRepairScanner(pool *pgxpool.Pool, q *db.Queries, frontendURL string, days int, log *slog.Logger) *usecase.RepairScanner {
+	return usecase.NewRepairScanner(NewListener(pool, q, frontendURL, log), days, log)
+}
+
 // RegisterEventHandlers subscribes the warranty listener to the platform
 // bus (outbox -> bus, same as the notification handlers). Every process
 // that drains the outbox registers it, so whichever claims a
