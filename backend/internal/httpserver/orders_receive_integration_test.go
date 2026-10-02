@@ -31,6 +31,79 @@ func (it *itest) shipOrder(sellerTok string, o orderView, assign [][]map[string]
 	}
 }
 
+// receiveFixture is the center -> distributor -> dealer chain of the
+// receipt tests (TEC-168, reused by TEC-169): a serial product with a
+// distributor price and a dealer price, a fixed-barcode product, two serial
+// units and a fixed barcode (5) in a center bin, and a token per party.
+type receiveFixture struct {
+	center, dist, dealer         db.Organization
+	cur                          string
+	piece, fixed                 db.Product
+	loc                          ledger.Owner
+	u1, u2, fu                   db.Unit
+	staffTok, distTok, dealerTok string
+}
+
+// newReceiveFixture builds the chain; prefix names its rows, n0 numbers
+// its barcodes.
+func (it *itest) newReceiveFixture(prefix string, n0 int) receiveFixture {
+	it.t.Helper()
+	ctx := context.Background()
+	center := it.brandCenter("olex")
+	brand, err := it.q.GetBrandByID(ctx, center.BrandID)
+	if err != nil {
+		it.t.Fatal(err)
+	}
+	cur := strings.TrimSpace(brand.Currency)
+	if cur != "TRY" {
+		today := time.Now().UTC().Truncate(24 * time.Hour)
+		if err := it.q.UpsertExchangeRate(ctx, db.UpsertExchangeRateParams{
+			RateDate: pgtype.Date{Time: today, Valid: true}, Base: cur, Quote: "TRY", Rate: "35", Source: "manual",
+		}); err != nil {
+			it.t.Fatalf("rate: %v", err)
+		}
+	}
+	dist := it.org(prefix+"-dist", "distributor", center)
+	dealer := it.org(prefix+"-dealer", "dealer", dist)
+	staff, spw := it.user(prefix + "-center-staff")
+	it.member(center, staff, "staff", rbac.RoleCenterStaff, rbac.RoleCenterWarehouse)
+	distOwner, dpw := it.user(prefix + "-dist-owner")
+	it.member(dist, distOwner, "owner")
+	dealerOwner, rpw := it.user(prefix + "-dealer-owner")
+	it.member(dealer, dealerOwner, "owner")
+
+	piece := it.product(center, strings.ToUpper(prefix)+"P")
+	fixed := it.product(center, strings.ToUpper(prefix)+"F")
+	if _, err := it.pool.Exec(ctx, `UPDATE products SET uses_fixed_barcode = TRUE WHERE id = $1`, fixed.ID); err != nil {
+		it.t.Fatalf("fixed product: %v", err)
+	}
+	fixed.UsesFixedBarcode = true
+	it.setListPrice(piece, cur, "50")
+	it.setListPrice(fixed, cur, "5")
+	if _, err := it.q.UpsertDistributorDealerPrice(ctx, db.UpsertDistributorDealerPriceParams{
+		ProductID: piece.ID, BrandID: piece.BrandID, DistributorOrgID: dist.ID, Currency: cur, Price: "70",
+	}); err != nil {
+		it.t.Fatal(err)
+	}
+
+	chain := it.stockChain()
+	loc := chain.location(center, strings.ToUpper(prefix))
+	u1 := chain.unit(center, piece, n0+1)
+	chain.post(ledger.TypeEntry, u1, chain.nextRef(), loc)
+	u2 := chain.unit(center, piece, n0+2)
+	chain.post(ledger.TypeEntry, u2, chain.nextRef(), loc)
+	fu := chain.fixedUnit(center, fixed, n0+1, loc, 5)
+
+	staffTok := it.loginOrg(staff, spw, center)
+	distTok := it.loginOrg(distOwner, dpw, dist)
+	dealerTok := it.loginOrg(dealerOwner, rpw, dealer)
+
+	return receiveFixture{
+		center: center, dist: dist, dealer: dealer, cur: cur, piece: piece, fixed: fixed, loc: loc,
+		u1: u1, u2: u2, fu: fu, staffTok: staffTok, distTok: distTok, dealerTok: dealerTok,
+	}
+}
+
 // TEC-168 acceptance: barcode ownership moves step by step along center ->
 // distributor -> dealer. Each order is shipped (order_out) and received by
 // the buyer (received): the unit is available at the buyer and the ledger
@@ -41,54 +114,11 @@ func (it *itest) shipOrder(sellerTok string, o orderView, assign [][]map[string]
 func TestIntegrationOrdersReceiveAndCancel(t *testing.T) {
 	it := newIntegration(t)
 	ctx := context.Background()
-	center := it.brandCenter("olex")
-	brand, err := it.q.GetBrandByID(ctx, center.BrandID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cur := strings.TrimSpace(brand.Currency)
-	if cur != "TRY" {
-		today := time.Now().UTC().Truncate(24 * time.Hour)
-		if err := it.q.UpsertExchangeRate(ctx, db.UpsertExchangeRateParams{
-			RateDate: pgtype.Date{Time: today, Valid: true}, Base: cur, Quote: "TRY", Rate: "35", Source: "manual",
-		}); err != nil {
-			t.Fatalf("rate: %v", err)
-		}
-	}
-	dist := it.org("t168-dist", "distributor", center)
-	dealer := it.org("t168-dealer", "dealer", dist)
-	staff, spw := it.user("t168-center-staff")
-	it.member(center, staff, "staff", rbac.RoleCenterStaff, rbac.RoleCenterWarehouse)
-	distOwner, dpw := it.user("t168-dist-owner")
-	it.member(dist, distOwner, "owner")
-	dealerOwner, rpw := it.user("t168-dealer-owner")
-	it.member(dealer, dealerOwner, "owner")
-
-	piece := it.product(center, "T168P")
-	fixed := it.product(center, "T168F")
-	if _, err := it.pool.Exec(ctx, `UPDATE products SET uses_fixed_barcode = TRUE WHERE id = $1`, fixed.ID); err != nil {
-		t.Fatalf("fixed product: %v", err)
-	}
-	fixed.UsesFixedBarcode = true
-	it.setListPrice(piece, cur, "50")
-	it.setListPrice(fixed, cur, "5")
-	if _, err := it.q.UpsertDistributorDealerPrice(ctx, db.UpsertDistributorDealerPriceParams{
-		ProductID: piece.ID, BrandID: piece.BrandID, DistributorOrgID: dist.ID, Currency: cur, Price: "70",
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	chain := it.stockChain()
-	loc := chain.location(center, "T168")
-	u1 := chain.unit(center, piece, 1681)
-	chain.post(ledger.TypeEntry, u1, chain.nextRef(), loc)
-	u2 := chain.unit(center, piece, 1682)
-	chain.post(ledger.TypeEntry, u2, chain.nextRef(), loc)
-	fu := chain.fixedUnit(center, fixed, 1681, loc, 5)
-
-	staffTok := it.loginOrg(staff, spw, center)
-	distTok := it.loginOrg(distOwner, dpw, dist)
-	dealerTok := it.loginOrg(dealerOwner, rpw, dealer)
+	f := it.newReceiveFixture("t168", 1680)
+	center, dist, dealer := f.center, f.dist, f.dealer
+	piece, fixed, loc := f.piece, f.fixed, f.loc
+	u1, u2, fu := f.u1, f.u2, f.fu
+	staffTok, distTok, dealerTok := f.staffTok, f.distTok, f.dealerTok
 
 	state := func(u db.Unit) db.UnitCurrentState {
 		t.Helper()
