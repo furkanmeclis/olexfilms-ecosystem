@@ -115,6 +115,9 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	on(events.WarrantyExpired, func(event events.Event) (notifmodel.DispatchInput, bool) {
 		return warrantyDispatch(event, catalog.EventWarrantyExpired, 0)
 	})
+	// TEC-192: the delayed review request goes to the service customer
+	// (WhatsApp); the task writes the event once per service.
+	on(events.ServiceReviewRequested, serviceReviewDispatch)
 	on(events.AIDraftCreated, func(event events.Event) (notifmodel.DispatchInput, bool) {
 		ids := userIDsFromAIEvent(event)
 		return notifmodel.DispatchInput{
@@ -154,6 +157,33 @@ func warrantyDispatch(event events.Event, code string, days int64) (notifmodel.D
 	}
 	if u := vars["verify_url"]; u != "" {
 		in.ActionURL = &u
+	}
+	return in, true
+}
+
+// serviceReviewDispatch maps service.review_requested to a dispatch for the
+// customer; the brand is the service brand (K20), review_url the dealer's
+// google_business_url.
+func serviceReviewDispatch(event events.Event) (notifmodel.DispatchInput, bool) {
+	customer, ok := int64FromPayload(event.Payload, "customer_user_id")
+	url := stringFromPayload(event.Payload, "review_url")
+	if !ok || customer <= 0 || url == "" {
+		return notifmodel.DispatchInput{}, false
+	}
+	vars := map[string]string{}
+	for _, k := range []string{"organization_name", "review_url", "plate", "service_no"} {
+		vars[k] = stringFromPayload(event.Payload, k)
+	}
+	in := notifmodel.DispatchInput{
+		EventCode: catalog.EventServiceReviewRequest, UserIDs: []int64{customer}, Vars: vars,
+		Payload: map[string]any{
+			"service_uuid": stringFromPayload(event.Payload, "service_uuid"),
+			"service_no":   vars["service_no"],
+		},
+		ActionURL: &url,
+	}
+	if brand, ok := int64FromPayload(event.Payload, "brand_id"); ok && brand > 0 {
+		in.BrandID = &brand
 	}
 	return in, true
 }
