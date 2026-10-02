@@ -118,10 +118,12 @@ func (c Caller) brand() pgtype.Int8 {
 
 // Service implements the customer and vehicle use cases.
 type Service struct {
-	pool   TxBeginner
-	q      *db.Queries
-	pii    *crypto.PIIBox
-	plates PlateValidator
+	pool    TxBeginner
+	q       *db.Queries
+	pii     *crypto.PIIBox
+	plates  PlateValidator
+	revoker Revoker
+	search  SearchIndexer
 }
 
 // New creates the service. pii may be nil (CUSTOMER_PII_KEY unset in

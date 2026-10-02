@@ -31,6 +31,7 @@ const (
 type Handler struct {
 	svc      *cu.Service
 	activity *activity.Recorder
+	exports  Exports
 }
 
 // New creates the handler; rec may be nil.

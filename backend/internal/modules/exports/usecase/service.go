@@ -9,6 +9,7 @@ import (
 	"io"
 	"log/slog"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
@@ -270,6 +271,29 @@ func (s *Service) GetJob(ctx context.Context, jobUUID uuid.UUID, actorID int64, 
 	return mapExportJob(row), nil
 }
 
+// GetPortalJob returns a portal export job owned by the actor (other jobs
+// answer ErrNotFound, never ErrForbidden, so their existence does not leak).
+func (s *Service) GetPortalJob(ctx context.Context, jobUUID uuid.UUID, actorID int64) (ExportJobView, error) {
+	row, err := s.q.GetExportJobByUUID(ctx, jobUUID)
+	if err != nil || !portalJobOf(row, actorID) {
+		return ExportJobView{}, ErrNotFound
+	}
+	return mapExportJob(row), nil
+}
+
+// DownloadPortal opens the file of a portal export job owned by the actor.
+func (s *Service) DownloadPortal(ctx context.Context, jobUUID uuid.UUID, actorID int64) (io.ReadCloser, string, string, error) {
+	row, err := s.q.GetExportJobByUUID(ctx, jobUUID)
+	if err != nil || !portalJobOf(row, actorID) {
+		return nil, "", "", ErrNotFound
+	}
+	return s.openExportFile(ctx, row)
+}
+
+func portalJobOf(row db.ExportJob, actorID int64) bool {
+	return strings.HasPrefix(row.Resource, PortalResourcePrefix) && row.ActorID == actorID && !row.OrganizationID.Valid
+}
+
 // GetOrgJob returns a tenant-scoped job.
 func (s *Service) GetOrgJob(ctx context.Context, jobUUID uuid.UUID, orgID int64) (ExportJobView, error) {
 	row, err := s.q.GetExportJobByUUID(ctx, jobUUID)
@@ -364,7 +388,14 @@ func (s *Service) openExportFile(ctx context.Context, row db.ExportJob) (io.Read
 	return rc, ioengine.ContentTypeForExport(format), filename, nil
 }
 
+// PortalResourcePrefix marks export resources requested from the customer
+// portal (TEC-161): their files are downloaded through /v1/portal/exports.
+const PortalResourcePrefix = "portal."
+
 func exportDownloadPath(row db.ExportJob) string {
+	if strings.HasPrefix(row.Resource, PortalResourcePrefix) {
+		return fmt.Sprintf("/v1/portal/exports/%s/download", row.Uuid.String())
+	}
 	if row.OrganizationID.Valid {
 		return fmt.Sprintf("/v1/tenant/exports/%s/download", row.Uuid.String())
 	}
@@ -398,8 +429,9 @@ func mapExportJob(row db.ExportJob) ExportJobView {
 	}
 }
 
-// renderDocument returns a styled PDF for document adapters, or nil to use
-// the generic encoder (other formats, no renderer, or Gotenberg failure).
+// renderDocument returns a structured JSON document or a styled PDF for
+// document adapters, or nil to use the generic encoder (other formats, no
+// renderer, or Gotenberg failure).
 func (s *Service) renderDocument(
 	ctx context.Context,
 	adapter ioengine.ResourceAdapter,
@@ -409,6 +441,9 @@ func (s *Service) renderDocument(
 	lh *ioengine.Letterhead,
 	title string,
 ) ([]byte, error) {
+	if jd, ok := adapter.(ioengine.JSONDocumentRenderer); ok && ioengine.ExportFormat(format) == ioengine.ExportJSON {
+		return jd.DocumentJSON(ds, locale)
+	}
 	doc, ok := adapter.(ioengine.DocumentRenderer)
 	if !ok || s.pdf == nil || ioengine.ExportFormat(format) != ioengine.ExportPDF {
 		return nil, nil
