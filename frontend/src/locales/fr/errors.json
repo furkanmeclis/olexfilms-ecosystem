@@ -101,5 +101,20 @@
   "codes.VEHICLE_TRANSFER_INVALID_CODE": "Le code est erroné.",
   "codes.VEHICLE_TRANSFER_LOCKED": "Trop de codes erronés ; le transfert a été annulé.",
   "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "Les codes n'ont pas pu être envoyés. Réessayez plus tard.",
-  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Le propriétaire du véhicule a changé ; lancez un nouveau transfert."
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Le propriétaire du véhicule a changé ; lancez un nouveau transfert.",
+  "codes.ORDER_INVALID_TRANSITION": "Le statut de la commande ne permet pas cette action.",
+  "codes.ORDER_TRANSITION_UNAVAILABLE": "Cette étape n'est pas encore disponible.",
+  "codes.ORDER_NOT_EDITABLE": "Seuls les brouillons de commande peuvent être modifiés.",
+  "codes.ORDER_NO_SUPPLIER": "Seul un distributeur (auprès du centre) ou un revendeur (auprès de son distributeur) peut commander des produits.",
+  "codes.ORDER_NOT_ASSIGNABLE": "Les unités ne peuvent être attribuées que pendant la préparation.",
+  "codes.ORDER_UNIT_ALREADY_ASSIGNED": "Cette unité est déjà sur la ligne.",
+  "codes.ORDER_UNIT_RESERVED": "Cette unité est réservée par une autre commande.",
+  "codes.ORDER_UNIT_NOT_AVAILABLE": "Cette unité n'est pas dans votre stock ou appartient à un autre produit.",
+  "codes.ORDER_INSUFFICIENT_STOCK": "Stock non réservé insuffisant pour ce code-barres.",
+  "codes.ORDER_ITEM_OVER_ASSIGNED": "L'attribution dépasse la quantité de la ligne.",
+  "codes.ORDER_NOT_FULLY_ASSIGNED": "Chaque ligne doit d'abord être entièrement attribuée.",
+  "codes.ORDER_STOCK_UNAVAILABLE": "Le mouvement de stock de cet envoi a été refusé.",
+  "codes.PRICE_NOT_FOUND": "Aucun prix pour ce produit dans la devise de la commande.",
+  "codes.RATE_NOT_FOUND": "Aucun taux de change disponible à figer pour la devise de la commande.",
+  "codes.ROLL_CUT_UNSUPPORTED": "Les rouleaux partent entiers ; les mètres doivent égaler la longueur restante."
 }

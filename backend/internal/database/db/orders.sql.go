@@ -257,16 +257,26 @@ SELECT COUNT(*) FROM orders
 WHERE brand_id = $1
   AND buyer_org_id = $2
   AND ($3::text IS NULL OR status = $3::text)
+  AND ($4::timestamptz IS NULL OR created_at >= $4::timestamptz)
+  AND ($5::timestamptz IS NULL OR created_at < $5::timestamptz)
 `
 
 type CountOrdersByBuyerParams struct {
-	BrandID    int64       `json:"brand_id"`
-	BuyerOrgID int64       `json:"buyer_org_id"`
-	Status     pgtype.Text `json:"status"`
+	BrandID     int64              `json:"brand_id"`
+	BuyerOrgID  int64              `json:"buyer_org_id"`
+	Status      pgtype.Text        `json:"status"`
+	CreatedFrom pgtype.Timestamptz `json:"created_from"`
+	CreatedTo   pgtype.Timestamptz `json:"created_to"`
 }
 
 func (q *Queries) CountOrdersByBuyer(ctx context.Context, arg CountOrdersByBuyerParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countOrdersByBuyer, arg.BrandID, arg.BuyerOrgID, arg.Status)
+	row := q.db.QueryRow(ctx, countOrdersByBuyer,
+		arg.BrandID,
+		arg.BuyerOrgID,
+		arg.Status,
+		arg.CreatedFrom,
+		arg.CreatedTo,
+	)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -277,16 +287,26 @@ SELECT COUNT(*) FROM orders
 WHERE brand_id = $1
   AND organization_id = $2
   AND ($3::text IS NULL OR status = $3::text)
+  AND ($4::timestamptz IS NULL OR created_at >= $4::timestamptz)
+  AND ($5::timestamptz IS NULL OR created_at < $5::timestamptz)
 `
 
 type CountOrdersBySellerParams struct {
-	BrandID     int64       `json:"brand_id"`
-	SellerOrgID int64       `json:"seller_org_id"`
-	Status      pgtype.Text `json:"status"`
+	BrandID     int64              `json:"brand_id"`
+	SellerOrgID int64              `json:"seller_org_id"`
+	Status      pgtype.Text        `json:"status"`
+	CreatedFrom pgtype.Timestamptz `json:"created_from"`
+	CreatedTo   pgtype.Timestamptz `json:"created_to"`
 }
 
 func (q *Queries) CountOrdersBySeller(ctx context.Context, arg CountOrdersBySellerParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countOrdersBySeller, arg.BrandID, arg.SellerOrgID, arg.Status)
+	row := q.db.QueryRow(ctx, countOrdersBySeller,
+		arg.BrandID,
+		arg.SellerOrgID,
+		arg.Status,
+		arg.CreatedFrom,
+		arg.CreatedTo,
+	)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -299,16 +319,26 @@ WHERE brand_id = $1
        OR organization_id = ANY ($2::bigint[])
        OR buyer_org_id = ANY ($2::bigint[]))
   AND ($3::text IS NULL OR status = $3::text)
+  AND ($4::timestamptz IS NULL OR created_at >= $4::timestamptz)
+  AND ($5::timestamptz IS NULL OR created_at < $5::timestamptz)
 `
 
 type CountOrdersInScopeParams struct {
-	BrandID int64       `json:"brand_id"`
-	OrgIds  []int64     `json:"org_ids"`
-	Status  pgtype.Text `json:"status"`
+	BrandID     int64              `json:"brand_id"`
+	OrgIds      []int64            `json:"org_ids"`
+	Status      pgtype.Text        `json:"status"`
+	CreatedFrom pgtype.Timestamptz `json:"created_from"`
+	CreatedTo   pgtype.Timestamptz `json:"created_to"`
 }
 
 func (q *Queries) CountOrdersInScope(ctx context.Context, arg CountOrdersInScopeParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countOrdersInScope, arg.BrandID, arg.OrgIds, arg.Status)
+	row := q.db.QueryRow(ctx, countOrdersInScope,
+		arg.BrandID,
+		arg.OrgIds,
+		arg.Status,
+		arg.CreatedFrom,
+		arg.CreatedTo,
+	)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -1322,16 +1352,20 @@ SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_i
 WHERE brand_id = $1
   AND buyer_org_id = $2
   AND ($3::text IS NULL OR status = $3::text)
+  AND ($4::timestamptz IS NULL OR created_at >= $4::timestamptz)
+  AND ($5::timestamptz IS NULL OR created_at < $5::timestamptz)
 ORDER BY created_at DESC, id DESC
-LIMIT $5 OFFSET $4
+LIMIT $7 OFFSET $6
 `
 
 type ListOrdersByBuyerParams struct {
-	BrandID    int64       `json:"brand_id"`
-	BuyerOrgID int64       `json:"buyer_org_id"`
-	Status     pgtype.Text `json:"status"`
-	RowOffset  int32       `json:"row_offset"`
-	RowLimit   int32       `json:"row_limit"`
+	BrandID     int64              `json:"brand_id"`
+	BuyerOrgID  int64              `json:"buyer_org_id"`
+	Status      pgtype.Text        `json:"status"`
+	CreatedFrom pgtype.Timestamptz `json:"created_from"`
+	CreatedTo   pgtype.Timestamptz `json:"created_to"`
+	RowOffset   int32              `json:"row_offset"`
+	RowLimit    int32              `json:"row_limit"`
 }
 
 // Buyer side: orders the organization buys.
@@ -1340,6 +1374,8 @@ func (q *Queries) ListOrdersByBuyer(ctx context.Context, arg ListOrdersByBuyerPa
 		arg.BrandID,
 		arg.BuyerOrgID,
 		arg.Status,
+		arg.CreatedFrom,
+		arg.CreatedTo,
 		arg.RowOffset,
 		arg.RowLimit,
 	)
@@ -1402,16 +1438,20 @@ SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_i
 WHERE brand_id = $1
   AND organization_id = $2
   AND ($3::text IS NULL OR status = $3::text)
+  AND ($4::timestamptz IS NULL OR created_at >= $4::timestamptz)
+  AND ($5::timestamptz IS NULL OR created_at < $5::timestamptz)
 ORDER BY created_at DESC, id DESC
-LIMIT $5 OFFSET $4
+LIMIT $7 OFFSET $6
 `
 
 type ListOrdersBySellerParams struct {
-	BrandID     int64       `json:"brand_id"`
-	SellerOrgID int64       `json:"seller_org_id"`
-	Status      pgtype.Text `json:"status"`
-	RowOffset   int32       `json:"row_offset"`
-	RowLimit    int32       `json:"row_limit"`
+	BrandID     int64              `json:"brand_id"`
+	SellerOrgID int64              `json:"seller_org_id"`
+	Status      pgtype.Text        `json:"status"`
+	CreatedFrom pgtype.Timestamptz `json:"created_from"`
+	CreatedTo   pgtype.Timestamptz `json:"created_to"`
+	RowOffset   int32              `json:"row_offset"`
+	RowLimit    int32              `json:"row_limit"`
 }
 
 // Seller side: orders the organization sells.
@@ -1420,6 +1460,8 @@ func (q *Queries) ListOrdersBySeller(ctx context.Context, arg ListOrdersBySeller
 		arg.BrandID,
 		arg.SellerOrgID,
 		arg.Status,
+		arg.CreatedFrom,
+		arg.CreatedTo,
 		arg.RowOffset,
 		arg.RowLimit,
 	)
@@ -1484,16 +1526,20 @@ WHERE brand_id = $1
        OR organization_id = ANY ($2::bigint[])
        OR buyer_org_id = ANY ($2::bigint[]))
   AND ($3::text IS NULL OR status = $3::text)
+  AND ($4::timestamptz IS NULL OR created_at >= $4::timestamptz)
+  AND ($5::timestamptz IS NULL OR created_at < $5::timestamptz)
 ORDER BY created_at DESC, id DESC
-LIMIT $5 OFFSET $4
+LIMIT $7 OFFSET $6
 `
 
 type ListOrdersInScopeParams struct {
-	BrandID   int64       `json:"brand_id"`
-	OrgIds    []int64     `json:"org_ids"`
-	Status    pgtype.Text `json:"status"`
-	RowOffset int32       `json:"row_offset"`
-	RowLimit  int32       `json:"row_limit"`
+	BrandID     int64              `json:"brand_id"`
+	OrgIds      []int64            `json:"org_ids"`
+	Status      pgtype.Text        `json:"status"`
+	CreatedFrom pgtype.Timestamptz `json:"created_from"`
+	CreatedTo   pgtype.Timestamptz `json:"created_to"`
+	RowOffset   int32              `json:"row_offset"`
+	RowLimit    int32              `json:"row_limit"`
 }
 
 // Scope list: orders where any of org_ids is the seller or the buyer
@@ -1503,6 +1549,8 @@ func (q *Queries) ListOrdersInScope(ctx context.Context, arg ListOrdersInScopePa
 		arg.BrandID,
 		arg.OrgIds,
 		arg.Status,
+		arg.CreatedFrom,
+		arg.CreatedTo,
 		arg.RowOffset,
 		arg.RowLimit,
 	)

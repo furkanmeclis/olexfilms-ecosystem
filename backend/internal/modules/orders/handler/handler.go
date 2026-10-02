@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	ord "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/orders/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
@@ -132,13 +133,45 @@ func toItems(in []itemBody) []ord.ItemInput {
 	return out
 }
 
-// List (GET /v1/orders?side&status&limit&offset).
+// parseCreatedBound parses a created_from / created_to bound: RFC3339 as
+// given, or a YYYY-MM-DD day in UTC. A day as the upper bound (end) means
+// the whole day, so it moves to the next midnight (exclusive bound).
+func parseCreatedBound(raw string, end bool) (*time.Time, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil, nil
+	}
+	if d, err := time.Parse("2006-01-02", raw); err == nil {
+		if end {
+			d = d.Add(24 * time.Hour)
+		}
+		return &d, nil
+	}
+	t, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		return nil, err
+	}
+	utc := t.UTC()
+	return &utc, nil
+}
+
+// List (GET /v1/orders?side&status&created_from&created_to&limit&offset).
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	q := apiquery.Parse(r.URL.Query())
 	v := r.URL.Query()
+	from, err := parseCreatedBound(v.Get("created_from"), false)
+	if err != nil {
+		writeError(w, r, &ord.ValidationError{Field: "created_from", Message: "invalid date", Code: "invalid"})
+		return
+	}
+	to, err := parseCreatedBound(v.Get("created_to"), true)
+	if err != nil {
+		writeError(w, r, &ord.ValidationError{Field: "created_to", Message: "invalid date", Code: "invalid"})
+		return
+	}
 	items, total, err := h.svc.List(r.Context(), caller(r), ord.ListFilter{
 		Side: strings.TrimSpace(v.Get("side")), Status: strings.TrimSpace(v.Get("status")),
-		Limit: q.Limit, Offset: q.Offset,
+		CreatedFrom: from, CreatedTo: to, Limit: q.Limit, Offset: q.Offset,
 	})
 	if err != nil {
 		writeError(w, r, err)
