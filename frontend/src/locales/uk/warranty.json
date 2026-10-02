@@ -1,0 +1,23 @@
+{
+  "public.page_title": "Перевірка гарантії",
+  "public.status.active": "Активна",
+  "public.status.expired": "Закінчилася",
+  "public.status.void": "Анульована",
+  "public.days_remaining": "Залишилося днів",
+  "public.start": "Дата початку",
+  "public.end": "Дата закінчення",
+  "public.vehicle": "Автомобіль",
+  "public.plate": "Номерний знак",
+  "public.vin": "VIN (останні 4)",
+  "public.model_year": "Рік моделі",
+  "public.dealer": "Виконавець",
+  "public.privacy_note": "Номерний знак і VIN частково приховані для захисту персональних даних.",
+  "public.not_found_title": "Гарантію не знайдено",
+  "public.not_found_body": "Гарантії з таким кодом немає. Відскануйте QR-код ще раз або перевірте код.",
+  "public.rate_limited_title": "Забагато запитів",
+  "public.rate_limited_body": "Забагато перевірок за короткий час. Спробуйте ще раз трохи згодом.",
+  "public.retry_after": "Спробуйте ще раз через {{seconds}} с.",
+  "public.error_title": "Зараз неможливо показати гарантію",
+  "public.error_body": "Спробуйте пізніше.",
+  "public.language": "Мова"
+}

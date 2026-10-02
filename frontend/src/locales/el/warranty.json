@@ -1,0 +1,23 @@
+{
+  "public.page_title": "Έλεγχος εγγύησης",
+  "public.status.active": "Ενεργή",
+  "public.status.expired": "Έληξε",
+  "public.status.void": "Ακυρώθηκε",
+  "public.days_remaining": "Ημέρες που απομένουν",
+  "public.start": "Ημερομηνία έναρξης",
+  "public.end": "Ημερομηνία λήξης",
+  "public.vehicle": "Όχημα",
+  "public.plate": "Πινακίδα",
+  "public.vin": "VIN (τελευταία 4)",
+  "public.model_year": "Έτος μοντέλου",
+  "public.dealer": "Εφαρμογή από",
+  "public.privacy_note": "Η πινακίδα και το VIN αποκρύπτονται εν μέρει για την προστασία των προσωπικών δεδομένων.",
+  "public.not_found_title": "Η εγγύηση δεν βρέθηκε",
+  "public.not_found_body": "Δεν υπάρχει εγγύηση με αυτόν τον κωδικό. Σαρώστε ξανά τον κωδικό QR ή ελέγξτε τον κωδικό.",
+  "public.rate_limited_title": "Πάρα πολλά αιτήματα",
+  "public.rate_limited_body": "Πάρα πολλές αναζητήσεις σε σύντομο χρόνο. Δοκιμάστε ξανά σε λίγο.",
+  "public.retry_after": "Δοκιμάστε ξανά σε {{seconds}} δευτερόλεπτα.",
+  "public.error_title": "Η εγγύηση δεν μπορεί να εμφανιστεί αυτή τη στιγμή",
+  "public.error_body": "Δοκιμάστε ξανά αργότερα.",
+  "public.language": "Γλώσσα"
+}

@@ -40,6 +40,7 @@ import storage from "./storage.json";
 import table from "./table.json";
 import users from "./users.json";
 import vehicles from "./vehicles.json";
+import warranty from "./warranty.json";
 
 const catalog: LocaleCatalog = {
   access,
@@ -81,6 +82,7 @@ const catalog: LocaleCatalog = {
   table,
   users,
   vehicles,
+  warranty,
 };
 
 export default catalog;
