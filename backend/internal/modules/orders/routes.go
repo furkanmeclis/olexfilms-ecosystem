@@ -1,6 +1,7 @@
-// Package orders mounts the order routes (TEC-166, F1-04b): draft orders up
-// the tree (K6), server-side prices (K8), the rate frozen at seller approval
-// (K7) and the stock-free status transitions.
+// Package orders mounts the order routes (TEC-166, F1-04b; TEC-167,
+// F1-04c): draft orders up the tree (K6), server-side prices (K8), the rate
+// frozen at seller approval (K7), barcode assignment with stock
+// reservations and the status transitions up to shipping.
 package orders
 
 import (
@@ -43,4 +44,7 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/orders/{uuid}", route(h.Get))
 	mux.Handle("PUT /v1/orders/{uuid}/items", route(h.ReplaceItems, write))
 	mux.Handle("POST /v1/orders/{uuid}/transitions", route(h.Transition, act))
+	ship := middleware.RequirePermission(rbac.PermOrdersShip)
+	mux.Handle("POST /v1/orders/{uuid}/items/{item_uuid}/units", route(h.AssignUnit, ship))
+	mux.Handle("DELETE /v1/orders/{uuid}/items/{item_uuid}/units/{unit_uuid}", route(h.UnassignUnit, ship))
 }

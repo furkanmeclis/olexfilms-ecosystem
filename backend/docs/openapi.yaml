@@ -8243,17 +8243,24 @@ paths:
       operationId: transitionOrder
       summary: Move an order to another status
       description: >-
-        Stock-free transitions (TEC-166): draft -> submitted (buyer,
+        Transitions (TEC-166, TEC-167): draft -> submitted (buyer,
         orders.write); submitted -> approved (seller, orders.approve: line
         prices are fetched again and locked, the rate to TRY is frozen into
         rate_snapshot/try_rate, 422 RATE_NOT_FOUND without a rate);
         approved -> preparing | processing (seller, orders.ship or
-        orders.approve); draft | submitted | approved | preparing ->
-        cancelled (either side, orders.cancel). A request for the current
-        status is a no-op. Other moves answer 409 ORDER_INVALID_TRANSITION;
-        the stock-bound statuses (ready, shipped, delivered, received,
-        cancelling) answer 409 ORDER_TRANSITION_UNAVAILABLE until TEC-167/168.
-        Every move writes the status history and an orders.* outbox event.
+        orders.approve); preparing -> ready (seller, orders.ship; every line
+        fully assigned, else 409 ORDER_NOT_FULLY_ASSIGNED); ready -> shipped
+        (seller, orders.ship; one ledger order_out per assigned unit with
+        idempotency key order:order_item_unit:<id>:order_out:<barcode>,
+        serial units go in_transit owned by the buyer, reservations are
+        consumed; 409 ORDER_STOCK_UNAVAILABLE when the ledger refuses);
+        draft | submitted | approved | preparing | ready -> cancelled
+        (either side, orders.cancel; active reservations are released). A
+        request for the current status is a no-op (a repeated ship writes no
+        movement). Other moves answer 409 ORDER_INVALID_TRANSITION;
+        delivered, received and cancelling answer 409
+        ORDER_TRANSITION_UNAVAILABLE until TEC-168. Every move writes the
+        status history and an orders.* outbox event.
       security:
         - bearerAuth: []
       parameters:
@@ -8286,6 +8293,97 @@ paths:
           $ref: "#/components/responses/Conflict"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/orders/{uuid}/items/{item_uuid}/units:
+    post:
+      tags: [Orders]
+      operationId: assignOrderUnit
+      summary: Assign a unit to an order line and reserve it (seller, orders.ship)
+      description: >-
+        Only while the order is preparing (409 ORDER_NOT_ASSIGNABLE). The
+        unit is named by barcode (scan) or unit_uuid and must be of the
+        line's product and in the seller's stock (409
+        ORDER_UNIT_NOT_AVAILABLE). Serial pieces count as 1; a serial unit
+        reserved by another order answers 409 ORDER_UNIT_RESERVED. Rolls
+        ship whole: meters, when given, must equal the roll's remaining
+        meters (400 ROLL_CUT_UNSUPPORTED). Fixed barcodes take a quantity;
+        the seller's active reservations may not exceed what it holds (409
+        ORDER_INSUFFICIENT_STOCK). The line amount may not be exceeded (409
+        ORDER_ITEM_OVER_ASSIGNED); a unit already on the line answers 409
+        ORDER_UNIT_ALREADY_ASSIGNED.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: item_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderUnitAssignInput"
+      responses:
+        "200":
+          description: Order with the assignment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrder"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/orders/{uuid}/items/{item_uuid}/units/{unit_uuid}:
+    delete:
+      tags: [Orders]
+      operationId: unassignOrderUnit
+      summary: Remove a unit from an order line (seller, orders.ship)
+      description: >-
+        Only while the order is preparing. The reservation is released (it
+        stays as history) and the unit can be assigned again.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: item_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: unit_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Order without the assignment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrder"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
 
 components:
   securitySchemes:
@@ -13141,9 +13239,33 @@ components:
         name: { type: string }
         unit_type: { type: string }
 
+    OrderAssignedUnit:
+      type: object
+      required: [unit_uuid, barcode, unit_kind, quantity, meters, shipped, assigned_at]
+      properties:
+        unit_uuid: { type: string, format: uuid }
+        barcode: { type: string }
+        unit_kind: { type: string, enum: [serial, fixed] }
+        quantity: { type: [integer, "null"], description: Pieces (1 for a serial piece) }
+        meters: { type: [string, "null"], description: Whole roll meters (roll_meter lines) }
+        shipped: { type: boolean, description: The order_out movement is written }
+        assigned_at: { type: string, format: date-time }
+
+    OrderUnitAssignInput:
+      type: object
+      description: Give either barcode or unit_uuid.
+      properties:
+        barcode: { type: string, description: Scanned barcode }
+        unit_uuid: { type: string, format: uuid }
+        quantity: { type: integer, minimum: 1, maximum: 1000000, description: Fixed barcodes only (serial pieces are 1) }
+        meters:
+          type: string
+          pattern: '^[0-9]{1,8}(\.[0-9]{1,2})?$'
+          description: Rolls only; must equal the remaining meters (a roll ships whole); a JSON number is accepted too
+
     OrderItem:
       type: object
-      required: [uuid, product, quantity, meters, unit_price, price_source, line_total, note]
+      required: [uuid, product, quantity, meters, unit_price, price_source, line_total, note, assigned, units]
       properties:
         uuid: { type: string, format: uuid }
         product: { $ref: "#/components/schemas/OrderProductRef" }
@@ -13156,6 +13278,13 @@ components:
         price_source: { type: string, enum: [list, override, distributor_dealer] }
         line_total: { type: string, example: "240.00" }
         note: { type: [string, "null"] }
+        assigned:
+          type: string
+          description: Amount covered by the assigned units (pieces, or meters with two decimals)
+          example: "3"
+        units:
+          type: array
+          items: { $ref: "#/components/schemas/OrderAssignedUnit" }
 
     OrderHistoryEntry:
       type: object
@@ -13201,6 +13330,8 @@ components:
         - cancel_reason
         - submitted_at
         - approved_at
+        - ready_at
+        - shipped_at
         - cancelled_at
         - created_at
         - updated_at
@@ -13229,6 +13360,8 @@ components:
         cancel_reason: { type: [string, "null"] }
         submitted_at: { type: [string, "null"], format: date-time }
         approved_at: { type: [string, "null"], format: date-time }
+        ready_at: { type: [string, "null"], format: date-time }
+        shipped_at: { type: [string, "null"], format: date-time }
         cancelled_at: { type: [string, "null"], format: date-time }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }

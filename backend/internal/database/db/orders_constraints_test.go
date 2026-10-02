@@ -293,7 +293,9 @@ func TestStockReservationConstraints(t *testing.T) {
 				t.Fatalf("fixed reservation = %+v, %v", r, err)
 			}
 		}
-		sum, err := f.q.SumActiveReservedQuantityByUnit(ctx, fixedUnit.ID)
+		sum, err := f.q.SumActiveReservedQuantityByUnit(ctx, db.SumActiveReservedQuantityByUnitParams{
+			UnitID: fixedUnit.ID, OrganizationID: f.centerID,
+		})
 		if err != nil || sum != 8 {
 			t.Fatalf("reserved sum = %d, %v", sum, err)
 		}

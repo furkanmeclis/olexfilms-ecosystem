@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
@@ -40,6 +41,12 @@ func TestTransitionRules(t *testing.T) {
 		{StatusApproved, StatusCancelled, PartyBuyer, holds(rbac.PermOrdersCancel), true},
 		{StatusPreparing, StatusCancelled, PartySeller, holds(rbac.PermOrdersCancel), true},
 		{StatusPreparing, StatusCancelled, PartySeller, holds(rbac.PermOrdersWrite), false},
+		{StatusPreparing, StatusReady, PartySeller, holds(rbac.PermOrdersShip), true},
+		{StatusPreparing, StatusReady, PartyBuyer, all, false},
+		{StatusPreparing, StatusReady, PartySeller, holds(rbac.PermOrdersApprove), false},
+		{StatusReady, StatusShipped, PartySeller, holds(rbac.PermOrdersShip), true},
+		{StatusReady, StatusShipped, PartyBuyer, all, false},
+		{StatusReady, StatusCancelled, PartyBuyer, holds(rbac.PermOrdersCancel), true},
 	}
 	for _, c := range cases {
 		r, ok := lookupTransition(c.from, c.to)
@@ -51,15 +58,16 @@ func TestTransitionRules(t *testing.T) {
 	// Invalid or stock-bound moves have no rule.
 	for _, m := range [][2]string{
 		{StatusDraft, StatusApproved}, {StatusProcessing, StatusCancelled}, {StatusApproved, StatusShipped},
-		{StatusCancelled, StatusDraft}, {StatusPreparing, StatusReady}, {StatusSubmitted, StatusDraft},
+		{StatusCancelled, StatusDraft}, {StatusApproved, StatusReady}, {StatusSubmitted, StatusDraft},
+		{StatusPreparing, StatusShipped}, {StatusShipped, StatusCancelled},
 	} {
 		if _, ok := lookupTransition(m[0], m[1]); ok {
 			t.Errorf("%s -> %s must not be allowed", m[0], m[1])
 		}
 	}
-	for _, to := range []string{StatusShipped, StatusReceived, StatusCancelling, StatusDelivered, StatusReady} {
+	for _, to := range []string{StatusReceived, StatusCancelling, StatusDelivered} {
 		if supportedTargets[to] {
-			t.Errorf("%s belongs to TEC-167/168", to)
+			t.Errorf("%s belongs to TEC-168", to)
 		}
 	}
 	// Every allowed target is supported and has an outbox event.
@@ -121,6 +129,26 @@ func TestMoney(t *testing.T) {
 	}
 	if numericTextPtr(pgtype.Numeric{}, 2) != nil {
 		t.Fatal("NULL stays null")
+	}
+}
+
+func TestAssignedUnits(t *testing.T) {
+	one := pgtype.Int4{Int32: 1, Valid: true}
+	three := pgtype.Int4{Int32: 3, Valid: true}
+	units, sum := assignedUnits([]db.ListOrderItemUnitsByOrderRow{
+		{Barcode: "A", UnitKind: "serial", Quantity: one, MovementID: pgtype.Int8{Int64: 9, Valid: true}},
+		{Barcode: "B", UnitKind: "fixed", Quantity: three},
+	}, false)
+	if sum != "4" || len(units) != 2 || !units[0].Shipped || units[1].Shipped || *units[1].Quantity != 3 {
+		t.Fatalf("pieces = %s %+v", sum, units)
+	}
+	m, _ := numeric("12.50")
+	units, sum = assignedUnits([]db.ListOrderItemUnitsByOrderRow{{Barcode: "R", UnitKind: "serial", Meters: m}}, true)
+	if sum != "12.50" || units[0].Meters == nil || *units[0].Meters != "12.50" || units[0].Quantity != nil {
+		t.Fatalf("roll = %s %+v", sum, units)
+	}
+	if _, sum = assignedUnits(nil, true); sum != "0.00" {
+		t.Fatalf("empty = %s", sum)
 	}
 }
 
