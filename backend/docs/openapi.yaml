@@ -13896,6 +13896,13 @@ components:
         package: { type: [string, "null"], maxLength: 255 }
         notes: { type: [string, "null"], maxLength: 5000 }
         has_measurement: { type: boolean }
+        vin:
+          type: [string, "null"]
+          description: >-
+            Replaces the VIN snapshot of the service (the vehicle record is
+            not changed). Same rules as the vehicle VIN: 17 letters or digits
+            without I, O, Q; spaces and dashes are dropped. null or "" clears
+            it (400 while has_measurement is true).
 
     ServiceItemInput:
       type: object
