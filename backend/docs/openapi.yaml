@@ -5289,6 +5289,56 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/stock/organizations/{uuid}/units:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    get:
+      tags: [Stock]
+      operationId: listStockOrganizationUnits
+      summary: Units held by an organization
+      description: >-
+        Needs `stock.read`; the organization must be inside the viewer's
+        reach (404 otherwise). The distributor roles distributor_owner and
+        distributor_warehouse_staff hold `stock.read` at scope `subtree`
+        (TEC-216, migration 000061), so a distributor lists the units of
+        its own dealers; it still cannot write or adjust them. Serial units
+        come from `unit_current_state` (one row, `quantity` 1), fixed
+        barcodes from `fixed_barcode_holdings` (one row per barcode with
+        the quantity on hand). Without `status` the list holds the units
+        counted as stock (available, placed); `status` lists exactly that
+        status. `barcode` is an exact match, `product_uuid` narrows to one
+        product, `q` matches a part of the product name, SKU or barcode.
+        `purchase_price` is the price the holding organization pays for
+        the product (K8, in the organization's currency); it is null when
+        the viewer's `pricing.purchase.read` does not reach the
+        organization (a direct parent sees its child's purchase price
+        through its own `pricing.sale.read`), for the center, or when no
+        price is set.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/StockProductUUIDFilter"
+        - $ref: "#/components/parameters/StockUnitStatusFilter"
+        - $ref: "#/components/parameters/StockBarcodeFilter"
+      responses:
+        "200":
+          description: Units of the organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockUnitPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/stock/locations/{uuid}/products:
     parameters:
       - $ref: "#/components/parameters/ResourceUUID"
@@ -5381,7 +5431,9 @@ paths:
         the roll has answer 422 STOCK_SPLIT_INSUFFICIENT_METERS. The same
         `idempotency_key` returns the earlier split with 200 and writes
         nothing; reused for another roll or meters it answers 409
-        STOCK_SPLIT_KEY_CONFLICT. Label printing: TEC-95.
+        STOCK_SPLIT_KEY_CONFLICT. A roll the caller may read but not
+        write (a distributor on dealer stock, TEC-216) answers 403. Label
+        printing: TEC-95.
       security:
         - bearerAuth: []
       requestBody:
@@ -11459,6 +11511,16 @@ components:
       name: category_uuid
       in: query
       schema: { type: string, format: uuid }
+    StockUnitStatusFilter:
+      name: status
+      in: query
+      description: One unit status; without it the list holds available and placed units.
+      schema: { $ref: "#/components/schemas/StockUnitStatus" }
+    StockBarcodeFilter:
+      name: barcode
+      in: query
+      description: Exact barcode (scanner lookup).
+      schema: { type: string, maxLength: 64 }
     StockStatusFilter:
       name: status
       in: query
@@ -15363,6 +15425,62 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/StockRebuildReport" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    StockUnitRow:
+      type: object
+      description: One unit (or one fixed barcode with its quantity on hand) held by an organization.
+      required: [uuid, barcode, unit_kind, status, quantity, initial_meters, remaining_meters, product, location,
+        purchase_price, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        barcode: { type: string }
+        unit_kind: { type: string, enum: [serial, fixed] }
+        status: { $ref: "#/components/schemas/StockUnitStatus" }
+        quantity: { type: integer, description: "1 for a serial unit, the quantity on hand for a fixed barcode" }
+        initial_meters: { type: [string, "null"], description: "Roll length (decimal string, 2 places)" }
+        remaining_meters: { type: [string, "null"] }
+        product:
+          type: object
+          required: [uuid, sku, name, unit_type, uses_fixed_barcode]
+          properties:
+            uuid: { type: string, format: uuid }
+            sku: { type: string }
+            name: { type: string }
+            unit_type: { $ref: "#/components/schemas/CatalogUnitType" }
+            uses_fixed_barcode: { type: boolean }
+        location:
+          description: Bin of a serial unit; null for organization-level stock and fixed barcodes.
+          oneOf:
+            - $ref: "#/components/schemas/StockLocationRef"
+            - type: "null"
+        purchase_price:
+          description: Null when the viewer may not read it or no price is set.
+          oneOf:
+            - type: object
+              required: [amount, currency, source]
+              properties:
+                amount: { type: string, description: "Decimal string, 2 places" }
+                currency: { type: string, minLength: 3, maxLength: 3 }
+                source: { type: string, enum: [list, override, distributor] }
+            - type: "null"
+        updated_at: { type: string, format: date-time }
+
+    EnvelopeStockUnitPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/StockUnitRow" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeStockProductPage:

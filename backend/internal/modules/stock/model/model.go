@@ -139,6 +139,46 @@ const (
 	StatusOutOfStock = "out_of_stock"
 )
 
+// UnitStatuses are the units.status values the unit list filters on.
+var UnitStatuses = []string{"reserved", "printed", "available", "placed", "in_transit", "used", "void"}
+
+// UnitFilter filters the organization unit list (TEC-216).
+type UnitFilter struct {
+	ProductUUID *uuid.UUID
+	// Status is "" (available and placed) or one unit status.
+	Status  string
+	Barcode string
+	Q       string
+	Limit   int32
+	Offset  int32
+}
+
+// UnitPurchasePrice is the purchase price the holding organization pays
+// for the unit's product (K8: the sale price of the level above) in the
+// organization's currency.
+type UnitPurchasePrice struct {
+	Amount   string `json:"amount"`
+	Currency string `json:"currency"`
+	Source   string `json:"source"`
+}
+
+// StockUnitRow is one unit (or one fixed barcode with its quantity on
+// hand) held by an organization. PurchasePrice is null when the viewer
+// may not read it (pricing.purchase.read) or no price is set.
+type StockUnitRow struct {
+	UUID            uuid.UUID          `json:"uuid"`
+	Barcode         string             `json:"barcode"`
+	UnitKind        string             `json:"unit_kind"`
+	Status          string             `json:"status"`
+	Quantity        int32              `json:"quantity"`
+	InitialMeters   *string            `json:"initial_meters"`
+	RemainingMeters *string            `json:"remaining_meters"`
+	Product         ProductRef         `json:"product"`
+	Location        *LocationRef       `json:"location"`
+	PurchasePrice   *UnitPurchasePrice `json:"purchase_price"`
+	UpdatedAt       time.Time          `json:"updated_at"`
+}
+
 // StockFilter filters the product stock lists.
 type StockFilter struct {
 	ProductUUID  *uuid.UUID

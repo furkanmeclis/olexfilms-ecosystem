@@ -2906,6 +2906,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/stock/organizations/{uuid}/units": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Units held by an organization
+         * @description Needs `stock.read`; the organization must be inside the viewer's reach (404 otherwise). The distributor roles distributor_owner and distributor_warehouse_staff hold `stock.read` at scope `subtree` (TEC-216, migration 000061), so a distributor lists the units of its own dealers; it still cannot write or adjust them. Serial units come from `unit_current_state` (one row, `quantity` 1), fixed barcodes from `fixed_barcode_holdings` (one row per barcode with the quantity on hand). Without `status` the list holds the units counted as stock (available, placed); `status` lists exactly that status. `barcode` is an exact match, `product_uuid` narrows to one product, `q` matches a part of the product name, SKU or barcode. `purchase_price` is the price the holding organization pays for the product (K8, in the organization's currency); it is null when the viewer's `pricing.purchase.read` does not reach the organization (a direct parent sees its child's purchase price through its own `pricing.sale.read`), for the center, or when no price is set.
+         */
+        get: operations["listStockOrganizationUnits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/stock/locations/{uuid}/products": {
         parameters: {
             query?: never;
@@ -2960,7 +2983,7 @@ export interface paths {
         put?: never;
         /**
          * Split a roll (cut meters off as a new unit)
-         * @description Needs `stock.write` (TEC-184). The roll (by `barcode` or `unit_uuid`) must be on hand (available or placed) at the caller's active organization (409 STOCK_SPLIT_UNIT_ELSEWHERE) and not on an open service or order reservation (409 STOCK_SPLIT_UNIT_IN_USE). The meters leave as a new unit of the same product with the barcode `<roll barcode>-S<n>` at the roll's owner; the roll keeps the rest and is used up at 0 m. Both split movements are written in one transaction; product stock totals do not change. Pieces and fixed barcodes are not split (422 STOCK_SPLIT_NOT_ROLL); more meters than the roll has answer 422 STOCK_SPLIT_INSUFFICIENT_METERS. The same `idempotency_key` returns the earlier split with 200 and writes nothing; reused for another roll or meters it answers 409 STOCK_SPLIT_KEY_CONFLICT. Label printing: TEC-95.
+         * @description Needs `stock.write` (TEC-184). The roll (by `barcode` or `unit_uuid`) must be on hand (available or placed) at the caller's active organization (409 STOCK_SPLIT_UNIT_ELSEWHERE) and not on an open service or order reservation (409 STOCK_SPLIT_UNIT_IN_USE). The meters leave as a new unit of the same product with the barcode `<roll barcode>-S<n>` at the roll's owner; the roll keeps the rest and is used up at 0 m. Both split movements are written in one transaction; product stock totals do not change. Pieces and fixed barcodes are not split (422 STOCK_SPLIT_NOT_ROLL); more meters than the roll has answer 422 STOCK_SPLIT_INSUFFICIENT_METERS. The same `idempotency_key` returns the earlier split with 200 and writes nothing; reused for another roll or meters it answers 409 STOCK_SPLIT_KEY_CONFLICT. A roll the caller may read but not write (a distributor on dealer stock, TEC-216) answers 403. Label printing: TEC-95.
          */
         post: operations["createStockSplit"];
         delete?: never;
@@ -8713,6 +8736,52 @@ export interface components {
             data: components["schemas"]["StockRebuildReport"];
             meta: components["schemas"]["ResponseMeta"];
         };
+        /** @description One unit (or one fixed barcode with its quantity on hand) held by an organization. */
+        StockUnitRow: {
+            /** Format: uuid */
+            uuid: string;
+            barcode: string;
+            /** @enum {string} */
+            unit_kind: "serial" | "fixed";
+            status: components["schemas"]["StockUnitStatus"];
+            /** @description 1 for a serial unit, the quantity on hand for a fixed barcode */
+            quantity: number;
+            /** @description Roll length (decimal string, 2 places) */
+            initial_meters: string | null;
+            remaining_meters: string | null;
+            product: {
+                /** Format: uuid */
+                uuid: string;
+                sku: string;
+                name: string;
+                unit_type: components["schemas"]["CatalogUnitType"];
+                uses_fixed_barcode: boolean;
+            };
+            /** @description Bin of a serial unit; null for organization-level stock and fixed barcodes. */
+            location: components["schemas"]["StockLocationRef"] | null;
+            /** @description Null when the viewer may not read it or no price is set. */
+            purchase_price: {
+                /** @description Decimal string, 2 places */
+                amount: string;
+                currency: string;
+                /** @enum {string} */
+                source: "list" | "override" | "distributor";
+            } | null;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        EnvelopeStockUnitPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["StockUnitRow"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
         EnvelopeStockProductPage: {
             /** @enum {boolean} */
             success: true;
@@ -10924,6 +10993,10 @@ export interface components {
         VehicleCatalogUUID: string;
         StockProductUUIDFilter: string;
         StockCategoryUUIDFilter: string;
+        /** @description One unit status; without it the list holds available and placed units. */
+        StockUnitStatusFilter: components["schemas"]["StockUnitStatus"];
+        /** @description Exact barcode (scanner lookup). */
+        StockBarcodeFilter: string;
         /** @description `in_stock`: quantity or meters above zero; `out_of_stock`: both zero. */
         StockStatusFilter: "in_stock" | "out_of_stock";
         ProductUUID: string;
@@ -16059,6 +16132,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeStockProductPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listStockOrganizationUnits: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                product_uuid?: components["parameters"]["StockProductUUIDFilter"];
+                /** @description One unit status; without it the list holds available and placed units. */
+                status?: components["parameters"]["StockUnitStatusFilter"];
+                /** @description Exact barcode (scanner lookup). */
+                barcode?: components["parameters"]["StockBarcodeFilter"];
+            };
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Units of the organization */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockUnitPage"];
                 };
             };
             400: components["responses"]["BadRequest"];
