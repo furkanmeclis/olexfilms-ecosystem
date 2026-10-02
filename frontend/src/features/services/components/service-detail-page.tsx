@@ -3,7 +3,6 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   Car,
-  FileDown,
   History,
   ImageIcon,
   Package,
@@ -43,6 +42,7 @@ import {
   serviceWizardService,
   type Service,
 } from "@/features/services/services/service-wizard.service";
+import { ServicePdfButton } from "@/features/services/components/service-pdf-button";
 import { WarrantyCertificateButton } from "@/features/warranty/components/warranty-certificate-button";
 import { panelCertificateClient } from "@/features/warranty/services/certificate.service";
 import { isApiError } from "@/lib/api";
@@ -354,7 +354,7 @@ function StatusHistory({ service }: { service: Service }) {
 /**
  * Service detail (TEC-183): vehicle and customer, items with their parts,
  * images, warranties and the status history. A draft the caller may still
- * edit links back to the wizard; the PDF arrives with TEC-196.
+ * edit links back to the wizard; "PDF" downloads the service PDF (TEC-196).
  */
 export function ServiceDetailPage({
   slug,
@@ -420,17 +420,11 @@ export function ServiceDetailPage({
                 locale={locale}
               />
             ) : null}
-            {/* TEC-196: service PDF; disabled until the document lands. */}
-            <Button
-              type="button"
-              variant="outline"
-              disabled
-              title={t("services.detail.pdf_soon")}
-              data-testid="service-pdf"
-            >
-              <FileDown className="size-4" />
-              {t("services.detail.pdf")}
-            </Button>
+            <ServicePdfButton
+              serviceUuid={s.uuid}
+              serviceNo={s.service_no}
+              locale={locale}
+            />
           </div>
         ) : null
       }
