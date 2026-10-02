@@ -22,7 +22,9 @@ func TestPlanSerialSplit(t *testing.T) {
 	}
 	// The rest of the roll: used up, out of the stock count.
 	m.Centimeters = 5000
-	if plan, err = planSerial(m, cur, nil); err != nil || plan.toStatus != StatusUsed || plan.quantityDelta != -1 || plan.metersDelta != -5000 {
+	trash := Owner{Type: OwnerTrash, ID: dist, OrgID: dist}
+	if plan, err = planSerial(m, cur, nil); err != nil || plan.toStatus != StatusUsed || plan.quantityDelta != -1 ||
+		plan.metersDelta != -5000 || plan.toOwner != trash || !plan.ownerChanged {
 		t.Fatalf("plan = %+v %v", plan, err)
 	}
 	m.Centimeters = 5001

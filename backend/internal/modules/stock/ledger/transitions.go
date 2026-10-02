@@ -201,7 +201,11 @@ func planSerial(m Movement, cur serialCurrent, prev *prevMovement) (serialPlan, 
 	}
 	plan.metersDelta = delta
 	if m.Type == TypeSplit && cur.remaining+delta == 0 {
+		// Nothing left: the empty roll goes to the holder's trash (a used
+		// unit is owned by a service or the trash).
 		plan.toStatus = StatusUsed
+		plan.toOwner = Owner{Type: OwnerTrash, ID: cur.owner.OrgID, OrgID: cur.owner.OrgID}
+		plan.ownerChanged = true
 	}
 	plan.quantityDelta = b2i(counted(plan.toStatus)) - b2i(cur.hasState && counted(cur.status))
 	return plan, nil

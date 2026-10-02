@@ -116,7 +116,8 @@ func TestRollSplit(t *testing.T) {
 		t.Fatalf("split the rest: %+v %v", rest, err)
 	}
 	src, srcUnit = e.state(t, u)
-	if src.Status != "used" || mustMeters(t, srcUnit.RemainingMeters) != 0 {
+	if src.Status != "used" || src.OwnerType != string(ledger.OwnerTrash) || src.OwnerID != e.dist.ID ||
+		mustMeters(t, srcUnit.RemainingMeters) != 0 {
 		t.Fatalf("used-up roll = %+v", src)
 	}
 	if qty, meters := e.orgStock(t, e.dist.ID, e.roll); qty != 2 || meters != "50.00" {

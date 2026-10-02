@@ -18,8 +18,9 @@ import (
 // (TEC-184). It is not postable: only Ledger.Split writes it, always as a
 // pair in one transaction:
 //
-//   - on the source roll: meters_delta = -N, owner kept, status kept (used
-//     when nothing is left), metadata.split_role = "source";
+//   - on the source roll: meters_delta = -N, owner and status kept (when
+//     nothing is left: used, owned by the holder's trash),
+//     metadata.split_role = "source";
 //   - the first movement of the new unit: the source's owner and status,
 //     meters_delta = 0 (the new unit's initial = remaining = N),
 //     metadata.split_role = "target".
@@ -348,7 +349,8 @@ func (p *Projection) trackSplits(u db.Unit, up *UnitProjection, mvs []db.StockMo
 			if cm >= 0 {
 				up.anomaly("movement %d (%s): split source without meters", mv.ID, mv.Type)
 			}
-			if mv.FromOwnerType != mv.ToOwnerType || mv.FromOwnerID != mv.ToOwnerID {
+			usedUp := Status(mv.ToStatus.String) == StatusUsed && mv.ToOwnerType.String == string(OwnerTrash)
+			if !usedUp && (mv.FromOwnerType != mv.ToOwnerType || mv.FromOwnerID != mv.ToOwnerID) {
 				up.anomaly("movement %d (%s): split moves the source roll", mv.ID, mv.Type)
 			}
 			if mv.FromStatus != mv.ToStatus && Status(mv.ToStatus.String) != StatusUsed {
