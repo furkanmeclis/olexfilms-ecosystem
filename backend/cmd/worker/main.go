@@ -23,6 +23,7 @@ import (
 	notifmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/providers"
 	notifusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/usecase"
+	servicereview "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/review"
 	stockrebuild "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/rebuild"
 	stockusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/usecase"
 	warrantymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty"
@@ -103,6 +104,10 @@ func main() {
 	notifmodule.RegisterEventHandlers(eventBus, notifSvc, log)
 	// TEC-186: service.completed opens one warranty per service item.
 	warrantymodule.RegisterEventHandlers(eventBus, pool, queries, cfg.Auth.FrontendURL, log)
+	// TEC-192: service.completed schedules the delayed review request.
+	reviewQueue := queue.NewClient(cfg.Redis)
+	defer func() { _ = reviewQueue.Close() }()
+	servicereview.RegisterEventHandlers(eventBus, reviewQueue, cfg.Services.ReviewRequestDelay, log)
 	outboxStore := outbox.NewStore(pool, queries)
 	outboxPub := outbox.NewPublisher(outboxStore, eventBus, log)
 	outboxStop := outboxPub.StartRun(ctx)
@@ -189,6 +194,8 @@ func main() {
 		WithWarrantyRepairScan(warrantymodule.NewRepairScanner(pool, queries, cfg.Auth.FrontendURL, cfg.Warranty.RepairScanDays, log).Task).
 		// TEC-190: expire pending vehicle transfers (5 min).
 		WithVehicleTransferExpire(transferExpirer.ExpireTransfersTask).
+		// TEC-192: delayed Google review request of a completed service.
+		WithServiceReviewRequest(servicereview.NewTaskSender(pool, queries, log).Task).
 		// TEC-156: nightly projection drift scan; report only, no repair.
 		WithInventoryRebuild(stockrebuild.New(pool, queries).ScanTask(log)).
 		WithSearch(

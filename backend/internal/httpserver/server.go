@@ -83,6 +83,7 @@ import (
 	searchusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/usecase"
 	servicesmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services"
 	serviceshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/handler"
+	servicereview "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/review"
 	servicesusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/usecase"
 	settingsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/settings"
 	settingshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/settings/handler"
@@ -377,6 +378,12 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	notifmodule.RegisterEventHandlers(eventBus, notifSvc, log)
 	// TEC-186: service.completed opens one warranty per service item.
 	warrantymodule.RegisterEventHandlers(eventBus, deps.DB, deps.Queries, cfg.Auth.FrontendURL, log)
+	// TEC-192: service.completed schedules the delayed review request.
+	var reviewQueue servicereview.Enqueuer
+	if deps.Queue != nil {
+		reviewQueue = deps.Queue
+	}
+	servicereview.RegisterEventHandlers(eventBus, reviewQueue, cfg.Services.ReviewRequestDelay, log)
 	// TEC-189: public warranty lookup behind /garanti/{public_code}.
 	warrantymodule.RegisterPublicRoutes(mux, deps.Queries, ratelimit.New(deps.Redis, cfg.App.Env),
 		cfg.Warranty.PublicRateLimit, cfg.Warranty.PublicRateWindow)
@@ -430,6 +437,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 			WithWarrantyCron(warrantyCron.ExpireTask, warrantyCron.ExpiringScanTask).
 			WithWarrantyRepairScan(warrantymodule.NewRepairScanner(deps.DB, deps.Queries, cfg.Auth.FrontendURL, cfg.Warranty.RepairScanDays, log).Task).
 			WithVehicleTransferExpire(customersSvc.ExpireTransfersTask).
+			WithServiceReviewRequest(servicereview.NewTaskSender(deps.DB, deps.Queries, log).Task).
 			WithNotificationPurge(notifSvc.PurgeExpired).
 			WithWhatsAppPoll(waSvc.PollStatus)
 		if searchIndexer != nil {

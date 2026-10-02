@@ -44,6 +44,14 @@ type Querier interface {
 	// to the new owner in the transfer transaction.
 	ChangeWarrantyHolderByVehicle(ctx context.Context, arg ChangeWarrantyHolderByVehicleParams) ([]Warranty, error)
 	ClaimOutboxEvents(ctx context.Context, arg ClaimOutboxEventsParams) ([]OutboxEvent, error)
+	// TEC-192 (F1-06h): review request 24 hours after a service is completed.
+	// Stamps review_request_sent_at when every send condition holds: the
+	// service is still completed, the request was not sent yet, the dealer has
+	// a google_business_url (TEC-98 decision 7) and the customer is a live,
+	// non-anonymized (TEC-161), non-merged user with a phone. The conditional
+	// UPDATE is the idempotency barrier: a second run (or a concurrent one)
+	// matches no row, so only one outbox event is ever written.
+	ClaimServiceReviewRequest(ctx context.Context, arg ClaimServiceReviewRequestParams) (ClaimServiceReviewRequestRow, error)
 	ClearAppSettingsLogo(ctx context.Context) (AppSetting, error)
 	ClearOrganizationLogo(ctx context.Context, argUuid uuid.UUID) (Organization, error)
 	// Closes the source account. phone_e164/email are the values it keeps (the

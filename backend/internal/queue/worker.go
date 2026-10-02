@@ -63,6 +63,8 @@ type Worker struct {
 	inventoryRebuild     InventoryRebuildFunc
 	// TEC-190: pending vehicle transfers past expires_at.
 	vehicleTransferExpire VehicleTransferTaskFunc
+	// TEC-192: delayed Google review request of a completed service.
+	serviceReviewRequest ServiceReviewRequestFunc
 }
 
 // NewWorker builds a worker that handles known task types on every queue.
@@ -129,6 +131,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskWarrantyRepairScan, w.handleWarrantyRepairScan)
 	mux.HandleFunc(TaskInventoryRebuild, w.handleInventoryRebuild)
 	mux.HandleFunc(TaskVehicleTransferExpire, w.handleVehicleTransferExpire)
+	mux.HandleFunc(TaskServiceReviewRequest, w.handleServiceReviewRequest)
 	return w
 }
 
