@@ -44,6 +44,13 @@ func ProductImageObjectKey(productUUID uuid.UUID, imageKey string) string {
 	return fmt.Sprintf("products/%s/images/%s", productUUID.String(), imageKey)
 }
 
+// ServiceImageObjectKey builds services/{org}/{service}/images/{image}.{ext}
+// (TEC-179). The image uuid is random, so a key is never reused for other
+// bytes.
+func ServiceImageObjectKey(orgUUID, serviceUUID, imageUUID uuid.UUID, ext string) string {
+	return fmt.Sprintf("services/%s/%s/images/%s.%s", orgUUID.String(), serviceUUID.String(), imageUUID.String(), trimExt(ext))
+}
+
 // DocumentObjectKey builds documents/{org}/{kind}/{render}.pdf (TEC-88).
 func DocumentObjectKey(orgUUID uuid.UUID, kind string, renderUUID uuid.UUID) string {
 	return fmt.Sprintf("documents/%s/%s/%s.pdf", orgUUID.String(), kind, renderUUID.String())

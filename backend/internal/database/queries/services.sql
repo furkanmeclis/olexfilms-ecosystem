@@ -113,7 +113,9 @@ DELETE FROM services
 WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id) AND status = 'draft';
 
 -- Scope list: org_ids NULL = whole brand (brand/all scope); created_by for
--- scope own, customer_user_id for scope customer (portal).
+-- scope own, customer_user_id for scope customer (portal). q matches the
+-- service number, plate, VIN and the customer's name or phone (TEC-179;
+-- anonymized customers are not searchable by name).
 -- name: ListServicesInScope :many
 SELECT * FROM services
 WHERE brand_id = sqlc.arg(brand_id)
@@ -127,6 +129,15 @@ WHERE brand_id = sqlc.arg(brand_id)
     OR service_no ILIKE '%' || sqlc.narg(q) || '%'
     OR plate ILIKE '%' || sqlc.narg(q) || '%'
     OR vin ILIKE '%' || sqlc.narg(q) || '%'
+    OR EXISTS (
+      SELECT 1 FROM users cu
+      WHERE cu.id = services.customer_user_id
+        AND cu.status <> 'anonymized'
+        AND (
+          (cu.name || ' ' || cu.surname) ILIKE '%' || sqlc.narg(q) || '%'
+          OR cu.phone_e164 LIKE '%' || sqlc.narg(q) || '%'
+        )
+    )
   )
 ORDER BY created_at DESC, id DESC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
@@ -144,6 +155,15 @@ WHERE brand_id = sqlc.arg(brand_id)
     OR service_no ILIKE '%' || sqlc.narg(q) || '%'
     OR plate ILIKE '%' || sqlc.narg(q) || '%'
     OR vin ILIKE '%' || sqlc.narg(q) || '%'
+    OR EXISTS (
+      SELECT 1 FROM users cu
+      WHERE cu.id = services.customer_user_id
+        AND cu.status <> 'anonymized'
+        AND (
+          (cu.name || ' ' || cu.surname) ILIKE '%' || sqlc.narg(q) || '%'
+          OR cu.phone_e164 LIKE '%' || sqlc.narg(q) || '%'
+        )
+    )
   );
 
 -- Services of a customer across brands' organizations in scope (portal and
@@ -155,6 +175,23 @@ WHERE customer_user_id = sqlc.arg(customer_user_id)
   AND (sqlc.narg(org_ids)::bigint[] IS NULL OR organization_id = ANY (sqlc.narg(org_ids)::bigint[]))
 ORDER BY created_at DESC, id DESC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
+
+-- Display references of one service (organization, customer, vehicle and
+-- the car brand / model snapshot) for the API view (TEC-179).
+-- name: GetServiceRefs :one
+SELECT o.uuid AS organization_uuid, o.name AS organization_name, o.type AS organization_type,
+       u.uuid AS customer_uuid, u.name AS customer_name, u.surname AS customer_surname,
+       u.phone_e164 AS customer_phone, u.status AS customer_status,
+       v.uuid AS vehicle_uuid,
+       cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
+       cm.uuid AS car_model_uuid, cm.name AS car_model_name
+FROM services s
+JOIN organizations o ON o.id = s.organization_id
+JOIN users u ON u.id = s.customer_user_id
+JOIN vehicles v ON v.id = s.vehicle_id
+JOIN car_brands cb ON cb.id = s.car_brand_id
+JOIN car_models cm ON cm.id = s.car_model_id
+WHERE s.id = sqlc.arg(id);
 
 -- ---------------------------------------------------------------------------
 -- Service items. Locked by trigger once the service is completed or
