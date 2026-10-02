@@ -243,9 +243,11 @@ func (q *Queries) ListExportJobsForActor(ctx context.Context, arg ListExportJobs
 }
 
 const listExportJobsForOrganization = `-- name: ListExportJobsForOrganization :many
-SELECT id, uuid, resource, actor_id, format, query_json, locale, status, file_key, row_count, error, expires_at, created_at, updated_at, organization_id FROM export_jobs
-WHERE organization_id = $1
-ORDER BY created_at DESC
+SELECT export_jobs.id, export_jobs.uuid, export_jobs.resource, export_jobs.actor_id, export_jobs.format, export_jobs.query_json, export_jobs.locale, export_jobs.status, export_jobs.file_key, export_jobs.row_count, export_jobs.error, export_jobs.expires_at, export_jobs.created_at, export_jobs.updated_at, export_jobs.organization_id, u.uuid AS actor_uuid, u.name AS actor_name, u.surname AS actor_surname
+FROM export_jobs
+JOIN users u ON u.id = export_jobs.actor_id
+WHERE export_jobs.organization_id = $1
+ORDER BY export_jobs.created_at DESC
 LIMIT $3 OFFSET $2
 `
 
@@ -255,31 +257,42 @@ type ListExportJobsForOrganizationParams struct {
 	LimitCount     int32       `json:"limit_count"`
 }
 
-func (q *Queries) ListExportJobsForOrganization(ctx context.Context, arg ListExportJobsForOrganizationParams) ([]ExportJob, error) {
+type ListExportJobsForOrganizationRow struct {
+	ExportJob    ExportJob `json:"export_job"`
+	ActorUuid    uuid.UUID `json:"actor_uuid"`
+	ActorName    string    `json:"actor_name"`
+	ActorSurname string    `json:"actor_surname"`
+}
+
+// TEC-211: the organization list carries who requested each job.
+func (q *Queries) ListExportJobsForOrganization(ctx context.Context, arg ListExportJobsForOrganizationParams) ([]ListExportJobsForOrganizationRow, error) {
 	rows, err := q.db.Query(ctx, listExportJobsForOrganization, arg.OrganizationID, arg.OffsetCount, arg.LimitCount)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ExportJob{}
+	items := []ListExportJobsForOrganizationRow{}
 	for rows.Next() {
-		var i ExportJob
+		var i ListExportJobsForOrganizationRow
 		if err := rows.Scan(
-			&i.ID,
-			&i.Uuid,
-			&i.Resource,
-			&i.ActorID,
-			&i.Format,
-			&i.QueryJson,
-			&i.Locale,
-			&i.Status,
-			&i.FileKey,
-			&i.RowCount,
-			&i.Error,
-			&i.ExpiresAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.OrganizationID,
+			&i.ExportJob.ID,
+			&i.ExportJob.Uuid,
+			&i.ExportJob.Resource,
+			&i.ExportJob.ActorID,
+			&i.ExportJob.Format,
+			&i.ExportJob.QueryJson,
+			&i.ExportJob.Locale,
+			&i.ExportJob.Status,
+			&i.ExportJob.FileKey,
+			&i.ExportJob.RowCount,
+			&i.ExportJob.Error,
+			&i.ExportJob.ExpiresAt,
+			&i.ExportJob.CreatedAt,
+			&i.ExportJob.UpdatedAt,
+			&i.ExportJob.OrganizationID,
+			&i.ActorUuid,
+			&i.ActorName,
+			&i.ActorSurname,
 		); err != nil {
 			return nil, err
 		}

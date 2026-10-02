@@ -7748,8 +7748,17 @@ export interface components {
             row_count: number;
             error?: string | null;
             download_url?: string | null;
+            /** @description Download file name (TEC-211). */
+            filename?: string;
+            actor?: components["schemas"]["IoJobActor"];
             /** Format: date-time */
             created_at: string;
+        };
+        /** @description The user who requested an export or uploaded an import (TEC-211). Present on the organization job lists (GET /v1/tenant/exports, GET /v1/tenant/imports). */
+        IoJobActor: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
         };
         EnvelopeExportJob: {
             /** @enum {boolean} */
@@ -7787,6 +7796,9 @@ export interface components {
             rollback_until?: string | null;
             /** Format: date-time */
             applied_at?: string | null;
+            /** @description Uploaded file name (TEC-211). */
+            source_filename?: string;
+            actor?: components["schemas"]["IoJobActor"];
             /** Format: date-time */
             created_at: string;
         };

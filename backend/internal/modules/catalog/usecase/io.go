@@ -10,9 +10,11 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/catalog/model"
+	pricingusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/pricing/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -27,18 +29,43 @@ type OrgReader interface {
 	GetOrganizationByID(ctx context.Context, id int64) (db.Organization, error)
 }
 
+// PriceReader loads the effective price views of products (pricing module).
+type PriceReader interface {
+	ViewsByUUIDs(ctx context.Context, v pricingusecase.Viewer, uuids []uuid.UUID) ([]pricingusecase.ProductPriceView, error)
+}
+
 // IOAdapter exports and imports the products of one brand. Export reads the
 // brand of the job's organization; import writes only when the job belongs
 // to the brand center (K4). Rows are matched by SKU inside the brand.
+//
+// TEC-211: the price columns (purchase, sale, recommended) are behind their
+// pricing.* permission (ioengine.Column.Permission). The export job stores
+// the grants of the requester; the adapter reads prices only for the
+// granted columns (the pricing viewer mirrors the grants) and the export
+// worker removes the ungranted columns from the file.
 type IOAdapter struct {
-	svc  *Service
-	orgs OrgReader
+	svc    *Service
+	orgs   OrgReader
+	prices PriceReader
 }
 
 // NewIOAdapter creates the products I/O adapter.
 func NewIOAdapter(svc *Service, orgs OrgReader) *IOAdapter {
 	return &IOAdapter{svc: svc, orgs: orgs}
 }
+
+// WithPrices adds the price columns source (nil leaves them empty).
+func (a *IOAdapter) WithPrices(pr PriceReader) *IOAdapter {
+	a.prices = pr
+	return a
+}
+
+// Export column keys of the price columns.
+const (
+	ColumnPurchasePrice    = "purchase_price"
+	ColumnSalePrice        = "sale_price"
+	ColumnRecommendedPrice = "recommended_sale_price"
+)
 
 // Resource implements ioengine.ResourceAdapter.
 func (a *IOAdapter) Resource() string { return IOResource }
@@ -56,6 +83,18 @@ func (a *IOAdapter) ExportColumns() []ioengine.Column {
 		{Key: "uses_fixed_barcode", LabelKey: "catalog.products.uses_fixed_barcode", Type: ioengine.ColumnTypeBoolean},
 		{Key: "active", LabelKey: "catalog.products.is_active", Type: ioengine.ColumnTypeBoolean},
 		{Key: "description_md", LabelKey: "catalog.products.description", Type: ioengine.ColumnTypeString},
+		{
+			Key: ColumnPurchasePrice, LabelKey: "catalog.products.purchase_price", Type: ioengine.ColumnTypeString,
+			AlignRight: true, Permission: rbac.PermPricingPurchaseRead,
+		},
+		{
+			Key: ColumnSalePrice, LabelKey: "catalog.products.sale_price", Type: ioengine.ColumnTypeString,
+			AlignRight: true, Permission: rbac.PermPricingSaleRead,
+		},
+		{
+			Key: ColumnRecommendedPrice, LabelKey: "catalog.products.recommended_price", Type: ioengine.ColumnTypeString,
+			AlignRight: true, Permission: rbac.PermPricingRecommendedRead,
+		},
 	}
 }
 
@@ -79,20 +118,74 @@ func (a *IOAdapter) Export(ctx context.Context, query ioengine.ExportQuery, _ i1
 		f.CategoryUUID = &v
 	}
 	rows := []map[string]any{}
+	viewer := pricingusecase.Viewer{
+		OrgID: org.ID, OrgType: org.Type, BrandID: org.BrandID,
+		PurchaseRead:    ioengine.Granted(query, rbac.PermPricingPurchaseRead),
+		SaleRead:        ioengine.Granted(query, rbac.PermPricingSaleRead),
+		RecommendedRead: ioengine.Granted(query, rbac.PermPricingRecommendedRead),
+	}
 	for {
 		page, total, err := a.svc.ListProducts(ctx, scope, f)
 		if err != nil {
 			return ioengine.Dataset{}, err
 		}
+		pageRows := make([]map[string]any, 0, len(page))
 		for _, p := range page {
-			rows = append(rows, exportRow(p))
+			pageRows = append(pageRows, exportRow(p))
 		}
+		if err := a.addPrices(ctx, viewer, page, pageRows); err != nil {
+			return ioengine.Dataset{}, err
+		}
+		rows = append(rows, pageRows...)
 		f.Offset += int32(len(page))
 		if len(page) == 0 || int64(f.Offset) >= total {
 			break
 		}
 	}
 	return ioengine.Dataset{Resource: IOResource, Columns: a.ExportColumns(), Rows: rows}, nil
+}
+
+// addPrices fills the granted price columns of one page ("CUR amount",
+// several currencies joined with "; ").
+func (a *IOAdapter) addPrices(ctx context.Context, v pricingusecase.Viewer, page []model.Product, rows []map[string]any) error {
+	if a.prices == nil || (!v.PurchaseRead && !v.SaleRead && !v.RecommendedRead) {
+		return nil
+	}
+	uuids := make([]uuid.UUID, 0, len(page))
+	for _, p := range page {
+		uuids = append(uuids, p.UUID)
+	}
+	views, err := a.prices.ViewsByUUIDs(ctx, v, uuids)
+	if err != nil {
+		return fmt.Errorf("catalog export: prices: %w", err)
+	}
+	byUUID := make(map[uuid.UUID]pricingusecase.ProductPriceView, len(views))
+	for _, pv := range views {
+		byUUID[pv.ProductUUID] = pv
+	}
+	for i, p := range page {
+		pv := byUUID[p.UUID]
+		if v.PurchaseRead {
+			rows[i][ColumnPurchasePrice] = joinPrices(pv.Prices, func(e pricingusecase.EffectivePrice) *string { return e.PurchasePrice })
+		}
+		if v.SaleRead {
+			rows[i][ColumnSalePrice] = joinPrices(pv.Prices, func(e pricingusecase.EffectivePrice) *string { return e.SalePrice })
+		}
+		if v.RecommendedRead {
+			rows[i][ColumnRecommendedPrice] = joinPrices(pv.Prices, func(e pricingusecase.EffectivePrice) *string { return e.RecommendedSalePrice })
+		}
+	}
+	return nil
+}
+
+func joinPrices(prices []pricingusecase.EffectivePrice, pick func(pricingusecase.EffectivePrice) *string) string {
+	parts := make([]string, 0, len(prices))
+	for _, e := range prices {
+		if v := pick(e); v != nil && *v != "" {
+			parts = append(parts, e.Currency+" "+*v)
+		}
+	}
+	return strings.Join(parts, "; ")
 }
 
 func exportRow(p model.Product) map[string]any {

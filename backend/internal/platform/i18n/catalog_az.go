@@ -240,6 +240,8 @@ var azCatalog = map[string]string{
 	"catalog.products.uuid":                    "UUID",
 	"catalog.products.warranty_months":         "Zəmanət (ay)",
 	"catalog.products.micron_thickness":        "Qalınlıq (mikron)",
+	"catalog.products.purchase_price":          "Alış qiyməti",
+	"catalog.products.recommended_price":       "Tövsiyə olunan satış qiyməti",
 	"catalog.products.uses_fixed_barcode":      "Sabit barkod",
 	"catalog.services.name":                    "Xidmətin adı",
 	"catalog.services.category":                "Kateqoriya",

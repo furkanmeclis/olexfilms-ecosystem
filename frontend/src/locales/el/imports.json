@@ -73,6 +73,8 @@
   "columns.format": "Μορφή",
   "columns.status": "Κατάσταση",
   "columns.created_at": "Δημιουργήθηκε",
+  "columns.actor": "Μεταφορτώθηκε από",
+  "columns.file": "Αρχείο",
   "columns.actions": "Ενέργειες",
   "resources.platform.users": "Χρήστες",
   "resources.platform.roles": "Ρόλοι",

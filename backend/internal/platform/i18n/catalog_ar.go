@@ -240,6 +240,8 @@ var arCatalog = map[string]string{
 	"catalog.products.uuid":                    "UUID",
 	"catalog.products.warranty_months":         "الضمان (أشهر)",
 	"catalog.products.micron_thickness":        "السماكة (ميكرون)",
+	"catalog.products.purchase_price":          "سعر الشراء",
+	"catalog.products.recommended_price":       "سعر البيع الموصى به",
 	"catalog.products.uses_fixed_barcode":      "باركود ثابت",
 	"catalog.services.name":                    "اسم الخدمة",
 	"catalog.services.category":                "الفئة",

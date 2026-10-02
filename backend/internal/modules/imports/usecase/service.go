@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
@@ -80,7 +82,32 @@ type ImportJobView struct {
 	Error          *string                 `json:"error,omitempty"`
 	RollbackUntil  *time.Time              `json:"rollback_until,omitempty"`
 	AppliedAt      *time.Time              `json:"applied_at,omitempty"`
-	CreatedAt      time.Time               `json:"created_at"`
+	// SourceFilename is the uploaded file name (TEC-211).
+	SourceFilename string `json:"source_filename"`
+	// Actor is the user who uploaded the job; set on the organization
+	// list (TEC-211).
+	Actor     *ActorView `json:"actor,omitempty"`
+	CreatedAt time.Time  `json:"created_at"`
+}
+
+// ActorView names the user who uploaded a job.
+type ActorView struct {
+	UUID uuid.UUID `json:"uuid"`
+	Name string    `json:"name"`
+}
+
+// sourceFilenameMax is import_jobs.source_filename VARCHAR(255).
+const sourceFilenameMax = 255
+
+func cleanSourceFilename(name string) string {
+	name = strings.TrimSpace(filepath.Base(strings.ReplaceAll(name, "\\", "/")))
+	if name == "." || name == "/" {
+		name = ""
+	}
+	if len(name) > sourceFilenameMax {
+		name = name[:sourceFilenameMax]
+	}
+	return name
 }
 
 // Upload creates a job from file bytes.
@@ -95,6 +122,7 @@ func (s *Service) Upload(ctx context.Context, actorID int64, organizationID *int
 	row, err := s.q.CreateImportJob(ctx, db.CreateImportJobParams{
 		Resource: resource, ActorID: actorID, Format: string(format), Locale: locale,
 		FileKey: pgtype.Text{}, OrganizationID: int8Arg(organizationID),
+		SourceFilename: cleanSourceFilename(filename),
 	})
 	if err != nil {
 		return ImportJobView{}, err
@@ -361,10 +389,20 @@ func (s *Service) ListJobs(ctx context.Context, actorID int64, admin bool, orgID
 	var total int64
 	var err error
 	if orgID != nil {
-		rows, err = s.q.ListImportJobsForOrganization(ctx, db.ListImportJobsForOrganizationParams{
+		orgRows, err := s.q.ListImportJobsForOrganization(ctx, db.ListImportJobsForOrganizationParams{
 			OrganizationID: *orgID, LimitCount: limit, OffsetCount: offset,
 		})
+		if err != nil {
+			return nil, 0, err
+		}
 		total, _ = s.q.CountImportJobsForOrganization(ctx, *orgID)
+		out := make([]ImportJobView, 0, len(orgRows))
+		for _, r := range orgRows {
+			v := mapImportJob(r.ImportJob)
+			v.Actor = &ActorView{UUID: r.ActorUuid, Name: strings.TrimSpace(r.ActorName + " " + r.ActorSurname)}
+			out = append(out, v)
+		}
+		return out, total, nil
 	} else if admin {
 		rows, err = s.q.ListAllImportJobs(ctx, db.ListAllImportJobsParams{LimitCount: limit, OffsetCount: offset})
 		total, _ = s.q.CountAllImportJobs(ctx)
@@ -554,7 +592,7 @@ func mapImportJob(row db.ImportJob) ImportJobView {
 	return ImportJobView{
 		UUID: row.Uuid, Resource: row.Resource, Format: row.Format, Status: row.Status,
 		Mapping: mapping, Defaults: defaults, PreviewSummary: preview, Error: errMsg,
-		RollbackUntil: rb, AppliedAt: ap, CreatedAt: row.CreatedAt.Time,
+		RollbackUntil: rb, AppliedAt: ap, SourceFilename: row.SourceFilename, CreatedAt: row.CreatedAt.Time,
 	}
 }
 

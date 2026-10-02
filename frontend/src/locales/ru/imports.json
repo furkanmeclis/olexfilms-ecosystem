@@ -73,6 +73,8 @@
   "columns.format": "Формат",
   "columns.status": "Статус",
   "columns.created_at": "Создан",
+  "columns.actor": "Загрузил",
+  "columns.file": "Файл",
   "columns.actions": "Действия",
   "resources.platform.users": "Пользователи",
   "resources.platform.roles": "Роли",

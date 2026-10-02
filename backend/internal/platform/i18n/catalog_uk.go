@@ -240,6 +240,8 @@ var ukCatalog = map[string]string{
 	"catalog.products.uuid":                    "UUID",
 	"catalog.products.warranty_months":         "Гарантія (міс.)",
 	"catalog.products.micron_thickness":        "Товщина (мікрон)",
+	"catalog.products.purchase_price":          "Закупівельна ціна",
+	"catalog.products.recommended_price":       "Рекомендована ціна продажу",
 	"catalog.products.uses_fixed_barcode":      "Фіксований штрихкод",
 	"catalog.services.name":                    "Назва послуги",
 	"catalog.services.category":                "Категорія",
