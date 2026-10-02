@@ -55,6 +55,13 @@ type DocumentRenderer interface {
 	DocumentHTML(ds Dataset, locale string, lh *Letterhead, title string) (string, error)
 }
 
+// JSONDocumentRenderer is implemented by adapters whose JSON export is a
+// structured document (e.g. the TEC-161 personal data export) rather than
+// the generic column/row JSON.
+type JSONDocumentRenderer interface {
+	DocumentJSON(ds Dataset, locale string) ([]byte, error)
+}
+
 // ExportFormat supported for downloads.
 type ExportFormat string
 

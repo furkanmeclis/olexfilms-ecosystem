@@ -18,6 +18,14 @@ type Querier interface {
 	AddFixedBarcodeHolding(ctx context.Context, arg AddFixedBarcodeHoldingParams) (FixedBarcodeHolding, error)
 	// Signed deltas; the CHECK rejects negative stock.
 	AddOrganizationProductStock(ctx context.Context, arg AddOrganizationProductStockParams) (OrganizationProductStock, error)
+	// Clears every personal profile field (identity numbers: ciphertext and
+	// mask together); anonymized_at keeps the first anonymization instant.
+	AnonymizeCustomerProfile(ctx context.Context, userID int64) (CustomerProfile, error)
+	// Irreversible: name "Anonim", no surname or phone, a unique placeholder
+	// e-mail that satisfies chk_users_email_or_phone, a password hash nobody
+	// knows and status anonymized (every login path requires status active).
+	// The WHERE clause makes a second call a no-op.
+	AnonymizeUser(ctx context.Context, arg AnonymizeUserParams) (User, error)
 	// TEC-152: product image uploads.
 	// Atomically appends one image while the product holds fewer than
 	// max_images; no row means the product is gone or already full.
@@ -207,6 +215,8 @@ type Querier interface {
 	CreateWebAuthnCredential(ctx context.Context, arg CreateWebAuthnCredentialParams) (WebauthnCredential, error)
 	// Scope check: is the customer linked to an organization the caller reaches?
 	CustomerInScope(ctx context.Context, arg CustomerInScopeParams) (bool, error)
+	// Is the customer linked to an organization of the brand?
+	CustomerLinkedToBrand(ctx context.Context, arg CustomerLinkedToBrandParams) (bool, error)
 	DeactivateDocumentTemplates(ctx context.Context, arg DeactivateDocumentTemplatesParams) error
 	DecideQRLoginChallenge(ctx context.Context, arg DecideQRLoginChallengeParams) (QrLoginChallenge, error)
 	DecideStockReclassification(ctx context.Context, arg DecideStockReclassificationParams) (StockReclassification, error)
@@ -570,6 +580,10 @@ type Querier interface {
 	// TEC-84: currencies and daily exchange rates. Rates travel as text so no
 	// precision is lost between NUMERIC and Go.
 	ListCurrencies(ctx context.Context, activeOnly bool) ([]Currency, error)
+	// Services of a customer for the data export (brand_id NULL: every brand).
+	ListCustomerExportServices(ctx context.Context, arg ListCustomerExportServicesParams) ([]ListCustomerExportServicesRow, error)
+	// Warranties held by a customer for the data export.
+	ListCustomerExportWarranties(ctx context.Context, arg ListCustomerExportWarrantiesParams) ([]ListCustomerExportWarrantiesRow, error)
 	// Organizations serving a customer (portal, customer detail).
 	ListCustomerOrganizationsByUser(ctx context.Context, arg ListCustomerOrganizationsByUserParams) ([]ListCustomerOrganizationsByUserRow, error)
 	ListDealerPricesForProducts(ctx context.Context, arg ListDealerPricesForProductsParams) ([]ListDealerPricesForProductsRow, error)
@@ -821,6 +835,10 @@ type Querier interface {
 	LockUnitCurrentState(ctx context.Context, unitID int64) (UnitCurrentState, error)
 	// Same first lock as ledger.Post (the unit row), in id order.
 	LockUnitsByIDs(ctx context.Context, ids []int64) ([]int64, error)
+	// TEC-161 (F1-08c): KVKK/GDPR anonymization and personal data export
+	// (K19, TEC-100 decision 2). Nothing here deletes a row: users, vehicles,
+	// services and warranties stay; only personal fields are overwritten.
+	LockUserByUUID(ctx context.Context, argUuid uuid.UUID) (User, error)
 	LockVehicleTransferByUUID(ctx context.Context, arg LockVehicleTransferByUUIDParams) (VehicleTransfer, error)
 	LockWarranty(ctx context.Context, arg LockWarrantyParams) (Warranty, error)
 	MarkAllNotificationsReadForUser(ctx context.Context, userID pgtype.Int8) (int64, error)
