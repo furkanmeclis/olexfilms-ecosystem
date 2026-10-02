@@ -17,13 +17,15 @@ export function useAccountingAccess(slug: string) {
   const features = useEnabledFeatures(slug);
   const orgType = org?.type ?? null;
   const orgUuid = org?.uuid ?? "";
+  const parentUuid = org?.parent?.uuid ?? null;
   return useMemo(
     () => ({
       orgUuid,
       orgType,
-      ...resolveAccountingAccess({ can, orgType, features }),
+      parentUuid,
+      ...resolveAccountingAccess({ can, orgType, features, parentUuid }),
     }),
-    [can, features, orgType, orgUuid],
+    [can, features, orgType, orgUuid, parentUuid],
   );
 }
 
@@ -39,4 +41,12 @@ export const accountingKeys = {
     ["accounting", org, "cari-detail", uuid] as const,
   entries: (org: string, params: unknown) =>
     ["accounting", org, "entries", params] as const,
+  statement: (org: string, cari: string, params: unknown) =>
+    ["accounting", org, "statement", cari, params] as const,
+  exportJob: (org: string, uuid: string) =>
+    ["accounting", org, "export", uuid] as const,
+  disputes: (org: string, params: unknown) =>
+    ["accounting", org, "disputes", params] as const,
+  dispute: (org: string, uuid: string) =>
+    ["accounting", org, "dispute", uuid] as const,
 };

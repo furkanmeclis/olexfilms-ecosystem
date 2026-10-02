@@ -9,6 +9,7 @@ const ACCOUNTING_ITEMS = [
   "accounting-accounts",
   "accounting-cari",
   "accounting-entries",
+  "accounting-disputes",
 ];
 
 function visibleIds(granted: string[], features: string[] = ["accounting"]) {
@@ -23,7 +24,7 @@ function visibleIds(granted: string[], features: string[] = ["accounting"]) {
   );
 }
 
-describe("tenant nav: accounting (TEC-176)", () => {
+describe("tenant nav: accounting (TEC-176, TEC-195)", () => {
   it("links the accounting pages", () => {
     const items = tenantNav("acme").groups.find((g) => g.id === "accounting");
     expect(items?.feature).toBe("accounting");
@@ -31,6 +32,7 @@ describe("tenant nav: accounting (TEC-176)", () => {
       routes.tenant.accounting.accounts("acme"),
       routes.tenant.accounting.cari("acme"),
       routes.tenant.accounting.entries("acme"),
+      routes.tenant.accounting.disputes("acme"),
     ]);
   });
 

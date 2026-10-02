@@ -6,6 +6,7 @@ import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
+import { StatusChip } from "@/components/common/status-chip";
 import {
   EntityPage,
   EntityTable,
@@ -16,6 +17,7 @@ import { createColumn } from "@/components/tables";
 import { Button } from "@/components/ui/button";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import { DisputeButton } from "@/features/accounting/components/dispute-dialog";
 import { EntryFilters } from "@/features/accounting/components/entry-filters";
 import { SettlementDialog } from "@/features/accounting/components/settlement-dialog";
 import {
@@ -23,10 +25,12 @@ import {
   EntryStatus,
   useCategoryLabels,
 } from "@/features/accounting/components/shared";
+import { useOpenDisputeEntries } from "@/features/accounting/components/statement-page";
 import {
   accountingKeys,
   useAccountingAccess,
 } from "@/features/accounting/hooks/use-accounting-access";
+import { isEntryDisputable } from "@/features/accounting/lib/disputes";
 import {
   EMPTY_ENTRY_FILTERS,
   entryFilterParams,
@@ -39,8 +43,53 @@ import {
 } from "@/features/accounting/services/accounting.service";
 import { useLocale } from "@/providers/locale-provider";
 
+/** Dispute controls of a child organization's ledger rows (TEC-195). */
+export type EntryDisputeOptions = {
+  orgUuid: string;
+  parentUuid: string | null;
+  /** Entry uuids that already carry an open dispute. */
+  openDisputes: ReadonlySet<string>;
+};
+
+/**
+ * Status cell: reversal markers, an open dispute marker, or the "dispute"
+ * button of a disputable row (only passed with accounting.dispute).
+ */
+export function EntryStatusCell({
+  entry,
+  dispute,
+}: {
+  entry: FinanceEntry;
+  dispute?: EntryDisputeOptions | null;
+}) {
+  const { t, format } = useLocale();
+  const disputed = Boolean(dispute?.openDisputes.has(entry.uuid));
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      <EntryStatus entry={entry} />
+      {disputed ? (
+        <span data-testid="entry-disputed">
+          <StatusChip
+            label={t("accounting.disputes.statuses.open")}
+            tone="warning"
+          />
+        </span>
+      ) : dispute && isEntryDisputable(entry, dispute.parentUuid) ? (
+        <DisputeButton
+          orgUuid={dispute.orgUuid}
+          entryUuid={entry.uuid}
+          summary={`${format.dateTime(entry.created_at)} · ${entry.category}`}
+        />
+      ) : null}
+    </div>
+  );
+}
+
 /** Columns shared by the ledger list and the cari detail's recent rows. */
-export function useEntryColumns(categories: Map<string, string>) {
+export function useEntryColumns(
+  categories: Map<string, string>,
+  dispute?: EntryDisputeOptions | null,
+) {
   const { t, format } = useLocale();
   return useMemo(
     () =>
@@ -111,7 +160,9 @@ export function useEntryColumns(categories: Map<string, string>) {
           accessorFn: (row) => (row.reversal_of_uuid ? 2 : row.voided ? 1 : 0),
           labelKey: "accounting.fields.status",
           enableSorting: false,
-          cell: ({ row }) => <EntryStatus entry={row.original} />,
+          cell: ({ row }) => (
+            <EntryStatusCell entry={row.original} dispute={dispute} />
+          ),
         }),
         createColumn<FinanceEntry>({
           accessorKey: "description",
@@ -121,7 +172,7 @@ export function useEntryColumns(categories: Map<string, string>) {
           cell: ({ row }) => row.original.description ?? "—",
         }),
       ] as ColumnDef<FinanceEntry, unknown>[],
-    [categories, format, t],
+    [categories, dispute, format, t],
   );
 }
 
@@ -143,7 +194,23 @@ export function EntriesPage({
   const [settle, setSettle] = useState<SettlementKind | null>(null);
   const enabled = access.canRead && Boolean(access.orgUuid);
   const categories = useCategoryLabels(access.orgUuid, enabled);
-  const columns = useEntryColumns(categories);
+  const openDisputes = useOpenDisputeEntries(
+    access.orgUuid,
+    enabled && access.canDispute,
+  );
+  const disputeKey = Array.from(openDisputes).sort().join(",");
+  const dispute = useMemo<EntryDisputeOptions | null>(
+    () =>
+      access.canDispute
+        ? {
+            orgUuid: access.orgUuid,
+            parentUuid: access.parentUuid,
+            openDisputes: new Set(disputeKey ? disputeKey.split(",") : []),
+          }
+        : null,
+    [access.canDispute, access.orgUuid, access.parentUuid, disputeKey],
+  );
+  const columns = useEntryColumns(categories, dispute);
 
   const params = useMemo(
     () =>

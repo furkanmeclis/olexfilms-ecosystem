@@ -87,5 +87,9 @@
   "codes.STOCK_RECLASSIFICATION_PRODUCT_CHANGED": "The unit's product changed after the request.",
   "codes.STOCK_RECLASSIFICATION_NOT_PENDING": "This reclassification request has already been decided.",
   "codes.STOCK_RECLASSIFICATION_PENDING_EXISTS": "This unit already has a pending reclassification request.",
-  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "You can't approve your own request."
+  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "You can't approve your own request.",
+  "codes.ENTRY_NOT_DISPUTABLE": "Only an open entry your parent organization posted to this cari account can be disputed.",
+  "codes.DISPUTE_ALREADY_OPEN": "This entry already has an open dispute.",
+  "codes.DISPUTE_NOT_OPEN": "This dispute is already resolved or rejected.",
+  "codes.DISPUTE_NOT_RESOLVABLE": "The disputed entry is no longer open; reject or reverse the dispute."
 }

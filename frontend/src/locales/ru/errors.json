@@ -87,5 +87,9 @@
   "codes.STOCK_RECLASSIFICATION_PRODUCT_CHANGED": "Товар единицы изменился после запроса.",
   "codes.STOCK_RECLASSIFICATION_NOT_PENDING": "По этому запросу на переклассификацию уже принято решение.",
   "codes.STOCK_RECLASSIFICATION_PENDING_EXISTS": "Для этой единицы уже есть ожидающий запрос на переклассификацию.",
-  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Вы не можете одобрить собственный запрос."
+  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Вы не можете одобрить собственный запрос.",
+  "codes.ENTRY_NOT_DISPUTABLE": "Оспорить можно только открытую проводку, которую вышестоящая организация внесла на этот счёт.",
+  "codes.DISPUTE_ALREADY_OPEN": "По этой проводке уже есть открытая претензия.",
+  "codes.DISPUTE_NOT_OPEN": "Эта претензия уже решена или отклонена.",
+  "codes.DISPUTE_NOT_RESOLVABLE": "Оспариваемая проводка больше не открыта; отклоните претензию или сторнируйте проводку."
 }

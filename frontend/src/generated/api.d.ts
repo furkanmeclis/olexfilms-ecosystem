@@ -8832,6 +8832,8 @@ export interface components {
             source_label: string;
             /** Format: uuid */
             reversal_of_uuid: string | null;
+            /** @description A later row reverses this one (no longer disputable) */
+            reversed: boolean;
             orig_currency: string;
             orig_amount: components["schemas"]["AccountingAmount"];
             debit: components["schemas"]["AccountingAmount"];
