@@ -150,6 +150,9 @@ func main() {
 	logsSvc := logsusecase.New(queries)
 	ratesSvc := fxrates.New(queries, fxrates.NewFetcher(cfg.Rates.TCMBURL, cfg.Rates.ECBURL), log)
 	warrantyCron := warrantymodule.NewCron(pool, queries, cfg.Auth.FrontendURL)
+	// TEC-190: only the transfer expiry of the customers service runs here.
+	transferExpirer := customersusecase.New(pool, queries, nil, nil)
+	transferExpirer.SetOutbox(outbox.NewStore(pool, queries))
 
 	persist := logging.Attach(log, logsSvc)
 	log = persist.Logger()
@@ -179,6 +182,8 @@ func main() {
 		WithRatesFetch(ratesSvc.FetchTask).
 		WithWarrantyCron(warrantyCron.ExpireTask, warrantyCron.ExpiringScanTask).
 		WithWarrantyRepairScan(warrantymodule.NewRepairScanner(pool, queries, cfg.Auth.FrontendURL, cfg.Warranty.RepairScanDays, log).Task).
+		// TEC-190: expire pending vehicle transfers (5 min).
+		WithVehicleTransferExpire(transferExpirer.ExpireTransfersTask).
 		// TEC-156: nightly projection drift scan; report only, no repair.
 		WithInventoryRebuild(stockrebuild.New(pool, queries).ScanTask(log)).
 		WithSearch(

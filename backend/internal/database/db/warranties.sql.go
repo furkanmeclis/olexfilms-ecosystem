@@ -573,6 +573,36 @@ func (q *Queries) GetPublicWarrantyByCode(ctx context.Context, arg GetPublicWarr
 	return i, err
 }
 
+const getVehicleByID = `-- name: GetVehicleByID :one
+SELECT id, uuid, user_id, organization_id, brand_id, car_brand_id, car_model_id, model_year, plate, plate_normalized, plate_country, vin, created_at, updated_at, deleted_at FROM vehicles
+WHERE id = $1
+`
+
+// Vehicle of a transfer (TEC-190): scope check and response of the verify /
+// cancel endpoints, which address the transfer, not the vehicle.
+func (q *Queries) GetVehicleByID(ctx context.Context, id int64) (Vehicle, error) {
+	row := q.db.QueryRow(ctx, getVehicleByID, id)
+	var i Vehicle
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.UserID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.CarBrandID,
+		&i.CarModelID,
+		&i.ModelYear,
+		&i.Plate,
+		&i.PlateNormalized,
+		&i.PlateCountry,
+		&i.Vin,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const getVehicleTransfer = `-- name: GetVehicleTransfer :one
 SELECT id, uuid, organization_id, brand_id, vehicle_id, from_user_id, to_user_id, to_phone, from_code_hash, to_code_hash, from_verified_at, to_verified_at, attempts, expires_at, status, initiated_by_user_id, completed_at, cancelled_at, created_at, updated_at FROM vehicle_transfers
 WHERE id = $1 AND brand_id = $2

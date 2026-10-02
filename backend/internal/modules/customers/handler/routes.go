@@ -28,6 +28,9 @@ import (
 // TEC-193: the customer merge needs customers.merge (center roles only,
 // sensitive); the preview (dry run) writes nothing, the apply also needs a
 // fresh step-up. The use case requires a center organization.
+//
+// TEC-190: the vehicle transfer endpoints need vehicles.transfer; the
+// transfer's current owner must be a customer in scope.
 func RegisterRoutes(
 	mux *http.ServeMux,
 	h *Handler,
@@ -47,6 +50,7 @@ func RegisterRoutes(
 	}
 	readC, writeC := with(rbac.PermCustomersRead), with(rbac.PermCustomersWrite)
 	readV, writeV := with(rbac.PermVehiclesRead), with(rbac.PermVehiclesWrite)
+	transferV := with(rbac.PermVehiclesTransfer)
 	privacy := with(rbac.PermCustomersAnonymize)
 	privacyStepUp := func(fn http.HandlerFunc) http.Handler {
 		return middleware.Chain(fn, authn, org, module, middleware.RequireScope(q, rbac.PermCustomersAnonymize),
@@ -82,4 +86,10 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/vehicles/{uuid}", readV(h.GetVehicle))
 	mux.Handle("PATCH /v1/vehicles/{uuid}", writeV(h.UpdateVehicle))
 	mux.Handle("DELETE /v1/vehicles/{uuid}", writeV(h.DeleteVehicle))
+
+	// TEC-190: vehicle transfer with two codes (vehicles.transfer).
+	mux.Handle("GET /v1/vehicles/{uuid}/transfers", transferV(h.ListVehicleTransfers))
+	mux.Handle("POST /v1/vehicles/{uuid}/transfers", transferV(h.StartVehicleTransfer))
+	mux.Handle("POST /v1/vehicle-transfers/{uuid}/verify", transferV(h.VerifyVehicleTransfer))
+	mux.Handle("POST /v1/vehicle-transfers/{uuid}/cancel", transferV(h.CancelVehicleTransfer))
 }
