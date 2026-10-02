@@ -161,5 +161,7 @@
   "labels.transfers.request": "طلب نقل مخزون",
   "labels.transfers.approve": "اعتماد عمليات نقل المخزون",
   "groups.orders": "الطلبات",
-  "groups.transfers": "عمليات النقل"
+  "groups.transfers": "عمليات النقل",
+  "labels.services.complete": "إكمال الخدمات",
+  "labels.services.cancel": "إلغاء الخدمات"
 }

@@ -320,6 +320,18 @@ var Permissions = []PermissionDef{
 		Slug: PermTransfersApprove, Name: "Approve stock transfers", Module: "transfers", Scopes: scopesTree,
 		Description: "Approve or reject transfers between dealers of the distributor (K13).",
 	},
+
+	// TEC-178: service completion and cancellation. Appended last; migration
+	// 000050 seeds them. Cancel is center-only (decision: only the center
+	// cancels a service), so its scopes start at brand.
+	{
+		Slug: PermServicesComplete, Name: "Complete services", Module: "services", Scopes: scopesRecordsInt,
+		Description: "Complete a service: consumes its stock and starts the warranty flow.",
+	},
+	{
+		Slug: PermServicesCancel, Name: "Cancel services", Module: "services", Scopes: scopesSupplier,
+		Description: "Cancel a service that is not completed (center only).",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -396,6 +408,9 @@ var Roles = []RoleDef{
 			PermOrdersWrite:   ScopeBrand,
 			PermOrdersApprove: ScopeBrand,
 			PermOrdersCancel:  ScopeBrand,
+			// TEC-178 (000050).
+			PermServicesComplete: ScopeBrand,
+			PermServicesCancel:   ScopeBrand,
 		}),
 	},
 	{
@@ -490,6 +505,8 @@ var Roles = []RoleDef{
 			PermOrdersReceive:    ScopeManaged,
 			PermOrdersCancel:     ScopeManaged,
 			PermTransfersApprove: ScopeManaged,
+			// TEC-178 (000050).
+			PermServicesComplete: ScopeSubtree,
 		}),
 	},
 	{
@@ -505,6 +522,7 @@ var Roles = []RoleDef{
 			PermCustomersWrite:     ScopeSubtree,
 			PermVehiclesRead:       ScopeSubtree,
 			PermVehiclesWrite:      ScopeSubtree,
+			PermServicesComplete:   ScopeSubtree,
 		}),
 	},
 	{
@@ -570,6 +588,8 @@ var Roles = []RoleDef{
 			PermOrdersReceive:    ScopeManaged,
 			PermOrdersCancel:     ScopeManaged,
 			PermTransfersRequest: ScopeManaged,
+			// TEC-178 (000050).
+			PermServicesComplete: ScopeManaged,
 		}),
 	},
 	{
@@ -586,6 +606,7 @@ var Roles = []RoleDef{
 			PermVehiclesWrite:      ScopeOwn,
 			PermOrdersRead:         ScopeManaged,
 			PermOrdersReceive:      ScopeManaged,
+			PermServicesComplete:   ScopeOwn,
 		}),
 	},
 	{

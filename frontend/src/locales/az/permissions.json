@@ -161,5 +161,7 @@
   "labels.transfers.request": "Stok transferi tələb et",
   "labels.transfers.approve": "Stok transferlərini təsdiqlə",
   "groups.orders": "Sifarişlər",
-  "groups.transfers": "Transferlər"
+  "groups.transfers": "Transferlər",
+  "labels.services.complete": "Xidmətləri tamamlamaq",
+  "labels.services.cancel": "Xidmətləri ləğv etmək"
 }

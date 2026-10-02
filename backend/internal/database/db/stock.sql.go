@@ -54,7 +54,7 @@ SET quantity_on_hand = quantity_on_hand + $1::int,
     last_movement_id = $2,
     version = version + 1
 WHERE unit_id = $3 AND owner_type = $4 AND owner_id = $5
-RETURNING id, unit_id, brand_id, unit_kind, owner_type, owner_id, holder_org_id, quantity_on_hand, last_movement_id, version, owner_location_id, owner_organization_id, created_at, updated_at
+RETURNING id, unit_id, brand_id, unit_kind, owner_type, owner_id, holder_org_id, quantity_on_hand, last_movement_id, version, owner_location_id, owner_organization_id, created_at, updated_at, owner_service_id
 `
 
 type AddFixedBarcodeHoldingParams struct {
@@ -90,6 +90,7 @@ func (q *Queries) AddFixedBarcodeHolding(ctx context.Context, arg AddFixedBarcod
 		&i.OwnerOrganizationID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OwnerServiceID,
 	)
 	return i, err
 }
@@ -767,7 +768,7 @@ func (q *Queries) GetUnitByUUID(ctx context.Context, argUuid uuid.UUID) (Unit, e
 }
 
 const getUnitCurrentState = `-- name: GetUnitCurrentState :one
-SELECT unit_id, brand_id, unit_kind, owner_type, owner_id, holder_org_id, status, last_movement_id, version, owner_location_id, owner_organization_id, updated_at FROM unit_current_state WHERE unit_id = $1
+SELECT unit_id, brand_id, unit_kind, owner_type, owner_id, holder_org_id, status, last_movement_id, version, owner_location_id, owner_organization_id, updated_at, owner_service_id FROM unit_current_state WHERE unit_id = $1
 `
 
 func (q *Queries) GetUnitCurrentState(ctx context.Context, unitID int64) (UnitCurrentState, error) {
@@ -786,6 +787,7 @@ func (q *Queries) GetUnitCurrentState(ctx context.Context, unitID int64) (UnitCu
 		&i.OwnerLocationID,
 		&i.OwnerOrganizationID,
 		&i.UpdatedAt,
+		&i.OwnerServiceID,
 	)
 	return i, err
 }
@@ -1010,7 +1012,7 @@ VALUES (
     $1, $2, $3, $4,
     $5, $6, $7
 )
-RETURNING unit_id, brand_id, unit_kind, owner_type, owner_id, holder_org_id, status, last_movement_id, version, owner_location_id, owner_organization_id, updated_at
+RETURNING unit_id, brand_id, unit_kind, owner_type, owner_id, holder_org_id, status, last_movement_id, version, owner_location_id, owner_organization_id, updated_at, owner_service_id
 `
 
 type InsertUnitCurrentStateParams struct {
@@ -1049,6 +1051,7 @@ func (q *Queries) InsertUnitCurrentState(ctx context.Context, arg InsertUnitCurr
 		&i.OwnerLocationID,
 		&i.OwnerOrganizationID,
 		&i.UpdatedAt,
+		&i.OwnerServiceID,
 	)
 	return i, err
 }
@@ -1122,7 +1125,7 @@ func (q *Queries) ListBinProductStocksByOrganization(ctx context.Context, organi
 }
 
 const listFixedBarcodeHoldingsByHolder = `-- name: ListFixedBarcodeHoldingsByHolder :many
-SELECT id, unit_id, brand_id, unit_kind, owner_type, owner_id, holder_org_id, quantity_on_hand, last_movement_id, version, owner_location_id, owner_organization_id, created_at, updated_at FROM fixed_barcode_holdings
+SELECT id, unit_id, brand_id, unit_kind, owner_type, owner_id, holder_org_id, quantity_on_hand, last_movement_id, version, owner_location_id, owner_organization_id, created_at, updated_at, owner_service_id FROM fixed_barcode_holdings
 WHERE holder_org_id = $1 AND quantity_on_hand > 0
 ORDER BY unit_id, id
 `
@@ -1151,6 +1154,7 @@ func (q *Queries) ListFixedBarcodeHoldingsByHolder(ctx context.Context, holderOr
 			&i.OwnerOrganizationID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.OwnerServiceID,
 		); err != nil {
 			return nil, err
 		}
@@ -1163,7 +1167,7 @@ func (q *Queries) ListFixedBarcodeHoldingsByHolder(ctx context.Context, holderOr
 }
 
 const listFixedBarcodeHoldingsByUnit = `-- name: ListFixedBarcodeHoldingsByUnit :many
-SELECT id, unit_id, brand_id, unit_kind, owner_type, owner_id, holder_org_id, quantity_on_hand, last_movement_id, version, owner_location_id, owner_organization_id, created_at, updated_at FROM fixed_barcode_holdings WHERE unit_id = $1 ORDER BY id
+SELECT id, unit_id, brand_id, unit_kind, owner_type, owner_id, holder_org_id, quantity_on_hand, last_movement_id, version, owner_location_id, owner_organization_id, created_at, updated_at, owner_service_id FROM fixed_barcode_holdings WHERE unit_id = $1 ORDER BY id
 `
 
 func (q *Queries) ListFixedBarcodeHoldingsByUnit(ctx context.Context, unitID int64) ([]FixedBarcodeHolding, error) {
@@ -1190,6 +1194,7 @@ func (q *Queries) ListFixedBarcodeHoldingsByUnit(ctx context.Context, unitID int
 			&i.OwnerOrganizationID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.OwnerServiceID,
 		); err != nil {
 			return nil, err
 		}
@@ -1547,7 +1552,7 @@ func (q *Queries) ListStockReclassifications(ctx context.Context, arg ListStockR
 }
 
 const listUnitCurrentStatesByHolder = `-- name: ListUnitCurrentStatesByHolder :many
-SELECT s.unit_id, s.brand_id, s.unit_kind, s.owner_type, s.owner_id, s.holder_org_id, s.status, s.last_movement_id, s.version, s.owner_location_id, s.owner_organization_id, s.updated_at, u.barcode, u.product_id, u.remaining_meters
+SELECT s.unit_id, s.brand_id, s.unit_kind, s.owner_type, s.owner_id, s.holder_org_id, s.status, s.last_movement_id, s.version, s.owner_location_id, s.owner_organization_id, s.updated_at, s.owner_service_id, u.barcode, u.product_id, u.remaining_meters
 FROM unit_current_state s
 JOIN units u ON u.id = s.unit_id
 WHERE s.holder_org_id = $1
@@ -1573,6 +1578,7 @@ type ListUnitCurrentStatesByHolderRow struct {
 	OwnerLocationID     pgtype.Int8        `json:"owner_location_id"`
 	OwnerOrganizationID pgtype.Int8        `json:"owner_organization_id"`
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	OwnerServiceID      pgtype.Int8        `json:"owner_service_id"`
 	Barcode             string             `json:"barcode"`
 	ProductID           int64              `json:"product_id"`
 	RemainingMeters     pgtype.Numeric     `json:"remaining_meters"`
@@ -1600,6 +1606,7 @@ func (q *Queries) ListUnitCurrentStatesByHolder(ctx context.Context, arg ListUni
 			&i.OwnerLocationID,
 			&i.OwnerOrganizationID,
 			&i.UpdatedAt,
+			&i.OwnerServiceID,
 			&i.Barcode,
 			&i.ProductID,
 			&i.RemainingMeters,
@@ -1727,7 +1734,7 @@ func (q *Queries) LockBinProductStock(ctx context.Context, arg LockBinProductSto
 
 const lockFixedBarcodeHolding = `-- name: LockFixedBarcodeHolding :one
 
-SELECT id, unit_id, brand_id, unit_kind, owner_type, owner_id, holder_org_id, quantity_on_hand, last_movement_id, version, owner_location_id, owner_organization_id, created_at, updated_at FROM fixed_barcode_holdings
+SELECT id, unit_id, brand_id, unit_kind, owner_type, owner_id, holder_org_id, quantity_on_hand, last_movement_id, version, owner_location_id, owner_organization_id, created_at, updated_at, owner_service_id FROM fixed_barcode_holdings
 WHERE unit_id = $1 AND owner_type = $2 AND owner_id = $3
 FOR UPDATE
 `
@@ -1758,12 +1765,13 @@ func (q *Queries) LockFixedBarcodeHolding(ctx context.Context, arg LockFixedBarc
 		&i.OwnerOrganizationID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OwnerServiceID,
 	)
 	return i, err
 }
 
 const lockFixedBarcodeHoldingsByUnit = `-- name: LockFixedBarcodeHoldingsByUnit :many
-SELECT id, unit_id, brand_id, unit_kind, owner_type, owner_id, holder_org_id, quantity_on_hand, last_movement_id, version, owner_location_id, owner_organization_id, created_at, updated_at FROM fixed_barcode_holdings
+SELECT id, unit_id, brand_id, unit_kind, owner_type, owner_id, holder_org_id, quantity_on_hand, last_movement_id, version, owner_location_id, owner_organization_id, created_at, updated_at, owner_service_id FROM fixed_barcode_holdings
 WHERE unit_id = $1
 ORDER BY id
 FOR UPDATE
@@ -1793,6 +1801,7 @@ func (q *Queries) LockFixedBarcodeHoldingsByUnit(ctx context.Context, unitID int
 			&i.OwnerOrganizationID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.OwnerServiceID,
 		); err != nil {
 			return nil, err
 		}
@@ -1925,7 +1934,7 @@ func (q *Queries) LockUnit(ctx context.Context, id int64) (Unit, error) {
 }
 
 const lockUnitCurrentState = `-- name: LockUnitCurrentState :one
-SELECT unit_id, brand_id, unit_kind, owner_type, owner_id, holder_org_id, status, last_movement_id, version, owner_location_id, owner_organization_id, updated_at FROM unit_current_state WHERE unit_id = $1 FOR UPDATE
+SELECT unit_id, brand_id, unit_kind, owner_type, owner_id, holder_org_id, status, last_movement_id, version, owner_location_id, owner_organization_id, updated_at, owner_service_id FROM unit_current_state WHERE unit_id = $1 FOR UPDATE
 `
 
 // Serialises every ledger write on one unit (double owner / double
@@ -1946,6 +1955,7 @@ func (q *Queries) LockUnitCurrentState(ctx context.Context, unitID int64) (UnitC
 		&i.OwnerLocationID,
 		&i.OwnerOrganizationID,
 		&i.UpdatedAt,
+		&i.OwnerServiceID,
 	)
 	return i, err
 }
@@ -2070,7 +2080,7 @@ SET owner_type = $1,
     last_movement_id = $5,
     version = version + 1
 WHERE unit_id = $6 AND version = $7
-RETURNING unit_id, brand_id, unit_kind, owner_type, owner_id, holder_org_id, status, last_movement_id, version, owner_location_id, owner_organization_id, updated_at
+RETURNING unit_id, brand_id, unit_kind, owner_type, owner_id, holder_org_id, status, last_movement_id, version, owner_location_id, owner_organization_id, updated_at, owner_service_id
 `
 
 type UpdateUnitCurrentStateParams struct {
@@ -2108,6 +2118,7 @@ func (q *Queries) UpdateUnitCurrentState(ctx context.Context, arg UpdateUnitCurr
 		&i.OwnerLocationID,
 		&i.OwnerOrganizationID,
 		&i.UpdatedAt,
+		&i.OwnerServiceID,
 	)
 	return i, err
 }

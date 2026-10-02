@@ -29,10 +29,12 @@ type Querier interface {
 	AssignMemberRoleBySlug(ctx context.Context, arg AssignMemberRoleBySlugParams) error
 	AssignUserRoleBySlug(ctx context.Context, arg AssignUserRoleBySlugParams) error
 	AttachNotificationDelivery(ctx context.Context, arg AttachNotificationDeliveryParams) error
+	CancelService(ctx context.Context, arg CancelServiceParams) (Service, error)
 	CancelStockTransferRequest(ctx context.Context, id int64) (StockTransferRequest, error)
 	ClaimOutboxEvents(ctx context.Context, arg ClaimOutboxEventsParams) ([]OutboxEvent, error)
 	ClearAppSettingsLogo(ctx context.Context) (AppSetting, error)
 	ClearOrganizationLogo(ctx context.Context, argUuid uuid.UUID) (Organization, error)
+	CompleteService(ctx context.Context, arg CompleteServiceParams) (Service, error)
 	CompleteStockTransferRequest(ctx context.Context, id int64) (StockTransferRequest, error)
 	ConfirmUserTOTP(ctx context.Context, arg ConfirmUserTOTPParams) (UserTotp, error)
 	ConsumeOTP(ctx context.Context, id int64) error
@@ -78,6 +80,7 @@ type Querier interface {
 	CountRoles(ctx context.Context, q_ pgtype.Text) (int64, error)
 	CountScopedVehicles(ctx context.Context, arg CountScopedVehiclesParams) (int64, error)
 	CountSearchFinanceEntries(ctx context.Context, arg CountSearchFinanceEntriesParams) (int64, error)
+	CountServicesInScope(ctx context.Context, arg CountServicesInScopeParams) (int64, error)
 	CountStockMovementsByUnit(ctx context.Context, unitID int64) (int64, error)
 	CountStorageActivity(ctx context.Context, objectKey string) (int64, error)
 	CountStorageTrash(ctx context.Context) (int64, error)
@@ -143,6 +146,20 @@ type Querier interface {
 	CreateQRLoginChallenge(ctx context.Context, arg CreateQRLoginChallengeParams) (QrLoginChallenge, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
 	CreateRole(ctx context.Context, arg CreateRoleParams) (Role, error)
+	// TEC-178 (F1-05a): services, service items, images and status logs
+	// (migration 000050). Every read is brand-bound (K20, decision 2: the
+	// brand is the service organization's brand). Transitions lock the row
+	// first (Lock* ... FOR UPDATE) in the use case transaction.
+	// ---------------------------------------------------------------------------
+	// Services.
+	CreateService(ctx context.Context, arg CreateServiceParams) (Service, error)
+	// ---------------------------------------------------------------------------
+	// Images.
+	CreateServiceImage(ctx context.Context, arg CreateServiceImageParams) (ServiceImage, error)
+	// ---------------------------------------------------------------------------
+	// Service items. Locked by trigger once the service is completed or
+	// cancelled.
+	CreateServiceItem(ctx context.Context, arg CreateServiceItemParams) (ServiceItem, error)
 	// ---------------------------------------------------------------------------
 	// Stock import staging.
 	CreateStockImportBatch(ctx context.Context, arg CreateStockImportBatchParams) (StockImportBatch, error)
@@ -192,6 +209,8 @@ type Querier interface {
 	DeleteDistributorDealerPrice(ctx context.Context, arg DeleteDistributorDealerPriceParams) (int64, error)
 	DeleteDistributorPriceOverride(ctx context.Context, arg DeleteDistributorPriceOverrideParams) (int64, error)
 	DeleteDistrict(ctx context.Context, id int64) (int64, error)
+	// Draft deletion (items, images and logs must be gone first).
+	DeleteDraftService(ctx context.Context, arg DeleteDraftServiceParams) (int64, error)
 	DeleteLogPurgeRule(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	DeleteManualExchangeRate(ctx context.Context, arg DeleteManualExchangeRateParams) (int64, error)
 	DeleteMemberRoles(ctx context.Context, memberID int64) error
@@ -212,6 +231,9 @@ type Querier interface {
 	DeletePushSubscriptionByEndpoint(ctx context.Context, endpoint string) error
 	DeleteRole(ctx context.Context, argUuid uuid.UUID) error
 	DeleteRolePermission(ctx context.Context, arg DeleteRolePermissionParams) error
+	DeleteServiceImage(ctx context.Context, arg DeleteServiceImageParams) (ServiceImage, error)
+	DeleteServiceItem(ctx context.Context, arg DeleteServiceItemParams) (int64, error)
+	DeleteServiceItemsByService(ctx context.Context, serviceID int64) (int64, error)
 	DeleteStaleQRLoginChallenges(ctx context.Context) (int64, error)
 	DeleteStorageShare(ctx context.Context, argUuid uuid.UUID) error
 	DeleteStorageStar(ctx context.Context, arg DeleteStorageStarParams) error
@@ -370,6 +392,13 @@ type Querier interface {
 	GetRoleByID(ctx context.Context, id int64) (Role, error)
 	GetRoleBySlug(ctx context.Context, slug string) (Role, error)
 	GetRoleByUUID(ctx context.Context, argUuid uuid.UUID) (Role, error)
+	GetService(ctx context.Context, arg GetServiceParams) (Service, error)
+	// Public warranty / PDF lookup by number (unique across brands).
+	GetServiceByNo(ctx context.Context, serviceNo string) (Service, error)
+	GetServiceByUUID(ctx context.Context, arg GetServiceByUUIDParams) (Service, error)
+	GetServiceImage(ctx context.Context, arg GetServiceImageParams) (ServiceImage, error)
+	GetServiceItem(ctx context.Context, arg GetServiceItemParams) (ServiceItem, error)
+	GetServiceItemByUUID(ctx context.Context, arg GetServiceItemByUUIDParams) (ServiceItem, error)
 	GetStepupSettings(ctx context.Context) (StepupSetting, error)
 	GetStockImportBatch(ctx context.Context, arg GetStockImportBatchParams) (StockImportBatch, error)
 	GetStockMovement(ctx context.Context, id int64) (StockMovement, error)
@@ -432,6 +461,9 @@ type Querier interface {
 	InsertOrderStatusHistory(ctx context.Context, arg InsertOrderStatusHistoryParams) (OrderStatusHistory, error)
 	InsertOutboxEvent(ctx context.Context, arg InsertOutboxEventParams) (OutboxEvent, error)
 	InsertRolePermission(ctx context.Context, arg InsertRolePermissionParams) error
+	// ---------------------------------------------------------------------------
+	// Status log (append-only).
+	InsertServiceStatusLog(ctx context.Context, arg InsertServiceStatusLogParams) (ServiceStatusLog, error)
 	InsertStockImportRow(ctx context.Context, arg InsertStockImportRowParams) (StockImportRow, error)
 	// ---------------------------------------------------------------------------
 	// Stock movements (append-only: insert and read only).
@@ -559,6 +591,9 @@ type Querier interface {
 	// ListOpenFinanceEntriesBySource lists the original rows of one source that
 	// have not been reversed yet, locked for the reversing transaction.
 	ListOpenFinanceEntriesBySource(ctx context.Context, arg ListOpenFinanceEntriesBySourceParams) ([]FinanceEntry, error)
+	// Other open services holding the same unit (draft check; the ledger has
+	// the final word on completion).
+	ListOpenServicesByUnit(ctx context.Context, arg ListOpenServicesByUnitParams) ([]ListOpenServicesByUnitRow, error)
 	ListOrderItemUnitsByItem(ctx context.Context, orderItemID int64) ([]OrderItemUnit, error)
 	ListOrderItemUnitsByOrder(ctx context.Context, orderID int64) ([]ListOrderItemUnitsByOrderRow, error)
 	ListOrderItems(ctx context.Context, orderID int64) ([]OrderItem, error)
@@ -621,6 +656,15 @@ type Querier interface {
 	// Vehicles of customers linked to the organizations in scope; the brand is
 	// always the domain brand (K20).
 	ListScopedVehicles(ctx context.Context, arg ListScopedVehiclesParams) ([]ListScopedVehiclesRow, error)
+	ListServiceImages(ctx context.Context, serviceID int64) ([]ServiceImage, error)
+	ListServiceItems(ctx context.Context, serviceID int64) ([]ServiceItem, error)
+	ListServiceStatusLogs(ctx context.Context, serviceID int64) ([]ServiceStatusLog, error)
+	// Services of a customer across brands' organizations in scope (portal and
+	// customer detail).
+	ListServicesByCustomer(ctx context.Context, arg ListServicesByCustomerParams) ([]Service, error)
+	// Scope list: org_ids NULL = whole brand (brand/all scope); created_by for
+	// scope own, customer_user_id for scope customer (portal).
+	ListServicesInScope(ctx context.Context, arg ListServicesInScopeParams) ([]Service, error)
 	ListSharedKeys(ctx context.Context, keys []string) ([]string, error)
 	ListStockImportBatches(ctx context.Context, organizationID int64) ([]StockImportBatch, error)
 	ListStockImportRows(ctx context.Context, arg ListStockImportRowsParams) ([]StockImportRow, error)
@@ -680,6 +724,11 @@ type Querier interface {
 	LockOrderItem(ctx context.Context, arg LockOrderItemParams) (OrderItem, error)
 	LockOrderItems(ctx context.Context, orderID int64) ([]OrderItem, error)
 	LockOrganizationProductStock(ctx context.Context, arg LockOrganizationProductStockParams) (OrganizationProductStock, error)
+	LockService(ctx context.Context, arg LockServiceParams) (Service, error)
+	LockServiceByUUID(ctx context.Context, arg LockServiceByUUIDParams) (Service, error)
+	// Completion locks the lines in id order (deadlock-free with concurrent
+	// completions sharing a unit).
+	LockServiceItems(ctx context.Context, serviceID int64) ([]ServiceItem, error)
 	LockStockImportBatch(ctx context.Context, id int64) (StockImportBatch, error)
 	LockStockReclassification(ctx context.Context, arg LockStockReclassificationParams) (StockReclassification, error)
 	LockStockReservation(ctx context.Context, id int64) (StockReservation, error)
@@ -765,6 +814,7 @@ type Querier interface {
 	// SearchFinanceEntries is the filtered, paged ledger of one organization.
 	// reversed_by_uuid is set when the row has been reversed (void).
 	SearchFinanceEntries(ctx context.Context, arg SearchFinanceEntriesParams) ([]SearchFinanceEntriesRow, error)
+	ServiceNoExists(ctx context.Context, serviceNo string) (bool, error)
 	SetAppSettingsLogo(ctx context.Context, logoObjectKey pgtype.Text) (AppSetting, error)
 	SetCarBrandHero(ctx context.Context, arg SetCarBrandHeroParams) (CarBrand, error)
 	SetCarBrandLogo(ctx context.Context, arg SetCarBrandLogoParams) (CarBrand, error)
@@ -790,6 +840,9 @@ type Querier interface {
 	// that changed so the caller can reindex them.
 	SetProductsActiveByUUIDs(ctx context.Context, arg SetProductsActiveByUUIDsParams) ([]uuid.UUID, error)
 	SetRolePermissions(ctx context.Context, roleID int64) error
+	// Written in the completion transaction before the status flips.
+	SetServiceItemMovement(ctx context.Context, arg SetServiceItemMovementParams) (ServiceItem, error)
+	SetServiceReviewRequestSent(ctx context.Context, id int64) (Service, error)
 	SetUserEmailVerified(ctx context.Context, id int64) (User, error)
 	SetWhatsAppInstance(ctx context.Context, arg SetWhatsAppInstanceParams) (WhatsappSetting, error)
 	SetWhatsAppSMSFallback(ctx context.Context, smsFallbackEnabled bool) (WhatsappSetting, error)
@@ -834,6 +887,14 @@ type Querier interface {
 	// Full replacement of the editable fields (read-modify-write in the use case).
 	UpdateProductCategory(ctx context.Context, arg UpdateProductCategoryParams) (ProductCategory, error)
 	UpdateRole(ctx context.Context, arg UpdateRoleParams) (Role, error)
+	// Edits the form fields (wizard steps 1, 2 and 4). The caller has locked
+	// the row and checked the form lock (completed / cancelled: center only).
+	UpdateService(ctx context.Context, arg UpdateServiceParams) (Service, error)
+	UpdateServiceImage(ctx context.Context, arg UpdateServiceImageParams) (ServiceImage, error)
+	UpdateServiceItem(ctx context.Context, arg UpdateServiceItemParams) (ServiceItem, error)
+	// Moves the service to status (not completed / cancelled, which have their
+	// own queries). The caller has locked the row and validated the transition.
+	UpdateServiceStatus(ctx context.Context, arg UpdateServiceStatusParams) (Service, error)
 	UpdateStepupSettings(ctx context.Context, arg UpdateStepupSettingsParams) (StepupSetting, error)
 	UpdateStockImportBatchStatus(ctx context.Context, arg UpdateStockImportBatchStatusParams) (StockImportBatch, error)
 	UpdateStockImportRowResult(ctx context.Context, arg UpdateStockImportRowResultParams) (StockImportRow, error)

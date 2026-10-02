@@ -161,5 +161,7 @@
   "labels.transfers.request": "Umlagerung anfordern",
   "labels.transfers.approve": "Umlagerungen freigeben",
   "groups.orders": "Bestellungen",
-  "groups.transfers": "Umlagerungen"
+  "groups.transfers": "Umlagerungen",
+  "labels.services.complete": "Services abschließen",
+  "labels.services.cancel": "Services stornieren"
 }
