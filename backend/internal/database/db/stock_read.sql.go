@@ -533,7 +533,7 @@ func (q *Queries) ListStockMovementsByUnitPage(ctx context.Context, arg ListStoc
 }
 
 const listWarehouseLocationsByIDs = `-- name: ListWarehouseLocationsByIDs :many
-SELECT id, uuid, organization_id, parent_id, code, name, active, created_at, updated_at FROM warehouse_locations WHERE id = ANY($1::bigint[])
+SELECT id, uuid, organization_id, parent_id, code, name, active, created_at, updated_at, warehouse_id, room_id, type, full_code, sort_order FROM warehouse_locations WHERE id = ANY($1::bigint[])
 `
 
 func (q *Queries) ListWarehouseLocationsByIDs(ctx context.Context, ids []int64) ([]WarehouseLocation, error) {
@@ -555,6 +555,11 @@ func (q *Queries) ListWarehouseLocationsByIDs(ctx context.Context, ids []int64) 
 			&i.Active,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.WarehouseID,
+			&i.RoomID,
+			&i.Type,
+			&i.FullCode,
+			&i.SortOrder,
 		); err != nil {
 			return nil, err
 		}

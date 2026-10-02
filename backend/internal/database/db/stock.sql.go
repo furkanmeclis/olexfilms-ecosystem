@@ -321,7 +321,7 @@ VALUES (
     $1, $2, $3,
     $4, $5
 )
-RETURNING id, uuid, organization_id, parent_id, code, name, active, created_at, updated_at
+RETURNING id, uuid, organization_id, parent_id, code, name, active, created_at, updated_at, warehouse_id, room_id, type, full_code, sort_order
 `
 
 type CreateWarehouseLocationParams struct {
@@ -358,6 +358,11 @@ func (q *Queries) CreateWarehouseLocation(ctx context.Context, arg CreateWarehou
 		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.WarehouseID,
+		&i.RoomID,
+		&i.Type,
+		&i.FullCode,
+		&i.SortOrder,
 	)
 	return i, err
 }
@@ -795,7 +800,7 @@ func (q *Queries) GetUnitCurrentState(ctx context.Context, unitID int64) (UnitCu
 }
 
 const getWarehouseLocation = `-- name: GetWarehouseLocation :one
-SELECT id, uuid, organization_id, parent_id, code, name, active, created_at, updated_at FROM warehouse_locations
+SELECT id, uuid, organization_id, parent_id, code, name, active, created_at, updated_at, warehouse_id, room_id, type, full_code, sort_order FROM warehouse_locations
 WHERE id = $1 AND organization_id = $2
 `
 
@@ -817,12 +822,17 @@ func (q *Queries) GetWarehouseLocation(ctx context.Context, arg GetWarehouseLoca
 		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.WarehouseID,
+		&i.RoomID,
+		&i.Type,
+		&i.FullCode,
+		&i.SortOrder,
 	)
 	return i, err
 }
 
 const getWarehouseLocationByUUID = `-- name: GetWarehouseLocationByUUID :one
-SELECT id, uuid, organization_id, parent_id, code, name, active, created_at, updated_at FROM warehouse_locations WHERE uuid = $1
+SELECT id, uuid, organization_id, parent_id, code, name, active, created_at, updated_at, warehouse_id, room_id, type, full_code, sort_order FROM warehouse_locations WHERE uuid = $1
 `
 
 func (q *Queries) GetWarehouseLocationByUUID(ctx context.Context, argUuid uuid.UUID) (WarehouseLocation, error) {
@@ -838,6 +848,11 @@ func (q *Queries) GetWarehouseLocationByUUID(ctx context.Context, argUuid uuid.U
 		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.WarehouseID,
+		&i.RoomID,
+		&i.Type,
+		&i.FullCode,
+		&i.SortOrder,
 	)
 	return i, err
 }
@@ -1670,7 +1685,7 @@ func (q *Queries) ListUnitsByBarcode(ctx context.Context, barcode string) ([]Uni
 }
 
 const listWarehouseLocations = `-- name: ListWarehouseLocations :many
-SELECT id, uuid, organization_id, parent_id, code, name, active, created_at, updated_at FROM warehouse_locations
+SELECT id, uuid, organization_id, parent_id, code, name, active, created_at, updated_at, warehouse_id, room_id, type, full_code, sort_order FROM warehouse_locations
 WHERE organization_id = $1
   AND ($2::bool IS NULL OR active = $2::bool)
 ORDER BY code, id
@@ -1700,6 +1715,11 @@ func (q *Queries) ListWarehouseLocations(ctx context.Context, arg ListWarehouseL
 			&i.Active,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.WarehouseID,
+			&i.RoomID,
+			&i.Type,
+			&i.FullCode,
+			&i.SortOrder,
 		); err != nil {
 			return nil, err
 		}
@@ -2290,7 +2310,7 @@ SET parent_id = $1,
     name = $3,
     active = $4
 WHERE id = $5 AND organization_id = $6
-RETURNING id, uuid, organization_id, parent_id, code, name, active, created_at, updated_at
+RETURNING id, uuid, organization_id, parent_id, code, name, active, created_at, updated_at, warehouse_id, room_id, type, full_code, sort_order
 `
 
 type UpdateWarehouseLocationParams struct {
@@ -2322,6 +2342,11 @@ func (q *Queries) UpdateWarehouseLocation(ctx context.Context, arg UpdateWarehou
 		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.WarehouseID,
+		&i.RoomID,
+		&i.Type,
+		&i.FullCode,
+		&i.SortOrder,
 	)
 	return i, err
 }

@@ -3085,6 +3085,273 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/warehouse/warehouses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Warehouses of the active organization
+         * @description Needs `warehouse.read`; center and distributor organizations only (403 for dealers, K12). Works on the active organization's own warehouses. Ordered by sort_order. `active` filters.
+         */
+        get: operations["listWarehouses"];
+        put?: never;
+        /**
+         * Open a warehouse
+         * @description Needs `warehouse.write`; center and distributor organizations only (403 for dealers, K12). `code` is upper-cased (A-Z, 0-9, _; 1-32), unique per organization (409 WAREHOUSE_CODE_TAKEN). The warehouse is brand-independent (K20).
+         */
+        post: operations["createWarehouse"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/warehouses/reorder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reorder warehouses
+         * @description Needs `warehouse.write`; center and distributor organizations only (403 for dealers, K12). sort_order becomes the position in `uuids`.
+         */
+        post: operations["reorderWarehouses"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/warehouses/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * One warehouse
+         * @description Needs `warehouse.read`; center and distributor organizations only (403 for dealers, K12). Works on the active organization's own warehouses.
+         */
+        get: operations["getWarehouse"];
+        put?: never;
+        post?: never;
+        /**
+         * Remove an empty warehouse
+         * @description Needs `warehouse.write`; center and distributor organizations only (403 for dealers, K12). 409 WAREHOUSE_IN_USE while it has rooms.
+         */
+        delete: operations["deleteWarehouse"];
+        options?: never;
+        head?: never;
+        /**
+         * Edit a warehouse
+         * @description Needs `warehouse.write`; center and distributor organizations only (403 for dealers, K12). A new code re-derives the full_code of every location below it.
+         */
+        patch: operations["updateWarehouse"];
+        trace?: never;
+    };
+    "/v1/warehouse/warehouses/{uuid}/rooms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Rooms of a warehouse
+         * @description Needs `warehouse.read`; center and distributor organizations only (403 for dealers, K12). Works on the active organization's own warehouses.
+         */
+        get: operations["listWarehouseRooms"];
+        put?: never;
+        /**
+         * Add a room
+         * @description Needs `warehouse.write`; center and distributor organizations only (403 for dealers, K12). `code` is unique within the warehouse (409 WAREHOUSE_CODE_TAKEN).
+         */
+        post: operations["createWarehouseRoom"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/rooms/reorder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reorder rooms
+         * @description Needs `warehouse.write`; center and distributor organizations only (403 for dealers, K12). The rooms belong to one warehouse; sort_order becomes the position.
+         */
+        post: operations["reorderWarehouseRooms"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/rooms/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * One room
+         * @description Needs `warehouse.read`; center and distributor organizations only (403 for dealers, K12). Works on the active organization's own warehouses.
+         */
+        get: operations["getWarehouseRoom"];
+        put?: never;
+        post?: never;
+        /**
+         * Remove an empty room
+         * @description Needs `warehouse.write`; center and distributor organizations only (403 for dealers, K12). 409 WAREHOUSE_IN_USE while it has locations.
+         */
+        delete: operations["deleteWarehouseRoom"];
+        options?: never;
+        head?: never;
+        /**
+         * Edit a room
+         * @description Needs `warehouse.write`; center and distributor organizations only (403 for dealers, K12). A new code re-derives the full_code of every location in it.
+         */
+        patch: operations["updateWarehouseRoom"];
+        trace?: never;
+    };
+    "/v1/warehouse/rooms/{uuid}/locations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Location tree of a room
+         * @description Needs `warehouse.read`; center and distributor organizations only (403 for dealers, K12). Works on the active organization's own warehouses. Flat list; build the tree with parent_uuid, siblings by sort_order.
+         */
+        get: operations["listWarehouseRoomLocations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/locations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a location
+         * @description Needs `warehouse.write`; center and distributor organizations only (403 for dealers, K12). Tree: aisle at the room root; shelf at the room root or under an aisle; bin under a shelf (400 VALIDATION_ERROR otherwise). full_code = <warehouse>-<room>-<ancestors>-<code>, unique per organization (409 WAREHOUSE_CODE_TAKEN).
+         */
+        post: operations["createWarehouseLocation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/locations/reorder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reorder sibling locations
+         * @description Needs `warehouse.write`; center and distributor organizations only (403 for dealers, K12). The locations share room and parent (400 VALIDATION_ERROR otherwise).
+         */
+        post: operations["reorderWarehouseLocations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/locations/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate a location tree
+         * @description Needs `warehouse.write`; center and distributor organizations only (403 for dealers, K12). Every node of a level gets every code of the next level, e.g. aisle A x shelf 1-10 x bin 1-5 (pad 2: 01..10). Existing siblings with the same code are reused. At most 2000 nodes per request; one transaction.
+         */
+        post: operations["generateWarehouseLocations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/locations/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * One location
+         * @description Needs `warehouse.read`; center and distributor organizations only (403 for dealers, K12). Works on the active organization's own warehouses.
+         */
+        get: operations["getWarehouseLocation"];
+        put?: never;
+        post?: never;
+        /**
+         * Remove a location
+         * @description Needs `warehouse.write`; center and distributor organizations only (403 for dealers, K12). 409 WAREHOUSE_IN_USE while it has children or stock history; deactivate it instead.
+         */
+        delete: operations["deleteWarehouseLocation"];
+        options?: never;
+        head?: never;
+        /**
+         * Edit a location
+         * @description Needs `warehouse.write`; center and distributor organizations only (403 for dealers, K12). A new code re-derives the full_code of the location and its subtree.
+         */
+        patch: operations["updateWarehouseLocation"];
+        trace?: never;
+    };
     "/v1/public/product-images/{key}": {
         parameters: {
             query?: never;
@@ -8456,6 +8723,166 @@ export interface components {
                 limit: number;
                 offset: number;
             };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @description Upper-cased on save; the hyphen is the full_code separator. */
+        WarehouseCode: string;
+        Warehouse: {
+            /** Format: uuid */
+            uuid: string;
+            code: string;
+            name: string;
+            address: string | null;
+            active: boolean;
+            sort_order: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        WarehouseInput: {
+            code: components["schemas"]["WarehouseCode"];
+            /** @description Defaults to the code. */
+            name?: string;
+            address?: string | null;
+        };
+        WarehousePatch: {
+            code?: components["schemas"]["WarehouseCode"];
+            name?: string;
+            address?: string | null;
+            active?: boolean;
+        };
+        WarehouseReorderInput: {
+            uuids: string[];
+        };
+        WarehouseRoom: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            warehouse_uuid: string;
+            code: string;
+            name: string;
+            active: boolean;
+            sort_order: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        WarehouseRoomInput: {
+            code: components["schemas"]["WarehouseCode"];
+            /** @description Defaults to the code. */
+            name?: string;
+        };
+        WarehouseRoomPatch: {
+            code?: components["schemas"]["WarehouseCode"];
+            name?: string;
+            active?: boolean;
+        };
+        /** @enum {string} */
+        WarehouseLocationType: "aisle" | "shelf" | "bin";
+        WarehouseLocation: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            warehouse_uuid: string;
+            /** Format: uuid */
+            room_uuid: string;
+            /** Format: uuid */
+            parent_uuid: string | null;
+            type: components["schemas"]["WarehouseLocationType"];
+            code: string;
+            /** @example IST-R1-A-01-03 */
+            full_code: string;
+            name: string;
+            active: boolean;
+            sort_order: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        WarehouseLocationInput: {
+            /** Format: uuid */
+            room_uuid: string;
+            /** Format: uuid */
+            parent_uuid?: string | null;
+            type: components["schemas"]["WarehouseLocationType"];
+            code: components["schemas"]["WarehouseCode"];
+            /** @description Defaults to the code. */
+            name?: string;
+        };
+        WarehouseLocationPatch: {
+            code?: components["schemas"]["WarehouseCode"];
+            name?: string;
+            active?: boolean;
+        };
+        /** @description Either `codes`, or the range `from`..`to` rendered as prefix + zero-padded number. */
+        WarehouseGenerateLevel: {
+            type: components["schemas"]["WarehouseLocationType"];
+            codes?: components["schemas"]["WarehouseCode"][];
+            from?: number;
+            to?: number;
+            pad?: number;
+            prefix?: string;
+        };
+        WarehouseGenerateInput: {
+            /** Format: uuid */
+            room_uuid: string;
+            /** Format: uuid */
+            parent_uuid?: string | null;
+            levels: components["schemas"]["WarehouseGenerateLevel"][];
+        };
+        WarehouseGenerateResult: {
+            created: number;
+            existing: number;
+        };
+        EnvelopeWarehouse: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Warehouse"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWarehouseList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["Warehouse"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWarehouseRoom: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WarehouseRoom"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWarehouseRoomList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["WarehouseRoom"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWarehouseLocation: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WarehouseLocation"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWarehouseLocationList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["WarehouseLocation"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWarehouseGenerateResult: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WarehouseGenerateResult"];
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
@@ -15917,6 +16344,535 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    listWarehouses: {
+        parameters: {
+            query?: {
+                active?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Warehouses */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    createWarehouse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseInput"];
+            };
+        };
+        responses: {
+            /** @description Created warehouse */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    reorderWarehouses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseReorderInput"];
+            };
+        };
+        responses: {
+            /** @description Reordered */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getWarehouse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Warehouse */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteWarehouse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    updateWarehouse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehousePatch"];
+            };
+        };
+        responses: {
+            /** @description Warehouse */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    listWarehouseRooms: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rooms */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseRoomList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createWarehouseRoom: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseRoomInput"];
+            };
+        };
+        responses: {
+            /** @description Created room */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseRoom"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    reorderWarehouseRooms: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseReorderInput"];
+            };
+        };
+        responses: {
+            /** @description Reordered */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getWarehouseRoom: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Room */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseRoom"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteWarehouseRoom: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    updateWarehouseRoom: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseRoomPatch"];
+            };
+        };
+        responses: {
+            /** @description Room */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseRoom"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    listWarehouseRoomLocations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Locations */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseLocationList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createWarehouseLocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseLocationInput"];
+            };
+        };
+        responses: {
+            /** @description Created location */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseLocation"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    reorderWarehouseLocations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseReorderInput"];
+            };
+        };
+        responses: {
+            /** @description Reordered */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    generateWarehouseLocations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseGenerateInput"];
+            };
+        };
+        responses: {
+            /** @description Generation counts */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseGenerateResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getWarehouseLocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Location */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseLocation"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteWarehouseLocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    updateWarehouseLocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseLocationPatch"];
+            };
+        };
+        responses: {
+            /** @description Location */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseLocation"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     getPublicProductImage: {

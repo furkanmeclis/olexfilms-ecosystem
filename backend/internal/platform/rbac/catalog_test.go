@@ -295,6 +295,30 @@ func TestWarrantyGrants(t *testing.T) {
 	}
 }
 
+// TEC-201 (K12): the warehouse module belongs to the center and the
+// distributor; no dealer role holds warehouse.*.
+func TestWarehouseGrants(t *testing.T) {
+	for _, slug := range []string{RoleCenterWarehouse, RoleDistributorOwner, RoleDistributorWarehouseStaff} {
+		r, _ := RoleBySlug(slug)
+		if _, ok := r.Grants[PermWarehouseRead]; !ok {
+			t.Fatalf("%s must hold warehouse.read", slug)
+		}
+		if _, ok := r.Grants[PermWarehouseWrite]; !ok {
+			t.Fatalf("%s must hold warehouse.write", slug)
+		}
+	}
+	for _, r := range Roles {
+		if r.OrgType != OrgTypeDealer {
+			continue
+		}
+		for _, slug := range []string{PermWarehouseRead, PermWarehouseWrite} {
+			if _, ok := r.Grants[slug]; ok {
+				t.Fatalf("%s must not hold %s (K12)", r.Slug, slug)
+			}
+		}
+	}
+}
+
 // TEC-214: tasks.* are center-only (brand scope); every center role holds
 // both, no distributor or dealer role holds either.
 func TestTaskGrants(t *testing.T) {

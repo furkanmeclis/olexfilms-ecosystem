@@ -194,6 +194,7 @@ type Querier interface {
 	CreateQRLoginChallenge(ctx context.Context, arg CreateQRLoginChallengeParams) (QrLoginChallenge, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
 	CreateRole(ctx context.Context, arg CreateRoleParams) (Role, error)
+	CreateRoom(ctx context.Context, arg CreateRoomParams) (Room, error)
 	// TEC-178 (F1-05a): services, service items, images and status logs
 	// (migration 000050). Every read is brand-bound (K20, decision 2: the
 	// brand is the service organization's brand). Transitions lock the row
@@ -224,6 +225,7 @@ type Querier interface {
 	// Sibling dealer transfer requests (K13).
 	CreateStockTransferRequest(ctx context.Context, arg CreateStockTransferRequestParams) (StockTransferRequest, error)
 	CreateTerritory(ctx context.Context, arg CreateTerritoryParams) (Territory, error)
+	CreateTypedLocation(ctx context.Context, arg CreateTypedLocationParams) (WarehouseLocation, error)
 	// ---------------------------------------------------------------------------
 	// Units.
 	CreateUnit(ctx context.Context, arg CreateUnitParams) (Unit, error)
@@ -232,6 +234,7 @@ type Querier interface {
 	// ---------------------------------------------------------------------------
 	// Vehicle transfers.
 	CreateVehicleTransfer(ctx context.Context, arg CreateVehicleTransferParams) (VehicleTransfer, error)
+	CreateWarehouse(ctx context.Context, arg CreateWarehouseParams) (Warehouse, error)
 	// TEC-153: stock ledger primitives for ledger.Post (TEC-154) and the stock
 	// API. Every write goes through ledger.Post inside one transaction: lock the
 	// state row (FOR UPDATE), append the movement, update the projections.
@@ -300,6 +303,7 @@ type Querier interface {
 	DeletePushSubscriptionByEndpoint(ctx context.Context, endpoint string) error
 	DeleteRole(ctx context.Context, argUuid uuid.UUID) error
 	DeleteRolePermission(ctx context.Context, arg DeleteRolePermissionParams) error
+	DeleteRoom(ctx context.Context, arg DeleteRoomParams) (int64, error)
 	DeleteServiceImage(ctx context.Context, arg DeleteServiceImageParams) (ServiceImage, error)
 	DeleteServiceItem(ctx context.Context, arg DeleteServiceItemParams) (int64, error)
 	DeleteServiceItemsByService(ctx context.Context, serviceID int64) (int64, error)
@@ -310,8 +314,10 @@ type Querier interface {
 	DeleteStorageTrashByUUID(ctx context.Context, argUuid uuid.UUID) error
 	DeleteSystemModuleFlag(ctx context.Context, moduleKey string) (int64, error)
 	DeleteTerritory(ctx context.Context, arg DeleteTerritoryParams) (int64, error)
+	DeleteTypedLocation(ctx context.Context, arg DeleteTypedLocationParams) (int64, error)
 	DeleteUnitCurrentStateForRepair(ctx context.Context, unitID int64) error
 	DeleteUserTOTP(ctx context.Context, userID int64) error
+	DeleteWarehouse(ctx context.Context, arg DeleteWarehouseParams) (int64, error)
 	DeleteWebAuthnCredentialByCredentialID(ctx context.Context, credentialID string) error
 	DeleteWebAuthnCredentialByUUID(ctx context.Context, arg DeleteWebAuthnCredentialByUUIDParams) error
 	// Every organization below the given one (not including itself).
@@ -341,6 +347,8 @@ type Querier interface {
 	// The rate of a pair (either direction) on the latest day within
 	// [min_date, on_date]; on that day manual > tcmb > ecb, direct before inverse.
 	FindPairRate(ctx context.Context, arg FindPairRateParams) (FindPairRateRow, error)
+	// The sibling with this code (bulk generation reuses existing nodes).
+	FindTypedLocationChild(ctx context.Context, arg FindTypedLocationChildParams) (WarehouseLocation, error)
 	// Plate lookup (not unique: plates change hands).
 	FindVehiclesByPlate(ctx context.Context, arg FindVehiclesByPlateParams) ([]Vehicle, error)
 	// Duplicate-VIN warning (VIN is not unique; ownership transfer is F1-06).
@@ -493,6 +501,8 @@ type Querier interface {
 	GetRoleByID(ctx context.Context, id int64) (Role, error)
 	GetRoleBySlug(ctx context.Context, slug string) (Role, error)
 	GetRoleByUUID(ctx context.Context, argUuid uuid.UUID) (Role, error)
+	GetRoomByID(ctx context.Context, arg GetRoomByIDParams) (Room, error)
+	GetRoomByUUID(ctx context.Context, arg GetRoomByUUIDParams) (Room, error)
 	GetService(ctx context.Context, arg GetServiceParams) (Service, error)
 	// Public warranty / PDF lookup by number (unique across brands).
 	GetServiceByNo(ctx context.Context, serviceNo string) (Service, error)
@@ -524,6 +534,7 @@ type Querier interface {
 	GetTaskSubjectOrg(ctx context.Context, arg GetTaskSubjectOrgParams) (GetTaskSubjectOrgRow, error)
 	GetTaskView(ctx context.Context, arg GetTaskViewParams) (GetTaskViewRow, error)
 	GetTransferRequestByUUID(ctx context.Context, arg GetTransferRequestByUUIDParams) (StockTransferRequest, error)
+	GetTypedLocationByUUID(ctx context.Context, arg GetTypedLocationByUUIDParams) (WarehouseLocation, error)
 	GetUnit(ctx context.Context, id int64) (Unit, error)
 	GetUnitByBarcode(ctx context.Context, arg GetUnitByBarcodeParams) (Unit, error)
 	GetUnitByUUID(ctx context.Context, argUuid uuid.UUID) (Unit, error)
@@ -543,7 +554,12 @@ type Querier interface {
 	GetVehicleTransferByUUID(ctx context.Context, arg GetVehicleTransferByUUIDParams) (VehicleTransfer, error)
 	// Vehicle with its customer and car brand/model, for API responses.
 	GetVehicleViewByUUID(ctx context.Context, argUuid uuid.UUID) (GetVehicleViewByUUIDRow, error)
+	GetWarehouseByID(ctx context.Context, arg GetWarehouseByIDParams) (Warehouse, error)
+	GetWarehouseByUUID(ctx context.Context, arg GetWarehouseByUUIDParams) (Warehouse, error)
 	GetWarehouseLocation(ctx context.Context, arg GetWarehouseLocationParams) (WarehouseLocation, error)
+	// TEC-201: typed locations (000059) repeat sibling codes, so they are
+	// addressed by full_code; legacy locations keep their organization-unique
+	// code.
 	GetWarehouseLocationByCode(ctx context.Context, arg GetWarehouseLocationByCodeParams) (WarehouseLocation, error)
 	GetWarehouseLocationByUUID(ctx context.Context, argUuid uuid.UUID) (WarehouseLocation, error)
 	GetWarranty(ctx context.Context, arg GetWarrantyParams) (Warranty, error)
@@ -737,6 +753,7 @@ type Querier interface {
 	ListLatestKVKKNotices(ctx context.Context) ([]KvkkNotice, error)
 	ListLatestLegalTexts(ctx context.Context, kind string) ([]LegalText, error)
 	ListLegalTextVersions(ctx context.Context, arg ListLegalTextVersionsParams) ([]LegalText, error)
+	ListLocationsByUUIDs(ctx context.Context, arg ListLocationsByUUIDsParams) ([]WarehouseLocation, error)
 	ListLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
 	// Grants of the user's roles in one organization (active org context).
 	ListMemberGrants(ctx context.Context, arg ListMemberGrantsParams) ([]ListMemberGrantsRow, error)
@@ -829,6 +846,15 @@ type Querier interface {
 	ListRolesFiltered(ctx context.Context, arg ListRolesFilteredParams) ([]Role, error)
 	ListRolesForExport(ctx context.Context, q_ pgtype.Text) ([]Role, error)
 	ListRolesForUserIDs(ctx context.Context, userIds []int64) ([]ListRolesForUserIDsRow, error)
+	// ---------------------------------------------------------------------------
+	// Typed locations (aisle, shelf, bin).
+	// The whole tree of a room, parents before children is not guaranteed:
+	// callers group by parent_id and order siblings by sort_order.
+	ListRoomLocations(ctx context.Context, arg ListRoomLocationsParams) ([]WarehouseLocation, error)
+	// ---------------------------------------------------------------------------
+	// Rooms.
+	ListRooms(ctx context.Context, arg ListRoomsParams) ([]Room, error)
+	ListRoomsByUUIDs(ctx context.Context, arg ListRoomsByUUIDsParams) ([]Room, error)
 	// Vehicles of customers linked to the organizations in scope; the brand is
 	// always the domain brand (K20).
 	ListScopedVehicles(ctx context.Context, arg ListScopedVehiclesParams) ([]ListScopedVehiclesRow, error)
@@ -911,6 +937,12 @@ type Querier interface {
 	ListVehiclesInScope(ctx context.Context, arg ListVehiclesInScopeParams) ([]ListVehiclesInScopeRow, error)
 	ListWarehouseLocations(ctx context.Context, arg ListWarehouseLocationsParams) ([]WarehouseLocation, error)
 	ListWarehouseLocationsByIDs(ctx context.Context, ids []int64) ([]WarehouseLocation, error)
+	// TEC-201: warehouse and location tree (000059). Every query is bound to
+	// one organization; the warehouse side is brand-independent (K20).
+	// ---------------------------------------------------------------------------
+	// Warehouses.
+	ListWarehouses(ctx context.Context, arg ListWarehousesParams) ([]Warehouse, error)
+	ListWarehousesByUUIDs(ctx context.Context, arg ListWarehousesByUUIDsParams) ([]Warehouse, error)
 	// All warranties of a service (one PDF per service, decision 2).
 	ListWarrantiesByService(ctx context.Context, arg ListWarrantiesByServiceParams) ([]Warranty, error)
 	ListWarrantiesByVehicle(ctx context.Context, arg ListWarrantiesByVehicleParams) ([]Warranty, error)
@@ -1122,6 +1154,7 @@ type Querier interface {
 	SetCustomerTaxNo(ctx context.Context, arg SetCustomerTaxNoParams) (CustomerProfile, error)
 	// TEC-158: staged importers keep their apply/undo report in preview_json.
 	SetImportJobPreview(ctx context.Context, arg SetImportJobPreviewParams) (ImportJob, error)
+	SetLocationSortOrder(ctx context.Context, arg SetLocationSortOrderParams) (int64, error)
 	SetNotificationChannelEnabled(ctx context.Context, arg SetNotificationChannelEnabledParams) (NotificationChannelSetting, error)
 	SetOrderCancelReason(ctx context.Context, arg SetOrderCancelReasonParams) (Order, error)
 	SetOrderExternalReference(ctx context.Context, arg SetOrderExternalReferenceParams) (Order, error)
@@ -1138,6 +1171,7 @@ type Querier interface {
 	// that changed so the caller can reindex them.
 	SetProductsActiveByUUIDs(ctx context.Context, arg SetProductsActiveByUUIDsParams) ([]uuid.UUID, error)
 	SetRolePermissions(ctx context.Context, roleID int64) error
+	SetRoomSortOrder(ctx context.Context, arg SetRoomSortOrderParams) (int64, error)
 	// Written in the completion transaction before the status flips.
 	SetServiceItemMovement(ctx context.Context, arg SetServiceItemMovementParams) (ServiceItem, error)
 	SetServiceReviewRequestSent(ctx context.Context, id int64) (Service, error)
@@ -1154,6 +1188,7 @@ type Querier interface {
 	// customer snapshot, 000050).
 	SetVehicleOwner(ctx context.Context, arg SetVehicleOwnerParams) (Vehicle, error)
 	SetVehicleTransferVerified(ctx context.Context, arg SetVehicleTransferVerifiedParams) (VehicleTransfer, error)
+	SetWarehouseSortOrder(ctx context.Context, arg SetWarehouseSortOrderParams) (int64, error)
 	SetWhatsAppInstance(ctx context.Context, arg SetWhatsAppInstanceParams) (WhatsappSetting, error)
 	SetWhatsAppSMSFallback(ctx context.Context, smsFallbackEnabled bool) (WhatsappSetting, error)
 	ShipTransferRequest(ctx context.Context, arg ShipTransferRequestParams) (StockTransferRequest, error)
@@ -1210,6 +1245,7 @@ type Querier interface {
 	// Full replacement of the editable fields (read-modify-write in the use case).
 	UpdateProductCategory(ctx context.Context, arg UpdateProductCategoryParams) (ProductCategory, error)
 	UpdateRole(ctx context.Context, arg UpdateRoleParams) (Role, error)
+	UpdateRoom(ctx context.Context, arg UpdateRoomParams) (Room, error)
 	// Edits the form fields (wizard steps 1, 2 and 4). The caller has locked
 	// the row and checked the form lock (completed / cancelled: center only).
 	UpdateService(ctx context.Context, arg UpdateServiceParams) (Service, error)
@@ -1222,6 +1258,7 @@ type Querier interface {
 	UpdateStockImportBatchStatus(ctx context.Context, arg UpdateStockImportBatchStatusParams) (StockImportBatch, error)
 	UpdateStockImportRowResult(ctx context.Context, arg UpdateStockImportRowResultParams) (StockImportRow, error)
 	UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, error)
+	UpdateTypedLocation(ctx context.Context, arg UpdateTypedLocationParams) (WarehouseLocation, error)
 	// Optimistic check on version in addition to the row lock.
 	UpdateUnitCurrentState(ctx context.Context, arg UpdateUnitCurrentStateParams) (UnitCurrentState, error)
 	UpdateUnitExternal(ctx context.Context, arg UpdateUnitExternalParams) (Unit, error)
@@ -1240,6 +1277,7 @@ type Querier interface {
 	UpdateUserTOTPRecoveryHashes(ctx context.Context, arg UpdateUserTOTPRecoveryHashesParams) error
 	// Full replace of the editable fields (the caller reads the row first).
 	UpdateVehicle(ctx context.Context, arg UpdateVehicleParams) (Vehicle, error)
+	UpdateWarehouse(ctx context.Context, arg UpdateWarehouseParams) (Warehouse, error)
 	UpdateWarehouseLocation(ctx context.Context, arg UpdateWarehouseLocationParams) (WarehouseLocation, error)
 	UpdateWebAuthnCredentialCounter(ctx context.Context, arg UpdateWebAuthnCredentialCounterParams) error
 	UpdateWebAuthnCredentialName(ctx context.Context, arg UpdateWebAuthnCredentialNameParams) (WebauthnCredential, error)

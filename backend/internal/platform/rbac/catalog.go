@@ -640,9 +640,10 @@ var Roles = []RoleDef{
 			// TEC-171: read and dispute only (TEC-99 decision 7).
 			PermAccountingRead:    ScopeManaged,
 			PermAccountingDispute: ScopeManaged,
-			PermWarehouseRead:     ScopeManaged,
-			PermStockRead:         ScopeManaged,
-			PermModulesRead:       ScopeManaged,
+			// TEC-201 (000059): no warehouse.read; locations and counts
+			// belong to the center and the distributor (K12).
+			PermStockRead:   ScopeManaged,
+			PermModulesRead: ScopeManaged,
 			// TEC-165 (000049): buyer side and K13 transfer requests.
 			PermOrdersRead:       ScopeManaged,
 			PermOrdersWrite:      ScopeManaged,
