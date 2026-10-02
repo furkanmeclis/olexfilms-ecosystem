@@ -87,5 +87,15 @@
   "codes.STOCK_RECLASSIFICATION_PRODUCT_CHANGED": "Товар одиниці змінився після запиту.",
   "codes.STOCK_RECLASSIFICATION_NOT_PENDING": "Цей запит на перекласифікацію вже вирішено.",
   "codes.STOCK_RECLASSIFICATION_PENDING_EXISTS": "Для цієї одиниці вже є запит на перекласифікацію, що очікує.",
-  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Ви не можете схвалити власний запит."
+  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Ви не можете схвалити власний запит.",
+  "codes.VEHICLE_TRANSFER_UNAVAILABLE": "Передача автомобіля зараз недоступна.",
+  "codes.VEHICLE_TRANSFER_PENDING": "Для цього автомобіля вже є передача в очікуванні; спершу завершіть або скасуйте її.",
+  "codes.VEHICLE_TRANSFER_SAME_OWNER": "Новий власник — це поточний власник.",
+  "codes.VEHICLE_TRANSFER_OWNER_NO_PHONE": "У поточного власника немає телефону; код неможливо надіслати.",
+  "codes.VEHICLE_TRANSFER_NOT_PENDING": "Передача більше не очікує.",
+  "codes.VEHICLE_TRANSFER_EXPIRED": "Термін передачі минув; почніть нову.",
+  "codes.VEHICLE_TRANSFER_INVALID_CODE": "Код неправильний.",
+  "codes.VEHICLE_TRANSFER_LOCKED": "Забагато неправильних кодів; передачу скасовано.",
+  "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "Не вдалося надіслати коди. Спробуйте пізніше.",
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Власник автомобіля змінився; почніть нову передачу."
 }

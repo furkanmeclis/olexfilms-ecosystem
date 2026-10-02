@@ -87,5 +87,15 @@
   "codes.STOCK_RECLASSIFICATION_PRODUCT_CHANGED": "Das Produkt der Einheit hat sich nach der Anfrage geändert.",
   "codes.STOCK_RECLASSIFICATION_NOT_PENDING": "Über diese Umklassifizierungsanfrage wurde bereits entschieden.",
   "codes.STOCK_RECLASSIFICATION_PENDING_EXISTS": "Für diese Einheit gibt es bereits eine offene Umklassifizierungsanfrage.",
-  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Sie können Ihre eigene Anfrage nicht genehmigen."
+  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Sie können Ihre eigene Anfrage nicht genehmigen.",
+  "codes.VEHICLE_TRANSFER_UNAVAILABLE": "Die Fahrzeugübertragung ist derzeit nicht verfügbar.",
+  "codes.VEHICLE_TRANSFER_PENDING": "Für dieses Fahrzeug gibt es bereits eine ausstehende Übertragung; schließen Sie sie zuerst ab oder brechen Sie sie ab.",
+  "codes.VEHICLE_TRANSFER_SAME_OWNER": "Der neue Eigentümer ist der bisherige Eigentümer.",
+  "codes.VEHICLE_TRANSFER_OWNER_NO_PHONE": "Der bisherige Eigentümer hat keine Telefonnummer; es kann kein Code gesendet werden.",
+  "codes.VEHICLE_TRANSFER_NOT_PENDING": "Die Übertragung ist nicht mehr ausstehend.",
+  "codes.VEHICLE_TRANSFER_EXPIRED": "Die Übertragung ist abgelaufen; starten Sie eine neue.",
+  "codes.VEHICLE_TRANSFER_INVALID_CODE": "Der Code ist falsch.",
+  "codes.VEHICLE_TRANSFER_LOCKED": "Zu viele falsche Codes; die Übertragung wurde abgebrochen.",
+  "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "Die Codes konnten nicht gesendet werden. Versuchen Sie es später erneut.",
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Der Fahrzeugeigentümer hat sich geändert; starten Sie eine neue Übertragung."
 }

@@ -87,5 +87,15 @@
   "codes.STOCK_RECLASSIFICATION_PRODUCT_CHANGED": "The unit's product changed after the request.",
   "codes.STOCK_RECLASSIFICATION_NOT_PENDING": "This reclassification request has already been decided.",
   "codes.STOCK_RECLASSIFICATION_PENDING_EXISTS": "This unit already has a pending reclassification request.",
-  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "You can't approve your own request."
+  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "You can't approve your own request.",
+  "codes.VEHICLE_TRANSFER_UNAVAILABLE": "Vehicle transfer is not available right now.",
+  "codes.VEHICLE_TRANSFER_PENDING": "This vehicle already has a pending transfer; complete or cancel it first.",
+  "codes.VEHICLE_TRANSFER_SAME_OWNER": "The new owner is the current owner.",
+  "codes.VEHICLE_TRANSFER_OWNER_NO_PHONE": "The current owner has no phone number; no code can be sent.",
+  "codes.VEHICLE_TRANSFER_NOT_PENDING": "The transfer is no longer pending.",
+  "codes.VEHICLE_TRANSFER_EXPIRED": "The transfer expired; start a new one.",
+  "codes.VEHICLE_TRANSFER_INVALID_CODE": "The code is wrong.",
+  "codes.VEHICLE_TRANSFER_LOCKED": "Too many wrong codes; the transfer was cancelled.",
+  "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "The codes could not be sent. Try again later.",
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "The vehicle owner changed; start a new transfer."
 }

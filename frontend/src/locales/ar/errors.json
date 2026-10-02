@@ -87,5 +87,15 @@
   "codes.STOCK_RECLASSIFICATION_PRODUCT_CHANGED": "تغيّر منتج الوحدة بعد الطلب.",
   "codes.STOCK_RECLASSIFICATION_NOT_PENDING": "تم البت في طلب إعادة التصنيف هذا بالفعل.",
   "codes.STOCK_RECLASSIFICATION_PENDING_EXISTS": "يوجد طلب إعادة تصنيف معلّق لهذه الوحدة بالفعل.",
-  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "لا يمكنك الموافقة على طلبك."
+  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "لا يمكنك الموافقة على طلبك.",
+  "codes.VEHICLE_TRANSFER_UNAVAILABLE": "نقل ملكية المركبة غير متاح حاليًا.",
+  "codes.VEHICLE_TRANSFER_PENDING": "توجد عملية نقل معلقة لهذه المركبة؛ أكملها أو ألغها أولًا.",
+  "codes.VEHICLE_TRANSFER_SAME_OWNER": "المالك الجديد هو نفسه المالك الحالي.",
+  "codes.VEHICLE_TRANSFER_OWNER_NO_PHONE": "لا يوجد رقم هاتف للمالك الحالي؛ لا يمكن إرسال الرمز.",
+  "codes.VEHICLE_TRANSFER_NOT_PENDING": "لم تعد عملية النقل معلقة.",
+  "codes.VEHICLE_TRANSFER_EXPIRED": "انتهت صلاحية النقل؛ ابدأ عملية جديدة.",
+  "codes.VEHICLE_TRANSFER_INVALID_CODE": "الرمز غير صحيح.",
+  "codes.VEHICLE_TRANSFER_LOCKED": "عدد كبير من الرموز الخاطئة؛ تم إلغاء النقل.",
+  "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "تعذر إرسال الرموز. حاول لاحقًا.",
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "تغيّر مالك المركبة؛ ابدأ عملية نقل جديدة."
 }

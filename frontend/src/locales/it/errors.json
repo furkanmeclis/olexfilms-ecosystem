@@ -87,5 +87,15 @@
   "codes.STOCK_RECLASSIFICATION_PRODUCT_CHANGED": "Il prodotto dell'unità è cambiato dopo la richiesta.",
   "codes.STOCK_RECLASSIFICATION_NOT_PENDING": "Questa richiesta di riclassificazione è già stata decisa.",
   "codes.STOCK_RECLASSIFICATION_PENDING_EXISTS": "Per questa unità esiste già una richiesta di riclassificazione in attesa.",
-  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Non puoi approvare la tua richiesta."
+  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Non puoi approvare la tua richiesta.",
+  "codes.VEHICLE_TRANSFER_UNAVAILABLE": "Il trasferimento del veicolo non è disponibile al momento.",
+  "codes.VEHICLE_TRANSFER_PENDING": "Per questo veicolo c'è già un trasferimento in attesa; lo completi o lo annulli prima.",
+  "codes.VEHICLE_TRANSFER_SAME_OWNER": "Il nuovo proprietario è l'attuale proprietario.",
+  "codes.VEHICLE_TRANSFER_OWNER_NO_PHONE": "L'attuale proprietario non ha un telefono; non è possibile inviare il codice.",
+  "codes.VEHICLE_TRANSFER_NOT_PENDING": "Il trasferimento non è più in attesa.",
+  "codes.VEHICLE_TRANSFER_EXPIRED": "Il trasferimento è scaduto; ne avvii uno nuovo.",
+  "codes.VEHICLE_TRANSFER_INVALID_CODE": "Il codice è errato.",
+  "codes.VEHICLE_TRANSFER_LOCKED": "Troppi codici errati; il trasferimento è stato annullato.",
+  "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "Non è stato possibile inviare i codici. Riprovi più tardi.",
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Il proprietario del veicolo è cambiato; avvii un nuovo trasferimento."
 }

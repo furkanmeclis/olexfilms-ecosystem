@@ -87,5 +87,15 @@
   "codes.STOCK_RECLASSIFICATION_PRODUCT_CHANGED": "Το προϊόν της μονάδας άλλαξε μετά το αίτημα.",
   "codes.STOCK_RECLASSIFICATION_NOT_PENDING": "Αυτό το αίτημα επαναταξινόμησης έχει ήδη κριθεί.",
   "codes.STOCK_RECLASSIFICATION_PENDING_EXISTS": "Υπάρχει ήδη εκκρεμές αίτημα επαναταξινόμησης για αυτή τη μονάδα.",
-  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Δεν μπορείτε να εγκρίνετε το δικό σας αίτημα."
+  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Δεν μπορείτε να εγκρίνετε το δικό σας αίτημα.",
+  "codes.VEHICLE_TRANSFER_UNAVAILABLE": "Η μεταβίβαση οχήματος δεν είναι διαθέσιμη αυτή τη στιγμή.",
+  "codes.VEHICLE_TRANSFER_PENDING": "Υπάρχει ήδη εκκρεμής μεταβίβαση για αυτό το όχημα· ολοκληρώστε ή ακυρώστε την πρώτα.",
+  "codes.VEHICLE_TRANSFER_SAME_OWNER": "Ο νέος ιδιοκτήτης είναι ο τρέχων ιδιοκτήτης.",
+  "codes.VEHICLE_TRANSFER_OWNER_NO_PHONE": "Ο τρέχων ιδιοκτήτης δεν έχει τηλέφωνο· δεν μπορεί να σταλεί κωδικός.",
+  "codes.VEHICLE_TRANSFER_NOT_PENDING": "Η μεταβίβαση δεν είναι πλέον σε εκκρεμότητα.",
+  "codes.VEHICLE_TRANSFER_EXPIRED": "Η μεταβίβαση έληξε· ξεκινήστε νέα.",
+  "codes.VEHICLE_TRANSFER_INVALID_CODE": "Ο κωδικός είναι λανθασμένος.",
+  "codes.VEHICLE_TRANSFER_LOCKED": "Πάρα πολλοί λανθασμένοι κωδικοί· η μεταβίβαση ακυρώθηκε.",
+  "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "Οι κωδικοί δεν στάλθηκαν. Δοκιμάστε ξανά αργότερα.",
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Ο ιδιοκτήτης του οχήματος άλλαξε· ξεκινήστε νέα μεταβίβαση."
 }

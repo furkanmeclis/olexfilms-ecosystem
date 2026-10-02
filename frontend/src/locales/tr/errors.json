@@ -87,5 +87,15 @@
   "codes.STOCK_RECLASSIFICATION_PRODUCT_CHANGED": "Talepten sonra birimin ürünü değişmiş.",
   "codes.STOCK_RECLASSIFICATION_NOT_PENDING": "Bu yeniden sınıflandırma talebi zaten sonuçlanmış.",
   "codes.STOCK_RECLASSIFICATION_PENDING_EXISTS": "Bu birim için bekleyen bir yeniden sınıflandırma talebi var.",
-  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Kendi talebinizi onaylayamazsınız."
+  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Kendi talebinizi onaylayamazsınız.",
+  "codes.VEHICLE_TRANSFER_UNAVAILABLE": "Araç devri şu an kullanılamıyor.",
+  "codes.VEHICLE_TRANSFER_PENDING": "Bu araç için bekleyen bir devir var; önce onu tamamlayın ya da iptal edin.",
+  "codes.VEHICLE_TRANSFER_SAME_OWNER": "Yeni sahip mevcut sahiple aynı kişi.",
+  "codes.VEHICLE_TRANSFER_OWNER_NO_PHONE": "Mevcut sahibin telefonu yok; kod gönderilemez.",
+  "codes.VEHICLE_TRANSFER_NOT_PENDING": "Devir artık beklemede değil.",
+  "codes.VEHICLE_TRANSFER_EXPIRED": "Devrin süresi doldu; yeni bir devir başlatın.",
+  "codes.VEHICLE_TRANSFER_INVALID_CODE": "Kod hatalı.",
+  "codes.VEHICLE_TRANSFER_LOCKED": "Çok fazla hatalı kod girildi; devir iptal edildi.",
+  "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "Kodlar gönderilemedi. Daha sonra tekrar deneyin.",
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Aracın sahibi değişti; yeni bir devir başlatın."
 }

@@ -87,5 +87,15 @@
   "codes.STOCK_RECLASSIFICATION_PRODUCT_CHANGED": "Товар единицы изменился после запроса.",
   "codes.STOCK_RECLASSIFICATION_NOT_PENDING": "По этому запросу на переклассификацию уже принято решение.",
   "codes.STOCK_RECLASSIFICATION_PENDING_EXISTS": "Для этой единицы уже есть ожидающий запрос на переклассификацию.",
-  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Вы не можете одобрить собственный запрос."
+  "codes.STOCK_RECLASSIFICATION_SELF_APPROVAL": "Вы не можете одобрить собственный запрос.",
+  "codes.VEHICLE_TRANSFER_UNAVAILABLE": "Передача автомобиля сейчас недоступна.",
+  "codes.VEHICLE_TRANSFER_PENDING": "Для этого автомобиля уже есть ожидающая передача; сначала завершите или отмените её.",
+  "codes.VEHICLE_TRANSFER_SAME_OWNER": "Новый владелец совпадает с текущим.",
+  "codes.VEHICLE_TRANSFER_OWNER_NO_PHONE": "У текущего владельца нет телефона; код отправить нельзя.",
+  "codes.VEHICLE_TRANSFER_NOT_PENDING": "Передача больше не ожидает.",
+  "codes.VEHICLE_TRANSFER_EXPIRED": "Срок передачи истёк; начните новую.",
+  "codes.VEHICLE_TRANSFER_INVALID_CODE": "Неверный код.",
+  "codes.VEHICLE_TRANSFER_LOCKED": "Слишком много неверных кодов; передача отменена.",
+  "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "Не удалось отправить коды. Попробуйте позже.",
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Владелец автомобиля изменился; начните новую передачу."
 }
