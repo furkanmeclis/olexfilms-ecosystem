@@ -52,15 +52,18 @@ type rule struct {
 	perms []string
 }
 
-// transitions is the stock-free part of the state machine (TEC-166):
+// transitions is the state machine up to shipping (TEC-166, TEC-167):
 //
 //	draft -> submitted (buyer, orders.write)
 //	submitted -> approved (seller, orders.approve; prices and rate freeze)
 //	approved -> preparing | processing (seller, orders.ship or orders.approve)
-//	draft | submitted | approved | preparing -> cancelled (either side, orders.cancel)
+//	preparing -> ready (seller, orders.ship; every line fully assigned)
+//	ready -> shipped (seller, orders.ship; order_out per assigned unit)
+//	draft | submitted | approved | preparing | ready -> cancelled
+//	    (either side, orders.cancel; active reservations are released)
 //
-// Stock-bound transitions (ready, shipped, delivered, received, cancelling)
-// arrive with TEC-167/TEC-168; until then they answer 409.
+// delivered, received and cancelling arrive with TEC-168; until then they
+// answer 409 ORDER_TRANSITION_UNAVAILABLE.
 var transitions = map[string]map[string]rule{
 	StatusDraft: {
 		StatusSubmitted: {PartyBuyer, []string{rbac.PermOrdersWrite}},
@@ -76,6 +79,11 @@ var transitions = map[string]map[string]rule{
 		StatusCancelled:  {PartyEither, []string{rbac.PermOrdersCancel}},
 	},
 	StatusPreparing: {
+		StatusReady:     {PartySeller, []string{rbac.PermOrdersShip}},
+		StatusCancelled: {PartyEither, []string{rbac.PermOrdersCancel}},
+	},
+	StatusReady: {
+		StatusShipped:   {PartySeller, []string{rbac.PermOrdersShip}},
 		StatusCancelled: {PartyEither, []string{rbac.PermOrdersCancel}},
 	},
 }
@@ -83,7 +91,7 @@ var transitions = map[string]map[string]rule{
 // supportedTargets are the statuses this API moves an order to.
 var supportedTargets = map[string]bool{
 	StatusSubmitted: true, StatusApproved: true, StatusPreparing: true,
-	StatusProcessing: true, StatusCancelled: true,
+	StatusProcessing: true, StatusReady: true, StatusShipped: true, StatusCancelled: true,
 }
 
 // lookupTransition returns the rule of from -> to, or ok=false.
@@ -132,6 +140,10 @@ func eventFor(to string) string {
 		return events.OrdersPreparing
 	case StatusProcessing:
 		return events.OrdersProcessing
+	case StatusReady:
+		return events.OrdersReady
+	case StatusShipped:
+		return events.OrdersShipped
 	case StatusCancelled:
 		return events.OrdersCancelled
 	}

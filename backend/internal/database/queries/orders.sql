@@ -250,7 +250,7 @@ WHERE order_item_id = sqlc.arg(order_item_id)
 ORDER BY id;
 
 -- name: ListOrderItemUnitsByOrder :many
-SELECT oiu.*, u.barcode, u.unit_kind
+SELECT oiu.*, u.barcode, u.unit_kind, u.uuid AS unit_uuid
 FROM order_item_units oiu
 JOIN order_items i ON i.id = oiu.order_item_id
 JOIN units u ON u.id = oiu.unit_id
@@ -326,12 +326,13 @@ JOIN order_items i ON i.id = r.order_item_id
 WHERE i.order_id = sqlc.arg(order_id)
 ORDER BY r.id;
 
--- Fixed barcodes: total actively reserved quantity, checked against the
--- holding by the use case (sum <= on hand).
+-- Fixed barcodes: total quantity actively reserved by the seller
+-- organization, checked against what that organization holds by the use
+-- case (sum <= on hand, under the unit row lock).
 -- name: SumActiveReservedQuantityByUnit :one
 SELECT COALESCE(SUM(quantity), 0)::bigint AS reserved_quantity
 FROM stock_reservations
-WHERE unit_id = sqlc.arg(unit_id) AND status = 'active';
+WHERE unit_id = sqlc.arg(unit_id) AND organization_id = sqlc.arg(organization_id) AND status = 'active';
 
 -- name: ReleaseStockReservation :one
 UPDATE stock_reservations
