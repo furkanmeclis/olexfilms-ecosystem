@@ -30,11 +30,20 @@ type orderView struct {
 		UUID string `json:"uuid"`
 	} `json:"buyer"`
 	AvailableTransitions []string `json:"available_transitions"`
+	ShippedAt            *string  `json:"shipped_at"`
 	Items                []struct {
+		UUID        string `json:"uuid"`
 		UnitPrice   string `json:"unit_price"`
 		PriceSource string `json:"price_source"`
 		LineTotal   string `json:"line_total"`
 		Quantity    *int32 `json:"quantity"`
+		Assigned    string `json:"assigned"`
+		Units       []struct {
+			UnitUUID string `json:"unit_uuid"`
+			Barcode  string `json:"barcode"`
+			Quantity *int32 `json:"quantity"`
+			Shipped  bool   `json:"shipped"`
+		} `json:"units"`
 	} `json:"items"`
 	History []struct {
 		FromStatus *string `json:"from_status"`
@@ -76,8 +85,8 @@ func (it *itest) setListPrice(p db.Product, currency, sale string) {
 // TEC-166 acceptance: center -> distributor order takes its price from the
 // effective purchase price (client prices are ignored); approval freezes the
 // rate and re-locks the prices; later price list changes leave the order
-// alone; organizations outside the order get 404; invalid and stock-bound
-// transitions answer 409. A distributor -> dealer order is invisible to the
+// alone; organizations outside the order get 404; invalid transitions and
+// the TEC-168 statuses answer 409. A distributor -> dealer order is invisible to the
 // distributor's other dealers.
 func TestIntegrationOrdersCenterToDistributor(t *testing.T) {
 	it := newIntegration(t)
@@ -210,10 +219,16 @@ func TestIntegrationOrdersCenterToDistributor(t *testing.T) {
 		t.Fatalf("frozen order moved: %+v", b)
 	}
 
-	// 6. Stock-bound transitions are not available yet (TEC-167/168).
-	for _, st := range []string{"shipped", "received", "cancelling", "ready", "delivered"} {
+	// 6. delivered, received and cancelling are not available yet
+	// (TEC-168); ready and shipped do not follow approved.
+	for _, st := range []string{"received", "cancelling", "delivered"} {
 		if code, ec := it.transition(staffTok, o.UUID, st); code != http.StatusConflict || ec != "ORDER_TRANSITION_UNAVAILABLE" {
 			t.Fatalf("%s = %d %s", st, code, ec)
+		}
+	}
+	for _, st := range []string{"ready", "shipped"} {
+		if code, ec := it.transition(staffTok, o.UUID, st); code != http.StatusConflict || ec != "ORDER_INVALID_TRANSITION" {
+			t.Fatalf("approved -> %s = %d %s", st, code, ec)
 		}
 	}
 	if code, _ := it.transition(staffTok, o.UUID, "preparing"); code != http.StatusOK {
