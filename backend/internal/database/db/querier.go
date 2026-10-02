@@ -54,6 +54,7 @@ type Querier interface {
 	ConsumeOTPAt(ctx context.Context, arg ConsumeOTPAtParams) error
 	ConsumeQRLoginChallenge(ctx context.Context, code string) (QrLoginChallenge, error)
 	ConsumeStockReservation(ctx context.Context, id int64) (StockReservation, error)
+	CountAccountingDisputes(ctx context.Context, arg CountAccountingDisputesParams) (int64, error)
 	CountActivityEvents(ctx context.Context, arg CountActivityEventsParams) (int64, error)
 	CountAllBulkJobs(ctx context.Context) (int64, error)
 	CountAllExportJobs(ctx context.Context) (int64, error)
@@ -301,6 +302,7 @@ type Querier interface {
 	FindVehiclesByPlate(ctx context.Context, arg FindVehiclesByPlateParams) ([]Vehicle, error)
 	// Duplicate-VIN warning (VIN is not unique; ownership transfer is F1-06).
 	FindVehiclesByVIN(ctx context.Context, arg FindVehiclesByVINParams) ([]Vehicle, error)
+	GetAccountingDisputeView(ctx context.Context, arg GetAccountingDisputeViewParams) (GetAccountingDisputeViewRow, error)
 	GetActiveDocumentTemplate(ctx context.Context, arg GetActiveDocumentTemplateParams) (DocumentTemplate, error)
 	// Full-unit duplicate guard before creation (decision 3); the partial
 	// unique index uq_warranties_active_full_unit is the final barrier.
@@ -483,6 +485,14 @@ type Querier interface {
 	IncrementOTPAttempts(ctx context.Context, id int64) (OtpCode, error)
 	// A wrong code: one more attempt (the use case cancels at the limit).
 	IncrementVehicleTransferAttempts(ctx context.Context, id int64) (VehicleTransfer, error)
+	// TEC-174 (F1-07d): cari disputes (K24). A dispute is visible to the
+	// disputing organization (organization_id) and to the parent it addresses
+	// (counterparty_org_id); org_ids NULL means the whole brand (brand/all
+	// scopes), otherwise any of org_ids must be one of the two sides.
+	// InsertAccountingDispute opens a dispute. A second open dispute on the
+	// same row conflicts with uq_accounting_disputes_open_entry and returns no
+	// row.
+	InsertAccountingDispute(ctx context.Context, arg InsertAccountingDisputeParams) (AccountingDispute, error)
 	InsertActivityEvent(ctx context.Context, arg InsertActivityEventParams) (ActivityEvent, error)
 	InsertAppLog(ctx context.Context, arg InsertAppLogParams) error
 	InsertBulkChange(ctx context.Context, arg InsertBulkChangeParams) (BulkChange, error)
@@ -539,6 +549,7 @@ type Querier interface {
 	// Idempotent link: a second call keeps the row and fills first_service_at
 	// only when it was empty.
 	LinkCustomerOrganization(ctx context.Context, arg LinkCustomerOrganizationParams) (CustomerOrganization, error)
+	ListAccountingDisputes(ctx context.Context, arg ListAccountingDisputesParams) ([]ListAccountingDisputesRow, error)
 	ListActiveDevicePushTokens(ctx context.Context, userID int64) ([]DevicePushToken, error)
 	ListActiveMobileSessionUUIDsForDevice(ctx context.Context, arg ListActiveMobileSessionUUIDsForDeviceParams) ([]uuid.UUID, error)
 	ListActivePublicKeys(ctx context.Context, keys []string) ([]string, error)
@@ -809,6 +820,9 @@ type Querier interface {
 	ListWebAuthnCredentialsForUserIDs(ctx context.Context, userIds []int64) ([]WebauthnCredential, error)
 	ListWhatsAppAlarmRecipients(ctx context.Context) ([]ListWhatsAppAlarmRecipientsRow, error)
 	ListWhatsAppConnectionEvents(ctx context.Context, limit int32) ([]WhatsappConnectionEvent, error)
+	// LockAccountingDispute locks a dispute addressed to the counterparty
+	// organization for its resolution.
+	LockAccountingDispute(ctx context.Context, arg LockAccountingDisputeParams) (AccountingDispute, error)
 	// Active reservations of a unit (at most one for a serial unit).
 	LockActiveReservationsByUnit(ctx context.Context, unitID int64) ([]StockReservation, error)
 	LockBinProductStock(ctx context.Context, arg LockBinProductStockParams) (BinProductStock, error)
@@ -900,6 +914,7 @@ type Querier interface {
 	// changed the list since it was read (expected).
 	ReplaceProductImages(ctx context.Context, arg ReplaceProductImagesParams) (Product, error)
 	ReplaceUserRoles(ctx context.Context, userID int64) error
+	ResolveAccountingDispute(ctx context.Context, arg ResolveAccountingDisputeParams) (AccountingDispute, error)
 	// Success: phone gets the E.164 form and phone_raw is cleared. A phone
 	// written by the API in the meantime is kept (only phone_raw is cleared).
 	ResolveOrganizationRawPhone(ctx context.Context, arg ResolveOrganizationRawPhoneParams) (int64, error)

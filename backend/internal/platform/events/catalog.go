@@ -24,6 +24,16 @@ const (
 	FinanceEntryVoided = "finance.entry_voided"
 )
 
+// Accounting dispute events (TEC-174, K24): written to the outbox in the
+// transaction that opens, resolves or rejects a dispute; notifications
+// reach the parent (opened) and the disputing organization (resolved,
+// rejected).
+const (
+	AccountingDisputeOpened   = "accounting.dispute_opened"
+	AccountingDisputeResolved = "accounting.dispute_resolved"
+	AccountingDisputeRejected = "accounting.dispute_rejected"
+)
+
 // Jobs (operations / service jobs) domain events.
 const (
 	JobsCreated   = "jobs.created"
@@ -347,6 +357,9 @@ func catalogConstants() []string {
 		CariEntryVoided,
 		FinanceEntryPosted,
 		FinanceEntryVoided,
+		AccountingDisputeOpened,
+		AccountingDisputeResolved,
+		AccountingDisputeRejected,
 		JobsCreated,
 		JobsReady,
 		JobsDelivered,

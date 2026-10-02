@@ -88,6 +88,7 @@
   "labels.accounting.read": "Преглед на счетоводството",
   "labels.accounting.write": "Управление на счетоводството",
   "labels.accounting.dispute": "Оспорване на счетоводни записи",
+  "labels.accounting.resolve": "Решаване на счетоводни възражения",
   "labels.warehouse.read": "Преглед на склада",
   "labels.warehouse.write": "Управление на склада",
   "labels.campaigns.read": "Преглед на кампании",

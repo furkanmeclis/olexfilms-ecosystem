@@ -88,6 +88,7 @@
   "labels.accounting.read": "Перегляд бухгалтерії",
   "labels.accounting.write": "Керування бухгалтерією",
   "labels.accounting.dispute": "Оскарження бухгалтерських записів",
+  "labels.accounting.resolve": "Розгляд оскаржень бухгалтерських записів",
   "labels.warehouse.read": "Перегляд складу",
   "labels.warehouse.write": "Керування складом",
   "labels.campaigns.read": "Перегляд кампаній",

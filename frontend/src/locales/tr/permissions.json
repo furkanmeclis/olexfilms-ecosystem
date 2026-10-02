@@ -88,6 +88,7 @@
   "labels.accounting.read": "Muhasebeyi görüntüle",
   "labels.accounting.write": "Muhasebeyi yönet",
   "labels.accounting.dispute": "Muhasebe kaydına itiraz et",
+  "labels.accounting.resolve": "Muhasebe itirazlarını sonuçlandır",
   "labels.warehouse.read": "Depoyu görüntüle",
   "labels.warehouse.write": "Depoyu yönet",
   "labels.campaigns.read": "Kampanyaları görüntüle",

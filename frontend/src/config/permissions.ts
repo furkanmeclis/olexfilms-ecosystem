@@ -88,6 +88,7 @@ export const Permission = {
   AccountingRead: "accounting.read",
   AccountingWrite: "accounting.write",
   AccountingDispute: "accounting.dispute",
+  AccountingResolve: "accounting.resolve",
   WarehouseRead: "warehouse.read",
   WarehouseWrite: "warehouse.write",
   CampaignsRead: "campaigns.read",
@@ -359,6 +360,7 @@ export const permissions = {
     read: Permission.AccountingRead,
     write: Permission.AccountingWrite,
     dispute: Permission.AccountingDispute,
+    resolve: Permission.AccountingResolve,
   },
   warehouse: {
     read: Permission.WarehouseRead,
