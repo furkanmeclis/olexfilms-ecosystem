@@ -59,3 +59,25 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/services/{uuid}/images/{image}", route(h.DownloadImage))
 	mux.Handle("DELETE /v1/services/{uuid}/images/{image}", route(h.DeleteImage, write))
 }
+
+// RegisterPDFRoutes mounts the service PDF (TEC-196): POST
+// /v1/services/{uuid}/pdf queues the export job for a service inside the
+// caller's services.read scope (else 404); GET /v1/service-pdfs/{uuid}
+// [/download] polls and downloads the job of the active organization. Same
+// gates as the reads (organization, services module, services.read).
+func RegisterPDFRoutes(
+	mux *http.ServeMux,
+	h *serviceshandler.PDF,
+	tokens *jwt.Manager,
+	loader middleware.IdentityLoader,
+	q *db.Queries,
+	checker middleware.FeatureChecker,
+) {
+	route := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, middleware.Authenticate(tokens, loader), middleware.RequireOrganization(tokens, q),
+			middleware.RequireFeature(checker, features.ModuleServices), middleware.RequireScope(q, rbac.PermServicesRead))
+	}
+	mux.Handle("POST /v1/services/{uuid}/pdf", route(h.Request))
+	mux.Handle("GET /v1/service-pdfs/{uuid}", route(h.Get))
+	mux.Handle("GET /v1/service-pdfs/{uuid}/download", route(h.Download))
+}

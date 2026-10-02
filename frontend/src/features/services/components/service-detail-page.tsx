@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   Car,
-  FileDown,
+  ExternalLink,
   History,
   ImageIcon,
   Package,
@@ -22,6 +22,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import {
   canContinueWizard,
@@ -43,6 +44,7 @@ import {
   serviceWizardService,
   type Service,
 } from "@/features/services/services/service-wizard.service";
+import { ServicePdfButton } from "@/features/services/components/service-pdf-button";
 import { WarrantyCertificateButton } from "@/features/warranty/components/warranty-certificate-button";
 import { panelCertificateClient } from "@/features/warranty/services/certificate.service";
 import { isApiError } from "@/lib/api";
@@ -93,7 +95,15 @@ function Empty({ children, testId }: { children: ReactNode; testId: string }) {
   );
 }
 
-function VehicleCustomer({ service }: { service: Service }) {
+function VehicleCustomer({
+  service,
+  slug,
+  canOpenVehicle,
+}: {
+  service: Service;
+  slug: string;
+  canOpenVehicle: boolean;
+}) {
   const { t, format } = useLocale();
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -123,6 +133,17 @@ function VehicleCustomer({ service }: { service: Service }) {
             {service.km === null ? "—" : format.number(service.km)}
           </Field>
         </dl>
+        {canOpenVehicle ? (
+          <Button asChild variant="link" className="mt-3 h-auto p-0">
+            <Link
+              href={routes.tenant.vehicles.detail(slug, service.vehicle_uuid)}
+              data-testid="detail-vehicle-link"
+            >
+              <ExternalLink className="size-4" />
+              {t("services.detail.vehicle_open")}
+            </Link>
+          </Button>
+        ) : null}
       </Section>
       <Section
         title={t("services.detail.customer")}
@@ -354,7 +375,7 @@ function StatusHistory({ service }: { service: Service }) {
 /**
  * Service detail (TEC-183): vehicle and customer, items with their parts,
  * images, warranties and the status history. A draft the caller may still
- * edit links back to the wizard; the PDF arrives with TEC-196.
+ * edit links back to the wizard; "PDF" downloads the service PDF (TEC-196).
  */
 export function ServiceDetailPage({
   slug,
@@ -420,17 +441,11 @@ export function ServiceDetailPage({
                 locale={locale}
               />
             ) : null}
-            {/* TEC-196: service PDF; disabled until the document lands. */}
-            <Button
-              type="button"
-              variant="outline"
-              disabled
-              title={t("services.detail.pdf_soon")}
-              data-testid="service-pdf"
-            >
-              <FileDown className="size-4" />
-              {t("services.detail.pdf")}
-            </Button>
+            <ServicePdfButton
+              serviceUuid={s.uuid}
+              serviceNo={s.service_no}
+              locale={locale}
+            />
           </div>
         ) : null
       }
@@ -478,7 +493,11 @@ export function ServiceDetailPage({
           {t("services.detail.cancel_reason", { reason: s.cancel_reason })}
         </p>
       ) : null}
-      <VehicleCustomer service={s} />
+      <VehicleCustomer
+        service={s}
+        slug={slug}
+        canOpenVehicle={can(permissions.vehicles.read)}
+      />
       {s.package || s.notes ? (
         <Card>
           <CardContent className="pt-6">

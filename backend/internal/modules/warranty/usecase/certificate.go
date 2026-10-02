@@ -245,29 +245,14 @@ func (s *CertificateService) Build(ctx context.Context, q ioengine.ExportQuery, 
 }
 
 func (s *CertificateService) checkJobOrg(ctx context.Context, jobOrgID int64, svc db.Service) error {
-	if jobOrgID == svc.OrganizationID {
-		return nil
-	}
-	org, err := s.q.GetOrganizationByID(ctx, jobOrgID)
+	ok, err := ioengine.JobOrgCovers(ctx, s.q, jobOrgID, svc.OrganizationID, svc.BrandID)
 	if err != nil {
-		return fmt.Errorf("warranty certificate: job organization: %w", err)
+		return fmt.Errorf("warranty certificate: %w", err)
 	}
-	if org.BrandID != svc.BrandID {
+	if !ok {
 		return errCertificateScope
 	}
-	if org.Type == "center" {
-		return nil
-	}
-	below, err := s.q.Descendants(ctx, jobOrgID)
-	if err != nil {
-		return fmt.Errorf("warranty certificate: descendants: %w", err)
-	}
-	for _, o := range below {
-		if o.ID == svc.OrganizationID {
-			return nil
-		}
-	}
-	return errCertificateScope
+	return nil
 }
 
 func (s *CertificateService) certificate(ctx context.Context, svc db.Service, rows []db.ListWarrantyCertificateItemsRow, loc i18n.Locale) (Certificate, error) {

@@ -1,5 +1,7 @@
 "use client";
 
+import { ShieldCheck } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -58,7 +60,18 @@ export function PortalHome() {
           </CardTitle>
           <CardDescription>{t("portal.home.empty")}</CardDescription>
         </CardHeader>
-        <CardContent />
+        <CardContent>
+          <Button
+            asChild
+            variant="secondary"
+            data-testid="portal-warranties-link"
+          >
+            <Link href={routes.portal.warranties}>
+              <ShieldCheck className="size-4" />
+              {t("warranty.portal.home_link")}
+            </Link>
+          </Button>
+        </CardContent>
       </Card>
       <AIConsentDialog />
     </div>
