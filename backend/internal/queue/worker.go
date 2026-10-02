@@ -61,6 +61,8 @@ type Worker struct {
 	warrantyExpiringScan WarrantyTaskFunc
 	warrantyRepairScan   WarrantyTaskFunc
 	inventoryRebuild     InventoryRebuildFunc
+	// TEC-190: pending vehicle transfers past expires_at.
+	vehicleTransferExpire VehicleTransferTaskFunc
 }
 
 // NewWorker builds a worker that handles known task types on every queue.
@@ -126,6 +128,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskWarrantyExpiringScan, w.handleWarrantyExpiringScan)
 	mux.HandleFunc(TaskWarrantyRepairScan, w.handleWarrantyRepairScan)
 	mux.HandleFunc(TaskInventoryRebuild, w.handleInventoryRebuild)
+	mux.HandleFunc(TaskVehicleTransferExpire, w.handleVehicleTransferExpire)
 	return w
 }
 

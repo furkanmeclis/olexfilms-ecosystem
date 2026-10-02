@@ -500,6 +500,9 @@ type Querier interface {
 	GetUserByUUID(ctx context.Context, argUuid uuid.UUID) (User, error)
 	GetUserTOTPByUserID(ctx context.Context, userID int64) (UserTotp, error)
 	GetValidRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
+	// Vehicle of a transfer (TEC-190): scope check and response of the verify /
+	// cancel endpoints, which address the transfer, not the vehicle.
+	GetVehicleByID(ctx context.Context, id int64) (Vehicle, error)
 	GetVehicleByUUID(ctx context.Context, argUuid uuid.UUID) (Vehicle, error)
 	GetVehicleByUUIDForUpdate(ctx context.Context, argUuid uuid.UUID) (Vehicle, error)
 	GetVehicleTransfer(ctx context.Context, arg GetVehicleTransferParams) (VehicleTransfer, error)

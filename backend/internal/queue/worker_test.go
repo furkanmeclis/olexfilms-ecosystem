@@ -25,6 +25,7 @@ func wireAll(w *Worker, hits map[string]int, tag string) *Worker {
 			func(context.Context) error { hit(TaskWarrantyExpiringScan); return nil },
 		).
 		WithWarrantyRepairScan(func(context.Context) error { hit(TaskWarrantyRepairScan); return nil }).
+		WithVehicleTransferExpire(func(context.Context) error { hit(TaskVehicleTransferExpire); return nil }).
 		WithSearch(
 			func(context.Context, string, string) error { hit(TaskSearchUpsert); return nil },
 			func(context.Context, string, string) error { hit(TaskSearchDelete); return nil },
@@ -49,7 +50,7 @@ func TestWorkerSettersAreIdempotent(t *testing.T) {
 		wireAll(w, hits, "second")
 	}()
 
-	for _, typ := range []string{TaskNotificationPurge, TaskWhatsAppStatusPoll, TaskLogPurgeSweep, TaskRatesFetch, TaskWarrantyExpire, TaskWarrantyExpiringScan, TaskWarrantyRepairScan} {
+	for _, typ := range []string{TaskNotificationPurge, TaskWhatsAppStatusPoll, TaskLogPurgeSweep, TaskRatesFetch, TaskWarrantyExpire, TaskWarrantyExpiringScan, TaskWarrantyRepairScan, TaskVehicleTransferExpire} {
 		if err := w.mux.ProcessTask(context.Background(), asynq.NewTask(typ, []byte("{}"))); err != nil {
 			t.Fatalf("%s: %v", typ, err)
 		}

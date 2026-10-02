@@ -331,6 +331,12 @@ SET status = 'expired'
 WHERE status = 'pending' AND expires_at <= sqlc.arg(now)
 RETURNING *;
 
+-- Vehicle of a transfer (TEC-190): scope check and response of the verify /
+-- cancel endpoints, which address the transfer, not the vehicle.
+-- name: GetVehicleByID :one
+SELECT * FROM vehicles
+WHERE id = sqlc.arg(id);
+
 -- Vehicle owner change in the transfer transaction (services keep their
 -- customer snapshot, 000050).
 -- name: SetVehicleOwner :one
