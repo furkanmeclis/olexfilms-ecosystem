@@ -3252,7 +3252,7 @@ export interface paths {
         put?: never;
         /**
          * Add a location
-         * @description Needs `warehouse.write`; center and distributor organizations only (403 for dealers, K12). Tree: aisle at the room root; shelf at the room root or under an aisle; bin under a shelf (422 otherwise). full_code = <warehouse>-<room>-<ancestors>-<code>, unique per organization (409 WAREHOUSE_CODE_TAKEN).
+         * @description Needs `warehouse.write`; center and distributor organizations only (403 for dealers, K12). Tree: aisle at the room root; shelf at the room root or under an aisle; bin under a shelf (400 VALIDATION_ERROR otherwise). full_code = <warehouse>-<room>-<ancestors>-<code>, unique per organization (409 WAREHOUSE_CODE_TAKEN).
          */
         post: operations["createWarehouseLocation"];
         delete?: never;
@@ -3272,7 +3272,7 @@ export interface paths {
         put?: never;
         /**
          * Reorder sibling locations
-         * @description Needs `warehouse.write`; center and distributor organizations only (403 for dealers, K12). The locations share room and parent (422 otherwise).
+         * @description Needs `warehouse.write`; center and distributor organizations only (403 for dealers, K12). The locations share room and parent (400 VALIDATION_ERROR otherwise).
          */
         post: operations["reorderWarehouseLocations"];
         delete?: never;

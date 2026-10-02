@@ -89,7 +89,7 @@ func TestIntegrationWarehouseTree(t *testing.T) {
 		t.Fatalf("codes %q %q", w1.Code, w2.Code)
 	}
 	it.whDo(dTok, "POST", "/v1/warehouse/warehouses", map[string]any{"code": wCode}, http.StatusConflict, nil)
-	it.whDo(dTok, "POST", "/v1/warehouse/warehouses", map[string]any{"code": "BAD-CODE"}, http.StatusUnprocessableEntity, nil)
+	it.whDo(dTok, "POST", "/v1/warehouse/warehouses", map[string]any{"code": "BAD-CODE"}, http.StatusBadRequest, nil)
 	var list whList
 	it.whDo(dTok, "GET", "/v1/warehouse/warehouses", nil, http.StatusOK, &list)
 	if len(list.Items) != 2 || list.Items[0].UUID != w1.UUID {
@@ -119,9 +119,9 @@ func TestIntegrationWarehouseTree(t *testing.T) {
 	}
 	// Tree shape and sibling uniqueness.
 	it.whDo(dTok, "POST", "/v1/warehouse/locations",
-		map[string]any{"room_uuid": room.UUID, "type": "bin", "code": "09"}, http.StatusUnprocessableEntity, nil)
+		map[string]any{"room_uuid": room.UUID, "type": "bin", "code": "09"}, http.StatusBadRequest, nil)
 	it.whDo(dTok, "POST", "/v1/warehouse/locations",
-		map[string]any{"room_uuid": room.UUID, "parent_uuid": aisle.UUID, "type": "bin", "code": "09"}, http.StatusUnprocessableEntity, nil)
+		map[string]any{"room_uuid": room.UUID, "parent_uuid": aisle.UUID, "type": "bin", "code": "09"}, http.StatusBadRequest, nil)
 	it.whDo(dTok, "POST", "/v1/warehouse/locations",
 		map[string]any{"room_uuid": room.UUID, "type": "aisle", "code": "A"}, http.StatusConflict, nil)
 
@@ -152,7 +152,7 @@ func TestIntegrationWarehouseTree(t *testing.T) {
 	it.whDo(dTok, "POST", "/v1/warehouse/locations/generate", map[string]any{
 		"room_uuid": room.UUID,
 		"levels":    []map[string]any{{"type": "bin", "codes": []string{"01"}}},
-	}, http.StatusUnprocessableEntity, nil)
+	}, http.StatusBadRequest, nil)
 
 	var locs whList
 	it.whDo(dTok, "GET", "/v1/warehouse/rooms/"+room.UUID+"/locations", nil, http.StatusOK, &locs)
@@ -192,7 +192,7 @@ func TestIntegrationWarehouseTree(t *testing.T) {
 	if b.SortOrder != 0 || a.SortOrder != 1 {
 		t.Fatalf("sort orders B=%d C=%d", b.SortOrder, a.SortOrder)
 	}
-	it.whDo(dTok, "POST", "/v1/warehouse/locations/reorder", map[string]any{"uuids": []string{aisleB, bin.UUID}}, http.StatusUnprocessableEntity, nil)
+	it.whDo(dTok, "POST", "/v1/warehouse/locations/reorder", map[string]any{"uuids": []string{aisleB, bin.UUID}}, http.StatusBadRequest, nil)
 
 	// Delete: a parent is in use, a leaf goes.
 	it.whDo(dTok, "DELETE", "/v1/warehouse/locations/"+aisle.UUID, nil, http.StatusConflict, nil)
@@ -225,7 +225,7 @@ func TestIntegrationWarehouseTree(t *testing.T) {
 	it.whDo(oTok, "POST", "/v1/warehouse/locations/generate", map[string]any{
 		"room_uuid": room.UUID, "levels": []map[string]any{{"type": "aisle", "codes": []string{"Z"}}},
 	}, http.StatusNotFound, nil)
-	it.whDo(oTok, "POST", "/v1/warehouse/locations/reorder", map[string]any{"uuids": []string{aisle.UUID}}, http.StatusUnprocessableEntity, nil)
+	it.whDo(oTok, "POST", "/v1/warehouse/locations/reorder", map[string]any{"uuids": []string{aisle.UUID}}, http.StatusBadRequest, nil)
 
 	// The center warehouse role runs its own tree and does not list the
 	// distributor's.

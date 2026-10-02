@@ -5955,7 +5955,7 @@ paths:
         Needs `warehouse.write`; center and distributor organizations only (403
         for dealers, K12).
         Tree: aisle at the room root; shelf at the room root or under an aisle;
-        bin under a shelf (422 otherwise). full_code =
+        bin under a shelf (400 VALIDATION_ERROR otherwise). full_code =
         <warehouse>-<room>-<ancestors>-<code>, unique per organization (409
         WAREHOUSE_CODE_TAKEN).
       security:
@@ -5993,7 +5993,7 @@ paths:
       description: >-
         Needs `warehouse.write`; center and distributor organizations only (403
         for dealers, K12).
-        The locations share room and parent (422 otherwise).
+        The locations share room and parent (400 VALIDATION_ERROR otherwise).
       security:
         - bearerAuth: []
       requestBody:
