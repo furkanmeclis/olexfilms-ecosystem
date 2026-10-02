@@ -61,12 +61,19 @@ export const routes = {
       wizard: (slug: string, uuid: string) =>
         `/t/${slug}/services/${uuid}/wizard`,
     },
+    /** TEC-191 warranty list and detail. */
+    warranties: {
+      list: (slug: string) => `/t/${slug}/warranties`,
+      detail: (slug: string, uuid: string) => `/t/${slug}/warranties/${uuid}`,
+    },
   },
   /** Customer / fleet portal (TEC-90): its own Auth.js instance and BFF. */
   portal: {
     home: "/portal",
     login: "/portal/login",
     forgotPassword: "/portal/forgot-password",
+    /** TEC-191: the user's warranties. */
+    warranties: "/portal/warranties",
   },
   guest: {
     login: "/platform/login",
