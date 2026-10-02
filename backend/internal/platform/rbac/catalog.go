@@ -455,6 +455,9 @@ var Roles = []RoleDef{
 			PermStockAdjust:     ScopeAll,
 			PermStockReclassify: ScopeAll,
 			PermStockImport:     ScopeAll,
+			// TEC-158 (000053): preview, confirm and undo of its stock
+			// import jobs run on /v1/tenant/imports.
+			PermTenantImportsRead: ScopeManaged,
 			// TEC-165 (000049): orders stay brand-bound (K20).
 			PermOrdersRead: ScopeBrand,
 			PermOrdersShip: ScopeBrand,

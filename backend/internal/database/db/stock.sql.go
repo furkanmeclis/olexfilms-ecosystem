@@ -139,7 +139,7 @@ VALUES (
     $1, $2, $3,
     $4, $5, $6
 )
-RETURNING id, uuid, organization_id, brand_id, created_by_user_id, status, source_filename, target_owner_type, target_owner_id, rows_total, rows_new, rows_duplicate, rows_invalid, rows_conflict, error, applied_at, undone_at, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, created_by_user_id, status, source_filename, target_owner_type, target_owner_id, rows_total, rows_new, rows_duplicate, rows_invalid, rows_conflict, error, applied_at, undone_at, created_at, updated_at, import_job_id
 `
 
 type CreateStockImportBatchParams struct {
@@ -183,6 +183,7 @@ func (q *Queries) CreateStockImportBatch(ctx context.Context, arg CreateStockImp
 		&i.UndoneAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ImportJobID,
 	)
 	return i, err
 }
@@ -539,7 +540,7 @@ func (q *Queries) EnsureOrganizationProductStock(ctx context.Context, arg Ensure
 }
 
 const getStockImportBatch = `-- name: GetStockImportBatch :one
-SELECT id, uuid, organization_id, brand_id, created_by_user_id, status, source_filename, target_owner_type, target_owner_id, rows_total, rows_new, rows_duplicate, rows_invalid, rows_conflict, error, applied_at, undone_at, created_at, updated_at FROM stock_import_batches
+SELECT id, uuid, organization_id, brand_id, created_by_user_id, status, source_filename, target_owner_type, target_owner_id, rows_total, rows_new, rows_duplicate, rows_invalid, rows_conflict, error, applied_at, undone_at, created_at, updated_at, import_job_id FROM stock_import_batches
 WHERE id = $1 AND organization_id = $2
 `
 
@@ -571,6 +572,7 @@ func (q *Queries) GetStockImportBatch(ctx context.Context, arg GetStockImportBat
 		&i.UndoneAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ImportJobID,
 	)
 	return i, err
 }
@@ -851,7 +853,7 @@ VALUES (
     $8, $9, $10,
     $11, $12
 )
-RETURNING id, batch_id, row_number, barcode, product_sku, product_id, quantity, meters, target_owner_type, target_owner_id, raw, row_status, errors, unit_id, movement_id, created_at, updated_at
+RETURNING id, batch_id, row_number, barcode, product_sku, product_id, quantity, meters, target_owner_type, target_owner_id, raw, row_status, errors, unit_id, movement_id, created_at, updated_at, undo_movement_id
 `
 
 type InsertStockImportRowParams struct {
@@ -903,6 +905,7 @@ func (q *Queries) InsertStockImportRow(ctx context.Context, arg InsertStockImpor
 		&i.MovementID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UndoMovementID,
 	)
 	return i, err
 }
@@ -1246,7 +1249,7 @@ func (q *Queries) ListOrganizationProductStocks(ctx context.Context, arg ListOrg
 }
 
 const listStockImportBatches = `-- name: ListStockImportBatches :many
-SELECT id, uuid, organization_id, brand_id, created_by_user_id, status, source_filename, target_owner_type, target_owner_id, rows_total, rows_new, rows_duplicate, rows_invalid, rows_conflict, error, applied_at, undone_at, created_at, updated_at FROM stock_import_batches
+SELECT id, uuid, organization_id, brand_id, created_by_user_id, status, source_filename, target_owner_type, target_owner_id, rows_total, rows_new, rows_duplicate, rows_invalid, rows_conflict, error, applied_at, undone_at, created_at, updated_at, import_job_id FROM stock_import_batches
 WHERE organization_id = $1
 ORDER BY created_at DESC, id DESC
 `
@@ -1280,6 +1283,7 @@ func (q *Queries) ListStockImportBatches(ctx context.Context, organizationID int
 			&i.UndoneAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ImportJobID,
 		); err != nil {
 			return nil, err
 		}
@@ -1292,7 +1296,7 @@ func (q *Queries) ListStockImportBatches(ctx context.Context, organizationID int
 }
 
 const listStockImportRows = `-- name: ListStockImportRows :many
-SELECT id, batch_id, row_number, barcode, product_sku, product_id, quantity, meters, target_owner_type, target_owner_id, raw, row_status, errors, unit_id, movement_id, created_at, updated_at FROM stock_import_rows
+SELECT id, batch_id, row_number, barcode, product_sku, product_id, quantity, meters, target_owner_type, target_owner_id, raw, row_status, errors, unit_id, movement_id, created_at, updated_at, undo_movement_id FROM stock_import_rows
 WHERE batch_id = $1
   AND ($2::text IS NULL OR row_status = $2::text)
 ORDER BY row_number
@@ -1330,6 +1334,7 @@ func (q *Queries) ListStockImportRows(ctx context.Context, arg ListStockImportRo
 			&i.MovementID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.UndoMovementID,
 		); err != nil {
 			return nil, err
 		}
@@ -1839,7 +1844,7 @@ func (q *Queries) LockOrganizationProductStock(ctx context.Context, arg LockOrga
 }
 
 const lockStockImportBatch = `-- name: LockStockImportBatch :one
-SELECT id, uuid, organization_id, brand_id, created_by_user_id, status, source_filename, target_owner_type, target_owner_id, rows_total, rows_new, rows_duplicate, rows_invalid, rows_conflict, error, applied_at, undone_at, created_at, updated_at FROM stock_import_batches WHERE id = $1 FOR UPDATE
+SELECT id, uuid, organization_id, brand_id, created_by_user_id, status, source_filename, target_owner_type, target_owner_id, rows_total, rows_new, rows_duplicate, rows_invalid, rows_conflict, error, applied_at, undone_at, created_at, updated_at, import_job_id FROM stock_import_batches WHERE id = $1 FOR UPDATE
 `
 
 func (q *Queries) LockStockImportBatch(ctx context.Context, id int64) (StockImportBatch, error) {
@@ -1865,6 +1870,7 @@ func (q *Queries) LockStockImportBatch(ctx context.Context, id int64) (StockImpo
 		&i.UndoneAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ImportJobID,
 	)
 	return i, err
 }
@@ -1972,7 +1978,7 @@ SET status = $1,
     applied_at = CASE WHEN $1::text = 'applied' THEN NOW() ELSE applied_at END,
     undone_at = CASE WHEN $1::text = 'undone' THEN NOW() ELSE undone_at END
 WHERE id = $8
-RETURNING id, uuid, organization_id, brand_id, created_by_user_id, status, source_filename, target_owner_type, target_owner_id, rows_total, rows_new, rows_duplicate, rows_invalid, rows_conflict, error, applied_at, undone_at, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, created_by_user_id, status, source_filename, target_owner_type, target_owner_id, rows_total, rows_new, rows_duplicate, rows_invalid, rows_conflict, error, applied_at, undone_at, created_at, updated_at, import_job_id
 `
 
 type UpdateStockImportBatchStatusParams struct {
@@ -2018,6 +2024,7 @@ func (q *Queries) UpdateStockImportBatchStatus(ctx context.Context, arg UpdateSt
 		&i.UndoneAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ImportJobID,
 	)
 	return i, err
 }
@@ -2029,7 +2036,7 @@ SET row_status = $1,
     unit_id = $3,
     movement_id = $4
 WHERE id = $5
-RETURNING id, batch_id, row_number, barcode, product_sku, product_id, quantity, meters, target_owner_type, target_owner_id, raw, row_status, errors, unit_id, movement_id, created_at, updated_at
+RETURNING id, batch_id, row_number, barcode, product_sku, product_id, quantity, meters, target_owner_type, target_owner_id, raw, row_status, errors, unit_id, movement_id, created_at, updated_at, undo_movement_id
 `
 
 type UpdateStockImportRowResultParams struct {
@@ -2067,6 +2074,7 @@ func (q *Queries) UpdateStockImportRowResult(ctx context.Context, arg UpdateStoc
 		&i.MovementID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UndoMovementID,
 	)
 	return i, err
 }

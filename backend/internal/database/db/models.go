@@ -1173,6 +1173,7 @@ type StockImportBatch struct {
 	UndoneAt        pgtype.Timestamptz `json:"undone_at"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	ImportJobID     pgtype.Int8        `json:"import_job_id"`
 }
 
 type StockImportRow struct {
@@ -1193,6 +1194,7 @@ type StockImportRow struct {
 	MovementID      pgtype.Int8        `json:"movement_id"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	UndoMovementID  pgtype.Int8        `json:"undo_movement_id"`
 }
 
 type StockMovement struct {

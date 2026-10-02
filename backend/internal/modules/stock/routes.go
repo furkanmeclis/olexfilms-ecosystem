@@ -50,6 +50,28 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/stock/reclassifications/{uuid}/cancel", scoped(rh.Cancel, rbac.PermStockWrite))
 }
 
+// RegisterImportRoutes mounts the TEC-158 stock import upload (stock.import,
+// center only). Preview, confirm and undo run on /v1/tenant/imports/{uuid}.
+func RegisterImportRoutes(
+	mux *http.ServeMux,
+	h *stockhandler.Import,
+	checker middleware.FeatureChecker,
+	tokens *jwt.Manager,
+	loader middleware.IdentityLoader,
+	q *db.Queries,
+) {
+	chain := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn,
+			middleware.Authenticate(tokens, loader),
+			middleware.RequireOrganization(tokens, q),
+			middleware.RequireFeature(checker, features.ModuleStock),
+			middleware.RequireScope(q, rbac.PermStockImport),
+		)
+	}
+	mux.Handle("POST /v1/stock/import", chain(h.Upload))
+	mux.Handle("GET /v1/stock/import/sample", chain(h.Sample))
+}
+
 // RegisterPlatformRoutes mounts the super_admin stock maintenance routes
 // (TEC-156): the projection drift check is a dry run.
 func RegisterPlatformRoutes(

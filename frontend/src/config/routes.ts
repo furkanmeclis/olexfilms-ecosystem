@@ -39,6 +39,15 @@ export const routes = {
         `/t/${slug}/catalog/products/${uuid}/edit`,
       categories: (slug: string) => `/t/${slug}/catalog/categories`,
     },
+    /** TEC-176 accounting; statement / disputes come with TEC-195. */
+    accounting: {
+      root: (slug: string) => `/t/${slug}/accounting`,
+      accounts: (slug: string) => `/t/${slug}/accounting/accounts`,
+      cari: (slug: string) => `/t/${slug}/accounting/cari`,
+      cariDetail: (slug: string, uuid: string) =>
+        `/t/${slug}/accounting/cari/${uuid}`,
+      entries: (slug: string) => `/t/${slug}/accounting/entries`,
+    },
     /** TEC-181 service wizard, TEC-183 list and detail. */
     services: {
       list: (slug: string) => `/t/${slug}/services`,
