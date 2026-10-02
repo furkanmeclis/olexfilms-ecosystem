@@ -2325,6 +2325,48 @@ export interface paths {
         patch: operations["patchPlatformModule"];
         trace?: never;
     };
+    "/v1/platform/system-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * System settings catalog with effective values (platform.settings.read)
+         * @description TEC-215. Every catalog key with its effective value (stored override or default). Secret values are masked as `********`.
+         */
+        get: operations["listSystemSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/system-settings/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One system setting (platform.settings.read) */
+        get: operations["getSystemSetting"];
+        /**
+         * Store a system setting value (platform.settings.write)
+         * @description The value is validated against the key's catalog schema (kind, min/max, max_len); a mismatch is 400 VALIDATION_ERROR. Writing the mask `********` to a secret key keeps the stored value. The Redis cache is dropped on every write.
+         */
+        put: operations["putSystemSetting"];
+        post?: never;
+        /** Reset a system setting to its default (platform.settings.write) */
+        delete: operations["resetSystemSetting"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/platform/organizations/{uuid}/modules": {
         parameters: {
             query?: never;
@@ -8080,6 +8122,46 @@ export interface components {
             };
             meta: components["schemas"]["ResponseMeta"];
         };
+        /** @description A JSON scalar matching the setting kind (integer, boolean or string). */
+        SystemSettingValue: number | boolean | string;
+        SystemSetting: {
+            /** @example contract_grace_days */
+            key: string;
+            /** @enum {string} */
+            group: "general" | "contracts" | "forecast" | "services" | "smtp" | "warehouse" | "scanning";
+            /** @enum {string} */
+            kind: "int" | "bool" | "string";
+            default: components["schemas"]["SystemSettingValue"];
+            description: string;
+            min?: number;
+            max?: number;
+            max_len?: number;
+            /** @description Masked as ******** on read */
+            secret?: boolean;
+            /** @description Effective value (stored override or default); secrets masked. */
+            value: components["schemas"]["SystemSettingValue"];
+            is_default: boolean;
+            schema_version: number;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        SystemSettingInput: {
+            value: components["schemas"]["SystemSettingValue"];
+        };
+        EnvelopeSystemSetting: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["SystemSetting"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeSystemSettingList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["SystemSetting"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
         EnvelopePlatformOrganizationModules: {
             /** @enum {boolean} */
             success: true;
@@ -11012,6 +11094,8 @@ export interface components {
         GeoID: number;
         /** @description Module key from the backend catalog (GET /v1/features) */
         ModuleKey: string;
+        /** @description System setting key from the catalog (e.g. contract_grace_days, smtp.host) */
+        SystemSettingKey: string;
         /** @description Resource UUID */
         ResourceUUID: string;
         Limit: number;
@@ -14873,6 +14957,111 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ModuleError"];
+        };
+    };
+    listSystemSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeSystemSettingList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getSystemSetting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description System setting key from the catalog (e.g. contract_grace_days, smtp.host) */
+                key: components["parameters"]["SystemSettingKey"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Setting */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeSystemSetting"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    putSystemSetting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description System setting key from the catalog (e.g. contract_grace_days, smtp.host) */
+                key: components["parameters"]["SystemSettingKey"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SystemSettingInput"];
+            };
+        };
+        responses: {
+            /** @description Setting */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeSystemSetting"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    resetSystemSetting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description System setting key from the catalog (e.g. contract_grace_days, smtp.host) */
+                key: components["parameters"]["SystemSettingKey"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Setting (default) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeSystemSetting"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     listPlatformOrganizationModules: {

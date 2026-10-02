@@ -135,6 +135,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/sms"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/stepup"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/sysconfig"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/whatsapp"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/realtime"
@@ -183,6 +184,8 @@ type Server struct {
 	stepUp *stepup.Service
 	// features resolves module flags (TEC-86).
 	features *features.Service
+	// sysconfig is the global system settings store (TEC-215).
+	sysconfig *sysconfig.Service
 }
 
 // New wires router and middleware for the API skeleton.
@@ -513,7 +516,17 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-149: vehicle catalog (global car brands/models, super_admin writes).
 	vehiclecatalogmodule.RegisterRoutes(mux, vehiclecataloghandler.New(
 		vehiclecatalogusecase.New(deps.Queries), deps.Storage, activityRec), tokens, loader)
-	settingsmodule.RegisterRoutes(mux, settingshandler.New(settingsusecase.New(deps.Queries), deps.Storage), tokens, loader)
+	// TEC-215: system settings store with a 30 s Redis cache.
+	var sysCache sysconfig.Cache = sysconfig.NoCache{}
+	if deps.Redis != nil {
+		sysCache = sysconfig.NewRedisCache(deps.Redis, cfg.App.Env, func(op string, err error) {
+			log.Warn("sysconfig_cache_error", "op", op, "error", err)
+		})
+	}
+	sysSvc := sysconfig.New(deps.Queries, sysCache)
+	s.sysconfig = sysSvc
+	settingsmodule.RegisterRoutes(mux, settingshandler.New(settingsusecase.New(deps.Queries), deps.Storage),
+		settingshandler.NewSystem(sysSvc), tokens, loader)
 	accessmodule.RegisterRoutes(mux, accesshandler.New(stepUpSvc, activityRec), tokens, loader)
 	authsettingsmodule.RegisterRoutes(mux, authsettingshandler.New(authSettingsSvc, activityRec), tokens, loader)
 	githubmodule.RegisterRoutes(mux, githubhandler.New(githubSvc, activityRec), tokens, loader)

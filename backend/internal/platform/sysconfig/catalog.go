@@ -1,0 +1,197 @@
+// Package sysconfig is the global system settings store (TEC-215, design
+// §4 "Sistem ayarları"): a typed catalog of keys with defaults, JSONB rows
+// in system_settings for overrides, and a short Redis cache in front.
+//
+// Adding a setting is one catalog entry: the catalog is the schema. The
+// value type, bounds and default are checked here, so handlers and callers
+// never see an out-of-range value.
+package sysconfig
+
+import (
+	"encoding/json"
+	"fmt"
+	"math"
+	"sort"
+	"strings"
+)
+
+// Kind is the JSON type a setting holds.
+type Kind string
+
+const (
+	KindInt    Kind = "int"
+	KindBool   Kind = "bool"
+	KindString Kind = "string"
+)
+
+// Group names a settings page section; new areas (warehouse, scanning,
+// ...) add their own group constant with their keys.
+type Group string
+
+const (
+	GroupGeneral   Group = "general"
+	GroupContracts Group = "contracts"
+	GroupForecast  Group = "forecast"
+	GroupServices  Group = "services"
+	GroupSMTP      Group = "smtp"
+	GroupWarehouse Group = "warehouse"
+	GroupScanning  Group = "scanning"
+)
+
+// SchemaVersion is stored with every row; bump it when a key's shape
+// changes so stale rows can be recognized.
+const SchemaVersion = 1
+
+// Setting keys.
+const (
+	// KeyForecastMinDays is the minimum data window (days) before the stock
+	// forecast proposes anything (K15).
+	KeyForecastMinDays = "forecast_min_days"
+	// KeyContractGraceDays is the read-only grace after a contract expires
+	// (design §4). Default 0 keeps K23 ("grace yok"); raising it is a product
+	// decision.
+	KeyContractGraceDays = "contract_grace_days"
+	// KeyPhotoStandardEnabled switches the vehicle intake photo standard
+	// (design §4, default off).
+	KeyPhotoStandardEnabled = "photo_standard_enabled"
+
+	KeySMTPHost     = "smtp.host"
+	KeySMTPPort     = "smtp.port"
+	KeySMTPUsername = "smtp.username"
+	KeySMTPPassword = "smtp.password"
+	KeySMTPFrom     = "smtp.from"
+	KeySMTPFromName = "smtp.from_name"
+)
+
+// SecretMask replaces a secret value on read. Writing the mask back keeps
+// the stored value, so a form can round-trip without revealing it.
+const SecretMask = "********"
+
+// Definition is one catalog entry.
+type Definition struct {
+	Key         string `json:"key"`
+	Group       Group  `json:"group"`
+	Kind        Kind   `json:"kind"`
+	Default     any    `json:"default"`
+	Description string `json:"description"`
+	// Min/Max bound KindInt values (inclusive); MaxLen bounds KindString.
+	Min    *int64 `json:"min,omitempty"`
+	Max    *int64 `json:"max,omitempty"`
+	MaxLen int    `json:"max_len,omitempty"`
+	// Secret values are masked on read (SecretMask).
+	Secret bool `json:"secret,omitempty"`
+}
+
+func i64(v int64) *int64 { return &v }
+
+var catalog = []Definition{
+	{Key: KeyForecastMinDays, Group: GroupForecast, Kind: KindInt, Default: int64(30), Min: i64(1), Max: i64(3650),
+		Description: "Minimum days of movement history before the stock forecast proposes anything (K15)"},
+	{Key: KeyContractGraceDays, Group: GroupContracts, Kind: KindInt, Default: int64(0), Min: i64(0), Max: i64(365),
+		Description: "Read-only grace period after a contract expires; 0 = no grace (K23)"},
+	{Key: KeyPhotoStandardEnabled, Group: GroupServices, Kind: KindBool, Default: false,
+		Description: "Require the vehicle intake photo standard"},
+	{Key: KeySMTPHost, Group: GroupSMTP, Kind: KindString, Default: "", MaxLen: 253,
+		Description: "SMTP host; empty = use environment configuration"},
+	{Key: KeySMTPPort, Group: GroupSMTP, Kind: KindInt, Default: int64(0), Min: i64(0), Max: i64(65535),
+		Description: "SMTP port; 0 = use environment configuration"},
+	{Key: KeySMTPUsername, Group: GroupSMTP, Kind: KindString, Default: "", MaxLen: 255,
+		Description: "SMTP username"},
+	{Key: KeySMTPPassword, Group: GroupSMTP, Kind: KindString, Default: "", MaxLen: 255, Secret: true,
+		Description: "SMTP password (masked on read)"},
+	{Key: KeySMTPFrom, Group: GroupSMTP, Kind: KindString, Default: "", MaxLen: 255,
+		Description: "Sender address for outbound email"},
+	{Key: KeySMTPFromName, Group: GroupSMTP, Kind: KindString, Default: "", MaxLen: 255,
+		Description: "Sender display name for outbound email"},
+}
+
+var byKey = func() map[string]Definition {
+	m := make(map[string]Definition, len(catalog))
+	for _, d := range catalog {
+		if _, dup := m[d.Key]; dup {
+			panic("sysconfig: duplicate key " + d.Key)
+		}
+		if _, err := d.Validate(mustJSON(d.Default)); err != nil {
+			panic("sysconfig: default of " + d.Key + " fails its own schema: " + err.Error())
+		}
+		m[d.Key] = d
+	}
+	return m
+}()
+
+func mustJSON(v any) json.RawMessage {
+	b, err := json.Marshal(v)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
+// Catalog returns every definition, sorted by key.
+func Catalog() []Definition {
+	out := make([]Definition, len(catalog))
+	copy(out, catalog)
+	sort.Slice(out, func(i, j int) bool { return out[i].Key < out[j].Key })
+	return out
+}
+
+// Lookup returns the definition of key.
+func Lookup(key string) (Definition, bool) {
+	d, ok := byKey[key]
+	return d, ok
+}
+
+// ValidationError is a value that does not match its definition.
+type ValidationError struct {
+	Key     string
+	Message string
+}
+
+func (e *ValidationError) Error() string { return e.Key + ": " + e.Message }
+
+// Validate checks raw against the definition and returns the canonical
+// JSON encoding (an integer without fraction, a bare bool, a string).
+func (d Definition) Validate(raw json.RawMessage) (json.RawMessage, error) {
+	fail := func(msg string) (json.RawMessage, error) {
+		return nil, &ValidationError{Key: d.Key, Message: msg}
+	}
+	// json.Unmarshal accepts null as the zero value for every kind, so it
+	// is refused up front: "no value" is a reset (DELETE), not a write.
+	if t := strings.TrimSpace(string(raw)); t == "" || t == "null" {
+		return fail("value is required")
+	}
+	switch d.Kind {
+	case KindInt:
+		var f float64
+		if err := json.Unmarshal(raw, &f); err != nil {
+			return fail("must be an integer")
+		}
+		if f != math.Trunc(f) || math.IsInf(f, 0) || math.IsNaN(f) || math.Abs(f) > math.MaxInt32 {
+			return fail("must be an integer")
+		}
+		n := int64(f)
+		if d.Min != nil && n < *d.Min {
+			return fail(fmt.Sprintf("must be at least %d", *d.Min))
+		}
+		if d.Max != nil && n > *d.Max {
+			return fail(fmt.Sprintf("must be at most %d", *d.Max))
+		}
+		return mustJSON(n), nil
+	case KindBool:
+		var b bool
+		if err := json.Unmarshal(raw, &b); err != nil {
+			return fail("must be a boolean")
+		}
+		return mustJSON(b), nil
+	case KindString:
+		var s string
+		if err := json.Unmarshal(raw, &s); err != nil {
+			return fail("must be a string")
+		}
+		if d.MaxLen > 0 && len([]rune(s)) > d.MaxLen {
+			return fail(fmt.Sprintf("must be at most %d characters", d.MaxLen))
+		}
+		return mustJSON(s), nil
+	}
+	return fail("unknown kind")
+}

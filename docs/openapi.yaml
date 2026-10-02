@@ -4049,6 +4049,106 @@ paths:
         "422":
           $ref: "#/components/responses/ModuleError"
 
+  /v1/platform/system-settings:
+    get:
+      tags: [Platform]
+      operationId: listSystemSettings
+      summary: System settings catalog with effective values (platform.settings.read)
+      description: >-
+        TEC-215. Every catalog key with its effective value (stored override
+        or default). Secret values are masked as `********`.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeSystemSettingList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/system-settings/{key}:
+    get:
+      tags: [Platform]
+      operationId: getSystemSetting
+      summary: One system setting (platform.settings.read)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemSettingKey"
+      responses:
+        "200":
+          description: Setting
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeSystemSetting"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Platform]
+      operationId: putSystemSetting
+      summary: Store a system setting value (platform.settings.write)
+      description: >-
+        The value is validated against the key's catalog schema (kind,
+        min/max, max_len); a mismatch is 400 VALIDATION_ERROR. Writing the
+        mask `********` to a secret key keeps the stored value. The Redis
+        cache is dropped on every write.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemSettingKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SystemSettingInput"
+      responses:
+        "200":
+          description: Setting
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeSystemSetting"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Platform]
+      operationId: resetSystemSetting
+      summary: Reset a system setting to its default (platform.settings.write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemSettingKey"
+      responses:
+        "200":
+          description: Setting (default)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeSystemSetting"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/platform/organizations/{uuid}/modules:
     get:
       tags: [Platform]
@@ -11567,6 +11667,12 @@ components:
       required: true
       description: Module key from the backend catalog (GET /v1/features)
       schema: { type: string, example: ai_assistant }
+    SystemSettingKey:
+      name: key
+      in: path
+      required: true
+      description: System setting key from the catalog (e.g. contract_grace_days, smtp.host)
+      schema: { type: string, example: contract_grace_days }
     ResourceUUID:
       name: uuid
       in: path
@@ -14606,6 +14712,61 @@ components:
             items:
               type: array
               items: { $ref: "#/components/schemas/PlatformModule" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    SystemSettingValue:
+      description: A JSON scalar matching the setting kind (integer, boolean or string).
+      oneOf:
+        - type: integer
+        - type: boolean
+        - type: string
+
+    SystemSetting:
+      type: object
+      required: [key, group, kind, default, description, value, is_default, schema_version]
+      properties:
+        key: { type: string, example: contract_grace_days }
+        group: { type: string, enum: [general, contracts, forecast, services, smtp, warehouse, scanning] }
+        kind: { type: string, enum: [int, bool, string] }
+        default: { $ref: "#/components/schemas/SystemSettingValue" }
+        description: { type: string }
+        min: { type: integer }
+        max: { type: integer }
+        max_len: { type: integer }
+        secret: { type: boolean, description: Masked as ******** on read }
+        value:
+          description: Effective value (stored override or default); secrets masked.
+          $ref: "#/components/schemas/SystemSettingValue"
+        is_default: { type: boolean }
+        schema_version: { type: integer }
+        updated_at: { type: string, format: date-time }
+
+    SystemSettingInput:
+      type: object
+      required: [value]
+      properties:
+        value: { $ref: "#/components/schemas/SystemSettingValue" }
+
+    EnvelopeSystemSetting:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/SystemSetting" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeSystemSettingList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/SystemSetting" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopePlatformOrganizationModules:
