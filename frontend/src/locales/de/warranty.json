@@ -1,0 +1,23 @@
+{
+  "public.page_title": "Garantieprüfung",
+  "public.status.active": "Aktiv",
+  "public.status.expired": "Abgelaufen",
+  "public.status.void": "Storniert",
+  "public.days_remaining": "Verbleibende Tage",
+  "public.start": "Beginn",
+  "public.end": "Ende",
+  "public.vehicle": "Fahrzeug",
+  "public.plate": "Kennzeichen",
+  "public.vin": "FIN (letzte 4)",
+  "public.model_year": "Baujahr",
+  "public.dealer": "Ausgeführt von",
+  "public.privacy_note": "Kennzeichen und FIN sind zum Schutz personenbezogener Daten teilweise ausgeblendet.",
+  "public.not_found_title": "Garantie nicht gefunden",
+  "public.not_found_body": "Zu diesem Code gibt es keine Garantie. Scannen Sie den QR-Code erneut oder prüfen Sie den Code.",
+  "public.rate_limited_title": "Zu viele Anfragen",
+  "public.rate_limited_body": "Zu viele Abfragen in kurzer Zeit. Bitte versuchen Sie es gleich noch einmal.",
+  "public.retry_after": "Versuchen Sie es in {{seconds}} Sekunden erneut.",
+  "public.error_title": "Die Garantie kann derzeit nicht angezeigt werden",
+  "public.error_body": "Bitte versuchen Sie es später erneut.",
+  "public.language": "Sprache"
+}

@@ -490,6 +490,89 @@ func (q *Queries) GetPendingVehicleTransfer(ctx context.Context, vehicleID int64
 	return i, err
 }
 
+const getPublicWarrantyByCode = `-- name: GetPublicWarrantyByCode :one
+SELECT w.public_code, w.status, w.start_at, w.end_at,
+       p.name AS product_name,
+       o.name AS organization_name, o.city AS organization_city,
+       COALESCE(pr.name, '')::text AS organization_province,
+       cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
+       (cb.logo_object_key IS NOT NULL)::boolean AS car_brand_has_logo,
+       cm.name AS car_model_name,
+       s.model_year AS service_model_year, s.plate AS service_plate,
+       s.plate_country AS service_plate_country, s.vin AS service_vin,
+       v.model_year AS vehicle_model_year, v.plate AS vehicle_plate,
+       v.plate_country AS vehicle_plate_country, v.vin AS vehicle_vin
+FROM warranties w
+JOIN products p ON p.id = w.product_id
+JOIN organizations o ON o.id = w.organization_id
+LEFT JOIN provinces pr ON pr.id = o.province_id
+JOIN services s ON s.id = w.service_id
+JOIN car_brands cb ON cb.id = s.car_brand_id
+JOIN car_models cm ON cm.id = s.car_model_id
+JOIN vehicles v ON v.id = w.vehicle_id
+WHERE w.public_code = $1 AND w.brand_id = $2
+`
+
+type GetPublicWarrantyByCodeParams struct {
+	PublicCode string `json:"public_code"`
+	BrandID    int64  `json:"brand_id"`
+}
+
+type GetPublicWarrantyByCodeRow struct {
+	PublicCode           string             `json:"public_code"`
+	Status               string             `json:"status"`
+	StartAt              pgtype.Timestamptz `json:"start_at"`
+	EndAt                pgtype.Timestamptz `json:"end_at"`
+	ProductName          string             `json:"product_name"`
+	OrganizationName     string             `json:"organization_name"`
+	OrganizationCity     string             `json:"organization_city"`
+	OrganizationProvince string             `json:"organization_province"`
+	CarBrandUuid         uuid.UUID          `json:"car_brand_uuid"`
+	CarBrandName         string             `json:"car_brand_name"`
+	CarBrandHasLogo      bool               `json:"car_brand_has_logo"`
+	CarModelName         string             `json:"car_model_name"`
+	ServiceModelYear     pgtype.Int2        `json:"service_model_year"`
+	ServicePlate         pgtype.Text        `json:"service_plate"`
+	ServicePlateCountry  pgtype.Text        `json:"service_plate_country"`
+	ServiceVin           pgtype.Text        `json:"service_vin"`
+	VehicleModelYear     pgtype.Int2        `json:"vehicle_model_year"`
+	VehiclePlate         pgtype.Text        `json:"vehicle_plate"`
+	VehiclePlateCountry  pgtype.Text        `json:"vehicle_plate_country"`
+	VehicleVin           pgtype.Text        `json:"vehicle_vin"`
+}
+
+// Public warranty lookup (TEC-189): only the fields the public page shows.
+// No users join: the holder's personal data is never read, so an anonymized
+// customer's warranty answers the same way (K19). Vehicle fields come from
+// the service snapshot first, then the vehicle.
+func (q *Queries) GetPublicWarrantyByCode(ctx context.Context, arg GetPublicWarrantyByCodeParams) (GetPublicWarrantyByCodeRow, error) {
+	row := q.db.QueryRow(ctx, getPublicWarrantyByCode, arg.PublicCode, arg.BrandID)
+	var i GetPublicWarrantyByCodeRow
+	err := row.Scan(
+		&i.PublicCode,
+		&i.Status,
+		&i.StartAt,
+		&i.EndAt,
+		&i.ProductName,
+		&i.OrganizationName,
+		&i.OrganizationCity,
+		&i.OrganizationProvince,
+		&i.CarBrandUuid,
+		&i.CarBrandName,
+		&i.CarBrandHasLogo,
+		&i.CarModelName,
+		&i.ServiceModelYear,
+		&i.ServicePlate,
+		&i.ServicePlateCountry,
+		&i.ServiceVin,
+		&i.VehicleModelYear,
+		&i.VehiclePlate,
+		&i.VehiclePlateCountry,
+		&i.VehicleVin,
+	)
+	return i, err
+}
+
 const getVehicleTransfer = `-- name: GetVehicleTransfer :one
 SELECT id, uuid, organization_id, brand_id, vehicle_id, from_user_id, to_user_id, to_phone, from_code_hash, to_code_hash, from_verified_at, to_verified_at, attempts, expires_at, status, initiated_by_user_id, completed_at, cancelled_at, created_at, updated_at FROM vehicle_transfers
 WHERE id = $1 AND brand_id = $2

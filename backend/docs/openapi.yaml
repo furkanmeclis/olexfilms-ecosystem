@@ -1269,6 +1269,55 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /v1/public/warranties/{public_code}:
+    get:
+      tags: [Public]
+      operationId: getPublicWarranty
+      summary: Public warranty lookup (QR page /garanti/{public_code})
+      description: |
+        TEC-189. No authentication. Looks up a warranty by its random public
+        code inside the brand of the request domain (K20). Returns no personal
+        data: no holder name, phone, e-mail or address; the plate is masked
+        (e.g. `34 *** 12`) and only the last four VIN characters are shown.
+        The warranty of an anonymized customer is still returned (K19).
+        Malformed codes (outside `^[A-Za-z0-9_-]{12,32}$`) are 404 without a
+        database lookup; malformed, unknown and other-brand codes share the same
+        404 body. Rate limited per client IP (WARRANTY_PUBLIC_RATE_LIMIT per
+        WARRANTY_PUBLIC_RATE_WINDOW); over the limit 429 with Retry-After.
+        Responses carry `Cache-Control: no-store` and `X-Robots-Tag: noindex`.
+      security: []
+      parameters:
+        - name: public_code
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 12
+            maxLength: 32
+            pattern: "^[A-Za-z0-9_-]{12,32}$"
+      responses:
+        "200":
+          description: Warranty
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePublicWarranty"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          description: Rate limited per client IP
+          headers:
+            Retry-After:
+              description: Seconds until the window resets
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /v1/me/organizations:
     get:
       tags: [Auth]
@@ -10363,6 +10412,65 @@ components:
           type: string
           enum: [active, inactive]
 
+    PublicWarranty:
+      type: object
+      description: Public warranty projection (TEC-189); never carries personal data.
+      required: [public_code, status, start_at, end_at, days_remaining, product, brand, dealer, vehicle]
+      properties:
+        public_code:
+          type: string
+        status:
+          type: string
+          enum: [active, expired, void]
+          description: An active warranty past end_at reads expired before the nightly cron runs.
+        start_at:
+          type: string
+          format: date-time
+        end_at:
+          type: string
+          format: date-time
+        days_remaining:
+          type: integer
+          minimum: 0
+          description: Whole days left (rounded up) while active, else 0.
+        product:
+          type: object
+          required: [name]
+          properties:
+            name: { type: string }
+        brand:
+          type: object
+          description: Brand of the request domain.
+          required: [name, slug]
+          properties:
+            name: { type: string }
+            slug: { type: string }
+        dealer:
+          type: object
+          description: Organization that performed the service.
+          required: [name, city]
+          properties:
+            name: { type: string }
+            city: { type: string }
+        vehicle:
+          type: object
+          required: [brand_name, brand_logo_uuid, model_name, model_year, plate_masked, vin_last4]
+          properties:
+            brand_name: { type: string }
+            brand_logo_uuid:
+              type: [string, "null"]
+              format: uuid
+              description: Car brand with a logo, served at /brand-logos/{uuid}.
+            model_name: { type: string }
+            model_year:
+              type: [integer, "null"]
+            plate_masked:
+              type: [string, "null"]
+              example: "34 *** 12"
+            vin_last4:
+              type: [string, "null"]
+              example: "6752"
+
     PublicOrganization:
       type: object
       required: [uuid, slug, name, status, access_ok]
@@ -11622,6 +11730,14 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/PublicBrand" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePublicWarranty:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PublicWarranty" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeTokens:

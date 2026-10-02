@@ -1,0 +1,23 @@
+{
+  "public.page_title": "Warranty check",
+  "public.status.active": "Active",
+  "public.status.expired": "Expired",
+  "public.status.void": "Voided",
+  "public.days_remaining": "Days remaining",
+  "public.start": "Start date",
+  "public.end": "End date",
+  "public.vehicle": "Vehicle",
+  "public.plate": "Plate",
+  "public.vin": "VIN (last 4)",
+  "public.model_year": "Model year",
+  "public.dealer": "Applied by",
+  "public.privacy_note": "The plate and VIN are partly hidden to protect personal data.",
+  "public.not_found_title": "Warranty not found",
+  "public.not_found_body": "No warranty matches this code. Scan the QR code again or check the code.",
+  "public.rate_limited_title": "Too many requests",
+  "public.rate_limited_body": "Too many lookups in a short time. Please try again shortly.",
+  "public.retry_after": "Try again in {{seconds}} seconds.",
+  "public.error_title": "The warranty cannot be shown right now",
+  "public.error_body": "Please try again later.",
+  "public.language": "Language"
+}

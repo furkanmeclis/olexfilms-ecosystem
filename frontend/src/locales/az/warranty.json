@@ -1,0 +1,23 @@
+{
+  "public.page_title": "Zəmanət sorğusu",
+  "public.status.active": "Aktiv",
+  "public.status.expired": "Müddəti bitib",
+  "public.status.void": "Ləğv edilib",
+  "public.days_remaining": "Qalan gün",
+  "public.start": "Başlanğıc tarixi",
+  "public.end": "Bitmə tarixi",
+  "public.vehicle": "Avtomobil",
+  "public.plate": "Dövlət nömrəsi",
+  "public.vin": "VIN (son 4)",
+  "public.model_year": "Model ili",
+  "public.dealer": "Tətbiq edən",
+  "public.privacy_note": "Şəxsi məlumatları qorumaq üçün dövlət nömrəsi və VIN qismən gizlədilib.",
+  "public.not_found_title": "Zəmanət tapılmadı",
+  "public.not_found_body": "Bu koda uyğun zəmanət yoxdur. QR kodu yenidən oxudun və ya kodu yoxlayın.",
+  "public.rate_limited_title": "Həddən çox sorğu",
+  "public.rate_limited_body": "Qısa müddətdə həddən çox sorğu edildi. Bir az sonra yenidən cəhd edin.",
+  "public.retry_after": "{{seconds}} saniyədən sonra yenidən cəhd edin.",
+  "public.error_title": "Zəmanət hazırda göstərilə bilmir",
+  "public.error_body": "Zəhmət olmasa, sonra yenidən cəhd edin.",
+  "public.language": "Dil seçimi"
+}

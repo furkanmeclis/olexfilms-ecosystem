@@ -1,0 +1,23 @@
+{
+  "public.page_title": "Проверка на гаранция",
+  "public.status.active": "Активна",
+  "public.status.expired": "Изтекла",
+  "public.status.void": "Анулирана",
+  "public.days_remaining": "Оставащи дни",
+  "public.start": "Начална дата",
+  "public.end": "Крайна дата",
+  "public.vehicle": "Автомобил",
+  "public.plate": "Регистрационен номер",
+  "public.vin": "VIN (последни 4)",
+  "public.model_year": "Година на производство",
+  "public.dealer": "Изпълнено от",
+  "public.privacy_note": "Регистрационният номер и VIN са частично скрити за защита на личните данни.",
+  "public.not_found_title": "Гаранцията не е намерена",
+  "public.not_found_body": "Няма гаранция с този код. Сканирайте QR кода отново или проверете кода.",
+  "public.rate_limited_title": "Твърде много заявки",
+  "public.rate_limited_body": "Твърде много проверки за кратко време. Моля, опитайте отново след малко.",
+  "public.retry_after": "Опитайте отново след {{seconds}} секунди.",
+  "public.error_title": "Гаранцията не може да бъде показана в момента",
+  "public.error_body": "Моля, опитайте отново по-късно.",
+  "public.language": "Език"
+}
