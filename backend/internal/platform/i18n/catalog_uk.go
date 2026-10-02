@@ -323,6 +323,7 @@ var ukCatalog = map[string]string{
 	"accounting.source.order":                       "Замовлення",
 	"accounting.source.service":                     "Послуга",
 	"accounting.source.transfer":                    "Переміщення",
+	"accounting.source.opening_balance":             "Початковий залишок",
 	"export.title.tenant.accounting.cari_statement": "Виписка за рахунком",
 	"export.title.tenant.accounting.balances":       "Звіт про залишки",
 	"resources.tenant.accounting.cari_statement":    "Виписка за рахунком",

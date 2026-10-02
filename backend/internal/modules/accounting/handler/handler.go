@@ -26,6 +26,7 @@ const (
 	CodeIdempotencyReused  = "IDEMPOTENCY_KEY_REUSED"
 	CodeRateNotFound       = response.CodeRateNotFound
 	CodeCounterpartyAbsent = "COUNTERPARTY_NOT_FOUND"
+	CodeOpeningExists      = "OPENING_BALANCE_EXISTS"
 )
 
 // Handler serves accounting endpoints.
@@ -62,7 +63,9 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Error(w, r, http.StatusNotFound, CodeCounterpartyAbsent,
 			"Counterparty must be the parent or a direct child organization of the same brand")
 	case errors.Is(err, acc.ErrNotVoidable):
-		response.Conflict(w, r, CodeEntryNotVoidable, "Only an open manual entry can be voided")
+		response.Conflict(w, r, CodeEntryNotVoidable, "Only an open manual entry or opening balance can be voided")
+	case errors.Is(err, acc.ErrOpeningBalanceExists):
+		response.Conflict(w, r, CodeOpeningExists, "This cari already has an opening balance; reverse it first")
 	case errors.Is(err, acc.ErrIdempotencyConflict):
 		response.Conflict(w, r, CodeIdempotencyReused, "The idempotency key was used for a different entry")
 	case errors.Is(err, acc.ErrRateNotFound):
@@ -447,4 +450,30 @@ func (h *Handler) VoidEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, r, http.StatusCreated, e)
+}
+
+type openingBody struct {
+	CariUUID        *uuid.UUID `json:"cari_uuid"`
+	CounterpartyOrg *uuid.UUID `json:"counterparty_organization_uuid"`
+	Side            string     `json:"side"`
+	Amount          string     `json:"amount"`
+	Currency        string     `json:"currency"`
+	OpeningDate     string     `json:"opening_date"`
+	Description     string     `json:"description"`
+}
+
+// CreateOpeningBalance books the one-off opening balance of a cari
+// (POST /v1/accounting/opening-balances, step-up, TEC-177). The same
+// opening balance again answers 200 with the earlier entry; other values
+// while one is open answer 409 OPENING_BALANCE_EXISTS.
+func (h *Handler) CreateOpeningBalance(w http.ResponseWriter, r *http.Request) {
+	var b openingBody
+	if !decode(w, r, &b) {
+		return
+	}
+	e, replayed, err := h.svc.PostOpeningBalance(r.Context(), caller(r), acc.OpeningBalanceInput{
+		CariUUID: b.CariUUID, CounterpartyOrg: b.CounterpartyOrg, Side: b.Side, Amount: b.Amount,
+		Currency: b.Currency, Date: b.OpeningDate, Description: b.Description,
+	})
+	written(w, r, e, replayed, err)
 }

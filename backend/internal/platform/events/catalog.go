@@ -15,6 +15,9 @@ const (
 	CariChargePosted  = "cari.charge_posted"
 	CariPaymentPosted = "cari.payment_posted"
 	CariEntryVoided   = "cari.entry_voided"
+	// CariOpeningBalancePosted: the one-off opening balance of a cari
+	// (TEC-177); its reversal publishes CariEntryVoided.
+	CariOpeningBalancePosted = "cari.opening_balance_posted"
 )
 
 // Finance (income/expense ledger, TEC-99) domain events. A ledger row that
@@ -249,6 +252,11 @@ const (
 	ServiceNoteAdded    = "service.note_added"
 )
 
+// ServiceReviewRequested is written by the delayed service:review_request
+// task (TEC-192) in the transaction that stamps review_request_sent_at; the
+// notification module sends the WhatsApp review request from it.
+const ServiceReviewRequested = "service.review_requested"
+
 // Warranty domain events (TEC-98 / TEC-185). warranty.created is written
 // by the service.completed consumer, expiring_soon (payload days: 30 or 7)
 // and expired by the daily cron, holder_changed by a completed vehicle
@@ -361,6 +369,7 @@ func catalogConstants() []string {
 		CariChargePosted,
 		CariPaymentPosted,
 		CariEntryVoided,
+		CariOpeningBalancePosted,
 		FinanceEntryPosted,
 		FinanceEntryVoided,
 		AccountingDisputeOpened,
@@ -518,6 +527,7 @@ func catalogConstants() []string {
 		ServiceImageAdded,
 		ServiceImageRemoved,
 		ServiceNoteAdded,
+		ServiceReviewRequested,
 		WarrantyCreated,
 		WarrantyExpiringSoon,
 		WarrantyExpired,

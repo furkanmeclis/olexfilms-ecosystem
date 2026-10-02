@@ -373,9 +373,11 @@ func (s *Service) counterparty(ctx context.Context, book db.Organization, cariUU
 	}
 }
 
-// Void reverses a manual entry (and nothing else) of the active
-// organization's book. Entries sourced by other modules are voided by their
-// source (VoidBySourceTx); disputes are TEC-174.
+// Void reverses a manual entry or an opening balance (TEC-177) of the
+// active organization's book, and nothing else. Entries sourced by other
+// modules are voided by their source (VoidBySourceTx); disputes are TEC-174.
+// Reversing an opening balance also writes an audit row; a new opening
+// balance may then be booked.
 func (s *Service) Void(ctx context.Context, c Caller, id uuid.UUID, reason string) (Entry, error) {
 	book, err := s.writeBook(ctx, c)
 	if err != nil {
@@ -395,13 +397,14 @@ func (s *Service) Void(ctx context.Context, c Caller, id uuid.UUID, reason strin
 	if err != nil {
 		return Entry{}, fmt.Errorf("accounting: entry: %w", err)
 	}
-	if row.SourceType.String != SourceManual || !row.SourceUuid.Valid || row.ReversalOfID.Valid {
+	sourceType := row.SourceType.String
+	if (sourceType != SourceManual && sourceType != SourceOpeningBalance) || !row.SourceUuid.Valid || row.ReversalOfID.Valid {
 		return Entry{}, ErrNotVoidable
 	}
 	var reversal db.FinanceEntry
 	err = s.inTx(ctx, func(tx pgx.Tx) error {
 		res, err := s.poster.VoidBySourceTx(ctx, tx,
-			posting.Source{Type: SourceManual, UUID: uuid.UUID(row.SourceUuid.Bytes)}, reason, c.actor())
+			posting.Source{Type: sourceType, UUID: uuid.UUID(row.SourceUuid.Bytes)}, reason, c.actor())
 		if err != nil {
 			return err
 		}
@@ -412,6 +415,9 @@ func (s *Service) Void(ctx context.Context, c Caller, id uuid.UUID, reason strin
 		}
 		if reversal.ID == 0 {
 			return ErrNotVoidable // already reversed
+		}
+		if sourceType == SourceOpeningBalance {
+			return s.auditEntry(ctx, tx, AuditOpeningBalanceVoided, reversal, c.actor(), map[string]any{"reason": reason})
 		}
 		return nil
 	})

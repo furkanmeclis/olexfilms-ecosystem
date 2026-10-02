@@ -323,6 +323,7 @@ var itCatalog = map[string]string{
 	"accounting.source.order":                       "Ordine",
 	"accounting.source.service":                     "Servizio",
 	"accounting.source.transfer":                    "Trasferimento",
+	"accounting.source.opening_balance":             "Saldo di apertura",
 	"export.title.tenant.accounting.cari_statement": "Estratto conto",
 	"export.title.tenant.accounting.balances":       "Report dei saldi",
 	"resources.tenant.accounting.cari_statement":    "Estratto conto",

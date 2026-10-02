@@ -323,6 +323,7 @@ var azCatalog = map[string]string{
 	"accounting.source.order":                       "Sifariş",
 	"accounting.source.service":                     "Xidmət",
 	"accounting.source.transfer":                    "Köçürmə",
+	"accounting.source.opening_balance":             "İlkin qalıq",
 	"export.title.tenant.accounting.cari_statement": "Hesab çıxarışı",
 	"export.title.tenant.accounting.balances":       "Qalıqlar hesabatı",
 	"resources.tenant.accounting.cari_statement":    "Hesab çıxarışı",

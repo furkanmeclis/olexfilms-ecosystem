@@ -323,6 +323,7 @@ var ruCatalog = map[string]string{
 	"accounting.source.order":                       "Заказ",
 	"accounting.source.service":                     "Услуга",
 	"accounting.source.transfer":                    "Перемещение",
+	"accounting.source.opening_balance":             "Начальный остаток",
 	"export.title.tenant.accounting.cari_statement": "Выписка по счёту",
 	"export.title.tenant.accounting.balances":       "Отчёт об остатках",
 	"resources.tenant.accounting.cari_statement":    "Выписка по счёту",

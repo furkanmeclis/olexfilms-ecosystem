@@ -323,6 +323,7 @@ var frCatalog = map[string]string{
 	"accounting.source.order":                       "Commande",
 	"accounting.source.service":                     "Prestation",
 	"accounting.source.transfer":                    "Virement interne",
+	"accounting.source.opening_balance":             "Solde d'ouverture",
 	"export.title.tenant.accounting.cari_statement": "Relevé de compte",
 	"export.title.tenant.accounting.balances":       "Rapport des soldes",
 	"resources.tenant.accounting.cari_statement":    "Relevé de compte",
