@@ -1318,6 +1318,97 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /v1/services/{uuid}/pdf:
+    post:
+      tags: [Services]
+      operationId: requestServicePdf
+      summary: Queue the PDF of a service
+      description: >-
+        TEC-196. One PDF per service on the letterhead of the organization
+        that performed it: service number, created / completed day and
+        status, the customer (phone masked, anonymized customers labelled),
+        the vehicle (brand, model, year, plate, VIN), every item with its
+        unit barcode, amount (pieces / metres / whole unit) and applied parts,
+        and the warranty summary with a QR code per warranty pointing at
+        PUBLIC_FRONTEND_URL/garanti/{public_code}. The job runs on
+        worker-docs (exports queue) and is rendered by Gotenberg in the
+        requested language (RTL for ar). Needs services.read; a service
+        outside the scope answers 404. Poll and download through
+        /v1/service-pdfs/{uuid}.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServicePdfInput"
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/service-pdfs/{uuid}:
+    get:
+      tags: [Services]
+      operationId: getServicePdfJob
+      summary: A service PDF job of the active organization
+      description: download_url points at /v1/service-pdfs/{uuid}/download once completed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Export job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/service-pdfs/{uuid}/download:
+    get:
+      tags: [Services]
+      operationId: downloadServicePdf
+      summary: Download a completed service PDF
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: PDF bytes
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/services/{uuid}/warranty-certificate:
     post:
       tags: [Services]
@@ -14998,6 +15089,12 @@ components:
             bank: { $ref: "#/components/schemas/AccountingAmount" }
             accounts: { $ref: "#/components/schemas/AccountingAmount" }
         generated_at: { type: string, format: date-time }
+
+    ServicePdfInput:
+      type: object
+      additionalProperties: false
+      properties:
+        locale: { type: string, description: PDF language override (default the user language), example: ar }
 
     WarrantyCertificateInput:
       type: object

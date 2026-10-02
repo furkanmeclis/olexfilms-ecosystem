@@ -746,6 +746,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/services/{uuid}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue the PDF of a service
+         * @description TEC-196. One PDF per service on the letterhead of the organization that performed it: service number, created / completed day and status, the customer (phone masked, anonymized customers labelled), the vehicle (brand, model, year, plate, VIN), every item with its unit barcode, amount (pieces / metres / whole unit) and applied parts, and the warranty summary with a QR code per warranty pointing at PUBLIC_FRONTEND_URL/garanti/{public_code}. The job runs on worker-docs (exports queue) and is rendered by Gotenberg in the requested language (RTL for ar). Needs services.read; a service outside the scope answers 404. Poll and download through /v1/service-pdfs/{uuid}.
+         */
+        post: operations["requestServicePdf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/service-pdfs/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A service PDF job of the active organization
+         * @description download_url points at /v1/service-pdfs/{uuid}/download once completed.
+         */
+        get: operations["getServicePdfJob"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/service-pdfs/{uuid}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download a completed service PDF */
+        get: operations["downloadServicePdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/services/{uuid}/warranty-certificate": {
         parameters: {
             query?: never;
@@ -8896,6 +8953,13 @@ export interface components {
             /** Format: date-time */
             generated_at: string;
         };
+        ServicePdfInput: {
+            /**
+             * @description PDF language override (default the user language)
+             * @example ar
+             */
+            locale?: string;
+        };
         WarrantyCertificateInput: {
             /**
              * @description Certificate language override (default the user language)
@@ -10729,6 +10793,89 @@ export interface operations {
                 };
             };
             500: components["responses"]["InternalError"];
+        };
+    };
+    requestServicePdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ServicePdfInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getServicePdfJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Export job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    downloadServicePdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     requestServiceWarrantyCertificate: {
