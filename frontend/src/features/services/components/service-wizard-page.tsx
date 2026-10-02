@@ -10,6 +10,7 @@ import { Loading } from "@/components/common/loading";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { CustomerVehicleStep } from "@/features/services/components/customer-vehicle-step";
 import { MeasurementStep } from "@/features/services/components/measurement-step";
@@ -128,7 +129,12 @@ export function ServiceWizardPage({
       description={t("services.wizard.description")}
       breadcrumbs={[
         { label: t("layout.breadcrumb_home"), href: routes.tenant.home(slug) },
-        { label: t("services.nav") },
+        {
+          label: t("services.list.title"),
+          href: can(permissions.services.read)
+            ? routes.tenant.services.list(slug)
+            : undefined,
+        },
         { label: title },
       ]}
       actions={
@@ -234,8 +240,7 @@ export function ServiceWizardPage({
         onCompleted={(saved) => {
           stored(saved);
           storeParts(saved.uuid, null);
-          // The detail page comes with TEC-183; until then the tenant home.
-          router.push(routes.tenant.home(slug));
+          router.push(routes.tenant.services.detail(slug, saved.uuid));
         }}
       />
     );

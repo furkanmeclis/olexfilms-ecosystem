@@ -1,3 +1,4 @@
+import { apiConfig } from "@/config/api";
 import type { components } from "@/generated/api";
 import { platformRequest } from "@/lib/api/platform-request";
 
@@ -15,6 +16,19 @@ export type ServiceItem = Schemas["ServiceItem"];
 export type ServiceItemInput = Schemas["ServiceItemInput"];
 export type ServiceStockUnit = Schemas["ServiceStockUnit"];
 export type ServiceStatus = Schemas["ServiceStatus"];
+export type ServiceStatusLog = Schemas["ServiceStatusLog"];
+export type ServiceImage = Schemas["ServiceImage"];
+export type ServiceWarranty = Schemas["ServiceWarranty"];
+
+/** GET /v1/services filters (TEC-183); dates are ISO bounds. */
+export type ServiceListQuery = {
+  q?: string;
+  status?: ServiceStatus;
+  created_from?: string;
+  created_to?: string;
+  limit: number;
+  offset: number;
+};
 
 export type StockUnitQuery = {
   barcode?: string;
@@ -38,6 +52,12 @@ const enc = encodeURIComponent;
  * active organization of the session.
  */
 export const serviceWizardService = {
+  /** Service list in the services.read scope (TEC-183). */
+  listServices(params: ServiceListQuery) {
+    return platformRequest<Page<Service>>("GET", "/v1/services", {
+      query: params,
+    });
+  },
   getService(uuid: string) {
     return platformRequest<Service>("GET", `/v1/services/${enc(uuid)}`);
   },
@@ -93,8 +113,15 @@ export const serviceWizardService = {
   },
 };
 
+/** Browser URL of a service image (the API url goes through the BFF). */
+export function serviceImageSrc(url: string): string {
+  return `${apiConfig.baseUrl.replace(/\/$/, "")}${url}`;
+}
+
 export const serviceWizardKeys = {
   all: ["service-wizard"] as const,
+  list: (params: ServiceListQuery) =>
+    ["service-wizard", "list", params] as const,
   service: (uuid: string) => ["service-wizard", "service", uuid] as const,
   customers: (q: string) => ["service-wizard", "customers", q] as const,
   vehicles: (customerUuid: string) =>

@@ -85,6 +85,21 @@ type StatusLogView struct {
 	CreatedAt           time.Time `json:"created_at"`
 }
 
+// WarrantyView summarises one warranty the completed service issued
+// (TEC-186); ServiceItemUUID and ProductName tie it to the service item.
+type WarrantyView struct {
+	UUID            uuid.UUID  `json:"uuid"`
+	PublicCode      string     `json:"public_code"`
+	ServiceItemUUID uuid.UUID  `json:"service_item_uuid"`
+	ProductName     string     `json:"product_name"`
+	ItemKind        string     `json:"item_kind"`
+	Status          string     `json:"status"`
+	StartAt         time.Time  `json:"start_at"`
+	EndAt           time.Time  `json:"end_at"`
+	ExpiredAt       *time.Time `json:"expired_at"`
+	VoidedAt        *time.Time `json:"voided_at"`
+}
+
 // ServiceView is a service as the API returns it.
 type ServiceView struct {
 	UUID           uuid.UUID   `json:"uuid"`
@@ -118,6 +133,7 @@ type ServiceView struct {
 	Items                []ItemView      `json:"items,omitempty"`
 	Images               []ImageView     `json:"images,omitempty"`
 	StatusLogs           []StatusLogView `json:"status_logs,omitempty"`
+	Warranties           []WarrantyView  `json:"warranties,omitempty"`
 }
 
 func tsPtr(t pgtype.Timestamptz) *time.Time {
@@ -189,6 +205,7 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, svc db.Serv
 		return ServiceView{}, fmt.Errorf("services: items: %w", err)
 	}
 	v.Items = make([]ItemView, 0, len(items))
+	itemByID := make(map[int64]ItemView, len(items))
 	for _, it := range items {
 		p, err := q.GetProduct(ctx, db.GetProductParams{ID: it.ProductID, BrandID: svc.BrandID})
 		if err != nil {
@@ -210,6 +227,7 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, svc db.Serv
 			iv.Quantity = &qv
 		}
 		v.Items = append(v.Items, iv)
+		itemByID[it.ID] = iv
 	}
 	images, err := q.ListServiceImages(ctx, svc.ID)
 	if err != nil {
@@ -232,6 +250,19 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, svc db.Serv
 			FromStatus: textPtr(l.FromStatus), ToStatus: l.ToStatus, Note: textPtr(l.Note),
 			ByOtherOrganization: l.ActorOrgID.Valid && l.ActorOrgID.Int64 != svc.OrganizationID,
 			CreatedAt:           l.CreatedAt.Time,
+		})
+	}
+	warranties, err := q.ListWarrantiesByService(ctx, db.ListWarrantiesByServiceParams{ServiceID: svc.ID, BrandID: svc.BrandID})
+	if err != nil {
+		return ServiceView{}, fmt.Errorf("services: warranties: %w", err)
+	}
+	v.Warranties = make([]WarrantyView, 0, len(warranties))
+	for _, w := range warranties {
+		item := itemByID[w.ServiceItemID]
+		v.Warranties = append(v.Warranties, WarrantyView{
+			UUID: w.Uuid, PublicCode: w.PublicCode, ServiceItemUUID: item.UUID, ProductName: item.Product.Name,
+			ItemKind: w.ItemKind, Status: w.Status, StartAt: w.StartAt.Time, EndAt: w.EndAt.Time,
+			ExpiredAt: tsPtr(w.ExpiredAt), VoidedAt: tsPtr(w.VoidedAt),
 		})
 	}
 	return v, nil
@@ -261,12 +292,15 @@ func (s *Service) Get(ctx context.Context, c Caller, id uuid.UUID) (ServiceView,
 }
 
 // ListFilter narrows the service list. Q matches the service number,
-// plate, VIN and the customer's name or phone.
+// plate, VIN and the customer's name or phone. CreatedFrom is inclusive,
+// CreatedTo exclusive (TEC-183).
 type ListFilter struct {
 	Q            string
 	Status       string
 	CustomerUUID string
 	VehicleUUID  string
+	CreatedFrom  *time.Time
+	CreatedTo    *time.Time
 	Limit        int32
 	Offset       int32
 }
@@ -285,6 +319,15 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]ServiceVi
 			return nil, 0, invalid("status", "unknown service status")
 		}
 		p.Status = pgtype.Text{String: st, Valid: true}
+	}
+	if f.CreatedFrom != nil {
+		p.CreatedFrom = pgtype.Timestamptz{Time: *f.CreatedFrom, Valid: true}
+	}
+	if f.CreatedTo != nil {
+		if f.CreatedFrom != nil && !f.CreatedTo.After(*f.CreatedFrom) {
+			return nil, 0, invalid("created_to", "must be after created_from")
+		}
+		p.CreatedTo = pgtype.Timestamptz{Time: *f.CreatedTo, Valid: true}
 	}
 	if q := strings.TrimSpace(f.Q); q != "" {
 		if len([]rune(q)) > 100 {
@@ -327,6 +370,7 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]ServiceVi
 	total, err := s.q.CountServicesInScope(ctx, db.CountServicesInScopeParams{
 		BrandID: p.BrandID, OrgIds: p.OrgIds, CreatedByUserID: p.CreatedByUserID,
 		CustomerUserID: p.CustomerUserID, VehicleID: p.VehicleID, Status: p.Status, Q: p.Q,
+		CreatedFrom: p.CreatedFrom, CreatedTo: p.CreatedTo,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("services: count: %w", err)

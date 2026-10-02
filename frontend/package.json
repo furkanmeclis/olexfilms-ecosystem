@@ -16,6 +16,7 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "i18n:check": "node ../scripts/check-i18n.mjs",
     "i18n:report": "node ../scripts/i18n-untranslated-report.mjs",
     "i18n:gen": "node scripts/gen-locale-catalogs.mjs",
@@ -100,6 +101,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@playwright/test": "1.56.1",
     "@tailwindcss/postcss": "^4",
     "@tanstack/react-query-devtools": "^5.101.2",
     "@types/lodash": "^4.17.24",
