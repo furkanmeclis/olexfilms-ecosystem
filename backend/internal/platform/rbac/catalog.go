@@ -332,6 +332,22 @@ var Permissions = []PermissionDef{
 		Slug: PermServicesCancel, Name: "Cancel services", Module: "services", Scopes: scopesSupplier,
 		Description: "Cancel a service that is not completed (center only).",
 	},
+
+	// TEC-185: warranties and vehicle ownership transfer. Appended last;
+	// migration 000051 seeds them. Void is center-only, so its scopes start
+	// at brand.
+	{
+		Slug: PermWarrantiesRead, Name: "Read warranties", Module: "warranties", Scopes: scopesRecords,
+		Description: "Warranties opened from completed services: period, status, covered product.",
+	},
+	{
+		Slug: PermWarrantiesVoid, Name: "Void warranties", Module: "warranties", Scopes: scopesSupplier,
+		Description: "Void a warranty (center only).",
+	},
+	{
+		Slug: PermVehiclesTransfer, Name: "Transfer vehicles", Module: "vehicles", Scopes: scopesRecordsInt,
+		Description: "Transfer a vehicle and its active warranties to a new owner with two codes.",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -411,6 +427,10 @@ var Roles = []RoleDef{
 			// TEC-178 (000050).
 			PermServicesComplete: ScopeBrand,
 			PermServicesCancel:   ScopeBrand,
+			// TEC-185 (000051).
+			PermWarrantiesRead:   ScopeBrand,
+			PermWarrantiesVoid:   ScopeBrand,
+			PermVehiclesTransfer: ScopeBrand,
 		}),
 	},
 	{
@@ -507,6 +527,9 @@ var Roles = []RoleDef{
 			PermTransfersApprove: ScopeManaged,
 			// TEC-178 (000050).
 			PermServicesComplete: ScopeSubtree,
+			// TEC-185 (000051).
+			PermWarrantiesRead:   ScopeSubtree,
+			PermVehiclesTransfer: ScopeSubtree,
 		}),
 	},
 	{
@@ -523,6 +546,8 @@ var Roles = []RoleDef{
 			PermVehiclesRead:       ScopeSubtree,
 			PermVehiclesWrite:      ScopeSubtree,
 			PermServicesComplete:   ScopeSubtree,
+			PermWarrantiesRead:     ScopeSubtree,
+			PermVehiclesTransfer:   ScopeSubtree,
 		}),
 	},
 	{
@@ -590,6 +615,9 @@ var Roles = []RoleDef{
 			PermTransfersRequest: ScopeManaged,
 			// TEC-178 (000050).
 			PermServicesComplete: ScopeManaged,
+			// TEC-185 (000051).
+			PermWarrantiesRead:   ScopeManaged,
+			PermVehiclesTransfer: ScopeManaged,
 		}),
 	},
 	{
@@ -607,6 +635,8 @@ var Roles = []RoleDef{
 			PermOrdersRead:         ScopeManaged,
 			PermOrdersReceive:      ScopeManaged,
 			PermServicesComplete:   ScopeOwn,
+			PermWarrantiesRead:     ScopeManaged,
+			PermVehiclesTransfer:   ScopeOwn,
 		}),
 	},
 	{
@@ -632,6 +662,7 @@ var Roles = []RoleDef{
 			PermServicesRead:       ScopeCustomer,
 			PermCustomersRead:      ScopeCustomer,
 			PermVehiclesRead:       ScopeCustomer,
+			PermWarrantiesRead:     ScopeCustomer,
 		}),
 	},
 	{
@@ -642,6 +673,7 @@ var Roles = []RoleDef{
 			PermServicesRead:       ScopeCustomer,
 			PermCustomersRead:      ScopeCustomer,
 			PermVehiclesRead:       ScopeCustomer,
+			PermWarrantiesRead:     ScopeCustomer,
 		}),
 	},
 }

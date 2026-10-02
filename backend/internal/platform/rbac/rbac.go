@@ -178,6 +178,12 @@ const (
 	// TEC-178 (000050): service completion and center-only cancel.
 	PermServicesComplete = "services.complete"
 	PermServicesCancel   = "services.cancel"
+
+	// TEC-185 (000051): warranties (void is center-only) and vehicle
+	// ownership transfer with two codes (TEC-98 decision 6).
+	PermWarrantiesRead   = "warranties.read"
+	PermWarrantiesVoid   = "warranties.void"
+	PermVehiclesTransfer = "vehicles.transfer"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

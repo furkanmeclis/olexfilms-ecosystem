@@ -31,11 +31,16 @@ type Querier interface {
 	AttachNotificationDelivery(ctx context.Context, arg AttachNotificationDeliveryParams) error
 	CancelService(ctx context.Context, arg CancelServiceParams) (Service, error)
 	CancelStockTransferRequest(ctx context.Context, id int64) (StockTransferRequest, error)
+	CancelVehicleTransfer(ctx context.Context, id int64) (VehicleTransfer, error)
+	// Vehicle transfer (decision 6): the active warranties of the vehicle move
+	// to the new owner in the transfer transaction.
+	ChangeWarrantyHolderByVehicle(ctx context.Context, arg ChangeWarrantyHolderByVehicleParams) ([]Warranty, error)
 	ClaimOutboxEvents(ctx context.Context, arg ClaimOutboxEventsParams) ([]OutboxEvent, error)
 	ClearAppSettingsLogo(ctx context.Context) (AppSetting, error)
 	ClearOrganizationLogo(ctx context.Context, argUuid uuid.UUID) (Organization, error)
 	CompleteService(ctx context.Context, arg CompleteServiceParams) (Service, error)
 	CompleteStockTransferRequest(ctx context.Context, id int64) (StockTransferRequest, error)
+	CompleteVehicleTransfer(ctx context.Context, arg CompleteVehicleTransferParams) (VehicleTransfer, error)
 	ConfirmUserTOTP(ctx context.Context, arg ConfirmUserTOTPParams) (UserTotp, error)
 	ConsumeOTP(ctx context.Context, id int64) error
 	ConsumeOTPAt(ctx context.Context, arg ConsumeOTPAtParams) error
@@ -87,6 +92,7 @@ type Querier interface {
 	CountUnreadInappForUser(ctx context.Context, userID pgtype.Int8) (int64, error)
 	CountUsers(ctx context.Context, arg CountUsersParams) (int64, error)
 	CountUsersWithRole(ctx context.Context, roleSlug string) (int64, error)
+	CountWarrantiesInScope(ctx context.Context, arg CountWarrantiesInScopeParams) (int64, error)
 	CreateBulkJob(ctx context.Context, arg CreateBulkJobParams) (BulkJob, error)
 	// TEC-149: vehicle catalog (car brands and models). Global reference data:
 	// no organization/brand filter; only super_admin writes (use case + route).
@@ -178,6 +184,9 @@ type Querier interface {
 	CreateUnit(ctx context.Context, arg CreateUnitParams) (Unit, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateVehicle(ctx context.Context, arg CreateVehicleParams) (Vehicle, error)
+	// ---------------------------------------------------------------------------
+	// Vehicle transfers.
+	CreateVehicleTransfer(ctx context.Context, arg CreateVehicleTransferParams) (VehicleTransfer, error)
 	// TEC-153: stock ledger primitives for ledger.Post (TEC-154) and the stock
 	// API. Every write goes through ledger.Post inside one transaction: lock the
 	// state row (FOR UPDATE), append the movement, update the projections.
@@ -186,6 +195,15 @@ type Querier interface {
 	// ---------------------------------------------------------------------------
 	// Warehouse locations (minimal; TEC-95 extends).
 	CreateWarehouseLocation(ctx context.Context, arg CreateWarehouseLocationParams) (WarehouseLocation, error)
+	// TEC-185 (F1-06a): warranties and vehicle ownership transfers (migration
+	// 000051). Panel reads are brand-bound (K20); the public lookup by
+	// public_code is brand-bound too (a warranty of another brand is 404).
+	// ---------------------------------------------------------------------------
+	// Warranties.
+	// Idempotent creation from service.completed (decision 3): the item, its
+	// service, organization, brand, product, unit and kind come from the
+	// service item; a second run returns no row (ON CONFLICT DO NOTHING).
+	CreateWarrantyForServiceItem(ctx context.Context, arg CreateWarrantyForServiceItemParams) (Warranty, error)
 	CreateWebAuthnCredential(ctx context.Context, arg CreateWebAuthnCredentialParams) (WebauthnCredential, error)
 	// Scope check: is the customer linked to an organization the caller reaches?
 	CustomerInScope(ctx context.Context, arg CustomerInScopeParams) (bool, error)
@@ -255,6 +273,10 @@ type Querier interface {
 	// check the proposed row and reject every negative delta.
 	EnsureFixedBarcodeHolding(ctx context.Context, arg EnsureFixedBarcodeHoldingParams) error
 	EnsureOrganizationProductStock(ctx context.Context, arg EnsureOrganizationProductStockParams) error
+	ExpireDueVehicleTransfers(ctx context.Context, now pgtype.Timestamptz) ([]VehicleTransfer, error)
+	// Daily cron (decision 4/5): end_at is the end of the last covered day in
+	// the organization's time zone, so expiry is a plain comparison.
+	ExpireDueWarranties(ctx context.Context, now pgtype.Timestamptz) ([]Warranty, error)
 	ExtensionExists(ctx context.Context, extname string) (bool, error)
 	// TEC-160 (F1-08b): customer and vehicle API (/v1/customers, /v1/vehicles).
 	// Fill-only identity: a customer created by another organization keeps its
@@ -268,6 +290,9 @@ type Querier interface {
 	// Duplicate-VIN warning (VIN is not unique; ownership transfer is F1-06).
 	FindVehiclesByVIN(ctx context.Context, arg FindVehiclesByVINParams) ([]Vehicle, error)
 	GetActiveDocumentTemplate(ctx context.Context, arg GetActiveDocumentTemplateParams) (DocumentTemplate, error)
+	// Full-unit duplicate guard before creation (decision 3); the partial
+	// unique index uq_warranties_active_full_unit is the final barrier.
+	GetActiveFullWarrantyByVehicleUnit(ctx context.Context, arg GetActiveFullWarrantyByVehicleUnitParams) (Warranty, error)
 	GetActiveOTPByEmailType(ctx context.Context, arg GetActiveOTPByEmailTypeParams) (OtpCode, error)
 	GetActivePhoneOTP(ctx context.Context, arg GetActivePhoneOTPParams) (OtpCode, error)
 	// Public image route: the active product (any brand) that lists the key.
@@ -368,6 +393,7 @@ type Querier interface {
 	GetOrganizationMemberByUserAndSlug(ctx context.Context, arg GetOrganizationMemberByUserAndSlugParams) (GetOrganizationMemberByUserAndSlugRow, error)
 	GetOrganizationMemberByUserUUID(ctx context.Context, arg GetOrganizationMemberByUserUUIDParams) (GetOrganizationMemberByUserUUIDRow, error)
 	GetOrganizationTreeByUUID(ctx context.Context, argUuid uuid.UUID) (GetOrganizationTreeByUUIDRow, error)
+	GetPendingVehicleTransfer(ctx context.Context, vehicleID int64) (VehicleTransfer, error)
 	GetPermissionBySlug(ctx context.Context, slug string) (Permission, error)
 	GetPlateFormatByCountry(ctx context.Context, iso2 string) (GetPlateFormatByCountryRow, error)
 	GetProduct(ctx context.Context, arg GetProductParams) (Product, error)
@@ -424,15 +450,24 @@ type Querier interface {
 	GetValidRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
 	GetVehicleByUUID(ctx context.Context, argUuid uuid.UUID) (Vehicle, error)
 	GetVehicleByUUIDForUpdate(ctx context.Context, argUuid uuid.UUID) (Vehicle, error)
+	GetVehicleTransfer(ctx context.Context, arg GetVehicleTransferParams) (VehicleTransfer, error)
+	GetVehicleTransferByUUID(ctx context.Context, arg GetVehicleTransferByUUIDParams) (VehicleTransfer, error)
 	// Vehicle with its customer and car brand/model, for API responses.
 	GetVehicleViewByUUID(ctx context.Context, argUuid uuid.UUID) (GetVehicleViewByUUIDRow, error)
 	GetWarehouseLocation(ctx context.Context, arg GetWarehouseLocationParams) (WarehouseLocation, error)
 	GetWarehouseLocationByUUID(ctx context.Context, argUuid uuid.UUID) (WarehouseLocation, error)
+	GetWarranty(ctx context.Context, arg GetWarrantyParams) (Warranty, error)
+	// Public page /garanti/{public_code} (decision 1).
+	GetWarrantyByPublicCode(ctx context.Context, arg GetWarrantyByPublicCodeParams) (Warranty, error)
+	GetWarrantyByServiceItem(ctx context.Context, serviceItemID int64) (Warranty, error)
+	GetWarrantyByUUID(ctx context.Context, arg GetWarrantyByUUIDParams) (Warranty, error)
 	GetWebAuthnCredentialByCredentialID(ctx context.Context, credentialID string) (WebauthnCredential, error)
 	GetWebAuthnCredentialByUUID(ctx context.Context, arg GetWebAuthnCredentialByUUIDParams) (WebauthnCredential, error)
 	// WhatsApp gateway, KVKK notices, conversations and messages (TEC-92).
 	GetWhatsAppSettings(ctx context.Context) (WhatsappSetting, error)
 	IncrementOTPAttempts(ctx context.Context, id int64) (OtpCode, error)
+	// A wrong code: one more attempt (the use case cancels at the limit).
+	IncrementVehicleTransferAttempts(ctx context.Context, id int64) (VehicleTransfer, error)
 	InsertActivityEvent(ctx context.Context, arg InsertActivityEventParams) (ActivityEvent, error)
 	InsertAppLog(ctx context.Context, arg InsertAppLogParams) error
 	InsertBulkChange(ctx context.Context, arg InsertBulkChangeParams) (BulkChange, error)
@@ -701,11 +736,22 @@ type Querier interface {
 	ListUserUUIDsForBulk(ctx context.Context, arg ListUserUUIDsForBulkParams) ([]uuid.UUID, error)
 	ListUsersFiltered(ctx context.Context, arg ListUsersFilteredParams) ([]User, error)
 	ListUsersForExport(ctx context.Context, arg ListUsersForExportParams) ([]User, error)
+	ListVehicleTransfersByVehicle(ctx context.Context, arg ListVehicleTransfersByVehicleParams) ([]VehicleTransfer, error)
 	ListVehiclesByUser(ctx context.Context, arg ListVehiclesByUserParams) ([]ListVehiclesByUserRow, error)
 	// Vehicles of customers linked to the organizations in scope.
 	ListVehiclesInScope(ctx context.Context, arg ListVehiclesInScopeParams) ([]ListVehiclesInScopeRow, error)
 	ListWarehouseLocations(ctx context.Context, arg ListWarehouseLocationsParams) ([]WarehouseLocation, error)
 	ListWarehouseLocationsByIDs(ctx context.Context, ids []int64) ([]WarehouseLocation, error)
+	// All warranties of a service (one PDF per service, decision 2).
+	ListWarrantiesByService(ctx context.Context, arg ListWarrantiesByServiceParams) ([]Warranty, error)
+	ListWarrantiesByVehicle(ctx context.Context, arg ListWarrantiesByVehicleParams) ([]Warranty, error)
+	// Reminder scan, 30 days: active warranties ending within 30 days that were
+	// not notified yet (a missed day is caught up by the <= condition).
+	ListWarrantiesDue30DayNotice(ctx context.Context, arg ListWarrantiesDue30DayNoticeParams) ([]Warranty, error)
+	ListWarrantiesDue7DayNotice(ctx context.Context, arg ListWarrantiesDue7DayNoticeParams) ([]Warranty, error)
+	// Scope list: org_ids NULL = whole brand (brand/all scope);
+	// holder_user_id for scope customer (portal).
+	ListWarrantiesInScope(ctx context.Context, arg ListWarrantiesInScopeParams) ([]Warranty, error)
 	ListWebAuthnCredentialsByUserID(ctx context.Context, userID int64) ([]WebauthnCredential, error)
 	ListWebAuthnCredentialsForUserIDs(ctx context.Context, userIds []int64) ([]WebauthnCredential, error)
 	ListWhatsAppAlarmRecipients(ctx context.Context) ([]ListWhatsAppAlarmRecipientsRow, error)
@@ -740,6 +786,8 @@ type Querier interface {
 	// Serialises every ledger write on one unit (double owner / double
 	// consumption guard).
 	LockUnitCurrentState(ctx context.Context, unitID int64) (UnitCurrentState, error)
+	LockVehicleTransferByUUID(ctx context.Context, arg LockVehicleTransferByUUIDParams) (VehicleTransfer, error)
+	LockWarranty(ctx context.Context, arg LockWarrantyParams) (Warranty, error)
 	MarkAllNotificationsReadForUser(ctx context.Context, userID pgtype.Int8) (int64, error)
 	MarkBulkJobCompleted(ctx context.Context, arg MarkBulkJobCompletedParams) (BulkJob, error)
 	MarkBulkJobFailed(ctx context.Context, arg MarkBulkJobFailedParams) (BulkJob, error)
@@ -773,6 +821,9 @@ type Querier interface {
 	MarkOutboxRetry(ctx context.Context, arg MarkOutboxRetryParams) error
 	MarkQRLoginChallengeScanned(ctx context.Context, code string) (QrLoginChallenge, error)
 	MarkUserPhoneVerified(ctx context.Context, id int64) error
+	// Stamped in the notification transaction; a second run is a no-op.
+	MarkWarrantyNotified30(ctx context.Context, arg MarkWarrantyNotified30Params) (int64, error)
+	MarkWarrantyNotified7(ctx context.Context, arg MarkWarrantyNotified7Params) (int64, error)
 	NextDocumentTemplateVersion(ctx context.Context, arg NextDocumentTemplateVersionParams) (int32, error)
 	PingDB(ctx context.Context) (int32, error)
 	PublishDocumentTemplate(ctx context.Context, id int64) (DocumentTemplate, error)
@@ -833,6 +884,9 @@ type Querier interface {
 	SetOrderItemUnitMovement(ctx context.Context, arg SetOrderItemUnitMovementParams) (OrderItemUnit, error)
 	SetOrderReceiptDocument(ctx context.Context, arg SetOrderReceiptDocumentParams) (Order, error)
 	SetOrderShipping(ctx context.Context, arg SetOrderShippingParams) (Order, error)
+	// ---------------------------------------------------------------------------
+	// Organization Google Business link (decision 7).
+	SetOrganizationGoogleBusinessURL(ctx context.Context, arg SetOrganizationGoogleBusinessURLParams) (Organization, error)
 	SetOrganizationLogo(ctx context.Context, arg SetOrganizationLogoParams) (Organization, error)
 	// Bulk activate/deactivate within one brand.
 	SetProductsActive(ctx context.Context, arg SetProductsActiveParams) (int64, error)
@@ -844,6 +898,10 @@ type Querier interface {
 	SetServiceItemMovement(ctx context.Context, arg SetServiceItemMovementParams) (ServiceItem, error)
 	SetServiceReviewRequestSent(ctx context.Context, id int64) (Service, error)
 	SetUserEmailVerified(ctx context.Context, id int64) (User, error)
+	// Vehicle owner change in the transfer transaction (services keep their
+	// customer snapshot, 000050).
+	SetVehicleOwner(ctx context.Context, arg SetVehicleOwnerParams) (Vehicle, error)
+	SetVehicleTransferVerified(ctx context.Context, arg SetVehicleTransferVerifiedParams) (VehicleTransfer, error)
 	SetWhatsAppInstance(ctx context.Context, arg SetWhatsAppInstanceParams) (WhatsappSetting, error)
 	SetWhatsAppSMSFallback(ctx context.Context, smsFallbackEnabled bool) (WhatsappSetting, error)
 	SlugExists(ctx context.Context, slug string) (bool, error)
@@ -947,6 +1005,8 @@ type Querier interface {
 	UpsertSystemRole(ctx context.Context, arg UpsertSystemRoleParams) (Role, error)
 	UpsertUserTOTPSetup(ctx context.Context, arg UpsertUserTOTPSetupParams) (UserTotp, error)
 	UserHasRoleSlug(ctx context.Context, arg UserHasRoleSlugParams) (bool, error)
+	// Center void (warranties.void). Expired warranties may be voided too.
+	VoidWarranty(ctx context.Context, arg VoidWarrantyParams) (Warranty, error)
 }
 
 var _ Querier = (*Queries)(nil)
