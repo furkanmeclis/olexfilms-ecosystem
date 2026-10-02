@@ -58,6 +58,13 @@ SET status = 'failed',
 WHERE id = $1
 RETURNING *;
 
+-- name: SetImportJobPreview :one
+-- TEC-158: staged importers keep their apply/undo report in preview_json.
+UPDATE import_jobs
+SET preview_json = $2
+WHERE id = $1
+RETURNING *;
+
 -- name: MarkImportJobRolledBack :one
 UPDATE import_jobs
 SET status = 'rolled_back'

@@ -2661,6 +2661,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/stock/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload a stock import file (brand center, staged)
+         * @description Needs `stock.import` and the brand center (K14). Columns: barcode, product_sku (required), quantity (fixed barcodes), meters (rolls), location_code (optional, a location of the center; default the organization). Map, preview, confirm and undo through `/v1/tenant/imports/{uuid}`: the preview stages the rows of the batch (batch uuid = job uuid) and classifies them as new, duplicate, invalid or conflict with their target; confirm (worker-core import queue) creates the new units and posts their entry movements through the stock ledger in one transaction, and confirming again writes nothing; rollback voids the units that saw no other movement and refuses the others row by row (STOCK_IMPORT_UNDO_UNIT_TOUCHED).
+         */
+        post: operations["importStockUnits"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock/import/sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sample stock import file */
+        get: operations["stockImportSample"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/stock/units/by-barcode/{barcode}": {
         parameters: {
             query?: never;
@@ -6683,6 +6720,7 @@ export interface components {
             defaults?: {
                 [key: string]: string;
             };
+            preview_summary?: components["schemas"]["ImportPreviewSummary"];
             error?: string | null;
             /** Format: date-time */
             rollback_until?: string | null;
@@ -6690,6 +6728,41 @@ export interface components {
             applied_at?: string | null;
             /** Format: date-time */
             created_at: string;
+        };
+        /** @description Dry run (preview) or apply/undo report of an import job. Staged importers (stock import, TEC-158) also set batch_uuid, counts per row status, the row status/target and stable error codes. */
+        ImportPreviewSummary: {
+            total?: number;
+            valid?: number;
+            invalid?: number;
+            /** Format: uuid */
+            batch_uuid?: string;
+            /** @description Rows per status: new, duplicate, invalid, conflict, applied, undone, undo_rejected. */
+            counts?: {
+                [key: string]: number;
+            };
+            rows?: {
+                /** @description 1-based data row number */
+                index: number;
+                data?: {
+                    [key: string]: unknown;
+                };
+                /** @enum {string} */
+                status?: "new" | "duplicate" | "invalid" | "conflict" | "applied" | "undone" | "undo_rejected";
+                /** @description Localized status (job locale) */
+                status_label?: string;
+                /** @description Where the row is written: organization_uuid, organization_name, owner_type (organization or warehouse_location), location_uuid, location_code, product_uuid, product_sku, product_name, unit_kind (serial or fixed), unit_type. */
+                target?: {
+                    [key: string]: unknown;
+                };
+            }[];
+            errors?: {
+                index: number;
+                field?: string;
+                /** @description Stable code, e.g. STOCK_IMPORT_PRODUCT_NOT_FOUND, STOCK_IMPORT_DUPLICATE_IN_FILE, STOCK_IMPORT_HELD_BY_OTHER_ORG, STOCK_IMPORT_UNDO_UNIT_TOUCHED. */
+                code?: string;
+                /** @description Localized message (job locale) */
+                error: string;
+            }[];
         };
         EnvelopeImportJob: {
             /** @enum {boolean} */
@@ -14014,6 +14087,68 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    importStockUnits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    /**
+                     * @default csv
+                     * @enum {string}
+                     */
+                    format?: "csv" | "tsv" | "xlsx" | "json";
+                    /** @example tr */
+                    locale?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Import job created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeImportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    stockImportSample: {
+        parameters: {
+            query?: {
+                format?: "csv" | "tsv" | "xlsx" | "json";
+                locale?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sample file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getStockUnitHistory: {
