@@ -345,6 +345,9 @@ var azCatalog = map[string]string{
 	"export.title.portal.customer_data_export": "Şəxsi məlumatların çıxarışı",
 	"resources.customers.data_export":          "Müştərinin şəxsi məlumatları",
 	"resources.portal.customer_data_export":    "Şəxsi məlumatlarım",
+	// TEC-164: customer list export.
+	"export.title.customers.list":              "Müştəri siyahısı",
+	"resources.customers.list":                 "Müştərilər",
 	"customers.export.section":                 "Bölmə",
 	"customers.export.item":                    "Qeyd",
 	"customers.export.field":                   "Sahə",

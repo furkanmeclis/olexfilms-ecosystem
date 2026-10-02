@@ -116,5 +116,10 @@
   "codes.ORDER_STOCK_UNAVAILABLE": "此次发货的库存变动被拒绝。",
   "codes.PRICE_NOT_FOUND": "该产品没有订单币种的价格。",
   "codes.RATE_NOT_FOUND": "没有可锁定的订单币种汇率。",
-  "codes.ROLL_CUT_UNSUPPORTED": "卷材需整卷发货；米数必须等于剩余长度。"
+  "codes.ROLL_CUT_UNSUPPORTED": "卷材需整卷发货；米数必须等于剩余长度。",
+  "codes.CUSTOMER_ANONYMIZED": "该客户已匿名化，无法更改。",
+  "codes.CUSTOMER_INACTIVE": "客户账户未激活。",
+  "codes.ALREADY_MEMBER": "该客户已是此经销商的成员。",
+  "codes.PII_ENCRYPTION_UNAVAILABLE": "暂时无法保存证件号码（缺少加密密钥）。",
+  "codes.INVALID_PLATE": "车牌号不符合其国家的格式。"
 }

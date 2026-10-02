@@ -10,8 +10,8 @@ import { E2E_AUTH_SECRET } from "./constants";
  */
 
 export const SLUG = "acme";
-const ORG = "0b9c4c1e-0000-4000-8000-000000000001";
-const USER = "0b9c4c1e-0000-4000-8000-000000000002";
+export const ORG = "0b9c4c1e-0000-4000-8000-000000000001";
+export const USER = "0b9c4c1e-0000-4000-8000-000000000002";
 export const SERVICE_UUID = "0b9c4c1e-0000-4000-8000-0000000000a1";
 const CUSTOMER = "0b9c4c1e-0000-4000-8000-0000000000c1";
 const VEHICLE = "0b9c4c1e-0000-4000-8000-0000000000d1";
@@ -69,7 +69,7 @@ const vehicle = {
   warnings: [],
 };
 
-const rollUnit = {
+export const rollUnit = {
   uuid: "0b9c4c1e-0000-4000-8000-0000000000f1",
   barcode: "OLX-ROLL-001",
   unit_kind: "serial",
@@ -87,7 +87,7 @@ const rollUnit = {
 
 const envelope = (data: unknown) => ({ success: true, data, meta: {} });
 
-const membership = {
+export const membership = {
   uuid: ORG,
   slug: SLUG,
   name: "Acme Bayi",
@@ -100,7 +100,7 @@ const membership = {
   parent: null,
 };
 
-function me() {
+function me(memberships: Json[], activeOrg: string) {
   return {
     effective_locale: "en",
     effective_timezone: "Europe/Istanbul",
@@ -118,9 +118,9 @@ function me() {
     roles: [],
     permissions: PERMISSIONS,
     grants: Object.fromEntries(PERMISSIONS.map((p) => [p, "organization"])),
-    active_organization_uuid: ORG,
+    active_organization_uuid: activeOrg,
     organization_roles: ["owner"],
-    organizations: [membership],
+    organizations: memberships,
     links: {
       profile: "/v1/auth/profile",
       change_password: "/v1/auth/password/change",
@@ -136,6 +136,12 @@ export class MockApi {
   items: Item[] = [];
   logs: Log[] = [];
   warranties: Json[] = [];
+  /** Panel memberships of the caller (org switcher, by-slug lookup). */
+  memberships: Json[] = [membership];
+  activeOrg = ORG;
+  private nextItem = 0;
+  /** Units the stock picker lists (TEC-218); barcode is the key. */
+  stockUnits: Json[] = [rollUnit];
   /** Every BFF call, for assertions: "METHOD /path?query". */
   calls: string[] = [];
   /** Bodies of write calls by "METHOD /path". */
@@ -217,20 +223,34 @@ export class MockApi {
       ok({ items, total: items.length, limit: 20, offset: 0 });
     const svc = `/v1/services/${SERVICE_UUID}`;
 
-    if (
-      method === "GET" &&
-      path === `/v1/public/organizations/by-slug/${SLUG}`
-    ) {
+    const bySlug = path.match(/^\/v1\/public\/organizations\/by-slug\/(.+)$/);
+    const org = bySlug && this.memberships.find((m) => m.slug === bySlug[1]);
+    if (method === "GET" && org) {
       return ok({
-        uuid: ORG,
-        slug: SLUG,
-        name: "Acme Bayi",
+        uuid: org.uuid,
+        slug: org.slug,
+        name: org.name,
         status: "active",
         logo_url: null,
         access_ok: true,
       });
     }
-    if (method === "GET" && path === "/v1/auth/me") return ok(me());
+    if (method === "GET" && path === "/v1/auth/me") {
+      return ok(me(this.memberships, this.activeOrg));
+    }
+    if (method === "POST" && path === "/v1/auth/organization-context") {
+      const target = this.memberships.find(
+        (m) => m.slug === body?.organization_slug,
+      );
+      if (!target) {
+        return route.fulfill({
+          status: 403,
+          json: { error: { code: "FORBIDDEN", message: "No membership" } },
+        });
+      }
+      this.activeOrg = target.uuid as string;
+      return ok({ authenticated: true, expires_in: 3600 });
+    }
     if (method === "GET" && path === "/v1/auth/step-up") {
       return ok({ valid: false, expires_at: null, methods: [] });
     }
@@ -242,7 +262,7 @@ export class MockApi {
       });
     }
     if (method === "GET" && path === "/v1/me/organizations") {
-      return ok({ items: [membership] });
+      return ok({ items: this.memberships });
     }
     if (method === "GET" && path === "/v1/customers") {
       return page(url.searchParams.get("q") ? [customer] : []);
@@ -275,20 +295,31 @@ export class MockApi {
     }
     if (this.service && method === "GET" && path === `${svc}/stock-units`) {
       const barcode = url.searchParams.get("barcode");
-      const units = barcode && barcode !== rollUnit.barcode ? [] : [rollUnit];
+      const q = url.searchParams.get("q")?.toLowerCase();
+      const units = this.stockUnits.filter((u) => {
+        const product = u.product as Json;
+        if (barcode) return u.barcode === barcode;
+        if (!q) return true;
+        return [u.barcode, product.sku, product.name].some((v) =>
+          String(v).toLowerCase().includes(q),
+        );
+      });
       return ok({ items: units });
     }
     if (this.service && method === "POST" && path === `${svc}/items`) {
+      const unit =
+        this.stockUnits.find((u) => u.barcode === body?.barcode) ?? rollUnit;
+      const product = unit.product as Json;
       this.items.push({
-        uuid: `0b9c4c1e-0000-4000-8000-00000000010${this.items.length}`,
+        uuid: `0b9c4c1e-0000-4000-8000-00000000010${this.nextItem++}`,
         product: {
-          uuid: rollUnit.product.uuid,
-          sku: rollUnit.product.sku,
-          name: rollUnit.product.name,
-          unit_type: rollUnit.product.unit_type,
+          uuid: product.uuid,
+          sku: product.sku,
+          name: product.name,
+          unit_type: product.unit_type,
         },
         barcode: body?.barcode,
-        unit_kind: rollUnit.unit_kind,
+        unit_kind: unit.unit_kind,
         kind: body?.kind,
         quantity: body?.quantity ?? null,
         meters:
@@ -298,6 +329,11 @@ export class MockApi {
         created_at: new Date().toISOString(),
       });
       return ok(this.view(), 201);
+    }
+    const itemPath = path.match(/^\/v1\/services\/[^/]+\/items\/([^/]+)$/);
+    if (this.service && method === "DELETE" && itemPath) {
+      this.items = this.items.filter((it) => it.uuid !== itemPath[1]);
+      return ok(this.view());
     }
     if (this.service && method === "POST" && path === `${svc}/transitions`) {
       const to = String(body?.status);

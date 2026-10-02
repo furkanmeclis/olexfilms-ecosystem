@@ -5841,7 +5841,12 @@ paths:
         customers.read. A dealer sees the customers linked to its organization
         (customer_organizations), a distributor its subtree, the center the
         brand; always the domain brand (K20). Anonymized customers are listed
-        masked (`anonymized: true`, localized name, no contact data).
+        masked (`anonymized: true`, localized name, no contact data). TEC-164:
+        `q` searches the Meilisearch customers index when it is up (filtered
+        on the scope's organizations and the brand, ranked by relevance; the
+        hits are reloaded from Postgres with the same scope) and falls back to
+        the SQL search otherwise. Anonymized customers are never indexed, so
+        `status=anonymized` always uses the SQL search.
       security:
         - bearerAuth: []
       parameters:
@@ -6140,6 +6145,89 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "409":
           $ref: "#/components/responses/Conflict"
+
+  /v1/customers/export:
+    post:
+      tags: [Customers]
+      operationId: requestCustomerListExport
+      summary: Queue a customer list export (CSV, XLSX or PDF)
+      description: >-
+        TEC-164. customers.read with the list's scope: the job (worker-docs,
+        exports queue) exports the customers of the scope with the list
+        filters (`q`, `status`), masked like the list (anonymized customers
+        show the anonymized label; identity numbers are not exported). The
+        worker re-authorizes the stored scope against the job organization.
+        The request is written to the activity log (customers.list_exported).
+        Poll and download through /v1/customer-list-exports/{uuid}.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerListExportInput"
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/customer-list-exports/{uuid}:
+    get:
+      tags: [Customers]
+      operationId: getCustomerListExport
+      summary: A customer list export job of the active organization
+      description: download_url points at /v1/customer-list-exports/{uuid}/download once completed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Export job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/customer-list-exports/{uuid}/download:
+    get:
+      tags: [Customers]
+      operationId: downloadCustomerListExport
+      summary: Download a completed customer list export (audited)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: File bytes (text/csv, XLSX or application/pdf)
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /v1/customers/{uuid}/data-export:
     post:
@@ -13039,6 +13127,22 @@ components:
         data: { $ref: "#/components/schemas/CustomerMergeResult" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
+    CustomerListExportInput:
+      type: object
+      required: [format]
+      properties:
+        format:
+          type: string
+          enum: [csv, xlsx, pdf]
+        query:
+          type: object
+          description: List filters (same as GET /v1/customers).
+          properties:
+            q: { type: string, maxLength: 100 }
+            status: { type: string, enum: [active, disabled, pending, anonymized] }
+        locale:
+          type: string
+          description: Document language (defaults to the request locale).
     CustomerDataExportInput:
       type: object
       required: [format]

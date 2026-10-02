@@ -345,6 +345,9 @@ var bgCatalog = map[string]string{
 	"export.title.portal.customer_data_export": "Извлечение на лични данни",
 	"resources.customers.data_export":          "Лични данни на клиента",
 	"resources.portal.customer_data_export":    "Моите лични данни",
+	// TEC-164: customer list export.
+	"export.title.customers.list":              "Списък с клиенти",
+	"resources.customers.list":                 "Клиенти",
 	"customers.export.section":                 "Раздел",
 	"customers.export.item":                    "Запис",
 	"customers.export.field":                   "Поле",
