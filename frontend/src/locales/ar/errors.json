@@ -91,5 +91,15 @@
   "codes.ENTRY_NOT_DISPUTABLE": "لا يمكن الاعتراض إلا على قيد مفتوح سجّلته مؤسستك الأعلى في هذا الحساب الجاري.",
   "codes.DISPUTE_ALREADY_OPEN": "يوجد اعتراض مفتوح على هذا القيد بالفعل.",
   "codes.DISPUTE_NOT_OPEN": "تمت معالجة هذا الاعتراض أو رفضه بالفعل.",
-  "codes.DISPUTE_NOT_RESOLVABLE": "القيد المعترض عليه لم يعد مفتوحًا؛ ارفض الاعتراض أو اعكس القيد."
+  "codes.DISPUTE_NOT_RESOLVABLE": "القيد المعترض عليه لم يعد مفتوحًا؛ ارفض الاعتراض أو اعكس القيد.",
+  "codes.VEHICLE_TRANSFER_UNAVAILABLE": "نقل ملكية المركبة غير متاح حاليًا.",
+  "codes.VEHICLE_TRANSFER_PENDING": "توجد عملية نقل معلقة لهذه المركبة؛ أكملها أو ألغها أولًا.",
+  "codes.VEHICLE_TRANSFER_SAME_OWNER": "المالك الجديد هو نفسه المالك الحالي.",
+  "codes.VEHICLE_TRANSFER_OWNER_NO_PHONE": "لا يوجد رقم هاتف للمالك الحالي؛ لا يمكن إرسال الرمز.",
+  "codes.VEHICLE_TRANSFER_NOT_PENDING": "لم تعد عملية النقل معلقة.",
+  "codes.VEHICLE_TRANSFER_EXPIRED": "انتهت صلاحية النقل؛ ابدأ عملية جديدة.",
+  "codes.VEHICLE_TRANSFER_INVALID_CODE": "الرمز غير صحيح.",
+  "codes.VEHICLE_TRANSFER_LOCKED": "عدد كبير من الرموز الخاطئة؛ تم إلغاء النقل.",
+  "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "تعذر إرسال الرموز. حاول لاحقًا.",
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "تغيّر مالك المركبة؛ ابدأ عملية نقل جديدة."
 }

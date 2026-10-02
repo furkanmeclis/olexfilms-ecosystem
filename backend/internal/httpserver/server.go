@@ -343,7 +343,13 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	}
 	customersSvc.SetSearchIndexer(searchIndexer)
 	customersSvc.SetOutbox(outbox.NewStore(deps.DB, deps.Queries)) // TEC-193: customer.merged
-	customersH := customershandler.New(customersSvc, activityRec)
+	// TEC-190: vehicle transfer codes go out like the phone OTP (WhatsApp,
+	// SMS fallback), synchronously and never through the outbox.
+	customersSvc.SetTransfers(
+		&whatsapp.Sender{WhatsApp: waSvc.Provider(), SMS: sms.Noop{Log: log}, SMSFallback: waSvc.SMSFallbackEnabled},
+		customersusecase.TransferConfig{Key: otp.DeriveKey(cfg.Encryption.Key), AppName: cfg.App.Name},
+	)
+	customersH := customershandler.New(customersSvc, activityRec).WithLimiter(ratelimit.New(deps.Redis, cfg.App.Env))
 	customershandler.RegisterRoutes(mux, customersH, tokens, loader, deps.Queries, featureSvc, stepUpSvc)
 	ratesmodule.RegisterRoutes(mux, rateshandler.New(ratesSvc, activityRec), tokens, loader)
 	// TEC-146: price list and effective price views (K8).
@@ -427,6 +433,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 			WithRatesFetch(ratesSvc.FetchTask).
 			WithWarrantyCron(warrantyCron.ExpireTask, warrantyCron.ExpiringScanTask).
 			WithWarrantyRepairScan(warrantymodule.NewRepairScanner(deps.DB, deps.Queries, cfg.Auth.FrontendURL, cfg.Warranty.RepairScanDays, log).Task).
+			WithVehicleTransferExpire(customersSvc.ExpireTransfersTask).
 			WithNotificationPurge(notifSvc.PurgeExpired).
 			WithWhatsAppPoll(waSvc.PollStatus)
 		if searchIndexer != nil {

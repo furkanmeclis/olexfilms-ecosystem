@@ -32,6 +32,7 @@ type Handler struct {
 	svc      *cu.Service
 	activity *activity.Recorder
 	exports  Exports
+	limiter  Limiter // TEC-190: transfer endpoints
 }
 
 // New creates the handler; rec may be nil.

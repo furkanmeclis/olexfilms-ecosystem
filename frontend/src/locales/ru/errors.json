@@ -91,5 +91,15 @@
   "codes.ENTRY_NOT_DISPUTABLE": "Оспорить можно только открытую проводку, которую вышестоящая организация внесла на этот счёт.",
   "codes.DISPUTE_ALREADY_OPEN": "По этой проводке уже есть открытая претензия.",
   "codes.DISPUTE_NOT_OPEN": "Эта претензия уже решена или отклонена.",
-  "codes.DISPUTE_NOT_RESOLVABLE": "Оспариваемая проводка больше не открыта; отклоните претензию или сторнируйте проводку."
+  "codes.DISPUTE_NOT_RESOLVABLE": "Оспариваемая проводка больше не открыта; отклоните претензию или сторнируйте проводку.",
+  "codes.VEHICLE_TRANSFER_UNAVAILABLE": "Передача автомобиля сейчас недоступна.",
+  "codes.VEHICLE_TRANSFER_PENDING": "Для этого автомобиля уже есть ожидающая передача; сначала завершите или отмените её.",
+  "codes.VEHICLE_TRANSFER_SAME_OWNER": "Новый владелец совпадает с текущим.",
+  "codes.VEHICLE_TRANSFER_OWNER_NO_PHONE": "У текущего владельца нет телефона; код отправить нельзя.",
+  "codes.VEHICLE_TRANSFER_NOT_PENDING": "Передача больше не ожидает.",
+  "codes.VEHICLE_TRANSFER_EXPIRED": "Срок передачи истёк; начните новую.",
+  "codes.VEHICLE_TRANSFER_INVALID_CODE": "Неверный код.",
+  "codes.VEHICLE_TRANSFER_LOCKED": "Слишком много неверных кодов; передача отменена.",
+  "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "Не удалось отправить коды. Попробуйте позже.",
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Владелец автомобиля изменился; начните новую передачу."
 }

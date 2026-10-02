@@ -126,6 +126,7 @@ type Service struct {
 	revoker Revoker
 	search  SearchIndexer
 	out     outbox.Enqueuer
+	tr      *transfers // TEC-190: vehicle transfer (nil: disabled)
 }
 
 // New creates the service. pii may be nil (CUSTOMER_PII_KEY unset in

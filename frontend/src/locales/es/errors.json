@@ -91,5 +91,15 @@
   "codes.ENTRY_NOT_DISPUTABLE": "Solo se puede reclamar un asiento abierto que su organización superior registró en esta cuenta corriente.",
   "codes.DISPUTE_ALREADY_OPEN": "Este asiento ya tiene una reclamación abierta.",
   "codes.DISPUTE_NOT_OPEN": "Esta reclamación ya fue resuelta o rechazada.",
-  "codes.DISPUTE_NOT_RESOLVABLE": "El asiento reclamado ya no está abierto; rechace la reclamación o registre un contraasiento."
+  "codes.DISPUTE_NOT_RESOLVABLE": "El asiento reclamado ya no está abierto; rechace la reclamación o registre un contraasiento.",
+  "codes.VEHICLE_TRANSFER_UNAVAILABLE": "La transferencia de vehículos no está disponible ahora.",
+  "codes.VEHICLE_TRANSFER_PENDING": "Este vehículo ya tiene una transferencia pendiente; complétela o cancélela primero.",
+  "codes.VEHICLE_TRANSFER_SAME_OWNER": "El nuevo propietario es el propietario actual.",
+  "codes.VEHICLE_TRANSFER_OWNER_NO_PHONE": "El propietario actual no tiene teléfono; no se puede enviar el código.",
+  "codes.VEHICLE_TRANSFER_NOT_PENDING": "La transferencia ya no está pendiente.",
+  "codes.VEHICLE_TRANSFER_EXPIRED": "La transferencia venció; inicie una nueva.",
+  "codes.VEHICLE_TRANSFER_INVALID_CODE": "El código es incorrecto.",
+  "codes.VEHICLE_TRANSFER_LOCKED": "Demasiados códigos incorrectos; la transferencia se canceló.",
+  "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "No se pudieron enviar los códigos. Inténtelo más tarde.",
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "El propietario del vehículo cambió; inicie una nueva transferencia."
 }

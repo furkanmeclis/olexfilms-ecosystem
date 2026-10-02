@@ -61,6 +61,10 @@ export const routes = {
       wizard: (slug: string, uuid: string) =>
         `/t/${slug}/services/${uuid}/wizard`,
     },
+    /** TEC-190 vehicle detail with the ownership transfer. */
+    vehicles: {
+      detail: (slug: string, uuid: string) => `/t/${slug}/vehicles/${uuid}`,
+    },
   },
   /** Customer / fleet portal (TEC-90): its own Auth.js instance and BFF. */
   portal: {

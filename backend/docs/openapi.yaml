@@ -6450,6 +6450,173 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /v1/vehicles/{uuid}/transfers:
+    get:
+      tags: [Customers]
+      operationId: listVehicleTransfers
+      summary: Ownership transfers of a vehicle, newest first (TEC-190)
+      description: >-
+        vehicles.transfer; the vehicle's customer must be in scope (else
+        404). A pending transfer past expires_at is shown as expired.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Transfers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicleTransferList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Customers]
+      operationId: startVehicleTransfer
+      summary: Start a vehicle ownership transfer with two codes (TEC-190)
+      description: >-
+        vehicles.transfer. The new owner is given by phone (E.164, national
+        numbers use the organization's country). Two random 6 digit codes
+        are generated, one for the current owner and one for the new owner,
+        and sent over WhatsApp (SMS fallback when enabled); only salted,
+        keyed hashes are stored. The transfer expires after 15 minutes. A
+        failed delivery saves nothing (502 VEHICLE_TRANSFER_DELIVERY_FAILED).
+        Refusals (409): VEHICLE_TRANSFER_PENDING (one open transfer per
+        vehicle), VEHICLE_TRANSFER_SAME_OWNER, VEHICLE_TRANSFER_OWNER_NO_PHONE,
+        CUSTOMER_ANONYMIZED / CUSTOMER_INACTIVE. Writes
+        vehicle.transfer_started and the audit row
+        vehicles.transfer_started. Rate limited per user (429).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VehicleTransferStartInput"
+      responses:
+        "201":
+          description: Started; both codes sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicleTransfer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "502":
+          description: VEHICLE_TRANSFER_DELIVERY_FAILED (a code could not be delivered; nothing saved)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: VEHICLE_TRANSFER_UNAVAILABLE (no message sender configured)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/vehicle-transfers/{uuid}/verify:
+    post:
+      tags: [Customers]
+      operationId: verifyVehicleTransfer
+      summary: Enter transfer codes; completes the transfer when both are verified
+      description: >-
+        vehicles.transfer. Codes can be entered together or one by one. A
+        wrong code counts one attempt (422 VEHICLE_TRANSFER_INVALID_CODE,
+        details[].code = attempts left); at 5 attempts the transfer is
+        cancelled (409 VEHICLE_TRANSFER_LOCKED). A transfer past expires_at
+        is marked expired (409 VEHICLE_TRANSFER_EXPIRED). When both codes
+        are verified, one transaction moves the vehicle and its active
+        warranties to the new owner (one warranty.holder_changed event per
+        warranty), links the new owner to the organization and writes
+        vehicle.transfer_completed and the audit row; services keep their
+        customer. A new owner without an account is created at completion
+        and needs new_owner_name (400 VALIDATION_ERROR, nothing is
+        verified then). Rate limited per transfer and user (429).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VehicleTransferVerifyInput"
+      responses:
+        "200":
+          description: Codes accepted (status completed when both sides are verified)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicleTransfer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          description: VEHICLE_TRANSFER_INVALID_CODE (details[].field names the wrong code, details[].code the attempts left)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /v1/vehicle-transfers/{uuid}/cancel:
+    post:
+      tags: [Customers]
+      operationId: cancelVehicleTransfer
+      summary: Cancel a pending vehicle transfer
+      description: >-
+        vehicles.transfer. Writes vehicle.transfer_cancelled (reason
+        cancelled) and the audit row. A transfer that is no longer pending
+        answers 409 VEHICLE_TRANSFER_NOT_PENDING (expired:
+        VEHICLE_TRANSFER_EXPIRED).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicleTransfer"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   /v1/portal/vehicle-catalog/brands:
     get:
       tags: [VehicleCatalog]
@@ -10387,6 +10554,71 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/Vehicle" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    VehicleTransfer:
+      type: object
+      description: >-
+        A vehicle ownership transfer (TEC-190). Codes and hashes never leave
+        the server; the new owner's phone is masked.
+      required: [uuid, vehicle_uuid, status, to_phone_masked, new_owner_known, from_verified, to_verified,
+                 attempts, max_attempts, expires_at, created_at, completed_at, cancelled_at, warranties_moved]
+      properties:
+        uuid: { type: string, format: uuid }
+        vehicle_uuid: { type: string, format: uuid }
+        status: { type: string, enum: [pending, completed, cancelled, expired] }
+        to_phone_masked: { type: string }
+        new_owner_known:
+          type: boolean
+          description: The new owner has an account (false = created at completion, name required).
+        from_verified: { type: boolean }
+        to_verified: { type: boolean }
+        attempts: { type: integer, format: int32 }
+        max_attempts: { type: integer, format: int32 }
+        expires_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+        completed_at: { type: [string, "null"], format: date-time }
+        cancelled_at: { type: [string, "null"], format: date-time }
+        warranties_moved:
+          type: integer
+          description: Active warranties moved to the new owner (set on the completing call, else 0).
+
+    VehicleTransferStartInput:
+      type: object
+      additionalProperties: false
+      required: [phone]
+      properties:
+        phone: { type: string, description: New owner's phone (E.164 or national for the organization's country). }
+
+    VehicleTransferVerifyInput:
+      type: object
+      additionalProperties: false
+      properties:
+        from_code: { type: string, pattern: "^[0-9]{6}$", description: Code sent to the current owner. }
+        to_code: { type: string, pattern: "^[0-9]{6}$", description: Code sent to the new owner. }
+        new_owner_name: { type: string, maxLength: 100, description: Required when the new owner has no account. }
+        new_owner_surname: { type: string, maxLength: 100 }
+
+    EnvelopeVehicleTransfer:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/VehicleTransfer" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeVehicleTransferList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/VehicleTransfer" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeVehiclePage:

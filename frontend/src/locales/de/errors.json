@@ -91,5 +91,15 @@
   "codes.ENTRY_NOT_DISPUTABLE": "Nur eine offene Buchung, die Ihre übergeordnete Organisation auf dieses Kontokorrent gebucht hat, kann beanstandet werden.",
   "codes.DISPUTE_ALREADY_OPEN": "Für diese Buchung gibt es bereits einen offenen Einspruch.",
   "codes.DISPUTE_NOT_OPEN": "Dieser Einspruch wurde bereits gelöst oder abgelehnt.",
-  "codes.DISPUTE_NOT_RESOLVABLE": "Die beanstandete Buchung ist nicht mehr offen; lehnen Sie den Einspruch ab oder stornieren Sie."
+  "codes.DISPUTE_NOT_RESOLVABLE": "Die beanstandete Buchung ist nicht mehr offen; lehnen Sie den Einspruch ab oder stornieren Sie.",
+  "codes.VEHICLE_TRANSFER_UNAVAILABLE": "Die Fahrzeugübertragung ist derzeit nicht verfügbar.",
+  "codes.VEHICLE_TRANSFER_PENDING": "Für dieses Fahrzeug gibt es bereits eine ausstehende Übertragung; schließen Sie sie zuerst ab oder brechen Sie sie ab.",
+  "codes.VEHICLE_TRANSFER_SAME_OWNER": "Der neue Eigentümer ist der bisherige Eigentümer.",
+  "codes.VEHICLE_TRANSFER_OWNER_NO_PHONE": "Der bisherige Eigentümer hat keine Telefonnummer; es kann kein Code gesendet werden.",
+  "codes.VEHICLE_TRANSFER_NOT_PENDING": "Die Übertragung ist nicht mehr ausstehend.",
+  "codes.VEHICLE_TRANSFER_EXPIRED": "Die Übertragung ist abgelaufen; starten Sie eine neue.",
+  "codes.VEHICLE_TRANSFER_INVALID_CODE": "Der Code ist falsch.",
+  "codes.VEHICLE_TRANSFER_LOCKED": "Zu viele falsche Codes; die Übertragung wurde abgebrochen.",
+  "codes.VEHICLE_TRANSFER_DELIVERY_FAILED": "Die Codes konnten nicht gesendet werden. Versuchen Sie es später erneut.",
+  "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Der Fahrzeugeigentümer hat sich geändert; starten Sie eine neue Übertragung."
 }
