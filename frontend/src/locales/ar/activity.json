@@ -16,6 +16,7 @@
   "actions.bulk.completed": "اكتمل إجراء جماعي",
   "actions.bulk.failed": "فشل إجراء جماعي",
   "actions.bulk.rolled_back": "تم التراجع عن إجراء جماعي",
+  "actions.bulk.undone": "تم التراجع عن الإجراء الجماعي",
   "actions.settings.updated": "حُدّثت الإعدادات",
   "actions.access.settings.updated": "حُدّثت إعدادات الوصول",
   "actions.stepup.verified": "اكتمل التحقق الإضافي",

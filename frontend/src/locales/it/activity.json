@@ -16,6 +16,7 @@
   "actions.bulk.completed": "Azione multipla completata",
   "actions.bulk.failed": "Azione multipla non riuscita",
   "actions.bulk.rolled_back": "Azione multipla annullata",
+  "actions.bulk.undone": "Azione multipla annullata",
   "actions.settings.updated": "Impostazioni aggiornate",
   "actions.access.settings.updated": "Impostazioni di accesso aggiornate",
   "actions.stepup.verified": "Verifica dell'identità completata",

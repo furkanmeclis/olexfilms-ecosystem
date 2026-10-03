@@ -178,3 +178,10 @@ SELECT uuid FROM products
 WHERE active
   AND images @> jsonb_build_array(jsonb_build_object('key', sqlc.arg(key)::text))
 LIMIT 1;
+
+-- TEC-212: bulk engine adapter (one product, logged + undoable).
+-- name: SetProductActiveByUUID :one
+UPDATE products
+SET active = sqlc.arg(active)
+WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id)
+RETURNING *;

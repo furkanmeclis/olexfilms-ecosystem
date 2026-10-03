@@ -27,6 +27,27 @@ func NewUsers(q *db.Queries) *UsersAdapter {
 
 func (a *UsersAdapter) Resource() string { return ResourceUsers }
 
+// WithQueries binds the adapter to a transaction (bulkengine.TxBinder).
+func (a *UsersAdapter) WithQueries(q *db.Queries) bulkengine.BulkAdapter {
+	return &UsersAdapter{q: q}
+}
+
+// CurrentState reports the live status for the undo conflict check.
+func (a *UsersAdapter) CurrentState(ctx context.Context, _ string, entityUUID string) (map[string]any, error) {
+	id, err := uuid.Parse(entityUUID)
+	if err != nil {
+		return nil, err
+	}
+	user, err := a.q.GetUserByUUID(ctx, id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, bulkengine.ErrEntityGone
+	}
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"status": user.Status}, nil
+}
+
 func (a *UsersAdapter) BulkActions() []bulkengine.BulkActionDef {
 	return []bulkengine.BulkActionDef{
 		{
@@ -82,11 +103,13 @@ func (a *UsersAdapter) ApplyItem(ctx context.Context, action, entityUUID string)
 		"status":     user.Status,
 		"role_slugs": roleSlugs,
 	}
+	applied := map[string]any{"status": "active"}
 	switch action {
 	case "disable":
+		applied["status"] = "disabled"
 		if user.Status == "disabled" {
 			return bulkengine.BulkItemResult{
-				EntityUUID: entityUUID, EntityType: "user", OK: true, Op: "update", Previous: previous,
+				EntityUUID: entityUUID, EntityType: "user", OK: true, Op: "update", Previous: previous, Applied: applied,
 			}, nil
 		}
 		if err := a.guardLastSuperAdmin(ctx, user.ID, "disabled"); err != nil {
@@ -98,7 +121,7 @@ func (a *UsersAdapter) ApplyItem(ctx context.Context, action, entityUUID string)
 	case "enable":
 		if user.Status == "active" {
 			return bulkengine.BulkItemResult{
-				EntityUUID: entityUUID, EntityType: "user", OK: true, Op: "update", Previous: previous,
+				EntityUUID: entityUUID, EntityType: "user", OK: true, Op: "update", Previous: previous, Applied: applied,
 			}, nil
 		}
 		_, err = a.q.UpdateUserPlatform(ctx, db.UpdateUserPlatformParams{
@@ -111,7 +134,7 @@ func (a *UsersAdapter) ApplyItem(ctx context.Context, action, entityUUID string)
 		return bulkengine.BulkItemResult{EntityUUID: entityUUID, OK: false, Error: err.Error()}, nil
 	}
 	return bulkengine.BulkItemResult{
-		EntityUUID: entityUUID, EntityType: "user", OK: true, Op: "update", Previous: previous,
+		EntityUUID: entityUUID, EntityType: "user", OK: true, Op: "update", Previous: previous, Applied: applied,
 	}, nil
 }
 
@@ -195,6 +218,11 @@ func NewRoles(q *db.Queries) *RolesAdapter {
 }
 
 func (a *RolesAdapter) Resource() string { return ResourceRoles }
+
+// WithQueries binds the adapter to a transaction (bulkengine.TxBinder).
+func (a *RolesAdapter) WithQueries(q *db.Queries) bulkengine.BulkAdapter {
+	return &RolesAdapter{q: q}
+}
 
 func (a *RolesAdapter) BulkActions() []bulkengine.BulkActionDef {
 	return []bulkengine.BulkActionDef{

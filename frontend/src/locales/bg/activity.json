@@ -16,6 +16,7 @@
   "actions.bulk.completed": "Завършено масово действие",
   "actions.bulk.failed": "Неуспешно масово действие",
   "actions.bulk.rolled_back": "Отменено масово действие",
+  "actions.bulk.undone": "Масовото действие е отменено",
   "actions.settings.updated": "Обновени настройки",
   "actions.access.settings.updated": "Обновени настройки за достъп",
   "actions.stepup.verified": "Завършена допълнителна проверка",

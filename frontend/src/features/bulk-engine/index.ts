@@ -12,6 +12,7 @@ export { SelectionBanner } from "@/features/bulk-engine/components/selection-ban
 export {
   useBulkMutation,
   useBulkRollbackMutation,
+  useBulkUndoMutation,
 } from "@/features/bulk-engine/hooks/use-bulk-mutation";
 export { useBulkJobQuery } from "@/features/bulk-engine/hooks/use-bulk-job-query";
 export {
@@ -21,8 +22,14 @@ export {
 export { bulkService } from "@/features/bulk-engine/services/bulk.service";
 export type {
   BulkJob,
+  BulkOperation,
   BulkResource,
   BulkSummary,
   BulkTarget,
+  BulkUndoResult,
   SelectionScope,
+} from "@/features/bulk-engine/types";
+export {
+  bulkUndoPath,
+  isTenantBulkResource,
 } from "@/features/bulk-engine/types";

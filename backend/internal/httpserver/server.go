@@ -458,8 +458,11 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(deps.Queries),
 		bulkadapters.NewRoles(deps.Queries),
+		// TEC-212: tenant resources with undo.
+		bulkadapters.NewCatalogProducts(deps.Queries),
+		bulkadapters.NewTasks(deps.Queries),
 	)
-	bulkSvc := bulkusecase.New(deps.Queries, bulkReg, deps.Queue, notifSvc, activityRec, cfg.Bulk, log)
+	bulkSvc := bulkusecase.New(deps.Queries, bulkReg, deps.Queue, notifSvc, activityRec, cfg.Bulk, log).WithPool(deps.DB)
 	logsSvc := logsusecase.New(deps.Queries)
 	if s.worker != nil {
 		warrantyCron := warrantymodule.NewCron(deps.DB, deps.Queries, cfg.Auth.FrontendURL)
@@ -495,6 +498,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	exportmodule.RegisterRoutes(mux, exporthandler.New(exportSvc), tokens, loader, stepUpSvc, deps.Queries)
 	importmodule.RegisterRoutes(mux, importhandler.New(importSvc), tokens, loader, deps.Queries)
 	bulkmodule.RegisterRoutes(mux, bulkhandler.New(bulkSvc), tokens, loader)
+	bulkmodule.RegisterTenantRoutes(mux, bulkhandler.New(bulkSvc), featureSvc, tokens, loader, deps.Queries)
 	catalogmodule.RegisterRoutes(mux, cataloghandler.New(catalogSvc, exportSvc, importSvc, deps.Storage, activityRec), featureSvc, tokens, loader, deps.Queries)
 	// TEC-155: stock read API (barcode history, organization/bin stock).
 	// TEC-157: reclassification (request, approval applies it via the ledger).
@@ -532,6 +536,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	}
 	sysSvc := sysconfig.New(deps.Queries, sysCache)
 	s.sysconfig = sysSvc
+	bulkSvc.WithUndoWindow(sysSvc.BulkUndoWindowHours)
 	settingsmodule.RegisterRoutes(mux, settingshandler.New(settingsusecase.New(deps.Queries), deps.Storage),
 		settingshandler.NewSystem(sysSvc), tokens, loader)
 	accessmodule.RegisterRoutes(mux, accesshandler.New(stepUpSvc, activityRec), tokens, loader)

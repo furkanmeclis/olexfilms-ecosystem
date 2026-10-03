@@ -164,6 +164,30 @@ type BulkJob struct {
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 }
 
+type BulkOperation struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID pgtype.Int8        `json:"organization_id"`
+	BrandID        pgtype.Int8        `json:"brand_id"`
+	JobID          pgtype.Int8        `json:"job_id"`
+	Resource       string             `json:"resource"`
+	Action         string             `json:"action"`
+	Permission     string             `json:"permission"`
+	ActorUserID    int64              `json:"actor_user_id"`
+	TargetJson     []byte             `json:"target_json"`
+	Changes        []byte             `json:"changes"`
+	Total          int32              `json:"total"`
+	Succeeded      int32              `json:"succeeded"`
+	Failed         int32              `json:"failed"`
+	UndoStatus     string             `json:"undo_status"`
+	UndoUntil      pgtype.Timestamptz `json:"undo_until"`
+	UndoneAt       pgtype.Timestamptz `json:"undone_at"`
+	UndoneByUserID pgtype.Int8        `json:"undone_by_user_id"`
+	UndoResult     []byte             `json:"undo_result"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
 type CarBrand struct {
 	ID            int64              `json:"id"`
 	Uuid          uuid.UUID          `json:"uuid"`

@@ -18,7 +18,9 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var (
@@ -46,6 +48,8 @@ type ExecuteResult struct {
 	Async   bool
 	Job     BulkJobView
 	Summary bulkengine.BulkSummary
+	// Operation is the logged (undoable) sync run (TEC-212).
+	Operation *OperationView
 }
 
 type BulkJobView struct {
@@ -71,6 +75,9 @@ type Service struct {
 	cfg      config.BulkConfig
 	log      *slog.Logger
 	syncMode bool
+	// pool runs items + the bulk_operations log in one transaction.
+	pool       *pgxpool.Pool
+	undoWindow func(ctx context.Context) int
 }
 
 func New(
@@ -115,11 +122,11 @@ func (s *Service) Execute(ctx context.Context, actorID int64, in ExecuteInput) (
 	locale := string(i18n.Normalize(in.Locale))
 	targetJSON, _ := json.Marshal(in.Target)
 	if len(targets) <= s.cfg.SyncMax {
-		ctx = bulkengine.WithRun(ctx, bulkengine.Run{Params: in.Target.Params, Query: in.Target.Query})
-		summary, err := s.applyTargets(ctx, 0, adapter, def, in.Action, targets)
+		op, summary, err := s.run(ctx, actorID, 0, adapter, def, in.Resource, in.Action, in.Target, targets)
 		if err != nil {
 			return ExecuteResult{}, err
 		}
+		view := s.operationView(ctx, op)
 		if s.activity != nil {
 			uid := actorID
 			s.activity.Record(ctx, &uid, "bulk.completed", in.Resource, nil, map[string]any{
@@ -127,7 +134,7 @@ func (s *Service) Execute(ctx context.Context, actorID int64, in ExecuteInput) (
 				"succeeded": summary.Succeeded, "failed": summary.Failed, "sync": true,
 			}, nil)
 		}
-		return ExecuteResult{Async: false, Summary: summary}, nil
+		return ExecuteResult{Async: false, Summary: summary, Operation: &view}, nil
 	}
 	row, err := s.q.CreateBulkJob(ctx, db.CreateBulkJobParams{
 		Resource: in.Resource, Action: in.Action, ActorID: actorID,
@@ -179,19 +186,12 @@ func (s *Service) ProcessBulk(ctx context.Context, jobID int64) error {
 	if err != nil {
 		return s.failBulk(ctx, jobID, err.Error())
 	}
-	ctx = bulkengine.WithRun(ctx, bulkengine.Run{Params: target.Params, Query: target.Query})
-	summary, err := s.applyTargets(ctx, jobID, adapter, def, job.Action, targets)
+	op, summary, err := s.run(ctx, job.ActorID, jobID, adapter, def, job.Resource, job.Action, target, targets)
 	if err != nil {
 		return s.failBulk(ctx, jobID, err.Error())
 	}
 	resultJSON, _ := json.Marshal(summary)
-	var rollbackUntil pgtype.Timestamptz
-	if def.Reversible && summary.Succeeded > 0 {
-		rollbackUntil = pgtype.Timestamptz{
-			Time:  time.Now().UTC().Add(time.Duration(s.cfg.RollbackHours) * time.Hour),
-			Valid: true,
-		}
-	}
+	rollbackUntil := op.UndoUntil
 	completed, err := s.q.MarkBulkJobCompleted(ctx, db.MarkBulkJobCompletedParams{
 		ID: jobID, ResultJson: resultJSON, RollbackUntil: rollbackUntil,
 	})
@@ -226,48 +226,40 @@ func (s *Service) ProcessBulk(ctx context.Context, jobID int64) error {
 	return nil
 }
 
+// Rollback undoes the operation of a completed job
+// (POST /v1/platform/bulk/{uuid}/rollback); it is the job-side entry to
+// Undo and shares its rules (once, within the window, conflicts skipped).
 func (s *Service) Rollback(ctx context.Context, jobUUID uuid.UUID, actorID int64) (BulkJobView, error) {
 	job, err := s.getOwned(ctx, jobUUID, actorID, false)
 	if err != nil {
 		return BulkJobView{}, err
 	}
 	if job.Status != "completed" {
-		return BulkJobView{}, ErrInvalidRequest
+		return BulkJobView{}, ErrUndoUnavailable
 	}
-	if job.RollbackUntil.Valid && time.Now().After(job.RollbackUntil.Time) {
-		return BulkJobView{}, ErrInvalidRequest
+	op, err := s.q.GetBulkOperationByJobID(ctx, pgtype.Int8{Int64: job.ID, Valid: true})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return BulkJobView{}, ErrUndoUnavailable
 	}
-	_, adapter, err := s.registry.ActionDef(job.Resource, job.Action)
 	if err != nil {
 		return BulkJobView{}, err
 	}
-	changes, err := s.q.ListBulkChangesForJob(ctx, job.ID)
+	res, err := s.undoOperation(ctx, op, actorID)
 	if err != nil {
 		return BulkJobView{}, err
-	}
-	failed := 0
-	for i := len(changes) - 1; i >= 0; i-- {
-		ch := changes[i]
-		var prev map[string]any
-		_ = json.Unmarshal(ch.PreviousJson, &prev)
-		if err := adapter.RevertItem(ctx, job.Action, ch.EntityUuid.String(), prev); err != nil {
-			failed++
-		}
 	}
 	status := "rolled_back"
-	if failed > 0 {
+	if res.UndoStatus == UndoPartial {
 		status = "rolled_back_partial"
 	}
-	row, err := s.q.MarkBulkJobRolledBack(ctx, db.MarkBulkJobRolledBackParams{
-		ID: job.ID, Status: status,
-	})
+	row, err := s.q.MarkBulkJobRolledBack(ctx, db.MarkBulkJobRolledBackParams{ID: job.ID, Status: status})
 	if err != nil {
 		return BulkJobView{}, err
 	}
 	if s.activity != nil {
 		uid := actorID
 		s.activity.Record(ctx, &uid, "bulk.rolled_back", job.Resource, &job.Uuid, map[string]any{
-			"failed_rollback": failed,
+			"undo_status": res.UndoStatus, "operation_uuid": op.Uuid.String(),
 		}, nil)
 	}
 	return mapBulkJob(row), nil
@@ -305,38 +297,6 @@ func (s *Service) GetJob(ctx context.Context, jobUUID uuid.UUID, actorID int64, 
 		return BulkJobView{}, ErrForbidden
 	}
 	return mapBulkJob(row), nil
-}
-
-func (s *Service) applyTargets(
-	ctx context.Context,
-	jobID int64,
-	adapter bulkengine.BulkAdapter,
-	def bulkengine.BulkActionDef,
-	action string,
-	targets []string,
-) (bulkengine.BulkSummary, error) {
-	summary := bulkengine.BulkSummary{Total: len(targets)}
-	for _, entityUUID := range targets {
-		res, err := adapter.ApplyItem(ctx, action, entityUUID)
-		if err != nil {
-			summary.Failed++
-			continue
-		}
-		if !res.OK {
-			summary.Failed++
-			continue
-		}
-		summary.Succeeded++
-		if jobID > 0 && def.Reversible {
-			prev, _ := json.Marshal(res.Previous)
-			_, _ = s.q.InsertBulkChange(ctx, db.InsertBulkChangeParams{
-				JobID: jobID, EntityType: res.EntityType,
-				EntityUuid: uuid.MustParse(res.EntityUUID), Op: res.Op,
-				PreviousJson: prev,
-			})
-		}
-	}
-	return summary, nil
 }
 
 func (s *Service) failBulk(ctx context.Context, jobID int64, msg string) error {

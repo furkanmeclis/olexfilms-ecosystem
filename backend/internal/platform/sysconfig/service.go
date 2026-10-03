@@ -124,6 +124,11 @@ func (s *Service) ForecastMinDays(ctx context.Context) int {
 	return int(s.Int(ctx, KeyForecastMinDays))
 }
 
+// BulkUndoWindowHours is the typed accessor for KeyBulkUndoWindowHours.
+func (s *Service) BulkUndoWindowHours(ctx context.Context) int {
+	return int(s.Int(ctx, KeyBulkUndoWindowHours))
+}
+
 // PhotoStandardEnabled is the typed accessor for KeyPhotoStandardEnabled.
 func (s *Service) PhotoStandardEnabled(ctx context.Context) bool {
 	return s.Bool(ctx, KeyPhotoStandardEnabled)
