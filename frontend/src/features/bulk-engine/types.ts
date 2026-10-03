@@ -78,10 +78,7 @@ export type BulkExecuteSyncResult = {
 };
 
 export type BulkResource =
-  | "platform.users"
-  | "platform.roles"
-  | "catalog.products"
-  | "tasks";
+  "platform.users" | "platform.roles" | "catalog.products" | "tasks";
 
 export const BULK_PATHS: Record<BulkResource, string> = {
   "platform.users": "/v1/platform/users/bulk",

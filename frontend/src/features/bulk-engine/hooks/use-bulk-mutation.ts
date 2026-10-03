@@ -102,7 +102,10 @@ export function useBulkMutation() {
               label: t("bulk.undo"),
               onClick: () => {
                 undo.mutate(
-                  { resource: variables.resource, operationUuid: operation.uuid },
+                  {
+                    resource: variables.resource,
+                    operationUuid: operation.uuid,
+                  },
                   { onSuccess: () => variables.onComplete?.() },
                 );
               },

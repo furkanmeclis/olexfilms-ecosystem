@@ -29,4 +29,7 @@ export type {
   BulkUndoResult,
   SelectionScope,
 } from "@/features/bulk-engine/types";
-export { bulkUndoPath, isTenantBulkResource } from "@/features/bulk-engine/types";
+export {
+  bulkUndoPath,
+  isTenantBulkResource,
+} from "@/features/bulk-engine/types";
