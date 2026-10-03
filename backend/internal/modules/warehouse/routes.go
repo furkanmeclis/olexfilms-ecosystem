@@ -74,3 +74,33 @@ func RegisterScanRoutes(
 	mux.Handle("POST /v1/warehouse/scan",
 		middleware.Chain(http.HandlerFunc(h.Scan), authn, org, module, middleware.RequireScope(q, rbac.PermWarehouseRead)))
 }
+
+// RegisterEntryRoutes mounts the TEC-204 stock entry documents. Reads need
+// warehouse.read, every change warehouse.write; the use case limits
+// generate_new and confirm to the center (K14).
+func RegisterEntryRoutes(
+	mux *http.ServeMux,
+	h *whhandler.Entries,
+	checker middleware.FeatureChecker,
+	tokens *jwt.Manager,
+	loader middleware.IdentityLoader,
+	q *db.Queries,
+) {
+	authn := middleware.Authenticate(tokens, loader)
+	org := middleware.RequireOrganization(tokens, q)
+	module := middleware.RequireFeature(checker, features.ModuleWarehouse)
+	scoped := func(fn http.HandlerFunc, slug string) http.Handler {
+		return middleware.Chain(fn, authn, org, module, middleware.RequireScope(q, slug))
+	}
+	read := func(fn http.HandlerFunc) http.Handler { return scoped(fn, rbac.PermWarehouseRead) }
+	write := func(fn http.HandlerFunc) http.Handler { return scoped(fn, rbac.PermWarehouseWrite) }
+
+	mux.Handle("GET /v1/warehouse/stock-entries", read(h.List))
+	mux.Handle("POST /v1/warehouse/stock-entries", write(h.Create))
+	mux.Handle("GET /v1/warehouse/stock-entries/{uuid}", read(h.Get))
+	mux.Handle("POST /v1/warehouse/stock-entries/{uuid}/lines", write(h.AddLines))
+	mux.Handle("DELETE /v1/warehouse/stock-entries/{uuid}/lines/{line_uuid}", write(h.DeleteLine))
+	mux.Handle("POST /v1/warehouse/stock-entries/{uuid}/place", write(h.Place))
+	mux.Handle("POST /v1/warehouse/stock-entries/{uuid}/confirm", write(h.Confirm))
+	mux.Handle("POST /v1/warehouse/stock-entries/{uuid}/cancel", write(h.Cancel))
+}

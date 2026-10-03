@@ -1247,6 +1247,37 @@ type StepupSetting struct {
 	UpdatedAt                 pgtype.Timestamptz `json:"updated_at"`
 }
 
+type StockEntry struct {
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	WarehouseID       pgtype.Int8        `json:"warehouse_id"`
+	Mode              string             `json:"mode"`
+	Status            string             `json:"status"`
+	Note              pgtype.Text        `json:"note"`
+	ImportBatchID     pgtype.Int8        `json:"import_batch_id"`
+	CreatedByUserID   pgtype.Int8        `json:"created_by_user_id"`
+	ConfirmedByUserID pgtype.Int8        `json:"confirmed_by_user_id"`
+	ConfirmedAt       pgtype.Timestamptz `json:"confirmed_at"`
+	CancelledAt       pgtype.Timestamptz `json:"cancelled_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type StockEntryLine struct {
+	ID                  int64              `json:"id"`
+	Uuid                uuid.UUID          `json:"uuid"`
+	EntryID             int64              `json:"entry_id"`
+	UnitID              int64              `json:"unit_id"`
+	Quantity            int32              `json:"quantity"`
+	LocationID          pgtype.Int8        `json:"location_id"`
+	EntryMovementID     pgtype.Int8        `json:"entry_movement_id"`
+	PlacementMovementID pgtype.Int8        `json:"placement_movement_id"`
+	UndoMovementID      pgtype.Int8        `json:"undo_movement_id"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+}
+
 type StockImportBatch struct {
 	ID              int64              `json:"id"`
 	Uuid            uuid.UUID          `json:"uuid"`
