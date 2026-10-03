@@ -171,5 +171,8 @@
   "groups.warranties": "الضمانات",
   "labels.tasks.read": "عرض المهام",
   "labels.tasks.write": "إدارة المهام",
-  "groups.tasks": "المهام"
+  "groups.tasks": "المهام",
+  "labels.integrations.glorian.view": "عرض تكامل Glorian",
+  "labels.integrations.glorian.manage": "إدارة تكامل Glorian",
+  "groups.integrations": "التكاملات"
 }

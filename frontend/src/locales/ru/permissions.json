@@ -171,5 +171,8 @@
   "groups.warranties": "Гарантии",
   "labels.tasks.read": "Просмотр задач",
   "labels.tasks.write": "Управление задачами",
-  "groups.tasks": "Задачи"
+  "groups.tasks": "Задачи",
+  "labels.integrations.glorian.view": "Просмотр интеграции Glorian",
+  "labels.integrations.glorian.manage": "Управление интеграцией Glorian",
+  "groups.integrations": "Интеграции"
 }

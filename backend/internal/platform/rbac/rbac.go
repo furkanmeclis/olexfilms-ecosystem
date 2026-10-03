@@ -193,6 +193,11 @@ const (
 	// by center roles only (brand scope) and super_admin.
 	PermTasksRead  = "tasks.read"
 	PermTasksWrite = "tasks.write"
+
+	// TEC-266 (000075): Glorian hub connection and sync state (K2). Held by
+	// super_admin only until the Glorian settings screen lands.
+	PermIntegrationsGlorianView   = "integrations.glorian.view"
+	PermIntegrationsGlorianManage = "integrations.glorian.manage"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

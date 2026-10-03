@@ -171,5 +171,8 @@
   "groups.warranties": "质保",
   "labels.tasks.read": "查看任务",
   "labels.tasks.write": "管理任务",
-  "groups.tasks": "任务"
+  "groups.tasks": "任务",
+  "labels.integrations.glorian.view": "查看 Glorian 集成",
+  "labels.integrations.glorian.manage": "管理 Glorian 集成",
+  "groups.integrations": "集成"
 }

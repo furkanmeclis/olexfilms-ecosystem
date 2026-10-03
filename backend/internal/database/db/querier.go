@@ -203,6 +203,9 @@ type Querier interface {
 	CreateImportJob(ctx context.Context, arg CreateImportJobParams) (ImportJob, error)
 	// An applied import batch is a confirmed entry at once.
 	CreateImportStockEntry(ctx context.Context, arg CreateImportStockEntryParams) (StockEntry, error)
+	// TEC-266 (F2-02a): Glorian sync schema. api_key_enc is always the
+	// crypto.SecretBox ciphertext; callers never pass a plain key here.
+	CreateIntegrationConnection(ctx context.Context, arg CreateIntegrationConnectionParams) (IntegrationConnection, error)
 	CreateLabelTemplate(ctx context.Context, arg CreateLabelTemplateParams) (LabelTemplate, error)
 	CreateLogPurgeRule(ctx context.Context, arg CreateLogPurgeRuleParams) (LogPurgeRule, error)
 	CreateMigrationRun(ctx context.Context, arg CreateMigrationRunParams) (MigrationRun, error)
@@ -223,6 +226,7 @@ type Querier interface {
 	// ---------------------------------------------------------------------------
 	// Units assigned to order lines.
 	CreateOrderItemUnit(ctx context.Context, arg CreateOrderItemUnitParams) (OrderItemUnit, error)
+	CreateOrderOutbound(ctx context.Context, arg CreateOrderOutboundParams) (OrderOutbound, error)
 	CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error)
 	CreateOrganizationMember(ctx context.Context, arg CreateOrganizationMemberParams) (OrganizationMember, error)
 	CreatePhoneOTP(ctx context.Context, arg CreatePhoneOTPParams) (OtpCode, error)
@@ -328,12 +332,14 @@ type Querier interface {
 	// Fails with a restrict/foreign key violation while models still use the brand.
 	DeleteCarBrand(ctx context.Context, id int64) (int64, error)
 	DeleteCarModel(ctx context.Context, id int64) (int64, error)
+	DeleteConnectionLocationMap(ctx context.Context, arg DeleteConnectionLocationMapParams) (int64, error)
 	DeleteDistributorDealerPrice(ctx context.Context, arg DeleteDistributorDealerPriceParams) (int64, error)
 	DeleteDistributorPriceOverride(ctx context.Context, arg DeleteDistributorPriceOverrideParams) (int64, error)
 	DeleteDistrict(ctx context.Context, id int64) (int64, error)
 	// Draft deletion (items, images and logs must be gone first).
 	DeleteDraftService(ctx context.Context, arg DeleteDraftServiceParams) (int64, error)
 	DeleteFixedBarcodeHoldingForRepair(ctx context.Context, id int64) error
+	DeleteIntegrationConnection(ctx context.Context, id int64) (int64, error)
 	DeleteLabelTemplate(ctx context.Context, arg DeleteLabelTemplateParams) (int64, error)
 	DeleteLogPurgeRule(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	DeleteManualExchangeRate(ctx context.Context, arg DeleteManualExchangeRateParams) (int64, error)
@@ -417,6 +423,7 @@ type Querier interface {
 	FindVehiclesByPlate(ctx context.Context, arg FindVehiclesByPlateParams) ([]Vehicle, error)
 	// Duplicate-VIN warning (VIN is not unique; ownership transfer is F1-06).
 	FindVehiclesByVIN(ctx context.Context, arg FindVehiclesByVINParams) ([]Vehicle, error)
+	FinishIntegrationSyncRun(ctx context.Context, arg FinishIntegrationSyncRunParams) (IntegrationSyncRun, error)
 	FinishMigrationRun(ctx context.Context, arg FinishMigrationRunParams) (MigrationRun, error)
 	GetAccountingDisputeView(ctx context.Context, arg GetAccountingDisputeViewParams) (GetAccountingDisputeViewRow, error)
 	GetActiveDocumentTemplate(ctx context.Context, arg GetActiveDocumentTemplateParams) (DocumentTemplate, error)
@@ -461,6 +468,7 @@ type Querier interface {
 	GetCariStatementOpening(ctx context.Context, arg GetCariStatementOpeningParams) (pgtype.Numeric, error)
 	// A user that is a member of the given (center) organization.
 	GetCenterMemberByUUID(ctx context.Context, arg GetCenterMemberByUUIDParams) (GetCenterMemberByUUIDRow, error)
+	GetConnectionLocationMapByRemote(ctx context.Context, arg GetConnectionLocationMapByRemoteParams) (ConnectionLocationMap, error)
 	GetConsentForText(ctx context.Context, arg GetConsentForTextParams) (Consent, error)
 	GetCountryByID(ctx context.Context, id int64) (Country, error)
 	GetCountryByISO2(ctx context.Context, iso2 string) (Country, error)
@@ -493,6 +501,11 @@ type Querier interface {
 	GetGitHubAppSettings(ctx context.Context) (GithubAppSetting, error)
 	GetImportJobByID(ctx context.Context, id int64) (ImportJob, error)
 	GetImportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ImportJob, error)
+	GetIntegrationConnectionByKey(ctx context.Context, arg GetIntegrationConnectionByKeyParams) (IntegrationConnection, error)
+	GetIntegrationConnectionByUUID(ctx context.Context, arg GetIntegrationConnectionByUUIDParams) (IntegrationConnection, error)
+	// The connection of the product's brand with the given key.
+	GetIntegrationConnectionForProduct(ctx context.Context, arg GetIntegrationConnectionForProductParams) (IntegrationConnection, error)
+	GetIntegrationExternalPartyByRemoteID(ctx context.Context, arg GetIntegrationExternalPartyByRemoteIDParams) (IntegrationExternalParty, error)
 	GetLabelTemplateByID(ctx context.Context, id int64) (LabelTemplate, error)
 	GetLabelTemplateByUUID(ctx context.Context, arg GetLabelTemplateByUUIDParams) (LabelTemplate, error)
 	GetLatestConsent(ctx context.Context, arg GetLatestConsentParams) (Consent, error)
@@ -532,6 +545,7 @@ type Querier interface {
 	GetOrderItem(ctx context.Context, arg GetOrderItemParams) (OrderItem, error)
 	GetOrderItemByUUID(ctx context.Context, arg GetOrderItemByUUIDParams) (OrderItem, error)
 	GetOrderItemUnit(ctx context.Context, arg GetOrderItemUnitParams) (OrderItemUnit, error)
+	GetOrderOutbound(ctx context.Context, arg GetOrderOutboundParams) (OrderOutbound, error)
 	GetOrgModuleFlag(ctx context.Context, arg GetOrgModuleFlagParams) (ModuleFlag, error)
 	GetOrganizationByID(ctx context.Context, id int64) (Organization, error)
 	GetOrganizationBySlug(ctx context.Context, slug string) (Organization, error)
@@ -713,6 +727,7 @@ type Querier interface {
 	// entry conflicts with uq_finance_entries_reversal_of and returns no row.
 	InsertFinanceReversal(ctx context.Context, arg InsertFinanceReversalParams) (FinanceEntry, error)
 	InsertImportChange(ctx context.Context, arg InsertImportChangeParams) (ImportChange, error)
+	InsertIntegrationExternalParty(ctx context.Context, arg InsertIntegrationExternalPartyParams) (IntegrationExternalParty, error)
 	InsertKVKKNotice(ctx context.Context, arg InsertKVKKNoticeParams) (KvkkNotice, error)
 	InsertLegalText(ctx context.Context, arg InsertLegalTextParams) (LegalText, error)
 	InsertMessage(ctx context.Context, arg InsertMessageParams) (Message, error)
@@ -775,6 +790,9 @@ type Querier interface {
 	LastMigrationWatermark(ctx context.Context, arg LastMigrationWatermarkParams) (pgtype.Timestamptz, error)
 	// The scanning user's current location context (location_first).
 	LastStockCountLocationScan(ctx context.Context, arg LastStockCountLocationScanParams) (pgtype.Int8, error)
+	// The latest successful run of a kind; its watermark seeds the next
+	// incremental pull.
+	LastSucceededIntegrationSyncRun(ctx context.Context, arg LastSucceededIntegrationSyncRunParams) (IntegrationSyncRun, error)
 	LatestExchangeRateDate(ctx context.Context, onDate pgtype.Date) (pgtype.Date, error)
 	// Idempotent link: a second call keeps the row and fills first_service_at
 	// only when it was empty.
@@ -823,6 +841,7 @@ type Querier interface {
 	ListCariStatementLines(ctx context.Context, arg ListCariStatementLinesParams) ([]ListCariStatementLinesRow, error)
 	// TEC-221: assignee picker of the task form (members of the center).
 	ListCenterMembers(ctx context.Context, organizationID int64) ([]ListCenterMembersRow, error)
+	ListConnectionLocationMaps(ctx context.Context, connectionID int64) ([]ConnectionLocationMap, error)
 	// Fixed barcode holdings at the given locations of the organization.
 	ListCountExpectedFixed(ctx context.Context, arg ListCountExpectedFixedParams) ([]ListCountExpectedFixedRow, error)
 	// ---------------------------------------------------------------------------
@@ -895,6 +914,10 @@ type Querier interface {
 	ListImportJobsForActor(ctx context.Context, arg ListImportJobsForActorParams) ([]ImportJob, error)
 	// TEC-211: the organization list carries who uploaded each job.
 	ListImportJobsForOrganization(ctx context.Context, arg ListImportJobsForOrganizationParams) ([]ListImportJobsForOrganizationRow, error)
+	ListIntegrationConnections(ctx context.Context, brandID int64) ([]IntegrationConnection, error)
+	ListIntegrationConnectionsByKey(ctx context.Context, key string) ([]IntegrationConnection, error)
+	ListIntegrationExternalParties(ctx context.Context, connectionID int64) ([]IntegrationExternalParty, error)
+	ListIntegrationSyncRuns(ctx context.Context, arg ListIntegrationSyncRunsParams) ([]IntegrationSyncRun, error)
 	// TEC-202: label templates and barcode batches.
 	// ---------------------------------------------------------------------------
 	// Label templates.
@@ -931,6 +954,7 @@ type Querier interface {
 	ListOrderItemUnitsByItem(ctx context.Context, orderItemID int64) ([]OrderItemUnit, error)
 	ListOrderItemUnitsByOrder(ctx context.Context, orderID int64) ([]ListOrderItemUnitsByOrderRow, error)
 	ListOrderItems(ctx context.Context, orderID int64) ([]OrderItem, error)
+	ListOrderOutboundsByState(ctx context.Context, arg ListOrderOutboundsByStateParams) ([]OrderOutbound, error)
 	ListOrderStatusHistory(ctx context.Context, orderID int64) ([]OrderStatusHistory, error)
 	// Orders an organization sells or buys: their documents carry the
 	// organization's name and dealer code, refreshed when it changes.
@@ -1244,6 +1268,7 @@ type Querier interface {
 	LockOrderForDisputeReversal(ctx context.Context, arg LockOrderForDisputeReversalParams) (int64, error)
 	LockOrderItem(ctx context.Context, arg LockOrderItemParams) (OrderItem, error)
 	LockOrderItems(ctx context.Context, orderID int64) ([]OrderItem, error)
+	LockOrderOutbound(ctx context.Context, id int64) (OrderOutbound, error)
 	// TEC-229: locks (FOR SHARE) the orders the return lines of a request were
 	// sold on, so a dispute reversal of the same order (LockOrderForDisputeReversal,
 	// FOR UPDATE) and the receipt of the return are serialized.
@@ -1412,6 +1437,7 @@ type Querier interface {
 	SetCustomerTaxNo(ctx context.Context, arg SetCustomerTaxNoParams) (CustomerProfile, error)
 	// TEC-158: staged importers keep their apply/undo report in preview_json.
 	SetImportJobPreview(ctx context.Context, arg SetImportJobPreviewParams) (ImportJob, error)
+	SetIntegrationConnectionAPIKey(ctx context.Context, arg SetIntegrationConnectionAPIKeyParams) (IntegrationConnection, error)
 	SetLocationSortOrder(ctx context.Context, arg SetLocationSortOrderParams) (int64, error)
 	SetNotificationChannelEnabled(ctx context.Context, arg SetNotificationChannelEnabledParams) (NotificationChannelSetting, error)
 	SetOrderCancelReason(ctx context.Context, arg SetOrderCancelReasonParams) (Order, error)
@@ -1466,6 +1492,7 @@ type Querier interface {
 	ShipWarehouseTransfer(ctx context.Context, arg ShipWarehouseTransferParams) (WarehouseTransfer, error)
 	SlugExists(ctx context.Context, slug string) (bool, error)
 	SoftDeleteVehicle(ctx context.Context, id int64) (int64, error)
+	StartIntegrationSyncRun(ctx context.Context, arg StartIntegrationSyncRunParams) (IntegrationSyncRun, error)
 	StartStockCount(ctx context.Context, arg StartStockCountParams) (StockCount, error)
 	StockCountSerialScanExists(ctx context.Context, arg StockCountSerialScanExistsParams) (bool, error)
 	// Fixed barcodes: total quantity actively reserved by the seller
@@ -1510,6 +1537,7 @@ type Querier interface {
 	UpdateImportJobFileKey(ctx context.Context, arg UpdateImportJobFileKeyParams) (ImportJob, error)
 	UpdateImportJobMapping(ctx context.Context, arg UpdateImportJobMappingParams) (ImportJob, error)
 	UpdateImportJobPreview(ctx context.Context, arg UpdateImportJobPreviewParams) (ImportJob, error)
+	UpdateIntegrationConnection(ctx context.Context, arg UpdateIntegrationConnectionParams) (IntegrationConnection, error)
 	UpdateLabelTemplate(ctx context.Context, arg UpdateLabelTemplateParams) (LabelTemplate, error)
 	UpdateLogPurgeRule(ctx context.Context, arg UpdateLogPurgeRuleParams) (LogPurgeRule, error)
 	UpdateMessageStatusByExternalIDs(ctx context.Context, arg UpdateMessageStatusByExternalIDsParams) (int64, error)
@@ -1518,6 +1546,9 @@ type Querier interface {
 	UpdateOAuthProviderSettings(ctx context.Context, arg UpdateOAuthProviderSettingsParams) (OauthProviderSetting, error)
 	UpdateOrderDraft(ctx context.Context, arg UpdateOrderDraftParams) (Order, error)
 	UpdateOrderItem(ctx context.Context, arg UpdateOrderItemParams) (OrderItem, error)
+	// Records one attempt: the new state, the hold reason (NULL unless held)
+	// and the last error (NULL on success).
+	UpdateOrderOutboundState(ctx context.Context, arg UpdateOrderOutboundStateParams) (OrderOutbound, error)
 	// Moves the order to status and stamps the matching timestamp once. The
 	// caller has locked the row and validated the transition.
 	UpdateOrderStatus(ctx context.Context, arg UpdateOrderStatusParams) (Order, error)
@@ -1570,6 +1601,7 @@ type Querier interface {
 	UpdateWebAuthnCredentialName(ctx context.Context, arg UpdateWebAuthnCredentialNameParams) (WebauthnCredential, error)
 	UpdateWhatsAppStatus(ctx context.Context, arg UpdateWhatsAppStatusParams) (WhatsappSetting, error)
 	UpsertBinProductStockForRepair(ctx context.Context, arg UpsertBinProductStockForRepairParams) error
+	UpsertConnectionLocationMap(ctx context.Context, arg UpsertConnectionLocationMapParams) (ConnectionLocationMap, error)
 	UpsertConversation(ctx context.Context, arg UpsertConversationParams) (Conversation, error)
 	UpsertDevicePushToken(ctx context.Context, arg UpsertDevicePushTokenParams) (DevicePushToken, error)
 	// The database refuses an owner that is not a distributor of the brand.
@@ -1582,6 +1614,7 @@ type Querier interface {
 	UpsertEODReport(ctx context.Context, arg UpsertEODReportParams) (EodReport, error)
 	UpsertExchangeRate(ctx context.Context, arg UpsertExchangeRateParams) error
 	UpsertFixedBarcodeHoldingForRepair(ctx context.Context, arg UpsertFixedBarcodeHoldingForRepairParams) error
+	UpsertIntegrationExternalParty(ctx context.Context, arg UpsertIntegrationExternalPartyParams) (IntegrationExternalParty, error)
 	// Catalog sync: level and sort order follow the Go catalog; admin-edited
 	// default_enabled / is_paid survive (a core module is always on).
 	UpsertModuleCatalog(ctx context.Context, arg UpsertModuleCatalogParams) error
