@@ -5,6 +5,7 @@ import (
 	"errors"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/jackc/pgx/v5"
@@ -65,4 +66,39 @@ func mapPublicDealer(r db.GetPublicDealerBySlugRow) PublicDealer {
 		d.WhatsApp = &p
 	}
 	return d
+}
+
+// PublicDealerCodesLimit caps GET /v1/public/dealers (one sitemap file holds
+// at most 50 000 URLs; the brand's dealer count is far below this).
+const PublicDealerCodesLimit = 5000
+
+// PublicDealerCode is one row of GET /v1/public/dealers (TEC-251): what the
+// sitemap needs for `/bayi/{code}`, nothing else.
+type PublicDealerCode struct {
+	Code      string    `json:"code"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// PublicDealerCodes lists the codes of the brand's active, serving dealers
+// and distributors (same filters as PublicDealerByCode), sorted by code.
+func (s *Service) PublicDealerCodes(ctx context.Context, brandID int64) ([]PublicDealerCode, error) {
+	rows, err := s.q.ListPublicDealerCodes(ctx, db.ListPublicDealerCodesParams{
+		BrandID: brandID, RowLimit: PublicDealerCodesLimit,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return mapPublicDealerCodes(rows), nil
+}
+
+// mapPublicDealerCodes drops slugs the showcase would answer 404 for.
+func mapPublicDealerCodes(rows []db.ListPublicDealerCodesRow) []PublicDealerCode {
+	out := make([]PublicDealerCode, 0, len(rows))
+	for _, r := range rows {
+		if !dealerCodeRe.MatchString(r.Slug) {
+			continue
+		}
+		out = append(out, PublicDealerCode{Code: r.Slug, UpdatedAt: r.UpdatedAt.Time.UTC()})
+	}
+	return out
 }

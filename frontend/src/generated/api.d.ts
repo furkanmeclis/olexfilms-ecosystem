@@ -802,6 +802,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/dealers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Codes of the request brand's active dealers (sitemap)
+         * @description TEC-251. No authentication. Lists only `code` (organization slug,
+         *     the `/bayi/{code}` path) and `updated_at` of the active, serving
+         *     (access window open) dealers and distributors of the brand resolved
+         *     from the request domain, sorted by code, at most 5000. Same filters
+         *     as `GET /v1/public/dealers/{code}`. Used by the frontend sitemap.
+         *     Rate limited per client IP (30 per minute); over the limit 429 with
+         *     Retry-After.
+         */
+        get: operations["listPublicDealerCodes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/dealers/nearby": {
         parameters: {
             query?: never;
@@ -9864,6 +9890,19 @@ export interface components {
             data: components["schemas"]["PublicDealer"];
             meta: components["schemas"]["ResponseMeta"];
         };
+        PublicDealerCode: {
+            code: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        EnvelopePublicDealerCodes: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["PublicDealerCode"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
         EnvelopeTenantSettings: {
             /** @enum {boolean} */
             success: true;
@@ -15444,6 +15483,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopePublicBrand"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listPublicDealerCodes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dealer codes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePublicDealerCodes"];
+                };
+            };
+            /** @description Rate limited per client IP */
+            429: {
+                headers: {
+                    /** @description Seconds until the window resets */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
                 };
             };
             500: components["responses"]["InternalError"];

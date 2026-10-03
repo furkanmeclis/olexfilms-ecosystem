@@ -1448,6 +1448,41 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /v1/public/dealers:
+    get:
+      tags: [Public]
+      operationId: listPublicDealerCodes
+      summary: Codes of the request brand's active dealers (sitemap)
+      description: |
+        TEC-251. No authentication. Lists only `code` (organization slug,
+        the `/bayi/{code}` path) and `updated_at` of the active, serving
+        (access window open) dealers and distributors of the brand resolved
+        from the request domain, sorted by code, at most 5000. Same filters
+        as `GET /v1/public/dealers/{code}`. Used by the frontend sitemap.
+        Rate limited per client IP (30 per minute); over the limit 429 with
+        Retry-After.
+      security: []
+      responses:
+        "200":
+          description: Dealer codes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePublicDealerCodes"
+        "429":
+          description: Rate limited per client IP
+          headers:
+            Retry-After:
+              description: Seconds until the window resets
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /v1/public/dealers/nearby:
     get:
       tags: [Public]
@@ -18147,6 +18182,27 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/PublicDealer" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    PublicDealerCode:
+      type: object
+      required: [code, updated_at]
+      properties:
+        code: { type: string, maxLength: 100 }
+        updated_at: { type: string, format: date-time }
+
+    EnvelopePublicDealerCodes:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/PublicDealerCode" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeTenantSettings:

@@ -1095,6 +1095,10 @@ type Querier interface {
 	// Search indexer only (full reindex across brands).
 	ListProductsForIndex(ctx context.Context) ([]Product, error)
 	ListProvincesByCountry(ctx context.Context, countryID int64) ([]ListProvincesByCountryRow, error)
+	// TEC-251: codes (slugs) of the brand's active, serving dealers and
+	// distributors for the public sitemap. Same filters as
+	// GetPublicDealerBySlug; code and last change only.
+	ListPublicDealerCodes(ctx context.Context, arg ListPublicDealerCodesParams) ([]ListPublicDealerCodesRow, error)
 	ListPushSubscriptionsByUser(ctx context.Context, userID int64) ([]PushSubscription, error)
 	// TEC-156 (F1-02d): projection rebuild, drift scan and repair.
 	// Movements are read only (append-only ledger); the repair writes the

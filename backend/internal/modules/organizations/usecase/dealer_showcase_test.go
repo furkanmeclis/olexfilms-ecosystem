@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/google/uuid"
@@ -61,6 +62,29 @@ func TestMapPublicDealerWithoutCoordinatesOrWhatsApp(t *testing.T) {
 	d := mapPublicDealer(db.GetPublicDealerBySlugRow{Slug: "x", Name: "X", Phone: "0532 111 22 33"})
 	if d.Latitude != nil || d.Longitude != nil || d.WhatsApp != nil || d.LogoURL != nil {
 		t.Fatalf("dealer = %+v", d)
+	}
+}
+
+// TEC-251: the sitemap list carries code and updated_at only and skips
+// slugs the showcase would answer 404 for.
+func TestMapPublicDealerCodes(t *testing.T) {
+	at := time.Date(2026, 10, 1, 9, 30, 0, 0, time.FixedZone("TRT", 3*3600))
+	got := mapPublicDealerCodes([]db.ListPublicDealerCodesRow{
+		{Slug: "olex-kadikoy", UpdatedAt: pgtype.Timestamptz{Time: at, Valid: true}},
+		{Slug: "Bad Slug", UpdatedAt: pgtype.Timestamptz{Time: at, Valid: true}},
+	})
+	if len(got) != 1 || got[0].Code != "olex-kadikoy" || !got[0].UpdatedAt.Equal(at) || got[0].UpdatedAt.Location() != time.UTC {
+		t.Fatalf("codes = %+v", got)
+	}
+	b, err := json.Marshal(got[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `{"code":"olex-kadikoy","updated_at":"2026-10-01T06:30:00Z"}`; string(b) != want {
+		t.Fatalf("json = %s, want %s", b, want)
+	}
+	if empty := mapPublicDealerCodes(nil); empty == nil || len(empty) != 0 {
+		t.Fatalf("empty = %#v, want []", empty)
 	}
 }
 
