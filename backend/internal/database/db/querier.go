@@ -645,7 +645,9 @@ type Querier interface {
 	// Public warranty lookup (TEC-189): only the fields the public page shows.
 	// No users join: the holder's personal data is never read, so an anonymized
 	// customer's warranty answers the same way (K19). Vehicle fields come from
-	// the service snapshot first, then the vehicle.
+	// the service snapshot first, then the vehicle. TEC-260: an old hub number
+	// merged into another warranty resolves through warranty_public_code_aliases
+	// to the kept warranty; the row carries that warranty's own public_code.
 	GetPublicWarrantyByCode(ctx context.Context, arg GetPublicWarrantyByCodeParams) (GetPublicWarrantyByCodeRow, error)
 	GetQRLoginChallengeByCode(ctx context.Context, code string) (QrLoginChallenge, error)
 	GetRefreshTokenByHashAny(ctx context.Context, tokenHash string) (RefreshToken, error)
@@ -1506,6 +1508,9 @@ type Querier interface {
 	// Organization links the target already has: the target row keeps the
 	// earliest dates of both rows.
 	MergeConflictingCustomerOrganizations(ctx context.Context, arg MergeConflictingCustomerOrganizationsParams) (int64, error)
+	// The active full-unit warranty of a vehicle and unit
+	// (uq_warranties_active_full_unit).
+	MigratorActiveFullWarranty(ctx context.Context, arg MigratorActiveFullWarrantyParams) (MigratorActiveFullWarrantyRow, error)
 	MigratorAssignMemberRole(ctx context.Context, arg MigratorAssignMemberRoleParams) (int64, error)
 	MigratorAssignUserRole(ctx context.Context, arg MigratorAssignUserRoleParams) (int64, error)
 	MigratorBrandCurrency(ctx context.Context, id int64) (string, error)
@@ -1570,6 +1575,10 @@ type Querier interface {
 	MigratorInsertCarBrand(ctx context.Context, arg MigratorInsertCarBrandParams) (int64, error)
 	MigratorInsertCarModel(ctx context.Context, arg MigratorInsertCarModelParams) (int64, error)
 	MigratorInsertCategory(ctx context.Context, arg MigratorInsertCategoryParams) (int64, error)
+	// A historical, already completed transfer. The codes were sent and
+	// verified in the old hub; they are not carried over, the hashes are a
+	// marker no code ever matches (only a pending transfer is verified).
+	MigratorInsertCompletedVehicleTransfer(ctx context.Context, arg MigratorInsertCompletedVehicleTransferParams) (int64, error)
 	// TEC-255: migrator step 2 (hub customers -> users, customer_profiles,
 	// customer_organizations). Written only by cmd/migrator inside a step
 	// transaction.
@@ -1606,6 +1615,9 @@ type Querier interface {
 	MigratorInsertUser(ctx context.Context, arg MigratorInsertUserParams) (int64, error)
 	MigratorInsertVehicle(ctx context.Context, arg MigratorInsertVehicleParams) (int64, error)
 	MigratorInsertWarehouse(ctx context.Context, arg MigratorInsertWarehouseParams) (int64, error)
+	// A NULL public_code takes a random 22 character code (the column default).
+	MigratorInsertWarranty(ctx context.Context, arg MigratorInsertWarrantyParams) (MigratorInsertWarrantyRow, error)
+	MigratorInsertWarrantyAlias(ctx context.Context, arg MigratorInsertWarrantyAliasParams) (int64, error)
 	MigratorLegacyMessageExists(ctx context.Context, arg MigratorLegacyMessageExistsParams) (bool, error)
 	// One row per serving organization (K11: the customer is global, a dealer
 	// sees it through this link).
@@ -1621,6 +1633,7 @@ type Querier interface {
 	MigratorMeasurementDeviceBySerial(ctx context.Context, arg MigratorMeasurementDeviceBySerialParams) (MigratorMeasurementDeviceBySerialRow, error)
 	MigratorMeasurementDeviceByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorMeasurementDeviceByUUIDRow, error)
 	MigratorMeasurementResultIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
+	MigratorMoveVehicleOwner(ctx context.Context, arg MigratorMoveVehicleOwnerParams) (int64, error)
 	// TEC-261: migrator step 9 (orders). Written only by cmd/migrator inside a
 	// step transaction. Legacy orders are history: no status history row, no
 	// outbox event and no accounting entry is written for them (K9).
@@ -1638,6 +1651,9 @@ type Querier interface {
 	MigratorOrganizationUUIDByID(ctx context.Context, id int64) (uuid.UUID, error)
 	MigratorProductForUnit(ctx context.Context, arg MigratorProductForUnitParams) (MigratorProductForUnitRow, error)
 	MigratorProductIDByUUID(ctx context.Context, arg MigratorProductIDByUUIDParams) (int64, error)
+	// The service of the warranty a code resolves to (its public_code or an
+	// alias); no row means the code is free.
+	MigratorPublicCodeOwner(ctx context.Context, code string) (int64, error)
 	MigratorRoleOrgTypes(ctx context.Context, slugs []string) ([]MigratorRoleOrgTypesRow, error)
 	MigratorRoomByUUID(ctx context.Context, arg MigratorRoomByUUIDParams) (MigratorRoomByUUIDRow, error)
 	// The full_code prefix of the room's root locations (<warehouse>-<room>).
@@ -1658,11 +1674,15 @@ type Querier interface {
 	// The legacy status of a service that is not final yet. A final status is
 	// written after the items, which are locked afterwards.
 	MigratorSetServiceStatus(ctx context.Context, arg MigratorSetServiceStatusParams) error
+	// The active warranties of a transferred service follow the new owner.
+	MigratorSetServiceWarrantyHolder(ctx context.Context, arg MigratorSetServiceWarrantyHolderParams) (int64, error)
 	// TEC-263: migrator steps 10-11 (hub short_urls -> short_urls, hub
 	// sms_logs / notifications -> legacy_messages). Written only by
 	// cmd/migrator inside a step transaction.
 	MigratorShortURLByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorShortURLByUUIDRow, error)
 	MigratorShortURLTokenTaken(ctx context.Context, token string) (bool, error)
+	// The migrated service of a legacy transfer, with its vehicle's owner now.
+	MigratorTransferService(ctx context.Context, argUuid uuid.UUID) (MigratorTransferServiceRow, error)
 	MigratorUnitByUUID(ctx context.Context, arg MigratorUnitByUUIDParams) (MigratorUnitByUUIDRow, error)
 	// TEC-258: a movement this application wrote (not an imported legacy one).
 	MigratorUnitHasLedgerMovements(ctx context.Context, unitID int64) (bool, error)
@@ -1670,6 +1690,9 @@ type Querier interface {
 	// TEC-258: units of the brand whose ownership was written without a movement
 	// (TEC-257): they need an opening movement before the projection rebuild.
 	MigratorUnitsWithoutMovements(ctx context.Context, brandID int64) ([]int64, error)
+	// A changed legacy warranty that is still active here: the end (extension)
+	// and the status may change; the period start and the item never do.
+	MigratorUpdateActiveWarranty(ctx context.Context, arg MigratorUpdateActiveWarrantyParams) (int64, error)
 	// Legacy-sourced fields of a brand the migrator created; the logo is set
 	// separately.
 	MigratorUpdateCarBrand(ctx context.Context, arg MigratorUpdateCarBrandParams) error
@@ -1704,8 +1727,21 @@ type Querier interface {
 	MigratorUpsertUnitState(ctx context.Context, arg MigratorUpsertUnitStateParams) (int64, error)
 	MigratorUserByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorUserByUUIDRow, error)
 	MigratorUserIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
+	MigratorUserPhone(ctx context.Context, id int64) (pgtype.Text, error)
 	MigratorVehicleByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorVehicleByUUIDRow, error)
+	MigratorVehicleTransferByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	MigratorWarehouseIDByUUID(ctx context.Context, arg MigratorWarehouseIDByUUIDParams) (int64, error)
+	MigratorWarrantyAliasByCode(ctx context.Context, code string) (MigratorWarrantyAliasByCodeRow, error)
+	MigratorWarrantyByServiceItem(ctx context.Context, serviceItemID int64) (MigratorWarrantyByServiceItemRow, error)
+	MigratorWarrantyByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorWarrantyByUUIDRow, error)
+	// TEC-260: migrator step 7b (hub warranties -> warranties, legacy numbers ->
+	// public codes / aliases, hub service_customer_transfers -> completed
+	// vehicle_transfers). Written only by cmd/migrator inside a step
+	// transaction. Nothing here writes the outbox: no warranty event, no
+	// reminder and no transfer message is sent for a historical record.
+	// The service item a legacy warranty covers, with the service state the
+	// warranty copies (vehicle, customer) and the organization's time zone.
+	MigratorWarrantyServiceItem(ctx context.Context, argUuid uuid.UUID) (MigratorWarrantyServiceItemRow, error)
 	// Consents the target has not decided yet; a decision the target already
 	// made for the same legal text wins and the source's stays as a record.
 	MoveConsentsToUser(ctx context.Context, arg MoveConsentsToUserParams) (int64, error)
