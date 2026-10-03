@@ -103,6 +103,15 @@ export function CommandPalette({
           </div>
         ) : (
           <>
+            {data.infoText ? (
+              <div
+                role="status"
+                data-testid="search-info"
+                className="text-muted-foreground border-b px-4 py-2 text-xs"
+              >
+                {data.infoText}
+              </div>
+            ) : null}
             <CommandEmpty>{data.emptyText}</CommandEmpty>
             {[...data.groupedItems.entries()].map(([group, items], index) => (
               <div key={group}>
@@ -140,6 +149,10 @@ export function CommandPalette({
       <div className="text-muted-foreground flex items-center justify-between border-t px-4 py-2 text-xs">
         <span>{data.footerHint}</span>
         <div className="flex items-center gap-3">
+          <span>
+            <kbd className="bg-muted rounded px-1.5 py-0.5 font-mono">↑↓</kbd>{" "}
+            {t("search.footer_navigate")}
+          </span>
           <span>
             <kbd className="bg-muted rounded px-1.5 py-0.5 font-mono">↵</kbd>{" "}
             {t("search.footer_open")}
