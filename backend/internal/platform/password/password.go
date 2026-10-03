@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"golang.org/x/crypto/argon2"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -49,6 +50,10 @@ func Hash(value string) (string, error) {
 	if err := ValidatePassword(value); err != nil {
 		return "", err
 	}
+	return hashArgon2(value)
+}
+
+func hashArgon2(value string) (string, error) {
 	salt := make([]byte, saltLength)
 	if _, err := rand.Read(salt); err != nil {
 		return "", fmt.Errorf("password: generate salt: %w", err)
@@ -64,8 +69,53 @@ func Hash(value string) (string, error) {
 	), nil
 }
 
-// Verify checks a plaintext password against an Argon2id hash.
+// ResetRequired is stored as password_hash when a migrated account has no
+// usable hash (TEC-254). It never verifies, so the user signs in with OTP or
+// the password reset flow and sets a new password.
+const ResetRequired = "!reset-required"
+
+// IsBcrypt reports whether encoded is a well-formed bcrypt hash ($2a$, $2b$
+// or Laravel's $2y$). Legacy hub accounts keep such hashes until their next
+// successful login (TEC-254).
+func IsBcrypt(encoded string) bool {
+	if len(encoded) < 4 || encoded[0] != '$' || encoded[1] != '2' || encoded[3] != '$' {
+		return false
+	}
+	switch encoded[2] {
+	case 'a', 'b', 'y':
+	default:
+		return false
+	}
+	_, err := bcrypt.Cost([]byte(encoded))
+	return err == nil
+}
+
+// NeedsRehash reports whether a verified hash should be replaced with the
+// current Argon2id format (legacy bcrypt hashes).
+func NeedsRehash(encoded string) bool { return IsBcrypt(encoded) }
+
+// Rehash hashes value with Argon2id without the policy check. It is only for
+// upgrading the stored hash of a password that has just been verified: a
+// legacy password that predates the policy must keep working.
+func Rehash(value string) (string, error) { return hashArgon2(value) }
+
+// Verify checks a plaintext password against an Argon2id hash, or against a
+// legacy bcrypt hash migrated from the hub (TEC-254). ResetRequired never
+// verifies.
 func Verify(encoded, value string) (bool, error) {
+	if encoded == ResetRequired {
+		return false, nil
+	}
+	if IsBcrypt(encoded) {
+		err := bcrypt.CompareHashAndPassword([]byte(encoded), []byte(value))
+		if err == nil {
+			return true, nil
+		}
+		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+			return false, nil
+		}
+		return false, fmt.Errorf("password: bcrypt: %w", err)
+	}
 	parts := strings.Split(encoded, "$")
 	if len(parts) != 6 || parts[1] != "argon2id" || parts[2] != "v=19" {
 		return false, errors.New("password: invalid hash format")

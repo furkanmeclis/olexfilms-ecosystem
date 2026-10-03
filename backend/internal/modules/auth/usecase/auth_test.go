@@ -600,6 +600,42 @@ func TestLoginDisabledUserRequiresPassword(t *testing.T) {
 	}
 }
 
+// A user migrated from the legacy hub keeps the Laravel bcrypt hash ($2y$);
+// the first successful login accepts it and upgrades it to Argon2id
+// (TEC-254).
+func TestLoginLegacyBcryptHash(t *testing.T) {
+	ctx := context.Background()
+	repo := newMemRepo()
+	const legacy = "$2y$10$Ncl7Rt8nC3FBorv/7YtFnuoBuNhkUwYPBuFp7em6/7fDphhJDmidO" // "eski-sifre"
+	u, _ := repo.CreateUser(ctx, model.User{Email: "eski@x.io", PasswordHash: legacy, Status: "active"}, true)
+	tokens, _ := jwt.NewManager("test-secret-key-32-bytes-minimum!", time.Minute, time.Hour)
+	uc := New(repo, tokens)
+
+	if _, err := uc.Login(ctx, "eski@x.io", "yanlis", "", "", model.SessionMeta{}); !errors.Is(err, ErrInvalidCredentials) {
+		t.Fatalf("wrong password: got %v", err)
+	}
+	if repo.users[u.ID].PasswordHash != legacy {
+		t.Fatal("a failed login must not touch the hash")
+	}
+	tok, err := uc.Login(ctx, "eski@x.io", "eski-sifre", "", "", model.SessionMeta{})
+	if err != nil || tok.AccessToken == "" {
+		t.Fatalf("legacy login: %v", err)
+	}
+	upgraded := repo.users[u.ID].PasswordHash
+	if upgraded == legacy || password.NeedsRehash(upgraded) {
+		t.Fatalf("hash not upgraded: %q", upgraded)
+	}
+	if _, err := uc.Login(ctx, "eski@x.io", "eski-sifre", "", "", model.SessionMeta{}); err != nil {
+		t.Fatalf("login after upgrade: %v", err)
+	}
+
+	// A migrated account without a usable hash cannot log in by password.
+	_, _ = repo.CreateUser(ctx, model.User{Email: "reset@x.io", PasswordHash: password.ResetRequired, Status: "active"}, true)
+	if _, err := uc.Login(ctx, "reset@x.io", password.ResetRequired, "", "", model.SessionMeta{}); !errors.Is(err, ErrInvalidCredentials) {
+		t.Fatalf("reset-required login: got %v", err)
+	}
+}
+
 func TestNonSuperAdminCannotEscalateToSuperAdmin(t *testing.T) {
 	repo := newMemRepo()
 	tokens, _ := jwt.NewManager("test-secret-key-32-bytes-minimum!", time.Minute, time.Hour)
