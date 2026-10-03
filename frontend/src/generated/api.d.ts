@@ -802,6 +802,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/dealers/nearby": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Nearby dealers of the request brand ("find a dealer")
+         * @description TEC-240. No authentication. Lists the active, serving (access window
+         *     open) dealers and distributors of the brand resolved from the request
+         *     domain that have coordinates, within `radius_km` of (`lat`, `lng`).
+         *     Distance is the haversine great-circle distance in km, computed in
+         *     SQL; results are nearest first, at most 50. Organizations without
+         *     coordinates, suspended / pending ones and other brands' organizations
+         *     are never returned. `whatsapp` is the organization phone when it is
+         *     E.164, otherwise null. Rate limited per client IP (60 per minute);
+         *     over the limit 429 with Retry-After.
+         */
+        get: operations["getPublicNearbyDealers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/warranties/{public_code}": {
         parameters: {
             query?: never;
@@ -9561,6 +9589,9 @@ export interface components {
             /** @enum {string} */
             paper_size: "A4" | "A3" | "Letter" | "Legal";
             logo_url?: string | null;
+            /** @description TEC-240 map position (WGS84); null together with longitude when unset. */
+            latitude?: number | null;
+            longitude?: number | null;
         };
         PatchTenantSettingsRequest: {
             company_name?: string;
@@ -9575,6 +9606,33 @@ export interface components {
             footer_text?: string;
             /** @enum {string} */
             paper_size?: "A4" | "A3" | "Letter" | "Legal";
+            /**
+             * @description TEC-240. Sent together with longitude; both null clears the map
+             *     position. One without the other or an out of range value is
+             *     400 VALIDATION_ERROR.
+             */
+            latitude?: number | null;
+            longitude?: number | null;
+        };
+        NearbyDealer: {
+            slug: string;
+            name: string;
+            city: string;
+            district: string;
+            latitude: number;
+            longitude: number;
+            /** @description Haversine distance in km (2 decimals) */
+            distance_km: number;
+            /** @description E.164 phone */
+            whatsapp: string | null;
+        };
+        EnvelopeNearbyDealers: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["NearbyDealer"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeTenantSettings: {
             /** @enum {boolean} */
@@ -15124,6 +15182,44 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopePublicBrand"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getPublicNearbyDealers: {
+        parameters: {
+            query: {
+                lat: number;
+                lng: number;
+                /** @description Search radius in km (default 100). */
+                radius_km?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dealers, nearest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeNearbyDealers"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Rate limited per client IP */
+            429: {
+                headers: {
+                    /** @description Seconds until the window resets */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
                 };
             };
             500: components["responses"]["InternalError"];
