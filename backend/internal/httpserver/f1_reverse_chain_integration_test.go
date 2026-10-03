@@ -63,7 +63,7 @@ func TestIntegrationF1ReverseChain(t *testing.T) {
 	c := runF1Chain(t)
 	it := c.it
 	ctx := context.Background()
-	chainMoves := "entry,order_out,received,order_out,received,consumption"
+	chainMoves := "entry,placement,order_out,received,order_out,received,consumption"
 	stocks := func(step string, center, dist, dealer int32) {
 		t.Helper()
 		for _, s := range []struct {
@@ -212,7 +212,7 @@ func TestIntegrationF1ReverseChain(t *testing.T) {
 	chainMoves += ",return"
 	c.owned("consumption undone", "available", "organization", c.dealer.ID, c.dealer.ID, chainMoves)
 	meters("consumption undone", "25")
-	stocks("consumption undone", 0, 0, 2)
+	stocks("consumption undone", c.centerStockBefore-2, 0, 2)
 
 	// 4. A received order cannot be cancelled; the dealer returns both
 	// rolls to the distributor (TEC-223): approve, ship, receive. The
@@ -242,7 +242,7 @@ func TestIntegrationF1ReverseChain(t *testing.T) {
 	move(c.distTok, r1.UUID, "received")
 	chainMoves += ",transfer_in"
 	c.owned("R1 received", "available", "organization", c.dist.ID, c.dist.ID, chainMoves)
-	stocks("R1 received", 0, 2, 0)
+	stocks("R1 received", c.centerStockBefore-2, 2, 0)
 
 	// 5. The distributor returns both rolls to the center. The center
 	// warehouse role holds transfers.approve (TEC-228) and decides and
@@ -262,8 +262,8 @@ func TestIntegrationF1ReverseChain(t *testing.T) {
 	move(whTok, r2.UUID, "received")
 	chainMoves += ",transfer_in"
 	c.owned("R2 received", "available", "organization", c.center.ID, c.center.ID, chainMoves)
-	if c.centerStockBefore != 2 {
-		t.Fatalf("center stock before the chain = %d, want 2", c.centerStockBefore)
+	if c.centerStockBefore != 100 {
+		t.Fatalf("center stock before the chain = %d, want 100 (generated)", c.centerStockBefore)
 	}
 	stocks("R2 received", c.centerStockBefore, 0, 0)
 	meters("R2 received", "25")

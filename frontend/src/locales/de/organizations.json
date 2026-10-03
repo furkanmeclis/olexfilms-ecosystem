@@ -116,6 +116,8 @@
   "columns.type": "Typ",
   "columns.parent": "Übergeordnet",
   "fields.type": "Typ",
+  "fields.register_as_warehouse": "Als Lager anlegen",
+  "fields.register_as_warehouse_hint": "Beim Speichern wird für den Distributor ein Lager (Code MAIN) eröffnet; Räume und Lagerplätze folgen später.",
   "fields.city_hint": "Wird aus der Provinz übernommen, wenn leer.",
   "fields.district_hint": "Wird aus dem Bezirk übernommen, wenn leer.",
   "form.section_address": "Adresse",

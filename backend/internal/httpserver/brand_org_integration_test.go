@@ -464,6 +464,9 @@ func TestIntegrationPlatformTree(t *testing.T) {
 	}))
 	cleanup := func(uuid string) {
 		t.Cleanup(func() {
+			// TEC-207: the preset warehouse goes first (RESTRICT).
+			_, _ = it.pool.Exec(context.Background(),
+				"DELETE FROM warehouses WHERE organization_id = (SELECT id FROM organizations WHERE uuid = $1)", uuid)
 			_, _ = it.pool.Exec(context.Background(), "DELETE FROM organizations WHERE uuid = $1", uuid)
 		})
 	}
@@ -491,6 +494,13 @@ func TestIntegrationPlatformTree(t *testing.T) {
 	}
 	// Created first, removed last (cleanups run LIFO; the dealer references it).
 	cleanup(dist.UUID)
+	// TEC-207 (K4): the preset opened the distributor's warehouse.
+	var whCode string
+	if err := it.pool.QueryRow(context.Background(),
+		`SELECT w.code FROM warehouses w JOIN organizations o ON o.id = w.organization_id WHERE o.uuid = $1`,
+		dist.UUID).Scan(&whCode); err != nil || whCode != "MAIN" {
+		t.Fatalf("preset warehouse: %q %v", whCode, err)
+	}
 	code, dealer, ec := create(map[string]any{
 		"name": "Dealer " + it.suffix, "city": "", "district": "", "phone": "", "address": "",
 		"owner_user_uuid": owner.Uuid.String(), "type": "dealer", "parent_uuid": dist.UUID,

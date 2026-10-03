@@ -3,7 +3,6 @@ package httpserver
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"math/big"
 	"net/http"
 	"strings"
@@ -70,7 +69,9 @@ func ratOfText(t *testing.T, s string) *big.Rat {
 
 // TEC-217 (F1-13a) acceptance, the F1 gate chain in one scenario through
 // the HTTP handlers: the center opens a roll product (catalog API), prices
-// it (pricing API) and brings two full rolls in by the stock import; a
+// it (pricing API), generates 100 roll barcodes of 25 m (TEC-202) and
+// places them in a bin of its warehouse by a stock entry (TEC-204), no
+// fixture and no import; it sells the first two whole rolls on: a
 // distributor keeping its books in EUR orders them, the center ships, the
 // distributor receives; a dealer keeping its books in UAH orders them from
 // the distributor, ships, receives; the dealer consumes both whole rolls in
@@ -83,7 +84,8 @@ func ratOfText(t *testing.T, s string) *big.Rat {
 //
 // TestIntegrationF1GateOrderServiceWarranty covers the same chain with one
 // fixture unit in the brand currency everywhere; this one adds the API
-// product, the import, three currencies and two consumed units.
+// product, real barcode generation and placement (TEC-220), three
+// currencies and two consumed units.
 func TestIntegrationF1ChainEURUAH(t *testing.T) {
 	c := runF1Chain(t)
 
@@ -233,33 +235,100 @@ func runF1Chain(t *testing.T) *f1Chain {
 	it.accDo("PUT", "/v1/tenant/pricing/products/"+item.UUID+"/dealer-prices/"+cur, distTok,
 		map[string]string{"price": "6"}, http.StatusOK)
 
-	// 2. Barcodes: two full rolls of 25 m imported into a center bin
-	// (K14: only the center brings units in).
-	chain := it.stockChain()
-	loc := chain.location(center, "F1C")
-	bc := func(n int) string { return fmt.Sprintf("F1C-%s-R%d", it.suffix, n) }
-	csv := "barcode,product_sku,quantity,meters,location_code\n" +
-		bc(1) + "," + product.Sku + ",,25.00,F1C-" + it.suffix + "\n" +
-		bc(2) + "," + product.Sku + ",,25.00,F1C-" + it.suffix + "\n"
-	code, job := it.uploadStockImport(staffTok, csv)
-	if code != http.StatusCreated || job.UUID == "" {
-		t.Fatalf("import upload = %d %+v", code, job)
+	// 2. Barcodes (K14: only the center brings units in): the center builds
+	// a bin (warehouse -> room -> aisle -> shelf -> bin), generates 100
+	// roll labels of 25 m (TEC-202, POST /v1/stock/barcodes) and places
+	// them in the bin through a stock entry (TEC-204): draft, link the
+	// printed barcodes, place by the bin's scanned QR, confirm. No fixture
+	// and no import: every unit comes from the barcode generator. The
+	// chain then sells the first two rolls.
+	const generated = 100
+	wh := func(method, path string, body, out any) { it.whDo(staffTok, method, path, body, http.StatusOK, out) }
+	whNew := func(path string, body, out any) { it.whDo(staffTok, "POST", path, body, http.StatusCreated, out) }
+	sfx := it.suffix[len(it.suffix)-9:]
+	var whs, room, aisle, shelf, bin whItem
+	whNew("/v1/warehouse/warehouses", map[string]any{"code": "F" + sfx, "name": "F1 chain"}, &whs)
+	whNew("/v1/warehouse/warehouses/"+whs.UUID+"/rooms", map[string]any{"code": "R1"}, &room)
+	whNew("/v1/warehouse/locations", map[string]any{"room_uuid": room.UUID, "type": "aisle", "code": "A"}, &aisle)
+	whNew("/v1/warehouse/locations",
+		map[string]any{"room_uuid": room.UUID, "parent_uuid": aisle.UUID, "type": "shelf", "code": "01"}, &shelf)
+	whNew("/v1/warehouse/locations",
+		map[string]any{"room_uuid": room.UUID, "parent_uuid": shelf.UUID, "type": "bin", "code": "01"}, &bin)
+	var binID int64
+	if err := it.pool.QueryRow(ctx, `SELECT id FROM warehouse_locations WHERE uuid = $1`, bin.UUID).Scan(&binID); err != nil {
+		t.Fatalf("bin id: %v", err)
 	}
-	base := "/v1/tenant/imports/" + job.UUID
-	it.importJob("PATCH", base+"/mapping", staffTok, map[string]any{"mapping": map[string]string{
-		"barcode": "barcode", "product_sku": "product_sku", "quantity": "quantity",
-		"meters": "meters", "location_code": "location_code",
-	}}, http.StatusOK)
-	if pv := it.importJob("POST", base+"/preview", staffTok, nil, http.StatusOK); pv.PreviewSummary.Counts["new"] != 2 {
-		t.Fatalf("import preview = %+v", pv.PreviewSummary)
+
+	var batch struct {
+		UUID     string `json:"uuid"`
+		Quantity int    `json:"quantity"`
+		Meters   string `json:"meters"`
+		Units    []struct {
+			Barcode string `json:"barcode"`
+			Status  string `json:"status"`
+		} `json:"units"`
 	}
-	if applied := it.importJob("POST", base+"/confirm", staffTok, nil, http.StatusAccepted); applied.Status != "applied" ||
-		applied.PreviewSummary.Counts["applied"] != 2 {
-		t.Fatalf("import confirm = %+v", applied)
+	whNew("/v1/stock/barcodes", map[string]any{"product_uuid": item.UUID, "quantity": generated, "meters": "25"}, &batch)
+	if batch.UUID == "" || batch.Quantity != generated || len(batch.Units) != generated ||
+		ratOfText(t, batch.Meters).Cmp(big.NewRat(25, 1)) != 0 {
+		t.Fatalf("barcode batch = %s q%d m%s units %d", batch.UUID, batch.Quantity, batch.Meters, len(batch.Units))
+	}
+	barcodes := make([]string, 0, generated)
+	for _, u := range batch.Units {
+		if u.Status != "printed" {
+			t.Fatalf("generated unit %s status = %s, want printed", u.Barcode, u.Status)
+		}
+		barcodes = append(barcodes, u.Barcode)
+	}
+
+	type entryLine struct {
+		Barcode  string `json:"barcode"`
+		Location *struct {
+			UUID string `json:"uuid"`
+		} `json:"location"`
+		EntryMovementUUID     *string `json:"entry_movement_uuid"`
+		PlacementMovementUUID *string `json:"placement_movement_uuid"`
+	}
+	type entryView struct {
+		UUID      string      `json:"uuid"`
+		Mode      string      `json:"mode"`
+		Status    string      `json:"status"`
+		LineCount int64       `json:"line_count"`
+		Lines     []entryLine `json:"lines"`
+	}
+	var entry entryView
+	whNew("/v1/warehouse/stock-entries", map[string]any{"warehouse_uuid": whs.UUID, "mode": "with_existing"}, &entry)
+	if entry.Status != "draft" || entry.Mode != "with_existing" {
+		t.Fatalf("stock entry = %+v", entry)
+	}
+	ebase := "/v1/warehouse/stock-entries/" + entry.UUID
+	wh("POST", ebase+"/lines", map[string]any{"barcodes": barcodes}, &entry)
+	if entry.LineCount != generated {
+		t.Fatalf("stock entry lines = %d, want %d", entry.LineCount, generated)
+	}
+	wh("POST", ebase+"/place", map[string]any{"location_code": "OFW:LOC:" + bin.FullCode}, &entry)
+	wh("POST", ebase+"/confirm", nil, &entry)
+	if entry.Status != "confirmed" || entry.LineCount != generated || len(entry.Lines) != generated {
+		t.Fatalf("confirmed entry = %s lines %d/%d", entry.Status, entry.LineCount, len(entry.Lines))
+	}
+	for _, l := range entry.Lines {
+		if l.Location == nil || l.Location.UUID != bin.UUID || l.EntryMovementUUID == nil || l.PlacementMovementUUID == nil {
+			t.Fatalf("confirmed entry line = %+v", l)
+		}
+	}
+	var placed int
+	if err := it.pool.QueryRow(ctx, `SELECT count(*) FROM unit_current_state s JOIN units u ON u.id = s.unit_id
+		WHERE u.batch_id = (SELECT id FROM barcode_batches WHERE uuid = $1)
+		  AND s.status = 'placed' AND s.owner_type = 'warehouse_location' AND s.owner_id = $2`,
+		batch.UUID, binID).Scan(&placed); err != nil {
+		t.Fatal(err)
+	}
+	if placed != generated {
+		t.Fatalf("units placed in the bin = %d, want %d", placed, generated)
 	}
 	var rolls [2]db.Unit
 	for i := range rolls {
-		if rolls[i], err = it.q.GetUnitByBarcode(ctx, db.GetUnitByBarcodeParams{BrandID: center.BrandID, Barcode: bc(i + 1)}); err != nil {
+		if rolls[i], err = it.q.GetUnitByBarcode(ctx, db.GetUnitByBarcodeParams{BrandID: center.BrandID, Barcode: barcodes[i]}); err != nil {
 			t.Fatalf("roll %d: %v", i+1, err)
 		}
 	}
@@ -289,12 +358,12 @@ func runF1Chain(t *testing.T) *f1Chain {
 		}
 	}
 	for _, u := range rolls {
-		if u.Source != "imported" || u.OrganizationID != center.ID || !u.RemainingMeters.Valid ||
+		if u.Source != "generated" || !u.BatchID.Valid || u.OrganizationID != center.ID || !u.RemainingMeters.Valid ||
 			ratOfText(t, posting.FormatNumeric(u.RemainingMeters)).Cmp(big.NewRat(25, 1)) != 0 {
-			t.Fatalf("imported roll = %+v", u)
+			t.Fatalf("generated roll = %+v", u)
 		}
 	}
-	owned("import", "available", "warehouse_location", loc.ID, center.ID, "entry")
+	owned("placed", "placed", "warehouse_location", binID, center.ID, "entry,placement")
 	stockOf := func(tok string, org db.Organization) int32 {
 		t.Helper()
 		code, page := it.productStock(tok, "/v1/stock/organizations/"+org.Uuid.String()+"/products?product_uuid="+item.UUID)
@@ -305,6 +374,9 @@ func runF1Chain(t *testing.T) *f1Chain {
 		return q
 	}
 	centerStockBefore := stockOf(staffTok, center)
+	if centerStockBefore != generated {
+		t.Fatalf("center stock after the entry = %d, want %d", centerStockBefore, generated)
+	}
 
 	line := []any{map[string]any{"product_uuid": item.UUID, "meters": "50"}}
 	whole := [][]map[string]any{{{"barcode": rolls[0].Barcode}, {"barcode": rolls[1].Barcode}}}
@@ -327,11 +399,11 @@ func runF1Chain(t *testing.T) *f1Chain {
 	}
 	fa := freeze("A", a)
 	it.shipOrder(staffTok, a, whole)
-	owned("A shipped", "in_transit", "organization", dist.ID, dist.ID, "entry,order_out")
+	owned("A shipped", "in_transit", "organization", dist.ID, dist.ID, "entry,placement,order_out")
 	if code, ec := it.transition(distTok, a.UUID, "received"); code != http.StatusOK {
 		t.Fatalf("receive A = %d %s", code, ec)
 	}
-	owned("A received", "available", "organization", dist.ID, dist.ID, "entry,order_out,received")
+	owned("A received", "available", "organization", dist.ID, dist.ID, "entry,placement,order_out,received")
 	if v := it.orderCall("GET", "/v1/orders/"+a.UUID, distTok, nil, http.StatusOK); v.Status != "received" ||
 		string(v.RateSnapshot) != string(a.RateSnapshot) {
 		t.Fatalf("A after receipt = %s %s", v.Status, v.RateSnapshot)
@@ -345,11 +417,11 @@ func runF1Chain(t *testing.T) *f1Chain {
 	}
 	fb := freeze("B", b)
 	it.shipOrder(distTok, b, whole)
-	owned("B shipped", "in_transit", "organization", dealer.ID, dealer.ID, "entry,order_out,received,order_out")
+	owned("B shipped", "in_transit", "organization", dealer.ID, dealer.ID, "entry,placement,order_out,received,order_out")
 	if code, ec := it.transition(dealerTok, b.UUID, "received"); code != http.StatusOK {
 		t.Fatalf("receive B = %d %s", code, ec)
 	}
-	owned("B received", "available", "organization", dealer.ID, dealer.ID, "entry,order_out,received,order_out,received")
+	owned("B received", "available", "organization", dealer.ID, dealer.ID, "entry,placement,order_out,received,order_out,received")
 	if got := stockOf(dealerTok, dealer); got != 2 {
 		t.Fatalf("dealer stock after B = %d, want 2", got)
 	}
@@ -374,11 +446,11 @@ func runF1Chain(t *testing.T) *f1Chain {
 	if err := it.pool.QueryRow(ctx, `SELECT id, completed_at FROM services WHERE uuid = $1`, s.UUID).Scan(&svcID, &completedAt); err != nil {
 		t.Fatal(err)
 	}
-	owned("consumed", "used", "service", svcID, dealer.ID, "entry,order_out,received,order_out,received,consumption")
+	owned("consumed", "used", "service", svcID, dealer.ID, "entry,placement,order_out,received,order_out,received,consumption")
 	if got := stockOf(dealerTok, dealer); got != 0 {
 		t.Fatalf("dealer stock after the service = %d, want 0", got)
 	}
-	if code, h := it.unitHistory(dealerTok, rolls[0].Barcode, ""); code != http.StatusOK || h.Movements.Total != 6 {
+	if code, h := it.unitHistory(dealerTok, rolls[0].Barcode, ""); code != http.StatusOK || h.Movements.Total != 7 {
 		t.Fatalf("dealer unit history = %d %+v", code, h.Movements)
 	}
 

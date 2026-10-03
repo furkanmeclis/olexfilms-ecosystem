@@ -116,6 +116,8 @@
   "columns.type": "Type",
   "columns.parent": "Parent",
   "fields.type": "Type",
+  "fields.register_as_warehouse": "Register as warehouse",
+  "fields.register_as_warehouse_hint": "Opens a warehouse (code MAIN) for the distributor when it is saved; rooms and locations are added later.",
   "fields.city_hint": "Filled from the province when left empty.",
   "fields.district_hint": "Filled from the district when left empty.",
   "form.section_address": "Address",

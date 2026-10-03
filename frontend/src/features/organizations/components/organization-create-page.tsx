@@ -24,6 +24,9 @@ function toCreateBody(
     address: values.address.trim(),
     owner_user_uuid: values.owner_user_uuid,
     type: values.type,
+    ...(values.type === "distributor" && values.register_as_warehouse
+      ? { register_as_warehouse: true }
+      : {}),
     ...addressIds(values),
   };
 }

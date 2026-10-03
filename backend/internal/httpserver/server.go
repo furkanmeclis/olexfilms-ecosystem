@@ -407,6 +407,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		WithOutbox(outbox.NewStore(deps.DB, deps.Queries)) // TEC-174: dispute events
 	// TEC-198: re-parenting carries the open cari over (K25).
 	orgSvc.SetParentChangeHook(reparentHook(accountingSvc))
+	// TEC-207 (K4): the distributor preset opens its warehouse on create.
+	orgSvc.SetWarehousePresetHook(warehouseusecase.New(deps.DB, deps.Queries))
 	accountingH := accountinghandler.New(accountingSvc)
 	accountinghandler.RegisterRoutes(mux, accountingH, tokens, loader, deps.Queries, stepUpSvc, featureSvc)
 	// TEC-166: orders (draft, server-side prices, rate frozen at approval).
@@ -455,6 +457,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	catalogSvc := catalogusecase.New(deps.Queries, searchIndexer)
 	warrantyCert := warrantymodule.NewCertificate(deps.Queries, deps.Storage, cfg.Auth.FrontendURL, log)
 	servicePDF := servicesusecase.NewPDF(servicesSvc, warrantyCert, deps.Storage, log)
+	// TEC-207: end-of-day warehouse reports and their PDF.
+	eodSvc := warehouseusecase.NewEOD(deps.DB, deps.Queries)
+	eodPDF := warehouseusecase.NewEODPDF(eodSvc, deps.Storage, log)
 	ioReg := ioengine.NewRegistry(
 		// TEC-211: price columns behind pricing.* grants.
 		catalogusecase.NewIOAdapter(catalogSvc, deps.Queries).WithPrices(pricingSvc),
@@ -477,6 +482,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		warrantyusecase.NewPortalCertificateAdapter(warrantyCert),
 		// TEC-196: service PDF.
 		servicesusecase.NewPDFAdapter(servicePDF),
+		// TEC-207: end-of-day report PDF.
+		warehouseusecase.NewEODPDFAdapter(eodPDF),
 	)
 	exportSvc := exportusecase.New(deps.Queries, deps.Storage, ioReg, deps.Queue, notifSvc, activityRec, log)
 	exportSvc.SetDocumentPDF(pdfClient)
@@ -592,6 +599,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-205: bin <-> bin moves, warehouse transfer documents, order receipt placement.
 	warehousemodule.RegisterTransferRoutes(mux, warehousehandler.NewTransfers(warehouseusecase.NewWarehouseTransfers(deps.DB, deps.Queries,
 		outbox.NewStore(deps.DB, deps.Queries))), featureSvc, tokens, loader, deps.Queries)
+	// TEC-207: end-of-day reports (manual run + PDF export job on worker-docs).
+	warehousemodule.RegisterEODRoutes(mux, warehousehandler.NewEOD(eodSvc, eodPDF, exportSvc),
+		featureSvc, tokens, loader, deps.Queries)
 	settingsmodule.RegisterRoutes(mux, settingshandler.New(settingsusecase.New(deps.Queries), deps.Storage),
 		settingshandler.NewSystem(sysSvc), tokens, loader)
 	accessmodule.RegisterRoutes(mux, accesshandler.New(stepUpSvc, activityRec), tokens, loader)
