@@ -143,6 +143,7 @@ type Querier interface {
 	CountPermissions(ctx context.Context, q_ pgtype.Text) (int64, error)
 	CountPhoneOTPsSince(ctx context.Context, arg CountPhoneOTPsSinceParams) (int64, error)
 	CountPlatformNotifications(ctx context.Context, arg CountPlatformNotificationsParams) (int64, error)
+	CountPortalContracts(ctx context.Context, arg CountPortalContractsParams) (int64, error)
 	CountPortalServices(ctx context.Context, arg CountPortalServicesParams) (int64, error)
 	CountPortalVehicles(ctx context.Context, arg CountPortalVehiclesParams) (int64, error)
 	CountPricedProducts(ctx context.Context, arg CountPricedProductsParams) (int64, error)
@@ -1027,6 +1028,11 @@ type Querier interface {
 	ListPlateFormats(ctx context.Context, activeOnly bool) ([]ListPlateFormatsRow, error)
 	ListPlatformNotifications(ctx context.Context, arg ListPlatformNotificationsParams) ([]Notification, error)
 	ListPlatformNotificationsForExport(ctx context.Context, arg ListPlatformNotificationsForExportParams) ([]Notification, error)
+	// TEC-245 (F2-03e): the user's signed vehicle intake contracts. Until the
+	// contracts module (F3) lands a contract is only services.contract_id, so
+	// the list is the user's services that carry one (same ownership, brand,
+	// Glorian and draft rules as ListPortalServices); empty until F3 fills it.
+	ListPortalContracts(ctx context.Context, arg ListPortalContractsParams) ([]ListPortalContractsRow, error)
 	// Services of the user across every organization of the brand (one list,
 	// newest first). vehicle_id narrows to one vehicle (vehicle detail).
 	ListPortalServices(ctx context.Context, arg ListPortalServicesParams) ([]ListPortalServicesRow, error)

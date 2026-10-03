@@ -37,6 +37,8 @@ import (
 // the signed-in customer (vehicles.read, customer scope; the customer role
 // has no vehicles.transfer). The use case limits them to the user's own
 // vehicles and the transfers the user started; anything else is 404.
+// TEC-245: the three writes refuse a fleet session (read only) with 403
+// PORTAL_READ_ONLY (middleware.DenyPortalReadOnly); the list stays open.
 //
 // TEC-164: GET /v1/customers?q= searches the Meilisearch customers index
 // (filtered on the scope) when it is up; the list export needs
@@ -111,8 +113,14 @@ func RegisterRoutes(
 	portalV := func(fn http.HandlerFunc) http.Handler {
 		return middleware.Chain(fn, authn, middleware.RequirePermission(rbac.PermVehiclesRead))
 	}
+	// TEC-245: a fleet session is read only; the transfer writes answer 403
+	// PORTAL_READ_ONLY, the list stays open.
+	portalW := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, authn, middleware.RequirePermission(rbac.PermVehiclesRead),
+			middleware.DenyPortalReadOnly)
+	}
 	mux.Handle("GET /v1/portal/vehicles/{uuid}/transfers", portalV(h.PortalListVehicleTransfers))
-	mux.Handle("POST /v1/portal/vehicles/{uuid}/transfers", portalV(h.PortalStartVehicleTransfer))
-	mux.Handle("POST /v1/portal/vehicle-transfers/{uuid}/verify", portalV(h.PortalVerifyVehicleTransfer))
-	mux.Handle("POST /v1/portal/vehicle-transfers/{uuid}/cancel", portalV(h.PortalCancelVehicleTransfer))
+	mux.Handle("POST /v1/portal/vehicles/{uuid}/transfers", portalW(h.PortalStartVehicleTransfer))
+	mux.Handle("POST /v1/portal/vehicle-transfers/{uuid}/verify", portalW(h.PortalVerifyVehicleTransfer))
+	mux.Handle("POST /v1/portal/vehicle-transfers/{uuid}/cancel", portalW(h.PortalCancelVehicleTransfer))
 }

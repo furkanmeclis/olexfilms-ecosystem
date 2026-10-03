@@ -128,3 +128,40 @@ WHERE s.vehicle_id = sqlc.arg(vehicle_id)::bigint
   AND s.brand_id = sqlc.arg(brand_id)::bigint
   AND s.status <> 'draft'
   AND b.slug <> 'glorian';
+
+-- TEC-245 (F2-03e): the user's signed vehicle intake contracts. Until the
+-- contracts module (F3) lands a contract is only services.contract_id, so
+-- the list is the user's services that carry one (same ownership, brand,
+-- Glorian and draft rules as ListPortalServices); empty until F3 fills it.
+-- name: ListPortalContracts :many
+SELECT s.uuid, s.service_no, s.status, s.plate, s.plate_country, s.model_year, s.created_at,
+       o.uuid AS organization_uuid, o.name AS organization_name, o.type AS organization_type,
+       v.uuid AS vehicle_uuid,
+       cb.name AS car_brand_name, cm.name AS car_model_name
+FROM services s
+JOIN brands b ON b.id = s.brand_id
+JOIN organizations o ON o.id = s.organization_id
+JOIN vehicles v ON v.id = s.vehicle_id
+JOIN car_brands cb ON cb.id = s.car_brand_id
+JOIN car_models cm ON cm.id = s.car_model_id
+WHERE s.contract_id IS NOT NULL
+  AND (s.customer_user_id = sqlc.arg(user_id)::bigint
+       OR EXISTS (SELECT 1 FROM warranties hw
+                  WHERE hw.service_id = s.id AND hw.holder_user_id = sqlc.arg(user_id)::bigint))
+  AND s.brand_id = sqlc.arg(brand_id)::bigint
+  AND s.status <> 'draft'
+  AND b.slug <> 'glorian'
+ORDER BY s.created_at DESC, s.id DESC
+LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
+
+-- name: CountPortalContracts :one
+SELECT COUNT(*)::bigint
+FROM services s
+JOIN brands b ON b.id = s.brand_id
+WHERE s.contract_id IS NOT NULL
+  AND (s.customer_user_id = sqlc.arg(user_id)::bigint
+       OR EXISTS (SELECT 1 FROM warranties hw
+                  WHERE hw.service_id = s.id AND hw.holder_user_id = sqlc.arg(user_id)::bigint))
+  AND s.brand_id = sqlc.arg(brand_id)::bigint
+  AND s.status <> 'draft'
+  AND b.slug <> 'glorian';

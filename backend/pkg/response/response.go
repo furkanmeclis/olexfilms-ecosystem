@@ -46,6 +46,9 @@ const (
 	CodeNoPortalAccess = "NO_PORTAL_ACCESS"
 	CodeNoPanelAccess  = "NO_PANEL_ACCESS"
 	CodeRealmForbidden = "REALM_FORBIDDEN"
+	// CodePortalReadOnly: a fleet portal session (read only, TEC-245)
+	// called a portal write endpoint.
+	CodePortalReadOnly = "PORTAL_READ_ONLY"
 )
 
 // RequestIDFunc resolves the correlation id from request context.

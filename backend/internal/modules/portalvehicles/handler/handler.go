@@ -1,6 +1,6 @@
 // Package handler serves the TEC-238 portal reads:
 // GET /v1/portal/vehicles, GET /v1/portal/vehicles/{uuid},
-// GET /v1/portal/services.
+// GET /v1/portal/services; and TEC-245 GET /v1/portal/contracts.
 package handler
 
 import (
@@ -70,6 +70,18 @@ func (h *Handler) GetVehicle(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListServices(w http.ResponseWriter, r *http.Request) {
 	pq := apiquery.Parse(r.URL.Query())
 	items, total, err := h.svc.ListServices(r.Context(), caller(r), usecase.Page{Limit: pq.Limit, Offset: pq.Offset})
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, pq.Limit, pq.Offset))
+}
+
+// ListContracts (GET /v1/portal/contracts, TEC-245): the user's signed
+// vehicle intake contracts; an empty page until F3 records contracts.
+func (h *Handler) ListContracts(w http.ResponseWriter, r *http.Request) {
+	pq := apiquery.Parse(r.URL.Query())
+	items, total, err := h.svc.ListContracts(r.Context(), caller(r), usecase.Page{Limit: pq.Limit, Offset: pq.Offset})
 	if err != nil {
 		writeError(w, r, err)
 		return

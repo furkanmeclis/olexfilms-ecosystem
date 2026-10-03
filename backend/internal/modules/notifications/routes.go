@@ -76,6 +76,17 @@ func RegisterRoutes(
 		http.HandlerFunc(h.PutPreferences), authn,
 	))
 
+	// TEC-245: the same preferences from the customer / fleet portal (the
+	// realm middleware keeps /v1/notification-preferences panel only). The
+	// preferences are the user's own account settings, so a read-only fleet
+	// session may change them too.
+	mux.Handle("GET /v1/portal/notification-preferences", middleware.Chain(
+		http.HandlerFunc(h.GetPreferences), authn,
+	))
+	mux.Handle("PUT /v1/portal/notification-preferences", middleware.Chain(
+		http.HandlerFunc(h.PutPreferences), authn,
+	))
+
 	mux.Handle("GET /v1/platform/notifications/meta", middleware.Chain(
 		http.HandlerFunc(h.PlatformMeta), authn, requirePerm(rbac.PermPlatformNotificationsRead),
 	))
