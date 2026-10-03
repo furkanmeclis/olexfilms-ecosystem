@@ -452,6 +452,8 @@ var Roles = []RoleDef{
 			// TEC-214 (000058).
 			PermTasksRead:  ScopeBrand,
 			PermTasksWrite: ScopeBrand,
+			// TEC-228 (000070): decides returns sent to the center.
+			PermTransfersApprove: ScopeBrand,
 		}),
 	},
 	{
@@ -478,6 +480,9 @@ var Roles = []RoleDef{
 			// TEC-214 (000058).
 			PermTasksRead:  ScopeBrand,
 			PermTasksWrite: ScopeBrand,
+			// TEC-228 (000070): decides and receives returns sent to the
+			// center.
+			PermTransfersApprove: ScopeBrand,
 		}),
 	},
 	{
