@@ -5,6 +5,11 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const reviewApi = vi.hoisted(() => ({ get: vi.fn(), create: vi.fn() }));
+const readOnly = vi.hoisted(() => ({ value: false }));
+
+vi.mock("@/features/portal/lib/use-portal-read-only", () => ({
+  usePortalReadOnly: () => readOnly.value,
+}));
 
 vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({
@@ -54,6 +59,7 @@ afterEach(() => {
   act(() => root.unmount());
   container.remove();
   vi.clearAllMocks();
+  readOnly.value = false;
 });
 
 async function flush() {
@@ -196,6 +202,23 @@ describe("PortalServiceReview (TEC-244)", () => {
     const link = q<HTMLAnchorElement>("[data-testid=review-google]");
     expect(link?.getAttribute("href")).toBe("https://g.page/r/dealer");
     expect(link?.getAttribute("target")).toBe("_blank");
+  });
+
+  it("hides the form from a read-only fleet session (TEC-245)", async () => {
+    readOnly.value = true;
+    reviewApi.get.mockResolvedValue(state());
+    await render();
+    expect(q("[data-testid=portal-service-review]")).toBeNull();
+
+    act(() => root.unmount());
+    root = createRoot(container);
+    reviewApi.get.mockResolvedValue(
+      state({ google_business_url: "https://g.page/r/dealer" }),
+    );
+    await render();
+    expect(q("[data-testid=portal-review-form]")).toBeNull();
+    expect(q("[data-testid=review-google]")).not.toBeNull();
+    expect(container.textContent).not.toContain("portal.review.not_completed");
   });
 
   it("shows the not-completed note when the service cannot be reviewed", async () => {

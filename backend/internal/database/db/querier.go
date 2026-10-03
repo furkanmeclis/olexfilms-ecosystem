@@ -143,6 +143,7 @@ type Querier interface {
 	CountPermissions(ctx context.Context, q_ pgtype.Text) (int64, error)
 	CountPhoneOTPsSince(ctx context.Context, arg CountPhoneOTPsSinceParams) (int64, error)
 	CountPlatformNotifications(ctx context.Context, arg CountPlatformNotificationsParams) (int64, error)
+	CountPortalContracts(ctx context.Context, arg CountPortalContractsParams) (int64, error)
 	CountPortalServices(ctx context.Context, arg CountPortalServicesParams) (int64, error)
 	CountPortalVehicles(ctx context.Context, arg CountPortalVehiclesParams) (int64, error)
 	CountPricedProducts(ctx context.Context, arg CountPricedProductsParams) (int64, error)
@@ -719,6 +720,10 @@ type Querier interface {
 	GetWebAuthnCredentialByUUID(ctx context.Context, arg GetWebAuthnCredentialByUUIDParams) (WebauthnCredential, error)
 	// WhatsApp gateway, KVKK notices, conversations and messages (TEC-92).
 	GetWhatsAppSettings(ctx context.Context) (WhatsappSetting, error)
+	// TEC-258: ledger.Import appends a recorded (historical) movement as is: its
+	// uuid and time come from the import (migration_map, the legacy timestamp).
+	// Idempotent like InsertStockMovement (no row on a repeated key).
+	ImportStockMovement(ctx context.Context, arg ImportStockMovementParams) (StockMovement, error)
 	IncrementOTPAttempts(ctx context.Context, id int64) (OtpCode, error)
 	// A wrong code: one more attempt (the use case cancels at the limit).
 	IncrementVehicleTransferAttempts(ctx context.Context, id int64) (VehicleTransfer, error)
@@ -1050,6 +1055,11 @@ type Querier interface {
 	ListPlateFormats(ctx context.Context, activeOnly bool) ([]ListPlateFormatsRow, error)
 	ListPlatformNotifications(ctx context.Context, arg ListPlatformNotificationsParams) ([]Notification, error)
 	ListPlatformNotificationsForExport(ctx context.Context, arg ListPlatformNotificationsForExportParams) ([]Notification, error)
+	// TEC-245 (F2-03e): the user's signed vehicle intake contracts. Until the
+	// contracts module (F3) lands a contract is only services.contract_id, so
+	// the list is the user's services that carry one (same ownership, brand,
+	// Glorian and draft rules as ListPortalServices); empty until F3 fills it.
+	ListPortalContracts(ctx context.Context, arg ListPortalContractsParams) ([]ListPortalContractsRow, error)
 	// Services of the user across every organization of the brand (one list,
 	// newest first). vehicle_id narrows to one vehicle (vehicle detail).
 	ListPortalServices(ctx context.Context, arg ListPortalServicesParams) ([]ListPortalServicesRow, error)
@@ -1496,7 +1506,12 @@ type Querier interface {
 	MigratorRoomFullCodePrefix(ctx context.Context, arg MigratorRoomFullCodePrefixParams) (string, error)
 	MigratorSetCarBrandLogo(ctx context.Context, arg MigratorSetCarBrandLogoParams) error
 	MigratorUnitByUUID(ctx context.Context, arg MigratorUnitByUUIDParams) (MigratorUnitByUUIDRow, error)
+	// TEC-258: a movement this application wrote (not an imported legacy one).
+	MigratorUnitHasLedgerMovements(ctx context.Context, unitID int64) (bool, error)
 	MigratorUnitHasMovements(ctx context.Context, unitID int64) (bool, error)
+	// TEC-258: units of the brand whose ownership was written without a movement
+	// (TEC-257): they need an opening movement before the projection rebuild.
+	MigratorUnitsWithoutMovements(ctx context.Context, brandID int64) ([]int64, error)
 	// Legacy-sourced fields of a brand the migrator created; the logo is set
 	// separately.
 	MigratorUpdateCarBrand(ctx context.Context, arg MigratorUpdateCarBrandParams) error

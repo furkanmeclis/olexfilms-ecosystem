@@ -41,6 +41,8 @@ type Store interface {
 	ListPortalVehicleActiveWarranties(ctx context.Context, arg db.ListPortalVehicleActiveWarrantiesParams) ([]db.ListPortalVehicleActiveWarrantiesRow, error)
 	ListPortalServices(ctx context.Context, arg db.ListPortalServicesParams) ([]db.ListPortalServicesRow, error)
 	CountPortalServices(ctx context.Context, arg db.CountPortalServicesParams) (int64, error)
+	ListPortalContracts(ctx context.Context, arg db.ListPortalContractsParams) ([]db.ListPortalContractsRow, error)
+	CountPortalContracts(ctx context.Context, arg db.CountPortalContractsParams) (int64, error)
 }
 
 // Caller is the portal session: domain brand and user (internal ids).
@@ -333,4 +335,50 @@ func serviceViews(rows []db.ListPortalServicesRow) []ServiceView {
 		})
 	}
 	return out
+}
+
+// ContractView is one signed vehicle intake contract of the portal user
+// (TEC-245). Until the contracts module (F3) lands a contract is only the
+// service's contract_id, so the view names the service, the vehicle and
+// the organization; F3 adds the signing details and the PDF.
+type ContractView struct {
+	Service      ServiceRef      `json:"service"`
+	Status       string          `json:"status"`
+	Organization OrganizationRef `json:"organization"`
+	VehicleUUID  uuid.UUID       `json:"vehicle_uuid"`
+	CarBrandName string          `json:"car_brand_name"`
+	CarModelName string          `json:"car_model_name"`
+	ModelYear    *int16          `json:"model_year"`
+	Plate        *string         `json:"plate"`
+	PlateCountry *string         `json:"plate_country"`
+	CreatedAt    time.Time       `json:"created_at"`
+}
+
+// ListContracts returns one page of the user's signed vehicle intake
+// contracts (an empty list until F3 records contracts).
+func (s *Service) ListContracts(ctx context.Context, c Caller, p Page) ([]ContractView, int64, error) {
+	if !c.valid() {
+		return []ContractView{}, 0, nil
+	}
+	rows, err := s.q.ListPortalContracts(ctx, db.ListPortalContractsParams{
+		UserID: c.UserID, BrandID: c.BrandID, RowLimit: p.Limit, RowOffset: p.Offset,
+	})
+	if err != nil {
+		return nil, 0, fmt.Errorf("portal: contracts: %w", err)
+	}
+	total, err := s.q.CountPortalContracts(ctx, db.CountPortalContractsParams{UserID: c.UserID, BrandID: c.BrandID})
+	if err != nil {
+		return nil, 0, fmt.Errorf("portal: count contracts: %w", err)
+	}
+	out := make([]ContractView, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, ContractView{
+			Service: ServiceRef{UUID: r.Uuid, ServiceNo: r.ServiceNo}, Status: r.Status,
+			Organization: OrganizationRef{UUID: r.OrganizationUuid, Name: r.OrganizationName, Type: r.OrganizationType},
+			VehicleUUID:  r.VehicleUuid, CarBrandName: r.CarBrandName, CarModelName: r.CarModelName,
+			ModelYear: yearPtr(r.ModelYear), Plate: textPtr(r.Plate), PlateCountry: textPtr(r.PlateCountry),
+			CreatedAt: r.CreatedAt.Time,
+		})
+	}
+	return out, total, nil
 }

@@ -1956,7 +1956,8 @@ paths:
         ownership rule as GET /v1/portal/services/{uuid} (else 404). A
         rating out of range or missing answers 400 VALIDATION_ERROR; a
         second review 409 SERVICE_ALREADY_REVIEWED; a service that is not
-        completed 422 SERVICE_REVIEW_NOT_COMPLETED.
+        completed 422 SERVICE_REVIEW_NOT_COMPLETED; a read-only fleet
+        session 403 PORTAL_READ_ONLY (TEC-245).
       security:
         - bearerAuth: []
       parameters:
@@ -14894,7 +14895,7 @@ paths:
         organization (phone country, message sender, the organization the
         new owner is linked to) is the organization that registered the
         vehicle, else the owner's first organization link in the brand,
-        else the brand center.
+        else the brand center. A fleet session (read only, TEC-245) answers 403 PORTAL_READ_ONLY.
       security:
         - bearerAuth: []
       parameters:
@@ -14948,7 +14949,7 @@ paths:
         422 VEHICLE_TRANSFER_INVALID_CODE with the attempts left, 409
         VEHICLE_TRANSFER_LOCKED / EXPIRED / NOT_PENDING (a cancelled
         transfer), new_owner_name required when the new owner has no
-        account yet.
+        account yet. A fleet session (read only, TEC-245) answers 403 PORTAL_READ_ONLY.
       security:
         - bearerAuth: []
       parameters:
@@ -14992,7 +14993,7 @@ paths:
       description: >-
         Portal session with vehicles.read; only a transfer the signed-in user
         started as the owner (else 404). 409 VEHICLE_TRANSFER_NOT_PENDING /
-        VEHICLE_TRANSFER_EXPIRED as in the panel.
+        VEHICLE_TRANSFER_EXPIRED as in the panel. A fleet session (read only, TEC-245) answers 403 PORTAL_READ_ONLY.
       security:
         - bearerAuth: []
       parameters:
@@ -15012,6 +15013,87 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+
+  /v1/portal/contracts:
+    get:
+      tags: [Portal]
+      operationId: listPortalContracts
+      summary: The portal user's signed vehicle intake contracts (TEC-245)
+      description: >-
+        Portal session (aud=portal) with services.read; customer and fleet
+        sessions alike. Until the contracts module (F3) lands a contract is
+        only the service's contract_id, so the list is the user's services
+        that carry one (same ownership, brand, Glorian and draft rules as
+        GET /v1/portal/services), newest first. With no contract the answer
+        is 200 with an empty list.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Contracts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePortalContractPage"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/portal/notification-preferences:
+    get:
+      tags: [Portal]
+      operationId: getPortalNotificationPreferences
+      summary: Own notification preferences from the portal (TEC-245)
+      description: >-
+        Same handler and model as GET /v1/notification-preferences (F0-10),
+        mounted for the portal realm (the panel path answers 403
+        REALM_FORBIDDEN to a portal token).
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePreferences"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+    put:
+      tags: [Portal]
+      operationId: putPortalNotificationPreferences
+      summary: Update own notification preferences from the portal (TEC-245)
+      description: >-
+        Same handler and rules as PUT /v1/notification-preferences. The
+        preferences are the user's own account settings, so a read-only
+        fleet session may change them too.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotificationPreferences"
+      responses:
+        "200":
+          description: Preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePreferences"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
 
 components:
   securitySchemes:
@@ -23297,6 +23379,49 @@ components:
             items:
               type: array
               items: { $ref: "#/components/schemas/PortalServiceListItem" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    PortalContract:
+      type: object
+      description: >-
+        A signed vehicle intake contract of the portal user (TEC-245). Until
+        F3 a contract is only the service's contract_id: the item names the
+        service, the vehicle and the organization; F3 adds the signing
+        details and the PDF.
+      required: [service, status, organization, vehicle_uuid, car_brand_name, car_model_name,
+        model_year, plate, plate_country, created_at]
+      properties:
+        service:
+          type: object
+          required: [uuid, service_no]
+          properties:
+            uuid: { type: string, format: uuid }
+            service_no: { type: string }
+        status: { type: string, enum: [pending, processing, ready, completed, cancelled] }
+        organization: { $ref: "#/components/schemas/PortalOrganizationRef" }
+        vehicle_uuid: { type: string, format: uuid }
+        car_brand_name: { type: string }
+        car_model_name: { type: string }
+        model_year: { type: [integer, "null"] }
+        plate: { type: [string, "null"] }
+        plate_country: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+
+    EnvelopePortalContractPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/PortalContract" }
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }

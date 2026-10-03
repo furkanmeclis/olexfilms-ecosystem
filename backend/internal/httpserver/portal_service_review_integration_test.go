@@ -73,6 +73,15 @@ func TestIntegrationPortalServiceReview(t *testing.T) {
 	it.accDo("GET", path, portalTok(other), nil, http.StatusNotFound)
 	it.accDo("POST", path, portalTok(other), good, http.StatusNotFound)
 
+	// 2b. A fleet session is read only (TEC-245): 403 PORTAL_READ_ONLY.
+	fleet, fpw := it.user("t244-fleet", rbac.RoleFleet)
+	fleetTok := it.tokensFrom(it.do("POST", "/v1/auth/login", hostOlex, "", map[string]string{
+		"email": fleet.Email.String, "password": fpw, "realm": "portal",
+	})).AccessToken
+	if code, env := it.do("POST", path, hostOlex, fleetTok, good); code != http.StatusForbidden || errCode(env) != "PORTAL_READ_ONLY" {
+		t.Fatalf("fleet POST review = %d %s, want 403 PORTAL_READ_ONLY", code, errCode(env))
+	}
+
 	// 3. Out-of-range or missing rating: 400 VALIDATION_ERROR.
 	for _, body := range []map[string]any{
 		{"platform_rating": 0, "product_rating": 3},

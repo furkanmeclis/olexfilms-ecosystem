@@ -41,6 +41,7 @@ type fService struct {
 	org                      string
 	status                   string
 	created                  time.Time
+	contract                 bool // TEC-245: services.contract_id set
 }
 
 type fWarranty struct {
@@ -144,6 +145,31 @@ func (f *fakeStore) CountPortalServices(_ context.Context, a db.CountPortalServi
 	return int64(len(f.ownServices(a.UserID, a.BrandID, a.VehicleID))), nil
 }
 
+func (f *fakeStore) ownContracts(user, brand int64) []fService {
+	var out []fService
+	for _, s := range f.ownServices(user, brand, pgtype.Int8{}) {
+		if s.contract {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+func (f *fakeStore) ListPortalContracts(_ context.Context, a db.ListPortalContractsParams) ([]db.ListPortalContractsRow, error) {
+	rows := []db.ListPortalContractsRow{}
+	for _, s := range f.ownContracts(a.UserID, a.BrandID) {
+		rows = append(rows, db.ListPortalContractsRow{
+			Uuid: uuid.New(), ServiceNo: s.org + "-svc", Status: s.status, OrganizationName: s.org,
+			CreatedAt: pgtype.Timestamptz{Time: s.created, Valid: true},
+		})
+	}
+	return rows, nil
+}
+
+func (f *fakeStore) CountPortalContracts(_ context.Context, a db.CountPortalContractsParams) (int64, error) {
+	return int64(len(f.ownContracts(a.UserID, a.BrandID))), nil
+}
+
 var (
 	vehA  = uuid.New()
 	vehB  = uuid.New()
@@ -162,7 +188,7 @@ func fixture() *fakeStore {
 			{id: 1, user: userA, brand: brandOlex, vehicle: 1, org: "dealer-a", status: "completed", created: now.AddDate(0, -2, 0)},
 			{id: 2, user: userA, brand: brandOlex, vehicle: 1, org: "dealer-b", status: "processing", created: now.AddDate(0, -1, 0)},
 			{id: 3, user: userA, brand: brandOlex, vehicle: 1, org: "dealer-b", status: "draft", created: now},
-			{id: 4, user: userB, brand: brandOlex, vehicle: 2, org: "dealer-a", status: "completed", created: now},
+			{id: 4, user: userB, brand: brandOlex, vehicle: 2, org: "dealer-a", status: "completed", created: now, contract: true},
 			{id: 5, user: userA, brand: brandGlorian, vehicle: 3, org: "glorian-dealer", status: "completed", created: now},
 		},
 		warranties: []fWarranty{
@@ -179,6 +205,7 @@ func mux(f *fakeStore) http.Handler {
 	m.HandleFunc("GET /v1/portal/vehicles", h.ListVehicles)
 	m.HandleFunc("GET /v1/portal/vehicles/{uuid}", h.GetVehicle)
 	m.HandleFunc("GET /v1/portal/services", h.ListServices)
+	m.HandleFunc("GET /v1/portal/contracts", h.ListContracts)
 	return m
 }
 
@@ -330,5 +357,30 @@ func TestPortalVehicleDetail(t *testing.T) {
 	wantDays, wantPct := usecase.TimeLeft(now.AddDate(0, -3, 0), now.AddDate(0, 9, 0), now)
 	if w.DaysLeft != wantDays || w.PercentLeft != wantPct || w.PercentLeft < 70 || w.PercentLeft > 80 {
 		t.Fatalf("time left = %+v, want %d days %d%%", w, wantDays, wantPct)
+	}
+}
+
+// TEC-245 acceptance: a customer without a contract gets 200 with an empty
+// list (items is [], not null); a customer with one sees only their own.
+func TestPortalContracts(t *testing.T) {
+	f := fixture()
+	body := mustOK(t, f, "/v1/portal/contracts", userA)
+	if !strings.Contains(string(body), `"items":[]`) {
+		t.Fatalf("empty contracts must be an empty list: %s", body)
+	}
+	if p := decodePage(t, body); p.Data.Total != 0 {
+		t.Fatalf("user A contracts = %d", p.Data.Total)
+	}
+	p := decodePage(t, mustOK(t, f, "/v1/portal/contracts", userB))
+	if p.Data.Total != 1 || len(p.Data.Items) != 1 {
+		t.Fatalf("user B contracts = %+v", p.Data)
+	}
+	if svc := p.Data.Items[0]["service"].(map[string]any); svc["service_no"] != "dealer-a-svc" {
+		t.Fatalf("contract service = %v", svc)
+	}
+	// Glorian host: nothing.
+	code, body := get(t, f, "/v1/portal/contracts", userB, brandGlorian)
+	if code != http.StatusOK || decodePage(t, body).Data.Total != 0 {
+		t.Fatalf("glorian contracts = %d %s", code, body)
 	}
 }

@@ -29,7 +29,10 @@ func RegisterPortalDetailRoutes(
 	mux.Handle("GET /v1/portal/services/{uuid}/pdf", portal(h.PDF))
 	// TEC-244: the review form. The owner check is in the use case; the
 	// customer role holds no services.write, so the portal write rides on
-	// services.read like the rest of the portal service routes.
+	// services.read like the rest of the portal service routes. A fleet
+	// session is read only (TEC-245): the POST answers 403 PORTAL_READ_ONLY.
 	mux.Handle("GET /v1/portal/services/{uuid}/review", portal(h.GetReview))
-	mux.Handle("POST /v1/portal/services/{uuid}/review", portal(h.CreateReview))
+	mux.Handle("POST /v1/portal/services/{uuid}/review", middleware.Chain(http.HandlerFunc(h.CreateReview),
+		middleware.Authenticate(tokens, loader), middleware.RequirePermission(rbac.PermServicesRead),
+		middleware.DenyPortalReadOnly))
 }

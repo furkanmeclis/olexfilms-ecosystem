@@ -1078,7 +1078,7 @@ export interface paths {
         put?: never;
         /**
          * Review a service of the signed-in customer
-         * @description TEC-244. Platform and product quality ratings (1-5) with an optional comment (at most 2000 characters), one review per service. Same ownership rule as GET /v1/portal/services/{uuid} (else 404). A rating out of range or missing answers 400 VALIDATION_ERROR; a second review 409 SERVICE_ALREADY_REVIEWED; a service that is not completed 422 SERVICE_REVIEW_NOT_COMPLETED.
+         * @description TEC-244. Platform and product quality ratings (1-5) with an optional comment (at most 2000 characters), one review per service. Same ownership rule as GET /v1/portal/services/{uuid} (else 404). A rating out of range or missing answers 400 VALIDATION_ERROR; a second review 409 SERVICE_ALREADY_REVIEWED; a service that is not completed 422 SERVICE_REVIEW_NOT_COMPLETED; a read-only fleet session 403 PORTAL_READ_ONLY (TEC-245).
          */
         post: operations["createPortalServiceReview"];
         delete?: never;
@@ -7722,7 +7722,7 @@ export interface paths {
         put?: never;
         /**
          * The owner starts the transfer of their vehicle with two codes (TEC-243)
-         * @description Portal session with vehicles.read; the vehicle must be the signed-in user's (else 404). Runs the TEC-190 flow unchanged: one 6 digit code to the owner, one to the new owner (WhatsApp, SMS fallback), 15 minute expiry, the same 409 / 429 / 502 / 503 codes. The transfer's organization (phone country, message sender, the organization the new owner is linked to) is the organization that registered the vehicle, else the owner's first organization link in the brand, else the brand center.
+         * @description Portal session with vehicles.read; the vehicle must be the signed-in user's (else 404). Runs the TEC-190 flow unchanged: one 6 digit code to the owner, one to the new owner (WhatsApp, SMS fallback), 15 minute expiry, the same 409 / 429 / 502 / 503 codes. The transfer's organization (phone country, message sender, the organization the new owner is linked to) is the organization that registered the vehicle, else the owner's first organization link in the brand, else the brand center. A fleet session (read only, TEC-245) answers 403 PORTAL_READ_ONLY.
          */
         post: operations["startPortalVehicleTransfer"];
         delete?: never;
@@ -7742,7 +7742,7 @@ export interface paths {
         put?: never;
         /**
          * The owner enters the two codes; completes the transfer (TEC-243)
-         * @description Portal session with vehicles.read; only a transfer the signed-in user started as the owner (else 404). Same rules as POST /v1/vehicle-transfers/{uuid}/verify: codes together or one by one, 422 VEHICLE_TRANSFER_INVALID_CODE with the attempts left, 409 VEHICLE_TRANSFER_LOCKED / EXPIRED / NOT_PENDING (a cancelled transfer), new_owner_name required when the new owner has no account yet.
+         * @description Portal session with vehicles.read; only a transfer the signed-in user started as the owner (else 404). Same rules as POST /v1/vehicle-transfers/{uuid}/verify: codes together or one by one, 422 VEHICLE_TRANSFER_INVALID_CODE with the attempts left, 409 VEHICLE_TRANSFER_LOCKED / EXPIRED / NOT_PENDING (a cancelled transfer), new_owner_name required when the new owner has no account yet. A fleet session (read only, TEC-245) answers 403 PORTAL_READ_ONLY.
          */
         post: operations["verifyPortalVehicleTransfer"];
         delete?: never;
@@ -7762,9 +7762,53 @@ export interface paths {
         put?: never;
         /**
          * The owner cancels a pending transfer (TEC-243)
-         * @description Portal session with vehicles.read; only a transfer the signed-in user started as the owner (else 404). 409 VEHICLE_TRANSFER_NOT_PENDING / VEHICLE_TRANSFER_EXPIRED as in the panel.
+         * @description Portal session with vehicles.read; only a transfer the signed-in user started as the owner (else 404). 409 VEHICLE_TRANSFER_NOT_PENDING / VEHICLE_TRANSFER_EXPIRED as in the panel. A fleet session (read only, TEC-245) answers 403 PORTAL_READ_ONLY.
          */
         post: operations["cancelPortalVehicleTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/contracts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The portal user's signed vehicle intake contracts (TEC-245)
+         * @description Portal session (aud=portal) with services.read; customer and fleet sessions alike. Until the contracts module (F3) lands a contract is only the service's contract_id, so the list is the user's services that carry one (same ownership, brand, Glorian and draft rules as GET /v1/portal/services), newest first. With no contract the answer is 200 with an empty list.
+         */
+        get: operations["listPortalContracts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/notification-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Own notification preferences from the portal (TEC-245)
+         * @description Same handler and model as GET /v1/notification-preferences (F0-10), mounted for the portal realm (the panel path answers 403 REALM_FORBIDDEN to a portal token).
+         */
+        get: operations["getPortalNotificationPreferences"];
+        /**
+         * Update own notification preferences from the portal (TEC-245)
+         * @description Same handler and rules as PUT /v1/notification-preferences. The preferences are the user's own account settings, so a read-only fleet session may change them too.
+         */
+        put: operations["putPortalNotificationPreferences"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -13855,6 +13899,38 @@ export interface components {
             success: true;
             data: {
                 items: components["schemas"]["PortalServiceListItem"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @description A signed vehicle intake contract of the portal user (TEC-245). Until F3 a contract is only the service's contract_id: the item names the service, the vehicle and the organization; F3 adds the signing details and the PDF. */
+        PortalContract: {
+            service: {
+                /** Format: uuid */
+                uuid: string;
+                service_no: string;
+            };
+            /** @enum {string} */
+            status: "pending" | "processing" | "ready" | "completed" | "cancelled";
+            organization: components["schemas"]["PortalOrganizationRef"];
+            /** Format: uuid */
+            vehicle_uuid: string;
+            car_brand_name: string;
+            car_model_name: string;
+            model_year: number | null;
+            plate: string | null;
+            plate_country: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        EnvelopePortalContractPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["PortalContract"][];
                 /** Format: int64 */
                 total: number;
                 limit: number;
@@ -27742,6 +27818,78 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    listPortalContracts: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Contracts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePortalContractPage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getPortalNotificationPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Preferences */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePreferences"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    putPortalNotificationPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationPreferences"];
+            };
+        };
+        responses: {
+            /** @description Preferences */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePreferences"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
         };
     };
 }

@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PortalApiError } from "@/features/portal/lib/portal-client";
+import { usePortalReadOnly } from "@/features/portal/lib/use-portal-read-only";
 import {
   REVIEW_COMMENT_MAX,
   googleReviewUrl,
@@ -84,9 +85,12 @@ function StarRating({
 export function PortalServiceReviewView({
   serviceUuid,
   state,
+  readOnly = false,
 }: {
   serviceUuid: string;
   state: PortalServiceReviewState;
+  /** Read-only fleet session (TEC-245): no form, the API answers 403. */
+  readOnly?: boolean;
 }) {
   const { t } = useLocale();
   const qc = useQueryClient();
@@ -161,7 +165,7 @@ export function PortalServiceReviewView({
               </p>
             ) : null}
           </div>
-        ) : state.can_review ? (
+        ) : state.can_review && !readOnly ? (
           <form
             className="space-y-4"
             onSubmit={onSubmit}
@@ -209,7 +213,7 @@ export function PortalServiceReviewView({
                 : t("portal.review.submit")}
             </Button>
           </form>
-        ) : (
+        ) : readOnly ? null : (
           <p className="text-muted-foreground text-sm">
             {t("portal.review.not_completed")}
           </p>
@@ -244,14 +248,24 @@ export function PortalServiceReviewView({
  * failed load hides the card; the rest of the service page stays usable.
  */
 export function PortalServiceReview({ serviceUuid }: { serviceUuid: string }) {
+  const readOnly = usePortalReadOnly();
   const review = useQuery({
     queryKey: ["portal", "services", "review", serviceUuid],
     queryFn: () => portalServiceReviewApi.get(serviceUuid),
     retry: (count, error) =>
       !(error instanceof PortalApiError && error.status === 404) && count < 2,
   });
-  if (!review.data) return null;
+  const data = review.data;
+  if (!data) return null;
+  // A fleet session sees a stored review and the Google link, never the form.
+  if (readOnly && !data.review && !googleReviewUrl(data.google_business_url)) {
+    return null;
+  }
   return (
-    <PortalServiceReviewView serviceUuid={serviceUuid} state={review.data} />
+    <PortalServiceReviewView
+      serviceUuid={serviceUuid}
+      state={data}
+      readOnly={readOnly}
+    />
   );
 }

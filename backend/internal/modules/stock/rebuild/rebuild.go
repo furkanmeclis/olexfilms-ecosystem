@@ -111,20 +111,58 @@ func (s *Service) Run(ctx context.Context, opts Options) (Report, error) {
 	defer func() { _ = tx.Rollback(ctx) }()
 	q := s.q.WithTx(tx)
 
-	if opts.Apply {
-		if err := lockLedger(ctx, tx, q, opts.OrganizationID); err != nil {
+	if !opts.Apply {
+		sc, err := scan(ctx, q, opts.OrganizationID)
+		if err != nil {
 			return Report{}, err
 		}
+		sc.fill(&rep)
+		rep.FinishedAt = time.Now().UTC()
+		return rep, tx.Commit(ctx)
+	}
+	rep, err = repair(ctx, tx, q, opts, rep)
+	if err != nil {
+		return Report{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Report{}, fmt.Errorf("rebuild: commit: %w", err)
+	}
+	rep.FinishedAt = time.Now().UTC()
+	return rep, nil
+}
+
+// ApplyTx repairs the projections of opts' scope inside the caller's
+// transaction (opts.Apply is implied): the migrator rebuilds them right
+// after appending the legacy history in the same transaction (TEC-258).
+// The repair is visible when the caller commits.
+func ApplyTx(ctx context.Context, tx pgx.Tx, opts Options) (Report, error) {
+	if tx == nil {
+		return Report{}, errors.New("rebuild: transaction required")
+	}
+	if opts.OrganizationID < 0 {
+		return Report{}, fmt.Errorf("rebuild: organization id %d", opts.OrganizationID)
+	}
+	opts.Apply = true
+	rep := Report{OrganizationID: opts.OrganizationID, StartedAt: time.Now().UTC()}
+	rep, err := repair(ctx, tx, db.New(tx), opts, rep)
+	if err != nil {
+		return Report{}, err
+	}
+	rep.FinishedAt = time.Now().UTC()
+	return rep, nil
+}
+
+// repair locks the ledger, scans and writes the expected projections and
+// the audit row in tx; the caller commits.
+func repair(ctx context.Context, tx pgx.Tx, q *db.Queries, opts Options, rep Report) (Report, error) {
+	if err := lockLedger(ctx, tx, q, opts.OrganizationID); err != nil {
+		return Report{}, err
 	}
 	sc, err := scan(ctx, q, opts.OrganizationID)
 	if err != nil {
 		return Report{}, err
 	}
 	sc.fill(&rep)
-	if !opts.Apply {
-		rep.FinishedAt = time.Now().UTC()
-		return rep, tx.Commit(ctx)
-	}
 	if len(sc.diffs) > 0 {
 		if err := sc.apply(ctx, q); err != nil {
 			return Report{}, err
@@ -133,11 +171,7 @@ func (s *Service) Run(ctx context.Context, opts Options) (Report, error) {
 			return Report{}, err
 		}
 	}
-	if err := tx.Commit(ctx); err != nil {
-		return Report{}, fmt.Errorf("rebuild: commit: %w", err)
-	}
 	rep.Applied = len(sc.diffs) > 0
-	rep.FinishedAt = time.Now().UTC()
 	return rep, nil
 }
 

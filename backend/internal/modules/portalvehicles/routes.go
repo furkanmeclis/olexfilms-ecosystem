@@ -28,4 +28,7 @@ func RegisterRoutes(mux *http.ServeMux, h *handler.Handler, tokens *jwt.Manager,
 	mux.Handle("GET /v1/portal/vehicles", readV(h.ListVehicles))
 	mux.Handle("GET /v1/portal/vehicles/{uuid}", readV(h.GetVehicle))
 	mux.Handle("GET /v1/portal/services", readS(h.ListServices))
+	// TEC-245: signed vehicle intake contracts (services.read; a contract
+	// belongs to a service). Fleet sessions read it like customers.
+	mux.Handle("GET /v1/portal/contracts", readS(h.ListContracts))
 }
