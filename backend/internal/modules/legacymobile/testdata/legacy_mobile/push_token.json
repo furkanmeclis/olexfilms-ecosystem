@@ -3,13 +3,14 @@
   "method": "PUT",
   "path": "/v1/mobile/legacy/push-token",
   "adapts": "PUT /v1/mobile/push-token",
-  "source": "New mobile contract (docs/openapi.yaml, TEC-91; the body keeps the previous mobile API's expo_push_token + platform).",
+  "source": "olexfilms routes/api.php PUT /api/v1/mobile/push-token; app/Http/Requests/Api/PushToken/UpsertPushTokenRequest.php (expo_push_token, platform ios|android, device_name?); app/Http/Controllers/Api/V1/PushTokenController.php upsert (data null, push_tokens.saved).",
   "request": {
-    "headers": {"Authorization": "Bearer {{access_token}}"},
-    "body": {"expo_push_token": "{{expo_push_token}}", "platform": "android"}
+    "headers": {"Accept": "application/json", "Accept-Language": "tr", "Authorization": "Bearer {{access_token}}"},
+    "body": {"expo_push_token": "{{expo_push_token}}", "platform": "android", "device_name": "Legacy Phone"}
   },
   "response": {
     "status": 200,
-    "data_keys": ["uuid", "device_id", "platform", "last_seen_at"]
+    "message": "Push token kaydedildi.",
+    "data_null": true
   }
 }
