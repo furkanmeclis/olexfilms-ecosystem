@@ -195,6 +195,11 @@ export type PortalServiceProduct =
 export type PortalServiceWarranty =
   components["schemas"]["PortalServiceWarranty"];
 
+/** TEC-243: the TEC-190 transfer, as the portal owner sees it. */
+export type PortalVehicleTransfer = components["schemas"]["VehicleTransfer"];
+export type PortalVehicleTransferVerifyInput =
+  components["schemas"]["VehicleTransferVerifyInput"];
+
 export type PortalPage<T> = {
   items: T[];
   total: number;
@@ -261,6 +266,33 @@ export const portalApi = {
   getService(uuid: string) {
     return portalRequest<PortalService>(
       `portal/services/${encodeURIComponent(uuid)}`,
+    );
+  },
+  /** Ownership transfer of the user's own vehicle (TEC-243). */
+  listVehicleTransfers(vehicleUuid: string) {
+    return portalRequest<{ items: PortalVehicleTransfer[] }>(
+      `portal/vehicles/${encodeURIComponent(vehicleUuid)}/transfers`,
+    );
+  },
+  startVehicleTransfer(vehicleUuid: string, phone: string) {
+    return portalRequest<PortalVehicleTransfer>(
+      `portal/vehicles/${encodeURIComponent(vehicleUuid)}/transfers`,
+      { method: "POST", body: { phone } },
+    );
+  },
+  verifyVehicleTransfer(
+    transferUuid: string,
+    body: PortalVehicleTransferVerifyInput,
+  ) {
+    return portalRequest<PortalVehicleTransfer>(
+      `portal/vehicle-transfers/${encodeURIComponent(transferUuid)}/verify`,
+      { method: "POST", body },
+    );
+  },
+  cancelVehicleTransfer(transferUuid: string) {
+    return portalRequest<PortalVehicleTransfer>(
+      `portal/vehicle-transfers/${encodeURIComponent(transferUuid)}/cancel`,
+      { method: "POST", body: {} },
     );
   },
   forgotPassword(email: string) {
