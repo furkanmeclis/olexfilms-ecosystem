@@ -176,5 +176,10 @@
   "labels.integrations.glorian.manage": "Διαχείριση ενσωμάτωσης Glorian",
   "groups.integrations": "Ενσωματώσεις",
   "labels.measurements.write": "Μεταφόρτωση μετρήσεων",
-  "groups.measurements": "Μετρήσεις"
+  "groups.measurements": "Μετρήσεις",
+  "labels.contracts.templates.manage": "Διαχείριση προτύπων συμβάσεων",
+  "labels.contracts.read": "Προβολή συμβάσεων",
+  "labels.contracts.write": "Επεξεργασία συμβάσεων",
+  "labels.contracts.void": "Ακύρωση συμβάσεων",
+  "groups.contracts": "Συμβάσεις"
 }

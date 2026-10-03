@@ -176,5 +176,10 @@
   "labels.integrations.glorian.manage": "Glorian-Integration verwalten",
   "groups.integrations": "Integrationen",
   "labels.measurements.write": "Messungen hochladen",
-  "groups.measurements": "Messungen"
+  "groups.measurements": "Messungen",
+  "labels.contracts.templates.manage": "Vertragsvorlagen verwalten",
+  "labels.contracts.read": "Verträge anzeigen",
+  "labels.contracts.write": "Verträge bearbeiten",
+  "labels.contracts.void": "Verträge annullieren",
+  "groups.contracts": "Verträge"
 }

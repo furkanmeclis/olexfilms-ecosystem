@@ -176,5 +176,10 @@
   "labels.integrations.glorian.manage": "Керування інтеграцією Glorian",
   "groups.integrations": "Інтеграції",
   "labels.measurements.write": "Завантаження вимірювань",
-  "groups.measurements": "Вимірювання"
+  "groups.measurements": "Вимірювання",
+  "labels.contracts.templates.manage": "Керування шаблонами договорів",
+  "labels.contracts.read": "Перегляд договорів",
+  "labels.contracts.write": "Редагування договорів",
+  "labels.contracts.void": "Анулювання договорів",
+  "groups.contracts": "Договори"
 }
