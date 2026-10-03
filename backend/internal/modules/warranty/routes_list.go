@@ -11,6 +11,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -35,8 +36,14 @@ func RegisterListRoutes(
 	loader middleware.IdentityLoader,
 	checker middleware.FeatureChecker,
 	stepUp middleware.StepUpChecker,
+	finder searchengine.ListFinder,
 ) {
-	h := handler.NewList(usecase.NewReader(pool, q, outbox.NewStore(pool, q), frontendURL))
+	reader := usecase.NewReader(pool, q, outbox.NewStore(pool, q), frontendURL)
+	// TEC-209: q searches the warranties index (nil finder: SQL only).
+	if finder != nil {
+		reader.SetFinder(finder)
+	}
+	h := handler.NewList(reader)
 	authn := middleware.Authenticate(tokens, loader)
 	org := middleware.RequireOrganization(tokens, q)
 	module := middleware.RequireFeature(checker, features.ModuleServices)
