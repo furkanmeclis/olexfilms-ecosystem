@@ -6847,6 +6847,55 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  # TEC-203: universal scan resolver.
+  /v1/warehouse/scan:
+    post:
+      tags: [Warehouse]
+      operationId: resolveWarehouseScan
+      summary: Resolve one scanned code (location QR, unit barcode, SKU, short code)
+      description: >-
+        Needs `warehouse.read` with the warehouse module on (center or
+        distributor, 403 for dealers, K12). Resolution order:
+        `OFW:LOC:<full_code>` -> a location of the active organization (404
+        SCAN_LOCATION_NOT_FOUND otherwise, nothing else is tried);
+        `OFW:UNIT:<barcode>` -> that unit; a unit barcode (generated
+        `<PREFIX>-<8 digits>`, roll split `<barcode>-S<n>`, legacy/import
+        barcodes; exact, then upper-cased); a bare location full_code when
+        `scan.bare_location_code_enabled`; a product SKU of the active brand
+        when `scan.sku_enabled`; a 1-8 digit short code (optionally `-S<n>`)
+        expanded to `<PREFIX>-<8 digits>` when `scan.short_code_enabled`
+        (prefix `scan.short_code_prefix`, else the brand's default prefix).
+        Units follow the caller's `stock.read` reach like the barcode history
+        (a distributor sees its dealers' units, TEC-216); a unit outside the
+        reach, or any unknown code, is 404 SCAN_NO_MATCH. An empty code is 400
+        VALIDATION_ERROR.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseScanInput" }
+      responses:
+        "200":
+          description: Resolved entity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseScanResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: SCAN_NO_MATCH or SCAN_LOCATION_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /v1/public/product-images/{key}:
     get:
       tags: [Catalog]
@@ -16514,6 +16563,109 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/WarehouseGenerateResult" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    WarehouseScanInput:
+      type: object
+      required: [code]
+      additionalProperties: false
+      properties:
+        code: { type: string, maxLength: 200, example: "OFW:LOC:IST-R1-A-01-03" }
+
+    WarehouseScanPathNode:
+      type: object
+      required: [level, uuid, code, name]
+      properties:
+        level: { type: string, enum: [warehouse, room, aisle, shelf, bin, location] }
+        uuid: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+
+    WarehouseScanLocation:
+      type: object
+      required: [uuid, type, code, full_code, name, active, path]
+      properties:
+        uuid: { type: string, format: uuid }
+        type:
+          type: [string, "null"]
+          enum: [aisle, shelf, bin, null]
+          description: Null for an untyped legacy location.
+        code: { type: string }
+        full_code: { type: string }
+        name: { type: string }
+        active: { type: boolean }
+        path:
+          type: array
+          description: Tree path, warehouse first, the location itself last.
+          items: { $ref: "#/components/schemas/WarehouseScanPathNode" }
+
+    WarehouseScanProduct:
+      type: object
+      required: [uuid, sku, name, unit_type, uses_fixed_barcode, active]
+      properties:
+        uuid: { type: string, format: uuid }
+        sku: { type: string }
+        name: { type: string }
+        unit_type: { type: string, enum: [piece, roll_meter] }
+        uses_fixed_barcode: { type: boolean }
+        active: { type: boolean }
+
+    WarehouseScanHolder:
+      type: object
+      required: [uuid, name, type]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        type: { type: string, enum: [center, distributor, dealer] }
+
+    WarehouseScanUnit:
+      type: object
+      required: [uuid, barcode, unit_kind, status, initial_meters, remaining_meters, owner_type, quantity_on_hand, holder, location]
+      properties:
+        uuid: { type: string, format: uuid }
+        barcode: { type: string }
+        unit_kind: { type: string }
+        status: { type: string }
+        initial_meters: { type: [string, "null"] }
+        remaining_meters: { type: [string, "null"], description: Roll units only. }
+        owner_type: { type: [string, "null"], description: "Current owner type; null before stock entry." }
+        quantity_on_hand: { type: [integer, "null"], description: "Fixed-barcode units: summed over the reachable holdings." }
+        holder:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/WarehouseScanHolder"
+        location:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/WarehouseScanLocation"
+
+    WarehouseScanResult:
+      type: object
+      required: [type, matched_by, code, location, unit, product]
+      properties:
+        type: { type: string, enum: [location, unit, product] }
+        matched_by: { type: string, enum: [location_qr, location_code, unit_qr, barcode, sku, short_code] }
+        code: { type: string, description: "The resolved full_code, barcode or SKU." }
+        location:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/WarehouseScanLocation"
+        unit:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/WarehouseScanUnit"
+        product:
+          description: Set for product and unit results.
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/WarehouseScanProduct"
+
+    EnvelopeWarehouseScanResult:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/WarehouseScanResult" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     StockReclassificationStatus:

@@ -3659,6 +3659,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/warehouse/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve one scanned code (location QR, unit barcode, SKU, short code)
+         * @description Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Resolution order: `OFW:LOC:<full_code>` -> a location of the active organization (404 SCAN_LOCATION_NOT_FOUND otherwise, nothing else is tried); `OFW:UNIT:<barcode>` -> that unit; a unit barcode (generated `<PREFIX>-<8 digits>`, roll split `<barcode>-S<n>`, legacy/import barcodes; exact, then upper-cased); a bare location full_code when `scan.bare_location_code_enabled`; a product SKU of the active brand when `scan.sku_enabled`; a 1-8 digit short code (optionally `-S<n>`) expanded to `<PREFIX>-<8 digits>` when `scan.short_code_enabled` (prefix `scan.short_code_prefix`, else the brand's default prefix). Units follow the caller's `stock.read` reach like the barcode history (a distributor sees its dealers' units, TEC-216); a unit outside the reach, or any unknown code, is 404 SCAN_NO_MATCH. An empty code is 400 VALIDATION_ERROR.
+         */
+        post: operations["resolveWarehouseScan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/product-images/{key}": {
         parameters: {
             query?: never;
@@ -9357,6 +9377,84 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["WarehouseGenerateResult"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        WarehouseScanInput: {
+            /** @example OFW:LOC:IST-R1-A-01-03 */
+            code: string;
+        };
+        WarehouseScanPathNode: {
+            /** @enum {string} */
+            level: "warehouse" | "room" | "aisle" | "shelf" | "bin" | "location";
+            /** Format: uuid */
+            uuid: string;
+            code: string;
+            name: string;
+        };
+        WarehouseScanLocation: {
+            /** Format: uuid */
+            uuid: string;
+            /**
+             * @description Null for an untyped legacy location.
+             * @enum {string|null}
+             */
+            type: "aisle" | "shelf" | "bin" | null;
+            code: string;
+            full_code: string;
+            name: string;
+            active: boolean;
+            /** @description Tree path, warehouse first, the location itself last. */
+            path: components["schemas"]["WarehouseScanPathNode"][];
+        };
+        WarehouseScanProduct: {
+            /** Format: uuid */
+            uuid: string;
+            sku: string;
+            name: string;
+            /** @enum {string} */
+            unit_type: "piece" | "roll_meter";
+            uses_fixed_barcode: boolean;
+            active: boolean;
+        };
+        WarehouseScanHolder: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            /** @enum {string} */
+            type: "center" | "distributor" | "dealer";
+        };
+        WarehouseScanUnit: {
+            /** Format: uuid */
+            uuid: string;
+            barcode: string;
+            unit_kind: string;
+            status: string;
+            initial_meters: string | null;
+            /** @description Roll units only. */
+            remaining_meters: string | null;
+            /** @description Current owner type; null before stock entry. */
+            owner_type: string | null;
+            /** @description Fixed-barcode units: summed over the reachable holdings. */
+            quantity_on_hand: number | null;
+            holder: null | components["schemas"]["WarehouseScanHolder"];
+            location: null | components["schemas"]["WarehouseScanLocation"];
+        };
+        WarehouseScanResult: {
+            /** @enum {string} */
+            type: "location" | "unit" | "product";
+            /** @enum {string} */
+            matched_by: "location_qr" | "location_code" | "unit_qr" | "barcode" | "sku" | "short_code";
+            /** @description The resolved full_code, barcode or SKU. */
+            code: string;
+            location: null | components["schemas"]["WarehouseScanLocation"];
+            unit: null | components["schemas"]["WarehouseScanUnit"];
+            /** @description Set for product and unit results. */
+            product: null | components["schemas"]["WarehouseScanProduct"];
+        };
+        EnvelopeWarehouseScanResult: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WarehouseScanResult"];
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
@@ -18079,6 +18177,42 @@ export interface operations {
             404: components["responses"]["NotFound"];
             /** @description PDF engine unavailable */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    resolveWarehouseScan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseScanInput"];
+            };
+        };
+        responses: {
+            /** @description Resolved entity */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseScanResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            /** @description SCAN_NO_MATCH or SCAN_LOCATION_NOT_FOUND */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

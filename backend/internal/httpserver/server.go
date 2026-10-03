@@ -560,6 +560,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	sysSvc := sysconfig.New(deps.Queries, sysCache)
 	s.sysconfig = sysSvc
 	bulkSvc.WithUndoWindow(sysSvc.BulkUndoWindowHours)
+	// TEC-203: universal scan resolver (scan.* settings from sysconfig).
+	warehousemodule.RegisterScanRoutes(mux, warehousehandler.NewScan(warehouseusecase.NewScanner(deps.Queries, sysSvc)),
+		featureSvc, tokens, loader, deps.Queries)
 	settingsmodule.RegisterRoutes(mux, settingshandler.New(settingsusecase.New(deps.Queries), deps.Storage),
 		settingshandler.NewSystem(sysSvc), tokens, loader)
 	accessmodule.RegisterRoutes(mux, accesshandler.New(stepUpSvc, activityRec), tokens, loader)
