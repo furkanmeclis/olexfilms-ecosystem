@@ -79,6 +79,7 @@ import (
 	ratesmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/rates"
 	rateshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/rates/handler"
 	searchmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search"
+	searchgroups "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/groups"
 	searchhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/handler"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/indexsync"
 	searchusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/usecase"
@@ -447,7 +448,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	warrantymodule.RegisterPublicRoutes(mux, deps.Queries, ratelimit.New(deps.Redis, cfg.App.Env),
 		cfg.Warranty.PublicRateLimit, cfg.Warranty.PublicRateWindow)
 	// TEC-191: panel / portal warranty list and detail, center void.
-	warrantymodule.RegisterListRoutes(mux, deps.DB, deps.Queries, cfg.Auth.FrontendURL,
+	warrantyReader := warrantymodule.RegisterListRoutes(mux, deps.DB, deps.Queries, cfg.Auth.FrontendURL,
 		tokens, loader, featureSvc, stepUpSvc, listFinder)
 
 	// TEC-145: product catalog (brand scoped, center writes).
@@ -594,7 +595,12 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	activitymodule.RegisterRoutes(mux, activityhandler.New(activityusecase.New(deps.Queries)), tokens, loader)
 	logsmodule.RegisterRoutes(mux, logshandler.New(logsSvc), tokens, loader)
 	searchSvc := searchusecase.New(searchClient, searchReg, deps.Queries, log)
-	searchmodule.RegisterRoutes(mux, searchhandler.New(searchSvc), tokens, loader)
+	// TEC-213: Cmd+K global search through the module lists.
+	searchSvc.SetGroups(listFinder, deps.Queries, featureSvc, searchgroups.Build(searchgroups.Lists{
+		Customers: customersSvc, Services: servicesSvc, Warranties: warrantyReader,
+		Orders: ordersSvc, Organizations: orgSvc, Stock: stockSvc,
+	})...)
+	searchmodule.RegisterRoutes(mux, searchhandler.New(searchSvc), tokens, loader, deps.Queries)
 	storageSvc := storageusecase.New(deps.Storage, deps.Queries, log)
 	storagemodule.RegisterRoutes(
 		mux,

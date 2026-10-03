@@ -412,6 +412,59 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /v1/search/global:
+    get:
+      tags: [Search]
+      operationId: getSearchGlobal
+      summary: Cmd+K global search of the active organization (TEC-213)
+      description: |
+        Searches every index the caller may read in the active organization and
+        groups the hits by spec (customers, vehicles, services, warranties, orders,
+        organizations, stock_units, plus tenant / brand scoped specs such as
+        catalog products). Each list scoped group runs through its module list
+        (`GET /v1/<module>?q=`) with the list permission, scope and module
+        feature, so the index is never the only access check. A group the caller
+        lacks the permission or the module feature for is not queried and not
+        returned. When Meilisearch is off the allowed groups come back empty
+        with `info = search_disabled`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+            maxLength: 100
+        - name: spec
+          in: query
+          description: Narrow the answer to one group.
+          schema:
+            type: string
+            example: customers
+        - name: limit
+          in: query
+          description: Hits per group.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 5
+      responses:
+        "200":
+          description: Grouped hits
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeSearchGlobal"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /v1/auth/step-up:
     get:
       tags: [Auth]
@@ -12794,6 +12847,37 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/SearchHitsData" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    SearchGlobalGroup:
+      type: object
+      required: [spec, label_key, items]
+      properties:
+        spec: { type: string, example: customers }
+        label_key: { type: string, example: search.specs_customers }
+        icon: { type: [string, "null"] }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/SearchHit" }
+
+    SearchGlobalData:
+      type: object
+      required: [enabled, info, groups]
+      properties:
+        enabled: { type: boolean }
+        info:
+          type: [string, "null"]
+          enum: [search_disabled, null]
+        groups:
+          type: array
+          items: { $ref: "#/components/schemas/SearchGlobalGroup" }
+
+    EnvelopeSearchGlobal:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/SearchGlobalData" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     ErrorDetail:
