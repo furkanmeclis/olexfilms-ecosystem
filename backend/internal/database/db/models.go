@@ -2165,6 +2165,17 @@ type Warranty struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
+type WarrantyPublicCodeAlias struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	Code           string             `json:"code"`
+	WarrantyID     int64              `json:"warranty_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Reason         string             `json:"reason"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
 type WebauthnCredential struct {
 	ID                int64              `json:"id"`
 	Uuid              uuid.UUID          `json:"uuid"`
