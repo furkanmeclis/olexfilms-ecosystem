@@ -47,6 +47,7 @@ func TestRegisterSchedulesIncludesRatesFetch(t *testing.T) {
 		{cron: warrantyRepairScanCron, taskType: TaskWarrantyRepairScan, queue: QueueMaintenance}:       false,
 		{cron: inventoryRebuildCron, taskType: TaskInventoryRebuild, queue: QueueMaintenance}:           false,
 		{cron: vehicleTransferExpireCron, taskType: TaskVehicleTransferExpire, queue: QueueMaintenance}: false,
+		{cron: tasksDueScanCron, taskType: TaskTasksDueScan, queue: QueueMaintenance}:                   false,
 	}
 	for _, e := range r.entries {
 		if _, ok := want[e]; !ok {

@@ -63,6 +63,20 @@ func queryUUID(w http.ResponseWriter, r *http.Request, name string) (*uuid.UUID,
 	return &id, true
 }
 
+// queryTime reads an optional RFC 3339 timestamp query parameter.
+func queryTime(w http.ResponseWriter, r *http.Request, name string) (*time.Time, bool) {
+	raw := strings.TrimSpace(r.URL.Query().Get(name))
+	if raw == "" {
+		return nil, true
+	}
+	v, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		response.ValidationError(w, r, []response.Detail{{Field: name, Message: "must be an RFC 3339 date-time"}})
+		return nil, false
+	}
+	return &v, true
+}
+
 func decode(w http.ResponseWriter, r *http.Request, dst any) bool {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
@@ -93,7 +107,7 @@ func (n *nullable[T]) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// List (GET /v1/tasks?status&priority&subject_organization_uuid&assignee_user_uuid&mine&limit&offset).
+// List (GET /v1/tasks?status&priority&subject_organization_uuid&assignee_user_uuid&mine&due_after&due_before&limit&offset).
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	qv := r.URL.Query()
 	f := usecase.Filter{
@@ -114,6 +128,12 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		f.AssigneeUUID = &id
 	default:
 		response.ValidationError(w, r, []response.Detail{{Field: "mine", Message: "must be true or false"}})
+		return
+	}
+	if f.DueAfter, ok = queryTime(w, r, "due_after"); !ok {
+		return
+	}
+	if f.DueBefore, ok = queryTime(w, r, "due_before"); !ok {
 		return
 	}
 	q := apiquery.Parse(qv)
@@ -238,4 +258,15 @@ func (h *Handler) AddComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, r, http.StatusCreated, c)
+}
+
+// Assignees (GET /v1/tasks/assignees): members of the active center for
+// the assignee picker (TEC-221).
+func (h *Handler) Assignees(w http.ResponseWriter, r *http.Request) {
+	items, err := h.svc.Assignees(r.Context(), caller(r))
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, map[string]any{"items": items})
 }

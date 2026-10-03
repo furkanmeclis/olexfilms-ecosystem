@@ -168,5 +168,8 @@
   "labels.warranties.read": "Garantien anzeigen",
   "labels.warranties.void": "Garantien stornieren",
   "labels.vehicles.transfer": "Fahrzeuge übertragen",
-  "groups.warranties": "Garantien"
+  "groups.warranties": "Garantien",
+  "labels.tasks.read": "Aufgaben anzeigen",
+  "labels.tasks.write": "Aufgaben verwalten",
+  "groups.tasks": "Aufgaben"
 }

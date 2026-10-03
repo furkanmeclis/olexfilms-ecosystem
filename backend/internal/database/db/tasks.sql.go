@@ -12,6 +12,157 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const claimTasksDueSoon = `-- name: ClaimTasksDueSoon :many
+WITH picked AS (
+    SELECT id FROM tasks
+    WHERE status IN ('open', 'in_progress') AND due_at IS NOT NULL
+      AND due_at > $1::timestamptz
+      AND due_at <= $2::timestamptz
+      AND due_soon_notified_at IS NULL AND overdue_notified_at IS NULL
+      AND (assignee_user_id IS NOT NULL OR created_by_user_id IS NOT NULL)
+    ORDER BY due_at, id
+    LIMIT $3
+    FOR UPDATE SKIP LOCKED
+)
+UPDATE tasks t
+SET due_soon_notified_at = $1::timestamptz
+FROM picked, organizations o, organizations s
+WHERE t.id = picked.id AND o.id = t.organization_id AND s.id = t.subject_org_id
+RETURNING t.id, t.uuid, t.organization_id, t.brand_id, t.title, t.priority, t.due_at,
+          t.assignee_user_id, t.created_by_user_id,
+          o.timezone AS timezone, s.name AS subject_name
+`
+
+type ClaimTasksDueSoonParams struct {
+	Now      pgtype.Timestamptz `json:"now"`
+	Horizon  pgtype.Timestamptz `json:"horizon"`
+	RowLimit int32              `json:"row_limit"`
+}
+
+type ClaimTasksDueSoonRow struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	Title           string             `json:"title"`
+	Priority        string             `json:"priority"`
+	DueAt           pgtype.Timestamptz `json:"due_at"`
+	AssigneeUserID  pgtype.Int8        `json:"assignee_user_id"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	Timezone        string             `json:"timezone"`
+	SubjectName     string             `json:"subject_name"`
+}
+
+func (q *Queries) ClaimTasksDueSoon(ctx context.Context, arg ClaimTasksDueSoonParams) ([]ClaimTasksDueSoonRow, error) {
+	rows, err := q.db.Query(ctx, claimTasksDueSoon, arg.Now, arg.Horizon, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ClaimTasksDueSoonRow{}
+	for rows.Next() {
+		var i ClaimTasksDueSoonRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.Title,
+			&i.Priority,
+			&i.DueAt,
+			&i.AssigneeUserID,
+			&i.CreatedByUserID,
+			&i.Timezone,
+			&i.SubjectName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const claimTasksOverdue = `-- name: ClaimTasksOverdue :many
+WITH picked AS (
+    SELECT id FROM tasks
+    WHERE status IN ('open', 'in_progress') AND due_at IS NOT NULL
+      AND due_at <= $1::timestamptz
+      AND overdue_notified_at IS NULL
+      AND (assignee_user_id IS NOT NULL OR created_by_user_id IS NOT NULL)
+    ORDER BY due_at, id
+    LIMIT $2
+    FOR UPDATE SKIP LOCKED
+)
+UPDATE tasks t
+SET overdue_notified_at = $1::timestamptz,
+    due_soon_notified_at = COALESCE(t.due_soon_notified_at, $1::timestamptz)
+FROM picked, organizations o, organizations s
+WHERE t.id = picked.id AND o.id = t.organization_id AND s.id = t.subject_org_id
+RETURNING t.id, t.uuid, t.organization_id, t.brand_id, t.title, t.priority, t.due_at,
+          t.assignee_user_id, t.created_by_user_id,
+          o.timezone AS timezone, s.name AS subject_name
+`
+
+type ClaimTasksOverdueParams struct {
+	Now      pgtype.Timestamptz `json:"now"`
+	RowLimit int32              `json:"row_limit"`
+}
+
+type ClaimTasksOverdueRow struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	Title           string             `json:"title"`
+	Priority        string             `json:"priority"`
+	DueAt           pgtype.Timestamptz `json:"due_at"`
+	AssigneeUserID  pgtype.Int8        `json:"assignee_user_id"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	Timezone        string             `json:"timezone"`
+	SubjectName     string             `json:"subject_name"`
+}
+
+// TEC-221: tasks:due_scan. Each claim stamps one threshold on a page of
+// open tasks and returns what the reminder needs; a stamped task leaves the
+// candidate list, so a second run finds nothing (SKIP LOCKED keeps two
+// runs apart). Tasks with nobody to notify (no assignee, no creator) are
+// never claimed. The overdue pass also stamps due_soon so a missed run does
+// not send a stale "due soon" after the deadline.
+func (q *Queries) ClaimTasksOverdue(ctx context.Context, arg ClaimTasksOverdueParams) ([]ClaimTasksOverdueRow, error) {
+	rows, err := q.db.Query(ctx, claimTasksOverdue, arg.Now, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ClaimTasksOverdueRow{}
+	for rows.Next() {
+		var i ClaimTasksOverdueRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.Title,
+			&i.Priority,
+			&i.DueAt,
+			&i.AssigneeUserID,
+			&i.CreatedByUserID,
+			&i.Timezone,
+			&i.SubjectName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const countTaskComments = `-- name: CountTaskComments :one
 SELECT COUNT(*)::bigint FROM task_comments WHERE task_id = $1
 `
@@ -31,15 +182,19 @@ WHERE t.brand_id = $1
   AND ($4::text IS NULL OR t.priority = $4::text)
   AND ($5::bigint IS NULL OR t.subject_org_id = $5::bigint)
   AND ($6::bigint IS NULL OR t.assignee_user_id = $6::bigint)
+  AND ($7::timestamptz IS NULL OR t.due_at >= $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR t.due_at < $8::timestamptz)
 `
 
 type CountTasksParams struct {
-	BrandID        int64       `json:"brand_id"`
-	Status         pgtype.Text `json:"status"`
-	OnlyOpen       bool        `json:"only_open"`
-	Priority       pgtype.Text `json:"priority"`
-	SubjectOrgID   pgtype.Int8 `json:"subject_org_id"`
-	AssigneeUserID pgtype.Int8 `json:"assignee_user_id"`
+	BrandID        int64              `json:"brand_id"`
+	Status         pgtype.Text        `json:"status"`
+	OnlyOpen       bool               `json:"only_open"`
+	Priority       pgtype.Text        `json:"priority"`
+	SubjectOrgID   pgtype.Int8        `json:"subject_org_id"`
+	AssigneeUserID pgtype.Int8        `json:"assignee_user_id"`
+	DueAfter       pgtype.Timestamptz `json:"due_after"`
+	DueBefore      pgtype.Timestamptz `json:"due_before"`
 }
 
 func (q *Queries) CountTasks(ctx context.Context, arg CountTasksParams) (int64, error) {
@@ -50,6 +205,8 @@ func (q *Queries) CountTasks(ctx context.Context, arg CountTasksParams) (int64, 
 		arg.Priority,
 		arg.SubjectOrgID,
 		arg.AssigneeUserID,
+		arg.DueAfter,
+		arg.DueBefore,
 	)
 	var column_1 int64
 	err := row.Scan(&column_1)
@@ -88,7 +245,7 @@ func (q *Queries) GetCenterMemberByUUID(ctx context.Context, arg GetCenterMember
 }
 
 const getTaskByUUID = `-- name: GetTaskByUUID :one
-SELECT id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at FROM tasks
+SELECT id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at, due_soon_notified_at, overdue_notified_at FROM tasks
 WHERE uuid = $1 AND brand_id = $2
 `
 
@@ -118,6 +275,8 @@ func (q *Queries) GetTaskByUUID(ctx context.Context, arg GetTaskByUUIDParams) (T
 		&i.ClosedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DueSoonNotifiedAt,
+		&i.OverdueNotifiedAt,
 	)
 	return i, err
 }
@@ -155,7 +314,7 @@ func (q *Queries) GetTaskSubjectOrg(ctx context.Context, arg GetTaskSubjectOrgPa
 }
 
 const getTaskView = `-- name: GetTaskView :one
-SELECT t.id, t.uuid, t.organization_id, t.brand_id, t.subject_org_id, t.title, t.description, t.assignee_user_id, t.priority, t.due_at, t.status, t.source, t.created_by_user_id, t.closed_by_user_id, t.closed_at, t.created_at, t.updated_at,
+SELECT t.id, t.uuid, t.organization_id, t.brand_id, t.subject_org_id, t.title, t.description, t.assignee_user_id, t.priority, t.due_at, t.status, t.source, t.created_by_user_id, t.closed_by_user_id, t.closed_at, t.created_at, t.updated_at, t.due_soon_notified_at, t.overdue_notified_at,
        s.uuid AS subject_uuid, s.name AS subject_name, s.type AS subject_type,
        a.uuid AS assignee_uuid, a.name AS assignee_name, a.surname AS assignee_surname,
        c.uuid AS creator_uuid, c.name AS creator_name, c.surname AS creator_surname,
@@ -173,33 +332,35 @@ type GetTaskViewParams struct {
 }
 
 type GetTaskViewRow struct {
-	ID              int64              `json:"id"`
-	Uuid            uuid.UUID          `json:"uuid"`
-	OrganizationID  int64              `json:"organization_id"`
-	BrandID         int64              `json:"brand_id"`
-	SubjectOrgID    int64              `json:"subject_org_id"`
-	Title           string             `json:"title"`
-	Description     string             `json:"description"`
-	AssigneeUserID  pgtype.Int8        `json:"assignee_user_id"`
-	Priority        string             `json:"priority"`
-	DueAt           pgtype.Timestamptz `json:"due_at"`
-	Status          string             `json:"status"`
-	Source          string             `json:"source"`
-	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
-	ClosedByUserID  pgtype.Int8        `json:"closed_by_user_id"`
-	ClosedAt        pgtype.Timestamptz `json:"closed_at"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	SubjectUuid     uuid.UUID          `json:"subject_uuid"`
-	SubjectName     string             `json:"subject_name"`
-	SubjectType     string             `json:"subject_type"`
-	AssigneeUuid    pgtype.UUID        `json:"assignee_uuid"`
-	AssigneeName    pgtype.Text        `json:"assignee_name"`
-	AssigneeSurname pgtype.Text        `json:"assignee_surname"`
-	CreatorUuid     pgtype.UUID        `json:"creator_uuid"`
-	CreatorName     pgtype.Text        `json:"creator_name"`
-	CreatorSurname  pgtype.Text        `json:"creator_surname"`
-	CommentCount    int64              `json:"comment_count"`
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	SubjectOrgID      int64              `json:"subject_org_id"`
+	Title             string             `json:"title"`
+	Description       string             `json:"description"`
+	AssigneeUserID    pgtype.Int8        `json:"assignee_user_id"`
+	Priority          string             `json:"priority"`
+	DueAt             pgtype.Timestamptz `json:"due_at"`
+	Status            string             `json:"status"`
+	Source            string             `json:"source"`
+	CreatedByUserID   pgtype.Int8        `json:"created_by_user_id"`
+	ClosedByUserID    pgtype.Int8        `json:"closed_by_user_id"`
+	ClosedAt          pgtype.Timestamptz `json:"closed_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	DueSoonNotifiedAt pgtype.Timestamptz `json:"due_soon_notified_at"`
+	OverdueNotifiedAt pgtype.Timestamptz `json:"overdue_notified_at"`
+	SubjectUuid       uuid.UUID          `json:"subject_uuid"`
+	SubjectName       string             `json:"subject_name"`
+	SubjectType       string             `json:"subject_type"`
+	AssigneeUuid      pgtype.UUID        `json:"assignee_uuid"`
+	AssigneeName      pgtype.Text        `json:"assignee_name"`
+	AssigneeSurname   pgtype.Text        `json:"assignee_surname"`
+	CreatorUuid       pgtype.UUID        `json:"creator_uuid"`
+	CreatorName       pgtype.Text        `json:"creator_name"`
+	CreatorSurname    pgtype.Text        `json:"creator_surname"`
+	CommentCount      int64              `json:"comment_count"`
 }
 
 func (q *Queries) GetTaskView(ctx context.Context, arg GetTaskViewParams) (GetTaskViewRow, error) {
@@ -223,6 +384,8 @@ func (q *Queries) GetTaskView(ctx context.Context, arg GetTaskViewParams) (GetTa
 		&i.ClosedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DueSoonNotifiedAt,
+		&i.OverdueNotifiedAt,
 		&i.SubjectUuid,
 		&i.SubjectName,
 		&i.SubjectType,
@@ -248,7 +411,7 @@ VALUES (
     $5, $6, $7, $8,
     $9, $10
 )
-RETURNING id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at, due_soon_notified_at, overdue_notified_at
 `
 
 type InsertTaskParams struct {
@@ -298,6 +461,8 @@ func (q *Queries) InsertTask(ctx context.Context, arg InsertTaskParams) (Task, e
 		&i.ClosedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DueSoonNotifiedAt,
+		&i.OverdueNotifiedAt,
 	)
 	return i, err
 }
@@ -336,6 +501,40 @@ func (q *Queries) InsertTaskComment(ctx context.Context, arg InsertTaskCommentPa
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const listCenterMembers = `-- name: ListCenterMembers :many
+SELECT u.uuid, u.name, u.surname FROM users u
+JOIN organization_members m ON m.user_id = u.id
+WHERE m.organization_id = $1 AND u.deleted_at IS NULL
+ORDER BY u.name, u.surname, u.id
+`
+
+type ListCenterMembersRow struct {
+	Uuid    uuid.UUID `json:"uuid"`
+	Name    string    `json:"name"`
+	Surname string    `json:"surname"`
+}
+
+// TEC-221: assignee picker of the task form (members of the center).
+func (q *Queries) ListCenterMembers(ctx context.Context, organizationID int64) ([]ListCenterMembersRow, error) {
+	rows, err := q.db.Query(ctx, listCenterMembers, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListCenterMembersRow{}
+	for rows.Next() {
+		var i ListCenterMembersRow
+		if err := rows.Scan(&i.Uuid, &i.Name, &i.Surname); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listTaskComments = `-- name: ListTaskComments :many
@@ -400,7 +599,7 @@ func (q *Queries) ListTaskComments(ctx context.Context, arg ListTaskCommentsPara
 }
 
 const listTasks = `-- name: ListTasks :many
-SELECT t.id, t.uuid, t.organization_id, t.brand_id, t.subject_org_id, t.title, t.description, t.assignee_user_id, t.priority, t.due_at, t.status, t.source, t.created_by_user_id, t.closed_by_user_id, t.closed_at, t.created_at, t.updated_at,
+SELECT t.id, t.uuid, t.organization_id, t.brand_id, t.subject_org_id, t.title, t.description, t.assignee_user_id, t.priority, t.due_at, t.status, t.source, t.created_by_user_id, t.closed_by_user_id, t.closed_at, t.created_at, t.updated_at, t.due_soon_notified_at, t.overdue_notified_at,
        s.uuid AS subject_uuid, s.name AS subject_name, s.type AS subject_type,
        a.uuid AS assignee_uuid, a.name AS assignee_name, a.surname AS assignee_surname,
        c.uuid AS creator_uuid, c.name AS creator_name, c.surname AS creator_surname,
@@ -415,49 +614,55 @@ WHERE t.brand_id = $1
   AND ($4::text IS NULL OR t.priority = $4::text)
   AND ($5::bigint IS NULL OR t.subject_org_id = $5::bigint)
   AND ($6::bigint IS NULL OR t.assignee_user_id = $6::bigint)
+  AND ($7::timestamptz IS NULL OR t.due_at >= $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR t.due_at < $8::timestamptz)
 ORDER BY t.created_at DESC, t.id DESC
-LIMIT $8 OFFSET $7
+LIMIT $10 OFFSET $9
 `
 
 type ListTasksParams struct {
-	BrandID        int64       `json:"brand_id"`
-	Status         pgtype.Text `json:"status"`
-	OnlyOpen       bool        `json:"only_open"`
-	Priority       pgtype.Text `json:"priority"`
-	SubjectOrgID   pgtype.Int8 `json:"subject_org_id"`
-	AssigneeUserID pgtype.Int8 `json:"assignee_user_id"`
-	RowOffset      int32       `json:"row_offset"`
-	RowLimit       int32       `json:"row_limit"`
+	BrandID        int64              `json:"brand_id"`
+	Status         pgtype.Text        `json:"status"`
+	OnlyOpen       bool               `json:"only_open"`
+	Priority       pgtype.Text        `json:"priority"`
+	SubjectOrgID   pgtype.Int8        `json:"subject_org_id"`
+	AssigneeUserID pgtype.Int8        `json:"assignee_user_id"`
+	DueAfter       pgtype.Timestamptz `json:"due_after"`
+	DueBefore      pgtype.Timestamptz `json:"due_before"`
+	RowOffset      int32              `json:"row_offset"`
+	RowLimit       int32              `json:"row_limit"`
 }
 
 type ListTasksRow struct {
-	ID              int64              `json:"id"`
-	Uuid            uuid.UUID          `json:"uuid"`
-	OrganizationID  int64              `json:"organization_id"`
-	BrandID         int64              `json:"brand_id"`
-	SubjectOrgID    int64              `json:"subject_org_id"`
-	Title           string             `json:"title"`
-	Description     string             `json:"description"`
-	AssigneeUserID  pgtype.Int8        `json:"assignee_user_id"`
-	Priority        string             `json:"priority"`
-	DueAt           pgtype.Timestamptz `json:"due_at"`
-	Status          string             `json:"status"`
-	Source          string             `json:"source"`
-	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
-	ClosedByUserID  pgtype.Int8        `json:"closed_by_user_id"`
-	ClosedAt        pgtype.Timestamptz `json:"closed_at"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	SubjectUuid     uuid.UUID          `json:"subject_uuid"`
-	SubjectName     string             `json:"subject_name"`
-	SubjectType     string             `json:"subject_type"`
-	AssigneeUuid    pgtype.UUID        `json:"assignee_uuid"`
-	AssigneeName    pgtype.Text        `json:"assignee_name"`
-	AssigneeSurname pgtype.Text        `json:"assignee_surname"`
-	CreatorUuid     pgtype.UUID        `json:"creator_uuid"`
-	CreatorName     pgtype.Text        `json:"creator_name"`
-	CreatorSurname  pgtype.Text        `json:"creator_surname"`
-	CommentCount    int64              `json:"comment_count"`
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	SubjectOrgID      int64              `json:"subject_org_id"`
+	Title             string             `json:"title"`
+	Description       string             `json:"description"`
+	AssigneeUserID    pgtype.Int8        `json:"assignee_user_id"`
+	Priority          string             `json:"priority"`
+	DueAt             pgtype.Timestamptz `json:"due_at"`
+	Status            string             `json:"status"`
+	Source            string             `json:"source"`
+	CreatedByUserID   pgtype.Int8        `json:"created_by_user_id"`
+	ClosedByUserID    pgtype.Int8        `json:"closed_by_user_id"`
+	ClosedAt          pgtype.Timestamptz `json:"closed_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	DueSoonNotifiedAt pgtype.Timestamptz `json:"due_soon_notified_at"`
+	OverdueNotifiedAt pgtype.Timestamptz `json:"overdue_notified_at"`
+	SubjectUuid       uuid.UUID          `json:"subject_uuid"`
+	SubjectName       string             `json:"subject_name"`
+	SubjectType       string             `json:"subject_type"`
+	AssigneeUuid      pgtype.UUID        `json:"assignee_uuid"`
+	AssigneeName      pgtype.Text        `json:"assignee_name"`
+	AssigneeSurname   pgtype.Text        `json:"assignee_surname"`
+	CreatorUuid       pgtype.UUID        `json:"creator_uuid"`
+	CreatorName       pgtype.Text        `json:"creator_name"`
+	CreatorSurname    pgtype.Text        `json:"creator_surname"`
+	CommentCount      int64              `json:"comment_count"`
 }
 
 func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]ListTasksRow, error) {
@@ -468,6 +673,8 @@ func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]ListTas
 		arg.Priority,
 		arg.SubjectOrgID,
 		arg.AssigneeUserID,
+		arg.DueAfter,
+		arg.DueBefore,
 		arg.RowOffset,
 		arg.RowLimit,
 	)
@@ -496,6 +703,8 @@ func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]ListTas
 			&i.ClosedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DueSoonNotifiedAt,
+			&i.OverdueNotifiedAt,
 			&i.SubjectUuid,
 			&i.SubjectName,
 			&i.SubjectType,
@@ -518,7 +727,7 @@ func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]ListTas
 }
 
 const lockTask = `-- name: LockTask :one
-SELECT id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at FROM tasks
+SELECT id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at, due_soon_notified_at, overdue_notified_at FROM tasks
 WHERE uuid = $1 AND brand_id = $2
 FOR UPDATE
 `
@@ -549,6 +758,8 @@ func (q *Queries) LockTask(ctx context.Context, arg LockTaskParams) (Task, error
 		&i.ClosedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DueSoonNotifiedAt,
+		&i.OverdueNotifiedAt,
 	)
 	return i, err
 }
@@ -557,7 +768,7 @@ const setTaskAssignee = `-- name: SetTaskAssignee :one
 UPDATE tasks
 SET assignee_user_id = $1
 WHERE id = $2
-RETURNING id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at, due_soon_notified_at, overdue_notified_at
 `
 
 type SetTaskAssigneeParams struct {
@@ -587,6 +798,8 @@ func (q *Queries) SetTaskAssignee(ctx context.Context, arg SetTaskAssigneeParams
 		&i.ClosedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DueSoonNotifiedAt,
+		&i.OverdueNotifiedAt,
 	)
 	return i, err
 }
@@ -598,12 +811,17 @@ SET subject_org_id = $1,
     description = $3,
     assignee_user_id = $4,
     priority = $5,
-    due_at = $6,
+    due_at = $6::timestamptz,
+    -- TEC-221: a new deadline is reminded again.
+    due_soon_notified_at = CASE WHEN due_at IS DISTINCT FROM $6::timestamptz
+                                THEN NULL ELSE due_soon_notified_at END,
+    overdue_notified_at = CASE WHEN due_at IS DISTINCT FROM $6::timestamptz
+                               THEN NULL ELSE overdue_notified_at END,
     status = $7,
     closed_at = $8,
     closed_by_user_id = $9
 WHERE id = $10
-RETURNING id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at, due_soon_notified_at, overdue_notified_at
 `
 
 type UpdateTaskParams struct {
@@ -651,6 +869,8 @@ func (q *Queries) UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, e
 		&i.ClosedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DueSoonNotifiedAt,
+		&i.OverdueNotifiedAt,
 	)
 	return i, err
 }

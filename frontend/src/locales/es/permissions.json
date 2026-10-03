@@ -168,5 +168,8 @@
   "labels.warranties.read": "Ver garantías",
   "labels.warranties.void": "Anular garantías",
   "labels.vehicles.transfer": "Transferir vehículos",
-  "groups.warranties": "Garantías"
+  "groups.warranties": "Garantías",
+  "labels.tasks.read": "Ver tareas",
+  "labels.tasks.write": "Gestionar tareas",
+  "groups.tasks": "Tareas"
 }

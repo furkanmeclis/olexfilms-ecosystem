@@ -168,5 +168,8 @@
   "labels.warranties.read": "查看质保",
   "labels.warranties.void": "作废质保",
   "labels.vehicles.transfer": "转让车辆",
-  "groups.warranties": "质保"
+  "groups.warranties": "质保",
+  "labels.tasks.read": "查看任务",
+  "labels.tasks.write": "管理任务",
+  "groups.tasks": "任务"
 }

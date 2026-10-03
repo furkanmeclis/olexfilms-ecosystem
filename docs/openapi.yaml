@@ -12277,6 +12277,14 @@ paths:
           in: query
           description: Only tasks assigned to the caller
           schema: { type: boolean }
+        - name: due_after
+          in: query
+          description: Only tasks due at or after this instant (TEC-221); tasks without a due date are left out
+          schema: { type: string, format: date-time }
+        - name: due_before
+          in: query
+          description: Only tasks due before this instant (TEC-221); tasks without a due date are left out
+          schema: { type: string, format: date-time }
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
       responses:
@@ -12467,6 +12475,26 @@ paths:
                 $ref: "#/components/schemas/EnvelopeBulkJob"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/tasks/assignees:
+    get:
+      tags: [Tasks]
+      operationId: listTaskAssignees
+      summary: Members of the active center for the task assignee picker (TEC-221)
+      description: Needs tasks.read; the active organization must be the brand center.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Center members
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTaskAssigneeList"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "403":
@@ -19575,6 +19603,20 @@ components:
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeTaskAssigneeList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/TaskUserRef" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     # --- TEC-202: barcode batches and label templates -------------------------

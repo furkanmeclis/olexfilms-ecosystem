@@ -168,5 +168,8 @@
   "labels.warranties.read": "Garantileri görüntüle",
   "labels.warranties.void": "Garantileri iptal et",
   "labels.vehicles.transfer": "Araç devret",
-  "groups.warranties": "Garantiler"
+  "groups.warranties": "Garantiler",
+  "labels.tasks.read": "Görevleri görüntüle",
+  "labels.tasks.write": "Görevleri yönet",
+  "groups.tasks": "Görevler"
 }
