@@ -46,6 +46,11 @@ func olexSteps() []Step {
 	return []Step{
 		OrganizationsStep{}, // TEC-254: center, TR distributor, dealers
 		UsersStep{},         // TEC-254: users, memberships, roles
+
+		// TEC-256: car brands, models and brand logos; product categories,
+		// products and the warehouse product match.
+		VehicleCatalogStep{},
+		CatalogStep{},
 	}
 }
 
