@@ -388,6 +388,62 @@ func (q *Queries) CreateServiceItem(ctx context.Context, arg CreateServiceItemPa
 	return i, err
 }
 
+const createServiceItemCorrection = `-- name: CreateServiceItemCorrection :one
+INSERT INTO service_item_corrections (
+    organization_id, brand_id, service_id, service_item_id, product_id, unit_id, item_kind,
+    return_movement_id, replacement_unit_id, replacement_movement_id, reason,
+    created_by_user_id, actor_org_id
+)
+SELECT si.organization_id, si.brand_id, si.service_id, si.id, si.product_id, si.unit_id, si.kind,
+       $1, $2, $3,
+       $4, $5, $6
+FROM service_items si
+WHERE si.id = $7
+RETURNING id, uuid, organization_id, brand_id, service_id, service_item_id, product_id, unit_id, item_kind, return_movement_id, replacement_unit_id, replacement_movement_id, reason, created_by_user_id, actor_org_id, created_at
+`
+
+type CreateServiceItemCorrectionParams struct {
+	ReturnMovementID      int64       `json:"return_movement_id"`
+	ReplacementUnitID     pgtype.Int8 `json:"replacement_unit_id"`
+	ReplacementMovementID pgtype.Int8 `json:"replacement_movement_id"`
+	Reason                string      `json:"reason"`
+	CreatedByUserID       pgtype.Int8 `json:"created_by_user_id"`
+	ActorOrgID            pgtype.Int8 `json:"actor_org_id"`
+	ServiceItemID         int64       `json:"service_item_id"`
+}
+
+func (q *Queries) CreateServiceItemCorrection(ctx context.Context, arg CreateServiceItemCorrectionParams) (ServiceItemCorrection, error) {
+	row := q.db.QueryRow(ctx, createServiceItemCorrection,
+		arg.ReturnMovementID,
+		arg.ReplacementUnitID,
+		arg.ReplacementMovementID,
+		arg.Reason,
+		arg.CreatedByUserID,
+		arg.ActorOrgID,
+		arg.ServiceItemID,
+	)
+	var i ServiceItemCorrection
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ServiceID,
+		&i.ServiceItemID,
+		&i.ProductID,
+		&i.UnitID,
+		&i.ItemKind,
+		&i.ReturnMovementID,
+		&i.ReplacementUnitID,
+		&i.ReplacementMovementID,
+		&i.Reason,
+		&i.CreatedByUserID,
+		&i.ActorOrgID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const deleteDraftService = `-- name: DeleteDraftService :execrows
 DELETE FROM services
 WHERE id = $1 AND brand_id = $2 AND status = 'draft'
@@ -701,6 +757,35 @@ func (q *Queries) GetServiceItemByUUID(ctx context.Context, arg GetServiceItemBy
 	return i, err
 }
 
+const getServiceItemCorrectionByItem = `-- name: GetServiceItemCorrectionByItem :one
+SELECT id, uuid, organization_id, brand_id, service_id, service_item_id, product_id, unit_id, item_kind, return_movement_id, replacement_unit_id, replacement_movement_id, reason, created_by_user_id, actor_org_id, created_at FROM service_item_corrections
+WHERE service_item_id = $1
+`
+
+func (q *Queries) GetServiceItemCorrectionByItem(ctx context.Context, serviceItemID int64) (ServiceItemCorrection, error) {
+	row := q.db.QueryRow(ctx, getServiceItemCorrectionByItem, serviceItemID)
+	var i ServiceItemCorrection
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ServiceID,
+		&i.ServiceItemID,
+		&i.ProductID,
+		&i.UnitID,
+		&i.ItemKind,
+		&i.ReturnMovementID,
+		&i.ReplacementUnitID,
+		&i.ReplacementMovementID,
+		&i.Reason,
+		&i.CreatedByUserID,
+		&i.ActorOrgID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getServiceRefs = `-- name: GetServiceRefs :one
 SELECT o.uuid AS organization_uuid, o.name AS organization_name, o.type AS organization_type,
        u.uuid AS customer_uuid, u.name AS customer_name, u.surname AS customer_surname,
@@ -889,6 +974,51 @@ func (q *Queries) ListServiceImages(ctx context.Context, serviceID int64) ([]Ser
 			&i.SortOrder,
 			&i.UploadedByUserID,
 			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listServiceItemCorrections = `-- name: ListServiceItemCorrections :many
+SELECT c.id, c.uuid, c.service_item_id, c.reason, c.created_at,
+       ru.barcode AS replacement_barcode
+FROM service_item_corrections c
+LEFT JOIN units ru ON ru.id = c.replacement_unit_id
+WHERE c.service_id = $1
+ORDER BY c.id
+`
+
+type ListServiceItemCorrectionsRow struct {
+	ID                 int64              `json:"id"`
+	Uuid               uuid.UUID          `json:"uuid"`
+	ServiceItemID      int64              `json:"service_item_id"`
+	Reason             string             `json:"reason"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	ReplacementBarcode pgtype.Text        `json:"replacement_barcode"`
+}
+
+func (q *Queries) ListServiceItemCorrections(ctx context.Context, serviceID int64) ([]ListServiceItemCorrectionsRow, error) {
+	rows, err := q.db.Query(ctx, listServiceItemCorrections, serviceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListServiceItemCorrectionsRow{}
+	for rows.Next() {
+		var i ListServiceItemCorrectionsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.ServiceItemID,
+			&i.Reason,
+			&i.CreatedAt,
+			&i.ReplacementBarcode,
 		); err != nil {
 			return nil, err
 		}
@@ -1385,6 +1515,45 @@ func (q *Queries) LockServiceByUUID(ctx context.Context, arg LockServiceByUUIDPa
 		&i.CompletedAt,
 		&i.CancelledAt,
 		&i.ReviewRequestSentAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const lockServiceItemByUUID = `-- name: LockServiceItemByUUID :one
+
+SELECT id, uuid, service_id, organization_id, brand_id, product_id, unit_id, kind, quantity, meters, applied_parts, notes, stock_movement_id, created_at, updated_at FROM service_items
+WHERE uuid = $1 AND service_id = $2
+FOR UPDATE
+`
+
+type LockServiceItemByUUIDParams struct {
+	Uuid      uuid.UUID `json:"uuid"`
+	ServiceID int64     `json:"service_id"`
+}
+
+// ---------------------------------------------------------------------------
+// TEC-230: consumption corrections of completed services (migration 000073).
+// Locks one item of the locked service (FOR UPDATE also waits for a
+// warranty insert that holds a key share on the item).
+func (q *Queries) LockServiceItemByUUID(ctx context.Context, arg LockServiceItemByUUIDParams) (ServiceItem, error) {
+	row := q.db.QueryRow(ctx, lockServiceItemByUUID, arg.Uuid, arg.ServiceID)
+	var i ServiceItem
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.ServiceID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ProductID,
+		&i.UnitID,
+		&i.Kind,
+		&i.Quantity,
+		&i.Meters,
+		&i.AppliedParts,
+		&i.Notes,
+		&i.StockMovementID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
