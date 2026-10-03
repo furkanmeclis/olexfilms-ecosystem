@@ -64,6 +64,8 @@
   "system.groups.warehouse_hint": "Comportement de l'entrepôt et du stock.",
   "system.groups.scanning": "Numérisation",
   "system.groups.scanning_hint": "Paramètres de lecture des codes-barres et QR.",
+  "system.groups.mobile": "Application mobile",
+  "system.groups.mobile_hint": "Version minimale de l'application et liens vers les stores ; les versions plus anciennes doivent être mises à jour.",
   "system.keys.forecast_min_days": "Période minimale de prévision (jours)",
   "system.keys.forecast_min_days_hint": "Historique minimal de mouvements avant toute proposition de prévision.",
   "system.keys.contract_grace_days": "Délai de grâce du contrat (jours)",

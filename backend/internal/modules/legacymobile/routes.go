@@ -18,8 +18,12 @@
 // Bodies: requests and answers are the old shapes (auth.go, services.go,
 // reports.go) inside the old envelope (envelope.go);
 // testdata/legacy_mobile/*.json pins them, derived from the old
-// controllers and resources. No X-Mobile-Api-Version gate: the old app
-// does not send the header (version forcing is TEC-236).
+// controllers and resources.
+//
+// No X-Mobile-Api-Version gate: the old app does not send the header
+// (version forcing is TEC-236: middleware.MobileAppVersion wraps the
+// router, so the X-App-Version minimum applies here too; a request without
+// a version passes unless mobile.app_version_required is on).
 package legacymobile
 
 import (

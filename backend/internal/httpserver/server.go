@@ -679,9 +679,17 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	outboxPub := outbox.NewPublisher(outboxStore, eventBus, log)
 	s.outboxPub = outboxPub
 
+	// TEC-236: app version gate on /v1/mobile/* (legacy aliases included);
+	// system settings mobile.* override the MOBILE_APP_* environment.
+	gateSettings := sysSvc
+	if deps.Queries == nil {
+		gateSettings = nil
+	}
+	appGate := middleware.MobileAppVersion(mobileAppPolicy(gateSettings, cfg.Mobile), cfg.Mobile.AppUserAgentProducts)
+
 	s.http = &http.Server{
 		Addr:         cfg.HTTP.Addr,
-		Handler:      middleware.ServerErrors(log)(middleware.RequestID(errtrack.Middleware(errtrack.Recover(log)(middleware.ResolveBrand(brandResolver)(middleware.ResolveLocale(mux)))))),
+		Handler:      middleware.ServerErrors(log)(middleware.RequestID(errtrack.Middleware(errtrack.Recover(log)(middleware.ResolveBrand(brandResolver)(middleware.ResolveLocale(appGate(mux))))))),
 		ReadTimeout:  cfg.HTTP.ReadTimeout,
 		WriteTimeout: cfg.HTTP.WriteTimeout,
 		IdleTimeout:  cfg.HTTP.IdleTimeout,

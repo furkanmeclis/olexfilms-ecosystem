@@ -542,4 +542,5 @@ var zhCNCatalog = map[string]string{
 	"warehouse.eod.type.reclassification":          "重新分类",
 	"warehouse.eod.type.void":                      "作废",
 	"warehouse.eod.type.external_outbound":         "外部出库",
+	"mobile.update_required":                       "此应用版本已不再受支持。请更新应用后继续。",
 }

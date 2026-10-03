@@ -542,4 +542,5 @@ var bgCatalog = map[string]string{
 	"warehouse.eod.type.reclassification":          "Прекласификация",
 	"warehouse.eod.type.void":                      "Анулиране",
 	"warehouse.eod.type.external_outbound":         "Външно изписване",
+	"mobile.update_required":                       "Тази версия на приложението вече не се поддържа. Обновете приложението, за да продължите.",
 }
