@@ -374,3 +374,38 @@ WHERE (sqlc.narg(barcode)::text IS NULL OR u.barcode = sqlc.narg(barcode)::text)
   ))
 ORDER BY p.name, u.barcode, u.id
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
+
+-- ---------------------------------------------------------------------------
+-- TEC-230: consumption corrections of completed services (migration 000073).
+
+-- Locks one item of the locked service (FOR UPDATE also waits for a
+-- warranty insert that holds a key share on the item).
+-- name: LockServiceItemByUUID :one
+SELECT * FROM service_items
+WHERE uuid = sqlc.arg(uuid) AND service_id = sqlc.arg(service_id)
+FOR UPDATE;
+
+-- name: GetServiceItemCorrectionByItem :one
+SELECT * FROM service_item_corrections
+WHERE service_item_id = sqlc.arg(service_item_id);
+
+-- name: CreateServiceItemCorrection :one
+INSERT INTO service_item_corrections (
+    organization_id, brand_id, service_id, service_item_id, product_id, unit_id, item_kind,
+    return_movement_id, replacement_unit_id, replacement_movement_id, reason,
+    created_by_user_id, actor_org_id
+)
+SELECT si.organization_id, si.brand_id, si.service_id, si.id, si.product_id, si.unit_id, si.kind,
+       sqlc.arg(return_movement_id), sqlc.narg(replacement_unit_id), sqlc.narg(replacement_movement_id),
+       sqlc.arg(reason), sqlc.narg(created_by_user_id), sqlc.narg(actor_org_id)
+FROM service_items si
+WHERE si.id = sqlc.arg(service_item_id)
+RETURNING *;
+
+-- name: ListServiceItemCorrections :many
+SELECT c.id, c.uuid, c.service_item_id, c.reason, c.created_at,
+       ru.barcode AS replacement_barcode
+FROM service_item_corrections c
+LEFT JOIN units ru ON ru.id = c.replacement_unit_id
+WHERE c.service_id = sqlc.arg(service_id)
+ORDER BY c.id;

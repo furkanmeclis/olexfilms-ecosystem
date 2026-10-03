@@ -257,6 +257,8 @@ SELECT si.organization_id, si.brand_id, si.service_id, si.id, si.product_id, si.
 FROM service_items si
 JOIN services s ON s.id = si.service_id
 WHERE si.id = $4
+  -- TEC-230: a corrected item (unit returned to stock) gets no warranty.
+  AND NOT EXISTS (SELECT 1 FROM service_item_corrections c WHERE c.service_item_id = si.id)
 ON CONFLICT (service_item_id) DO NOTHING
 RETURNING id, uuid, public_code, organization_id, brand_id, service_id, service_item_id, product_id, unit_id, item_kind, vehicle_id, holder_user_id, start_at, end_at, status, expired_at, voided_at, voided_by_user_id, void_reason, notified_30_at, notified_7_at, created_at, updated_at
 `
@@ -1290,6 +1292,8 @@ JOIN products p ON p.id = si.product_id
 JOIN units u ON u.id = si.unit_id
 JOIN brands ub ON ub.id = u.brand_id
 WHERE si.service_id = $1
+  -- TEC-230: corrected items (unit returned to stock) get no warranty.
+  AND NOT EXISTS (SELECT 1 FROM service_item_corrections c WHERE c.service_item_id = si.id)
 ORDER BY si.id
 `
 
@@ -1466,6 +1470,7 @@ WITH page AS (
           SELECT 1 FROM service_items si
           WHERE si.service_id = s.id
             AND NOT EXISTS (SELECT 1 FROM warranties w WHERE w.service_item_id = si.id)
+            AND NOT EXISTS (SELECT 1 FROM service_item_corrections c WHERE c.service_item_id = si.id)
       )
     ORDER BY s.id
     LIMIT $5
@@ -1487,6 +1492,7 @@ JOIN products p ON p.id = si.product_id
 JOIN units u ON u.id = si.unit_id
 JOIN brands ub ON ub.id = u.brand_id
 WHERE NOT EXISTS (SELECT 1 FROM warranties w WHERE w.service_item_id = si.id)
+  AND NOT EXISTS (SELECT 1 FROM service_item_corrections c WHERE c.service_item_id = si.id)
 ORDER BY s.id, si.id
 `
 

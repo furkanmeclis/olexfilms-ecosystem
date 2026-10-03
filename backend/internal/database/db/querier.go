@@ -248,6 +248,7 @@ type Querier interface {
 	// Service items. Locked by trigger once the service is completed or
 	// cancelled.
 	CreateServiceItem(ctx context.Context, arg CreateServiceItemParams) (ServiceItem, error)
+	CreateServiceItemCorrection(ctx context.Context, arg CreateServiceItemCorrectionParams) (ServiceItemCorrection, error)
 	// TEC-206: stock counts (000068). Every query is bound to one organization;
 	// the warehouse side is brand-independent (K20).
 	CreateStockCount(ctx context.Context, arg CreateStockCountParams) (StockCount, error)
@@ -582,6 +583,7 @@ type Querier interface {
 	GetServiceImage(ctx context.Context, arg GetServiceImageParams) (ServiceImage, error)
 	GetServiceItem(ctx context.Context, arg GetServiceItemParams) (ServiceItem, error)
 	GetServiceItemByUUID(ctx context.Context, arg GetServiceItemByUUIDParams) (ServiceItem, error)
+	GetServiceItemCorrectionByItem(ctx context.Context, serviceItemID int64) (ServiceItemCorrection, error)
 	// Display references of one service (organization, customer, vehicle and
 	// the car brand / model snapshot) for the API view (TEC-179).
 	GetServiceRefs(ctx context.Context, id int64) (GetServiceRefsRow, error)
@@ -1010,6 +1012,7 @@ type Querier interface {
 	ListSearchUuidsByCustomer(ctx context.Context, argUuid uuid.UUID) (ListSearchUuidsByCustomerRow, error)
 	ListSearchUuidsByUserID(ctx context.Context, userID int64) (ListSearchUuidsByUserIDRow, error)
 	ListServiceImages(ctx context.Context, serviceID int64) ([]ServiceImage, error)
+	ListServiceItemCorrections(ctx context.Context, serviceID int64) ([]ListServiceItemCorrectionsRow, error)
 	ListServiceItems(ctx context.Context, serviceID int64) ([]ServiceItem, error)
 	ListServiceStatusLogs(ctx context.Context, serviceID int64) ([]ServiceStatusLog, error)
 	// ---------------------------------------------------------------------------
@@ -1212,6 +1215,11 @@ type Querier interface {
 	LockOrganizationProductStock(ctx context.Context, arg LockOrganizationProductStockParams) (OrganizationProductStock, error)
 	LockService(ctx context.Context, arg LockServiceParams) (Service, error)
 	LockServiceByUUID(ctx context.Context, arg LockServiceByUUIDParams) (Service, error)
+	// ---------------------------------------------------------------------------
+	// TEC-230: consumption corrections of completed services (migration 000073).
+	// Locks one item of the locked service (FOR UPDATE also waits for a
+	// warranty insert that holds a key share on the item).
+	LockServiceItemByUUID(ctx context.Context, arg LockServiceItemByUUIDParams) (ServiceItem, error)
 	// Completion locks the lines in id order (deadlock-free with concurrent
 	// completions sharing a unit).
 	LockServiceItems(ctx context.Context, serviceID int64) ([]ServiceItem, error)

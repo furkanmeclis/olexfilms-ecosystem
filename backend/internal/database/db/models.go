@@ -1240,6 +1240,25 @@ type ServiceItem struct {
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
+type ServiceItemCorrection struct {
+	ID                    int64              `json:"id"`
+	Uuid                  uuid.UUID          `json:"uuid"`
+	OrganizationID        int64              `json:"organization_id"`
+	BrandID               int64              `json:"brand_id"`
+	ServiceID             int64              `json:"service_id"`
+	ServiceItemID         int64              `json:"service_item_id"`
+	ProductID             int64              `json:"product_id"`
+	UnitID                int64              `json:"unit_id"`
+	ItemKind              string             `json:"item_kind"`
+	ReturnMovementID      int64              `json:"return_movement_id"`
+	ReplacementUnitID     pgtype.Int8        `json:"replacement_unit_id"`
+	ReplacementMovementID pgtype.Int8        `json:"replacement_movement_id"`
+	Reason                string             `json:"reason"`
+	CreatedByUserID       pgtype.Int8        `json:"created_by_user_id"`
+	ActorOrgID            pgtype.Int8        `json:"actor_org_id"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+}
+
 type ServiceStatusLog struct {
 	ID             int64              `json:"id"`
 	ServiceID      int64              `json:"service_id"`

@@ -18,6 +18,8 @@ SELECT si.organization_id, si.brand_id, si.service_id, si.id, si.product_id, si.
 FROM service_items si
 JOIN services s ON s.id = si.service_id
 WHERE si.id = sqlc.arg(service_item_id)
+  -- TEC-230: a corrected item (unit returned to stock) gets no warranty.
+  AND NOT EXISTS (SELECT 1 FROM service_item_corrections c WHERE c.service_item_id = si.id)
 ON CONFLICT (service_item_id) DO NOTHING
 RETURNING *;
 
@@ -218,6 +220,8 @@ JOIN products p ON p.id = si.product_id
 JOIN units u ON u.id = si.unit_id
 JOIN brands ub ON ub.id = u.brand_id
 WHERE si.service_id = sqlc.arg(service_id)
+  -- TEC-230: corrected items (unit returned to stock) get no warranty.
+  AND NOT EXISTS (SELECT 1 FROM service_item_corrections c WHERE c.service_item_id = si.id)
 ORDER BY si.id;
 
 -- TEC-194: repair scan. One page of completed services (completed in
@@ -238,6 +242,7 @@ WITH page AS (
           SELECT 1 FROM service_items si
           WHERE si.service_id = s.id
             AND NOT EXISTS (SELECT 1 FROM warranties w WHERE w.service_item_id = si.id)
+            AND NOT EXISTS (SELECT 1 FROM service_item_corrections c WHERE c.service_item_id = si.id)
       )
     ORDER BY s.id
     LIMIT sqlc.arg(service_limit)
@@ -259,6 +264,7 @@ JOIN products p ON p.id = si.product_id
 JOIN units u ON u.id = si.unit_id
 JOIN brands ub ON ub.id = u.brand_id
 WHERE NOT EXISTS (SELECT 1 FROM warranties w WHERE w.service_item_id = si.id)
+  AND NOT EXISTS (SELECT 1 FROM service_item_corrections c WHERE c.service_item_id = si.id)
 ORDER BY s.id, si.id;
 
 -- ---------------------------------------------------------------------------

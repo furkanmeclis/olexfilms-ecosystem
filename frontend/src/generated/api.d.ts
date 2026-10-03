@@ -6695,6 +6695,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/services/{uuid}/items/{item}/consumption-correction": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                item: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Correct the consumption of an item of a completed service
+         * @description TEC-230 (conservative default; a completed service still cannot be cancelled). The unit consumed by mistake goes back from the service into the service organization's stock with a ledger return movement (a roll with the meters the consumption took, fixed pieces credited back); with replacement_barcode the correct unit of the same product is consumed instead (same kind and amount, held by the service organization, not in an open service). Idempotency keys service:service_item_correction:{item id}:{return or consumption}:{barcode}. Center only (services.cancel on the service, else 403), within 24 hours of the completion (422 SERVICE_CORRECTION_WINDOW_CLOSED), once per item (409 SERVICE_ITEM_ALREADY_CORRECTED), whole consumptions only (a partial cut answers 422 SERVICE_CONSUMPTION_NOT_REVERSIBLE). An item with an active or expired warranty answers 422 SERVICE_ITEM_WARRANTY_ACTIVE (void the warranty first); the replacement gets no warranty. A service that is not completed answers 409 SERVICE_NOT_EDITABLE; a replacement that is not held answers 409 SERVICE_UNIT_NOT_AVAILABLE, one in an open service 409 SERVICE_UNIT_IN_USE. Accounting is not touched. Writes a service.updated outbox event (change consumption_corrected) and the stock.* events of the movements.
+         */
+        post: operations["correctServiceConsumption"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/stats/top-vehicle-models": {
         parameters: {
             query?: never;
@@ -11851,6 +11875,22 @@ export interface components {
             notes: string | null;
             /** Format: date-time */
             created_at: string;
+            /** @description Consumption correction of the item (TEC-230); null when not corrected */
+            correction: components["schemas"]["ServiceItemCorrection"] | null;
+        };
+        ServiceItemCorrection: {
+            /** Format: uuid */
+            uuid: string;
+            reason: string;
+            /** @description Unit consumed instead of the returned one */
+            replacement_barcode: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        ServiceConsumptionCorrectionInput: {
+            reason: string;
+            /** @description Barcode of the correct unit of the same product to consume instead */
+            replacement_barcode?: string | null;
         };
         ServiceStockUnit: {
             /** Format: uuid */
@@ -24857,6 +24897,40 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    correctServiceConsumption: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                item: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceConsumptionCorrectionInput"];
+            };
+        };
+        responses: {
+            /** @description Service with the corrected item (items[].correction) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeService"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     getTopVehicleModels: {
