@@ -6896,6 +6896,280 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /v1/warehouse/stock-entries:
+    get:
+      tags: [Warehouse]
+      operationId: listStockEntries
+      summary: List the stock entry documents of the active organization
+      description: >-
+        Needs `warehouse.read` with the warehouse module on (center or
+        distributor, K12). Newest first; entries written by an applied stock
+        import (TEC-158) have mode `import`. An unknown status is 400
+        VALIDATION_ERROR.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/StockEntryStatus" }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0 }
+      responses:
+        "200":
+          description: Entries (without lines)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntryPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Warehouse]
+      operationId: createStockEntry
+      summary: Open a draft stock entry at a warehouse (TEC-204)
+      description: >-
+        Needs `warehouse.write`. The warehouse must be an active warehouse of
+        the active organization. `with_existing` links printed barcodes,
+        `generate_new` reserves new barcodes (TEC-202; center only, 403
+        STOCK_ENTRY_CENTER_ONLY otherwise, K14).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockEntryInput" }
+      responses:
+        "201":
+          description: Draft entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not center/distributor, or STOCK_ENTRY_CENTER_ONLY
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/warehouse/stock-entries/{uuid}:
+    get:
+      tags: [Warehouse]
+      operationId: getStockEntry
+      summary: One stock entry with its lines and label links
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntry"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/warehouse/stock-entries/{uuid}/lines:
+    post:
+      tags: [Warehouse]
+      operationId: addStockEntryLines
+      summary: Link or reserve barcodes on a draft entry
+      description: >-
+        Needs `warehouse.write`. `with_existing`: `barcodes` (also
+        `OFW:UNIT:<barcode>` scans) of the active brand; each must be a
+        printed (or reserved) label not yet in stock (409
+        STOCK_ENTRY_UNIT_NOT_PRINTED) and not on another open entry (409
+        STOCK_ENTRY_UNIT_TAKEN); a fixed barcode may enter again.
+        `generate_new`: `product_uuid`, `quantity` barcodes (1-1000),
+        `meters` for rolls, optional `prefix` and `template_uuid`; the batch
+        is reserved through the TEC-202 rules in the same transaction.
+        `fixed_quantity` is the stock quantity of each fixed barcode. A
+        confirmed or cancelled entry is 409 STOCK_ENTRY_NOT_DRAFT.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockEntryLinesInput" }
+      responses:
+        "200":
+          description: Entry with the new lines
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/stock-entries/{uuid}/lines/{line_uuid}:
+    delete:
+      tags: [Warehouse]
+      operationId: deleteStockEntryLine
+      summary: Remove a line from a draft entry
+      description: >-
+        Needs `warehouse.write`. A generated label stays printed and can be
+        linked again with `with_existing`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - name: line_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntry"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/stock-entries/{uuid}/place:
+    post:
+      tags: [Warehouse]
+      operationId: placeStockEntryLines
+      summary: Place lines of a draft entry on a location (pick or scan)
+      description: >-
+        Needs `warehouse.write`. Exactly one of `location_uuid` or
+        `location_code` (a scanned `OFW:LOC:<full_code>` QR or a bare
+        full_code); the location must be active and in the entry's warehouse
+        (400 VALIDATION_ERROR otherwise). Lines: `line_uuids`, or the lines
+        of the scanned `barcodes`, or every line when both are empty.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockEntryPlaceInput" }
+      responses:
+        "200":
+          description: Entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/stock-entries/{uuid}/confirm:
+    post:
+      tags: [Warehouse]
+      operationId: confirmStockEntry
+      summary: Confirm a stock entry (ledger entry + placement)
+      description: >-
+        Needs `warehouse.write`. In one transaction every line is posted
+        through the stock ledger with the idempotency key
+        `stock_entry:stock_entry_line:<line id>:<type>:<barcode>`: serial
+        units get an `entry` into the organization and a `placement` on
+        their location; fixed barcodes an `entry` straight into their
+        location. Printed -> entry happens at a center only (403
+        STOCK_ENTRY_CENTER_ONLY, K14). 409 STOCK_ENTRY_NOT_DRAFT when the
+        entry is already confirmed (a second confirm writes nothing),
+        STOCK_ENTRY_EMPTY without lines, STOCK_ENTRY_UNPLACED while a line
+        has no location, STOCK_ENTRY_LEDGER_REFUSED when the ledger refuses a
+        movement (nothing is written).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Confirmed entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntry"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not center/distributor, or STOCK_ENTRY_CENTER_ONLY
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/stock-entries/{uuid}/cancel:
+    post:
+      tags: [Warehouse]
+      operationId: cancelStockEntry
+      summary: Cancel a draft stock entry
+      description: Needs `warehouse.write`. Only a draft can be cancelled (409 STOCK_ENTRY_NOT_DRAFT).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Cancelled entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntry"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   /v1/public/product-images/{key}:
     get:
       tags: [Catalog]
@@ -16694,6 +16968,156 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/WarehouseScanResult" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    StockEntryStatus:
+      type: string
+      enum: [draft, confirmed, cancelled, undone]
+
+    StockEntryMode:
+      type: string
+      enum: [with_existing, generate_new, import]
+
+    StockEntryInput:
+      type: object
+      additionalProperties: false
+      required: [warehouse_uuid, mode]
+      properties:
+        warehouse_uuid: { type: string, format: uuid }
+        mode: { type: string, enum: [with_existing, generate_new] }
+        note: { type: [string, "null"], maxLength: 500 }
+
+    StockEntryLinesInput:
+      type: object
+      additionalProperties: false
+      properties:
+        barcodes:
+          type: array
+          maxItems: 1000
+          items: { type: string, minLength: 1, maxLength: 128 }
+          description: with_existing only.
+        product_uuid: { type: string, format: uuid, description: generate_new only. }
+        quantity: { type: integer, minimum: 1, maximum: 1000, description: "generate_new: barcodes to reserve." }
+        meters: { type: string, description: "generate_new, roll products: length of each roll." }
+        prefix: { type: string, pattern: "^[A-Z0-9]{2,8}$" }
+        template_uuid: { type: string, format: uuid }
+        fixed_quantity: { type: [integer, "null"], minimum: 1, description: "Stock quantity of each fixed barcode (default 1)." }
+
+    StockEntryPlaceInput:
+      type: object
+      additionalProperties: false
+      properties:
+        line_uuids:
+          type: array
+          items: { type: string, format: uuid }
+        barcodes:
+          type: array
+          maxItems: 1000
+          items: { type: string }
+        location_uuid: { type: [string, "null"], format: uuid }
+        location_code: { type: string, maxLength: 200, description: "Scanned OFW:LOC:<full_code> or a bare full_code." }
+
+    StockEntryWarehouse:
+      type: object
+      required: [uuid, code, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+
+    StockEntryProduct:
+      type: object
+      required: [uuid, sku, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        sku: { type: string }
+        name: { type: string }
+
+    StockEntryLocation:
+      type: object
+      required: [uuid, code, full_code]
+      properties:
+        uuid: { type: string, format: uuid }
+        code: { type: string }
+        full_code: { type: [string, "null"] }
+
+    StockEntryLabelBatch:
+      type: object
+      required: [batch_uuid, labels_url]
+      properties:
+        batch_uuid: { type: string, format: uuid }
+        labels_url: { type: string, description: TEC-202 batch label sheet. }
+
+    StockEntryLine:
+      type: object
+      required: [uuid, unit_uuid, barcode, unit_kind, unit_status, quantity, product, location, label_url, entry_movement_uuid, placement_movement_uuid, undone]
+      properties:
+        uuid: { type: string, format: uuid }
+        unit_uuid: { type: string, format: uuid }
+        barcode: { type: string }
+        unit_kind: { type: string, enum: [serial, fixed] }
+        unit_status: { type: string }
+        quantity: { type: integer }
+        product: { $ref: "#/components/schemas/StockEntryProduct" }
+        location:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockEntryLocation"
+        label_url: { type: string, description: TEC-202 unit label PDF. }
+        entry_movement_uuid: { type: [string, "null"], format: uuid }
+        placement_movement_uuid: { type: [string, "null"], format: uuid }
+        undone: { type: boolean, description: "Voided by an import undo (mode import)." }
+
+    StockEntry:
+      type: object
+      required: [uuid, mode, status, note, warehouse, import_batch_uuid, line_count, created_at, confirmed_at, cancelled_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        mode: { $ref: "#/components/schemas/StockEntryMode" }
+        status: { $ref: "#/components/schemas/StockEntryStatus" }
+        note: { type: [string, "null"] }
+        warehouse:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockEntryWarehouse"
+        import_batch_uuid: { type: [string, "null"], format: uuid }
+        line_count: { type: integer, format: int64 }
+        placed_count: { type: integer, format: int64, description: Detail responses only. }
+        lines:
+          type: array
+          description: Detail responses only.
+          items: { $ref: "#/components/schemas/StockEntryLine" }
+        label_batches:
+          type: array
+          description: Detail responses only.
+          items: { $ref: "#/components/schemas/StockEntryLabelBatch" }
+        created_at: { type: string, format: date-time }
+        confirmed_at: { type: [string, "null"], format: date-time }
+        cancelled_at: { type: [string, "null"], format: date-time }
+
+    EnvelopeStockEntry:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/StockEntry" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeStockEntryPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/StockEntry" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     StockReclassificationStatus:

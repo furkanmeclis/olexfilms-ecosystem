@@ -108,33 +108,77 @@ func DefaultPrefix(brandSlug string) string {
 // Create reserves the batch: the units exist in status printed when it
 // returns.
 func (s *Barcodes) Create(ctx context.Context, c Caller, in BatchInput) (model.BarcodeBatch, error) {
-	org, err := centerOrg(c)
+	prep, err := s.prepare(ctx, s.q, c, in)
 	if err != nil {
 		return model.BarcodeBatch{}, err
 	}
+	var batch db.BarcodeBatch
+	var units []db.Unit
+	err = s.inTx(ctx, func(q *db.Queries) error {
+		batch, units, err = s.reserve(ctx, q, c, prep)
+		return err
+	})
+	if err != nil {
+		return model.BarcodeBatch{}, err
+	}
+	return s.view(ctx, batch, prep.product, units), nil
+}
+
+// ReserveInTx reserves a batch inside the caller's transaction q (the stock
+// entry generate_new mode, TEC-204) with the same rules as Create. It
+// returns the batch view and the new printed units.
+func (s *Barcodes) ReserveInTx(ctx context.Context, q *db.Queries, c Caller, in BatchInput) (model.BarcodeBatch, []db.Unit, error) {
+	prep, err := s.prepare(ctx, q, c, in)
+	if err != nil {
+		return model.BarcodeBatch{}, nil, err
+	}
+	batch, units, err := s.reserve(ctx, q, c, prep)
+	if err != nil {
+		return model.BarcodeBatch{}, nil, err
+	}
+	return s.view(ctx, batch, prep.product, units), units, nil
+}
+
+// batchPrep is a validated batch request.
+type batchPrep struct {
+	org      int64
+	quantity int
+	prefix   string
+	product  db.Product
+	meters   pgtype.Numeric
+	template pgtype.Int8
+	kind     string
+}
+
+// prepare validates a batch request (no writes).
+func (s *Barcodes) prepare(ctx context.Context, q *db.Queries, c Caller, in BatchInput) (batchPrep, error) {
+	org, err := centerOrg(c)
+	if err != nil {
+		return batchPrep{}, err
+	}
 	if in.Quantity < 1 || in.Quantity > MaxBatchQuantity {
-		return model.BarcodeBatch{}, invalid("quantity", fmt.Sprintf("must be between 1 and %d", MaxBatchQuantity))
+		return batchPrep{}, invalid("quantity", fmt.Sprintf("must be between 1 and %d", MaxBatchQuantity))
 	}
 	pid, err := uuid.Parse(strings.TrimSpace(in.ProductUUID))
 	if err != nil {
-		return model.BarcodeBatch{}, invalid("product_uuid", "must be a uuid")
+		return batchPrep{}, invalid("product_uuid", "must be a uuid")
 	}
 	prefix := strings.ToUpper(strings.TrimSpace(in.Prefix))
 	if prefix == "" {
 		prefix = DefaultPrefix(c.Org.BrandSlug)
 	}
 	if !prefixPattern.MatchString(prefix) {
-		return model.BarcodeBatch{}, invalid("prefix", "must be 2-8 characters: A-Z or 0-9")
+		return batchPrep{}, invalid("prefix", "must be 2-8 characters: A-Z or 0-9")
 	}
-	p, err := s.q.GetProductByUUID(ctx, db.GetProductByUUIDParams{Uuid: pid, BrandID: c.Org.BrandID})
+	p, err := q.GetProductByUUID(ctx, db.GetProductByUUIDParams{Uuid: pid, BrandID: c.Org.BrandID})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return model.BarcodeBatch{}, invalid("product_uuid", "product not found")
+		return batchPrep{}, invalid("product_uuid", "product not found")
 	}
 	if err != nil {
-		return model.BarcodeBatch{}, fmt.Errorf("stock: product: %w", err)
+		return batchPrep{}, fmt.Errorf("stock: product: %w", err)
 	}
 	if !p.Active {
-		return model.BarcodeBatch{}, ErrProductInactive
+		return batchPrep{}, ErrProductInactive
 	}
 	var meters pgtype.Numeric
 	isRoll := p.UnitType == "roll_meter" && !p.UsesFixedBarcode
@@ -142,24 +186,24 @@ func (s *Barcodes) Create(ctx context.Context, c Caller, in BatchInput) (model.B
 	case isRoll:
 		cm, err := ledger.ParseMeters(in.Meters)
 		if err != nil || cm <= 0 {
-			return model.BarcodeBatch{}, invalid("meters", "roll products need the length of each roll (positive, at most two decimals)")
+			return batchPrep{}, invalid("meters", "roll products need the length of each roll (positive, at most two decimals)")
 		}
 		meters = ledger.CentimetersToNumeric(cm)
 	case strings.TrimSpace(in.Meters) != "":
-		return model.BarcodeBatch{}, invalid("meters", "only roll products carry meters")
+		return batchPrep{}, invalid("meters", "only roll products carry meters")
 	}
 	var template pgtype.Int8
 	if t := strings.TrimSpace(in.TemplateUUID); t != "" {
 		tid, err := uuid.Parse(t)
 		if err != nil {
-			return model.BarcodeBatch{}, invalid("template_uuid", "must be a uuid")
+			return batchPrep{}, invalid("template_uuid", "must be a uuid")
 		}
-		tpl, err := s.q.GetLabelTemplateByUUID(ctx, db.GetLabelTemplateByUUIDParams{Uuid: tid, OrganizationID: org})
+		tpl, err := q.GetLabelTemplateByUUID(ctx, db.GetLabelTemplateByUUIDParams{Uuid: tid, OrganizationID: org})
 		if errors.Is(err, pgx.ErrNoRows) || (err == nil && tpl.Kind != labels.KindUnit) {
-			return model.BarcodeBatch{}, invalid("template_uuid", "unit label template not found")
+			return batchPrep{}, invalid("template_uuid", "unit label template not found")
 		}
 		if err != nil {
-			return model.BarcodeBatch{}, fmt.Errorf("stock: template: %w", err)
+			return batchPrep{}, fmt.Errorf("stock: template: %w", err)
 		}
 		template = i8(tpl.ID)
 	}
@@ -167,52 +211,49 @@ func (s *Barcodes) Create(ctx context.Context, c Caller, in BatchInput) (model.B
 	if p.UsesFixedBarcode {
 		kind = ledger.KindFixed
 	}
+	return batchPrep{org: org, quantity: in.Quantity, prefix: prefix, product: p, meters: meters, template: template, kind: kind}, nil
+}
 
-	var batch db.BarcodeBatch
-	var units []db.Unit
-	err = s.inTx(ctx, func(q *db.Queries) error {
-		counter, err := q.LockBarcodeCounter(ctx, db.LockBarcodeCounterParams{BrandID: c.Org.BrandID, Prefix: prefix})
-		if err != nil {
-			return fmt.Errorf("stock: barcode counter: %w", err)
-		}
-		seqs, err := freeSequences(ctx, q, c.Org.BrandID, prefix, counter.NextSeq, in.Quantity)
-		if err != nil {
-			return err
-		}
-		batch, err = q.CreateBarcodeBatch(ctx, db.CreateBarcodeBatchParams{
-			OrganizationID: org, BrandID: c.Org.BrandID, ProductID: p.ID, Quantity: int32(in.Quantity),
-			Prefix: prefix, FirstSeq: seqs[0], LastSeq: seqs[len(seqs)-1], Meters: meters,
-			TemplateID: template, CreatedByUserID: c.actor(),
-		})
-		if err != nil {
-			return fmt.Errorf("stock: batch: %w", err)
-		}
-		units = make([]db.Unit, 0, len(seqs))
-		for _, seq := range seqs {
-			u, err := q.CreateBatchUnit(ctx, db.CreateBatchUnitParams{
-				OrganizationID: org, BrandID: c.Org.BrandID, ProductID: p.ID, Barcode: Barcode(prefix, seq),
-				UnitKind: kind, Status: string(ledger.StatusPrinted),
-				InitialMeters: meters, RemainingMeters: meters, BatchID: i8(batch.ID),
-			})
-			if err != nil {
-				return fmt.Errorf("stock: batch unit: %w", err)
-			}
-			units = append(units, u)
-		}
-		if err := q.SetBarcodeCounter(ctx, db.SetBarcodeCounterParams{
-			NextSeq: seqs[len(seqs)-1] + 1, BrandID: c.Org.BrandID, Prefix: prefix,
-		}); err != nil {
-			return fmt.Errorf("stock: barcode counter: %w", err)
-		}
-		return s.audit(ctx, q, c, AuditBarcodeBatchCreated, batch, map[string]any{
-			"product_id": p.ID, "quantity": in.Quantity, "prefix": prefix,
-			"first_barcode": units[0].Barcode, "last_barcode": units[len(units)-1].Barcode,
-		})
+// reserve allocates the barcodes and creates the printed units in q.
+func (s *Barcodes) reserve(ctx context.Context, q *db.Queries, c Caller, b batchPrep) (db.BarcodeBatch, []db.Unit, error) {
+	counter, err := q.LockBarcodeCounter(ctx, db.LockBarcodeCounterParams{BrandID: c.Org.BrandID, Prefix: b.prefix})
+	if err != nil {
+		return db.BarcodeBatch{}, nil, fmt.Errorf("stock: barcode counter: %w", err)
+	}
+	seqs, err := freeSequences(ctx, q, c.Org.BrandID, b.prefix, counter.NextSeq, b.quantity)
+	if err != nil {
+		return db.BarcodeBatch{}, nil, err
+	}
+	batch, err := q.CreateBarcodeBatch(ctx, db.CreateBarcodeBatchParams{
+		OrganizationID: b.org, BrandID: c.Org.BrandID, ProductID: b.product.ID, Quantity: int32(b.quantity),
+		Prefix: b.prefix, FirstSeq: seqs[0], LastSeq: seqs[len(seqs)-1], Meters: b.meters,
+		TemplateID: b.template, CreatedByUserID: c.actor(),
 	})
 	if err != nil {
-		return model.BarcodeBatch{}, err
+		return db.BarcodeBatch{}, nil, fmt.Errorf("stock: batch: %w", err)
 	}
-	return s.view(ctx, batch, p, units), nil
+	units := make([]db.Unit, 0, len(seqs))
+	for _, seq := range seqs {
+		u, err := q.CreateBatchUnit(ctx, db.CreateBatchUnitParams{
+			OrganizationID: b.org, BrandID: c.Org.BrandID, ProductID: b.product.ID, Barcode: Barcode(b.prefix, seq),
+			UnitKind: b.kind, Status: string(ledger.StatusPrinted),
+			InitialMeters: b.meters, RemainingMeters: b.meters, BatchID: i8(batch.ID),
+		})
+		if err != nil {
+			return db.BarcodeBatch{}, nil, fmt.Errorf("stock: batch unit: %w", err)
+		}
+		units = append(units, u)
+	}
+	if err := q.SetBarcodeCounter(ctx, db.SetBarcodeCounterParams{
+		NextSeq: seqs[len(seqs)-1] + 1, BrandID: c.Org.BrandID, Prefix: b.prefix,
+	}); err != nil {
+		return db.BarcodeBatch{}, nil, fmt.Errorf("stock: barcode counter: %w", err)
+	}
+	err = s.audit(ctx, q, c, AuditBarcodeBatchCreated, batch, map[string]any{
+		"product_id": b.product.ID, "quantity": b.quantity, "prefix": b.prefix,
+		"first_barcode": units[0].Barcode, "last_barcode": units[len(units)-1].Barcode,
+	})
+	return batch, units, err
 }
 
 // freeSequences returns n consecutive-by-allocation sequence numbers from
