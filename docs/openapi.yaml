@@ -11010,14 +11010,26 @@ paths:
     post:
       tags: [Mobile]
       operationId: postMobileMeasurement
-      summary: Upload a paint thickness measurement (contract draft, K28)
+      summary: Upload a paint thickness measurement (minimal storage, K28)
       description: |
-        **Draft contract — answers 501 until F3.** The schema is finalized in
-        F3 (measurement module); fields may still change there, while `vin`,
-        `raw` and the version header stay mandatory. Idempotent by the
-        `Idempotency-Key` header or `client_measurement_id`. Accepted uploads
-        will answer `202 {uuid, status: accepted}`. Permission:
-        `measurements.write` (managed scope) once the module exists.
+        Minimal F2 storage (TEC-233): the upload is kept as a raw record in
+        the active organization (`measurement_results`; the whole request
+        body is stored unchanged) and answers `202 {uuid, status}`. F3-02
+        (TEC-113) adds mandatory VIN, the device registry, before/after
+        pairing, the difference table and the PDF on the same record.
+
+        Only `raw` (an object) is required. With a `vin` the status is
+        `accepted`; without one it is `vin_pending` ("tamamlanacak", filled in
+        later). `service_uuid` attaches the measurement to a service of the
+        active organization (its vehicle too); another organization's service
+        answers 404. Idempotent per organization by the `Idempotency-Key`
+        header or `client_measurement_id`: a repeat answers the first result
+        (same uuid and status) and writes nothing.
+
+        Permission `measurements.write` (managed scope). Bearer with
+        `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or
+        unsupported `X-Mobile-Api-Version` answers 426. Invalid fields answer
+        400 `VALIDATION_ERROR`.
       security:
         - bearerAuth: []
       parameters:
@@ -11035,21 +11047,21 @@ paths:
               $ref: "#/components/schemas/MobileMeasurementRequest"
       responses:
         "202":
-          description: Accepted (F3)
+          description: Accepted (also the answer to a repeated key)
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeMobileMeasurementAccepted"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "426":
           $ref: "#/components/responses/MobileApiVersionUnsupported"
-        "501":
-          description: 501 NOT_IMPLEMENTED until F3
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
 
   # --- TEC-235: mobile warehouse mirrors (tag Mobile) -------------------
   /v1/mobile/warehouse/warehouses:
@@ -20463,17 +20475,20 @@ components:
           description: Accepted for compatibility with the previous mobile API (not stored)
         app_version: { type: string, maxLength: 32 }
 
-    # K28 draft: finalized in F3 (measurement module). Fields can still
-    # change there; vin, raw and the version header stay mandatory.
+    # K28 / TEC-233: minimal F2 storage; F3-02 (TEC-113) makes vin
+    # mandatory and reads the parts.
     MobileMeasurementRequest:
       type: object
-      required: [vin, device, measured_at, parts, raw]
+      required: [raw]
       properties:
         client_measurement_id:
           type: string
           maxLength: 128
           description: Idempotency key in the body (alternative to the Idempotency-Key header)
-        vin: { type: string, minLength: 11, maxLength: 17 }
+        vin:
+          type: string
+          maxLength: 17
+          description: 11-17 letters or digits (upper-cased); empty or absent makes the upload vin_pending
         plate: { type: string }
         service_uuid: { type: string, format: uuid }
         measured_at: { type: string, format: date-time }
@@ -20483,7 +20498,7 @@ components:
           type: object
           required: [serial]
           properties:
-            serial: { type: string }
+            serial: { type: string, maxLength: 64 }
             model: { type: string }
             firmware: { type: string }
         parts:
@@ -20507,7 +20522,10 @@ components:
       required: [uuid, status]
       properties:
         uuid: { type: string, format: uuid }
-        status: { type: string, enum: [accepted] }
+        status:
+          type: string
+          enum: [accepted, vin_pending]
+          description: vin_pending when the upload has no VIN ("tamamlanacak")
 
     QRRealtime:
       type: object

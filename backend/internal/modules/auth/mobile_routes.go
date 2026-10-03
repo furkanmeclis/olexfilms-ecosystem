@@ -37,9 +37,6 @@ func RegisterMobileRoutes(
 	mux.Handle("POST /v1/mobile/auth/qr/{code}/approve", private(h.QRApprove))
 	mux.Handle("POST /v1/mobile/auth/qr/{code}/reject", private(h.QRReject))
 
-	// K28: contract only until F3 (501).
-	mux.Handle("POST /v1/mobile/measurements", private(h.CreateMeasurement))
-
 	mux.HandleFunc("POST /v1/auth/qr/start", h.QRStart)
 	mux.HandleFunc("GET /v1/auth/qr/{code}/status", h.QRStatus)
 	mux.HandleFunc("POST /v1/auth/qr/complete", h.QRComplete)

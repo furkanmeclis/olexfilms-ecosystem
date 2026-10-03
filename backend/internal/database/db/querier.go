@@ -409,6 +409,8 @@ type Querier interface {
 	// Both have a profile: the target keeps its values and only fills its empty
 	// fields from the source (an identity number moves with its mask).
 	FillCustomerProfileFromSource(ctx context.Context, arg FillCustomerProfileFromSourceParams) (int64, error)
+	// The first upload of a repeated idempotency key or client_measurement_id.
+	FindMeasurementResultByKeys(ctx context.Context, arg FindMeasurementResultByKeysParams) (MeasurementResult, error)
 	// Another draft entry (or, for serial units, a confirmed one whose line
 	// was not undone) already holding the unit.
 	FindOpenStockEntryForUnit(ctx context.Context, arg FindOpenStockEntryForUnitParams) (FindOpenStockEntryForUnitRow, error)
@@ -609,6 +611,9 @@ type Querier interface {
 	GetServiceByNo(ctx context.Context, serviceNo string) (Service, error)
 	GetServiceByUUID(ctx context.Context, arg GetServiceByUUIDParams) (Service, error)
 	GetServiceForIndex(ctx context.Context, argUuid uuid.UUID) (GetServiceForIndexRow, error)
+	// The service a measurement is attached to, bounded by the active
+	// organization (a service of another organization is not found).
+	GetServiceForMeasurement(ctx context.Context, arg GetServiceForMeasurementParams) (GetServiceForMeasurementRow, error)
 	GetServiceImage(ctx context.Context, arg GetServiceImageParams) (ServiceImage, error)
 	GetServiceItem(ctx context.Context, arg GetServiceItemParams) (ServiceItem, error)
 	GetServiceItemByUUID(ctx context.Context, arg GetServiceItemByUUIDParams) (ServiceItem, error)
@@ -730,6 +735,9 @@ type Querier interface {
 	InsertIntegrationExternalParty(ctx context.Context, arg InsertIntegrationExternalPartyParams) (IntegrationExternalParty, error)
 	InsertKVKKNotice(ctx context.Context, arg InsertKVKKNoticeParams) (KvkkNotice, error)
 	InsertLegalText(ctx context.Context, arg InsertLegalTextParams) (LegalText, error)
+	// InsertMeasurementResult skips the insert when the idempotency key or the
+	// client_measurement_id was already used in the organization (no row then).
+	InsertMeasurementResult(ctx context.Context, arg InsertMeasurementResultParams) (MeasurementResult, error)
 	InsertMessage(ctx context.Context, arg InsertMessageParams) (Message, error)
 	// ON CONFLICT DO NOTHING: a concurrent insert of the same key returns no row
 	// and the caller reads the existing one.
