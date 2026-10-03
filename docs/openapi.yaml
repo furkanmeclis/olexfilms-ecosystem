@@ -138,6 +138,13 @@ tags:
       otherwise 426 `MOBILE_API_VERSION_UNSUPPORTED`. Also the QR web sign-in
       (`/v1/auth/qr/*`).
 
+      Legacy aliases (TEC-234, removed in F5): with `MOBILE_LEGACY_ALIASES`
+      on (default off, otherwise 404), the old hub app reaches
+      `/v1/mobile/legacy/{auth/login, auth/me, services, services/{uuid},
+      measurements, push-token}`, adapters over the routes above and
+      `/v1/services` with the same gates and bodies but without the
+      `X-Mobile-Api-Version` header. They are not listed as paths.
+
 paths:
   /healthz:
     get:
