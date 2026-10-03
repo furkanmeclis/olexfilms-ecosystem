@@ -46,5 +46,13 @@
   "day.pick": "Επιλέξτε ημέρα",
   "choose_file": "Επιλογή αρχείου",
   "image_formats": "PNG, JPG, WEBP ή SVG",
-  "open": "Άνοιγμα"
+  "open": "Άνοιγμα",
+  "short_link.page_title": "Σύντομος σύνδεσμος",
+  "short_link.expired_title": "Αυτός ο σύνδεσμος έχει λήξει",
+  "short_link.expired_body": "Ο σύνδεσμος που ανοίξατε δεν ισχύει πλέον. Ζητήστε νέο από τον αποστολέα.",
+  "short_link.not_found_title": "Ο σύνδεσμος δεν βρέθηκε",
+  "short_link.not_found_body": "Αυτός ο σύνδεσμος δεν υπάρχει. Ελέγξτε ότι αντιγράφηκε ολόκληρος.",
+  "short_link.error_title": "Δεν ήταν δυνατό να ανοίξει ο σύνδεσμος",
+  "short_link.error_body": "Κάτι πήγε στραβά. Δοκιμάστε ξανά σε λίγο.",
+  "short_link.home": "Μετάβαση στην αρχική σελίδα"
 }

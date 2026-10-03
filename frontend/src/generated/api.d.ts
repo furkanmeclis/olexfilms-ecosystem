@@ -889,6 +889,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/short-urls/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Resolve a short URL (frontend /s/{token})
+         * @description TEC-249. No authentication. Resolves a short URL token inside the
+         *     brand of the request domain (K3) and counts the hit (`hit_count`,
+         *     `last_hit_at`). The target is always an internal path of the brand
+         *     frontend under `/portal`, `/garanti` or `/bayi` (never another
+         *     origin); the frontend route `/s/{token}` answers 302 to it. Tokens are
+         *     case-sensitive base62: new tokens are 10 characters, the old hub's
+         *     migrated tokens 8 (TEC-263). Malformed (outside
+         *     `^[A-Za-z0-9]{4,16}$`), unknown and other-brand tokens share the same
+         *     404 body; an expired token is 410 SHORT_URL_EXPIRED. Rate limited per
+         *     client IP (SHORT_URL_PUBLIC_RATE_LIMIT per
+         *     SHORT_URL_PUBLIC_RATE_WINDOW); over the limit 429 with Retry-After.
+         *     Responses carry `Cache-Control: no-store` and `X-Robots-Tag: noindex`.
+         */
+        get: operations["getPublicShortUrl"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/services/{uuid}/pdf": {
         parameters: {
             query?: never;
@@ -9192,6 +9223,23 @@ export interface components {
             data: components["schemas"]["PublicWarranty"];
             meta: components["schemas"]["ResponseMeta"];
         };
+        PublicShortUrl: {
+            /** @example aZ3kP9qXbT */
+            token: string;
+            /**
+             * @description Internal path (with optional query / fragment) under /portal, /garanti or /bayi.
+             * @example /garanti/AbCdEfGhIjKlMnOpQrSt_-
+             */
+            target_path: string;
+            /** Format: date-time */
+            expires_at: string | null;
+        };
+        EnvelopePublicShortUrl: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PublicShortUrl"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
         EnvelopeTokens: {
             /** @enum {boolean} */
             success: true;
@@ -15394,6 +15442,50 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+        };
+    };
+    getPublicShortUrl: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Target of the short URL */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePublicShortUrl"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description The short URL has expired (SHORT_URL_EXPIRED) */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited per client IP */
+            429: {
+                headers: {
+                    /** @description Seconds until the window resets */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
         };
     };
     requestServicePdf: {

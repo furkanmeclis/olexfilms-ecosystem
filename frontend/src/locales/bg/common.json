@@ -46,5 +46,13 @@
   "day.pick": "Изберете ден",
   "choose_file": "Изберете файл",
   "image_formats": "PNG, JPG, WEBP или SVG",
-  "open": "Отвори"
+  "open": "Отвори",
+  "short_link.page_title": "Кратка връзка",
+  "short_link.expired_title": "Тази връзка е изтекла",
+  "short_link.expired_body": "Отворената връзка вече не е валидна. Поискайте нова от подателя.",
+  "short_link.not_found_title": "Връзката не е намерена",
+  "short_link.not_found_body": "Тази връзка не съществува. Проверете дали е копирана изцяло.",
+  "short_link.error_title": "Връзката не можа да бъде отворена",
+  "short_link.error_body": "Нещо се обърка. Опитайте отново след малко.",
+  "short_link.home": "Към началната страница"
 }
