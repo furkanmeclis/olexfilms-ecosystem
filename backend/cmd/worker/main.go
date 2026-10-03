@@ -214,6 +214,7 @@ func main() {
 		os.Exit(1)
 	}
 	glorianPusher := glorian.NewPusher(queries, secretBox, glorian.HTTPClientFactory(glorian.OptionsFromConfig(cfg.Glorian)), log)
+	glorianOrders := glorian.NewOrderOutbounder(queries, secretBox, glorian.HTTPClientFactory(glorian.OptionsFromConfig(cfg.Glorian)), log)
 	waSvc := whatsappmodule.NewService(cfg.Wuzapi, pool, queries, secretBox, notifSvc, log)
 	notifSvc.RegisterProvider(providers.WhatsAppProvider{WA: waSvc.Provider()})
 
@@ -242,6 +243,8 @@ func main() {
 		WithGlorianPull(glorian.NewPuller(queries, secretBox, glorian.HTTPClientFactory(glorian.OptionsFromConfig(cfg.Glorian)), searchIndexer, log).Task).
 		// TEC-270: Glorian barcode bulk push and outbound PATCH by barcode.
 		WithGlorianPush(glorianPusher.PushTask, glorianPusher.PatchTask).
+		// TEC-271: Glorian order outbound (POST /orders, ship/receive/cancel) and held replay.
+		WithGlorianOrderOutbound(glorianOrders.OrderTask, glorianOrders.ReplayTask).
 		WithSearch(
 			searchIndexer.ProcessUpsert,
 			searchIndexer.ProcessDelete,

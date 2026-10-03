@@ -103,6 +103,10 @@ func TestContract_ListEndpoints(t *testing.T) {
 			p, err := c.ListStockItems(context.Background(), params)
 			return len(p.Items), err
 		}, 2},
+		{"orders", "/orders", func(c glorian.InventoryClient) (int, error) {
+			p, err := c.ListOrders(context.Background(), params)
+			return len(p.Items), err
+		}, 0},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -339,7 +343,7 @@ func TestContract_TransitionOrder(t *testing.T) {
 		t.Error("transition must not carry an Idempotency-Key")
 	}
 
-	for _, a := range []glorian.OrderAction{glorian.OrderActionDeliver, glorian.OrderActionReceive, glorian.OrderActionCancel, glorian.OrderActionPrepare} {
+	for _, a := range []glorian.OrderAction{glorian.OrderActionDeliver, glorian.OrderActionReceive} {
 		if _, err := c.TransitionOrder(ctx, order.ID, a, glorian.TransitionInput{}); err != nil {
 			t.Fatalf("%s: %v", a, err)
 		}
@@ -347,6 +351,33 @@ func TestContract_TransitionOrder(t *testing.T) {
 		if len(rs) != 1 || string(rs[0].Body) != "{}" {
 			t.Errorf("%s requests = %d body %q", a, len(rs), rs[0].Body)
 		}
+	}
+	// A delivered order cannot be cancelled (hub rule, mirrored by the fake).
+	if _, err := c.TransitionOrder(ctx, order.ID, glorian.OrderActionCancel, glorian.TransitionInput{}); !errors.Is(err, glorian.ErrValidation) {
+		t.Errorf("cancel after deliver err = %v; want validation", err)
+	}
+	other, err := c.CreateOrder(ctx, glorian.CreateOrderInput{
+		DealerID: "1", ExternalReference: "wh-order-0003",
+		Items: []glorian.OrderItemInput{{ProductID: "10", Quantity: 1}},
+	})
+	if err != nil {
+		t.Fatalf("CreateOrder: %v", err)
+	}
+	for _, a := range []glorian.OrderAction{glorian.OrderActionPrepare, glorian.OrderActionCancel} {
+		if _, err := c.TransitionOrder(ctx, other.ID, a, glorian.TransitionInput{}); err != nil {
+			t.Fatalf("%s: %v", a, err)
+		}
+		rs := srv.RequestsTo(http.MethodPost, "/orders/"+other.ID+"/"+string(a))
+		if len(rs) != 1 || string(rs[0].Body) != "{}" {
+			t.Errorf("%s requests = %d body %q", a, len(rs), rs[0].Body)
+		}
+	}
+	// Ship after cancel is refused; a second cancel is a no-op.
+	if _, err := c.TransitionOrder(ctx, other.ID, glorian.OrderActionShip, glorian.TransitionInput{CargoCompany: "X"}); !errors.Is(err, glorian.ErrValidation) {
+		t.Errorf("ship after cancel err = %v; want validation", err)
+	}
+	if again, err := c.TransitionOrder(ctx, other.ID, glorian.OrderActionCancel, glorian.TransitionInput{}); err != nil || again.Status != "cancelled" {
+		t.Errorf("second cancel = %+v, %v", again, err)
 	}
 
 	if _, err := c.TransitionOrder(ctx, order.ID, "explode", glorian.TransitionInput{}); !errors.Is(err, glorian.ErrInvalidInput) {
