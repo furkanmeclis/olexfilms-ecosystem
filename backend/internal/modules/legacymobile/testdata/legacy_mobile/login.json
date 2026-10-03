@@ -3,18 +3,22 @@
   "method": "POST",
   "path": "/v1/mobile/legacy/auth/login",
   "adapts": "POST /v1/mobile/auth/login",
-  "source": "New mobile contract (docs/openapi.yaml, TEC-91). The old hub docs/mobile-api.md was not reachable; old field names to be confirmed (TEC-234 comment).",
+  "source": "olexfilms routes/api.php POST /api/v1/mobile/auth/login; app/Http/Requests/Api/Auth/LoginRequest.php (email, password, device_name?); app/Http/Controllers/Api/V1/AuthController.php login + tokenResponse (token, token_type, user); app/Http/Resources/Api/UserResource.php; lang/tr/mobile_api.php auth.login_success; envelope docs/mobile-api.md 'JSON yanıt formatı'.",
   "request": {
-    "headers": {},
+    "headers": {"Accept": "application/json", "Accept-Language": "tr"},
     "body": {
       "email": "{{email}}",
       "password": "{{password}}",
-      "organization_slug": "{{organization_slug}}",
-      "device": {"id": "{{device_id}}", "name": "Legacy Phone", "platform": "android", "app_version": "1.9.0"}
+      "device_name": "Legacy Phone"
     }
   },
   "response": {
     "status": 200,
-    "data_keys": ["access_token", "refresh_token", "token_type", "expires_in", "refresh_expires_at", "me"]
+    "message": "Giriş başarılı.",
+    "data_keys": ["token", "token_type", "user"],
+    "nested_keys": {
+      "user": ["id", "name", "email", "phone", "locale", "avatar_url", "dealer_id", "roles", "dealer"],
+      "user.dealer": ["id", "name", "is_active"]
+    }
   }
 }
