@@ -10,6 +10,6 @@
   },
   "response": {
     "status": 200,
-    "data_keys": ["uuid", "service_no", "status", "organization", "customer", "items"]
+    "data_keys": ["uuid", "service_no", "status", "organization", "customer", "vehicle_uuid"]
   }
 }
