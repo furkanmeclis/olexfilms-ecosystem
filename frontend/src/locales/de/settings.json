@@ -64,6 +64,8 @@
   "system.groups.warehouse_hint": "Lager- und Bestandsverhalten.",
   "system.groups.scanning": "Scannen",
   "system.groups.scanning_hint": "Einstellungen für Barcode- und QR-Scan.",
+  "system.groups.mobile": "Mobile App",
+  "system.groups.mobile_hint": "Mindest-App-Version und Store-Links; ältere Versionen werden zum Aktualisieren aufgefordert.",
   "system.keys.forecast_min_days": "Mindestzeitraum der Prognose (Tage)",
   "system.keys.forecast_min_days_hint": "Mindestbewegungshistorie, bevor die Prognose Vorschläge macht.",
   "system.keys.contract_grace_days": "Vertragskulanz (Tage)",

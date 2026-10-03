@@ -25,6 +25,7 @@ const FORWARD_REQUEST_HEADERS = [
   "content-type",
   "idempotency-key",
   "user-agent",
+  "x-app-version",
   "x-mobile-api-version",
   "x-request-id",
 ] as const;

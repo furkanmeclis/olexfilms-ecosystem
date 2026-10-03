@@ -542,4 +542,5 @@ var arCatalog = map[string]string{
 	"warehouse.eod.type.reclassification":          "إعادة التصنيف",
 	"warehouse.eod.type.void":                      "إبطال",
 	"warehouse.eod.type.external_outbound":         "إخراج خارجي",
+	"mobile.update_required":                       "لم يعد إصدار التطبيق هذا مدعومًا. حدّث التطبيق للمتابعة.",
 }

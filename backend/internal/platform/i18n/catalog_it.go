@@ -542,4 +542,5 @@ var itCatalog = map[string]string{
 	"warehouse.eod.type.reclassification":          "Riclassificazione",
 	"warehouse.eod.type.void":                      "Annullamento",
 	"warehouse.eod.type.external_outbound":         "Uscita esterna",
+	"mobile.update_required":                       "Questa versione dell'app non è più supportata. Aggiorna l'app per continuare.",
 }

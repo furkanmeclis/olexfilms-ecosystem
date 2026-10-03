@@ -13,4 +13,8 @@ const (
 	CodeQRLoginClosed               = "QR_LOGIN_CLOSED"
 	CodeQRLoginInvalidSecret        = "QR_LOGIN_INVALID_SECRET"
 	CodeQRLoginDisabled             = "QR_LOGIN_DISABLED"
+
+	// CodeUpdateRequired is the 426 of an app release below the minimum
+	// (TEC-236).
+	CodeUpdateRequired = "UPDATE_REQUIRED"
 )
