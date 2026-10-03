@@ -359,6 +359,12 @@ func (s *Service) scopedVehicle(ctx context.Context, q *db.Queries, c Caller, id
 	if c.Org.BrandID == 0 || v.BrandID != c.Org.BrandID {
 		return db.Vehicle{}, ErrVehicleNotFound
 	}
+	if c.portalUserID != 0 { // TEC-243: portal, own vehicles only
+		if v.UserID != c.portalUserID {
+			return db.Vehicle{}, ErrVehicleNotFound
+		}
+		return v, nil
+	}
 	if err := s.requireInScope(ctx, q, c, v.UserID); err != nil {
 		if errors.Is(err, ErrCustomerNotFound) {
 			return db.Vehicle{}, ErrVehicleNotFound

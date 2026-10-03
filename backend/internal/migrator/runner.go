@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/migrator/source"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 )
 
 // Mode is a run mode.
@@ -57,6 +59,10 @@ type Target struct {
 	Mode   Mode
 	Since  time.Time
 	DryRun bool
+	// Storage receives copied legacy media (nil: media is not copied).
+	Storage storage.Driver
+	// LegacyFiles is the legacy hub storage directory (nil: not mounted).
+	LegacyFiles fs.FS
 }
 
 // StepResult is what a step reports back.
@@ -93,6 +99,10 @@ type Runner struct {
 	// Profiles defaults to Profiles().
 	Profiles map[string]Profile
 	Log      *slog.Logger
+	// Storage and LegacyFiles are handed to the steps that copy legacy
+	// media (TEC-256); either may be nil.
+	Storage     storage.Driver
+	LegacyFiles fs.FS
 }
 
 // RunReport summarizes a finished run.
@@ -257,7 +267,8 @@ func (r *Runner) execStep(ctx context.Context, step Step, srcs Sources, opts Opt
 		return StepResult{}, fmt.Errorf("begin: %w", err)
 	}
 	defer func() { _ = tx.Rollback(context.WithoutCancel(ctx)) }()
-	dst := &Target{Tx: tx, Q: db.New(tx), Mode: opts.Mode, Since: since, DryRun: opts.DryRun}
+	dst := &Target{Tx: tx, Q: db.New(tx), Mode: opts.Mode, Since: since, DryRun: opts.DryRun,
+		Storage: r.Storage, LegacyFiles: r.LegacyFiles}
 	res, err := step.Run(ctx, srcs, dst, NewMapper(dst.Q))
 	if err != nil {
 		return res, err

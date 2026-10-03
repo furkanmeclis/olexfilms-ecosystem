@@ -106,6 +106,10 @@ type Caller struct {
 	Org    orgctx.Scope
 	Filter scopefilter.Filter
 	Locale i18n.Locale
+	// portalUserID is set by PortalCaller (TEC-243): the caller is the
+	// customer themself and reaches only their own vehicles and the
+	// transfers they started, instead of the organization scope.
+	portalUserID int64
 }
 
 // orgIDs is the organization restriction of the scope (nil: none).

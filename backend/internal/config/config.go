@@ -63,6 +63,10 @@ type MobileConfig struct {
 	MinAPIVersion int
 	MaxAPIVersion int
 	QRLoginTTL    time.Duration
+	// LegacyAliases mounts the old hub app's aliases under
+	// /v1/mobile/legacy/* (TEC-234, MOBILE_LEGACY_ALIASES, default off;
+	// removed in F5).
+	LegacyAliases bool
 }
 
 // WarrantyConfig tunes the periodic warranty tasks. RepairScanDays is the
@@ -391,6 +395,7 @@ func Load() (Config, error) {
 			MinAPIVersion: getInt("MOBILE_API_MIN_VERSION", 1),
 			MaxAPIVersion: getInt("MOBILE_API_MAX_VERSION", 1),
 			QRLoginTTL:    getDuration("QR_LOGIN_TTL", 120*time.Second),
+			LegacyAliases: getBool("MOBILE_LEGACY_ALIASES", false),
 		},
 		Glorian: GlorianConfig{
 			Enabled:        getBool("GLORIAN_INVENTORY_ENABLED", false),

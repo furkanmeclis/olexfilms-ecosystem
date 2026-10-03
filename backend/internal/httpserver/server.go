@@ -58,6 +58,7 @@ import (
 	oauthprovidermodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/integrations/oauthprovider"
 	oauthproviderhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/integrations/oauthprovider/handler"
 	oauthproviderusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/integrations/oauthprovider/usecase"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/legacymobile"
 	legalmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/legal"
 	legalhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/legal/handler"
 	legalusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/legal/usecase"
@@ -361,11 +362,12 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		}
 		uc.SetQRLogin(deps.Queries, qrPublisher, rtIssuer, cfg.Mobile.QRLoginTTL)
 	}
-	authmodule.RegisterMobileRoutes(mux,
-		authhandler.NewMobile(uc, notifSvc, ratelimit.New(deps.Redis, cfg.App.Env)),
+	mobileH := authhandler.NewMobile(uc, notifSvc, ratelimit.New(deps.Redis, cfg.App.Env))
+	authmodule.RegisterMobileRoutes(mux, mobileH,
 		tokens, loader, cfg.Mobile.MinAPIVersion, cfg.Mobile.MaxAPIVersion)
 	// TEC-233: minimal measurement storage (K28), 202 {uuid, status}.
-	measurementsmodule.RegisterMobileRoutes(mux, measurementshandler.New(measurementsusecase.New(deps.Queries)),
+	measurementsH := measurementshandler.New(measurementsusecase.New(deps.Queries))
+	measurementsmodule.RegisterMobileRoutes(mux, measurementsH,
 		tokens, loader, deps.Queries, cfg.Mobile.MinAPIVersion, cfg.Mobile.MaxAPIVersion)
 	var featureCache features.Cache = features.NoCache{}
 	if deps.Redis != nil {
@@ -439,7 +441,15 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	if listFinder != nil {
 		servicesSvc.SetFinder(listFinder) // TEC-209
 	}
-	servicesmodule.RegisterRoutes(mux, serviceshandler.New(servicesSvc, deps.Storage), tokens, loader, deps.Queries, featureSvc)
+	servicesH := serviceshandler.New(servicesSvc, deps.Storage)
+	servicesmodule.RegisterRoutes(mux, servicesH, tokens, loader, deps.Queries, featureSvc)
+	// TEC-234: old hub mobile app aliases, /v1/mobile/legacy/* (MOBILE_LEGACY_ALIASES; F5'te kaldırılır).
+	legacymobile.RegisterRoutes(mux, cfg.Mobile.LegacyAliases, legacymobile.Handlers{
+		Login: mobileH.Login, Me: mobileH.Me,
+		ListServices: servicesH.List, GetService: servicesH.Get,
+		CreateMeasurement: measurementsH.Create,
+		PutPushToken:      mobileH.PutPushToken, DeletePushToken: mobileH.DeletePushToken,
+	}, tokens, loader, deps.Queries, featureSvc)
 	pdfClient := pdfrender.NewWithOptions(cfg.Gotenberg.URL, pdfrender.Options{MaxConnsPerHost: cfg.Queue.Concurrency})
 	realtime.RegisterRoutes(mux, realtime.NewHandler(rtIssuer, uc), tokens, loader)
 

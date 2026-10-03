@@ -873,7 +873,7 @@ const setUserEmailVerified = `-- name: SetUserEmailVerified :one
 UPDATE users
 SET email_verified_at = NOW()
 WHERE id = $1 AND deleted_at IS NULL
-RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, timezone, phone_e164, phone_verified_at, merged_into_user_id
+RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, timezone, phone_e164, phone_verified_at, merged_into_user_id, legacy_unverified, legacy_phone_raw
 `
 
 func (q *Queries) SetUserEmailVerified(ctx context.Context, id int64) (User, error) {
@@ -897,6 +897,8 @@ func (q *Queries) SetUserEmailVerified(ctx context.Context, id int64) (User, err
 		&i.PhoneE164,
 		&i.PhoneVerifiedAt,
 		&i.MergedIntoUserID,
+		&i.LegacyUnverified,
+		&i.LegacyPhoneRaw,
 	)
 	return i, err
 }
@@ -906,7 +908,7 @@ UPDATE users
 SET name = COALESCE($1, name),
     surname = COALESCE($2, surname)
 WHERE id = $3 AND deleted_at IS NULL
-RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, timezone, phone_e164, phone_verified_at, merged_into_user_id
+RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, timezone, phone_e164, phone_verified_at, merged_into_user_id, legacy_unverified, legacy_phone_raw
 `
 
 type UpdateUserProfileParams struct {
@@ -936,6 +938,8 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 		&i.PhoneE164,
 		&i.PhoneVerifiedAt,
 		&i.MergedIntoUserID,
+		&i.LegacyUnverified,
+		&i.LegacyPhoneRaw,
 	)
 	return i, err
 }

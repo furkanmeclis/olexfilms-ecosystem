@@ -32,6 +32,12 @@ import (
 // TEC-190: the vehicle transfer endpoints need vehicles.transfer; the
 // transfer's current owner must be a customer in scope.
 //
+// TEC-243: the portal transfer endpoints (/v1/portal/vehicles/{uuid}/transfers,
+// /v1/portal/vehicle-transfers/{uuid}/verify|cancel) run the same flow for
+// the signed-in customer (vehicles.read, customer scope; the customer role
+// has no vehicles.transfer). The use case limits them to the user's own
+// vehicles and the transfers the user started; anything else is 404.
+//
 // TEC-164: GET /v1/customers?q= searches the Meilisearch customers index
 // (filtered on the scope) when it is up; the list export needs
 // customers.read with the list's scope.
@@ -100,4 +106,13 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/vehicles/{uuid}/transfers", transferV(h.StartVehicleTransfer))
 	mux.Handle("POST /v1/vehicle-transfers/{uuid}/verify", transferV(h.VerifyVehicleTransfer))
 	mux.Handle("POST /v1/vehicle-transfers/{uuid}/cancel", transferV(h.CancelVehicleTransfer))
+
+	// TEC-243: the same flow from the portal (own vehicles only).
+	portalV := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, authn, middleware.RequirePermission(rbac.PermVehiclesRead))
+	}
+	mux.Handle("GET /v1/portal/vehicles/{uuid}/transfers", portalV(h.PortalListVehicleTransfers))
+	mux.Handle("POST /v1/portal/vehicles/{uuid}/transfers", portalV(h.PortalStartVehicleTransfer))
+	mux.Handle("POST /v1/portal/vehicle-transfers/{uuid}/verify", portalV(h.PortalVerifyVehicleTransfer))
+	mux.Handle("POST /v1/portal/vehicle-transfers/{uuid}/cancel", portalV(h.PortalCancelVehicleTransfer))
 }
