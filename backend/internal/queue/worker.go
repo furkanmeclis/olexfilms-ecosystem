@@ -69,6 +69,8 @@ type Worker struct {
 	tasksDueScan TasksDueScanFunc
 	// TEC-207: end-of-day warehouse reports.
 	warehouseEOD WarehouseEODFunc
+	// TEC-268: Glorian catalog and dealer pull.
+	glorianPull GlorianPullFunc
 }
 
 // NewWorker builds a worker that handles known task types on every queue.
@@ -138,6 +140,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskServiceReviewRequest, w.handleServiceReviewRequest)
 	mux.HandleFunc(TaskTasksDueScan, w.handleTasksDueScan)
 	mux.HandleFunc(TaskWarehouseEODReports, w.handleWarehouseEOD)
+	mux.HandleFunc(TaskGlorianPullCatalog, w.handleGlorianPull)
 	return w
 }
 

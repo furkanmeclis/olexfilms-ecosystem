@@ -13,6 +13,31 @@ const (
 	UnitRollMeter = "roll_meter"
 )
 
+// Locked fields (TEC-268): products.locked_fields names the fields a remote
+// hub owns (Glorian catalog pull, K2). The panel may not change them; the
+// names are the API input fields.
+const (
+	FieldCategoryUUID           = "category_uuid"
+	FieldSKU                    = "sku"
+	FieldName                   = "name"
+	FieldDescriptionMD          = "description_md"
+	FieldWarrantyDurationMonths = "warranty_duration_months"
+	FieldMicronThickness        = "micron_thickness"
+	FieldActive                 = "active"
+	FieldAvailableParts         = "available_parts"
+)
+
+// SyncedProductLockedFields are the fields the Glorian pull writes on a
+// product; images, unit_type and uses_fixed_barcode stay local.
+var SyncedProductLockedFields = []string{
+	FieldCategoryUUID, FieldSKU, FieldName, FieldDescriptionMD,
+	FieldWarrantyDurationMonths, FieldMicronThickness, FieldActive,
+}
+
+// SyncedCategoryLockedFields are the category fields a brand with an
+// integration connection takes from the hub; sort stays local.
+var SyncedCategoryLockedFields = []string{FieldName, FieldAvailableParts, FieldActive}
+
 // Category is the API view of a product category.
 type Category struct {
 	UUID           uuid.UUID `json:"uuid"`

@@ -5091,7 +5091,11 @@ paths:
       tags: [Catalog]
       operationId: updateCatalogCategory
       summary: Update a product category (center only)
-      description: Omitted fields keep their value.
+      description: >-
+        Omitted fields keep their value. In a brand with an integration
+        connection (Glorian pull, K2) `name`, `available_parts` and `active`
+        come from the hub: changing them is 409 CONFLICT with a `locked`
+        detail per field; `sort` stays editable.
       security:
         - bearerAuth: []
       requestBody:
@@ -5123,6 +5127,9 @@ paths:
       tags: [Catalog]
       operationId: deleteCatalogCategory
       summary: Delete a product category without products (center only)
+      description: >-
+        409 CONFLICT when products still use it, or (detail code `locked`)
+        when the brand takes its categories from an integration connection.
       security:
         - bearerAuth: []
       responses:
@@ -5420,7 +5427,10 @@ paths:
       summary: Update a product (center only)
       description: >-
         Omitted fields keep their value; `warranty_duration_months` and
-        `micron_thickness` sent as null are cleared.
+        `micron_thickness` sent as null are cleared. Fields listed in
+        `locked_fields` belong to the integration sync (Glorian pull):
+        changing one is 409 CONFLICT with a `locked` detail per field;
+        sending the current value is allowed.
       security:
         - bearerAuth: []
       requestBody:
@@ -5452,6 +5462,9 @@ paths:
       tags: [Catalog]
       operationId: deleteCatalogProduct
       summary: Delete a product (center only; its prices are deleted too)
+      description: >-
+        A product with `locked_fields` comes from the integration sync and is
+        removed on the hub: 409 CONFLICT (detail code `locked`).
       security:
         - bearerAuth: []
       responses:
@@ -5463,6 +5476,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
 
   /v1/catalog/products/{uuid}/images:
     parameters:

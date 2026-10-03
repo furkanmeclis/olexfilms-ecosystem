@@ -2814,13 +2814,16 @@ export interface paths {
         get: operations["getCatalogCategory"];
         put?: never;
         post?: never;
-        /** Delete a product category without products (center only) */
+        /**
+         * Delete a product category without products (center only)
+         * @description 409 CONFLICT when products still use it, or (detail code `locked`) when the brand takes its categories from an integration connection.
+         */
         delete: operations["deleteCatalogCategory"];
         options?: never;
         head?: never;
         /**
          * Update a product category (center only)
-         * @description Omitted fields keep their value.
+         * @description Omitted fields keep their value. In a brand with an integration connection (Glorian pull, K2) `name`, `available_parts` and `active` come from the hub: changing them is 409 CONFLICT with a `locked` detail per field; `sort` stays editable.
          */
         patch: operations["updateCatalogCategory"];
         trace?: never;
@@ -2960,13 +2963,16 @@ export interface paths {
         get: operations["getCatalogProduct"];
         put?: never;
         post?: never;
-        /** Delete a product (center only; its prices are deleted too) */
+        /**
+         * Delete a product (center only; its prices are deleted too)
+         * @description A product with `locked_fields` comes from the integration sync and is removed on the hub: 409 CONFLICT (detail code `locked`).
+         */
         delete: operations["deleteCatalogProduct"];
         options?: never;
         head?: never;
         /**
          * Update a product (center only)
-         * @description Omitted fields keep their value; `warranty_duration_months` and `micron_thickness` sent as null are cleared.
+         * @description Omitted fields keep their value; `warranty_duration_months` and `micron_thickness` sent as null are cleared. Fields listed in `locked_fields` belong to the integration sync (Glorian pull): changing one is 409 CONFLICT with a `locked` detail per field; sending the current value is allowed.
          */
         patch: operations["updateCatalogProduct"];
         trace?: never;
@@ -19068,6 +19074,7 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     updateCatalogProduct: {

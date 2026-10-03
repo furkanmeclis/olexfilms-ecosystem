@@ -812,6 +812,7 @@ SET active = $1
 WHERE brand_id = $2
   AND uuid = ANY($3::uuid[])
   AND active IS DISTINCT FROM $1
+  AND NOT ('active' = ANY(COALESCE(locked_fields, '{}'::text[])))
 RETURNING uuid
 `
 
@@ -822,7 +823,8 @@ type SetProductsActiveByUUIDsParams struct {
 }
 
 // Bulk activate/deactivate by public id within one brand. Returns the rows
-// that changed so the caller can reindex them.
+// that changed so the caller can reindex them. A product whose active flag
+// is locked by the integration sync is skipped (TEC-268).
 func (q *Queries) SetProductsActiveByUUIDs(ctx context.Context, arg SetProductsActiveByUUIDsParams) ([]uuid.UUID, error) {
 	rows, err := q.db.Query(ctx, setProductsActiveByUUIDs, arg.Active, arg.BrandID, arg.Uuids)
 	if err != nil {

@@ -12,6 +12,21 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const brandHasIntegrationConnection = `-- name: BrandHasIntegrationConnection :one
+SELECT EXISTS (
+    SELECT 1 FROM integration_connections WHERE brand_id = $1
+)::bool
+`
+
+// A brand with an integration connection takes its categories from the
+// remote hub, so their remote-sourced fields are locked in the panel.
+func (q *Queries) BrandHasIntegrationConnection(ctx context.Context, brandID int64) (bool, error) {
+	row := q.db.QueryRow(ctx, brandHasIntegrationConnection, brandID)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const createIntegrationConnection = `-- name: CreateIntegrationConnection :one
 
 INSERT INTO integration_connections (
@@ -366,6 +381,47 @@ func (q *Queries) GetOrderOutbound(ctx context.Context, arg GetOrderOutboundPara
 		&i.HeldReason,
 		&i.Attempts,
 		&i.LastError,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getProductByConnectionExternalID = `-- name: GetProductByConnectionExternalID :one
+
+SELECT id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at FROM products
+WHERE connection_id = $1 AND external_id = $2
+`
+
+type GetProductByConnectionExternalIDParams struct {
+	ConnectionID pgtype.Int8 `json:"connection_id"`
+	ExternalID   pgtype.Text `json:"external_id"`
+}
+
+// TEC-268 (F2-02c): Glorian catalog pull. A synced product is found by its
+// connection + remote id; the pull rewrites only the remote-sourced columns
+// (images, unit type and fixed barcode stay local).
+func (q *Queries) GetProductByConnectionExternalID(ctx context.Context, arg GetProductByConnectionExternalIDParams) (Product, error) {
+	row := q.db.QueryRow(ctx, getProductByConnectionExternalID, arg.ConnectionID, arg.ExternalID)
+	var i Product
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.CategoryID,
+		&i.Sku,
+		&i.Name,
+		&i.DescriptionMd,
+		&i.WarrantyDurationMonths,
+		&i.MicronThickness,
+		&i.Images,
+		&i.UnitType,
+		&i.UsesFixedBarcode,
+		&i.Active,
+		&i.ExternalID,
+		&i.ConnectionID,
+		&i.LockedFields,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -881,6 +937,77 @@ func (q *Queries) UpdateOrderOutboundState(ctx context.Context, arg UpdateOrderO
 		&i.HeldReason,
 		&i.Attempts,
 		&i.LastError,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateSyncedProduct = `-- name: UpdateSyncedProduct :one
+UPDATE products
+SET category_id = $1,
+    sku = $2,
+    name = $3,
+    description_md = $4,
+    warranty_duration_months = $5,
+    micron_thickness = $6,
+    active = $7,
+    external_id = $8,
+    connection_id = $9,
+    locked_fields = $10::text[]
+WHERE id = $11 AND brand_id = $12
+RETURNING id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at
+`
+
+type UpdateSyncedProductParams struct {
+	CategoryID             int64          `json:"category_id"`
+	Sku                    string         `json:"sku"`
+	Name                   string         `json:"name"`
+	DescriptionMd          string         `json:"description_md"`
+	WarrantyDurationMonths pgtype.Int4    `json:"warranty_duration_months"`
+	MicronThickness        pgtype.Numeric `json:"micron_thickness"`
+	Active                 bool           `json:"active"`
+	ExternalID             pgtype.Text    `json:"external_id"`
+	ConnectionID           pgtype.Int8    `json:"connection_id"`
+	LockedFields           []string       `json:"locked_fields"`
+	ID                     int64          `json:"id"`
+	BrandID                int64          `json:"brand_id"`
+}
+
+func (q *Queries) UpdateSyncedProduct(ctx context.Context, arg UpdateSyncedProductParams) (Product, error) {
+	row := q.db.QueryRow(ctx, updateSyncedProduct,
+		arg.CategoryID,
+		arg.Sku,
+		arg.Name,
+		arg.DescriptionMd,
+		arg.WarrantyDurationMonths,
+		arg.MicronThickness,
+		arg.Active,
+		arg.ExternalID,
+		arg.ConnectionID,
+		arg.LockedFields,
+		arg.ID,
+		arg.BrandID,
+	)
+	var i Product
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.CategoryID,
+		&i.Sku,
+		&i.Name,
+		&i.DescriptionMd,
+		&i.WarrantyDurationMonths,
+		&i.MicronThickness,
+		&i.Images,
+		&i.UnitType,
+		&i.UsesFixedBarcode,
+		&i.Active,
+		&i.ExternalID,
+		&i.ConnectionID,
+		&i.LockedFields,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
