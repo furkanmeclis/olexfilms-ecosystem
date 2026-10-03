@@ -160,5 +160,20 @@
   "dealers.retry": "إعادة المحاولة",
   "dealers.count": "الوكلاء الذين تم العثور عليهم: {{count}}",
   "dealers.show_on_map": "عرض على الخريطة",
-  "dealers.whatsapp": "واتساب"
+  "dealers.whatsapp": "واتساب",
+  "dealer_page.eyebrow": "وكيل معتمد",
+  "dealer_page.address": "العنوان",
+  "dealer_page.map_label": "خريطة موقع الوكيل",
+  "dealer_page.open_map": "افتح في الخرائط",
+  "dealer_page.no_location": "لم تتم إضافة موقع هذا الوكيل على الخريطة بعد.",
+  "dealer_page.whatsapp": "راسلنا على واتساب",
+  "dealer_page.whatsapp_text": "مرحبًا {{name}}، أود الحصول على بعض المعلومات.",
+  "dealer_page.logo_alt": "شعار {{name}}",
+  "dealer_page.find_other": "ابحث عن وكيل آخر",
+  "dealer_page.not_found_title": "لم يتم العثور على الوكيل",
+  "dealer_page.not_found_body": "لا يوجد وكيل نشط على هذا العنوان. استخدم أداة البحث عن الوكلاء لرؤية الوكلاء القريبين منك.",
+  "dealer_page.error_title": "لا يمكن عرض صفحة الوكيل الآن",
+  "dealer_page.error_body": "يرجى المحاولة مرة أخرى لاحقًا.",
+  "dealer_page.og_description": "{{name}}: وكيل معتمد في {{locality}}. العنوان والخريطة والتواصل عبر واتساب.",
+  "dealer_page.og_description_short": "{{name}}: وكيل معتمد. العنوان والخريطة والتواصل عبر واتساب."
 }

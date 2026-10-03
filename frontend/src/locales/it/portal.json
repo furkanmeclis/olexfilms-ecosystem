@@ -160,5 +160,20 @@
   "dealers.retry": "Riprova",
   "dealers.count": "Rivenditori trovati: {{count}}",
   "dealers.show_on_map": "Mostra sulla mappa",
-  "dealers.whatsapp": "WhatsApp"
+  "dealers.whatsapp": "WhatsApp",
+  "dealer_page.eyebrow": "Rivenditore autorizzato",
+  "dealer_page.address": "Indirizzo",
+  "dealer_page.map_label": "Mappa della posizione del rivenditore",
+  "dealer_page.open_map": "Apri nelle mappe",
+  "dealer_page.no_location": "La posizione di questo rivenditore non è ancora stata aggiunta.",
+  "dealer_page.whatsapp": "Scrivi su WhatsApp",
+  "dealer_page.whatsapp_text": "Salve {{name}}, vorrei ricevere alcune informazioni.",
+  "dealer_page.logo_alt": "Logo di {{name}}",
+  "dealer_page.find_other": "Trova un altro rivenditore",
+  "dealer_page.not_found_title": "Rivenditore non trovato",
+  "dealer_page.not_found_body": "Non c'è alcun rivenditore attivo a questo indirizzo. Usa la ricerca rivenditori per vedere quelli vicino a te.",
+  "dealer_page.error_title": "La pagina del rivenditore non può essere mostrata ora",
+  "dealer_page.error_body": "Riprova più tardi.",
+  "dealer_page.og_description": "{{name}}: rivenditore autorizzato a {{locality}}. Indirizzo, mappa e contatto WhatsApp.",
+  "dealer_page.og_description_short": "{{name}}: rivenditore autorizzato. Indirizzo, mappa e contatto WhatsApp."
 }

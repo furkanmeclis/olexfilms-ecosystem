@@ -830,6 +830,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/dealers/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public dealer showcase (page /bayi/{code})
+         * @description TEC-250. No authentication. `code` is the organization slug. Returns
+         *     the showcase of an active, serving (access window open) dealer or
+         *     distributor of the brand resolved from the request domain: name,
+         *     logo, address, province / district, coordinates and WhatsApp.
+         *     Suspended / pending / expired organizations, other brands' dealers
+         *     (e.g. Glorian on the Olex domain) and non-dealer organizations are
+         *     404. Internal fields (tax number, account, members, e-mail,
+         *     settings) are never returned. `latitude` / `longitude` are null
+         *     together when the dealer has no map position; `whatsapp` is the
+         *     organization phone when it is E.164, otherwise null. Rate limited
+         *     per client IP (120 per minute); over the limit 429 with Retry-After.
+         */
+        get: operations["getPublicDealerShowcase"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/warranties/{public_code}": {
         parameters: {
             query?: never;
@@ -9721,6 +9751,27 @@ export interface components {
             };
             meta: components["schemas"]["ResponseMeta"];
         };
+        /** @description TEC-250 public dealer showcase; showcase fields only. */
+        PublicDealer: {
+            /** @description Organization slug (the /bayi/{code} path) */
+            code: string;
+            name: string;
+            /** @description Public logo path (/v1/public/organizations/logo/{uuid}) */
+            logo_url: string | null;
+            address: string;
+            city: string;
+            district: string;
+            latitude: number | null;
+            longitude: number | null;
+            /** @description E.164 phone */
+            whatsapp: string | null;
+        };
+        EnvelopePublicDealer: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PublicDealer"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
         EnvelopeTenantSettings: {
             /** @enum {boolean} */
             success: true;
@@ -15298,6 +15349,41 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            /** @description Rate limited per client IP */
+            429: {
+                headers: {
+                    /** @description Seconds until the window resets */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getPublicDealerShowcase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dealer showcase */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePublicDealer"];
+                };
+            };
+            404: components["responses"]["NotFound"];
             /** @description Rate limited per client IP */
             429: {
                 headers: {

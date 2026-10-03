@@ -160,5 +160,20 @@
   "dealers.retry": "Спробувати ще",
   "dealers.count": "Знайдено дилерів: {{count}}",
   "dealers.show_on_map": "Показати на карті",
-  "dealers.whatsapp": "WhatsApp"
+  "dealers.whatsapp": "WhatsApp",
+  "dealer_page.eyebrow": "Офіційний дилер",
+  "dealer_page.address": "Адреса",
+  "dealer_page.map_label": "Карта розташування дилера",
+  "dealer_page.open_map": "Відкрити на карті",
+  "dealer_page.no_location": "Розташування цього дилера на карті ще не додано.",
+  "dealer_page.whatsapp": "Написати в WhatsApp",
+  "dealer_page.whatsapp_text": "Вітаю, {{name}}, я хотів(ла) би отримати інформацію.",
+  "dealer_page.logo_alt": "Логотип {{name}}",
+  "dealer_page.find_other": "Знайти іншого дилера",
+  "dealer_page.not_found_title": "Дилера не знайдено",
+  "dealer_page.not_found_body": "За цією адресою немає активного дилера. Скористайтеся пошуком дилерів, щоб побачити дилерів поруч із вами.",
+  "dealer_page.error_title": "Сторінку дилера зараз неможливо показати",
+  "dealer_page.error_body": "Спробуйте пізніше.",
+  "dealer_page.og_description": "{{name}}: офіційний дилер у {{locality}}. Адреса, карта та зв'язок через WhatsApp.",
+  "dealer_page.og_description_short": "{{name}}: офіційний дилер. Адреса, карта та зв'язок через WhatsApp."
 }

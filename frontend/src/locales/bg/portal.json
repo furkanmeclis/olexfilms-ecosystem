@@ -160,5 +160,20 @@
   "dealers.retry": "Опитай отново",
   "dealers.count": "Намерени дилъри: {{count}}",
   "dealers.show_on_map": "Покажи на картата",
-  "dealers.whatsapp": "WhatsApp"
+  "dealers.whatsapp": "WhatsApp",
+  "dealer_page.eyebrow": "Оторизиран дилър",
+  "dealer_page.address": "Адрес",
+  "dealer_page.map_label": "Карта с местоположението на дилъра",
+  "dealer_page.open_map": "Отвори в карти",
+  "dealer_page.no_location": "Местоположението на този дилър все още не е добавено.",
+  "dealer_page.whatsapp": "Пишете в WhatsApp",
+  "dealer_page.whatsapp_text": "Здравейте, {{name}}, бих искал(а) да получа информация.",
+  "dealer_page.logo_alt": "Лого на {{name}}",
+  "dealer_page.find_other": "Намерете друг дилър",
+  "dealer_page.not_found_title": "Дилърът не е намерен",
+  "dealer_page.not_found_body": "На този адрес няма активен дилър. Използвайте търсачката на дилъри, за да видите дилърите близо до вас.",
+  "dealer_page.error_title": "Страницата на дилъра не може да бъде показана в момента",
+  "dealer_page.error_body": "Моля, опитайте отново по-късно.",
+  "dealer_page.og_description": "{{name}}: оторизиран дилър в {{locality}}. Адрес, карта и връзка чрез WhatsApp.",
+  "dealer_page.og_description_short": "{{name}}: оторизиран дилър. Адрес, карта и връзка чрез WhatsApp."
 }

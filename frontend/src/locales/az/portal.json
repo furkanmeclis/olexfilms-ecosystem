@@ -160,5 +160,20 @@
   "dealers.retry": "Yenidən cəhd et",
   "dealers.count": "Tapılan diler: {{count}}",
   "dealers.show_on_map": "Xəritədə göstər",
-  "dealers.whatsapp": "WhatsApp"
+  "dealers.whatsapp": "WhatsApp",
+  "dealer_page.eyebrow": "Səlahiyyətli diler",
+  "dealer_page.address": "Ünvan",
+  "dealer_page.map_label": "Dilerin yer xəritəsi",
+  "dealer_page.open_map": "Xəritədə aç",
+  "dealer_page.no_location": "Bu dilerin xəritə mövqeyi hələ əlavə edilməyib.",
+  "dealer_page.whatsapp": "WhatsApp-da yaz",
+  "dealer_page.whatsapp_text": "Salam {{name}}, məlumat almaq istəyirəm.",
+  "dealer_page.logo_alt": "{{name}} loqosu",
+  "dealer_page.find_other": "Başqa diler tap",
+  "dealer_page.not_found_title": "Diler tapılmadı",
+  "dealer_page.not_found_body": "Bu ünvanda aktiv diler yoxdur. Yaxınlığınızdakı dilerləri görmək üçün diler axtarışından istifadə edin.",
+  "dealer_page.error_title": "Diler səhifəsi hazırda göstərilə bilmir",
+  "dealer_page.error_body": "Zəhmət olmasa, bir az sonra yenidən cəhd edin.",
+  "dealer_page.og_description": "{{name}}: {{locality}} səlahiyyətli dileri. Ünvan, xəritə və WhatsApp əlaqəsi.",
+  "dealer_page.og_description_short": "{{name}}: səlahiyyətli diler. Ünvan, xəritə və WhatsApp əlaqəsi."
 }

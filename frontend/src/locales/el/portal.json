@@ -160,5 +160,20 @@
   "dealers.retry": "Δοκιμή ξανά",
   "dealers.count": "Αντιπρόσωποι που βρέθηκαν: {{count}}",
   "dealers.show_on_map": "Εμφάνιση στον χάρτη",
-  "dealers.whatsapp": "WhatsApp"
+  "dealers.whatsapp": "WhatsApp",
+  "dealer_page.eyebrow": "Εξουσιοδοτημένος αντιπρόσωπος",
+  "dealer_page.address": "Διεύθυνση",
+  "dealer_page.map_label": "Χάρτης τοποθεσίας αντιπροσώπου",
+  "dealer_page.open_map": "Άνοιγμα στους χάρτες",
+  "dealer_page.no_location": "Η τοποθεσία αυτού του αντιπροσώπου δεν έχει προστεθεί ακόμη.",
+  "dealer_page.whatsapp": "Μήνυμα στο WhatsApp",
+  "dealer_page.whatsapp_text": "Γεια σας {{name}}, θα ήθελα κάποιες πληροφορίες.",
+  "dealer_page.logo_alt": "Λογότυπο {{name}}",
+  "dealer_page.find_other": "Βρείτε άλλον αντιπρόσωπο",
+  "dealer_page.not_found_title": "Ο αντιπρόσωπος δεν βρέθηκε",
+  "dealer_page.not_found_body": "Δεν υπάρχει ενεργός αντιπρόσωπος σε αυτή τη διεύθυνση. Χρησιμοποιήστε την αναζήτηση αντιπροσώπων για να δείτε όσους βρίσκονται κοντά σας.",
+  "dealer_page.error_title": "Η σελίδα του αντιπροσώπου δεν μπορεί να εμφανιστεί αυτή τη στιγμή",
+  "dealer_page.error_body": "Δοκιμάστε ξανά αργότερα.",
+  "dealer_page.og_description": "{{name}}: εξουσιοδοτημένος αντιπρόσωπος στην περιοχή {{locality}}. Διεύθυνση, χάρτης και επικοινωνία μέσω WhatsApp.",
+  "dealer_page.og_description_short": "{{name}}: εξουσιοδοτημένος αντιπρόσωπος. Διεύθυνση, χάρτης και επικοινωνία μέσω WhatsApp."
 }

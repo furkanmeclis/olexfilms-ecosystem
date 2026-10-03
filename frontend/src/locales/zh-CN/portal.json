@@ -160,5 +160,20 @@
   "dealers.retry": "重试",
   "dealers.count": "找到的经销商：{{count}}",
   "dealers.show_on_map": "在地图上显示",
-  "dealers.whatsapp": "WhatsApp"
+  "dealers.whatsapp": "WhatsApp",
+  "dealer_page.eyebrow": "授权经销商",
+  "dealer_page.address": "地址",
+  "dealer_page.map_label": "经销商位置地图",
+  "dealer_page.open_map": "在地图中打开",
+  "dealer_page.no_location": "该经销商的地图位置尚未添加。",
+  "dealer_page.whatsapp": "通过 WhatsApp 联系",
+  "dealer_page.whatsapp_text": "您好 {{name}}，我想了解一些信息。",
+  "dealer_page.logo_alt": "{{name}} 标志",
+  "dealer_page.find_other": "查找其他经销商",
+  "dealer_page.not_found_title": "未找到经销商",
+  "dealer_page.not_found_body": "此地址没有有效的经销商。请使用经销商查找功能查看您附近的经销商。",
+  "dealer_page.error_title": "经销商页面暂时无法显示",
+  "dealer_page.error_body": "请稍后再试。",
+  "dealer_page.og_description": "{{name}}：{{locality}} 的授权经销商。地址、地图和 WhatsApp 联系方式。",
+  "dealer_page.og_description_short": "{{name}}：授权经销商。地址、地图和 WhatsApp 联系方式。"
 }
