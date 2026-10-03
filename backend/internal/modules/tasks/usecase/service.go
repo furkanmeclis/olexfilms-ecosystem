@@ -219,7 +219,10 @@ type Filter struct {
 	Priority       string
 	SubjectOrgUUID *uuid.UUID
 	AssigneeUUID   *uuid.UUID
-	Limit, Offset  int32
+	// DueAfter / DueBefore bound due_at (inclusive / exclusive, TEC-221);
+	// either one leaves tasks without a due date out.
+	DueAfter, DueBefore *time.Time
+	Limit, Offset       int32
 }
 
 // List lists the tasks of the active brand, newest first.
@@ -263,6 +266,10 @@ func (s *Service) List(ctx context.Context, c Caller, f Filter) ([]Task, int64, 
 		}
 		arg.AssigneeUserID = pgtype.Int8{Int64: u.ID, Valid: true}
 	}
+	if f.DueAfter != nil && f.DueBefore != nil && !f.DueBefore.After(*f.DueAfter) {
+		return nil, 0, invalid("due_before", "must be after due_after")
+	}
+	arg.DueAfter, arg.DueBefore = tstz(f.DueAfter), tstz(f.DueBefore)
 	if arg.RowLimit <= 0 {
 		arg.RowLimit = 20
 	}
@@ -273,6 +280,7 @@ func (s *Service) List(ctx context.Context, c Caller, f Filter) ([]Task, int64, 
 	total, err := s.q.CountTasks(ctx, db.CountTasksParams{
 		BrandID: arg.BrandID, Status: arg.Status, OnlyOpen: arg.OnlyOpen, Priority: arg.Priority,
 		SubjectOrgID: arg.SubjectOrgID, AssigneeUserID: arg.AssigneeUserID,
+		DueAfter: arg.DueAfter, DueBefore: arg.DueBefore,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("tasks: count: %w", err)
@@ -394,13 +402,13 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (Task, e
 		if err := s.record(ctx, tx, events.TasksCreated, c, t, nil); err != nil {
 			return err
 		}
-		if t.AssigneeUserID.Valid {
-			if err := s.record(ctx, tx, events.TasksAssigned, c, t, nil); err != nil {
-				return err
-			}
+		if out, err = s.view(ctx, q, c.Org.BrandID, t.Uuid); err != nil {
+			return err
 		}
-		out, err = s.view(ctx, q, c.Org.BrandID, t.Uuid)
-		return err
+		if t.AssigneeUserID.Valid {
+			return s.recordAssigned(ctx, tx, c, t, nil, out)
+		}
+		return nil
 	})
 	if err != nil {
 		return Task{}, err
@@ -509,18 +517,18 @@ func (s *Service) Update(ctx context.Context, c Caller, id uuid.UUID, in UpdateI
 				return err
 			}
 		}
-		if assigned {
-			if err := s.record(ctx, tx, events.TasksAssigned, c, updated, prev); err != nil {
-				return err
-			}
-		}
 		if statusChanged {
 			if err := s.record(ctx, tx, events.TasksStatusChanged, c, updated, prev); err != nil {
 				return err
 			}
 		}
-		out, err = s.view(ctx, q, c.Org.BrandID, updated.Uuid)
-		return err
+		if out, err = s.view(ctx, q, c.Org.BrandID, updated.Uuid); err != nil {
+			return err
+		}
+		if assigned {
+			return s.recordAssigned(ctx, tx, c, updated, prev, out)
+		}
+		return nil
 	})
 	if err != nil {
 		return Task{}, err
@@ -651,6 +659,46 @@ func (s *Service) record(ctx context.Context, tx pgx.Tx, name string, c Caller, 
 	}
 	id, uid := t.ID, t.Uuid
 	return s.write(ctx, tx, name, c, taskResource, id, uid, payload)
+}
+
+// recordAssigned writes tasks.assigned with what the assignment
+// notification shows (TEC-221): the subject organization name next to the
+// title, and notify_user_ids (the assignee, unless they assigned
+// themselves).
+func (s *Service) recordAssigned(ctx context.Context, tx pgx.Tx, c Caller, t db.Task, prev *db.Task, view Task) error {
+	payload := taskPayload(t)
+	if prev != nil && prev.AssigneeUserID.Valid && prev.AssigneeUserID != t.AssigneeUserID {
+		payload["previous_assignee_user_id"] = prev.AssigneeUserID.Int64
+	}
+	payload["subject_org_name"] = view.Subject.Name
+	notify := []int64{}
+	if t.AssigneeUserID.Valid && t.AssigneeUserID.Int64 != c.UserID {
+		notify = append(notify, t.AssigneeUserID.Int64)
+	}
+	payload["notify_user_ids"] = notify
+	return s.write(ctx, tx, events.TasksAssigned, c, taskResource, t.ID, t.Uuid, payload)
+}
+
+// Member is a member of the center (assignee picker).
+type Member struct {
+	UUID uuid.UUID `json:"uuid"`
+	Name string    `json:"name"`
+}
+
+// Assignees lists the members of the active center (TEC-221).
+func (s *Service) Assignees(ctx context.Context, c Caller) ([]Member, error) {
+	if err := requireCenter(c); err != nil {
+		return nil, err
+	}
+	rows, err := s.q.ListCenterMembers(ctx, c.Org.InternalID)
+	if err != nil {
+		return nil, fmt.Errorf("tasks: members: %w", err)
+	}
+	out := make([]Member, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, Member{UUID: r.Uuid, Name: strings.TrimSpace(r.Name + " " + r.Surname)})
+	}
+	return out, nil
 }
 
 func (s *Service) recordComment(ctx context.Context, tx pgx.Tx, c Caller, t db.Task, cm db.TaskComment) error {

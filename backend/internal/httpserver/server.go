@@ -499,7 +499,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 			WithVehicleTransferExpire(customersSvc.ExpireTransfersTask).
 			WithServiceReviewRequest(servicereview.NewTaskSender(deps.DB, deps.Queries, log).Task).
 			WithNotificationPurge(notifSvc.PurgeExpired).
-			WithWhatsAppPoll(waSvc.PollStatus)
+			WithWhatsAppPoll(waSvc.PollStatus).
+			WithTasksDueScan(tasksusecase.NewCron(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)).DueScanTask)
 		if searchIndexer != nil {
 			s.worker.WithSearch(
 				searchIndexer.ProcessUpsert,

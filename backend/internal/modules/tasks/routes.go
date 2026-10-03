@@ -31,4 +31,6 @@ func RegisterRoutes(mux *http.ServeMux, h *handler.Handler, tokens *jwt.Manager,
 	mux.Handle("PATCH /v1/tasks/{uuid}", write(h.Update))
 	mux.Handle("GET /v1/tasks/{uuid}/comments", read(h.ListComments))
 	mux.Handle("POST /v1/tasks/{uuid}/comments", write(h.AddComment))
+	// TEC-221: assignee picker of the task form.
+	mux.Handle("GET /v1/tasks/assignees", read(h.Assignees))
 }

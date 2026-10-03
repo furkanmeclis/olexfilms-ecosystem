@@ -53,6 +53,14 @@ type Querier interface {
 	// UPDATE is the idempotency barrier: a second run (or a concurrent one)
 	// matches no row, so only one outbox event is ever written.
 	ClaimServiceReviewRequest(ctx context.Context, arg ClaimServiceReviewRequestParams) (ClaimServiceReviewRequestRow, error)
+	ClaimTasksDueSoon(ctx context.Context, arg ClaimTasksDueSoonParams) ([]ClaimTasksDueSoonRow, error)
+	// TEC-221: tasks:due_scan. Each claim stamps one threshold on a page of
+	// open tasks and returns what the reminder needs; a stamped task leaves the
+	// candidate list, so a second run finds nothing (SKIP LOCKED keeps two
+	// runs apart). Tasks with nobody to notify (no assignee, no creator) are
+	// never claimed. The overdue pass also stamps due_soon so a missed run does
+	// not send a stale "due soon" after the deadline.
+	ClaimTasksOverdue(ctx context.Context, arg ClaimTasksOverdueParams) ([]ClaimTasksOverdueRow, error)
 	ClearAppSettingsLogo(ctx context.Context) (AppSetting, error)
 	ClearDefaultLabelTemplate(ctx context.Context, arg ClearDefaultLabelTemplateParams) error
 	ClearOrganizationLogo(ctx context.Context, argUuid uuid.UUID) (Organization, error)
@@ -721,6 +729,8 @@ type Querier interface {
 	// ListCariStatementLines returns the period rows of a cari in ledger order
 	// with their signed cari effect (signed_amount).
 	ListCariStatementLines(ctx context.Context, arg ListCariStatementLinesParams) ([]ListCariStatementLinesRow, error)
+	// TEC-221: assignee picker of the task form (members of the center).
+	ListCenterMembers(ctx context.Context, organizationID int64) ([]ListCenterMembersRow, error)
 	// TEC-84: countries > provinces > districts, territories, plate formats.
 	ListCountries(ctx context.Context, activeOnly bool) ([]ListCountriesRow, error)
 	// TEC-84: currencies and daily exchange rates. Rates travel as text so no
