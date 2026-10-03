@@ -136,6 +136,9 @@ func (s *Service) AnonymizeCustomer(ctx context.Context, c Caller, id uuid.UUID,
 			s.search.EnqueueUpsert(ctx, adapters.SpecUsers, userUUID.String())
 			// TEC-164: an anonymized customer leaves the customers index.
 			s.search.EnqueueDelete(ctx, SearchSpec, userUUID.String())
+			// TEC-209: the services / warranties documents lose the
+			// person, the vehicles leave the index (K19).
+			s.indexCustomerRecords(ctx, userUUID)
 		}
 	}
 	return res, nil

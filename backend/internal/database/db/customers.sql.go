@@ -103,6 +103,7 @@ WHERE v.deleted_at IS NULL
   )
   AND ($4::text IS NULL OR v.plate_normalized LIKE $4 || '%')
   AND ($5::text IS NULL OR v.vin = $5)
+  AND ($6::text IS NULL OR v.plate_normalized LIKE $6::text || '%' OR v.vin LIKE $6::text || '%')
 `
 
 type CountScopedVehiclesParams struct {
@@ -111,6 +112,7 @@ type CountScopedVehiclesParams struct {
 	OrgIds          []int64     `json:"org_ids"`
 	PlateNormalized pgtype.Text `json:"plate_normalized"`
 	Vin             pgtype.Text `json:"vin"`
+	Q               pgtype.Text `json:"q"`
 }
 
 func (q *Queries) CountScopedVehicles(ctx context.Context, arg CountScopedVehiclesParams) (int64, error) {
@@ -120,6 +122,7 @@ func (q *Queries) CountScopedVehicles(ctx context.Context, arg CountScopedVehicl
 		arg.OrgIds,
 		arg.PlateNormalized,
 		arg.Vin,
+		arg.Q,
 	)
 	var column_1 int64
 	err := row.Scan(&column_1)
@@ -1034,8 +1037,10 @@ WHERE v.deleted_at IS NULL
   )
   AND ($4::text IS NULL OR v.plate_normalized LIKE $4 || '%')
   AND ($5::text IS NULL OR v.vin = $5)
+  AND ($6::text IS NULL OR v.plate_normalized LIKE $6::text || '%' OR v.vin LIKE $6::text || '%')
+  AND ($7::uuid[] IS NULL OR v.uuid = ANY ($7::uuid[]))
 ORDER BY v.created_at DESC, v.id DESC
-LIMIT $7 OFFSET $6
+LIMIT $9 OFFSET $8
 `
 
 type ListScopedVehiclesParams struct {
@@ -1044,6 +1049,8 @@ type ListScopedVehiclesParams struct {
 	OrgIds          []int64     `json:"org_ids"`
 	PlateNormalized pgtype.Text `json:"plate_normalized"`
 	Vin             pgtype.Text `json:"vin"`
+	Q               pgtype.Text `json:"q"`
+	Uuids           []uuid.UUID `json:"uuids"`
 	OffsetCount     int32       `json:"offset_count"`
 	LimitCount      int32       `json:"limit_count"`
 }
@@ -1067,6 +1074,8 @@ func (q *Queries) ListScopedVehicles(ctx context.Context, arg ListScopedVehicles
 		arg.OrgIds,
 		arg.PlateNormalized,
 		arg.Vin,
+		arg.Q,
+		arg.Uuids,
 		arg.OffsetCount,
 		arg.LimitCount,
 	)

@@ -214,6 +214,9 @@ func (s *Service) searchIndexed(ctx context.Context, c Caller, status, q string,
 func (s *Service) indexCustomer(ctx context.Context, id uuid.UUID) {
 	if s.search != nil && id != uuid.Nil {
 		s.search.EnqueueUpsert(ctx, SearchSpec, id.String())
+		// TEC-209: the customer's name, phone and organization links are
+		// part of its services, vehicles and warranties documents.
+		s.indexCustomerRecords(ctx, id)
 	}
 }
 

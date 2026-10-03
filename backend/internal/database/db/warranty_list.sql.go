@@ -108,8 +108,9 @@ WHERE w.brand_id = $1::bigint
        OR ($12::text IS NOT NULL AND $12::text <> '' AND (
               upper(translate(COALESCE(s.plate, ''), ' -._·', '')) LIKE '%' || $12::text || '%'
               OR COALESCE(v.plate_normalized, '') LIKE '%' || $12::text || '%')))
+  AND ($13::uuid[] IS NULL OR w.uuid = ANY ($13::uuid[]))
 ORDER BY CASE WHEN w.status = 'active' THEN w.end_at END ASC NULLS LAST, w.end_at DESC, w.id DESC
-LIMIT $14::int OFFSET $13::int
+LIMIT $15::int OFFSET $14::int
 `
 
 type ListWarrantyRowsParams struct {
@@ -125,6 +126,7 @@ type ListWarrantyRowsParams struct {
 	EndsBefore       pgtype.Timestamptz `json:"ends_before"`
 	Q                pgtype.Text        `json:"q"`
 	QPlate           pgtype.Text        `json:"q_plate"`
+	Uuids            []uuid.UUID        `json:"uuids"`
 	RowOffset        int32              `json:"row_offset"`
 	RowLimit         int32              `json:"row_limit"`
 }
@@ -189,6 +191,7 @@ func (q *Queries) ListWarrantyRows(ctx context.Context, arg ListWarrantyRowsPara
 		arg.EndsBefore,
 		arg.Q,
 		arg.QPlate,
+		arg.Uuids,
 		arg.RowOffset,
 		arg.RowLimit,
 	)

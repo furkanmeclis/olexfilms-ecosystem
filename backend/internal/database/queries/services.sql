@@ -126,6 +126,7 @@ WHERE brand_id = sqlc.arg(brand_id)
   AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
   AND (sqlc.narg(created_from)::timestamptz IS NULL OR created_at >= sqlc.narg(created_from)::timestamptz)
   AND (sqlc.narg(created_to)::timestamptz IS NULL OR created_at < sqlc.narg(created_to)::timestamptz)
+  AND (sqlc.narg(uuids)::uuid[] IS NULL OR uuid = ANY (sqlc.narg(uuids)::uuid[]))
   AND (
     sqlc.narg(q)::text IS NULL
     OR service_no ILIKE '%' || sqlc.narg(q) || '%'
