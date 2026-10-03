@@ -7102,7 +7102,7 @@ export interface paths {
         };
         /**
          * The portal user's services across every organization (TEC-238)
-         * @description Portal session (aud=portal) with services.read: the signed-in user's services at every dealer / distributor of the domain brand in one list, newest first. Draft services and Glorian rows are not listed. No measurement data.
+         * @description Portal session (aud=portal) with services.read: the signed-in user's services at every dealer / distributor of the domain brand in one list, newest first. A service is the user's when the user is its customer or holds one of its warranties (TEC-239 rule: a new owner with a transferred warranty sees it). Draft services and Glorian rows are not listed. No measurement data.
          */
         get: operations["listPortalServices"];
         put?: never;

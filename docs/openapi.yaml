@@ -13686,8 +13686,10 @@ paths:
       description: >-
         Portal session (aud=portal) with services.read: the signed-in user's
         services at every dealer / distributor of the domain brand in one
-        list, newest first. Draft services and Glorian rows are not listed.
-        No measurement data.
+        list, newest first. A service is the user's when the user is its
+        customer or holds one of its warranties (TEC-239 rule: a new owner
+        with a transferred warranty sees it). Draft services and Glorian
+        rows are not listed. No measurement data.
       security:
         - bearerAuth: []
       parameters:

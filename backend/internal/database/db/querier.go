@@ -976,7 +976,9 @@ type Querier interface {
 	// TEC-238 (F2-03a): customer portal "my vehicles" reads.
 	//
 	// Every query is bound to the signed-in user (vehicles.user_id,
-	// services.customer_user_id, warranties.holder_user_id) and to the domain
+	// warranties.holder_user_id; a service is the user's when the user is
+	// its customer OR holds one of its warranties, the TEC-239 rule, so a new
+	// owner who received a transferred warranty sees the service) and to the domain
 	// brand (K20). Glorian rows never come back (K1/K2: service, warranty and
 	// customer are closed to Glorian), even on a Glorian host. Draft services
 	// are dealer-internal and stay out. No measurement column is selected.

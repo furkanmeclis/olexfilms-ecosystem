@@ -1,7 +1,9 @@
 -- TEC-238 (F2-03a): customer portal "my vehicles" reads.
 --
 -- Every query is bound to the signed-in user (vehicles.user_id,
--- services.customer_user_id, warranties.holder_user_id) and to the domain
+-- warranties.holder_user_id; a service is the user's when the user is
+-- its customer OR holds one of its warranties, the TEC-239 rule, so a new
+-- owner who received a transferred warranty sees the service) and to the domain
 -- brand (K20). Glorian rows never come back (K1/K2: service, warranty and
 -- customer are closed to Glorian), even on a Glorian host. Draft services
 -- are dealer-internal and stay out. No measurement column is selected.
@@ -11,10 +13,12 @@ SELECT v.uuid, v.model_year, v.plate, v.plate_country, v.vin, v.created_at,
        cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
        cm.uuid AS car_model_uuid, cm.name AS car_model_name,
        (SELECT COUNT(*) FROM services s
-        WHERE s.vehicle_id = v.id AND s.customer_user_id = v.user_id
+        WHERE s.vehicle_id = v.id AND (s.customer_user_id = v.user_id
+               OR EXISTS (SELECT 1 FROM warranties hw WHERE hw.service_id = s.id AND hw.holder_user_id = v.user_id))
           AND s.brand_id = v.brand_id AND s.status <> 'draft')::bigint AS service_count,
        (SELECT MAX(COALESCE(s.completed_at, s.created_at)) FROM services s
-        WHERE s.vehicle_id = v.id AND s.customer_user_id = v.user_id
+        WHERE s.vehicle_id = v.id AND (s.customer_user_id = v.user_id
+               OR EXISTS (SELECT 1 FROM warranties hw WHERE hw.service_id = s.id AND hw.holder_user_id = v.user_id))
           AND s.brand_id = v.brand_id AND s.status <> 'draft')::timestamptz AS last_service_at,
        (SELECT COUNT(*) FROM warranties w
         WHERE w.vehicle_id = v.id AND w.holder_user_id = v.user_id
@@ -68,7 +72,9 @@ JOIN organizations o ON o.id = s.organization_id
 JOIN vehicles v ON v.id = s.vehicle_id
 JOIN car_brands cb ON cb.id = s.car_brand_id
 JOIN car_models cm ON cm.id = s.car_model_id
-WHERE s.customer_user_id = sqlc.arg(user_id)::bigint
+WHERE (s.customer_user_id = sqlc.arg(user_id)::bigint
+       OR EXISTS (SELECT 1 FROM warranties hw
+                  WHERE hw.service_id = s.id AND hw.holder_user_id = sqlc.arg(user_id)::bigint))
   AND s.brand_id = sqlc.arg(brand_id)::bigint
   AND s.status <> 'draft'
   AND b.slug <> 'glorian'
@@ -80,7 +86,9 @@ LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
 SELECT COUNT(*)::bigint
 FROM services s
 JOIN brands b ON b.id = s.brand_id
-WHERE s.customer_user_id = sqlc.arg(user_id)::bigint
+WHERE (s.customer_user_id = sqlc.arg(user_id)::bigint
+       OR EXISTS (SELECT 1 FROM warranties hw
+                  WHERE hw.service_id = s.id AND hw.holder_user_id = sqlc.arg(user_id)::bigint))
   AND s.brand_id = sqlc.arg(brand_id)::bigint
   AND s.status <> 'draft'
   AND b.slug <> 'glorian'
@@ -114,7 +122,9 @@ SELECT COUNT(*)::bigint AS total,
 FROM services s
 JOIN brands b ON b.id = s.brand_id
 WHERE s.vehicle_id = sqlc.arg(vehicle_id)::bigint
-  AND s.customer_user_id = sqlc.arg(user_id)::bigint
+  AND (s.customer_user_id = sqlc.arg(user_id)::bigint
+       OR EXISTS (SELECT 1 FROM warranties hw
+                  WHERE hw.service_id = s.id AND hw.holder_user_id = sqlc.arg(user_id)::bigint))
   AND s.brand_id = sqlc.arg(brand_id)::bigint
   AND s.status <> 'draft'
   AND b.slug <> 'glorian';

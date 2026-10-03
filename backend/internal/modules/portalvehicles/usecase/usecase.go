@@ -3,7 +3,9 @@
 // GET /v1/portal/services.
 //
 // Scope: every record belongs to the signed-in portal user (vehicle owner,
-// service customer, warranty holder) and to the domain brand (K20); Glorian
+// warranty holder; a service is the user's when the user is its customer
+// or holds one of its warranties, the TEC-239 rule) and to the domain
+// brand (K20); Glorian
 // rows never come back (K1/K2). Draft services are dealer-internal and stay
 // out. Measurement data (has_measurement, measurement results) is not part
 // of any portal view: the views below simply have no such field.

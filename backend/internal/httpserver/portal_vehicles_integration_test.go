@@ -191,7 +191,36 @@ func TestIntegrationPortalVehicles(t *testing.T) {
 		}
 	}
 
-	// 5. Realm: a panel token is refused on the portal routes.
+	// 5. TEC-239 ownership rule: a service is also the user's when the user
+	// holds one of its warranties (a transferred warranty). Customer B's
+	// warranty service moves its warranty to customer A: A now lists it, B
+	// (the service's customer) still does.
+	wB := it.warrantyFor(dealerB, center, p, custB, vehB, 239)
+	if _, err := it.pool.Exec(ctx, `UPDATE warranties SET holder_user_id = $2 WHERE id = $1`, wB.ID, custA.ID); err != nil {
+		t.Fatalf("transfer warranty: %v", err)
+	}
+	var svcWB string
+	if err := it.pool.QueryRow(ctx, `SELECT uuid::text FROM services WHERE id = $1`, wB.ServiceID).Scan(&svcWB); err != nil {
+		t.Fatal(err)
+	}
+	has := func(pg portalServicePage, id string) bool {
+		for _, s := range pg.Items {
+			if s.UUID == id {
+				return true
+			}
+		}
+		return false
+	}
+	spA := decodeData[portalServicePage](t, it.custDo("GET", "/v1/portal/services?limit=100", tokA, nil, http.StatusOK))
+	if spA.Total != 3 || !has(spA, svcWB) {
+		t.Fatalf("warranty holder services = %+v", spA)
+	}
+	spB = decodeData[portalServicePage](t, it.custDo("GET", "/v1/portal/services?limit=100", tokB, nil, http.StatusOK))
+	if spB.Total != 2 || !has(spB, svcWB) {
+		t.Fatalf("service customer services = %+v", spB)
+	}
+
+	// 6. Realm: a panel token is refused on the portal routes.
 	u, pw := it.user("t238-a-owner")
 	it.member(dealerA, u, "owner")
 	panelTok := it.loginOrg(u, pw, dealerA)
