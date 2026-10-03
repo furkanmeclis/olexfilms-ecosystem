@@ -143,3 +143,16 @@ WHERE brand_id = sqlc.arg(brand_id)
   AND id <> sqlc.arg(org_id)
   AND deleted_at IS NULL
 ORDER BY name, id;
+
+-- Members of an organization whose organization roles grant a permission
+-- (TEC-200: recipients of the transfers.* notifications).
+-- name: ListTransferNotifyUserIDs :many
+SELECT DISTINCT om.user_id
+FROM organization_members om
+JOIN users u ON u.id = om.user_id AND u.deleted_at IS NULL
+JOIN organization_member_roles mr ON mr.member_id = om.id
+JOIN role_permissions rp ON rp.role_id = mr.role_id
+JOIN permissions p ON p.id = rp.permission_id
+WHERE om.organization_id = sqlc.arg(organization_id)
+  AND p.slug = sqlc.arg(permission_slug)::text
+ORDER BY om.user_id;

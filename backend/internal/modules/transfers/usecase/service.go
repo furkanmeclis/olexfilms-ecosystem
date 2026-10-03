@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
@@ -114,11 +115,14 @@ type Service struct {
 	q      *db.Queries
 	out    outbox.Enqueuer
 	ledger *ledger.Ledger
+	// accounting books received transfers (TEC-200, K13); nil: none.
+	accounting AccountingPoster
+	now        func() time.Time
 }
 
 // New creates the service.
 func New(pool TxBeginner, q *db.Queries, out outbox.Enqueuer) *Service {
-	return &Service{pool: pool, q: q, out: out, ledger: ledger.New(q, out)}
+	return &Service{pool: pool, q: q, out: out, ledger: ledger.New(q, out), now: time.Now}
 }
 
 func (s *Service) inTx(ctx context.Context, fn func(q *db.Queries, tx pgx.Tx) error) error {
@@ -362,10 +366,17 @@ func (s *Service) Transition(ctx context.Context, c Caller, id uuid.UUID, in Tra
 			if err = s.receive(ctx, q, tx, c, r); err == nil {
 				r, err = q.ReceiveTransferRequest(ctx, db.ReceiveTransferRequestParams{ID: r.ID, ActorUserID: c.actor()})
 			}
+			if err == nil {
+				// K13: A alacak / B borç, same transaction as transfer_in.
+				err = s.book(ctx, q, tx, c, r)
+			}
 		case StatusCancelled:
 			if from == StatusShipped {
-				// The goods are back: one restore per shipped unit.
-				err = s.restore(ctx, q, tx, c, r)
+				// The goods are back: one restore per shipped unit, and
+				// any accounting row of the request is reversed.
+				if err = s.restore(ctx, q, tx, c, r); err == nil {
+					_, err = s.VoidAccountingTx(ctx, tx, r, "transfer cancelled after shipping", c.actorPtr())
+				}
 			}
 			if err == nil {
 				r, err = q.CancelTransferRequest(ctx, db.CancelTransferRequestParams{
@@ -404,6 +415,21 @@ func (s *Service) emit(ctx context.Context, tx pgx.Tx, name string, r db.StockTr
 	if from != "" && from != r.Status {
 		payload["from_status"] = from
 	}
+	// TEC-200: the notification bus reads the recipients and the names
+	// from the payload (resolved here, in the transition's transaction).
+	q := s.q.WithTx(tx)
+	for key, id := range map[string]int64{"from_org_name": r.FromOrgID, "to_org_name": r.ToOrgID} {
+		o, err := q.GetOrganizationByID(ctx, id)
+		if err != nil {
+			return fmt.Errorf("transfers: organization %d: %w", id, err)
+		}
+		payload[key] = o.Name
+	}
+	ids, err := s.notifyUserIDs(ctx, q, name, r, c)
+	if err != nil {
+		return err
+	}
+	payload["notify_user_ids"] = ids
 	ev := events.New(name).WithTenant(r.OrganizationID).WithEntity("stock_transfer_request", &id, &uid).WithPayload(payload)
 	if c.Principal.UserInternal != 0 {
 		ev = ev.WithActor(c.Principal.UserInternal)
@@ -412,4 +438,53 @@ func (s *Service) emit(ctx context.Context, tx pgx.Tx, name string, r db.StockTr
 		return fmt.Errorf("transfers: outbox: %w", err)
 	}
 	return nil
+}
+
+// notifyParties lists the sides told about a transfer event (TEC-200):
+// a new request goes to the deciders (receiver, common parent), a decision
+// to the giver and the receiver, a shipment to the receiver, a receipt to
+// the giver, a cancel to every side.
+func notifyParties(event string) []Party {
+	switch event {
+	case events.TransfersRequested:
+		return []Party{PartyReceiver, PartyParent}
+	case events.TransfersApproved, events.TransfersRejected:
+		return []Party{PartySender, PartyReceiver}
+	case events.TransfersShipped:
+		return []Party{PartyReceiver}
+	case events.TransfersReceived:
+		return []Party{PartySender}
+	case events.TransfersCancelled:
+		return []Party{PartySender, PartyReceiver, PartyParent}
+	}
+	return nil
+}
+
+// notifyUserIDs resolves the recipients of a transfer event: members of each
+// notified side holding that side's transfer permission (transfers.request
+// for the giver and the receiver, transfers.approve for the parent), minus
+// the actor.
+func (s *Service) notifyUserIDs(ctx context.Context, q *db.Queries, event string, r db.StockTransferRequest, c Caller) ([]int64, error) {
+	out := []int64{}
+	seen := map[int64]bool{c.Principal.UserInternal: true}
+	for _, p := range notifyParties(event) {
+		org, perm := r.FromOrgID, rbac.PermTransfersRequest
+		switch p {
+		case PartyReceiver:
+			org = r.ToOrgID
+		case PartyParent:
+			org, perm = r.ApproverOrgID, rbac.PermTransfersApprove
+		}
+		ids, err := q.ListTransferNotifyUserIDs(ctx, db.ListTransferNotifyUserIDsParams{OrganizationID: org, PermissionSlug: perm})
+		if err != nil {
+			return nil, fmt.Errorf("transfers: recipients: %w", err)
+		}
+		for _, id := range ids {
+			if !seen[id] {
+				seen[id] = true
+				out = append(out, id)
+			}
+		}
+	}
+	return out, nil
 }

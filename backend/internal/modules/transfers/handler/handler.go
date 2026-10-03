@@ -48,6 +48,11 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 			"Stock can be transferred only to a sibling under the same parent organization")
 	case errors.Is(err, tr.ErrInvalidTransition):
 		response.Conflict(w, r, CodeInvalidTransition, "The transfer status does not allow this transition")
+	case errors.Is(err, tr.ErrRateNotFound):
+		// TEC-200: like the K25 cari transfer (TEC-198), a missing rate
+		// answers 400 and the receipt is rolled back.
+		response.Error(w, r, http.StatusBadRequest, response.CodeRateNotFound,
+			"No exchange rate between the transfer currency and an organization's currency today")
 	case errors.Is(err, tr.ErrStockUnavailable):
 		response.Conflict(w, r, CodeStockUnavailable, "The stock movement for this transfer was refused")
 	default:

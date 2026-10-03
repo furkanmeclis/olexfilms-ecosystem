@@ -375,6 +375,45 @@ func (q *Queries) InsertTransferRequestItem(ctx context.Context, arg InsertTrans
 	return i, err
 }
 
+const listTransferNotifyUserIDs = `-- name: ListTransferNotifyUserIDs :many
+SELECT DISTINCT om.user_id
+FROM organization_members om
+JOIN users u ON u.id = om.user_id AND u.deleted_at IS NULL
+JOIN organization_member_roles mr ON mr.member_id = om.id
+JOIN role_permissions rp ON rp.role_id = mr.role_id
+JOIN permissions p ON p.id = rp.permission_id
+WHERE om.organization_id = $1
+  AND p.slug = $2::text
+ORDER BY om.user_id
+`
+
+type ListTransferNotifyUserIDsParams struct {
+	OrganizationID int64  `json:"organization_id"`
+	PermissionSlug string `json:"permission_slug"`
+}
+
+// Members of an organization whose organization roles grant a permission
+// (TEC-200: recipients of the transfers.* notifications).
+func (q *Queries) ListTransferNotifyUserIDs(ctx context.Context, arg ListTransferNotifyUserIDsParams) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listTransferNotifyUserIDs, arg.OrganizationID, arg.PermissionSlug)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int64{}
+	for rows.Next() {
+		var user_id int64
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTransferRequestItems = `-- name: ListTransferRequestItems :many
 SELECT i.id, i.uuid, i.request_id, i.organization_id, i.brand_id, i.unit_id, i.product_id, i.quantity, i.meters, i.unit_price, i.line_total, i.out_movement_id, i.in_movement_id, i.restore_movement_id, i.created_at, i.updated_at, u.uuid AS unit_uuid, u.barcode, u.unit_kind,
        p.uuid AS product_uuid, p.sku AS product_sku, p.name AS product_name, p.unit_type AS product_unit_type

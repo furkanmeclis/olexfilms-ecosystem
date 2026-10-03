@@ -11862,7 +11862,11 @@ paths:
         one transfer_cancel_restore per unit). rejected, received and
         cancelled are final. A request for the current status is a no-op;
         other moves answer 409 TRANSFER_INVALID_TRANSITION. Every move writes
-        a transfers.* outbox event. No accounting entry is booked.
+        a transfers.* outbox event. On receipt the giver books income on the
+        receiver's cari and the receiver a purchase expense on the giver's
+        cari for the line totals frozen at approval, in the same transaction
+        (K13, source stock_transfer); 400 RATE_NOT_FOUND rolls the receipt
+        back when an organization's currency has no rate for the day.
       security:
         - bearerAuth: []
       parameters:

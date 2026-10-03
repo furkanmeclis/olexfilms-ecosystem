@@ -947,6 +947,9 @@ type Querier interface {
 	ListTaskComments(ctx context.Context, arg ListTaskCommentsParams) ([]ListTaskCommentsRow, error)
 	ListTasks(ctx context.Context, arg ListTasksParams) ([]ListTasksRow, error)
 	ListTerritories(ctx context.Context, arg ListTerritoriesParams) ([]ListTerritoriesRow, error)
+	// Members of an organization whose organization roles grant a permission
+	// (TEC-200: recipients of the transfers.* notifications).
+	ListTransferNotifyUserIDs(ctx context.Context, arg ListTransferNotifyUserIDsParams) ([]int64, error)
 	ListTransferRequestItems(ctx context.Context, requestID int64) ([]ListTransferRequestItemsRow, error)
 	// Requests where org is the giver, the receiver or the common parent.
 	// direction: '' (all), 'outgoing' (giver), 'incoming' (receiver),
