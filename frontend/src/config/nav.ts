@@ -35,6 +35,10 @@ import {
   Wrench,
   ListTodo,
   Plus,
+  Warehouse,
+  ScanLine,
+  PackagePlus,
+  Barcode,
 } from "lucide-react";
 
 import { appleNavIcon } from "@/components/icons/apple-icon";
@@ -598,6 +602,58 @@ export function tenantNav(slug: string) {
             href: routes.tenant.tasks.create(slug),
             icon: Plus,
             permission: permissions.tasks.write,
+            orgTypes: ["center"],
+          },
+        ],
+      },
+      {
+        // TEC-231: the full warehouse of the center and the distributor
+        // (K12; a dealer has "My stock"). Same gates as /v1/warehouse/*
+        // (warehouse.read and the warehouse module). Barcode batches are
+        // center only (K14, stock.read like /v1/stock/barcodes). TEC-232
+        // adds transfers, counts and end of day to this group.
+        id: "warehouse",
+        labelKey: "warehouse.nav",
+        icon: Warehouse,
+        defaultOpen: true,
+        permission: permissions.warehouse.read,
+        feature: "warehouse",
+        orgTypes: ["center", "distributor"],
+        items: [
+          {
+            id: "warehouse-locations",
+            titleKey: "warehouse.nav_locations",
+            href: routes.tenant.warehouse.locations(slug),
+            icon: FolderTree,
+            permission: permissions.warehouse.read,
+            feature: "warehouse",
+            orgTypes: ["center", "distributor"],
+          },
+          {
+            id: "warehouse-scan",
+            titleKey: "warehouse.nav_scan",
+            href: routes.tenant.warehouse.scan(slug),
+            icon: ScanLine,
+            permission: permissions.warehouse.read,
+            feature: "warehouse",
+            orgTypes: ["center", "distributor"],
+          },
+          {
+            id: "warehouse-entries",
+            titleKey: "warehouse.nav_entries",
+            href: routes.tenant.warehouse.entries(slug),
+            icon: PackagePlus,
+            permission: permissions.warehouse.read,
+            feature: "warehouse",
+            orgTypes: ["center", "distributor"],
+          },
+          {
+            id: "warehouse-barcodes",
+            titleKey: "warehouse.nav_barcodes",
+            href: routes.tenant.warehouse.barcodes(slug),
+            icon: Barcode,
+            permission: [permissions.warehouse.read, permissions.stock.read],
+            feature: "warehouse",
             orgTypes: ["center"],
           },
         ],

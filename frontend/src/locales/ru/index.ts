@@ -45,6 +45,7 @@ import tasks from "./tasks.json";
 import transfers from "./transfers.json";
 import users from "./users.json";
 import vehicles from "./vehicles.json";
+import warehouse from "./warehouse.json";
 import warranty from "./warranty.json";
 
 const catalog: LocaleCatalog = {
@@ -92,6 +93,7 @@ const catalog: LocaleCatalog = {
   transfers,
   users,
   vehicles,
+  warehouse,
   warranty,
 };
 

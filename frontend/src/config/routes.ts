@@ -101,6 +101,20 @@ export const routes = {
       create: (slug: string) => `/t/${slug}/tasks/new`,
       detail: (slug: string, uuid: string) => `/t/${slug}/tasks/${uuid}`,
     },
+    /**
+     * TEC-231 full warehouse (center and distributor, K12): location tree,
+     * scan, stock entries, barcodes (center, K14). TEC-232 adds transfers,
+     * counts and end of day under the same root.
+     */
+    warehouse: {
+      root: (slug: string) => `/t/${slug}/warehouse`,
+      locations: (slug: string) => `/t/${slug}/warehouse/locations`,
+      scan: (slug: string) => `/t/${slug}/warehouse/scan`,
+      entries: (slug: string) => `/t/${slug}/warehouse/entries`,
+      entry: (slug: string, uuid: string) =>
+        `/t/${slug}/warehouse/entries/${uuid}`,
+      barcodes: (slug: string) => `/t/${slug}/warehouse/barcodes`,
+    },
   },
   /** Customer / fleet portal (TEC-90): its own Auth.js instance and BFF. */
   portal: {
