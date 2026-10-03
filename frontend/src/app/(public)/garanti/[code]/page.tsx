@@ -91,7 +91,9 @@ export async function generateMetadata({
     description = pageTitle;
   }
   return {
-    title,
+    // The document title stays the page name; the preview title carries
+    // the product.
+    title: pageTitle,
     description,
     openGraph: {
       type: "website",
