@@ -414,6 +414,11 @@ func (h *Handler) TenantPatchSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	s, err := h.svc.PatchTenantSettings(r.Context(), scope.InternalID, in)
 	if err != nil {
+		if errors.Is(err, orgusecase.ErrInvalidCoordinates) {
+			response.ErrorWithDetails(w, r, http.StatusBadRequest, response.CodeValidationError, "invalid coordinates",
+				[]response.Detail{{Field: "latitude", Message: err.Error(), Code: "invalid"}})
+			return
+		}
 		if errors.Is(err, orgusecase.ErrInvalidRequest) {
 			response.BadRequest(w, r, response.CodeValidationError, "invalid letterhead settings")
 			return
