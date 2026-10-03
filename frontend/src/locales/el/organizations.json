@@ -116,6 +116,8 @@
   "columns.type": "Τύπος",
   "columns.parent": "Ανώτερος",
   "fields.type": "Τύπος",
+  "fields.register_as_warehouse": "Ορισμός ως αποθήκη",
+  "fields.register_as_warehouse_hint": "Με την αποθήκευση ανοίγει αποθήκη (κωδικός MAIN) για τον διανομέα· αίθουσες και θέσεις προστίθενται αργότερα.",
   "fields.city_hint": "Αν μείνει κενό, συμπληρώνεται από τον νομό.",
   "fields.district_hint": "Αν μείνει κενό, συμπληρώνεται από τον δήμο.",
   "form.section_address": "Διεύθυνση",

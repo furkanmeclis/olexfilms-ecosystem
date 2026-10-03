@@ -116,6 +116,8 @@
   "columns.type": "Tipo",
   "columns.parent": "Superior",
   "fields.type": "Tipo",
+  "fields.register_as_warehouse": "Definir como almacén",
+  "fields.register_as_warehouse_hint": "Al guardar se abre un almacén (código MAIN) para el distribuidor; las salas y ubicaciones se añaden después.",
   "fields.city_hint": "Se completa con la provincia si se deja vacío.",
   "fields.district_hint": "Se completa con el distrito si se deja vacío.",
   "form.section_address": "Dirección",

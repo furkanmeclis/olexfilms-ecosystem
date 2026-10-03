@@ -48,6 +48,8 @@ type Service struct {
 	// the organization.* events (nil: no events).
 	finder searchengine.ListFinder
 	out    outbox.Enqueuer
+	// TEC-207: opens the register_as_warehouse preset's warehouse (nil: none).
+	warehouseHook WarehousePresetHook
 }
 
 // New creates an organizations service.
@@ -390,6 +392,13 @@ func (s *Service) RegisterOrganization(ctx context.Context, in RegisterInput, ow
 	}
 	if err := addMember(ctx, qtx, org, ownerUserID, "owner", nil); err != nil {
 		return RegisterResult{}, err
+	}
+	// K4 / TEC-207: the preset opens the distributor's warehouse in the
+	// same transaction.
+	if in.RegisterAsWarehouse && s.warehouseHook != nil {
+		if err := s.warehouseHook.OpenPresetWarehouseTx(ctx, tx, org); err != nil {
+			return RegisterResult{}, fmt.Errorf("register as warehouse: %w", err)
+		}
 	}
 	if err := s.emit(ctx, tx, events.OrganizationCreated, org); err != nil {
 		return RegisterResult{}, err

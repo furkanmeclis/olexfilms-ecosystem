@@ -116,6 +116,8 @@
   "columns.type": "Тип",
   "columns.parent": "Горна организация",
   "fields.type": "Тип",
+  "fields.register_as_warehouse": "Определи като склад",
+  "fields.register_as_warehouse_hint": "При запис за дистрибутора се открива склад (код MAIN); помещенията и местата се добавят по-късно.",
   "fields.city_hint": "Ако е празно, се попълва от областта.",
   "fields.district_hint": "Ако е празно, се попълва от общината.",
   "form.section_address": "Адрес",
