@@ -181,5 +181,13 @@
   "labels.contracts.read": "Verträge anzeigen",
   "labels.contracts.write": "Verträge bearbeiten",
   "labels.contracts.void": "Verträge annullieren",
-  "groups.contracts": "Verträge"
+  "groups.contracts": "Verträge",
+  "labels.service_catalog.manage": "Dienstleistungskatalog verwalten",
+  "labels.service_catalog.read": "Dienstleistungskatalog anzeigen",
+  "groups.service_catalog": "Dienstleistungskatalog",
+  "labels.service_subscriptions.assign": "Dienstleistungsabos zuweisen",
+  "labels.service_subscriptions.read": "Dienstleistungsabos anzeigen",
+  "labels.service_subscriptions.cancel_request": "Abo-Kündigung beantragen",
+  "labels.service_subscriptions.cancel_approve": "Abo-Kündigung genehmigen",
+  "groups.service_subscriptions": "Dienstleistungsabos"
 }

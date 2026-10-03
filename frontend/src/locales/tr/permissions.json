@@ -181,5 +181,13 @@
   "labels.contracts.read": "Sözleşmeleri görüntüle",
   "labels.contracts.write": "Sözleşme düzenle",
   "labels.contracts.void": "Sözleşmeleri iptal et",
-  "groups.contracts": "Sözleşmeler"
+  "groups.contracts": "Sözleşmeler",
+  "labels.service_catalog.manage": "Hizmet kataloğunu yönet",
+  "labels.service_catalog.read": "Hizmet kataloğunu görüntüle",
+  "groups.service_catalog": "Hizmet kataloğu",
+  "labels.service_subscriptions.assign": "Hizmet aboneliği ata",
+  "labels.service_subscriptions.read": "Hizmet aboneliklerini görüntüle",
+  "labels.service_subscriptions.cancel_request": "Abonelik iptali talep et",
+  "labels.service_subscriptions.cancel_approve": "Abonelik iptalini onayla",
+  "groups.service_subscriptions": "Hizmet abonelikleri"
 }

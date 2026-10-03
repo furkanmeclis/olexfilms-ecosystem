@@ -181,5 +181,13 @@
   "labels.contracts.read": "Преглед на договори",
   "labels.contracts.write": "Редактиране на договори",
   "labels.contracts.void": "Анулиране на договори",
-  "groups.contracts": "Договори"
+  "groups.contracts": "Договори",
+  "labels.service_catalog.manage": "Управление на каталога с услуги",
+  "labels.service_catalog.read": "Преглед на каталога с услуги",
+  "groups.service_catalog": "Каталог с услуги",
+  "labels.service_subscriptions.assign": "Възлагане на абонаменти за услуги",
+  "labels.service_subscriptions.read": "Преглед на абонаменти за услуги",
+  "labels.service_subscriptions.cancel_request": "Заявка за прекратяване на абонамент",
+  "labels.service_subscriptions.cancel_approve": "Одобряване на прекратяване на абонамент",
+  "groups.service_subscriptions": "Абонаменти за услуги"
 }
