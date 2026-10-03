@@ -504,8 +504,15 @@ type Querier interface {
 	GetFinanceEntryReversal(ctx context.Context, entryID pgtype.Int8) (FinanceEntry, error)
 	GetFixedHoldingQuantity(ctx context.Context, arg GetFixedHoldingQuantityParams) (int32, error)
 	GetGitHubAppSettings(ctx context.Context) (GithubAppSetting, error)
+	// A movement with its unit's barcode and the product's sync link, for the
+	// outbound PATCH of one barcode.
+	GetGlorianPushMovement(ctx context.Context, id int64) (GetGlorianPushMovementRow, error)
 	GetImportJobByID(ctx context.Context, id int64) (ImportJob, error)
 	GetImportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ImportJob, error)
+	// TEC-270 (F2-02e): Glorian barcode push. Units of products synced from a
+	// connection (products.connection_id + external_id) are pushed to the hub:
+	// entries and placements into a center bin in bulk, exits by barcode.
+	GetIntegrationConnectionByID(ctx context.Context, id int64) (IntegrationConnection, error)
 	GetIntegrationConnectionByKey(ctx context.Context, arg GetIntegrationConnectionByKeyParams) (IntegrationConnection, error)
 	GetIntegrationConnectionByUUID(ctx context.Context, arg GetIntegrationConnectionByUUIDParams) (IntegrationConnection, error)
 	// The connection of the product's brand with the given key.
@@ -594,6 +601,9 @@ type Querier interface {
 	// projection rows are already narrowed by scope.
 	GetProductIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	GetProductPrice(ctx context.Context, arg GetProductPriceParams) (ProductPrice, error)
+	// The sync link of a product: its brand and, for a synced product, the
+	// connection and remote product id.
+	GetProductPushLink(ctx context.Context, id int64) (GetProductPushLinkRow, error)
 	GetProvinceByID(ctx context.Context, id int64) (Province, error)
 	// Public warranty lookup (TEC-189): only the fields the public page shows.
 	// No users join: the holder's personal data is never read, so an anonymized
@@ -801,6 +811,10 @@ type Querier interface {
 	InsertWhatsAppConnectionEvent(ctx context.Context, arg InsertWhatsAppConnectionEventParams) (WhatsappConnectionEvent, error)
 	InvalidateActiveOTPs(ctx context.Context, arg InvalidateActiveOTPsParams) error
 	InvalidateActivePhoneOTPs(ctx context.Context, arg InvalidateActivePhoneOTPsParams) error
+	// The watermark of the latest successful run of a kind that set one. The
+	// barcode PATCH runs share the push_barcodes kind without a watermark, so
+	// LastSucceededIntegrationSyncRun would lose the bulk push cursor.
+	LastIntegrationSyncRunWatermark(ctx context.Context, arg LastIntegrationSyncRunWatermarkParams) (pgtype.Timestamptz, error)
 	// Watermark of the last successful, non-dry-run execution of a step.
 	LastMigrationWatermark(ctx context.Context, arg LastMigrationWatermarkParams) (pgtype.Timestamptz, error)
 	// The scanning user's current location context (location_first).
@@ -923,6 +937,10 @@ type Querier interface {
 	// the organization owner itself), per barcode, for the listed products.
 	ListFixedBarcodeQuantitiesByHolder(ctx context.Context, arg ListFixedBarcodeQuantitiesByHolderParams) ([]ListFixedBarcodeQuantitiesByHolderRow, error)
 	ListFixedBarcodeQuantitiesByLocation(ctx context.Context, arg ListFixedBarcodeQuantitiesByLocationParams) ([]ListFixedBarcodeQuantitiesByLocationRow, error)
+	// Serial units entered or placed into a warehouse bin after the keyset
+	// (created_at, id), for the products synced from the connection. A unit
+	// placed twice comes twice; the caller deduplicates by barcode.
+	ListGlorianPushUnits(ctx context.Context, arg ListGlorianPushUnitsParams) ([]ListGlorianPushUnitsRow, error)
 	// Grants of global roles (user_roles / JWT roles claim).
 	ListGrantsByRoleSlugs(ctx context.Context, roleSlugs []string) ([]ListGrantsByRoleSlugsRow, error)
 	ListImportChangesForJob(ctx context.Context, jobID int64) ([]ImportChange, error)
