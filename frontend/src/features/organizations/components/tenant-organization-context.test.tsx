@@ -136,6 +136,19 @@ async function flush() {
   });
 }
 
+// The switcher renders its items only once `useMyOrganizations` resolves.
+// TanStack Query delivers results through a setTimeout(0) scheduled after the
+// fetch settles, so a single flush can win that race; poll until it lands.
+async function findSwitcherItem(container: HTMLElement, slug: string) {
+  const selector = `[data-testid="organization-switcher-item-${slug}"]`;
+  for (let i = 0; i < 50; i++) {
+    const item = container.querySelector<HTMLButtonElement>(selector);
+    if (item) return item;
+    await flush();
+  }
+  throw new Error(`switcher item ${slug} never rendered`);
+}
+
 describe("TenantOrganizationContext during an organization switch", () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -235,13 +248,10 @@ describe("TenantOrganizationContext during an organization switch", () => {
         tenantContext("bayi-a"),
       ),
     );
-    await flush();
 
-    const item = container.querySelector<HTMLButtonElement>(
-      '[data-testid="organization-switcher-item-bayi-b"]',
-    );
+    const item = await findSwitcherItem(container, "bayi-b");
     await act(async () => {
-      item!.click();
+      item.click();
     });
     await flush();
     await flush();
@@ -256,12 +266,9 @@ describe("TenantOrganizationContext during an organization switch", () => {
   it("a failed switch releases the guard", async () => {
     switchOrganizationContext.mockReset().mockRejectedValue(new Error("x"));
     render(createElement(OrganizationSwitcher));
-    await flush();
-    const item = container.querySelector<HTMLButtonElement>(
-      '[data-testid="organization-switcher-item-bayi-b"]',
-    );
+    const item = await findSwitcherItem(container, "bayi-b");
     await act(async () => {
-      item!.click();
+      item.click();
     });
     await flush();
     expect(getOrgSwitchTarget()).toBeNull();
