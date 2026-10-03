@@ -189,5 +189,8 @@
   "labels.service_subscriptions.read": "Hizmet aboneliklerini görüntüle",
   "labels.service_subscriptions.cancel_request": "Abonelik iptali talep et",
   "labels.service_subscriptions.cancel_approve": "Abonelik iptalini onayla",
-  "groups.service_subscriptions": "Hizmet abonelikleri"
+  "groups.service_subscriptions": "Hizmet abonelikleri",
+  "labels.measurements.read": "Ölçümleri görüntüle",
+  "labels.measurements.link": "Ölçümleri hizmete bağla",
+  "labels.measurement_devices.manage": "Ölçüm cihazlarını yönet"
 }

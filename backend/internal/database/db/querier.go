@@ -89,6 +89,7 @@ type Querier interface {
 	CompleteStockTransferRequest(ctx context.Context, id int64) (StockTransferRequest, error)
 	CompleteVehicleTransfer(ctx context.Context, arg CompleteVehicleTransferParams) (VehicleTransfer, error)
 	CompleteWarehouseTransfer(ctx context.Context, arg CompleteWarehouseTransferParams) (WarehouseTransfer, error)
+	ConfirmServiceMeasurement(ctx context.Context, arg ConfirmServiceMeasurementParams) (int64, error)
 	ConfirmStockEntry(ctx context.Context, arg ConfirmStockEntryParams) (StockEntry, error)
 	ConfirmUserTOTP(ctx context.Context, arg ConfirmUserTOTPParams) (UserTotp, error)
 	ConsumeOTP(ctx context.Context, id int64) error
@@ -380,6 +381,8 @@ type Querier interface {
 	DeleteLabelTemplate(ctx context.Context, arg DeleteLabelTemplateParams) (int64, error)
 	DeleteLogPurgeRule(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	DeleteManualExchangeRate(ctx context.Context, arg DeleteManualExchangeRateParams) (int64, error)
+	DeleteMeasurementTires(ctx context.Context, arg DeleteMeasurementTiresParams) error
+	DeleteMeasurementValues(ctx context.Context, arg DeleteMeasurementValuesParams) error
 	DeleteMemberRoles(ctx context.Context, memberID int64) error
 	// The duplicate link of the source is folded into the target's (above).
 	DeleteMergedCustomerOrganizations(ctx context.Context, arg DeleteMergedCustomerOrganizationsParams) (int64, error)
@@ -593,6 +596,8 @@ type Querier interface {
 	// source in one organization (0: none). TEC-177 opens a new revision of an
 	// opening balance once the previous one is reversed.
 	GetMaxFinanceEntryRevisionBySource(ctx context.Context, arg GetMaxFinanceEntryRevisionBySourceParams) (int32, error)
+	GetMeasurementDeviceBySerial(ctx context.Context, arg GetMeasurementDeviceBySerialParams) (MeasurementDevice, error)
+	GetMeasurementResultByUUID(ctx context.Context, arg GetMeasurementResultByUUIDParams) (MeasurementResult, error)
 	// TEC-252: migrator bookkeeping (000074). Written only by cmd/migrator.
 	GetMigrationMap(ctx context.Context, arg GetMigrationMapParams) (MigrationMap, error)
 	GetModule(ctx context.Context, key string) (Module, error)
@@ -703,6 +708,7 @@ type Querier interface {
 	GetServiceItem(ctx context.Context, arg GetServiceItemParams) (ServiceItem, error)
 	GetServiceItemByUUID(ctx context.Context, arg GetServiceItemByUUIDParams) (ServiceItem, error)
 	GetServiceItemCorrectionByItem(ctx context.Context, serviceItemID int64) (ServiceItemCorrection, error)
+	GetServiceMeasurementByResult(ctx context.Context, arg GetServiceMeasurementByResultParams) (ServiceMeasurement, error)
 	GetServicePriceOverride(ctx context.Context, arg GetServicePriceOverrideParams) (ServicePriceOverride, error)
 	// Display references of one service (organization, customer, vehicle and
 	// the car brand / model snapshot) for the API view (TEC-179).
@@ -843,6 +849,10 @@ type Querier interface {
 	// InsertMeasurementResult skips the insert when the idempotency key or the
 	// client_measurement_id was already used in the organization (no row then).
 	InsertMeasurementResult(ctx context.Context, arg InsertMeasurementResultParams) (MeasurementResult, error)
+	InsertMeasurementTire(ctx context.Context, arg InsertMeasurementTireParams) (MeasurementTire, error)
+	// TEC-293 (F3-02a): normalized readings, tires, device registry and the
+	// before/after service link. Every query is bounded by the organization.
+	InsertMeasurementValue(ctx context.Context, arg InsertMeasurementValueParams) (MeasurementValue, error)
 	InsertMessage(ctx context.Context, arg InsertMessageParams) (Message, error)
 	// ON CONFLICT DO NOTHING: a concurrent insert of the same key returns no row
 	// and the caller reads the existing one.
@@ -916,6 +926,9 @@ type Querier interface {
 	// Idempotent link: a second call keeps the row and fills first_service_at
 	// only when it was empty.
 	LinkCustomerOrganization(ctx context.Context, arg LinkCustomerOrganizationParams) (CustomerOrganization, error)
+	// LinkServiceMeasurement fails with 23505 when the service already has a
+	// measurement in the phase or the measurement is linked to another service.
+	LinkServiceMeasurement(ctx context.Context, arg LinkServiceMeasurementParams) (ServiceMeasurement, error)
 	ListAccountingDisputes(ctx context.Context, arg ListAccountingDisputesParams) ([]ListAccountingDisputesRow, error)
 	ListActiveDevicePushTokens(ctx context.Context, userID int64) ([]DevicePushToken, error)
 	ListActiveMobileSessionUUIDsForDevice(ctx context.Context, arg ListActiveMobileSessionUUIDsForDeviceParams) ([]uuid.UUID, error)
@@ -1097,6 +1110,9 @@ type Querier interface {
 	ListLocationSubtreeIDs(ctx context.Context, arg ListLocationSubtreeIDsParams) ([]int64, error)
 	ListLocationsByUUIDs(ctx context.Context, arg ListLocationsByUUIDsParams) ([]WarehouseLocation, error)
 	ListLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
+	ListMeasurementDevices(ctx context.Context, organizationID int64) ([]MeasurementDevice, error)
+	ListMeasurementTires(ctx context.Context, arg ListMeasurementTiresParams) ([]MeasurementTire, error)
+	ListMeasurementValues(ctx context.Context, arg ListMeasurementValuesParams) ([]MeasurementValue, error)
 	// Grants of the user's roles in one organization (active org context).
 	ListMemberGrants(ctx context.Context, arg ListMemberGrantsParams) ([]ListMemberGrantsRow, error)
 	ListMemberRoleSlugs(ctx context.Context, arg ListMemberRoleSlugsParams) ([]string, error)
@@ -1258,6 +1274,7 @@ type Querier interface {
 	ListServiceImages(ctx context.Context, serviceID int64) ([]ServiceImage, error)
 	ListServiceItemCorrections(ctx context.Context, serviceID int64) ([]ListServiceItemCorrectionsRow, error)
 	ListServiceItems(ctx context.Context, serviceID int64) ([]ServiceItem, error)
+	ListServiceMeasurements(ctx context.Context, arg ListServiceMeasurementsParams) ([]ServiceMeasurement, error)
 	ListServicePriceOverrides(ctx context.Context, arg ListServicePriceOverridesParams) ([]ServicePriceOverride, error)
 	ListServiceStatusLogs(ctx context.Context, serviceID int64) ([]ServiceStatusLog, error)
 	// ---------------------------------------------------------------------------
@@ -1531,6 +1548,8 @@ type Querier interface {
 	MarkImportJobFailed(ctx context.Context, arg MarkImportJobFailedParams) (ImportJob, error)
 	MarkImportJobRolledBack(ctx context.Context, id int64) (ImportJob, error)
 	MarkLogPurgeRuleRun(ctx context.Context, arg MarkLogPurgeRuleRunParams) (LogPurgeRule, error)
+	// Marks a result normalized and fills the fields parsed from raw.
+	MarkMeasurementResultParsed(ctx context.Context, arg MarkMeasurementResultParsedParams) error
 	MarkNotificationFailed(ctx context.Context, arg MarkNotificationFailedParams) (Notification, error)
 	MarkNotificationProcessing(ctx context.Context, id int64) (Notification, error)
 	MarkNotificationRead(ctx context.Context, arg MarkNotificationReadParams) (Notification, error)
@@ -1877,6 +1896,8 @@ type Querier interface {
 	SetImportJobPreview(ctx context.Context, arg SetImportJobPreviewParams) (ImportJob, error)
 	SetIntegrationConnectionAPIKey(ctx context.Context, arg SetIntegrationConnectionAPIKeyParams) (IntegrationConnection, error)
 	SetLocationSortOrder(ctx context.Context, arg SetLocationSortOrderParams) (int64, error)
+	SetMeasurementDeviceActive(ctx context.Context, arg SetMeasurementDeviceActiveParams) (int64, error)
+	SetMeasurementResultPDFKey(ctx context.Context, arg SetMeasurementResultPDFKeyParams) error
 	SetNotificationChannelEnabled(ctx context.Context, arg SetNotificationChannelEnabledParams) (NotificationChannelSetting, error)
 	SetOrderCancelReason(ctx context.Context, arg SetOrderCancelReasonParams) (Order, error)
 	SetOrderExternalReference(ctx context.Context, arg SetOrderExternalReferenceParams) (Order, error)
@@ -1901,6 +1922,7 @@ type Querier interface {
 	SetServiceContract(ctx context.Context, arg SetServiceContractParams) (int64, error)
 	// Written in the completion transaction before the status flips.
 	SetServiceItemMovement(ctx context.Context, arg SetServiceItemMovementParams) (ServiceItem, error)
+	SetServiceMeasurementCheck(ctx context.Context, arg SetServiceMeasurementCheckParams) error
 	SetServiceReviewRequestSent(ctx context.Context, id int64) (Service, error)
 	SetServiceSubscriptionStatus(ctx context.Context, arg SetServiceSubscriptionStatusParams) (ServiceSubscription, error)
 	SetStockEntryLineLocation(ctx context.Context, arg SetStockEntryLineLocationParams) (int64, error)
@@ -1967,6 +1989,7 @@ type Querier interface {
 	// index. since NULL means all time. Ties sort by name.
 	TopServicedCarBrands(ctx context.Context, arg TopServicedCarBrandsParams) ([]TopServicedCarBrandsRow, error)
 	TopServicedCarModels(ctx context.Context, arg TopServicedCarModelsParams) ([]TopServicedCarModelsRow, error)
+	UnlinkServiceMeasurement(ctx context.Context, arg UnlinkServiceMeasurementParams) (int64, error)
 	UpdateAppSettings(ctx context.Context, arg UpdateAppSettingsParams) (AppSetting, error)
 	UpdateAuthSettings(ctx context.Context, arg UpdateAuthSettingsParams) (AuthSetting, error)
 	// Full replacement of the editable fields (read-modify-write in the use case).
@@ -2072,6 +2095,7 @@ type Querier interface {
 	UpsertExchangeRate(ctx context.Context, arg UpsertExchangeRateParams) error
 	UpsertFixedBarcodeHoldingForRepair(ctx context.Context, arg UpsertFixedBarcodeHoldingForRepairParams) error
 	UpsertIntegrationExternalParty(ctx context.Context, arg UpsertIntegrationExternalPartyParams) (IntegrationExternalParty, error)
+	UpsertMeasurementDevice(ctx context.Context, arg UpsertMeasurementDeviceParams) (MeasurementDevice, error)
 	// Catalog sync: level and sort order follow the Go catalog; admin-edited
 	// default_enabled / is_paid survive (a core module is always on).
 	UpsertModuleCatalog(ctx context.Context, arg UpsertModuleCatalogParams) error

@@ -435,6 +435,21 @@ var Permissions = []PermissionDef{
 		Slug: PermServiceSubscriptionsCancelApprove, Name: "Approve subscription cancellation", Module: "service_subscriptions", Scopes: scopesSupplier,
 		Description: "Approve or reject early cancellation requests; the static cancellation fee applies (center only).",
 	},
+
+	// TEC-293: measurement read side, service links and device registry
+	// (K28). Appended last; migration 000085 seeds them.
+	{
+		Slug: PermMeasurementsRead, Name: "Read measurements", Module: "measurements", Scopes: []Scope{ScopeManaged, ScopeSubtree},
+		Description: "Read paint thickness measurements, their readings, tires and service links (K28).",
+	},
+	{
+		Slug: PermMeasurementsLink, Name: "Link measurements", Module: "measurements", Scopes: scopesOrg,
+		Description: "Link a measurement to a service as its before or after measurement and confirm the link (K28).",
+	},
+	{
+		Slug: PermMeasurementDevicesManage, Name: "Manage measuring devices", Module: "measurements", Scopes: scopesOrg,
+		Description: "Register, edit and deactivate the measuring devices of the active organization (K28).",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -536,6 +551,10 @@ var Roles = []RoleDef{
 			PermServiceSubscriptionsAssign:        ScopeBrand,
 			PermServiceSubscriptionsRead:          ScopeBrand,
 			PermServiceSubscriptionsCancelApprove: ScopeBrand,
+			// TEC-293 (000085).
+			PermMeasurementsRead:         ScopeSubtree,
+			PermMeasurementsLink:         ScopeManaged,
+			PermMeasurementDevicesManage: ScopeManaged,
 		}),
 	},
 	{
@@ -669,6 +688,10 @@ var Roles = []RoleDef{
 			PermServiceSubscriptionsAssign:        ScopeSubtree,
 			PermServiceSubscriptionsRead:          ScopeSubtree,
 			PermServiceSubscriptionsCancelRequest: ScopeManaged,
+			// TEC-293 (000085).
+			PermMeasurementsRead:         ScopeSubtree,
+			PermMeasurementsLink:         ScopeManaged,
+			PermMeasurementDevicesManage: ScopeManaged,
 		}),
 	},
 	{
@@ -690,6 +713,8 @@ var Roles = []RoleDef{
 			PermMeasurementsWrite:  ScopeManaged, // TEC-233 (000076)
 			PermContractsRead:      ScopeSubtree, // TEC-285 (000083)
 			PermContractsWrite:     ScopeSubtree,
+			PermMeasurementsRead:   ScopeSubtree, // TEC-293 (000085)
+			PermMeasurementsLink:   ScopeManaged, // TEC-293 (000085)
 		}),
 	},
 	{
@@ -772,6 +797,10 @@ var Roles = []RoleDef{
 			// TEC-305 (000084).
 			PermServiceSubscriptionsRead:          ScopeManaged,
 			PermServiceSubscriptionsCancelRequest: ScopeManaged,
+			// TEC-293 (000085).
+			PermMeasurementsRead:         ScopeManaged,
+			PermMeasurementsLink:         ScopeManaged,
+			PermMeasurementDevicesManage: ScopeManaged,
 		}),
 	},
 	{
@@ -794,6 +823,8 @@ var Roles = []RoleDef{
 			PermMeasurementsWrite:  ScopeManaged, // TEC-233 (000076)
 			PermContractsRead:      ScopeManaged, // TEC-285 (000083)
 			PermContractsWrite:     ScopeOwn,
+			PermMeasurementsRead:   ScopeManaged, // TEC-293 (000085)
+			PermMeasurementsLink:   ScopeManaged, // TEC-293 (000085)
 		}),
 	},
 	{

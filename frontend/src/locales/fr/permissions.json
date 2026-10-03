@@ -189,5 +189,8 @@
   "labels.service_subscriptions.read": "Consulter les abonnements de service",
   "labels.service_subscriptions.cancel_request": "Demander la résiliation d'un abonnement",
   "labels.service_subscriptions.cancel_approve": "Approuver la résiliation d'un abonnement",
-  "groups.service_subscriptions": "Abonnements de service"
+  "groups.service_subscriptions": "Abonnements de service",
+  "labels.measurements.read": "Consulter les mesures",
+  "labels.measurements.link": "Associer les mesures",
+  "labels.measurement_devices.manage": "Gérer les appareils de mesure"
 }

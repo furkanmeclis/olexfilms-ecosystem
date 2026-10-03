@@ -189,5 +189,8 @@
   "labels.service_subscriptions.read": "عرض اشتراكات الخدمات",
   "labels.service_subscriptions.cancel_request": "طلب إلغاء الاشتراك",
   "labels.service_subscriptions.cancel_approve": "الموافقة على إلغاء الاشتراك",
-  "groups.service_subscriptions": "اشتراكات الخدمات"
+  "groups.service_subscriptions": "اشتراكات الخدمات",
+  "labels.measurements.read": "عرض القياسات",
+  "labels.measurements.link": "ربط القياسات",
+  "labels.measurement_devices.manage": "إدارة أجهزة القياس"
 }

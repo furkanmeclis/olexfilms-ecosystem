@@ -189,5 +189,8 @@
   "labels.service_subscriptions.read": "Преглед на абонаменти за услуги",
   "labels.service_subscriptions.cancel_request": "Заявка за прекратяване на абонамент",
   "labels.service_subscriptions.cancel_approve": "Одобряване на прекратяване на абонамент",
-  "groups.service_subscriptions": "Абонаменти за услуги"
+  "groups.service_subscriptions": "Абонаменти за услуги",
+  "labels.measurements.read": "Преглед на измерванията",
+  "labels.measurements.link": "Свързване на измервания",
+  "labels.measurement_devices.manage": "Управление на измервателни уреди"
 }

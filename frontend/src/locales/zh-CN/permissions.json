@@ -189,5 +189,8 @@
   "labels.service_subscriptions.read": "查看服务订阅",
   "labels.service_subscriptions.cancel_request": "申请取消订阅",
   "labels.service_subscriptions.cancel_approve": "批准取消订阅",
-  "groups.service_subscriptions": "服务订阅"
+  "groups.service_subscriptions": "服务订阅",
+  "labels.measurements.read": "查看测量",
+  "labels.measurements.link": "关联测量",
+  "labels.measurement_devices.manage": "管理测量设备"
 }

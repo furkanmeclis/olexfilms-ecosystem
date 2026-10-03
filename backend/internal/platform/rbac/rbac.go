@@ -221,6 +221,11 @@ const (
 	PermServiceSubscriptionsRead          = "service_subscriptions.read"
 	PermServiceSubscriptionsCancelRequest = "service_subscriptions.cancel_request"
 	PermServiceSubscriptionsCancelApprove = "service_subscriptions.cancel_approve"
+	// TEC-293 (000085): measurement read side, before/after service links
+	// and the measuring device registry (K28).
+	PermMeasurementsRead         = "measurements.read"
+	PermMeasurementsLink         = "measurements.link"
+	PermMeasurementDevicesManage = "measurement_devices.manage"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

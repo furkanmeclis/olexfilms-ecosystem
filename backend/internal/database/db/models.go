@@ -824,6 +824,8 @@ type MeasurementDevice struct {
 	Label          pgtype.Text        `json:"label"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	Model          pgtype.Text        `json:"model"`
+	IsActive       bool               `json:"is_active"`
 }
 
 type MeasurementResult struct {
@@ -842,6 +844,44 @@ type MeasurementResult struct {
 	Source              string             `json:"source"`
 	CreatedBy           pgtype.Int8        `json:"created_by"`
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	MeasuredAt          pgtype.Timestamptz `json:"measured_at"`
+	DeviceID            pgtype.Int8        `json:"device_id"`
+	CustomerUserID      pgtype.Int8        `json:"customer_user_id"`
+	BodyType            pgtype.Text        `json:"body_type"`
+	ParsedAt            pgtype.Timestamptz `json:"parsed_at"`
+	PdfKey              pgtype.Text        `json:"pdf_key"`
+}
+
+type MeasurementTire struct {
+	ID             int64              `json:"id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	ResultID       int64              `json:"result_id"`
+	Section        pgtype.Text        `json:"section"`
+	Width          pgtype.Text        `json:"width"`
+	Profile        pgtype.Text        `json:"profile"`
+	Diameter       pgtype.Text        `json:"diameter"`
+	Maker          pgtype.Text        `json:"maker"`
+	Season         pgtype.Text        `json:"season"`
+	TreadDepth1Mm  pgtype.Numeric     `json:"tread_depth_1_mm"`
+	TreadDepth2Mm  pgtype.Numeric     `json:"tread_depth_2_mm"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
+type MeasurementValue struct {
+	ID             int64              `json:"id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	ResultID       int64              `json:"result_id"`
+	PlaceID        string             `json:"place_id"`
+	PartType       string             `json:"part_type"`
+	IsInside       bool               `json:"is_inside"`
+	Position       pgtype.Int4        `json:"position"`
+	ValueUm        pgtype.Numeric     `json:"value_um"`
+	Interpretation pgtype.Int2        `json:"interpretation"`
+	SubstrateType  pgtype.Text        `json:"substrate_type"`
+	MeasuredAt     pgtype.Timestamptz `json:"measured_at"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
 type Message struct {
@@ -1436,36 +1476,39 @@ type Room struct {
 }
 
 type Service struct {
-	ID                  int64              `json:"id"`
-	Uuid                uuid.UUID          `json:"uuid"`
-	ServiceNo           string             `json:"service_no"`
-	OrganizationID      int64              `json:"organization_id"`
-	BrandID             int64              `json:"brand_id"`
-	CustomerUserID      int64              `json:"customer_user_id"`
-	VehicleID           int64              `json:"vehicle_id"`
-	CarBrandID          int64              `json:"car_brand_id"`
-	CarModelID          int64              `json:"car_model_id"`
-	ModelYear           pgtype.Int2        `json:"model_year"`
-	Plate               pgtype.Text        `json:"plate"`
-	PlateCountry        pgtype.Text        `json:"plate_country"`
-	Vin                 pgtype.Text        `json:"vin"`
-	Km                  pgtype.Int4        `json:"km"`
-	Package             pgtype.Text        `json:"package"`
-	Notes               pgtype.Text        `json:"notes"`
-	HasMeasurement      bool               `json:"has_measurement"`
-	MeasurementResultID pgtype.Int8        `json:"measurement_result_id"`
-	ContractID          pgtype.Int8        `json:"contract_id"`
-	Status              string             `json:"status"`
-	CreatedByUserID     pgtype.Int8        `json:"created_by_user_id"`
-	UpdatedByUserID     pgtype.Int8        `json:"updated_by_user_id"`
-	CompletedByUserID   pgtype.Int8        `json:"completed_by_user_id"`
-	CancelledByUserID   pgtype.Int8        `json:"cancelled_by_user_id"`
-	CancelReason        pgtype.Text        `json:"cancel_reason"`
-	CompletedAt         pgtype.Timestamptz `json:"completed_at"`
-	CancelledAt         pgtype.Timestamptz `json:"cancelled_at"`
-	ReviewRequestSentAt pgtype.Timestamptz `json:"review_request_sent_at"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	ID             int64       `json:"id"`
+	Uuid           uuid.UUID   `json:"uuid"`
+	ServiceNo      string      `json:"service_no"`
+	OrganizationID int64       `json:"organization_id"`
+	BrandID        int64       `json:"brand_id"`
+	CustomerUserID int64       `json:"customer_user_id"`
+	VehicleID      int64       `json:"vehicle_id"`
+	CarBrandID     int64       `json:"car_brand_id"`
+	CarModelID     int64       `json:"car_model_id"`
+	ModelYear      pgtype.Int2 `json:"model_year"`
+	Plate          pgtype.Text `json:"plate"`
+	PlateCountry   pgtype.Text `json:"plate_country"`
+	Vin            pgtype.Text `json:"vin"`
+	Km             pgtype.Int4 `json:"km"`
+	Package        pgtype.Text `json:"package"`
+	Notes          pgtype.Text `json:"notes"`
+	HasMeasurement bool        `json:"has_measurement"`
+	// Deprecated (TEC-293): not used; the measurement link is service_measurements.
+	MeasurementResultID      pgtype.Int8        `json:"measurement_result_id"`
+	ContractID               pgtype.Int8        `json:"contract_id"`
+	Status                   string             `json:"status"`
+	CreatedByUserID          pgtype.Int8        `json:"created_by_user_id"`
+	UpdatedByUserID          pgtype.Int8        `json:"updated_by_user_id"`
+	CompletedByUserID        pgtype.Int8        `json:"completed_by_user_id"`
+	CancelledByUserID        pgtype.Int8        `json:"cancelled_by_user_id"`
+	CancelReason             pgtype.Text        `json:"cancel_reason"`
+	CompletedAt              pgtype.Timestamptz `json:"completed_at"`
+	CancelledAt              pgtype.Timestamptz `json:"cancelled_at"`
+	ReviewRequestSentAt      pgtype.Timestamptz `json:"review_request_sent_at"`
+	CreatedAt                pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                pgtype.Timestamptz `json:"updated_at"`
+	MeasurementCheckRequired bool               `json:"measurement_check_required"`
+	MeasurementCheckedAt     pgtype.Timestamptz `json:"measurement_checked_at"`
 }
 
 type ServiceCatalogItem struct {
@@ -1541,6 +1584,20 @@ type ServiceItemCorrection struct {
 	CreatedByUserID       pgtype.Int8        `json:"created_by_user_id"`
 	ActorOrgID            pgtype.Int8        `json:"actor_org_id"`
 	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+}
+
+type ServiceMeasurement struct {
+	ID                  int64              `json:"id"`
+	OrganizationID      int64              `json:"organization_id"`
+	BrandID             int64              `json:"brand_id"`
+	ServiceID           int64              `json:"service_id"`
+	MeasurementResultID int64              `json:"measurement_result_id"`
+	Phase               string             `json:"phase"`
+	LinkSource          string             `json:"link_source"`
+	ConfirmedBy         pgtype.Int8        `json:"confirmed_by"`
+	ConfirmedAt         pgtype.Timestamptz `json:"confirmed_at"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 }
 
 type ServicePriceOverride struct {

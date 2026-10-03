@@ -189,5 +189,8 @@
   "labels.service_subscriptions.read": "Read service subscriptions",
   "labels.service_subscriptions.cancel_request": "Request subscription cancellation",
   "labels.service_subscriptions.cancel_approve": "Approve subscription cancellation",
-  "groups.service_subscriptions": "Service subscriptions"
+  "groups.service_subscriptions": "Service subscriptions",
+  "labels.measurements.read": "Read measurements",
+  "labels.measurements.link": "Link measurements",
+  "labels.measurement_devices.manage": "Manage measuring devices"
 }

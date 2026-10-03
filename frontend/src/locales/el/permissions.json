@@ -189,5 +189,8 @@
   "labels.service_subscriptions.read": "Προβολή συνδρομών υπηρεσιών",
   "labels.service_subscriptions.cancel_request": "Αίτημα ακύρωσης συνδρομής",
   "labels.service_subscriptions.cancel_approve": "Έγκριση ακύρωσης συνδρομής",
-  "groups.service_subscriptions": "Συνδρομές υπηρεσιών"
+  "groups.service_subscriptions": "Συνδρομές υπηρεσιών",
+  "labels.measurements.read": "Προβολή μετρήσεων",
+  "labels.measurements.link": "Σύνδεση μετρήσεων",
+  "labels.measurement_devices.manage": "Διαχείριση συσκευών μέτρησης"
 }

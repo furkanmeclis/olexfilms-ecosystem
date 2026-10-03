@@ -189,5 +189,8 @@
   "labels.service_subscriptions.read": "Dienstleistungsabos anzeigen",
   "labels.service_subscriptions.cancel_request": "Abo-Kündigung beantragen",
   "labels.service_subscriptions.cancel_approve": "Abo-Kündigung genehmigen",
-  "groups.service_subscriptions": "Dienstleistungsabos"
+  "groups.service_subscriptions": "Dienstleistungsabos",
+  "labels.measurements.read": "Messungen anzeigen",
+  "labels.measurements.link": "Messungen verknüpfen",
+  "labels.measurement_devices.manage": "Messgeräte verwalten"
 }

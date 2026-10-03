@@ -12,8 +12,65 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const confirmServiceMeasurement = `-- name: ConfirmServiceMeasurement :execrows
+UPDATE service_measurements
+SET confirmed_by = $1, confirmed_at = NOW()
+WHERE service_id = $2 AND phase = $3
+  AND organization_id = $4
+`
+
+type ConfirmServiceMeasurementParams struct {
+	ConfirmedBy    pgtype.Int8 `json:"confirmed_by"`
+	ServiceID      int64       `json:"service_id"`
+	Phase          string      `json:"phase"`
+	OrganizationID int64       `json:"organization_id"`
+}
+
+func (q *Queries) ConfirmServiceMeasurement(ctx context.Context, arg ConfirmServiceMeasurementParams) (int64, error) {
+	result, err := q.db.Exec(ctx, confirmServiceMeasurement,
+		arg.ConfirmedBy,
+		arg.ServiceID,
+		arg.Phase,
+		arg.OrganizationID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteMeasurementTires = `-- name: DeleteMeasurementTires :exec
+DELETE FROM measurement_tires
+WHERE result_id = $1 AND organization_id = $2
+`
+
+type DeleteMeasurementTiresParams struct {
+	ResultID       int64 `json:"result_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) DeleteMeasurementTires(ctx context.Context, arg DeleteMeasurementTiresParams) error {
+	_, err := q.db.Exec(ctx, deleteMeasurementTires, arg.ResultID, arg.OrganizationID)
+	return err
+}
+
+const deleteMeasurementValues = `-- name: DeleteMeasurementValues :exec
+DELETE FROM measurement_values
+WHERE result_id = $1 AND organization_id = $2
+`
+
+type DeleteMeasurementValuesParams struct {
+	ResultID       int64 `json:"result_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) DeleteMeasurementValues(ctx context.Context, arg DeleteMeasurementValuesParams) error {
+	_, err := q.db.Exec(ctx, deleteMeasurementValues, arg.ResultID, arg.OrganizationID)
+	return err
+}
+
 const findMeasurementResultByKeys = `-- name: FindMeasurementResultByKeys :one
-SELECT id, uuid, organization_id, brand_id, service_id, vehicle_id, vin, status, raw, client_measurement_id, idempotency_key, device_serial, source, created_by, created_at FROM measurement_results
+SELECT id, uuid, organization_id, brand_id, service_id, vehicle_id, vin, status, raw, client_measurement_id, idempotency_key, device_serial, source, created_by, created_at, measured_at, device_id, customer_user_id, body_type, parsed_at, pdf_key FROM measurement_results
 WHERE organization_id = $1
   AND (($2::varchar IS NOT NULL AND idempotency_key = $2::varchar)
     OR ($3::varchar IS NOT NULL AND client_measurement_id = $3::varchar))
@@ -47,6 +104,79 @@ func (q *Queries) FindMeasurementResultByKeys(ctx context.Context, arg FindMeasu
 		&i.Source,
 		&i.CreatedBy,
 		&i.CreatedAt,
+		&i.MeasuredAt,
+		&i.DeviceID,
+		&i.CustomerUserID,
+		&i.BodyType,
+		&i.ParsedAt,
+		&i.PdfKey,
+	)
+	return i, err
+}
+
+const getMeasurementDeviceBySerial = `-- name: GetMeasurementDeviceBySerial :one
+SELECT id, uuid, organization_id, brand_id, serial, label, created_at, updated_at, model, is_active FROM measurement_devices
+WHERE organization_id = $1 AND serial = $2
+`
+
+type GetMeasurementDeviceBySerialParams struct {
+	OrganizationID int64  `json:"organization_id"`
+	Serial         string `json:"serial"`
+}
+
+func (q *Queries) GetMeasurementDeviceBySerial(ctx context.Context, arg GetMeasurementDeviceBySerialParams) (MeasurementDevice, error) {
+	row := q.db.QueryRow(ctx, getMeasurementDeviceBySerial, arg.OrganizationID, arg.Serial)
+	var i MeasurementDevice
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.Serial,
+		&i.Label,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Model,
+		&i.IsActive,
+	)
+	return i, err
+}
+
+const getMeasurementResultByUUID = `-- name: GetMeasurementResultByUUID :one
+SELECT id, uuid, organization_id, brand_id, service_id, vehicle_id, vin, status, raw, client_measurement_id, idempotency_key, device_serial, source, created_by, created_at, measured_at, device_id, customer_user_id, body_type, parsed_at, pdf_key FROM measurement_results
+WHERE uuid = $1 AND organization_id = $2
+`
+
+type GetMeasurementResultByUUIDParams struct {
+	Uuid           uuid.UUID `json:"uuid"`
+	OrganizationID int64     `json:"organization_id"`
+}
+
+func (q *Queries) GetMeasurementResultByUUID(ctx context.Context, arg GetMeasurementResultByUUIDParams) (MeasurementResult, error) {
+	row := q.db.QueryRow(ctx, getMeasurementResultByUUID, arg.Uuid, arg.OrganizationID)
+	var i MeasurementResult
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ServiceID,
+		&i.VehicleID,
+		&i.Vin,
+		&i.Status,
+		&i.Raw,
+		&i.ClientMeasurementID,
+		&i.IdempotencyKey,
+		&i.DeviceSerial,
+		&i.Source,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.MeasuredAt,
+		&i.DeviceID,
+		&i.CustomerUserID,
+		&i.BodyType,
+		&i.ParsedAt,
+		&i.PdfKey,
 	)
 	return i, err
 }
@@ -76,6 +206,36 @@ func (q *Queries) GetServiceForMeasurement(ctx context.Context, arg GetServiceFo
 	return i, err
 }
 
+const getServiceMeasurementByResult = `-- name: GetServiceMeasurementByResult :one
+SELECT id, organization_id, brand_id, service_id, measurement_result_id, phase, link_source, confirmed_by, confirmed_at, created_at, updated_at FROM service_measurements
+WHERE measurement_result_id = $1
+  AND organization_id = $2
+`
+
+type GetServiceMeasurementByResultParams struct {
+	MeasurementResultID int64 `json:"measurement_result_id"`
+	OrganizationID      int64 `json:"organization_id"`
+}
+
+func (q *Queries) GetServiceMeasurementByResult(ctx context.Context, arg GetServiceMeasurementByResultParams) (ServiceMeasurement, error) {
+	row := q.db.QueryRow(ctx, getServiceMeasurementByResult, arg.MeasurementResultID, arg.OrganizationID)
+	var i ServiceMeasurement
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ServiceID,
+		&i.MeasurementResultID,
+		&i.Phase,
+		&i.LinkSource,
+		&i.ConfirmedBy,
+		&i.ConfirmedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const insertMeasurementResult = `-- name: InsertMeasurementResult :one
 INSERT INTO measurement_results (
     organization_id, brand_id, service_id, vehicle_id, vin, status, raw,
@@ -87,7 +247,7 @@ INSERT INTO measurement_results (
     $11, $12
 )
 ON CONFLICT DO NOTHING
-RETURNING id, uuid, organization_id, brand_id, service_id, vehicle_id, vin, status, raw, client_measurement_id, idempotency_key, device_serial, source, created_by, created_at
+RETURNING id, uuid, organization_id, brand_id, service_id, vehicle_id, vin, status, raw, client_measurement_id, idempotency_key, device_serial, source, created_by, created_at, measured_at, device_id, customer_user_id, body_type, parsed_at, pdf_key
 `
 
 type InsertMeasurementResultParams struct {
@@ -139,6 +299,510 @@ func (q *Queries) InsertMeasurementResult(ctx context.Context, arg InsertMeasure
 		&i.Source,
 		&i.CreatedBy,
 		&i.CreatedAt,
+		&i.MeasuredAt,
+		&i.DeviceID,
+		&i.CustomerUserID,
+		&i.BodyType,
+		&i.ParsedAt,
+		&i.PdfKey,
+	)
+	return i, err
+}
+
+const insertMeasurementTire = `-- name: InsertMeasurementTire :one
+INSERT INTO measurement_tires (
+    organization_id, brand_id, result_id, section, width, profile, diameter,
+    maker, season, tread_depth_1_mm, tread_depth_2_mm
+) VALUES (
+    $1, $2, $3, $4,
+    $5, $6, $7, $8,
+    $9, $10, $11
+)
+RETURNING id, organization_id, brand_id, result_id, section, width, profile, diameter, maker, season, tread_depth_1_mm, tread_depth_2_mm, created_at
+`
+
+type InsertMeasurementTireParams struct {
+	OrganizationID int64          `json:"organization_id"`
+	BrandID        int64          `json:"brand_id"`
+	ResultID       int64          `json:"result_id"`
+	Section        pgtype.Text    `json:"section"`
+	Width          pgtype.Text    `json:"width"`
+	Profile        pgtype.Text    `json:"profile"`
+	Diameter       pgtype.Text    `json:"diameter"`
+	Maker          pgtype.Text    `json:"maker"`
+	Season         pgtype.Text    `json:"season"`
+	TreadDepth1Mm  pgtype.Numeric `json:"tread_depth_1_mm"`
+	TreadDepth2Mm  pgtype.Numeric `json:"tread_depth_2_mm"`
+}
+
+func (q *Queries) InsertMeasurementTire(ctx context.Context, arg InsertMeasurementTireParams) (MeasurementTire, error) {
+	row := q.db.QueryRow(ctx, insertMeasurementTire,
+		arg.OrganizationID,
+		arg.BrandID,
+		arg.ResultID,
+		arg.Section,
+		arg.Width,
+		arg.Profile,
+		arg.Diameter,
+		arg.Maker,
+		arg.Season,
+		arg.TreadDepth1Mm,
+		arg.TreadDepth2Mm,
+	)
+	var i MeasurementTire
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ResultID,
+		&i.Section,
+		&i.Width,
+		&i.Profile,
+		&i.Diameter,
+		&i.Maker,
+		&i.Season,
+		&i.TreadDepth1Mm,
+		&i.TreadDepth2Mm,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const insertMeasurementValue = `-- name: InsertMeasurementValue :one
+
+INSERT INTO measurement_values (
+    organization_id, brand_id, result_id, place_id, part_type, is_inside,
+    position, value_um, interpretation, substrate_type, measured_at
+) VALUES (
+    $1, $2, $3, $4,
+    $5, $6, $7, $8,
+    $9, $10, $11
+)
+RETURNING id, organization_id, brand_id, result_id, place_id, part_type, is_inside, position, value_um, interpretation, substrate_type, measured_at, created_at
+`
+
+type InsertMeasurementValueParams struct {
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	ResultID       int64              `json:"result_id"`
+	PlaceID        string             `json:"place_id"`
+	PartType       string             `json:"part_type"`
+	IsInside       bool               `json:"is_inside"`
+	Position       pgtype.Int4        `json:"position"`
+	ValueUm        pgtype.Numeric     `json:"value_um"`
+	Interpretation pgtype.Int2        `json:"interpretation"`
+	SubstrateType  pgtype.Text        `json:"substrate_type"`
+	MeasuredAt     pgtype.Timestamptz `json:"measured_at"`
+}
+
+// TEC-293 (F3-02a): normalized readings, tires, device registry and the
+// before/after service link. Every query is bounded by the organization.
+func (q *Queries) InsertMeasurementValue(ctx context.Context, arg InsertMeasurementValueParams) (MeasurementValue, error) {
+	row := q.db.QueryRow(ctx, insertMeasurementValue,
+		arg.OrganizationID,
+		arg.BrandID,
+		arg.ResultID,
+		arg.PlaceID,
+		arg.PartType,
+		arg.IsInside,
+		arg.Position,
+		arg.ValueUm,
+		arg.Interpretation,
+		arg.SubstrateType,
+		arg.MeasuredAt,
+	)
+	var i MeasurementValue
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ResultID,
+		&i.PlaceID,
+		&i.PartType,
+		&i.IsInside,
+		&i.Position,
+		&i.ValueUm,
+		&i.Interpretation,
+		&i.SubstrateType,
+		&i.MeasuredAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const linkServiceMeasurement = `-- name: LinkServiceMeasurement :one
+INSERT INTO service_measurements (
+    organization_id, brand_id, service_id, measurement_result_id, phase,
+    link_source, confirmed_by, confirmed_at
+) VALUES (
+    $1, $2, $3,
+    $4, $5, $6,
+    $7::bigint,
+    CASE WHEN $7::bigint IS NULL THEN NULL ELSE NOW() END
+)
+RETURNING id, organization_id, brand_id, service_id, measurement_result_id, phase, link_source, confirmed_by, confirmed_at, created_at, updated_at
+`
+
+type LinkServiceMeasurementParams struct {
+	OrganizationID      int64       `json:"organization_id"`
+	BrandID             int64       `json:"brand_id"`
+	ServiceID           int64       `json:"service_id"`
+	MeasurementResultID int64       `json:"measurement_result_id"`
+	Phase               string      `json:"phase"`
+	LinkSource          string      `json:"link_source"`
+	ConfirmedBy         pgtype.Int8 `json:"confirmed_by"`
+}
+
+// LinkServiceMeasurement fails with 23505 when the service already has a
+// measurement in the phase or the measurement is linked to another service.
+func (q *Queries) LinkServiceMeasurement(ctx context.Context, arg LinkServiceMeasurementParams) (ServiceMeasurement, error) {
+	row := q.db.QueryRow(ctx, linkServiceMeasurement,
+		arg.OrganizationID,
+		arg.BrandID,
+		arg.ServiceID,
+		arg.MeasurementResultID,
+		arg.Phase,
+		arg.LinkSource,
+		arg.ConfirmedBy,
+	)
+	var i ServiceMeasurement
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ServiceID,
+		&i.MeasurementResultID,
+		&i.Phase,
+		&i.LinkSource,
+		&i.ConfirmedBy,
+		&i.ConfirmedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const listMeasurementDevices = `-- name: ListMeasurementDevices :many
+SELECT id, uuid, organization_id, brand_id, serial, label, created_at, updated_at, model, is_active FROM measurement_devices
+WHERE organization_id = $1
+ORDER BY is_active DESC, serial
+`
+
+func (q *Queries) ListMeasurementDevices(ctx context.Context, organizationID int64) ([]MeasurementDevice, error) {
+	rows, err := q.db.Query(ctx, listMeasurementDevices, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []MeasurementDevice{}
+	for rows.Next() {
+		var i MeasurementDevice
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.Serial,
+			&i.Label,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Model,
+			&i.IsActive,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listMeasurementTires = `-- name: ListMeasurementTires :many
+SELECT id, organization_id, brand_id, result_id, section, width, profile, diameter, maker, season, tread_depth_1_mm, tread_depth_2_mm, created_at FROM measurement_tires
+WHERE result_id = $1 AND organization_id = $2
+ORDER BY id
+`
+
+type ListMeasurementTiresParams struct {
+	ResultID       int64 `json:"result_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) ListMeasurementTires(ctx context.Context, arg ListMeasurementTiresParams) ([]MeasurementTire, error) {
+	rows, err := q.db.Query(ctx, listMeasurementTires, arg.ResultID, arg.OrganizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []MeasurementTire{}
+	for rows.Next() {
+		var i MeasurementTire
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.ResultID,
+			&i.Section,
+			&i.Width,
+			&i.Profile,
+			&i.Diameter,
+			&i.Maker,
+			&i.Season,
+			&i.TreadDepth1Mm,
+			&i.TreadDepth2Mm,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listMeasurementValues = `-- name: ListMeasurementValues :many
+SELECT id, organization_id, brand_id, result_id, place_id, part_type, is_inside, position, value_um, interpretation, substrate_type, measured_at, created_at FROM measurement_values
+WHERE result_id = $1 AND organization_id = $2
+ORDER BY is_inside, place_id, part_type, position NULLS LAST, id
+`
+
+type ListMeasurementValuesParams struct {
+	ResultID       int64 `json:"result_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) ListMeasurementValues(ctx context.Context, arg ListMeasurementValuesParams) ([]MeasurementValue, error) {
+	rows, err := q.db.Query(ctx, listMeasurementValues, arg.ResultID, arg.OrganizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []MeasurementValue{}
+	for rows.Next() {
+		var i MeasurementValue
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.ResultID,
+			&i.PlaceID,
+			&i.PartType,
+			&i.IsInside,
+			&i.Position,
+			&i.ValueUm,
+			&i.Interpretation,
+			&i.SubstrateType,
+			&i.MeasuredAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listServiceMeasurements = `-- name: ListServiceMeasurements :many
+SELECT id, organization_id, brand_id, service_id, measurement_result_id, phase, link_source, confirmed_by, confirmed_at, created_at, updated_at FROM service_measurements
+WHERE service_id = $1 AND organization_id = $2
+ORDER BY phase DESC
+`
+
+type ListServiceMeasurementsParams struct {
+	ServiceID      int64 `json:"service_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) ListServiceMeasurements(ctx context.Context, arg ListServiceMeasurementsParams) ([]ServiceMeasurement, error) {
+	rows, err := q.db.Query(ctx, listServiceMeasurements, arg.ServiceID, arg.OrganizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ServiceMeasurement{}
+	for rows.Next() {
+		var i ServiceMeasurement
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.ServiceID,
+			&i.MeasurementResultID,
+			&i.Phase,
+			&i.LinkSource,
+			&i.ConfirmedBy,
+			&i.ConfirmedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const markMeasurementResultParsed = `-- name: MarkMeasurementResultParsed :exec
+UPDATE measurement_results
+SET parsed_at = NOW(),
+    measured_at = $1,
+    device_id = $2,
+    body_type = $3
+WHERE id = $4 AND organization_id = $5
+`
+
+type MarkMeasurementResultParsedParams struct {
+	MeasuredAt     pgtype.Timestamptz `json:"measured_at"`
+	DeviceID       pgtype.Int8        `json:"device_id"`
+	BodyType       pgtype.Text        `json:"body_type"`
+	ID             int64              `json:"id"`
+	OrganizationID int64              `json:"organization_id"`
+}
+
+// Marks a result normalized and fills the fields parsed from raw.
+func (q *Queries) MarkMeasurementResultParsed(ctx context.Context, arg MarkMeasurementResultParsedParams) error {
+	_, err := q.db.Exec(ctx, markMeasurementResultParsed,
+		arg.MeasuredAt,
+		arg.DeviceID,
+		arg.BodyType,
+		arg.ID,
+		arg.OrganizationID,
+	)
+	return err
+}
+
+const setMeasurementDeviceActive = `-- name: SetMeasurementDeviceActive :execrows
+UPDATE measurement_devices
+SET is_active = $1
+WHERE uuid = $2 AND organization_id = $3
+`
+
+type SetMeasurementDeviceActiveParams struct {
+	IsActive       bool      `json:"is_active"`
+	Uuid           uuid.UUID `json:"uuid"`
+	OrganizationID int64     `json:"organization_id"`
+}
+
+func (q *Queries) SetMeasurementDeviceActive(ctx context.Context, arg SetMeasurementDeviceActiveParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setMeasurementDeviceActive, arg.IsActive, arg.Uuid, arg.OrganizationID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const setMeasurementResultPDFKey = `-- name: SetMeasurementResultPDFKey :exec
+UPDATE measurement_results
+SET pdf_key = $1
+WHERE id = $2 AND organization_id = $3
+`
+
+type SetMeasurementResultPDFKeyParams struct {
+	PdfKey         pgtype.Text `json:"pdf_key"`
+	ID             int64       `json:"id"`
+	OrganizationID int64       `json:"organization_id"`
+}
+
+func (q *Queries) SetMeasurementResultPDFKey(ctx context.Context, arg SetMeasurementResultPDFKeyParams) error {
+	_, err := q.db.Exec(ctx, setMeasurementResultPDFKey, arg.PdfKey, arg.ID, arg.OrganizationID)
+	return err
+}
+
+const setServiceMeasurementCheck = `-- name: SetServiceMeasurementCheck :exec
+UPDATE services
+SET measurement_check_required = $1,
+    measurement_checked_at = $2
+WHERE id = $3 AND organization_id = $4
+`
+
+type SetServiceMeasurementCheckParams struct {
+	MeasurementCheckRequired bool               `json:"measurement_check_required"`
+	MeasurementCheckedAt     pgtype.Timestamptz `json:"measurement_checked_at"`
+	ID                       int64              `json:"id"`
+	OrganizationID           int64              `json:"organization_id"`
+}
+
+func (q *Queries) SetServiceMeasurementCheck(ctx context.Context, arg SetServiceMeasurementCheckParams) error {
+	_, err := q.db.Exec(ctx, setServiceMeasurementCheck,
+		arg.MeasurementCheckRequired,
+		arg.MeasurementCheckedAt,
+		arg.ID,
+		arg.OrganizationID,
+	)
+	return err
+}
+
+const unlinkServiceMeasurement = `-- name: UnlinkServiceMeasurement :execrows
+DELETE FROM service_measurements
+WHERE service_id = $1 AND phase = $2
+  AND organization_id = $3
+`
+
+type UnlinkServiceMeasurementParams struct {
+	ServiceID      int64  `json:"service_id"`
+	Phase          string `json:"phase"`
+	OrganizationID int64  `json:"organization_id"`
+}
+
+func (q *Queries) UnlinkServiceMeasurement(ctx context.Context, arg UnlinkServiceMeasurementParams) (int64, error) {
+	result, err := q.db.Exec(ctx, unlinkServiceMeasurement, arg.ServiceID, arg.Phase, arg.OrganizationID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const upsertMeasurementDevice = `-- name: UpsertMeasurementDevice :one
+INSERT INTO measurement_devices (organization_id, brand_id, serial, label, model, is_active)
+VALUES (
+    $1, $2, $3, $4,
+    $5, $6
+)
+ON CONFLICT (organization_id, serial) DO UPDATE
+SET label = EXCLUDED.label, model = EXCLUDED.model, is_active = EXCLUDED.is_active
+RETURNING id, uuid, organization_id, brand_id, serial, label, created_at, updated_at, model, is_active
+`
+
+type UpsertMeasurementDeviceParams struct {
+	OrganizationID int64       `json:"organization_id"`
+	BrandID        int64       `json:"brand_id"`
+	Serial         string      `json:"serial"`
+	Label          pgtype.Text `json:"label"`
+	Model          pgtype.Text `json:"model"`
+	IsActive       bool        `json:"is_active"`
+}
+
+func (q *Queries) UpsertMeasurementDevice(ctx context.Context, arg UpsertMeasurementDeviceParams) (MeasurementDevice, error) {
+	row := q.db.QueryRow(ctx, upsertMeasurementDevice,
+		arg.OrganizationID,
+		arg.BrandID,
+		arg.Serial,
+		arg.Label,
+		arg.Model,
+		arg.IsActive,
+	)
+	var i MeasurementDevice
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.Serial,
+		&i.Label,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Model,
+		&i.IsActive,
 	)
 	return i, err
 }
