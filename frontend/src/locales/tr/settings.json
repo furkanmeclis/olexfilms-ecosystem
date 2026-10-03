@@ -113,5 +113,6 @@
   "coordinates.marker": "Seçilen konum",
   "coordinates.errors.latitude": "Enlem -90 ile 90 arasında bir sayı olmalı.",
   "coordinates.errors.longitude": "Boylam -180 ile 180 arasında bir sayı olmalı.",
-  "coordinates.errors.pair": "Enlem ve boylamı birlikte girin ya da ikisini de boş bırakın."
+  "coordinates.errors.pair": "Enlem ve boylamı birlikte girin ya da ikisini de boş bırakın.",
+  "system.hub.glorian": "Glorian hub bağlantısı, senkron çalışmaları ve sapma raporu."
 }

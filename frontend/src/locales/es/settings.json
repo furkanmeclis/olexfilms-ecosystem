@@ -113,5 +113,6 @@
   "coordinates.marker": "Posición seleccionada",
   "coordinates.errors.latitude": "La latitud debe ser un número entre -90 y 90.",
   "coordinates.errors.longitude": "La longitud debe ser un número entre -180 y 180.",
-  "coordinates.errors.pair": "Introduzca latitud y longitud juntas o deje ambas vacías."
+  "coordinates.errors.pair": "Introduzca latitud y longitud juntas o deje ambas vacías.",
+  "system.hub.glorian": "Conexión con el hub de Glorian, sincronizaciones e informe de discrepancias."
 }

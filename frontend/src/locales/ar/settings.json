@@ -113,5 +113,6 @@
   "coordinates.marker": "الموقع المحدد",
   "coordinates.errors.latitude": "يجب أن يكون خط العرض رقمًا بين -90 و90.",
   "coordinates.errors.longitude": "يجب أن يكون خط الطول رقمًا بين -180 و180.",
-  "coordinates.errors.pair": "أدخل خط العرض وخط الطول معًا، أو اترك كليهما فارغين."
+  "coordinates.errors.pair": "أدخل خط العرض وخط الطول معًا، أو اترك كليهما فارغين.",
+  "system.hub.glorian": "اتصال مركز Glorian وعمليات المزامنة وتقرير الفروقات."
 }

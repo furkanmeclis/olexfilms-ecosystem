@@ -206,6 +206,7 @@ export const routes = {
       facebook: "/platform/integrations/facebook",
       apple: "/platform/integrations/apple",
       whatsapp: "/platform/integrations/whatsapp",
+      glorian: "/platform/integrations/glorian",
     },
     legalTexts: "/platform/legal-texts",
     organizations: {
