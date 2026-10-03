@@ -2,6 +2,7 @@ export type ExportFormat = "pdf" | "xlsx" | "csv" | "json";
 export type ImportFormat = "json" | "xlsx" | "csv" | "tsv";
 
 import type { BulkActionMeta } from "@/features/bulk-engine/types";
+import type { components } from "@/generated/api";
 
 export type ResourceCapabilities = {
   create?: boolean;
@@ -80,7 +81,12 @@ export type AppSettings = {
   footer_text: string;
   paper_size: string;
   logo_url?: string | null;
+  /** TEC-240 map position; tenant settings only (null when unset). */
+  latitude?: TenantSettingsSchema["latitude"];
+  longitude?: TenantSettingsSchema["longitude"];
 };
+
+type TenantSettingsSchema = components["schemas"]["TenantSettings"];
 
 export type ActivityEvent = {
   uuid: string;

@@ -1,6 +1,13 @@
 "use client";
 
-import { BellRing, Car, FileSignature, House, ShieldCheck } from "lucide-react";
+import {
+  BellRing,
+  Car,
+  FileSignature,
+  House,
+  ShieldCheck,
+  Store,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -16,6 +23,7 @@ const ITEMS = [
     key: "portal.nav.warranties",
     icon: ShieldCheck,
   },
+  { href: routes.portal.dealers, key: "portal.nav.dealers", icon: Store },
   {
     href: routes.portal.contracts,
     key: "portal.nav.contracts",

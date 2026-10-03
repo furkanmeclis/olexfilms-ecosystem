@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { brand } from "@/config/brand";
 import { apiConfig } from "@/config/api";
+import { CoordinatesField } from "@/features/io/components/coordinates-field";
 import {
   PAPER_SIZES,
   settingsFormSchema,
@@ -211,6 +212,7 @@ function SettingsFormFields({
               label={t("settings.district")}
               disabled={!canWrite}
             />
+            <CoordinatesField disabled={!canWrite} />
           </>
         ) : null}
         <AppInput
@@ -327,7 +329,9 @@ export function SettingsForm({
       schema={settingsFormSchema}
       defaultValues={defaultValues}
       onSubmit={async (values) => {
-        await onSubmit(toPatchPayload(values));
+        await onSubmit(
+          toPatchPayload(values, { withCoordinates: Boolean(showLocation) }),
+        );
       }}
     >
       {(form) => (

@@ -1,15 +1,23 @@
 {
   "name": "service_detail",
   "method": "GET",
-  "path": "/v1/mobile/legacy/services/{{service_uuid}}",
+  "path": "/v1/mobile/legacy/services/{{service_id}}",
   "adapts": "GET /v1/services/{uuid}",
-  "source": "New services contract (docs/openapi.yaml, TEC-179). Out of scope (another organization) = 404. Old shape to be confirmed (TEC-234 comment).",
+  "source": "olexfilms routes/api.php GET /api/v1/mobile/services/{service} (integer id); app/Http/Controllers/Api/V1/ServiceController.php show (loads dealer, customer, user, carBrand, carModel, items.stockItem.product, images, warranties.stockItem.product); app/Http/Resources/Api/MobileServiceResource.php.",
   "request": {
-    "headers": {"Authorization": "Bearer {{access_token}}"},
+    "headers": {"Accept": "application/json", "Accept-Language": "tr", "Authorization": "Bearer {{access_token}}"},
     "body": null
   },
   "response": {
     "status": 200,
-    "data_keys": ["uuid", "service_no", "status", "organization", "customer", "vehicle_uuid"]
+    "message": null,
+    "data_keys": ["id", "service_no", "dealer_id", "customer_id", "user_id", "car_brand_id", "car_model_id", "year", "vin", "plate", "plate_country", "km", "package", "applied_parts", "notes", "status", "status_label", "completed_at", "review_request_sms_sent_at", "can_send_review_request", "has_warranty_records", "warranties", "dealer", "customer", "creator", "car_brand", "car_model", "items", "images", "created_at", "updated_at"],
+    "nested_keys": {
+      "dealer": ["id", "name"],
+      "customer": ["id", "name", "phone", "email"],
+      "creator": ["id", "name"],
+      "car_brand": ["id", "name"],
+      "car_model": ["id", "name"]
+    }
   }
 }

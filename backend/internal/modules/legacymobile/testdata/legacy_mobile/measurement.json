@@ -1,22 +1,29 @@
 {
   "name": "measurement",
   "method": "POST",
-  "path": "/v1/mobile/legacy/measurements",
+  "path": "/v1/mobile/legacy/nexptg-reports",
   "adapts": "POST /v1/mobile/measurements",
-  "source": "New measurement contract (docs/openapi.yaml, TEC-233, K28). Old NexPTG upload shape to be confirmed (TEC-234 comment).",
+  "source": "olexfilms routes/api.php POST /api/v1/mobile/nexptg-reports; app/Http/Requests/Api/NexptgReports/StoreNexptgReportRequest.php; app/Http/Controllers/Api/V1/NexptgReportController.php store (201, 'NexPTG raporu kaydedildi.'); app/Http/Resources/Api/MobileNexptgReportResource.php; example values docs/mobile-api.md section 4 (NexPTG Raporları).",
   "request": {
-    "headers": {"Authorization": "Bearer {{access_token}}", "Idempotency-Key": "{{idempotency_key}}"},
+    "headers": {"Accept": "application/json", "Accept-Language": "tr", "Authorization": "Bearer {{access_token}}"},
     "body": {
-      "client_measurement_id": "{{idempotency_key}}",
-      "service_uuid": "{{service_uuid}}",
-      "vin": "WVWZZZ1JZXW000001",
-      "measured_at": "2026-10-01T09:30:00Z",
-      "device": {"serial": "NX-LEGACY-1"},
-      "raw": {"device": "NexPTG", "parts": [{"part": "hood", "values": [98, 102, 101]}]}
+      "body_type": "sedan",
+      "car_brand_id": 1,
+      "car_model_id": 1,
+      "year": 2022,
+      "name": "BMW 320i Ölçüm",
+      "date": "2026-03-10T14:30:00+00:00",
+      "device_serial_number": "NEXPTG-001",
+      "vin": "WBA1234567890ABCD",
+      "unit_of_measure": "μm",
+      "measurements": [
+        {"is_inside": false, "place_id": "top", "part_type": "HOOD", "value": 120.5, "substrate_type": "Fe", "position": 1}
+      ]
     }
   },
   "response": {
-    "status": 202,
-    "data_keys": ["uuid", "status"]
+    "status": 201,
+    "message": "NexPTG raporu kaydedildi.",
+    "data_keys": ["id", "external_id", "name", "date", "calibration_date", "device_serial_number", "brand", "model", "car_brand_id", "car_model_id", "body_type", "vin", "year", "unit_of_measure", "measurements", "measurements_count", "is_matched", "service_id", "service_match_type", "service_match_type_label", "created_at", "updated_at"]
   }
 }
