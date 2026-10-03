@@ -1,0 +1,5 @@
+[
+  {"id": "10", "sku": "HYDRA-150", "name": "HYDRA 150", "description": null, "category_id": "1", "warranty_duration": 12, "micron_thickness": 150, "is_active": true, "image_url": null, "deleted_at": null, "updated_at": "2026-09-01T11:00:00+00:00"},
+  {"id": "11", "sku": "HYDRA-200", "name": "HYDRA 200", "description": "Mat", "category_id": "1", "warranty_duration": 24, "micron_thickness": 200, "is_active": true, "image_url": null, "deleted_at": null, "updated_at": "2026-09-02T11:00:00+00:00"},
+  {"id": "12", "sku": "TINT-35", "name": "Tint 35", "description": null, "category_id": "2", "warranty_duration": 60, "micron_thickness": null, "is_active": true, "image_url": "https://hub.example.test/img/tint-35.png", "deleted_at": null, "updated_at": "2026-09-04T11:00:00+00:00"}
+]
