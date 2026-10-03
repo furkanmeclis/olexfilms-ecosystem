@@ -125,6 +125,11 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	for name, code := range TransferEventCodes {
 		on(name, transferDispatcher(code))
 	}
+	// TEC-221: task assignment and due date reminders go to notify_user_ids
+	// (the assignee, or the creator of an unassigned task).
+	for name, code := range TaskEventCodes {
+		on(name, taskDispatcher(code))
+	}
 	on(events.AIDraftCreated, func(event events.Event) (notifmodel.DispatchInput, bool) {
 		ids := userIDsFromAIEvent(event)
 		return notifmodel.DispatchInput{

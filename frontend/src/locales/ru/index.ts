@@ -41,6 +41,7 @@ import stepup from "./stepup.json";
 import stock from "./stock.json";
 import storage from "./storage.json";
 import table from "./table.json";
+import tasks from "./tasks.json";
 import transfers from "./transfers.json";
 import users from "./users.json";
 import vehicles from "./vehicles.json";
@@ -87,6 +88,7 @@ const catalog: LocaleCatalog = {
   stock,
   storage,
   table,
+  tasks,
   transfers,
   users,
   vehicles,

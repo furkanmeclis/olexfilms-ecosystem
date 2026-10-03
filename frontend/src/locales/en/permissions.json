@@ -168,5 +168,8 @@
   "labels.warranties.read": "Read warranties",
   "labels.warranties.void": "Void warranties",
   "labels.vehicles.transfer": "Transfer vehicles",
-  "groups.warranties": "Warranties"
+  "groups.warranties": "Warranties",
+  "labels.tasks.read": "View tasks",
+  "labels.tasks.write": "Manage tasks",
+  "groups.tasks": "Tasks"
 }

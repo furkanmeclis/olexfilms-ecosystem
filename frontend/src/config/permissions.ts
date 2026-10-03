@@ -131,6 +131,8 @@ export const Permission = {
   OrdersCancel: "orders.cancel",
   TransfersRequest: "transfers.request",
   TransfersApprove: "transfers.approve",
+  TasksRead: "tasks.read",
+  TasksWrite: "tasks.write",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];
@@ -344,6 +346,10 @@ export const permissions = {
   transfers: {
     request: Permission.TransfersRequest,
     approve: Permission.TransfersApprove,
+  },
+  tasks: {
+    read: Permission.TasksRead,
+    write: Permission.TasksWrite,
   },
   catalog: {
     read: Permission.CatalogRead,

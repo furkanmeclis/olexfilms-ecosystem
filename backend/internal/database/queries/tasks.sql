@@ -29,7 +29,12 @@ SET subject_org_id = sqlc.arg(subject_org_id),
     description = sqlc.arg(description),
     assignee_user_id = sqlc.narg(assignee_user_id),
     priority = sqlc.arg(priority),
-    due_at = sqlc.narg(due_at),
+    due_at = sqlc.narg(due_at)::timestamptz,
+    -- TEC-221: a new deadline is reminded again.
+    due_soon_notified_at = CASE WHEN due_at IS DISTINCT FROM sqlc.narg(due_at)::timestamptz
+                                THEN NULL ELSE due_soon_notified_at END,
+    overdue_notified_at = CASE WHEN due_at IS DISTINCT FROM sqlc.narg(due_at)::timestamptz
+                               THEN NULL ELSE overdue_notified_at END,
     status = sqlc.arg(status),
     closed_at = sqlc.narg(closed_at),
     closed_by_user_id = sqlc.narg(closed_by_user_id)
@@ -64,6 +69,8 @@ WHERE t.brand_id = sqlc.arg(brand_id)
   AND (sqlc.narg(priority)::text IS NULL OR t.priority = sqlc.narg(priority)::text)
   AND (sqlc.narg(subject_org_id)::bigint IS NULL OR t.subject_org_id = sqlc.narg(subject_org_id)::bigint)
   AND (sqlc.narg(assignee_user_id)::bigint IS NULL OR t.assignee_user_id = sqlc.narg(assignee_user_id)::bigint)
+  AND (sqlc.narg(due_after)::timestamptz IS NULL OR t.due_at >= sqlc.narg(due_after)::timestamptz)
+  AND (sqlc.narg(due_before)::timestamptz IS NULL OR t.due_at < sqlc.narg(due_before)::timestamptz)
 ORDER BY t.created_at DESC, t.id DESC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
@@ -74,7 +81,9 @@ WHERE t.brand_id = sqlc.arg(brand_id)
   AND (NOT sqlc.arg(only_open)::boolean OR t.status IN ('open', 'in_progress'))
   AND (sqlc.narg(priority)::text IS NULL OR t.priority = sqlc.narg(priority)::text)
   AND (sqlc.narg(subject_org_id)::bigint IS NULL OR t.subject_org_id = sqlc.narg(subject_org_id)::bigint)
-  AND (sqlc.narg(assignee_user_id)::bigint IS NULL OR t.assignee_user_id = sqlc.narg(assignee_user_id)::bigint);
+  AND (sqlc.narg(assignee_user_id)::bigint IS NULL OR t.assignee_user_id = sqlc.narg(assignee_user_id)::bigint)
+  AND (sqlc.narg(due_after)::timestamptz IS NULL OR t.due_at >= sqlc.narg(due_after)::timestamptz)
+  AND (sqlc.narg(due_before)::timestamptz IS NULL OR t.due_at < sqlc.narg(due_before)::timestamptz);
 
 -- name: InsertTaskComment :one
 INSERT INTO task_comments (task_id, organization_id, brand_id, author_user_id, body)
@@ -109,3 +118,56 @@ UPDATE tasks
 SET assignee_user_id = sqlc.narg(assignee_user_id)
 WHERE id = sqlc.arg(id)
 RETURNING *;
+
+-- TEC-221: assignee picker of the task form (members of the center).
+-- name: ListCenterMembers :many
+SELECT u.uuid, u.name, u.surname FROM users u
+JOIN organization_members m ON m.user_id = u.id
+WHERE m.organization_id = sqlc.arg(organization_id) AND u.deleted_at IS NULL
+ORDER BY u.name, u.surname, u.id;
+
+-- TEC-221: tasks:due_scan. Each claim stamps one threshold on a page of
+-- open tasks and returns what the reminder needs; a stamped task leaves the
+-- candidate list, so a second run finds nothing (SKIP LOCKED keeps two
+-- runs apart). Tasks with nobody to notify (no assignee, no creator) are
+-- never claimed. The overdue pass also stamps due_soon so a missed run does
+-- not send a stale "due soon" after the deadline.
+-- name: ClaimTasksOverdue :many
+WITH picked AS (
+    SELECT id FROM tasks
+    WHERE status IN ('open', 'in_progress') AND due_at IS NOT NULL
+      AND due_at <= sqlc.arg(now)::timestamptz
+      AND overdue_notified_at IS NULL
+      AND (assignee_user_id IS NOT NULL OR created_by_user_id IS NOT NULL)
+    ORDER BY due_at, id
+    LIMIT sqlc.arg(row_limit)
+    FOR UPDATE SKIP LOCKED
+)
+UPDATE tasks t
+SET overdue_notified_at = sqlc.arg(now)::timestamptz,
+    due_soon_notified_at = COALESCE(t.due_soon_notified_at, sqlc.arg(now)::timestamptz)
+FROM picked, organizations o, organizations s
+WHERE t.id = picked.id AND o.id = t.organization_id AND s.id = t.subject_org_id
+RETURNING t.id, t.uuid, t.organization_id, t.brand_id, t.title, t.priority, t.due_at,
+          t.assignee_user_id, t.created_by_user_id,
+          o.timezone AS timezone, s.name AS subject_name;
+
+-- name: ClaimTasksDueSoon :many
+WITH picked AS (
+    SELECT id FROM tasks
+    WHERE status IN ('open', 'in_progress') AND due_at IS NOT NULL
+      AND due_at > sqlc.arg(now)::timestamptz
+      AND due_at <= sqlc.arg(horizon)::timestamptz
+      AND due_soon_notified_at IS NULL AND overdue_notified_at IS NULL
+      AND (assignee_user_id IS NOT NULL OR created_by_user_id IS NOT NULL)
+    ORDER BY due_at, id
+    LIMIT sqlc.arg(row_limit)
+    FOR UPDATE SKIP LOCKED
+)
+UPDATE tasks t
+SET due_soon_notified_at = sqlc.arg(now)::timestamptz
+FROM picked, organizations o, organizations s
+WHERE t.id = picked.id AND o.id = t.organization_id AND s.id = t.subject_org_id
+RETURNING t.id, t.uuid, t.organization_id, t.brand_id, t.title, t.priority, t.due_at,
+          t.assignee_user_id, t.created_by_user_id,
+          o.timezone AS timezone, s.name AS subject_name;
