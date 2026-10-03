@@ -247,7 +247,11 @@ func TestOrderOutboundTransitionsInOrder(t *testing.T) {
 		t.Fatalf("hub order = %v", row)
 	}
 
-	// Late: the order is already received when the first task runs.
+	// Late: the order is already received when the first task runs. The
+	// first product releases the remote id (unique per connection).
+	if _, err := f.tx.Exec(f.ctx, `UPDATE products SET connection_id = NULL, external_id = NULL WHERE id = $1`, c.units.product.ID); err != nil {
+		t.Fatal(err)
+	}
 	late := f.newOrderCase(t, f.glorian, 1, true, true)
 	late.order = f.setStatus(t, late.order, "shipped")
 	late.order = f.setStatus(t, late.order, "received")
