@@ -570,6 +570,11 @@ type Querier interface {
 	GetQRLoginChallengeByCode(ctx context.Context, code string) (QrLoginChallenge, error)
 	GetRefreshTokenByHashAny(ctx context.Context, tokenHash string) (RefreshToken, error)
 	GetRefreshTokenByUUID(ctx context.Context, argUuid uuid.UUID) (RefreshToken, error)
+	// TEC-239: the newest reusable portal job of the actor for one service
+	// (no organization): a completed job created at or after not_before, or a
+	// queued / processing one created at or after pending_after. Failed and
+	// expired jobs are never reused.
+	GetReusablePortalServiceJob(ctx context.Context, arg GetReusablePortalServiceJobParams) (ExportJob, error)
 	GetRoleByID(ctx context.Context, id int64) (Role, error)
 	GetRoleBySlug(ctx context.Context, slug string) (Role, error)
 	GetRoleByUUID(ctx context.Context, argUuid uuid.UUID) (Role, error)

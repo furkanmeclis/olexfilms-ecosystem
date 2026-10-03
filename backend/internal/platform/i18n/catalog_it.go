@@ -450,6 +450,8 @@ var itCatalog = map[string]string{
 	// TEC-196: service PDF.
 	"export.title.tenant.services.pdf":      "Rapporto di servizio",
 	"resources.tenant.services.pdf":         "Rapporto di servizio",
+	"export.title.portal.service_pdf":       "Rapporto di servizio",
+	"resources.portal.service_pdf":          "Il mio rapporto di servizio",
 	"services.pdf.status":                   "Stato",
 	"services.pdf.created_at":               "Creato",
 	"services.pdf.completed_at":             "Completato",
