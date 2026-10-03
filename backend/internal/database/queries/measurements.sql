@@ -27,3 +27,129 @@ LIMIT 1;
 -- name: GetServiceForMeasurement :one
 SELECT id, vehicle_id FROM services
 WHERE uuid = sqlc.arg(uuid) AND organization_id = sqlc.arg(organization_id) AND brand_id = sqlc.arg(brand_id);
+
+-- TEC-293 (F3-02a): normalized readings, tires, device registry and the
+-- before/after service link. Every query is bounded by the organization.
+
+-- name: InsertMeasurementValue :one
+INSERT INTO measurement_values (
+    organization_id, brand_id, result_id, place_id, part_type, is_inside,
+    position, value_um, interpretation, substrate_type, measured_at
+) VALUES (
+    sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.arg(result_id), sqlc.arg(place_id),
+    sqlc.arg(part_type), sqlc.arg(is_inside), sqlc.narg(position), sqlc.narg(value_um),
+    sqlc.narg(interpretation), sqlc.narg(substrate_type), sqlc.narg(measured_at)
+)
+RETURNING *;
+
+-- name: ListMeasurementValues :many
+SELECT * FROM measurement_values
+WHERE result_id = sqlc.arg(result_id) AND organization_id = sqlc.arg(organization_id)
+ORDER BY is_inside, place_id, part_type, position NULLS LAST, id;
+
+-- name: DeleteMeasurementValues :exec
+DELETE FROM measurement_values
+WHERE result_id = sqlc.arg(result_id) AND organization_id = sqlc.arg(organization_id);
+
+-- name: InsertMeasurementTire :one
+INSERT INTO measurement_tires (
+    organization_id, brand_id, result_id, section, width, profile, diameter,
+    maker, season, tread_depth_1_mm, tread_depth_2_mm
+) VALUES (
+    sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.arg(result_id), sqlc.narg(section),
+    sqlc.narg(width), sqlc.narg(profile), sqlc.narg(diameter), sqlc.narg(maker),
+    sqlc.narg(season), sqlc.narg(tread_depth_1_mm), sqlc.narg(tread_depth_2_mm)
+)
+RETURNING *;
+
+-- name: ListMeasurementTires :many
+SELECT * FROM measurement_tires
+WHERE result_id = sqlc.arg(result_id) AND organization_id = sqlc.arg(organization_id)
+ORDER BY id;
+
+-- name: DeleteMeasurementTires :exec
+DELETE FROM measurement_tires
+WHERE result_id = sqlc.arg(result_id) AND organization_id = sqlc.arg(organization_id);
+
+-- Marks a result normalized and fills the fields parsed from raw.
+-- name: MarkMeasurementResultParsed :exec
+UPDATE measurement_results
+SET parsed_at = NOW(),
+    measured_at = sqlc.narg(measured_at),
+    device_id = sqlc.narg(device_id),
+    body_type = sqlc.narg(body_type)
+WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id);
+
+-- name: SetMeasurementResultPDFKey :exec
+UPDATE measurement_results
+SET pdf_key = sqlc.narg(pdf_key)
+WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id);
+
+-- name: GetMeasurementResultByUUID :one
+SELECT * FROM measurement_results
+WHERE uuid = sqlc.arg(uuid) AND organization_id = sqlc.arg(organization_id);
+
+-- name: ListMeasurementDevices :many
+SELECT * FROM measurement_devices
+WHERE organization_id = sqlc.arg(organization_id)
+ORDER BY is_active DESC, serial;
+
+-- name: GetMeasurementDeviceBySerial :one
+SELECT * FROM measurement_devices
+WHERE organization_id = sqlc.arg(organization_id) AND serial = sqlc.arg(serial);
+
+-- name: UpsertMeasurementDevice :one
+INSERT INTO measurement_devices (organization_id, brand_id, serial, label, model, is_active)
+VALUES (
+    sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.arg(serial), sqlc.narg(label),
+    sqlc.narg(model), sqlc.arg(is_active)
+)
+ON CONFLICT (organization_id, serial) DO UPDATE
+SET label = EXCLUDED.label, model = EXCLUDED.model, is_active = EXCLUDED.is_active
+RETURNING *;
+
+-- name: SetMeasurementDeviceActive :execrows
+UPDATE measurement_devices
+SET is_active = sqlc.arg(is_active)
+WHERE uuid = sqlc.arg(uuid) AND organization_id = sqlc.arg(organization_id);
+
+-- LinkServiceMeasurement fails with 23505 when the service already has a
+-- measurement in the phase or the measurement is linked to another service.
+-- name: LinkServiceMeasurement :one
+INSERT INTO service_measurements (
+    organization_id, brand_id, service_id, measurement_result_id, phase,
+    link_source, confirmed_by, confirmed_at
+) VALUES (
+    sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.arg(service_id),
+    sqlc.arg(measurement_result_id), sqlc.arg(phase), sqlc.arg(link_source),
+    sqlc.narg(confirmed_by)::bigint,
+    CASE WHEN sqlc.narg(confirmed_by)::bigint IS NULL THEN NULL ELSE NOW() END
+)
+RETURNING *;
+
+-- name: ConfirmServiceMeasurement :execrows
+UPDATE service_measurements
+SET confirmed_by = sqlc.arg(confirmed_by), confirmed_at = NOW()
+WHERE service_id = sqlc.arg(service_id) AND phase = sqlc.arg(phase)
+  AND organization_id = sqlc.arg(organization_id);
+
+-- name: UnlinkServiceMeasurement :execrows
+DELETE FROM service_measurements
+WHERE service_id = sqlc.arg(service_id) AND phase = sqlc.arg(phase)
+  AND organization_id = sqlc.arg(organization_id);
+
+-- name: ListServiceMeasurements :many
+SELECT * FROM service_measurements
+WHERE service_id = sqlc.arg(service_id) AND organization_id = sqlc.arg(organization_id)
+ORDER BY phase DESC;
+
+-- name: GetServiceMeasurementByResult :one
+SELECT * FROM service_measurements
+WHERE measurement_result_id = sqlc.arg(measurement_result_id)
+  AND organization_id = sqlc.arg(organization_id);
+
+-- name: SetServiceMeasurementCheck :exec
+UPDATE services
+SET measurement_check_required = sqlc.arg(measurement_check_required),
+    measurement_checked_at = sqlc.narg(measurement_checked_at)
+WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id);

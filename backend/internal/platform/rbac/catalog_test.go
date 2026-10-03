@@ -368,6 +368,80 @@ func TestTaskGrants(t *testing.T) {
 	}
 }
 
+// TEC-285: contracts.* are in the catalog; templates.manage and void are
+// center-only (brand scope); every role that writes services reads and
+// writes contracts at its services.read / services.write scope.
+func TestContractGrants(t *testing.T) {
+	for _, slug := range []string{PermContractsTemplatesManage, PermContractsRead, PermContractsWrite, PermContractsVoid} {
+		def, ok := PermissionBySlug(slug)
+		if !ok || def.Module != "contracts" {
+			t.Fatalf("catalog misses %s", slug)
+		}
+	}
+	for _, r := range Roles {
+		if r.Slug == RoleSuperAdmin {
+			continue
+		}
+		for _, slug := range []string{PermContractsTemplatesManage, PermContractsVoid} {
+			if _, ok := r.Grants[slug]; ok && r.OrgType != OrgTypeCenter {
+				t.Fatalf("%s must not hold %s", r.Slug, slug)
+			}
+		}
+		if _, ok := r.Grants[PermServicesWrite]; ok {
+			if r.Grants[PermContractsRead] != r.Grants[PermServicesRead] {
+				t.Fatalf("%s contracts.read = %q, want services.read scope %q",
+					r.Slug, r.Grants[PermContractsRead], r.Grants[PermServicesRead])
+			}
+			if r.Grants[PermContractsWrite] != r.Grants[PermServicesWrite] {
+				t.Fatalf("%s contracts.write = %q, want services.write scope %q",
+					r.Slug, r.Grants[PermContractsWrite], r.Grants[PermServicesWrite])
+			}
+		}
+	}
+	staff, _ := RoleBySlug(RoleCenterStaff)
+	if staff.Grants[PermContractsTemplatesManage] != ScopeBrand || staff.Grants[PermContractsVoid] != ScopeBrand {
+		t.Fatalf("center_staff contract grants = %q %q",
+			staff.Grants[PermContractsTemplatesManage], staff.Grants[PermContractsVoid])
+	}
+	g := RoleGrants(RoleDef{Slug: RoleSuperAdmin})
+	for _, slug := range []string{PermContractsTemplatesManage, PermContractsRead, PermContractsWrite, PermContractsVoid} {
+		if g[slug] != ScopeAll {
+			t.Fatalf("super_admin %s = %q", slug, g[slug])
+		}
+	}
+}
+
+// TEC-305: catalog management and cancellation approval are center-only;
+// distributors assign to their subtree; dealers only read and request
+// cancellation.
+func TestServiceCatalogGrants(t *testing.T) {
+	for _, r := range Roles {
+		if r.Slug == RoleSuperAdmin || r.OrgType == OrgTypeCenter {
+			continue
+		}
+		for _, slug := range []string{PermServiceCatalogManage, PermServiceSubscriptionsCancelApprove} {
+			if _, ok := r.Grants[slug]; ok {
+				t.Fatalf("%s must not hold %s", r.Slug, slug)
+			}
+		}
+	}
+	dist, _ := RoleBySlug(RoleDistributorOwner)
+	if dist.Grants[PermServiceSubscriptionsAssign] != ScopeSubtree {
+		t.Fatalf("distributor_owner assign = %q", dist.Grants[PermServiceSubscriptionsAssign])
+	}
+	dealer, _ := RoleBySlug(RoleDealerOwner)
+	if _, ok := dealer.Grants[PermServiceSubscriptionsAssign]; ok {
+		t.Fatal("dealer_owner must not assign service subscriptions")
+	}
+	if dealer.Grants[PermServiceSubscriptionsCancelRequest] != ScopeManaged {
+		t.Fatalf("dealer_owner cancel_request = %q", dealer.Grants[PermServiceSubscriptionsCancelRequest])
+	}
+	staff, _ := RoleBySlug(RoleCenterStaff)
+	if staff.Grants[PermServiceCatalogManage] != ScopeBrand || staff.Grants[PermServiceSubscriptionsCancelApprove] != ScopeBrand {
+		t.Fatalf("center_staff service grants = %v", staff.Grants)
+	}
+}
+
 // TEC-329: every network role reads announcements and the library in its
 // organization; the center writes both for its brand, the distributor
 // owner writes announcements for its subtree only; dealers and portal
