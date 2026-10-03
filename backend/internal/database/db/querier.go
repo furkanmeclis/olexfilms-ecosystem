@@ -514,6 +514,7 @@ type Querier interface {
 	GetFinanceEntryReversal(ctx context.Context, entryID pgtype.Int8) (FinanceEntry, error)
 	GetFixedHoldingQuantity(ctx context.Context, arg GetFixedHoldingQuantityParams) (int32, error)
 	GetGitHubAppSettings(ctx context.Context) (GithubAppSetting, error)
+	GetGlorianOutboundByUUID(ctx context.Context, arg GetGlorianOutboundByUUIDParams) (GetGlorianOutboundByUUIDRow, error)
 	// TEC-271 (F2-02f): Glorian order outbound. An order of the glorian brand
 	// whose lines hold products synced from a connection is sent to that
 	// connection's hub as one order per connection (order_outbounds).
@@ -525,6 +526,7 @@ type Querier interface {
 	// not linked yet), so a remote item with its barcode is paired instead of
 	// being reported as remote only.
 	GetGlorianReconcileUnitByBarcode(ctx context.Context, arg GetGlorianReconcileUnitByBarcodeParams) (GetGlorianReconcileUnitByBarcodeRow, error)
+	GetGlorianSyncRunByUUID(ctx context.Context, arg GetGlorianSyncRunByUUIDParams) (IntegrationSyncRun, error)
 	GetImportJobByID(ctx context.Context, id int64) (ImportJob, error)
 	GetImportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ImportJob, error)
 	// TEC-270 (F2-02e): Glorian barcode push. Units of products synced from a
@@ -536,6 +538,7 @@ type Querier interface {
 	// The connection of the product's brand with the given key.
 	GetIntegrationConnectionForProduct(ctx context.Context, arg GetIntegrationConnectionForProductParams) (IntegrationConnection, error)
 	GetIntegrationExternalPartyByRemoteID(ctx context.Context, arg GetIntegrationExternalPartyByRemoteIDParams) (IntegrationExternalParty, error)
+	GetIntegrationSyncRunByID(ctx context.Context, id int64) (IntegrationSyncRun, error)
 	GetLabelTemplateByID(ctx context.Context, id int64) (LabelTemplate, error)
 	GetLabelTemplateByUUID(ctx context.Context, arg GetLabelTemplateByUUIDParams) (LabelTemplate, error)
 	GetLatestConsent(ctx context.Context, arg GetLatestConsentParams) (Consent, error)
@@ -975,6 +978,9 @@ type Querier interface {
 	// a connection, in line order. Olex and local products have no connection
 	// and never appear.
 	ListGlorianOrderUnits(ctx context.Context, orderID int64) ([]ListGlorianOrderUnitsRow, error)
+	// Order outbounds of a connection in one state with their order, oldest
+	// first (the replay order).
+	ListGlorianOutbounds(ctx context.Context, arg ListGlorianOutboundsParams) ([]ListGlorianOutboundsRow, error)
 	// Active dealers of the connection with the buyer's phone: the order's
 	// customer link (exactly one match links, none or several hold).
 	ListGlorianPartiesByPhone(ctx context.Context, arg ListGlorianPartiesByPhoneParams) ([]IntegrationExternalParty, error)
@@ -988,6 +994,12 @@ type Querier interface {
 	// mirrors a remote stock item of it), with the product's remote id and the
 	// unit's current owner from the ledger projection.
 	ListGlorianReconcileUnits(ctx context.Context, arg ListGlorianReconcileUnitsParams) ([]ListGlorianReconcileUnitsRow, error)
+	// TEC-273 (F2-02h): Glorian admin API. Every read is limited to one
+	// connection; the handler resolves the connection of the glorian brand
+	// first.
+	// Sync runs of a connection, newest first, optionally filtered by kind
+	// and status.
+	ListGlorianSyncRuns(ctx context.Context, arg ListGlorianSyncRunsParams) ([]IntegrationSyncRun, error)
 	// Grants of global roles (user_roles / JWT roles claim).
 	ListGrantsByRoleSlugs(ctx context.Context, roleSlugs []string) ([]ListGrantsByRoleSlugsRow, error)
 	// Held outbounds of a connection (0: every connection) after the keyset

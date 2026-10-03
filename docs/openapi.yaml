@@ -15233,6 +15233,336 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthenticated"
 
+  /v1/platform/integrations/glorian:
+    get:
+      tags: [Platform]
+      operationId: getGlorianIntegration
+      summary: Read the Glorian hub connection (TEC-273)
+      description: >-
+        Needs integrations.glorian.view (an `all` grant, or a `brand` grant on
+        the glorian brand's domain). The API key is write only: the response
+        never carries it, only `api_key_set` and a fixed mask. A brand without
+        a connection answers `configured: false` with the defaults.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Connection settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeGlorianConnection"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    put:
+      tags: [Platform]
+      operationId: putGlorianIntegration
+      summary: Create or replace the Glorian hub connection (TEC-273)
+      description: >-
+        Needs integrations.glorian.manage. `api_key` is write only: omitted or
+        blank keeps the stored key; it is stored encrypted. Activating needs a
+        key. A new connection belongs to the glorian brand's center
+        organization (422 GLORIAN_CENTER_MISSING when there is none).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PutGlorianConnectionRequest"
+      responses:
+        "200":
+          description: Saved connection settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeGlorianConnection"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          description: GLORIAN_CENTER_MISSING
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /v1/platform/integrations/glorian/test:
+    post:
+      tags: [Platform]
+      operationId: testGlorianIntegration
+      summary: Ping the Glorian hub with the stored settings (TEC-273)
+      description: >-
+        Needs integrations.glorian.manage. Sends GET product-categories (one
+        row) with the stored URL and key, also for an inactive connection. A
+        failed ping is a 200 with `ok: false`.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Ping result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeGlorianTestResult"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /v1/platform/integrations/glorian/sync-runs:
+    get:
+      tags: [Platform]
+      operationId: listGlorianSyncRuns
+      summary: List the sync runs of the Glorian connection (TEC-273)
+      description: Needs integrations.glorian.view. Newest first.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: kind
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pull_categories, pull_products, pull_dealers, pull_stock, push_barcodes, outbound, reconcile]
+        - name: status
+          in: query
+          required: false
+          schema: { type: string, enum: [running, succeeded, failed] }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        "200":
+          description: Sync runs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeGlorianSyncRunList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      tags: [Platform]
+      operationId: triggerGlorianSync
+      summary: Queue a manual Glorian sync (TEC-273)
+      description: >-
+        Needs integrations.glorian.manage. `pull` (default) queues the
+        catalog, dealer and stock pull, `push_barcodes` the barcode push,
+        `outbound_replay` the replay of held order outbounds. The runs appear
+        in the list when the worker takes the task. 422
+        GLORIAN_CONNECTION_INACTIVE for an inactive connection, 503
+        QUEUE_UNAVAILABLE when the task queue is off.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TriggerGlorianSyncRequest"
+      responses:
+        "202":
+          description: Task queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeGlorianSyncQueued"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          description: GLORIAN_CONNECTION_INACTIVE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          description: QUEUE_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /v1/platform/integrations/glorian/sync-runs/{uuid}:
+    get:
+      tags: [Platform]
+      operationId: getGlorianSyncRun
+      summary: Read one Glorian sync run (TEC-273)
+      description: >-
+        Needs integrations.glorian.view. `counts` holds the run totals; a
+        reconcile run also has the first rows of every drift category under
+        `counts.details`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Sync run
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeGlorianSyncRun"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /v1/platform/integrations/glorian/outbounds:
+    get:
+      tags: [Platform]
+      operationId: listGlorianOutbounds
+      summary: List Glorian order outbounds in one state (TEC-273)
+      description: Needs integrations.glorian.view. Oldest first; `state` defaults to held.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: state
+          in: query
+          required: false
+          schema: { type: string, enum: [pending, held, sent, failed, cancelled], default: held }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        "200":
+          description: Order outbounds
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeGlorianOutboundList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /v1/platform/integrations/glorian/outbounds/{uuid}/replay:
+    post:
+      tags: [Platform]
+      operationId: replayGlorianOutbound
+      summary: Queue the replay of one held or failed order outbound (TEC-273)
+      description: >-
+        Needs integrations.glorian.manage. The worker re-reads the order and
+        the hub order, so a replay never repeats a step; a pending replay of
+        the same outbound is reused. 422 GLORIAN_OUTBOUND_NOT_REPLAYABLE for
+        another state, 503 QUEUE_UNAVAILABLE when the task queue is off.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "202":
+          description: Replay queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeGlorianOutbound"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          description: GLORIAN_OUTBOUND_NOT_REPLAYABLE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          description: QUEUE_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /v1/platform/integrations/glorian/reconcile:
+    post:
+      tags: [Platform]
+      operationId: startGlorianReconcile
+      summary: Start a Glorian reconcile drift report (TEC-273)
+      description: >-
+        Needs integrations.glorian.manage. Opens a running reconcile sync run
+        and queues the report; GET /sync-runs/{uuid} shows the result. Read
+        only: the report never writes units or the ledger. 503
+        QUEUE_UNAVAILABLE when the task queue is off.
+      security:
+        - bearerAuth: []
+      responses:
+        "202":
+          description: Running reconcile sync run
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeGlorianSyncRun"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          description: QUEUE_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -23628,4 +23958,167 @@ components:
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    # TEC-273: Glorian admin API.
+    GlorianConnection:
+      type: object
+      description: The API key is never returned; `api_key_set` and `api_key_masked` stand in for it.
+      required: [configured, uuid, key, base_url, active, api_version, default_warehouse_uuid, api_key_set, api_key_masked, created_at, updated_at]
+      properties:
+        configured: { type: boolean }
+        uuid: { type: [string, "null"], format: uuid }
+        key: { type: string, example: glorian }
+        base_url: { type: string }
+        active: { type: boolean }
+        api_version: { type: string, example: "1" }
+        default_warehouse_uuid: { type: [string, "null"], format: uuid }
+        api_key_set: { type: boolean }
+        api_key_masked: { type: [string, "null"], example: "********" }
+        created_at: { type: [string, "null"], format: date-time }
+        updated_at: { type: [string, "null"], format: date-time }
+
+    PutGlorianConnectionRequest:
+      type: object
+      additionalProperties: false
+      required: [base_url]
+      properties:
+        base_url: { type: string, maxLength: 500, description: "http(s) root of the hub" }
+        active: { type: boolean, default: false }
+        api_version: { type: string, enum: ["1"], default: "1" }
+        default_warehouse_uuid:
+          type: [string, "null"]
+          format: uuid
+          description: A warehouse of the connection's center organization; null clears it.
+        api_key:
+          type: [string, "null"]
+          maxLength: 500
+          writeOnly: true
+          description: Write only. Omitted or blank keeps the stored key.
+
+    GlorianTestResult:
+      type: object
+      required: [ok, duration_ms, http_status, code, message]
+      properties:
+        ok: { type: boolean }
+        duration_ms: { type: integer, format: int64 }
+        http_status: { type: [integer, "null"] }
+        code:
+          type: [string, "null"]
+          description: Hub error code (e.g. UNAUTHORIZED), MISCONFIGURED or TRANSPORT_ERROR.
+        message: { type: [string, "null"] }
+
+    GlorianSyncRun:
+      type: object
+      required: [uuid, kind, status, started_at, finished_at, watermark, counts, error]
+      properties:
+        uuid: { type: string, format: uuid }
+        kind:
+          type: string
+          enum: [pull_categories, pull_products, pull_dealers, pull_stock, push_barcodes, outbound, reconcile]
+        status: { type: string, enum: [running, succeeded, failed] }
+        started_at: { type: string, format: date-time }
+        finished_at: { type: [string, "null"], format: date-time }
+        watermark: { type: [string, "null"], format: date-time }
+        counts:
+          type: object
+          additionalProperties: true
+          description: Run totals by kind; a reconcile run carries `details` with the first rows of every drift category.
+        error: { type: [string, "null"], description: 'A hold reads "held: <reason>".' }
+
+    TriggerGlorianSyncRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        kind: { type: string, enum: [pull, push_barcodes, outbound_replay], default: pull }
+
+    GlorianSyncQueued:
+      type: object
+      required: [kind, task]
+      properties:
+        kind: { type: string, enum: [pull, push_barcodes, outbound_replay] }
+        task: { type: string, example: "glorian:pull_catalog" }
+
+    GlorianOutbound:
+      type: object
+      required: [uuid, order_uuid, order_no, order_status, external_reference, state, held_reason, attempts, last_error, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        order_uuid: { type: string, format: uuid }
+        order_no: { type: string }
+        order_status: { type: string }
+        external_reference: { type: string }
+        state: { type: string, enum: [pending, held, sent, failed, cancelled] }
+        held_reason: { type: [string, "null"], enum: [missing_customer_link, inactive_connection, null] }
+        attempts: { type: integer }
+        last_error: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    EnvelopeGlorianConnection:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/GlorianConnection" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeGlorianTestResult:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/GlorianTestResult" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeGlorianSyncRun:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/GlorianSyncRun" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeGlorianSyncRunList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/GlorianSyncRun" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeGlorianSyncQueued:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/GlorianSyncQueued" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeGlorianOutbound:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/GlorianOutbound" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeGlorianOutboundList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/GlorianOutbound" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }

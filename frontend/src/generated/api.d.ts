@@ -7902,6 +7902,154 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/platform/integrations/glorian": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the Glorian hub connection (TEC-273)
+         * @description Needs integrations.glorian.view (an `all` grant, or a `brand` grant on the glorian brand's domain). The API key is write only: the response never carries it, only `api_key_set` and a fixed mask. A brand without a connection answers `configured: false` with the defaults.
+         */
+        get: operations["getGlorianIntegration"];
+        /**
+         * Create or replace the Glorian hub connection (TEC-273)
+         * @description Needs integrations.glorian.manage. `api_key` is write only: omitted or blank keeps the stored key; it is stored encrypted. Activating needs a key. A new connection belongs to the glorian brand's center organization (422 GLORIAN_CENTER_MISSING when there is none).
+         */
+        put: operations["putGlorianIntegration"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/integrations/glorian/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ping the Glorian hub with the stored settings (TEC-273)
+         * @description Needs integrations.glorian.manage. Sends GET product-categories (one row) with the stored URL and key, also for an inactive connection. A failed ping is a 200 with `ok: false`.
+         */
+        post: operations["testGlorianIntegration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/integrations/glorian/sync-runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the sync runs of the Glorian connection (TEC-273)
+         * @description Needs integrations.glorian.view. Newest first.
+         */
+        get: operations["listGlorianSyncRuns"];
+        put?: never;
+        /**
+         * Queue a manual Glorian sync (TEC-273)
+         * @description Needs integrations.glorian.manage. `pull` (default) queues the catalog, dealer and stock pull, `push_barcodes` the barcode push, `outbound_replay` the replay of held order outbounds. The runs appear in the list when the worker takes the task. 422 GLORIAN_CONNECTION_INACTIVE for an inactive connection, 503 QUEUE_UNAVAILABLE when the task queue is off.
+         */
+        post: operations["triggerGlorianSync"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/integrations/glorian/sync-runs/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read one Glorian sync run (TEC-273)
+         * @description Needs integrations.glorian.view. `counts` holds the run totals; a reconcile run also has the first rows of every drift category under `counts.details`.
+         */
+        get: operations["getGlorianSyncRun"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/integrations/glorian/outbounds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Glorian order outbounds in one state (TEC-273)
+         * @description Needs integrations.glorian.view. Oldest first; `state` defaults to held.
+         */
+        get: operations["listGlorianOutbounds"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/integrations/glorian/outbounds/{uuid}/replay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue the replay of one held or failed order outbound (TEC-273)
+         * @description Needs integrations.glorian.manage. The worker re-reads the order and the hub order, so a replay never repeats a step; a pending replay of the same outbound is reused. 422 GLORIAN_OUTBOUND_NOT_REPLAYABLE for another state, 503 QUEUE_UNAVAILABLE when the task queue is off.
+         */
+        post: operations["replayGlorianOutbound"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/integrations/glorian/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a Glorian reconcile drift report (TEC-273)
+         * @description Needs integrations.glorian.manage. Opens a running reconcile sync run and queues the report; GET /sync-runs/{uuid} shows the result. Read only: the report never writes units or the ledger. 503 QUEUE_UNAVAILABLE when the task queue is off.
+         */
+        post: operations["startGlorianReconcile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -14073,6 +14221,152 @@ export interface components {
                 total: number;
                 limit: number;
                 offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @description The API key is never returned; `api_key_set` and `api_key_masked` stand in for it. */
+        GlorianConnection: {
+            configured: boolean;
+            /** Format: uuid */
+            uuid: string | null;
+            /** @example glorian */
+            key: string;
+            base_url: string;
+            active: boolean;
+            /** @example 1 */
+            api_version: string;
+            /** Format: uuid */
+            default_warehouse_uuid: string | null;
+            api_key_set: boolean;
+            /** @example ******** */
+            api_key_masked: string | null;
+            /** Format: date-time */
+            created_at: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
+        };
+        PutGlorianConnectionRequest: {
+            /** @description http(s) root of the hub */
+            base_url: string;
+            /** @default false */
+            active: boolean;
+            /**
+             * @default 1
+             * @enum {string}
+             */
+            api_version: "1";
+            /**
+             * Format: uuid
+             * @description A warehouse of the connection's center organization; null clears it.
+             */
+            default_warehouse_uuid?: string | null;
+            /** @description Write only. Omitted or blank keeps the stored key. */
+            api_key?: string | null;
+        };
+        GlorianTestResult: {
+            ok: boolean;
+            /** Format: int64 */
+            duration_ms: number;
+            http_status: number | null;
+            /** @description Hub error code (e.g. UNAUTHORIZED), MISCONFIGURED or TRANSPORT_ERROR. */
+            code: string | null;
+            message: string | null;
+        };
+        GlorianSyncRun: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            kind: "pull_categories" | "pull_products" | "pull_dealers" | "pull_stock" | "push_barcodes" | "outbound" | "reconcile";
+            /** @enum {string} */
+            status: "running" | "succeeded" | "failed";
+            /** Format: date-time */
+            started_at: string;
+            /** Format: date-time */
+            finished_at: string | null;
+            /** Format: date-time */
+            watermark: string | null;
+            /** @description Run totals by kind; a reconcile run carries `details` with the first rows of every drift category. */
+            counts: {
+                [key: string]: unknown;
+            };
+            /** @description A hold reads "held: <reason>". */
+            error: string | null;
+        };
+        TriggerGlorianSyncRequest: {
+            /**
+             * @default pull
+             * @enum {string}
+             */
+            kind: "pull" | "push_barcodes" | "outbound_replay";
+        };
+        GlorianSyncQueued: {
+            /** @enum {string} */
+            kind: "pull" | "push_barcodes" | "outbound_replay";
+            /** @example glorian:pull_catalog */
+            task: string;
+        };
+        GlorianOutbound: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            order_uuid: string;
+            order_no: string;
+            order_status: string;
+            external_reference: string;
+            /** @enum {string} */
+            state: "pending" | "held" | "sent" | "failed" | "cancelled";
+            /** @enum {string|null} */
+            held_reason: "missing_customer_link" | "inactive_connection" | null;
+            attempts: number;
+            last_error: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        EnvelopeGlorianConnection: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["GlorianConnection"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeGlorianTestResult: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["GlorianTestResult"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeGlorianSyncRun: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["GlorianSyncRun"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeGlorianSyncRunList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["GlorianSyncRun"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeGlorianSyncQueued: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["GlorianSyncQueued"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeGlorianOutbound: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["GlorianOutbound"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeGlorianOutboundList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["GlorianOutbound"][];
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -28139,6 +28433,302 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getGlorianIntegration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Connection settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeGlorianConnection"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    putGlorianIntegration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PutGlorianConnectionRequest"];
+            };
+        };
+        responses: {
+            /** @description Saved connection settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeGlorianConnection"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            /** @description GLORIAN_CENTER_MISSING */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    testGlorianIntegration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ping result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeGlorianTestResult"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listGlorianSyncRuns: {
+        parameters: {
+            query?: {
+                kind?: "pull_categories" | "pull_products" | "pull_dealers" | "pull_stock" | "push_barcodes" | "outbound" | "reconcile";
+                status?: "running" | "succeeded" | "failed";
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sync runs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeGlorianSyncRunList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    triggerGlorianSync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["TriggerGlorianSyncRequest"];
+            };
+        };
+        responses: {
+            /** @description Task queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeGlorianSyncQueued"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description GLORIAN_CONNECTION_INACTIVE */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+            /** @description QUEUE_UNAVAILABLE */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getGlorianSyncRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sync run */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeGlorianSyncRun"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listGlorianOutbounds: {
+        parameters: {
+            query?: {
+                state?: "pending" | "held" | "sent" | "failed" | "cancelled";
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Order outbounds */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeGlorianOutboundList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    replayGlorianOutbound: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Replay queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeGlorianOutbound"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description GLORIAN_OUTBOUND_NOT_REPLAYABLE */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+            /** @description QUEUE_UNAVAILABLE */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    startGlorianReconcile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Running reconcile sync run */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeGlorianSyncRun"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+            /** @description QUEUE_UNAVAILABLE */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
 }
