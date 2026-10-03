@@ -37,6 +37,9 @@ export class WarehouseMock {
   rooms: Node[] = [];
   locations: Node[] = [];
   entries: Json[] = [];
+  /** TEC-232: warehouse transfers and where each confirmed unit sits. */
+  transfers: Json[] = [];
+  placed: Record<string, Node> = {};
   /** Printed labels waiting for a stock entry (barcode -> unit uuid). */
   printed: Record<string, string> = {
     "OLEX-00000001": "0b9c4c1e-0000-4000-8000-0000000000u1",
@@ -107,6 +110,13 @@ export class WarehouseMock {
       line_count: lines.length,
       placed_count: lines.filter((l) => l.location).length,
     };
+  }
+
+  private transferView(x: Json, withLines: boolean) {
+    const lines = (x.lines as Json[]) ?? [];
+    const v: Json = { ...x, line_count: lines.length };
+    if (!withLines) delete v.lines;
+    return v;
   }
 
   async handle(route: Route) {
@@ -331,12 +341,154 @@ export class WarehouseMock {
           return fail(409, "STOCK_ENTRY_UNPLACED");
         e.status = "confirmed";
         e.confirmed_at = NOW;
-        for (const l of lines) l.unit_status = "placed";
+        for (const l of lines) {
+          l.unit_status = "placed";
+          const loc = this.locations.find(
+            (x) => x.uuid === (l.location as Json).uuid,
+          );
+          if (loc) this.placed[String(l.barcode)] = loc;
+        }
         return ok(this.entryView(e));
       }
       if (method === "POST" && action === "cancel") {
         e.status = "cancelled";
         return ok(this.entryView(e));
+      }
+    }
+
+    // --- Warehouse transfers (TEC-205, TEC-232 e2e) ---
+    if (path === "/v1/warehouse/transfers") {
+      if (method === "GET") {
+        const items = this.transfers.map((x) => this.transferView(x, false));
+        return ok({ items, total: items.length, limit: 20, offset: 0 });
+      }
+      const from = this.warehouses.find(
+        (w) => w.uuid === body.from_warehouse_uuid,
+      );
+      const to = this.warehouses.find((w) => w.uuid === body.to_warehouse_uuid);
+      if (!from || !to || from.uuid === to.uuid) {
+        return fail(400, "VALIDATION_ERROR");
+      }
+      this.seq += 1;
+      const x: Json = {
+        uuid: this.id("f"),
+        transfer_no: `WT-${String(this.seq).padStart(6, "0")}`,
+        status: "draft",
+        note: body.note ?? null,
+        from_warehouse: { uuid: from.uuid, code: from.code, name: from.name },
+        to_warehouse: { uuid: to.uuid, code: to.code, name: to.name },
+        to_location: null,
+        lines: [],
+        created_at: NOW,
+        shipped_at: null,
+        completed_at: null,
+        cancelled_at: null,
+      };
+      this.transfers.unshift(x);
+      return ok(this.transferView(x, true), 201);
+    }
+    const trPath = path.match(
+      /^\/v1\/warehouse\/transfers\/([^/]+)(?:\/(lines|place|ship|complete|cancel))?(?:\/([^/]+))?$/,
+    );
+    if (trPath) {
+      const x = this.transfers.find((y) => y.uuid === trPath[1]);
+      if (!x) return fail(404, "NOT_FOUND");
+      const lines = x.lines as Json[];
+      const action = trPath[2];
+      const from = x.from_warehouse as Json;
+      const to = x.to_warehouse as Json;
+      if (method === "GET" && !action) return ok(this.transferView(x, true));
+      if (method === "POST" && action === "lines") {
+        if (x.status !== "draft") return fail(409, "WAREHOUSE_TRANSFER_STATE");
+        for (const raw of (body.barcodes as string[]) ?? []) {
+          const barcode = raw.replace(/^OFW:UNIT:/, "");
+          const loc = this.placed[barcode];
+          if (!loc || loc.warehouse_uuid !== from.uuid) {
+            return fail(409, "WAREHOUSE_UNIT_UNAVAILABLE");
+          }
+          if (lines.some((l) => l.barcode === barcode)) {
+            return fail(409, "WAREHOUSE_UNIT_BUSY");
+          }
+          lines.push({
+            uuid: this.id("fa"),
+            unit_uuid: this.printed[barcode] ?? this.id("fb"),
+            barcode,
+            unit_status: "placed",
+            product: PRODUCT,
+            source_location: {
+              uuid: loc.uuid,
+              code: loc.code,
+              full_code: loc.full_code,
+            },
+            target_location: null,
+            out_movement_uuid: null,
+            in_movement_uuid: null,
+            placement_movement_uuid: null,
+            restore_movement_uuid: null,
+          });
+        }
+        return ok(this.transferView(x, true));
+      }
+      if (method === "DELETE" && action === "lines" && trPath[3]) {
+        x.lines = lines.filter((l) => l.uuid !== trPath[3]);
+        return ok(this.transferView(x, true));
+      }
+      if (method === "POST" && action === "place") {
+        if (x.status !== "draft" && x.status !== "in_transit") {
+          return fail(409, "WAREHOUSE_TRANSFER_STATE");
+        }
+        const code = String(body.location_code ?? "").replace(/^OFW:LOC:/, "");
+        const target = body.location_uuid
+          ? this.locations.find((l) => l.uuid === body.location_uuid)
+          : this.locations.find((l) => l.full_code === code);
+        if (!target || target.warehouse_uuid !== to.uuid) {
+          return fail(400, "VALIDATION_ERROR");
+        }
+        const only = (body.line_uuids as string[]) ?? [];
+        for (const l of lines) {
+          if (only.length === 0 || only.includes(String(l.uuid))) {
+            l.target_location = {
+              uuid: target.uuid,
+              code: target.code,
+              full_code: target.full_code,
+            };
+          }
+        }
+        return ok(this.transferView(x, true));
+      }
+      if (method === "POST" && action === "ship") {
+        if (x.status !== "draft") return fail(409, "WAREHOUSE_TRANSFER_STATE");
+        if (lines.length === 0) return fail(409, "WAREHOUSE_TRANSFER_EMPTY");
+        x.status = "in_transit";
+        x.shipped_at = NOW;
+        for (const l of lines) {
+          l.unit_status = "in_transit";
+          l.out_movement_uuid = this.id("fc");
+        }
+        return ok(this.transferView(x, true));
+      }
+      if (method === "POST" && action === "complete") {
+        if (x.status !== "in_transit") {
+          return fail(409, "WAREHOUSE_TRANSFER_STATE");
+        }
+        if (lines.some((l) => !l.target_location)) {
+          return fail(409, "WAREHOUSE_TRANSFER_UNPLACED");
+        }
+        x.status = "completed";
+        x.completed_at = NOW;
+        for (const l of lines) {
+          l.unit_status = "placed";
+          const loc = this.locations.find(
+            (y) => y.uuid === (l.target_location as Json).uuid,
+          );
+          if (loc) this.placed[String(l.barcode)] = loc;
+        }
+        return ok(this.transferView(x, true));
+      }
+      if (method === "POST" && action === "cancel") {
+        x.status = "cancelled";
+        x.cancelled_at = NOW;
+        return ok(this.transferView(x, true));
       }
     }
 

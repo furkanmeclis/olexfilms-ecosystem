@@ -450,6 +450,8 @@ var elCatalog = map[string]string{
 	// TEC-196: service PDF.
 	"export.title.tenant.services.pdf":      "Αναφορά υπηρεσίας",
 	"resources.tenant.services.pdf":         "Αναφορά υπηρεσίας",
+	"export.title.portal.service_pdf":       "Αναφορά υπηρεσίας",
+	"resources.portal.service_pdf":          "Η αναφορά υπηρεσίας μου",
 	"services.pdf.status":                   "Κατάσταση",
 	"services.pdf.created_at":               "Δημιουργήθηκε",
 	"services.pdf.completed_at":             "Ολοκληρώθηκε",

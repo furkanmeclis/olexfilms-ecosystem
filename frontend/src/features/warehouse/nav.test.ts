@@ -22,7 +22,7 @@ function visibleIds(
 }
 
 describe("tenant nav: warehouse (TEC-231)", () => {
-  it("links the slice-1 screens", () => {
+  it("links the slice-1 and slice-2 screens (TEC-232)", () => {
     const group = tenantNav("acme").groups.find((g) => g.id === "warehouse");
     expect(group?.feature).toBe("warehouse");
     expect(group?.items.map((i) => i.href)).toEqual([
@@ -30,6 +30,9 @@ describe("tenant nav: warehouse (TEC-231)", () => {
       routes.tenant.warehouse.scan("acme"),
       routes.tenant.warehouse.entries("acme"),
       routes.tenant.warehouse.barcodes("acme"),
+      routes.tenant.warehouse.transfers("acme"),
+      routes.tenant.warehouse.counts("acme"),
+      routes.tenant.warehouse.endOfDay("acme"),
     ]);
   });
 
@@ -40,6 +43,9 @@ describe("tenant nav: warehouse (TEC-231)", () => {
       expect(ids).toContain("warehouse-locations");
       expect(ids).toContain("warehouse-scan");
       expect(ids).toContain("warehouse-entries");
+      expect(ids).toContain("warehouse-transfers");
+      expect(ids).toContain("warehouse-counts");
+      expect(ids).toContain("warehouse-end-of-day");
     }
   });
 

@@ -450,6 +450,8 @@ var azCatalog = map[string]string{
 	// TEC-196: service PDF.
 	"export.title.tenant.services.pdf":      "Xidmət hesabatı",
 	"resources.tenant.services.pdf":         "Xidmət hesabatı",
+	"export.title.portal.service_pdf":       "Xidmət hesabatı",
+	"resources.portal.service_pdf":          "Xidmət hesabatım",
 	"services.pdf.status":                   "Status",
 	"services.pdf.created_at":               "Yaradılıb",
 	"services.pdf.completed_at":             "Tamamlanıb",

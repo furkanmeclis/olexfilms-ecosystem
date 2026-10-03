@@ -39,6 +39,8 @@ import {
   ScanLine,
   PackagePlus,
   Barcode,
+  ClipboardCheck,
+  Sunset,
 } from "lucide-react";
 
 import { appleNavIcon } from "@/components/icons/apple-icon";
@@ -655,6 +657,34 @@ export function tenantNav(slug: string) {
             permission: [permissions.warehouse.read, permissions.stock.read],
             feature: "warehouse",
             orgTypes: ["center"],
+          },
+          // TEC-232 (slice 2): transfers, counts, end of day.
+          {
+            id: "warehouse-transfers",
+            titleKey: "warehouse.nav_transfers",
+            href: routes.tenant.warehouse.transfers(slug),
+            icon: ArrowLeftRight,
+            permission: permissions.warehouse.read,
+            feature: "warehouse",
+            orgTypes: ["center", "distributor"],
+          },
+          {
+            id: "warehouse-counts",
+            titleKey: "warehouse.nav_counts",
+            href: routes.tenant.warehouse.counts(slug),
+            icon: ClipboardCheck,
+            permission: permissions.warehouse.read,
+            feature: "warehouse",
+            orgTypes: ["center", "distributor"],
+          },
+          {
+            id: "warehouse-end-of-day",
+            titleKey: "warehouse.nav_end_of_day",
+            href: routes.tenant.warehouse.endOfDay(slug),
+            icon: Sunset,
+            permission: permissions.warehouse.read,
+            feature: "warehouse",
+            orgTypes: ["center", "distributor"],
           },
         ],
       },

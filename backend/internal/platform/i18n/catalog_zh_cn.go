@@ -450,6 +450,8 @@ var zhCNCatalog = map[string]string{
 	// TEC-196: service PDF.
 	"export.title.tenant.services.pdf":      "服务报告",
 	"resources.tenant.services.pdf":         "服务报告",
+	"export.title.portal.service_pdf":       "服务报告",
+	"resources.portal.service_pdf":          "我的服务报告",
 	"services.pdf.status":                   "状态",
 	"services.pdf.created_at":               "创建时间",
 	"services.pdf.completed_at":             "完成时间",

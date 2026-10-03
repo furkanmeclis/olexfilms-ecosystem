@@ -450,6 +450,8 @@ var bgCatalog = map[string]string{
 	// TEC-196: service PDF.
 	"export.title.tenant.services.pdf":      "Отчет за услугата",
 	"resources.tenant.services.pdf":         "Отчет за услугата",
+	"export.title.portal.service_pdf":       "Отчет за услугата",
+	"resources.portal.service_pdf":          "Моят отчет за услугата",
 	"services.pdf.status":                   "Статус",
 	"services.pdf.created_at":               "Създадена",
 	"services.pdf.completed_at":             "Завършена",

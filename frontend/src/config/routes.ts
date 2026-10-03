@@ -114,6 +114,16 @@ export const routes = {
       entry: (slug: string, uuid: string) =>
         `/t/${slug}/warehouse/entries/${uuid}`,
       barcodes: (slug: string) => `/t/${slug}/warehouse/barcodes`,
+      // TEC-232 (slice 2)
+      transfers: (slug: string) => `/t/${slug}/warehouse/transfers`,
+      transfer: (slug: string, uuid: string) =>
+        `/t/${slug}/warehouse/transfers/${uuid}`,
+      counts: (slug: string) => `/t/${slug}/warehouse/counts`,
+      count: (slug: string, uuid: string) =>
+        `/t/${slug}/warehouse/counts/${uuid}`,
+      endOfDay: (slug: string) => `/t/${slug}/warehouse/end-of-day`,
+      endOfDayReport: (slug: string, uuid: string) =>
+        `/t/${slug}/warehouse/end-of-day/${uuid}`,
     },
   },
   /** Customer / fleet portal (TEC-90): its own Auth.js instance and BFF. */

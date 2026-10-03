@@ -8,15 +8,17 @@ import { mockWarehouse, WAREHOUSE_SLUG } from "./support/warehouse-mock";
  * tree (warehouse › room › aisle › shelf › bin), resolve the bin's QR on
  * the scan page, then take a printed label into stock: open an entry,
  * scan the unit, scan the bin QR to place it and confirm.
+ *
+ * TEC-232 continues the flow: a second warehouse gets a location, the
+ * placed unit goes on a warehouse transfer (draft → ship → in transit),
+ * the receiver scans the target location QR and receives it.
  */
 
 test.beforeEach(async ({ context, baseURL }) => {
   await signIn(context, baseURL ?? "");
 });
 
-test("warehouse: create a location, then enter stock on it", async ({
-  page,
-}) => {
+test("warehouse: location → stock entry → transfer", async ({ page }) => {
   const api = await mockWarehouse(page);
   const base = `/t/${WAREHOUSE_SLUG}/warehouse`;
 
@@ -148,5 +150,83 @@ test("warehouse: create a location, then enter stock on it", async ({
   expect(api.calls).toContain(
     `POST /v1/warehouse/stock-entries/${entryUuid}/confirm`,
   );
+
+  // --- TEC-232: second warehouse with a location ---
+  await page.goto(`${base}/locations`);
+  await page.getByTestId("warehouse-new").click();
+  await save("WH2");
+  await page.getByTestId("room-new").click();
+  await save("R1");
+  await page.getByTestId("location-new-root").click();
+  await save("B");
+  await expect(page.locator('[data-code="WH2-R1-B"]')).toBeVisible();
+
+  // --- Warehouse transfer WH1 → WH2 ---
+  await page.goto(`${base}/transfers`);
+  await expect(page.getByTestId("transfers-empty")).toBeVisible();
+  await page.getByTestId("transfer-new").click();
+  const tform = page.getByTestId("transfer-form");
+  // Same warehouse on both sides is refused before any request.
+  await tform.getByTestId("transfer-from").selectOption({ label: "WH1 · WH1" });
+  await tform.getByTestId("transfer-to").selectOption({ label: "WH1 · WH1" });
+  await tform.getByTestId("transfer-create").click();
+  await expect(tform.getByText("Pick a different warehouse.")).toBeVisible();
+  expect(api.bodies["POST /v1/warehouse/transfers"]).toBeUndefined();
+  await tform.getByTestId("transfer-to").selectOption({ label: "WH2 · WH2" });
+  await tform.getByTestId("transfer-note").fill("Branch refill");
+  await tform.getByTestId("transfer-create").click();
+  await expect(page).toHaveURL(new RegExp(`${base}/transfers/[0-9a-f-]+$`));
+  const status = page.getByTestId("transfer-status");
+  await expect(status).toHaveAttribute("data-status", "draft");
+  await expect(page.getByTestId("transfer-ship")).toBeDisabled();
+
+  await page
+    .getByTestId("transfer-barcode-input")
+    .fill("OFW:UNIT:OLEX-00000001");
+  await page.getByTestId("transfer-barcode-input").press("Enter");
+  const tline = page.getByTestId("transfer-line");
+  await expect(tline).toHaveCount(1);
+  await expect(tline).toContainText("WH1-R1-A-S1-01");
+
+  await page.getByTestId("transfer-ship").click();
+  await page.getByRole("dialog").getByRole("button", { name: "Ship" }).click();
+  await expect(status).toHaveAttribute("data-status", "in_transit");
+  await expect(page.getByTestId("transfer-barcode-input")).toHaveCount(0);
+  await expect(page.getByTestId("transfer-complete")).toBeDisabled();
+
+  await page.getByTestId("transfer-location-input").fill("OFW:LOC:WH2-R1-B");
+  await page.getByTestId("transfer-location-input").press("Enter");
+  await expect(tline.getByTestId("transfer-line-target")).toHaveText(
+    "WH2-R1-B",
+  );
+  await page.getByTestId("transfer-complete").click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Receive" })
+    .click();
+  await expect(status).toHaveAttribute("data-status", "completed");
+  await expect(page.getByTestId("transfer-cancel")).toHaveCount(0);
+
+  const transferUuid = page.url().split("/").pop();
+  expect(api.bodies["POST /v1/warehouse/transfers"]).toEqual([
+    expect.objectContaining({ note: "Branch refill" }),
+  ]);
+  expect(
+    api.bodies[`POST /v1/warehouse/transfers/${transferUuid}/lines`],
+  ).toEqual([{ barcodes: ["OLEX-00000001"] }]);
+  expect(
+    api.bodies[`POST /v1/warehouse/transfers/${transferUuid}/place`],
+  ).toEqual([expect.objectContaining({ location_code: "OFW:LOC:WH2-R1-B" })]);
+  expect(api.calls).toContain(
+    `POST /v1/warehouse/transfers/${transferUuid}/ship`,
+  );
+  expect(api.calls).toContain(
+    `POST /v1/warehouse/transfers/${transferUuid}/complete`,
+  );
+  expect(api.placed["OLEX-00000001"]?.full_code).toBe("WH2-R1-B");
+
+  await page.goto(`${base}/transfers`);
+  await expect(page.getByTestId("transfer-row")).toHaveCount(1);
+
   expect(api.unknown.filter((c) => c.includes("/warehouse"))).toEqual([]);
 });
