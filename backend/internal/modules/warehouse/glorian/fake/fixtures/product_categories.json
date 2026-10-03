@@ -1,0 +1,5 @@
+[
+  {"id": "1", "name": "PPF", "available_parts": ["hood", "bumper"], "is_active": true, "deleted_at": null, "updated_at": "2026-09-01T10:00:00+00:00"},
+  {"id": "2", "name": "Cam Filmi", "available_parts": [], "is_active": true, "deleted_at": null, "updated_at": "2026-09-02T10:00:00+00:00"},
+  {"id": "3", "name": "Eski Seri", "available_parts": [], "is_active": false, "deleted_at": "2026-09-03T10:00:00+00:00", "updated_at": "2026-09-03T10:00:00+00:00"}
+]
