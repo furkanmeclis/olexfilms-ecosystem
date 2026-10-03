@@ -103,10 +103,10 @@ func TestOlexServices(t *testing.T) {
 		return c
 	}
 	outboxInserts := func() int64 {
-		return scalar(`SELECT COALESCE((SELECT n_tup_ins FROM pg_stat_xact_user_tables WHERE relname = 'outbox_events'), 0)`)
+		return scalar(`SELECT COALESCE((SELECT n_tup_ins FROM pg_stat_xact_user_tables WHERE schemaname = 'public' AND relname = 'outbox_events'), 0)`)
 	}
 	warrantyInserts := func() int64 {
-		return scalar(`SELECT COALESCE((SELECT n_tup_ins FROM pg_stat_xact_user_tables WHERE relname = 'warranties'), 0)`)
+		return scalar(`SELECT COALESCE((SELECT n_tup_ins FROM pg_stat_xact_user_tables WHERE schemaname = 'public' AND relname = 'warranties'), 0)`)
 	}
 
 	e.run("olexfx-base", Options{})
