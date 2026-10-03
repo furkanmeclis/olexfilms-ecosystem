@@ -76,6 +76,10 @@ func olexSteps() []Step {
 		// TEC-260: warranties (duplicates merged, legacy numbers kept as
 		// public codes / aliases) and completed vehicle transfers.
 		WarrantiesStep{},
+
+		// TEC-262: NexPTG device accounts -> measurement_devices, reports
+		// with their measurement rows -> measurement_results.
+		MeasurementsStep{},
 	}
 }
 

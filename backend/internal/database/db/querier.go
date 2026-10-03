@@ -1564,6 +1564,12 @@ type Querier interface {
 	MigratorInsertLegacyMessage(ctx context.Context, arg MigratorInsertLegacyMessageParams) (int64, error)
 	// warehouse_id and full_code are derived by trg_warehouse_locations_derive.
 	MigratorInsertLocation(ctx context.Context, arg MigratorInsertLocationParams) (MigratorInsertLocationRow, error)
+	// A device the organization already holds under the serial is left alone
+	// (no row then).
+	MigratorInsertMeasurementDevice(ctx context.Context, arg MigratorInsertMeasurementDeviceParams) (int64, error)
+	// Legacy reports carry no idempotency key / client id; the uuid (from
+	// migration_map) makes a rerun find the row.
+	MigratorInsertMeasurementResult(ctx context.Context, arg MigratorInsertMeasurementResultParams) (int64, error)
 	MigratorInsertOrder(ctx context.Context, arg MigratorInsertOrderParams) (int64, error)
 	// Legacy orders carry no prices: the line is frozen at 0, so a later receipt
 	// books no sale for it either (K9, no double count).
@@ -1598,6 +1604,9 @@ type Querier interface {
 	// Province by name, matched like the 000035 backfill: Turkish capitals
 	// folded, case insensitive.
 	MigratorMatchProvince(ctx context.Context, arg MigratorMatchProvinceParams) (int64, error)
+	MigratorMeasurementDeviceBySerial(ctx context.Context, arg MigratorMeasurementDeviceBySerialParams) (MigratorMeasurementDeviceBySerialRow, error)
+	MigratorMeasurementDeviceByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorMeasurementDeviceByUUIDRow, error)
+	MigratorMeasurementResultIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	MigratorMoveVehicleOwner(ctx context.Context, arg MigratorMoveVehicleOwnerParams) (int64, error)
 	// TEC-261: migrator step 9 (orders). Written only by cmd/migrator inside a
 	// step transaction. Legacy orders are history: no status history row, no
@@ -1624,6 +1633,11 @@ type Querier interface {
 	// The full_code prefix of the room's root locations (<warehouse>-<room>).
 	MigratorRoomFullCodePrefix(ctx context.Context, arg MigratorRoomFullCodePrefixParams) (string, error)
 	MigratorServiceByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorServiceByUUIDRow, error)
+	// TEC-262: migrator step 8 (hub nexptg_api_users -> measurement_devices,
+	// nexptg_reports + nexptg_report_measurements + service_nexptg_report ->
+	// measurement_results). Written only by cmd/migrator inside a step
+	// transaction.
+	MigratorServiceForMeasurement(ctx context.Context, argUuid uuid.UUID) (MigratorServiceForMeasurementRow, error)
 	MigratorServiceImageByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	MigratorServiceItemByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	// Another service already holds the number.
@@ -1659,6 +1673,8 @@ type Querier interface {
 	MigratorUpdateCarModel(ctx context.Context, arg MigratorUpdateCarModelParams) error
 	MigratorUpdateCategory(ctx context.Context, arg MigratorUpdateCategoryParams) error
 	MigratorUpdateLocation(ctx context.Context, arg MigratorUpdateLocationParams) error
+	MigratorUpdateMeasurementDevice(ctx context.Context, arg MigratorUpdateMeasurementDeviceParams) error
+	MigratorUpdateMeasurementResult(ctx context.Context, arg MigratorUpdateMeasurementResultParams) error
 	// A legacy change of an order the application has not moved yet. Parties,
 	// currency and totals stay as inserted.
 	MigratorUpdateOrder(ctx context.Context, arg MigratorUpdateOrderParams) (int64, error)

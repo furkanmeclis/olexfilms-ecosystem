@@ -113,5 +113,6 @@
   "coordinates.marker": "Selected position",
   "coordinates.errors.latitude": "Latitude must be a number between -90 and 90.",
   "coordinates.errors.longitude": "Longitude must be a number between -180 and 180.",
-  "coordinates.errors.pair": "Enter latitude and longitude together, or leave both empty."
+  "coordinates.errors.pair": "Enter latitude and longitude together, or leave both empty.",
+  "system.hub.glorian": "Glorian hub connection, sync runs and the drift report."
 }

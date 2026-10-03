@@ -113,5 +113,6 @@
   "coordinates.marker": "Seçilmiş mövqe",
   "coordinates.errors.latitude": "Enlik -90 ilə 90 arasında rəqəm olmalıdır.",
   "coordinates.errors.longitude": "Uzunluq -180 ilə 180 arasında rəqəm olmalıdır.",
-  "coordinates.errors.pair": "Enlik və uzunluğu birlikdə daxil edin və ya hər ikisini boş buraxın."
+  "coordinates.errors.pair": "Enlik və uzunluğu birlikdə daxil edin və ya hər ikisini boş buraxın.",
+  "system.hub.glorian": "Glorian hub bağlantısı, sinxronizasiya işləri və uyğunsuzluq hesabatı."
 }

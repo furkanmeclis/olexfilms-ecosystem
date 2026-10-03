@@ -15,6 +15,7 @@ import {
   ScrollText,
   Settings2,
   SlidersHorizontal,
+  Warehouse,
 } from "lucide-react";
 import Link from "next/link";
 import { useState, type ComponentType } from "react";
@@ -129,6 +130,14 @@ export const HUB_LINKS: HubLink[] = [
     descriptionKey: "settings.system.hub.whatsapp",
     icon: MessageCircle,
     permission: permissions.integrations.whatsapp.manage,
+  },
+  {
+    id: "glorian",
+    href: routes.platform.integrations.glorian,
+    titleKey: "layout.nav_glorian_integration",
+    descriptionKey: "settings.system.hub.glorian",
+    icon: Warehouse,
+    permission: permissions.integrations.glorian.view,
   },
   {
     id: "notification-center",
