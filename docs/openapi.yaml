@@ -1913,6 +1913,75 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /v1/portal/services/{uuid}/review:
+    get:
+      tags: [Portal]
+      operationId: getPortalServiceReview
+      summary: Review state of a service of the signed-in customer
+      description: >-
+        TEC-244. Portal session (services.read, scope customer); same
+        ownership rule as GET /v1/portal/services/{uuid} (else 404). Returns
+        the stored review (null when none), whether the user can send one
+        now (completed service without a review) and the dealer's Google
+        review link (null when the dealer has none).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Review state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePortalServiceReview"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Portal]
+      operationId: createPortalServiceReview
+      summary: Review a service of the signed-in customer
+      description: >-
+        TEC-244. Platform and product quality ratings (1-5) with an optional
+        comment (at most 2000 characters), one review per service. Same
+        ownership rule as GET /v1/portal/services/{uuid} (else 404). A
+        rating out of range or missing answers 400 VALIDATION_ERROR; a
+        second review 409 SERVICE_ALREADY_REVIEWED; a service that is not
+        completed 422 SERVICE_REVIEW_NOT_COMPLETED.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PortalServiceReviewInput"
+      responses:
+        "201":
+          description: Review stored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePortalServiceReview"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
   /v1/me/organizations:
     get:
       tags: [Auth]
@@ -23025,6 +23094,52 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/PortalService" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    PortalServiceReviewInput:
+      type: object
+      description: TEC-244 portal service review form.
+      required: [platform_rating, product_rating]
+      properties:
+        platform_rating: { type: integer, minimum: 1, maximum: 5 }
+        product_rating: { type: integer, minimum: 1, maximum: 5 }
+        comment:
+          type: [string, "null"]
+          maxLength: 2000
+          description: Optional; trimmed, empty means none.
+
+    PortalServiceReviewItem:
+      type: object
+      required: [uuid, platform_rating, product_rating, comment, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        platform_rating: { type: integer, minimum: 1, maximum: 5 }
+        product_rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+
+    PortalServiceReview:
+      type: object
+      description: TEC-244 review state of a portal service.
+      required: [review, can_review, google_business_url]
+      properties:
+        review:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/PortalServiceReviewItem"
+        can_review:
+          type: boolean
+          description: The service is completed and has no review yet.
+        google_business_url:
+          type: [string, "null"]
+          description: The dealer's Google review link; null when unset.
+
+    EnvelopePortalServiceReview:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PortalServiceReview" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     PortalNamedRef:

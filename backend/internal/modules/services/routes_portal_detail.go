@@ -27,4 +27,9 @@ func RegisterPortalDetailRoutes(
 	}
 	mux.Handle("GET /v1/portal/services/{uuid}", portal(h.Get))
 	mux.Handle("GET /v1/portal/services/{uuid}/pdf", portal(h.PDF))
+	// TEC-244: the review form. The owner check is in the use case; the
+	// customer role holds no services.write, so the portal write rides on
+	// services.read like the rest of the portal service routes.
+	mux.Handle("GET /v1/portal/services/{uuid}/review", portal(h.GetReview))
+	mux.Handle("POST /v1/portal/services/{uuid}/review", portal(h.CreateReview))
 }

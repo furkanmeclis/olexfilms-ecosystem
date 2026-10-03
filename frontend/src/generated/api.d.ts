@@ -1063,6 +1063,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portal/services/{uuid}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Review state of a service of the signed-in customer
+         * @description TEC-244. Portal session (services.read, scope customer); same ownership rule as GET /v1/portal/services/{uuid} (else 404). Returns the stored review (null when none), whether the user can send one now (completed service without a review) and the dealer's Google review link (null when the dealer has none).
+         */
+        get: operations["getPortalServiceReview"];
+        put?: never;
+        /**
+         * Review a service of the signed-in customer
+         * @description TEC-244. Platform and product quality ratings (1-5) with an optional comment (at most 2000 characters), one review per service. Same ownership rule as GET /v1/portal/services/{uuid} (else 404). A rating out of range or missing answers 400 VALIDATION_ERROR; a second review 409 SERVICE_ALREADY_REVIEWED; a service that is not completed 422 SERVICE_REVIEW_NOT_COMPLETED.
+         */
+        post: operations["createPortalServiceReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/organizations": {
         parameters: {
             query?: never;
@@ -13688,6 +13712,36 @@ export interface components {
             data: components["schemas"]["PortalService"];
             meta: components["schemas"]["ResponseMeta"];
         };
+        /** @description TEC-244 portal service review form. */
+        PortalServiceReviewInput: {
+            platform_rating: number;
+            product_rating: number;
+            /** @description Optional; trimmed, empty means none. */
+            comment?: string | null;
+        };
+        PortalServiceReviewItem: {
+            /** Format: uuid */
+            uuid: string;
+            platform_rating: number;
+            product_rating: number;
+            comment: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        /** @description TEC-244 review state of a portal service. */
+        PortalServiceReview: {
+            review: null | components["schemas"]["PortalServiceReviewItem"];
+            /** @description The service is completed and has no review yet. */
+            can_review: boolean;
+            /** @description The dealer's Google review link; null when unset. */
+            google_business_url: string | null;
+        };
+        EnvelopePortalServiceReview: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PortalServiceReview"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
         PortalNamedRef: {
             /** Format: uuid */
             uuid: string;
@@ -15665,6 +15719,65 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+        };
+    };
+    getPortalServiceReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Review state */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePortalServiceReview"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createPortalServiceReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortalServiceReviewInput"];
+            };
+        };
+        responses: {
+            /** @description Review stored */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePortalServiceReview"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     getMeOrganizations: {

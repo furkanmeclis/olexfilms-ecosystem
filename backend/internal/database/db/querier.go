@@ -260,6 +260,9 @@ type Querier interface {
 	// cancelled.
 	CreateServiceItem(ctx context.Context, arg CreateServiceItemParams) (ServiceItem, error)
 	CreateServiceItemCorrection(ctx context.Context, arg CreateServiceItemCorrectionParams) (ServiceItemCorrection, error)
+	// ON CONFLICT DO NOTHING: a second review of the same service returns no
+	// row (pgx.ErrNoRows), which the use case answers with 409.
+	CreateServiceReview(ctx context.Context, arg CreateServiceReviewParams) (ServiceReview, error)
 	// TEC-206: stock counts (000068). Every query is bound to one organization;
 	// the warehouse side is brand-independent (K20).
 	CreateStockCount(ctx context.Context, arg CreateStockCountParams) (StockCount, error)
@@ -638,6 +641,8 @@ type Querier interface {
 	// Display references of one service (organization, customer, vehicle and
 	// the car brand / model snapshot) for the API view (TEC-179).
 	GetServiceRefs(ctx context.Context, id int64) (GetServiceRefsRow, error)
+	// TEC-244 (F2-03h): the portal service review form (one per service).
+	GetServiceReviewByService(ctx context.Context, serviceID int64) (ServiceReview, error)
 	GetStepupSettings(ctx context.Context) (StepupSetting, error)
 	GetStockCountByUUID(ctx context.Context, arg GetStockCountByUUIDParams) (StockCount, error)
 	GetStockCountScanByUUID(ctx context.Context, arg GetStockCountScanByUUIDParams) (StockCountScan, error)

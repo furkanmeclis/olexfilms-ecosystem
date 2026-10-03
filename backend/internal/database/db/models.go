@@ -1388,6 +1388,19 @@ type ServiceItemCorrection struct {
 	CreatedAt             pgtype.Timestamptz `json:"created_at"`
 }
 
+type ServiceReview struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	ServiceID      int64              `json:"service_id"`
+	CustomerUserID int64              `json:"customer_user_id"`
+	PlatformRating int16              `json:"platform_rating"`
+	ProductRating  int16              `json:"product_rating"`
+	Comment        pgtype.Text        `json:"comment"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
 type ServiceStatusLog struct {
 	ID             int64              `json:"id"`
 	ServiceID      int64              `json:"service_id"`
