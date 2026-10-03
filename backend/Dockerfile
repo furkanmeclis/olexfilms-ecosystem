@@ -28,7 +28,9 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build -trimpath -ldflags="-s -w" -o /out/cutover-delta-report ./cmd/cutover-delta-report && \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -trimpath -ldflags="-s -w" -o /out/cutover-preflight ./cmd/cutover-preflight
+    go build -trimpath -ldflags="-s -w" -o /out/cutover-preflight ./cmd/cutover-preflight && \
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -trimpath -ldflags="-s -w" -o /out/inventory-reconcile ./cmd/inventory-reconcile
 
 FROM migrate/migrate:v4.19.1 AS migrate
 
@@ -47,6 +49,7 @@ COPY --from=builder /out/roles-sync /app/roles-sync
 COPY --from=builder /out/migrator /app/migrator
 COPY --from=builder /out/cutover-delta-report /app/cutover-delta-report
 COPY --from=builder /out/cutover-preflight /app/cutover-preflight
+COPY --from=builder /out/inventory-reconcile /app/inventory-reconcile
 COPY migrations /app/migrations
 COPY deploy/docker/entrypoint.sh /app/entrypoint.sh
 
