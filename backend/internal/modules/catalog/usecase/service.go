@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -37,6 +38,15 @@ var (
 	// ErrInUse: the record is still referenced (category with products).
 	ErrInUse = errors.New("catalog: record is still in use")
 )
+
+// LockedError: the write touches fields a remote hub owns (TEC-268, Glorian
+// catalog pull, K2). Fields are the API field names. HTTP 409 CONFLICT with
+// one "locked" detail per field.
+type LockedError struct{ Fields []string }
+
+func (e *LockedError) Error() string {
+	return "catalog: fields are managed by the integration sync: " + strings.Join(e.Fields, ", ")
+}
 
 // FieldError is one invalid input field.
 type FieldError struct {
@@ -90,6 +100,9 @@ type Store interface {
 	ListProducts(ctx context.Context, arg db.ListProductsParams) ([]db.Product, error)
 	CountProducts(ctx context.Context, arg db.CountProductsParams) (int64, error)
 	SetProductsActiveByUUIDs(ctx context.Context, arg db.SetProductsActiveByUUIDsParams) ([]uuid.UUID, error)
+	// TEC-268: a brand with an integration connection takes its categories
+	// from the hub.
+	BrandHasIntegrationConnection(ctx context.Context, brandID int64) (bool, error)
 
 	AppendProductImage(ctx context.Context, arg db.AppendProductImageParams) (db.Product, error)
 	ReplaceProductImages(ctx context.Context, arg db.ReplaceProductImagesParams) (db.Product, error)
@@ -219,6 +232,19 @@ func (s *Service) UpdateCategory(ctx context.Context, org orgctx.Scope, id uuid.
 	if err != nil {
 		return model.Category{}, err
 	}
+	var changed []string
+	if name != cur.Name {
+		changed = append(changed, model.FieldName)
+	}
+	if !slices.Equal(parts, decodeParts(cur.AvailableParts)) {
+		changed = append(changed, model.FieldAvailableParts)
+	}
+	if active != cur.Active {
+		changed = append(changed, model.FieldActive)
+	}
+	if err := s.guardSyncedCategory(ctx, org.BrandID, changed); err != nil {
+		return model.Category{}, err
+	}
 	partsJSON, _ := json.Marshal(parts)
 	row, err := s.store.UpdateProductCategory(ctx, db.UpdateProductCategoryParams{
 		ID: cur.ID, BrandID: org.BrandID, Name: name, AvailableParts: partsJSON, Sort: sort, Active: active,
@@ -238,12 +264,31 @@ func (s *Service) DeleteCategory(ctx context.Context, org orgctx.Scope, id uuid.
 	if err != nil {
 		return err
 	}
+	if err := s.guardSyncedCategory(ctx, org.BrandID, model.SyncedCategoryLockedFields); err != nil {
+		return err
+	}
 	n, err := s.store.DeleteProductCategory(ctx, db.DeleteProductCategoryParams{ID: cur.ID, BrandID: org.BrandID})
 	if err != nil {
 		return mapDBError(err)
 	}
 	if n == 0 {
 		return ErrNotFound
+	}
+	return nil
+}
+
+// guardSyncedCategory refuses a change of the remote-sourced category fields
+// in a brand whose categories come from an integration connection (TEC-268).
+func (s *Service) guardSyncedCategory(ctx context.Context, brandID int64, changed []string) error {
+	if len(changed) == 0 {
+		return nil
+	}
+	synced, err := s.store.BrandHasIntegrationConnection(ctx, brandID)
+	if err != nil {
+		return err
+	}
+	if synced {
+		return &LockedError{Fields: changed}
 	}
 	return nil
 }
@@ -350,6 +395,9 @@ func (s *Service) UpdateProduct(ctx context.Context, org orgctx.Scope, id uuid.U
 			return model.Product{}, err
 		}
 	}
+	if locked := lockedChanges(cur, p, cat.ID); len(locked) > 0 {
+		return model.Product{}, &LockedError{Fields: locked}
+	}
 	row, err := s.store.UpdateProduct(ctx, p.updateParams(cur.ID, org.BrandID, cat.ID))
 	if err != nil {
 		return model.Product{}, mapDBError(err)
@@ -366,6 +414,10 @@ func (s *Service) DeleteProduct(ctx context.Context, org orgctx.Scope, id uuid.U
 	cur, err := s.product(ctx, org.BrandID, id)
 	if err != nil {
 		return err
+	}
+	if len(cur.LockedFields) > 0 {
+		// A synced product is removed on the hub, not here (TEC-268).
+		return &LockedError{Fields: slices.Clone(cur.LockedFields)}
 	}
 	n, err := s.store.DeleteProduct(ctx, db.DeleteProductParams{ID: cur.ID, BrandID: org.BrandID})
 	if err != nil {
@@ -568,6 +620,38 @@ func (p productFields) updateParams(id, brandID, categoryID int64) db.UpdateProd
 		WarrantyDurationMonths: int4Arg(p.Warranty), MicronThickness: numericArg(p.Micron),
 		Images: images, UnitType: p.UnitType, UsesFixedBarcode: p.UsesFixedBarcode, Active: p.Active,
 	}
+}
+
+// lockedChanges lists the locked fields of cur that next (normalized) would
+// change; categoryID is the category next points at (TEC-268).
+func lockedChanges(cur db.Product, next productFields, categoryID int64) []string {
+	if len(cur.LockedFields) == 0 {
+		return nil
+	}
+	prev := fieldsOf(cur)
+	changed := map[string]bool{
+		model.FieldCategoryUUID:           categoryID != cur.CategoryID,
+		model.FieldSKU:                    next.SKU != prev.SKU,
+		model.FieldName:                   next.Name != prev.Name,
+		model.FieldDescriptionMD:          next.DescriptionMD != prev.DescriptionMD,
+		model.FieldWarrantyDurationMonths: !ptrEqual(next.Warranty, prev.Warranty),
+		model.FieldMicronThickness:        !ptrEqual(next.Micron, prev.Micron),
+		model.FieldActive:                 next.Active != prev.Active,
+	}
+	var out []string
+	for _, f := range cur.LockedFields {
+		if changed[f] {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+func ptrEqual[T comparable](a, b *T) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return *a == *b
 }
 
 // validateProduct normalizes p in place and resolves the category when

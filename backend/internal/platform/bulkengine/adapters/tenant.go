@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine"
@@ -133,6 +134,10 @@ func (a *CatalogProductsAdapter) ApplyItem(ctx context.Context, action, entityUU
 	}
 	if p.Active == want {
 		return res, nil
+	}
+	if slices.Contains(p.LockedFields, "active") {
+		// TEC-268: the integration sync owns the active flag.
+		return bulkengine.BulkItemResult{EntityUUID: entityUUID, OK: false, Error: "locked"}, nil
 	}
 	if _, err := a.q.SetProductActiveByUUID(ctx, db.SetProductActiveByUUIDParams{Active: want, Uuid: id, BrandID: org.BrandID}); err != nil {
 		return bulkengine.BulkItemResult{EntityUUID: entityUUID, OK: false, Error: err.Error()}, nil

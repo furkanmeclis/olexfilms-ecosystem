@@ -39,6 +39,9 @@ type Querier interface {
 	AssignMemberRoleBySlug(ctx context.Context, arg AssignMemberRoleBySlugParams) error
 	AssignUserRoleBySlug(ctx context.Context, arg AssignUserRoleBySlugParams) error
 	AttachNotificationDelivery(ctx context.Context, arg AttachNotificationDeliveryParams) error
+	// A brand with an integration connection takes its categories from the
+	// remote hub, so their remote-sourced fields are locked in the panel.
+	BrandHasIntegrationConnection(ctx context.Context, brandID int64) (bool, error)
 	CancelService(ctx context.Context, arg CancelServiceParams) (Service, error)
 	CancelStockCount(ctx context.Context, id int64) (StockCount, error)
 	CancelStockEntry(ctx context.Context, id int64) (StockEntry, error)
@@ -565,6 +568,10 @@ type Querier interface {
 	// Service summary of one vehicle across every organization of the brand.
 	GetPortalVehicleServiceSummary(ctx context.Context, arg GetPortalVehicleServiceSummaryParams) (GetPortalVehicleServiceSummaryRow, error)
 	GetProduct(ctx context.Context, arg GetProductParams) (Product, error)
+	// TEC-268 (F2-02c): Glorian catalog pull. A synced product is found by its
+	// connection + remote id; the pull rewrites only the remote-sourced columns
+	// (images, unit type and fixed barcode stay local).
+	GetProductByConnectionExternalID(ctx context.Context, arg GetProductByConnectionExternalIDParams) (Product, error)
 	// TEC-157 (F1-02e): reclassification requests (barcode kept, product
 	// changed). Scope narrowing happens in modules/stock/usecase.
 	// Reclassification target check: a product of another brand must be told
@@ -1454,7 +1461,8 @@ type Querier interface {
 	// Bulk activate/deactivate within one brand.
 	SetProductsActive(ctx context.Context, arg SetProductsActiveParams) (int64, error)
 	// Bulk activate/deactivate by public id within one brand. Returns the rows
-	// that changed so the caller can reindex them.
+	// that changed so the caller can reindex them. A product whose active flag
+	// is locked by the integration sync is skipped (TEC-268).
 	SetProductsActiveByUUIDs(ctx context.Context, arg SetProductsActiveByUUIDsParams) ([]uuid.UUID, error)
 	SetRolePermissions(ctx context.Context, roleID int64) error
 	SetRoomSortOrder(ctx context.Context, arg SetRoomSortOrderParams) (int64, error)
@@ -1575,6 +1583,7 @@ type Querier interface {
 	UpdateStepupSettings(ctx context.Context, arg UpdateStepupSettingsParams) (StepupSetting, error)
 	UpdateStockImportBatchStatus(ctx context.Context, arg UpdateStockImportBatchStatusParams) (StockImportBatch, error)
 	UpdateStockImportRowResult(ctx context.Context, arg UpdateStockImportRowResultParams) (StockImportRow, error)
+	UpdateSyncedProduct(ctx context.Context, arg UpdateSyncedProductParams) (Product, error)
 	UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, error)
 	UpdateTypedLocation(ctx context.Context, arg UpdateTypedLocationParams) (WarehouseLocation, error)
 	// Optimistic check on version in addition to the row lock.

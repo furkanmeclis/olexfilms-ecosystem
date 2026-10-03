@@ -384,8 +384,9 @@ func cell(row map[string]any, key string) string {
 func rowError(err error) (ioengine.RowResult, error) {
 	var verr *ValidationError
 	var conflict *ConflictError
+	var locked *LockedError
 	switch {
-	case errors.As(err, &verr), errors.As(err, &conflict), errors.Is(err, ErrCenterOnly):
+	case errors.As(err, &verr), errors.As(err, &conflict), errors.As(err, &locked), errors.Is(err, ErrCenterOnly):
 		return ioengine.RowResult{OK: false, Error: err.Error()}, nil
 	}
 	return ioengine.RowResult{}, err
