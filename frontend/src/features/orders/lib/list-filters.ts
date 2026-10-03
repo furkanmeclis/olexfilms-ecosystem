@@ -15,9 +15,10 @@ export {
 } from "@/features/services/lib/list-filters";
 
 /**
- * Statuses offered in the filter, in flow order. processing and delivered
- * are in the schema but not reached by the UI flow (TEC-168: received
- * follows shipped; preparing is the barcode path).
+ * Statuses offered in the filter, in flow order. delivered is in the schema
+ * but not used (TEC-168: received follows shipped). processing is not
+ * offered as a target but migrated orders sit in it (TEC-261), so it can be
+ * filtered.
  */
 export const ORDER_FILTER_STATUSES = [
   "draft",
@@ -25,6 +26,7 @@ export const ORDER_FILTER_STATUSES = [
   "approved",
   "preparing",
   "ready",
+  "processing",
   "shipped",
   "received",
   "cancelling",

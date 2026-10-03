@@ -68,8 +68,10 @@ export type OrderAction = {
 };
 
 /**
- * Targets the UI never offers: processing has no way out yet and delivered
- * is not used (TEC-168: received follows shipped).
+ * Targets the UI never offers: processing is the legacy warehouse step
+ * (the UI uses preparing; a processing order still moves on to preparing or
+ * cancelled, TEC-261) and delivered is not used (TEC-168: received follows
+ * shipped).
  */
 const HIDDEN_TARGETS = new Set<OrderStatus>(["processing", "delivered"]);
 

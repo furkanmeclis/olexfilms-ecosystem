@@ -39,6 +39,12 @@ func TestTransitionRules(t *testing.T) {
 		{StatusApproved, StatusPreparing, PartySeller, holds(rbac.PermOrdersShip), true},
 		{StatusApproved, StatusProcessing, PartySeller, holds(rbac.PermOrdersApprove), true},
 		{StatusApproved, StatusCancelled, PartyBuyer, holds(rbac.PermOrdersCancel), true},
+		{StatusProcessing, StatusPreparing, PartySeller, holds(rbac.PermOrdersShip), true},
+		{StatusProcessing, StatusPreparing, PartySeller, holds(rbac.PermOrdersApprove), false},
+		{StatusProcessing, StatusPreparing, PartyBuyer, all, false},
+		{StatusProcessing, StatusCancelled, PartySeller, holds(rbac.PermOrdersCancel), true},
+		{StatusProcessing, StatusCancelled, PartyBuyer, holds(rbac.PermOrdersCancel), true},
+		{StatusProcessing, StatusCancelled, PartySeller, holds(rbac.PermOrdersShip), false},
 		{StatusPreparing, StatusCancelled, PartySeller, holds(rbac.PermOrdersCancel), true},
 		{StatusPreparing, StatusCancelled, PartySeller, holds(rbac.PermOrdersWrite), false},
 		{StatusPreparing, StatusReady, PartySeller, holds(rbac.PermOrdersShip), true},
@@ -66,7 +72,7 @@ func TestTransitionRules(t *testing.T) {
 	}
 	// Invalid or stock-bound moves have no rule.
 	for _, m := range [][2]string{
-		{StatusDraft, StatusApproved}, {StatusProcessing, StatusCancelled}, {StatusApproved, StatusShipped},
+		{StatusDraft, StatusApproved}, {StatusProcessing, StatusReady}, {StatusProcessing, StatusShipped}, {StatusApproved, StatusShipped},
 		{StatusCancelled, StatusDraft}, {StatusApproved, StatusReady}, {StatusSubmitted, StatusDraft},
 		{StatusPreparing, StatusShipped}, {StatusShipped, StatusCancelled},
 		{StatusReceived, StatusCancelling}, {StatusReceived, StatusCancelled}, {StatusShipped, StatusDelivered},
@@ -96,6 +102,12 @@ func TestAvailableTransitions(t *testing.T) {
 	}
 	if got := availableTransitions(StatusSubmitted, PartyBuyer, holds(rbac.PermOrdersWrite)); len(got) != 0 {
 		t.Fatalf("buyer without cancel on submitted = %v", got)
+	}
+	if got := availableTransitions(StatusProcessing, PartySeller, holds(rbac.PermOrdersShip, rbac.PermOrdersCancel)); !reflect.DeepEqual(got, []string{StatusPreparing, StatusCancelled}) {
+		t.Fatalf("seller on processing = %v", got)
+	}
+	if got := availableTransitions(StatusProcessing, PartyBuyer, holds(rbac.PermOrdersCancel)); !reflect.DeepEqual(got, []string{StatusCancelled}) {
+		t.Fatalf("buyer on processing = %v", got)
 	}
 	if got := availableTransitions(StatusDraft, "", seller); len(got) != 0 {
 		t.Fatalf("observer = %v", got)
