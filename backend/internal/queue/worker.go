@@ -77,6 +77,9 @@ type Worker struct {
 	// TEC-271: Glorian order outbound and held replay.
 	glorianOrder  GlorianOrderOutboundFunc
 	glorianReplay GlorianOrderReplayFunc
+	// TEC-273: admin-triggered reconcile run and single outbound replay.
+	glorianReconcile GlorianReconcileFunc
+	glorianReplayOne GlorianOutboundReplayOneFunc
 }
 
 // NewWorker builds a worker that handles known task types on every queue.
@@ -151,6 +154,8 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskGlorianPatchStockItem, w.handleGlorianPatch)
 	mux.HandleFunc(TaskGlorianOrderOutbound, w.handleGlorianOrderOutbound)
 	mux.HandleFunc(TaskGlorianOrderReplay, w.handleGlorianOrderReplay)
+	mux.HandleFunc(TaskGlorianReconcile, w.handleGlorianReconcile)
+	mux.HandleFunc(TaskGlorianOutboundReplayOne, w.handleGlorianOutboundReplayOne)
 	return w
 }
 

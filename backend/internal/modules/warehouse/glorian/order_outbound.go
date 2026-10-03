@@ -254,6 +254,17 @@ func (o *OrderOutbounder) ReplayOutbound(ctx context.Context, outboundID int64) 
 	return o.sync(ctx, ob, order)
 }
 
+// ReplayOneTask is the glorian:order_outbound_replay_one handler (the
+// admin replay of TEC-273). A deleted outbound or order is dropped.
+func (o *OrderOutbounder) ReplayOneTask(ctx context.Context, outboundID int64) error {
+	err := o.ReplayOutbound(ctx, outboundID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		o.log.Warn("glorian_order_replay_one_missing", "outbound_id", outboundID, "error", err)
+		return nil
+	}
+	return TaskError(err)
+}
+
 // ReplayHeld replays every held outbound of a connection (0: all). A row
 // whose link or connection is now in place goes out; the others stay held.
 func (o *OrderOutbounder) ReplayHeld(ctx context.Context, connectionID int64) (ReplayResult, error) {

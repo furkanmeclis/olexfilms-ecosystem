@@ -55,6 +55,9 @@ import (
 	githubmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/integrations/github"
 	githubhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/integrations/github/handler"
 	githubusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/integrations/github/usecase"
+	glorianadminmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/integrations/glorianadmin"
+	glorianadminhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/integrations/glorianadmin/handler"
+	glorianadminusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/integrations/glorianadmin/usecase"
 	oauthprovidermodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/integrations/oauthprovider"
 	oauthproviderhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/integrations/oauthprovider/handler"
 	oauthproviderusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/integrations/oauthprovider/usecase"
@@ -673,6 +676,10 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	)
 	// TEC-238: customer portal vehicles, vehicle detail and service history.
 	portalvehiclesmodule.RegisterRoutes(mux, portalvehicleshandler.New(portalvehiclesusecase.New(deps.Queries)), tokens, loader)
+	// TEC-273: Glorian admin API (connection settings, sync runs, outbound
+	// replay, reconcile); glorian.Store is wired here.
+	glorianadminmodule.RegisterRoutes(mux, glorianadminhandler.New(glorianadminusecase.New(deps.Queries, secretBox,
+		glorian.HTTPClientFactory(glorian.OptionsFromConfig(cfg.Glorian)), glorianQueue, log), activityRec), tokens, loader)
 
 	var brandResolver *brandctx.Resolver
 	if deps.Queries != nil {
