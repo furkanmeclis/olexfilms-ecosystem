@@ -292,7 +292,7 @@ SET name    = CASE WHEN btrim(name) = '' AND $1::text IS NOT NULL THEN $1::text 
     email   = COALESCE(email, $3::text),
     locale  = COALESCE(locale, $4::text)
 WHERE id = $5 AND deleted_at IS NULL
-RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, timezone, phone_e164, phone_verified_at, merged_into_user_id
+RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, timezone, phone_e164, phone_verified_at, merged_into_user_id, legacy_unverified, legacy_phone_raw
 `
 
 type FillCustomerIdentityParams struct {
@@ -333,6 +333,8 @@ func (q *Queries) FillCustomerIdentity(ctx context.Context, arg FillCustomerIden
 		&i.PhoneE164,
 		&i.PhoneVerifiedAt,
 		&i.MergedIntoUserID,
+		&i.LegacyUnverified,
+		&i.LegacyPhoneRaw,
 	)
 	return i, err
 }
@@ -1340,7 +1342,7 @@ SET name    = $1,
     surname = $2,
     email   = $3
 WHERE id = $4 AND deleted_at IS NULL
-RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, timezone, phone_e164, phone_verified_at, merged_into_user_id
+RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, timezone, phone_e164, phone_verified_at, merged_into_user_id, legacy_unverified, legacy_phone_raw
 `
 
 type SetCustomerIdentityParams struct {
@@ -1378,6 +1380,8 @@ func (q *Queries) SetCustomerIdentity(ctx context.Context, arg SetCustomerIdenti
 		&i.PhoneE164,
 		&i.PhoneVerifiedAt,
 		&i.MergedIntoUserID,
+		&i.LegacyUnverified,
+		&i.LegacyPhoneRaw,
 	)
 	return i, err
 }

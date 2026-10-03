@@ -62,7 +62,7 @@ SET name              = 'Anonim',
     timezone          = NULL,
     status            = 'anonymized'
 WHERE id = $2 AND status <> 'anonymized'
-RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, timezone, phone_e164, phone_verified_at, merged_into_user_id
+RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, timezone, phone_e164, phone_verified_at, merged_into_user_id, legacy_unverified, legacy_phone_raw
 `
 
 type AnonymizeUserParams struct {
@@ -95,6 +95,8 @@ func (q *Queries) AnonymizeUser(ctx context.Context, arg AnonymizeUserParams) (U
 		&i.PhoneE164,
 		&i.PhoneVerifiedAt,
 		&i.MergedIntoUserID,
+		&i.LegacyUnverified,
+		&i.LegacyPhoneRaw,
 	)
 	return i, err
 }
@@ -270,7 +272,7 @@ func (q *Queries) ListCustomerExportWarranties(ctx context.Context, arg ListCust
 
 const lockUserByUUID = `-- name: LockUserByUUID :one
 
-SELECT id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, timezone, phone_e164, phone_verified_at, merged_into_user_id FROM users WHERE uuid = $1 AND deleted_at IS NULL FOR UPDATE
+SELECT id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, timezone, phone_e164, phone_verified_at, merged_into_user_id, legacy_unverified, legacy_phone_raw FROM users WHERE uuid = $1 AND deleted_at IS NULL FOR UPDATE
 `
 
 // TEC-161 (F1-08c): KVKK/GDPR anonymization and personal data export
@@ -297,6 +299,8 @@ func (q *Queries) LockUserByUUID(ctx context.Context, argUuid uuid.UUID) (User, 
 		&i.PhoneE164,
 		&i.PhoneVerifiedAt,
 		&i.MergedIntoUserID,
+		&i.LegacyUnverified,
+		&i.LegacyPhoneRaw,
 	)
 	return i, err
 }

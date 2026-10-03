@@ -8,9 +8,13 @@ SELECT * FROM users
 WHERE phone_e164 = $1 AND deleted_at IS NULL;
 
 -- name: MarkUserPhoneVerified :exec
+-- A verified phone also claims a migrated "unverified" customer (K26,
+-- TEC-255): the legacy marker and the unresolved legacy phone are cleared.
 UPDATE users
-SET phone_verified_at = COALESCE(phone_verified_at, NOW())
-WHERE id = $1 AND deleted_at IS NULL;
+SET phone_verified_at = COALESCE(phone_verified_at, NOW()),
+    legacy_unverified = FALSE,
+    legacy_phone_raw  = NULL
+WHERE id = $1 AND deleted_at IS NULL AND phone_e164 IS NOT NULL;
 
 -- name: GetUserByID :one
 SELECT * FROM users
