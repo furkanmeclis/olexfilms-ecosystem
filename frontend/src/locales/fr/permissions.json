@@ -171,5 +171,8 @@
   "groups.warranties": "Garanties",
   "labels.tasks.read": "Voir les tâches",
   "labels.tasks.write": "Gérer les tâches",
-  "groups.tasks": "Tâches"
+  "groups.tasks": "Tâches",
+  "labels.integrations.glorian.view": "Voir l'intégration Glorian",
+  "labels.integrations.glorian.manage": "Gérer l'intégration Glorian",
+  "groups.integrations": "Intégrations"
 }

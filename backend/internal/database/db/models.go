@@ -242,6 +242,17 @@ type CariAccountBalance struct {
 	LastEntryAt    pgtype.Timestamptz `json:"last_entry_at"`
 }
 
+type ConnectionLocationMap struct {
+	ID                  int64              `json:"id"`
+	OrganizationID      int64              `json:"organization_id"`
+	BrandID             int64              `json:"brand_id"`
+	ConnectionID        int64              `json:"connection_id"`
+	WarehouseLocationID int64              `json:"warehouse_location_id"`
+	RemoteLocationCode  string             `json:"remote_location_code"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Consent struct {
 	ID          int64              `json:"id"`
 	Uuid        uuid.UUID          `json:"uuid"`
@@ -569,6 +580,51 @@ type ImportJob struct {
 	SourceFilename string             `json:"source_filename"`
 }
 
+type IntegrationConnection struct {
+	ID                 int64              `json:"id"`
+	Uuid               uuid.UUID          `json:"uuid"`
+	OrganizationID     int64              `json:"organization_id"`
+	BrandID            int64              `json:"brand_id"`
+	Key                string             `json:"key"`
+	BaseUrl            string             `json:"base_url"`
+	ApiKeyEnc          string             `json:"api_key_enc"`
+	DefaultWarehouseID pgtype.Int8        `json:"default_warehouse_id"`
+	Active             bool               `json:"active"`
+	ApiVersion         string             `json:"api_version"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+}
+
+type IntegrationExternalParty struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	ConnectionID   int64              `json:"connection_id"`
+	RemoteID       string             `json:"remote_id"`
+	Name           string             `json:"name"`
+	PhoneE164      pgtype.Text        `json:"phone_e164"`
+	Active         bool               `json:"active"`
+	SyncedAt       pgtype.Timestamptz `json:"synced_at"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type IntegrationSyncRun struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	ConnectionID   int64              `json:"connection_id"`
+	Kind           string             `json:"kind"`
+	Status         string             `json:"status"`
+	StartedAt      pgtype.Timestamptz `json:"started_at"`
+	FinishedAt     pgtype.Timestamptz `json:"finished_at"`
+	Watermark      pgtype.Timestamptz `json:"watermark"`
+	Counts         []byte             `json:"counts"`
+	Error          pgtype.Text        `json:"error"`
+}
+
 type KvkkNotice struct {
 	ID        int64              `json:"id"`
 	Locale    string             `json:"locale"`
@@ -878,6 +934,22 @@ type OrderItemUnit struct {
 	AssignedAt       pgtype.Timestamptz `json:"assigned_at"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+type OrderOutbound struct {
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	OrderID           int64              `json:"order_id"`
+	ConnectionID      int64              `json:"connection_id"`
+	ExternalReference string             `json:"external_reference"`
+	State             string             `json:"state"`
+	HeldReason        pgtype.Text        `json:"held_reason"`
+	Attempts          int32              `json:"attempts"`
+	LastError         pgtype.Text        `json:"last_error"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
 
 type OrderStatusHistory struct {

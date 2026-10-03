@@ -366,6 +366,19 @@ var Permissions = []PermissionDef{
 		Slug: PermTasksWrite, Name: "Write tasks", Module: "tasks", Scopes: scopesSupplier,
 		Description: "Create, assign, update and close center tasks; comment on them (center only).",
 	},
+
+	// TEC-266: Glorian sync (K2). Appended last; migration 000075 seeds
+	// them. super_admin only for now; manage covers the API key, so it is
+	// sensitive.
+	{
+		Slug: PermIntegrationsGlorianView, Name: "View Glorian integration", Module: "integrations", Scopes: scopesSupplier,
+		Description: "Glorian hub connection, location map, sync runs, dealers and order outbound state (K2).",
+	},
+	{
+		Slug: PermIntegrationsGlorianManage, Name: "Manage Glorian integration", Module: "integrations", Scopes: scopesSupplier,
+		Sensitive:   true,
+		Description: "Edit the Glorian hub connection and API key, location map; start syncs and retry outbound orders.",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at

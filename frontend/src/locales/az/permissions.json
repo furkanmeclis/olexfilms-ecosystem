@@ -171,5 +171,8 @@
   "groups.warranties": "Zəmanətlər",
   "labels.tasks.read": "Tapşırıqlara bax",
   "labels.tasks.write": "Tapşırıqları idarə et",
-  "groups.tasks": "Tapşırıqlar"
+  "groups.tasks": "Tapşırıqlar",
+  "labels.integrations.glorian.view": "Glorian inteqrasiyasına bax",
+  "labels.integrations.glorian.manage": "Glorian inteqrasiyasını idarə et",
+  "groups.integrations": "İnteqrasiyalar"
 }

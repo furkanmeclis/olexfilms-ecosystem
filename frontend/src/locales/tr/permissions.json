@@ -171,5 +171,8 @@
   "groups.warranties": "Garantiler",
   "labels.tasks.read": "Görevleri görüntüle",
   "labels.tasks.write": "Görevleri yönet",
-  "groups.tasks": "Görevler"
+  "groups.tasks": "Görevler",
+  "labels.integrations.glorian.view": "Glorian entegrasyonunu görüntüle",
+  "labels.integrations.glorian.manage": "Glorian entegrasyonunu yönet",
+  "groups.integrations": "Entegrasyonlar"
 }
