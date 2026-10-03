@@ -178,5 +178,20 @@
   "preferences.inapp_hint": "Afficher les notifications dans le portail.",
   "preferences.saved": "Vos préférences ont été enregistrées.",
   "preferences.failed": "Impossible d’enregistrer les préférences. Veuillez réessayer.",
-  "read_only.notice": "Les comptes flotte sont en lecture seule ; les actions comme un transfert ne sont pas disponibles."
+  "read_only.notice": "Les comptes flotte sont en lecture seule ; les actions comme un transfert ne sont pas disponibles.",
+  "dealer_page.eyebrow": "Revendeur agréé",
+  "dealer_page.address": "Adresse",
+  "dealer_page.map_label": "Carte de localisation du revendeur",
+  "dealer_page.open_map": "Ouvrir dans les cartes",
+  "dealer_page.no_location": "L'emplacement de ce revendeur n'a pas encore été ajouté.",
+  "dealer_page.whatsapp": "Écrire sur WhatsApp",
+  "dealer_page.whatsapp_text": "Bonjour {{name}}, je souhaiterais obtenir des informations.",
+  "dealer_page.logo_alt": "Logo de {{name}}",
+  "dealer_page.find_other": "Trouver un autre revendeur",
+  "dealer_page.not_found_title": "Revendeur introuvable",
+  "dealer_page.not_found_body": "Aucun revendeur actif à cette adresse. Utilisez la recherche de revendeurs pour voir ceux qui sont près de chez vous.",
+  "dealer_page.error_title": "La page du revendeur ne peut pas être affichée pour le moment",
+  "dealer_page.error_body": "Veuillez réessayer plus tard.",
+  "dealer_page.og_description": "{{name}} : revendeur agréé à {{locality}}. Adresse, carte et contact WhatsApp.",
+  "dealer_page.og_description_short": "{{name}} : revendeur agréé. Adresse, carte et contact WhatsApp."
 }

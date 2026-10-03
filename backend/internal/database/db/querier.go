@@ -609,6 +609,10 @@ type Querier interface {
 	// connection and remote product id.
 	GetProductPushLink(ctx context.Context, id int64) (GetProductPushLinkRow, error)
 	GetProvinceByID(ctx context.Context, id int64) (Province, error)
+	// TEC-250: the public showcase of one active, serving (access window open)
+	// dealer or distributor of a brand. Only the showcase columns: no tax id,
+	// account, members or settings.
+	GetPublicDealerBySlug(ctx context.Context, arg GetPublicDealerBySlugParams) (GetPublicDealerBySlugRow, error)
 	// Public warranty lookup (TEC-189): only the fields the public page shows.
 	// No users join: the holder's personal data is never read, so an anonymized
 	// customer's warranty answers the same way (K19). Vehicle fields come from
