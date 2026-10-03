@@ -193,5 +193,22 @@
   "dealer_page.error_title": "Η σελίδα του αντιπροσώπου δεν μπορεί να εμφανιστεί αυτή τη στιγμή",
   "dealer_page.error_body": "Δοκιμάστε ξανά αργότερα.",
   "dealer_page.og_description": "{{name}}: εξουσιοδοτημένος αντιπρόσωπος στην περιοχή {{locality}}. Διεύθυνση, χάρτης και επικοινωνία μέσω WhatsApp.",
-  "dealer_page.og_description_short": "{{name}}: εξουσιοδοτημένος αντιπρόσωπος. Διεύθυνση, χάρτης και επικοινωνία μέσω WhatsApp."
+  "dealer_page.og_description_short": "{{name}}: εξουσιοδοτημένος αντιπρόσωπος. Διεύθυνση, χάρτης και επικοινωνία μέσω WhatsApp.",
+  "review.title": "Αξιολογήστε την υπηρεσία",
+  "review.description": "Αξιολογήστε την πλατφόρμα μας και την ποιότητα των προϊόντων· η γνώμη σας μετράει.",
+  "review.platform_rating": "Ποιότητα πλατφόρμας",
+  "review.product_rating": "Ποιότητα προϊόντων",
+  "review.comment": "Το σχόλιό σας (προαιρετικό)",
+  "review.comment_hint": "Έως {{max}} χαρακτήρες.",
+  "review.submit": "Αποστολή",
+  "review.submitting": "Αποστολή…",
+  "review.thanks": "Ευχαριστούμε για την αξιολόγησή σας.",
+  "review.your_review": "Η αξιολόγησή σας",
+  "review.rating_required": "Επιλέξτε και τις δύο βαθμολογίες.",
+  "review.star": "{{value}} / 5",
+  "review.google": "Αξιολόγηση στο Google",
+  "review.google_hint": "Αν μείνατε ικανοποιημένοι, μπορείτε να αξιολογήσετε τον αντιπρόσωπο και στο Google.",
+  "review.not_completed": "Μπορείτε να αξιολογήσετε την υπηρεσία μόλις ολοκληρωθεί.",
+  "review.failed": "Η αξιολόγηση δεν στάλθηκε. Δοκιμάστε ξανά.",
+  "review.already": "Αυτή η υπηρεσία έχει ήδη αξιολογηθεί."
 }

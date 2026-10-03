@@ -37,6 +37,7 @@ type pullFixture struct {
 	olex    db.Organization
 	conn    db.IntegrationConnection
 	suffix  string
+	seq     int // per-fixture counter of pushUnits (TEC-271)
 }
 
 func newPullFixture(t *testing.T, active bool) *pullFixture {

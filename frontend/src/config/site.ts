@@ -24,4 +24,11 @@ export const site = {
   title: "Olexfilms",
   description: "Olexfilms garanti, depo ve bayi ağı platformu.",
   keywords: ["olexfilms", "ppf", "garanti", "bayi"],
+  /** TEC-251: default Open Graph image (local asset, 1200x630). */
+  ogImage: {
+    url: "/images/og-default.png",
+    width: 1200,
+    height: 630,
+    alt: "Olex Films",
+  },
 } as const;

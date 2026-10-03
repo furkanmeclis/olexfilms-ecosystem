@@ -36,7 +36,8 @@ type pushUnits struct {
 // brand; linked products are synced from the fixture connection.
 func (f *pullFixture) pushUnits(t *testing.T, org db.Organization, n int, linked bool) pushUnits {
 	t.Helper()
-	tag := fmt.Sprintf("T270-%s-%d", f.suffix, org.ID)
+	f.seq++
+	tag := fmt.Sprintf("T270-%s-%d-%d", f.suffix, org.ID, f.seq)
 	cat, err := f.q.CreateProductCategory(f.ctx, db.CreateProductCategoryParams{
 		OrganizationID: org.ID, BrandID: org.BrandID, Name: f.name("T270 " + tag),
 		AvailableParts: []byte("[]"), Active: true,
@@ -67,7 +68,7 @@ func (f *pullFixture) pushUnits(t *testing.T, org db.Organization, n int, linked
 	for i := 1; i <= n; i++ {
 		u, err := f.q.CreateUnit(f.ctx, db.CreateUnitParams{
 			OrganizationID: org.ID, BrandID: org.BrandID, ProductID: s.product.ID,
-			Barcode: fmt.Sprintf("GT270-%s-%d-%d", f.suffix, org.ID, i), UnitKind: ledger.KindSerial,
+			Barcode: fmt.Sprintf("GT270-%s-%d-%d-%d", f.suffix, org.ID, f.seq, i), UnitKind: ledger.KindSerial,
 			Source: "generated", Status: string(ledger.StatusPrinted),
 		})
 		if err != nil {
@@ -259,7 +260,7 @@ func TestPatchOnExit(t *testing.T) {
 	if err := calls[0].JSON(&body); err != nil {
 		t.Fatal(err)
 	}
-	if body.Status != glorian.StockStatusExternalOutbound {
+	if body.Status != glorian.StockStatusExternalOutbound || body.Location != glorian.StockLocationCenter {
 		t.Fatalf("patch body = %+v", body)
 	}
 	if row, _ := f.srv.StockItem(barcode); row["status"] != glorian.StockStatusExternalOutbound {

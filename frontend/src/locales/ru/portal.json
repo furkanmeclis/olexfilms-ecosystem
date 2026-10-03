@@ -193,5 +193,22 @@
   "dealer_page.error_title": "Страницу дилера сейчас невозможно показать",
   "dealer_page.error_body": "Попробуйте позже.",
   "dealer_page.og_description": "{{name}}: официальный дилер в {{locality}}. Адрес, карта и связь через WhatsApp.",
-  "dealer_page.og_description_short": "{{name}}: официальный дилер. Адрес, карта и связь через WhatsApp."
+  "dealer_page.og_description_short": "{{name}}: официальный дилер. Адрес, карта и связь через WhatsApp.",
+  "review.title": "Оцените услугу",
+  "review.description": "Оцените нашу платформу и качество использованных продуктов; ваше мнение важно для нас.",
+  "review.platform_rating": "Качество платформы",
+  "review.product_rating": "Качество продуктов",
+  "review.comment": "Ваш комментарий (необязательно)",
+  "review.comment_hint": "Не более {{max}} символов.",
+  "review.submit": "Отправить",
+  "review.submitting": "Отправка…",
+  "review.thanks": "Спасибо за вашу оценку.",
+  "review.your_review": "Ваша оценка",
+  "review.rating_required": "Выберите обе оценки.",
+  "review.star": "{{value}} / 5",
+  "review.google": "Оценить в Google",
+  "review.google_hint": "Если вы довольны, можете также оценить дилера в Google.",
+  "review.not_completed": "Вы сможете оценить услугу после её завершения.",
+  "review.failed": "Не удалось отправить оценку. Попробуйте ещё раз.",
+  "review.already": "Эта услуга уже оценена."
 }

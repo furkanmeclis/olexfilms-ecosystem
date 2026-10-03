@@ -46,3 +46,37 @@ func (h *Handler) PublicDealerShowcase(w http.ResponseWriter, r *http.Request) {
 	}
 	response.JSON(w, r, http.StatusOK, dealer)
 }
+
+// TEC-251: per-IP limit of the public dealer code list (the sitemap reads
+// it from the frontend server).
+const (
+	dealerCodesRateAction = "dealer_codes"
+	dealerCodesRateLimit  = 30
+	dealerCodesRateWindow = time.Minute
+)
+
+// PublicDealerCodes serves GET /v1/public/dealers (TEC-251): code and last
+// change of the request brand's active dealers and distributors, for the
+// sitemap's `/bayi/{code}` URLs. No other field is exposed.
+func (h *Handler) PublicDealerCodes(w http.ResponseWriter, r *http.Request) {
+	if h.limiter != nil {
+		if ok, retry := h.limiter.Allow(r.Context(), dealerCodesRateAction, sessionMeta(r).IP, dealerCodesRateLimit, dealerCodesRateWindow); !ok {
+			if retry > 0 {
+				w.Header().Set("Retry-After", strconv.Itoa(int(retry.Seconds())+1))
+			}
+			response.TooManyRequests(w, r, "Too many requests. Try again later.")
+			return
+		}
+	}
+	brand, err := orgusecase.RequestBrand(r.Context())
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	items, err := h.svc.PublicDealerCodes(r.Context(), brand.ID)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, map[string]any{"items": items})
+}

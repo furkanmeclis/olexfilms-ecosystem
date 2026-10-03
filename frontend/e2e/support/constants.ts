@@ -13,6 +13,30 @@ export const E2E_LOGIN = {
   password: "e2e-password-1",
 };
 
+/**
+ * Portal phone OTP accounts of the upstream mock (TEC-246, keep in sync
+ * with PORTAL_OTP there): the code the fake WhatsApp sender delivers and
+ * the portal user (token subject) it signs in.
+ */
+export const E2E_PORTAL = {
+  owner: {
+    phone: "+905551110001",
+    typed: "555 111 00 01",
+    code: "246001",
+    uuid: "0b9c4c1e-0000-4000-8000-000000000246",
+    name: "Ayşe",
+    surname: "Yılmaz",
+  },
+  buyer: {
+    phone: "+905551110002",
+    typed: "555 111 00 02",
+    code: "246002",
+    uuid: "0b9c4c1e-0000-4000-8000-000000000247",
+    name: "Mehmet",
+    surname: "Demir",
+  },
+} as const;
+
 /** Public warranty codes the upstream mock answers (keep in sync). */
 export const E2E_WARRANTY = {
   ok: "E2EWARRANTY0001",

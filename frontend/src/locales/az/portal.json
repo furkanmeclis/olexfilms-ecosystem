@@ -193,5 +193,22 @@
   "dealer_page.error_title": "Diler səhifəsi hazırda göstərilə bilmir",
   "dealer_page.error_body": "Zəhmət olmasa, bir az sonra yenidən cəhd edin.",
   "dealer_page.og_description": "{{name}}: {{locality}} səlahiyyətli dileri. Ünvan, xəritə və WhatsApp əlaqəsi.",
-  "dealer_page.og_description_short": "{{name}}: səlahiyyətli diler. Ünvan, xəritə və WhatsApp əlaqəsi."
+  "dealer_page.og_description_short": "{{name}}: səlahiyyətli diler. Ünvan, xəritə və WhatsApp əlaqəsi.",
+  "review.title": "Xidməti qiymətləndirin",
+  "review.description": "Platformamızı və istifadə olunan məhsulların keyfiyyətini qiymətləndirin; rəyiniz bizim üçün önəmlidir.",
+  "review.platform_rating": "Platforma keyfiyyəti",
+  "review.product_rating": "Məhsul keyfiyyəti",
+  "review.comment": "Şərhiniz (istəyə bağlı)",
+  "review.comment_hint": "Ən çox {{max}} simvol.",
+  "review.submit": "Göndər",
+  "review.submitting": "Göndərilir…",
+  "review.thanks": "Qiymətləndirməniz üçün təşəkkür edirik.",
+  "review.your_review": "Qiymətləndirməniz",
+  "review.rating_required": "Zəhmət olmasa hər iki balı seçin.",
+  "review.star": "{{value}} / 5",
+  "review.google": "Google-da qiymətləndir",
+  "review.google_hint": "Razı qalmısınızsa, dileri Google-da da qiymətləndirə bilərsiniz.",
+  "review.not_completed": "Xidmət tamamlandıqdan sonra qiymətləndirə bilərsiniz.",
+  "review.failed": "Qiymətləndirmə göndərilmədi. Yenidən cəhd edin.",
+  "review.already": "Bu xidmət artıq qiymətləndirilib."
 }
