@@ -4,8 +4,15 @@
 //
 // Usage:
 //
-//	migrator run --profile=olex [--mode=full|delta] [--steps=a,b] [--dry-run]
-//	migrator report [--limit=20] [--json]
+//	migrator run --profile=olex [--mode=full|delta] [--overlap=10m] [--steps=a,b] [--dry-run]
+//	migrator report --profile=olex [--json] [--strict]
+//	migrator runs [--limit=20] [--json]
+//
+// run --mode=delta reads, per step, the rows changed since the step's last
+// watermark (migration_runs) minus --overlap (TEC-264). report compares the
+// legacy tables with what was migrated (expected differences are classified,
+// see migrator.BuildReport) and exits non-zero when a row is unaccounted
+// for. runs lists the run history and the migration_map counts.
 //
 // Environment: the usual DB_* settings for the new database, plus
 //
@@ -16,7 +23,7 @@
 //	LEGACY_HUB_STORAGE_DIR  legacy hub storage directory (media copy steps:
 //	                        brand logos go to the STORAGE_* object store)
 //
-// The legacy DSNs are only needed when a run has steps.
+// The legacy DSNs are only needed when a run has steps, and by report.
 package main
 
 import (
@@ -34,6 +41,7 @@ import (
 	"syscall"
 	"text/tabwriter"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/config"
@@ -45,8 +53,9 @@ import (
 )
 
 const usage = `usage:
-  migrator run --profile=olex [--mode=full|delta] [--steps=a,b] [--dry-run]
-  migrator report [--limit=20] [--json]
+  migrator run --profile=olex [--mode=full|delta] [--overlap=10m] [--steps=a,b] [--dry-run]
+  migrator report --profile=olex [--json] [--strict]
+  migrator runs [--limit=20] [--json]
 `
 
 // dsnEnv maps a source name to its DSN variable.
@@ -74,6 +83,8 @@ func run(ctx context.Context, args []string, out io.Writer) error {
 		return cmdRun(ctx, args[1:], out)
 	case "report":
 		return cmdReport(ctx, args[1:], out)
+	case "runs":
+		return cmdRuns(ctx, args[1:], out)
 	case "-h", "--help", "help":
 		_, _ = fmt.Fprint(out, usage)
 		return nil
@@ -86,6 +97,7 @@ func cmdRun(ctx context.Context, args []string, out io.Writer) error {
 	fs := flag.NewFlagSet("run", flag.ContinueOnError)
 	profile := fs.String("profile", envOr("MIGRATOR_PROFILE", "olex"), "profile name")
 	mode := fs.String("mode", string(migrator.ModeFull), "full | delta")
+	overlap := fs.Duration("overlap", migrator.DefaultDeltaOverlap, "delta mode: read this far before the last watermark")
 	steps := fs.String("steps", "", "comma separated step names (default: all)")
 	dryRun := fs.Bool("dry-run", false, "run every step and roll its writes back")
 	if err := fs.Parse(args); err != nil {
@@ -94,6 +106,12 @@ func cmdRun(ctx context.Context, args []string, out io.Writer) error {
 	m, err := migrator.ParseMode(*mode)
 	if err != nil {
 		return err
+	}
+	if *overlap < 0 {
+		return errors.New("--overlap must not be negative")
+	}
+	if *overlap == 0 {
+		*overlap = -1 // Options: negative means no overlap, zero the default
 	}
 	// Refuse disabled / unknown profiles before connecting anywhere.
 	if _, err := migrator.Lookup(migrator.Profiles(), *profile); err != nil {
@@ -122,7 +140,8 @@ func cmdRun(ctx context.Context, args []string, out io.Writer) error {
 	if *steps != "" {
 		only = strings.Split(*steps, ",")
 	}
-	rep, runErr := r.Run(ctx, migrator.Options{Profile: *profile, Mode: m, Steps: only, DryRun: *dryRun})
+	rep, runErr := r.Run(ctx, migrator.Options{Profile: *profile, Mode: m, Steps: only, DryRun: *dryRun,
+		Overlap: *overlap})
 	enc := json.NewEncoder(out)
 	enc.SetIndent("", "  ")
 	if rep.RunID != 0 {
@@ -131,8 +150,72 @@ func cmdRun(ctx context.Context, args []string, out io.Writer) error {
 	return runErr
 }
 
+// cmdReport is the validation report (TEC-264): source vs target counts per
+// legacy table, expected differences classified, mismatches listed; a
+// mismatch is an error, so the command exits non-zero.
 func cmdReport(ctx context.Context, args []string, out io.Writer) error {
 	fs := flag.NewFlagSet("report", flag.ContinueOnError)
+	profile := fs.String("profile", envOr("MIGRATOR_PROFILE", "olex"), "profile name")
+	asJSON := fs.Bool("json", false, "print JSON")
+	strict := fs.Bool("strict", false, "count rows a step skipped (with a reported reason) as mismatches")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() > 0 {
+		return fmt.Errorf("unexpected argument %q", fs.Arg(0))
+	}
+	p, err := migrator.Lookup(migrator.Profiles(), *profile)
+	if err != nil {
+		return err
+	}
+
+	pool, closePool, err := openTarget(ctx)
+	if err != nil {
+		return err
+	}
+	defer closePool()
+	srcs := migrator.Sources{}
+	defer func() {
+		for _, s := range srcs {
+			_ = s.Close()
+		}
+	}()
+	for _, name := range p.Sources {
+		s, err := openLegacy(ctx, name)
+		if err != nil {
+			return fmt.Errorf("open source %s: %w", name, err)
+		}
+		srcs[name] = s
+	}
+
+	tx, err := pool.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly, IsoLevel: pgx.RepeatableRead})
+	if err != nil {
+		return fmt.Errorf("begin read only: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	rep, err := migrator.BuildReport(ctx, srcs, tx, migrator.ReportOptions{Profile: p.Name, Strict: *strict})
+	if err != nil {
+		return err
+	}
+	return writeReport(out, rep, *asJSON)
+}
+
+// writeReport prints rep and returns its mismatch error (non-zero exit).
+func writeReport(out io.Writer, rep *migrator.Report, asJSON bool) error {
+	var err error
+	if asJSON {
+		err = migrator.WriteReportJSON(out, rep)
+	} else {
+		err = migrator.WriteReportText(out, rep)
+	}
+	if err != nil {
+		return err
+	}
+	return rep.Err()
+}
+
+func cmdRuns(ctx context.Context, args []string, out io.Writer) error {
+	fs := flag.NewFlagSet("runs", flag.ContinueOnError)
 	limit := fs.Int("limit", 20, "number of runs to list")
 	asJSON := fs.Bool("json", false, "print JSON")
 	if err := fs.Parse(args); err != nil {
