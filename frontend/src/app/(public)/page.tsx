@@ -2,9 +2,12 @@ import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 
 import { i18nConfig, normalizeLocale } from "@/config/i18n";
+import { routes } from "@/config/routes";
+import { site } from "@/config/site";
 import { LandingView } from "@/features/landing/components/landing-view";
 import { loadMessages, translate } from "@/lib/i18n/messages";
 import { resolveRequestLocale } from "@/lib/i18n/request-locale";
+import { localeAlternates } from "@/lib/seo/sitemap";
 
 /**
  * Public landing page (TEC-247). Language: `?lang=`, else the language
@@ -33,9 +36,31 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   const { locale } = await pageLocale(searchParams);
   if (locale !== i18nConfig.fallbackLocale) await loadMessages(locale);
+  const title = translate(locale, "landing.meta.title");
+  const description = translate(locale, "landing.meta.description");
+  const url = `${site.url}${routes.public.root}`;
   return {
-    title: { absolute: translate(locale, "landing.meta.title") },
-    description: translate(locale, "landing.meta.description"),
+    title: { absolute: title },
+    description,
+    alternates: {
+      canonical: routes.public.root,
+      languages: localeAlternates(url),
+    },
+    openGraph: {
+      type: "website",
+      siteName: site.name,
+      title,
+      description,
+      locale,
+      url: routes.public.root,
+      images: [{ ...site.ogImage, alt: title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [site.ogImage.url],
+    },
   };
 }
 

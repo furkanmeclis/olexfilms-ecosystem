@@ -66,3 +66,19 @@ WHERE o.slug = sqlc.arg(slug)
   AND o.type IN ('dealer', 'distributor')
   AND o.access_starts_at <= NOW()
   AND (o.access_ends_at IS NULL OR o.access_ends_at > NOW());
+
+-- name: ListPublicDealerCodes :many
+-- TEC-251: codes (slugs) of the brand's active, serving dealers and
+-- distributors for the public sitemap. Same filters as
+-- GetPublicDealerBySlug; code and last change only.
+SELECT o.slug,
+       o.updated_at
+FROM organizations o
+WHERE o.brand_id = sqlc.arg(brand_id)
+  AND o.deleted_at IS NULL
+  AND o.status = 'active'
+  AND o.type IN ('dealer', 'distributor')
+  AND o.access_starts_at <= NOW()
+  AND (o.access_ends_at IS NULL OR o.access_ends_at > NOW())
+ORDER BY o.slug
+LIMIT sqlc.arg(row_limit)::int;
