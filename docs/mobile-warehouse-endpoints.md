@@ -127,3 +127,22 @@ Backend'e dokunulmadı. Aşağıdakiler ayrı bir iş olarak açılmalı:
 
 Bilerek eşleşmeyenler: `mark-printed` (yeni modelde basım durumu yok),
 `reports/layout` (istemci tercihi).
+
+## 4. Durum güncellemesi (TEC-235)
+
+§3 madde 1'in şu kısmı karşılandı. Aynı handler ve usecase'ler, aynı izin,
+`RequireFeature(warehouse)` ve org kapsamı geçerli. Önce
+`X-Mobile-Api-Version` kontrol ediliyor.
+
+- `GET /v1/mobile/warehouse/warehouses`
+- `POST /v1/mobile/warehouse/scan`
+- `/v1/mobile/warehouse/stock-counts[/{uuid}]` ve alt yolları: `approve-start`,
+  `start`, `scans` (GET/POST), `scans/{scan_uuid}` (DELETE), `complete`,
+  `report`, `approve`, `cancel`
+- `/v1/mobile/warehouse/transfers[/{uuid}]` ve alt yolları: `lines` (POST),
+  `lines/{line_uuid}` (DELETE), `place`, `ship`, `complete`, `cancel`
+
+Madde 1'de hâlâ eksik olanlar: oda/konum ağacı (`rooms`, `locations`),
+stok girişi, `moves`, `orders/{uuid}/place`, gün sonu, etiket PDF'leri,
+sayım CSV'si (`stock-counts/{uuid}/export`) ve `/v1/mobile/stock/*`
+(by-barcode, etiketler). Madde 2–6 değişmedi.
