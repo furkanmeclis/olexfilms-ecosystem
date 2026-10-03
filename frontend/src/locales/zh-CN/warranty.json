@@ -20,6 +20,8 @@
   "public.error_title": "暂时无法显示质保信息",
   "public.error_body": "请稍后再试。",
   "public.language": "语言",
+  "public.download_pdf": "下载保修证书 (PDF)",
+  "public.og_description": "{{brand}} 保修：{{product}}（{{status}}）",
   "certificate.download": "质保 PDF",
   "certificate.preparing": "正在生成质保证书…",
   "certificate.ready": "质保证书已下载。",

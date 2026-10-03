@@ -77,7 +77,7 @@ func TestPublicGetNotFoundIsUniform(t *testing.T) {
 	f := &fakeLookup{}
 	mux := newMux(t, f, 100)
 	var bodies [][2]string
-	for _, code := range []string{"short", "has%20space", "x" + goodCode + "toolongtoolong", "!!!!!!!!!!!!!!!!!!!!!!"} {
+	for _, code := range []string{"abc", "has%20space", "x" + goodCode + "toolongtoolong", "!!!!!!!!!!!!!!!!!!!!!!"} {
 		rec := get(mux, code, "10.0.0.2")
 		if rec.Code != http.StatusNotFound {
 			t.Fatalf("%q: status %d", code, rec.Code)

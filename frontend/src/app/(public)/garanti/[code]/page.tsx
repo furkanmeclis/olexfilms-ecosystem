@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
+import { cache } from "react";
 
 import { i18nConfig, localeDir, normalizeLocale } from "@/config/i18n";
 import { PublicWarrantyView } from "@/features/warranty/components/public-warranty-view";
-import { fetchPublicWarranty } from "@/features/warranty/lib/public-warranty";
+import {
+  fetchPublicWarranty,
+  parsePdfNotice,
+} from "@/features/warranty/lib/public-warranty";
 import { loadMessages, translate } from "@/lib/i18n/messages";
 import { resolveRequestLocale } from "@/lib/i18n/request-locale";
 import {
@@ -23,8 +27,27 @@ export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ code: string }>;
-  searchParams: Promise<{ lang?: string | string[] }>;
+  searchParams: Promise<{
+    lang?: string | string[];
+    pdf?: string | string[];
+  }>;
 };
+
+/**
+ * One Go lookup per request: generateMetadata (OG tags) and the page share
+ * it, so the per-IP limit is hit once per view.
+ */
+const lookup = cache(async (code: string) => {
+  const requestHeaders = await headers();
+  return fetchPublicWarranty(
+    code,
+    {
+      clientIp: clientIpFromHeaders(requestHeaders),
+      forwardedHost: forwardedHostFromHeaders(requestHeaders),
+    },
+    fetchUpstream,
+  );
+});
 
 async function pageLocale(searchParams: PageProps["searchParams"]) {
   const { lang } = await searchParams;
@@ -39,13 +62,47 @@ async function pageLocale(searchParams: PageProps["searchParams"]) {
   return { locale, dir: localeDir(locale), timeZone: resolved.timeZone };
 }
 
+/**
+ * Title and Open Graph tags (TEC-248): a shared QR / WhatsApp link previews
+ * the brand, product and status only, never the vehicle or the code.
+ */
 export async function generateMetadata({
+  params,
   searchParams,
 }: PageProps): Promise<Metadata> {
+  const { code } = await params;
   const { locale } = await pageLocale(searchParams);
   if (locale !== i18nConfig.fallbackLocale) await loadMessages(locale);
+  const pageTitle = translate(locale, "warranty.public.page_title");
+  const result = await lookup(code);
+  let title = pageTitle;
+  let description = translate(locale, "warranty.public.not_found_body");
+  if (result.kind === "ok") {
+    const w = result.warranty;
+    title = `${w.product.name} · ${w.brand.name}`;
+    description = translate(locale, "warranty.public.og_description", {
+      brand: w.brand.name,
+      product: w.product.name,
+      status: translate(locale, `warranty.public.status.${w.status}`),
+    });
+  } else if (result.kind === "not_found") {
+    title = translate(locale, "warranty.public.not_found_title");
+  } else {
+    description = pageTitle;
+  }
   return {
-    title: translate(locale, "warranty.public.page_title"),
+    // The document title stays the page name; the preview title carries
+    // the product.
+    title: pageTitle,
+    description,
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      siteName: result.kind === "ok" ? result.warranty.brand.name : undefined,
+      locale,
+    },
+    twitter: { card: "summary", title, description },
     robots: { index: false, follow: false, nocache: true },
     // The code in the URL is the access key: never send it to other sites.
     referrer: "no-referrer",
@@ -59,16 +116,8 @@ export default async function PublicWarrantyPage({
   const { code } = await params;
   const { locale, timeZone } = await pageLocale(searchParams);
   if (locale !== i18nConfig.fallbackLocale) await loadMessages(locale);
-
-  const requestHeaders = await headers();
-  const result = await fetchPublicWarranty(
-    code,
-    {
-      clientIp: clientIpFromHeaders(requestHeaders),
-      forwardedHost: forwardedHostFromHeaders(requestHeaders),
-    },
-    fetchUpstream,
-  );
+  const { pdf } = await searchParams;
+  const result = await lookup(code);
 
   return (
     <PublicWarrantyView
@@ -76,6 +125,7 @@ export default async function PublicWarrantyPage({
       locale={locale}
       timeZone={timeZone}
       path={`/garanti/${encodeURIComponent(code)}`}
+      pdfNotice={parsePdfNotice(pdf)}
     />
   );
 }

@@ -20,6 +20,8 @@
   "public.error_title": "Сейчас невозможно показать гарантию",
   "public.error_body": "Попробуйте позже.",
   "public.language": "Язык",
+  "public.download_pdf": "Скачать гарантийный сертификат (PDF)",
+  "public.og_description": "Гарантия {{brand}}: {{product}} ({{status}})",
   "certificate.download": "Гарантия (PDF)",
   "certificate.preparing": "Готовим гарантийный сертификат…",
   "certificate.ready": "Гарантийный сертификат загружен.",

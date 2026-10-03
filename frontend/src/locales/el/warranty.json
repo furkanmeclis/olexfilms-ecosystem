@@ -20,6 +20,8 @@
   "public.error_title": "Η εγγύηση δεν μπορεί να εμφανιστεί αυτή τη στιγμή",
   "public.error_body": "Δοκιμάστε ξανά αργότερα.",
   "public.language": "Γλώσσα",
+  "public.download_pdf": "Λήψη πιστοποιητικού εγγύησης (PDF)",
+  "public.og_description": "Εγγύηση {{brand}}: {{product}} ({{status}})",
   "certificate.download": "PDF εγγύησης",
   "certificate.preparing": "Προετοιμασία πιστοποιητικού εγγύησης…",
   "certificate.ready": "Το πιστοποιητικό εγγύησης λήφθηκε.",

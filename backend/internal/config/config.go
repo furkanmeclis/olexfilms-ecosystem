@@ -68,11 +68,13 @@ type MobileConfig struct {
 // WarrantyConfig tunes the periodic warranty tasks. RepairScanDays is the
 // look-back window of warranty:repair_scan (TEC-194), by completed_at.
 // PublicRateLimit / PublicRateWindow cap the public lookup
-// GET /v1/public/warranties/{public_code} per client IP (TEC-189).
+// GET /v1/public/warranties/{public_code} per client IP (TEC-189);
+// PublicPDFRateLimit caps its anonymous PDF in the same window (TEC-248).
 type WarrantyConfig struct {
-	RepairScanDays   int
-	PublicRateLimit  int
-	PublicRateWindow time.Duration
+	RepairScanDays     int
+	PublicRateLimit    int
+	PublicRateWindow   time.Duration
+	PublicPDFRateLimit int
 }
 
 // ServicesConfig tunes the service follow-up tasks. ReviewRequestDelay is
@@ -377,9 +379,10 @@ func Load() (Config, error) {
 			ECBURL:  getEnv("RATES_ECB_URL", "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml"),
 		},
 		Warranty: WarrantyConfig{
-			RepairScanDays:   getInt("WARRANTY_REPAIR_SCAN_DAYS", 30),
-			PublicRateLimit:  getInt("WARRANTY_PUBLIC_RATE_LIMIT", 30),
-			PublicRateWindow: getDuration("WARRANTY_PUBLIC_RATE_WINDOW", time.Minute),
+			RepairScanDays:     getInt("WARRANTY_REPAIR_SCAN_DAYS", 30),
+			PublicRateLimit:    getInt("WARRANTY_PUBLIC_RATE_LIMIT", 30),
+			PublicRateWindow:   getDuration("WARRANTY_PUBLIC_RATE_WINDOW", time.Minute),
+			PublicPDFRateLimit: getInt("WARRANTY_PUBLIC_PDF_RATE_LIMIT", 5),
 		},
 		Services: ServicesConfig{
 			ReviewRequestDelay: getDuration("SERVICE_REVIEW_REQUEST_DELAY", 24*time.Hour),

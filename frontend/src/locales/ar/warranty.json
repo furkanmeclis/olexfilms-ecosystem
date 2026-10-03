@@ -20,6 +20,8 @@
   "public.error_title": "لا يمكن عرض الضمان حاليًا",
   "public.error_body": "يُرجى المحاولة لاحقًا.",
   "public.language": "اللغة",
+  "public.download_pdf": "تنزيل شهادة الضمان (PDF)",
+  "public.og_description": "ضمان {{brand}}: {{product}} ({{status}})",
   "certificate.download": "ملف الضمان PDF",
   "certificate.preparing": "جارٍ تجهيز شهادة الضمان…",
   "certificate.ready": "تم تنزيل شهادة الضمان.",

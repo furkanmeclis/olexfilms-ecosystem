@@ -38,11 +38,16 @@ type Public struct {
 	limiter Limiter
 	limit   int
 	window  time.Duration
+	// TEC-248: the anonymous PDF (WithPDF).
+	renderer    PDFRenderer
+	frontendURL string
+	pdfLimit    int
+	now         func() time.Time
 }
 
 // NewPublic builds the handler; limit hits per window per client IP.
 func NewPublic(lookup Lookup, limiter Limiter, limit int, window time.Duration) *Public {
-	return &Public{lookup: lookup, limiter: limiter, limit: limit, window: window}
+	return &Public{lookup: lookup, limiter: limiter, limit: limit, window: window, now: time.Now}
 }
 
 // Get answers the public warranty page. No authentication. The rate limit
@@ -51,33 +56,54 @@ func NewPublic(lookup Lookup, limiter Limiter, limit int, window time.Duration) 
 func (h *Public) Get(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Robots-Tag", "noindex, nofollow")
-	if h.limiter != nil {
-		if ok, retry := h.limiter.Allow(r.Context(), publicRateAction, clientIP(r), h.limit, h.window); !ok {
-			secs := int(retry.Seconds())
-			if secs < 1 {
-				secs = 1
-			}
-			w.Header().Set("Retry-After", strconv.Itoa(secs))
-			response.TooManyRequests(w, r, "")
-			return
-		}
+	if !h.allow(w, r, publicRateAction, h.limit) {
+		return
 	}
+	out, ok := h.find(w, r)
+	if !ok {
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
+// allow applies the per-IP limit of a bucket; over it the response is 429
+// with Retry-After and false is returned.
+func (h *Public) allow(w http.ResponseWriter, r *http.Request, action string, limit int) bool {
+	if h.limiter == nil {
+		return true
+	}
+	ok, retry := h.limiter.Allow(r.Context(), action, clientIP(r), limit, h.window)
+	if ok {
+		return true
+	}
+	secs := int(retry.Seconds())
+	if secs < 1 {
+		secs = 1
+	}
+	w.Header().Set("Retry-After", strconv.Itoa(secs))
+	response.TooManyRequests(w, r, "")
+	return false
+}
+
+// find resolves the path code in the domain brand. Every miss (malformed,
+// unknown, another brand's warranty) writes the same 404.
+func (h *Public) find(w http.ResponseWriter, r *http.Request) (usecase.PublicWarranty, bool) {
 	code := r.PathValue("public_code")
 	b, ok := brandctx.From(r.Context())
 	if !ok || !usecase.ValidPublicCode(code) {
 		response.NotFound(w, r, notFoundMessage)
-		return
+		return usecase.PublicWarranty{}, false
 	}
 	out, err := h.lookup.Lookup(r.Context(), usecase.PublicWarrantyBrand{Name: b.Name, Slug: b.Slug}, b.ID, code)
 	if err != nil {
 		if errors.Is(err, usecase.ErrPublicNotFound) {
 			response.NotFound(w, r, notFoundMessage)
-			return
+			return usecase.PublicWarranty{}, false
 		}
 		response.InternalErr(w, r, err, "warranty lookup failed")
-		return
+		return usecase.PublicWarranty{}, false
 	}
-	response.JSON(w, r, http.StatusOK, out)
+	return out, true
 }
 
 // clientIP is the client address the BFF forwards (first X-Forwarded-For

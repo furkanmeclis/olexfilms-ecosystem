@@ -451,7 +451,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	indexsync.Register(eventBus, deps.Queries, searchIndexer, log)
 	// TEC-189: public warranty lookup behind /garanti/{public_code}.
 	warrantymodule.RegisterPublicRoutes(mux, deps.Queries, ratelimit.New(deps.Redis, cfg.App.Env),
-		cfg.Warranty.PublicRateLimit, cfg.Warranty.PublicRateWindow)
+		cfg.Warranty.PublicRateLimit, cfg.Warranty.PublicRateWindow,
+		pdfClient, cfg.Auth.FrontendURL, cfg.Warranty.PublicPDFRateLimit)
 	// TEC-191: panel / portal warranty list and detail, center void.
 	warrantyReader := warrantymodule.RegisterListRoutes(mux, deps.DB, deps.Queries, cfg.Auth.FrontendURL,
 		tokens, loader, featureSvc, stepUpSvc, listFinder)

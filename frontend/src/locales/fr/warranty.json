@@ -20,6 +20,8 @@
   "public.error_title": "La garantie ne peut pas être affichée pour le moment",
   "public.error_body": "Veuillez réessayer plus tard.",
   "public.language": "Langue",
+  "public.download_pdf": "Télécharger le certificat de garantie (PDF)",
+  "public.og_description": "Garantie {{brand}} : {{product}} ({{status}})",
   "certificate.download": "PDF de garantie",
   "certificate.preparing": "Préparation du certificat de garantie…",
   "certificate.ready": "Certificat de garantie téléchargé.",
