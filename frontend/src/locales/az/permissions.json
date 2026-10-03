@@ -168,5 +168,8 @@
   "labels.warranties.read": "Zəmanətlərə baxmaq",
   "labels.warranties.void": "Zəmanətləri ləğv etmək",
   "labels.vehicles.transfer": "Avtomobili təhvil vermək",
-  "groups.warranties": "Zəmanətlər"
+  "groups.warranties": "Zəmanətlər",
+  "labels.tasks.read": "Tapşırıqlara bax",
+  "labels.tasks.write": "Tapşırıqları idarə et",
+  "groups.tasks": "Tapşırıqlar"
 }

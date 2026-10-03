@@ -511,7 +511,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 			WithVehicleTransferExpire(customersSvc.ExpireTransfersTask).
 			WithServiceReviewRequest(servicereview.NewTaskSender(deps.DB, deps.Queries, log).Task).
 			WithNotificationPurge(notifSvc.PurgeExpired).
-			WithWhatsAppPoll(waSvc.PollStatus)
+			WithWhatsAppPoll(waSvc.PollStatus).
+			WithTasksDueScan(tasksusecase.NewCron(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)).DueScanTask)
 		if searchIndexer != nil {
 			s.worker.WithSearch(
 				searchIndexer.ProcessUpsert,
@@ -579,6 +580,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-203: universal scan resolver (scan.* settings from sysconfig).
 	warehousemodule.RegisterScanRoutes(mux, warehousehandler.NewScan(warehouseusecase.NewScanner(deps.Queries, sysSvc)),
 		featureSvc, tokens, loader, deps.Queries)
+	// TEC-204: stock entry documents (confirm posts entry + placement via the ledger).
+	warehousemodule.RegisterEntryRoutes(mux, warehousehandler.NewEntries(warehouseusecase.NewStockEntries(deps.DB, deps.Queries,
+		outbox.NewStore(deps.DB, deps.Queries))), featureSvc, tokens, loader, deps.Queries)
 	settingsmodule.RegisterRoutes(mux, settingshandler.New(settingsusecase.New(deps.Queries), deps.Storage),
 		settingshandler.NewSystem(sysSvc), tokens, loader)
 	accessmodule.RegisterRoutes(mux, accesshandler.New(stepUpSvc, activityRec), tokens, loader)

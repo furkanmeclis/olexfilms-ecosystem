@@ -49,6 +49,8 @@ func Schedules() []Periodic {
 		{Cron: vehicleTransferExpireCron, Type: TaskVehicleTransferExpire, Queue: QueueMaintenance, Opts: vehicleTransferTaskOpts(), New: NewVehicleTransferExpireTask},
 		// TEC-156: nightly stock projection drift scan (report only).
 		{Cron: inventoryRebuildCron, Type: TaskInventoryRebuild, Queue: QueueMaintenance, New: newNightlyInventoryRebuildTask},
+		// TEC-221: hourly center task due date reminders (idempotent).
+		{Cron: tasksDueScanCron, Type: TaskTasksDueScan, Queue: QueueMaintenance, Opts: tasksDueScanOpts(), New: NewTasksDueScanTask},
 	}
 }
 

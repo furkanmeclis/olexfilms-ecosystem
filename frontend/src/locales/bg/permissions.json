@@ -168,5 +168,8 @@
   "labels.warranties.read": "Преглед на гаранции",
   "labels.warranties.void": "Анулиране на гаранции",
   "labels.vehicles.transfer": "Прехвърляне на автомобили",
-  "groups.warranties": "Гаранции"
+  "groups.warranties": "Гаранции",
+  "labels.tasks.read": "Преглед на задачи",
+  "labels.tasks.write": "Управление на задачи",
+  "groups.tasks": "Задачи"
 }

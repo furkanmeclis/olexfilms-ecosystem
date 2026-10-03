@@ -65,6 +65,8 @@ type Worker struct {
 	vehicleTransferExpire VehicleTransferTaskFunc
 	// TEC-192: delayed Google review request of a completed service.
 	serviceReviewRequest ServiceReviewRequestFunc
+	// TEC-221: center task due date reminders.
+	tasksDueScan TasksDueScanFunc
 }
 
 // NewWorker builds a worker that handles known task types on every queue.
@@ -132,6 +134,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskInventoryRebuild, w.handleInventoryRebuild)
 	mux.HandleFunc(TaskVehicleTransferExpire, w.handleVehicleTransferExpire)
 	mux.HandleFunc(TaskServiceReviewRequest, w.handleServiceReviewRequest)
+	mux.HandleFunc(TaskTasksDueScan, w.handleTasksDueScan)
 	return w
 }
 

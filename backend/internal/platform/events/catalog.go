@@ -601,7 +601,17 @@ func catalogConstants() []string {
 		VehicleCreated,
 		VehicleUpdated,
 		VehicleDeleted,
+		TasksDueSoon,
+		TasksOverdue,
 		OrganizationCreated,
 		OrganizationUpdated,
 	}
 }
+
+// Center task due date reminders (TEC-221): written by tasks:due_scan once
+// per task and threshold (tasks.due_soon_notified_at / overdue_notified_at);
+// the notification catalog reaches the assignee (or the creator).
+const (
+	TasksDueSoon = "tasks.due_soon"
+	TasksOverdue = "tasks.overdue"
+)
