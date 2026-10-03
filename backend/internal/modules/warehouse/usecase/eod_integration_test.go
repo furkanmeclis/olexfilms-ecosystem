@@ -44,6 +44,47 @@ func (e *entryEnv) post(t *testing.T, m ledger.Movement) {
 	}
 }
 
+// service creates a real draft service of org (a service owner is a
+// foreign key to services(id, organization_id) since 000050).
+func (e *entryEnv) service(t *testing.T, org db.Organization) int64 {
+	t.Helper()
+	user, err := e.q.CreateUser(e.ctx, db.CreateUserParams{
+		PasswordHash: "x", Name: "T207", Surname: e.suffix, Status: "active",
+		Email: pgtype.Text{String: "t207-svc-" + e.suffix + "@example.test", Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("customer: %v", err)
+	}
+	var carBrand, carModel int64
+	if err := e.pool.QueryRow(e.ctx, `INSERT INTO car_brands (name) VALUES ($1) RETURNING id`,
+		"t207-"+e.suffix).Scan(&carBrand); err != nil {
+		t.Fatalf("car brand: %v", err)
+	}
+	if err := e.pool.QueryRow(e.ctx, `INSERT INTO car_models (car_brand_id, name) VALUES ($1, $2) RETURNING id`,
+		carBrand, "t207-"+e.suffix).Scan(&carModel); err != nil {
+		t.Fatalf("car model: %v", err)
+	}
+	veh, err := e.q.CreateVehicle(e.ctx, db.CreateVehicleParams{
+		UserID: user.ID, BrandID: org.BrandID,
+		CarBrandID: pgtype.Int8{Int64: carBrand, Valid: true},
+		CarModelID: pgtype.Int8{Int64: carModel, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("vehicle: %v", err)
+	}
+	svc, err := e.q.CreateService(e.ctx, db.CreateServiceParams{
+		// services.service_no is VARCHAR(32).
+		ServiceNo:      "E" + e.suffix,
+		OrganizationID: org.ID, BrandID: org.BrandID,
+		CustomerUserID: user.ID, VehicleID: veh.ID,
+		CarBrandID: carBrand, CarModelID: carModel, Status: "draft",
+	})
+	if err != nil {
+		t.Fatalf("service: %v", err)
+	}
+	return svc.ID
+}
+
 func (e *entryEnv) locationID(t *testing.T, l wh.Location) int64 {
 	t.Helper()
 	var id int64
@@ -110,7 +151,7 @@ func TestEODReportSummarizesDay(t *testing.T) {
 
 	from := ledger.Owner{Type: ledger.OwnerWarehouseLocation, ID: locID, OrgID: e.center.ID}
 	e.post(t, ledger.Movement{Type: ledger.TypeConsumption, UnitID: units[0], From: &from,
-		To: &ledger.Owner{Type: ledger.OwnerService, ID: 987654321, OrgID: e.center.ID}, Reason: "t207 service"})
+		To: &ledger.Owner{Type: ledger.OwnerService, ID: e.service(t, e.center), OrgID: e.center.ID}, Reason: "t207 service"})
 	e.post(t, ledger.Movement{Type: ledger.TypeVoid, UnitID: units[1], From: &from, Reason: "t207 void"})
 	e.post(t, ledger.Movement{Type: ledger.TypePlacement, UnitID: units[2], From: &from,
 		To: &ledger.Owner{Type: ledger.OwnerWarehouseLocation, ID: loc2ID, OrgID: e.center.ID}, Reason: "t207 move"})
@@ -203,10 +244,16 @@ func TestEODDailyRunDistributor(t *testing.T) {
 	units := e.enterUnits(t, w, loc, 2, "G")
 	from := ledger.Owner{Type: ledger.OwnerWarehouseLocation, ID: e.locationID(t, loc), OrgID: e.center.ID}
 	dist := ledger.Owner{Type: ledger.OwnerOrganization, ID: e.dist.ID, OrgID: e.dist.ID}
-	e.post(t, ledger.Movement{Type: ledger.TypeTransferOut, UnitID: units[0], From: &from, To: &dist, Reason: "t207 transfer"})
-	e.post(t, ledger.Movement{Type: ledger.TypeTransferIn, UnitID: units[0], To: &dist, Reason: "t207 transfer in"})
-	e.post(t, ledger.Movement{Type: ledger.TypeOrderOut, UnitID: units[1], From: &from, To: &dist, Reason: "t207 order"})
-	e.post(t, ledger.Movement{Type: ledger.TypeReceived, UnitID: units[1], To: &dist, Reason: "t207 received"})
+	// The *_in movement must carry the reference of its *_out.
+	ref := time.Now().UnixNano()
+	e.post(t, ledger.Movement{Type: ledger.TypeTransferOut, UnitID: units[0], From: &from, To: &dist,
+		Source: "t207", RefType: "t207_transfer", RefID: ref, Reason: "t207 transfer"})
+	e.post(t, ledger.Movement{Type: ledger.TypeTransferIn, UnitID: units[0], To: &dist,
+		Source: "t207", RefType: "t207_transfer", RefID: ref, Reason: "t207 transfer in"})
+	e.post(t, ledger.Movement{Type: ledger.TypeOrderOut, UnitID: units[1], From: &from, To: &dist,
+		Source: "t207", RefType: "t207_order", RefID: ref, Reason: "t207 order"})
+	e.post(t, ledger.Movement{Type: ledger.TypeReceived, UnitID: units[1], To: &dist,
+		Source: "t207", RefType: "t207_order", RefID: ref, Reason: "t207 received"})
 
 	now := time.Now()
 	eod := wh.NewEOD(e.pool, e.q)
