@@ -26,6 +26,7 @@ type InventoryClient interface {
 	UpsertBarcodes(ctx context.Context, items []BarcodeUpsert) (BulkUpsertResult, error)
 	PatchStockItemByBarcode(ctx context.Context, barcode string, patch StockItemPatch) (StockItem, error)
 
+	ListOrders(ctx context.Context, p ListParams) (Page[Order], error)
 	CreateOrder(ctx context.Context, in CreateOrderInput) (Order, error)
 	TransitionOrder(ctx context.Context, orderID string, action OrderAction, in TransitionInput) (Order, error)
 }
@@ -152,6 +153,12 @@ func (c *HTTPClient) ListDealers(ctx context.Context, p ListParams) (Page[Dealer
 // ListStockItems pulls GET /stock-items.
 func (c *HTTPClient) ListStockItems(ctx context.Context, p ListParams) (Page[StockItem], error) {
 	return list[StockItem](ctx, c, "/stock-items", p)
+}
+
+// ListOrders pulls GET /orders (filters: dealer_id, status,
+// external_reference).
+func (c *HTTPClient) ListOrders(ctx context.Context, p ListParams) (Page[Order], error) {
+	return list[Order](ctx, c, "/orders", p)
 }
 
 // UpsertBarcodes pushes POST /stock-items/bulk (idempotent by barcode on

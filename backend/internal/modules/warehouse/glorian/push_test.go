@@ -106,19 +106,25 @@ func TestListenerSkipsUnlinkedAndOlexProducts(t *testing.T) {
 	}
 }
 
-func TestListenerPatchesExitTransferShipment(t *testing.T) {
+func TestListenerPatchesExitOnly(t *testing.T) {
 	q := &recordingQueue{}
 	bus, _ := newFakeListener(q, time.Now())
 	ctx := context.Background()
-	names := []string{events.StockExternalOutbound, events.StockTransferOut, events.StockOrderOut}
+	names := []string{events.StockExternalOutbound}
 	for i, name := range names {
 		if err := bus.Publish(ctx, stockEvent(name, int64(10+i), linkedProduct)); err != nil {
 			t.Fatal(err)
 		}
 	}
 	// A redelivered event finds its task id and enqueues nothing.
-	if err := bus.Publish(ctx, stockEvent(events.StockTransferOut, 11, linkedProduct)); err != nil {
+	if err := bus.Publish(ctx, stockEvent(events.StockExternalOutbound, 10, linkedProduct)); err != nil {
 		t.Fatal(err)
+	}
+	// Transfers and shipments send no PATCH (the hub order moves them).
+	for i, name := range []string{events.StockTransferOut, events.StockOrderOut, events.StockOrderCancelRestore} {
+		if err := bus.Publish(ctx, stockEvent(name, int64(20+i), linkedProduct)); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if len(q.tasks) != len(names) {
 		t.Fatalf("tasks = %d; want %d", len(q.tasks), len(names))
@@ -131,19 +137,18 @@ func TestListenerPatchesExitTransferShipment(t *testing.T) {
 }
 
 func TestPatchFor(t *testing.T) {
+	// Warehouse MarkOrderBarcodesExternalOutboundAction: exit only.
 	cases := map[string]glorian.StockItemPatch{
-		"external_outbound":       {Status: glorian.StockStatusExternalOutbound},
-		"transfer_out":            {Status: glorian.StockStatusExternalOutbound, Location: glorian.StockLocationDealer},
-		"order_out":               {Status: glorian.StockStatusExternalOutbound, Location: glorian.StockLocationDealer},
-		"transfer_cancel_restore": {Status: glorian.StockStatusAvailable, Location: glorian.StockLocationCenter},
-		"order_cancel_restore":    {Status: glorian.StockStatusAvailable, Location: glorian.StockLocationCenter},
+		"external_outbound": {Status: glorian.StockStatusExternalOutbound, Location: glorian.StockLocationCenter},
 	}
 	for typ, want := range cases {
 		if got, ok := glorian.PatchFor(typ); !ok || got != want {
 			t.Errorf("%s = %+v %v; want %+v", typ, got, ok, want)
 		}
 	}
-	for _, typ := range []string{"entry", "placement", "consumption", "transfer_in"} {
+	// Shipments and their restores go through the hub order (TEC-271).
+	for _, typ := range []string{"entry", "placement", "consumption", "transfer_in",
+		"transfer_out", "order_out", "transfer_cancel_restore", "order_cancel_restore"} {
 		if _, ok := glorian.PatchFor(typ); ok {
 			t.Errorf("%s must not patch", typ)
 		}
