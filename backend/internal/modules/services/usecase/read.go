@@ -363,17 +363,30 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]ServiceVi
 		}
 		p.VehicleID = pgtype.Int8{Int64: v.ID, Valid: true}
 	}
-	rows, err := s.q.ListServicesInScope(ctx, p)
-	if err != nil {
-		return nil, 0, fmt.Errorf("services: list: %w", err)
+	var (
+		rows    []db.Service
+		total   int64
+		indexed bool
+	)
+	// TEC-209: a text search goes to the services index when it is up; the
+	// date bounds are not indexed, so they stay on SQL.
+	if p.Q.Valid && !p.CreatedFrom.Valid && !p.CreatedTo.Valid && s.indexEnabled() {
+		rows, total, indexed = s.searchIndexed(ctx, c, p)
 	}
-	total, err := s.q.CountServicesInScope(ctx, db.CountServicesInScopeParams{
-		BrandID: p.BrandID, OrgIds: p.OrgIds, CreatedByUserID: p.CreatedByUserID,
-		CustomerUserID: p.CustomerUserID, VehicleID: p.VehicleID, Status: p.Status, Q: p.Q,
-		CreatedFrom: p.CreatedFrom, CreatedTo: p.CreatedTo,
-	})
-	if err != nil {
-		return nil, 0, fmt.Errorf("services: count: %w", err)
+	if !indexed {
+		var err error
+		rows, err = s.q.ListServicesInScope(ctx, p)
+		if err != nil {
+			return nil, 0, fmt.Errorf("services: list: %w", err)
+		}
+		total, err = s.q.CountServicesInScope(ctx, db.CountServicesInScopeParams{
+			BrandID: p.BrandID, OrgIds: p.OrgIds, CreatedByUserID: p.CreatedByUserID,
+			CustomerUserID: p.CustomerUserID, VehicleID: p.VehicleID, Status: p.Status, Q: p.Q,
+			CreatedFrom: p.CreatedFrom, CreatedTo: p.CreatedTo,
+		})
+		if err != nil {
+			return nil, 0, fmt.Errorf("services: count: %w", err)
+		}
 	}
 	out := make([]ServiceView, 0, len(rows))
 	for _, r := range rows {

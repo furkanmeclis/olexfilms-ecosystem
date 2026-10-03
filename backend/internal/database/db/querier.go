@@ -524,6 +524,7 @@ type Querier interface {
 	// Public warranty / PDF lookup by number (unique across brands).
 	GetServiceByNo(ctx context.Context, serviceNo string) (Service, error)
 	GetServiceByUUID(ctx context.Context, arg GetServiceByUUIDParams) (Service, error)
+	GetServiceForIndex(ctx context.Context, argUuid uuid.UUID) (GetServiceForIndexRow, error)
 	GetServiceImage(ctx context.Context, arg GetServiceImageParams) (ServiceImage, error)
 	GetServiceItem(ctx context.Context, arg GetServiceItemParams) (ServiceItem, error)
 	GetServiceItemByUUID(ctx context.Context, arg GetServiceItemByUUIDParams) (ServiceItem, error)
@@ -568,6 +569,7 @@ type Querier interface {
 	GetVehicleByID(ctx context.Context, id int64) (Vehicle, error)
 	GetVehicleByUUID(ctx context.Context, argUuid uuid.UUID) (Vehicle, error)
 	GetVehicleByUUIDForUpdate(ctx context.Context, argUuid uuid.UUID) (Vehicle, error)
+	GetVehicleForIndex(ctx context.Context, argUuid uuid.UUID) (GetVehicleForIndexRow, error)
 	GetVehicleTransfer(ctx context.Context, arg GetVehicleTransferParams) (VehicleTransfer, error)
 	GetVehicleTransferByUUID(ctx context.Context, arg GetVehicleTransferByUUIDParams) (VehicleTransfer, error)
 	// Vehicle with its customer and car brand/model, for API responses.
@@ -585,6 +587,7 @@ type Querier interface {
 	GetWarrantyByPublicCode(ctx context.Context, arg GetWarrantyByPublicCodeParams) (Warranty, error)
 	GetWarrantyByServiceItem(ctx context.Context, serviceItemID int64) (Warranty, error)
 	GetWarrantyByUUID(ctx context.Context, arg GetWarrantyByUUIDParams) (Warranty, error)
+	GetWarrantyForIndex(ctx context.Context, argUuid uuid.UUID) (GetWarrantyForIndexRow, error)
 	// service.completed consumer (TEC-186): the service, its organization's
 	// time zone (end_at is the end of the last day there, decision 4) and its
 	// brand slug (Glorian services get no warranty, K2).
@@ -894,6 +897,10 @@ type Querier interface {
 	// Vehicles of customers linked to the organizations in scope; the brand is
 	// always the domain brand (K20).
 	ListScopedVehicles(ctx context.Context, arg ListScopedVehiclesParams) ([]ListScopedVehiclesRow, error)
+	// Records of one customer: refreshed after anonymization (the documents
+	// lose the personal data) and after an ownership transfer.
+	ListSearchUuidsByCustomer(ctx context.Context, argUuid uuid.UUID) (ListSearchUuidsByCustomerRow, error)
+	ListSearchUuidsByUserID(ctx context.Context, userID int64) (ListSearchUuidsByUserIDRow, error)
 	ListServiceImages(ctx context.Context, serviceID int64) ([]ServiceImage, error)
 	ListServiceItems(ctx context.Context, serviceID int64) ([]ServiceItem, error)
 	ListServiceStatusLogs(ctx context.Context, serviceID int64) ([]ServiceStatusLog, error)
@@ -910,6 +917,13 @@ type Querier interface {
 	// Services of a customer across brands' organizations in scope (portal and
 	// customer detail).
 	ListServicesByCustomer(ctx context.Context, arg ListServicesByCustomerParams) ([]Service, error)
+	// TEC-209: Meilisearch services / warranties / vehicles indexes. One
+	// document per record; the list endpoints filter the index on the caller's
+	// scope (brand + organizations, own / assigned, holder) and reload the hits
+	// from Postgres with the same scope, so the index is never the only access
+	// check. The customer columns feed the document only while the customer
+	// is not anonymized (K19): the adapter drops them otherwise.
+	ListServicesForIndex(ctx context.Context) ([]ListServicesForIndexRow, error)
 	// Scope list: org_ids NULL = whole brand (brand/all scope); created_by for
 	// scope own, customer_user_id for scope customer (portal). q matches the
 	// service number, plate, VIN and the customer's name or phone (TEC-179;
@@ -977,6 +991,10 @@ type Querier interface {
 	ListUsersForExport(ctx context.Context, arg ListUsersForExportParams) ([]User, error)
 	ListVehicleTransfersByVehicle(ctx context.Context, arg ListVehicleTransfersByVehicleParams) ([]VehicleTransfer, error)
 	ListVehiclesByUser(ctx context.Context, arg ListVehiclesByUserParams) ([]ListVehiclesByUserRow, error)
+	// Vehicles: organization_ids are the owner's customer_organizations of the
+	// vehicle brand (the same EXISTS the list applies). Deleted vehicles and
+	// vehicles whose owner is anonymized, merged or deleted are not indexed.
+	ListVehiclesForIndex(ctx context.Context) ([]ListVehiclesForIndexRow, error)
 	// Vehicles of customers linked to the organizations in scope.
 	ListVehiclesInScope(ctx context.Context, arg ListVehiclesInScopeParams) ([]ListVehiclesInScopeRow, error)
 	ListWarehouseLocations(ctx context.Context, arg ListWarehouseLocationsParams) ([]WarehouseLocation, error)
@@ -994,6 +1012,7 @@ type Querier interface {
 	// not notified yet (a missed day is caught up by the <= condition).
 	ListWarrantiesDue30DayNotice(ctx context.Context, arg ListWarrantiesDue30DayNoticeParams) ([]Warranty, error)
 	ListWarrantiesDue7DayNotice(ctx context.Context, arg ListWarrantiesDue7DayNoticeParams) ([]Warranty, error)
+	ListWarrantiesForIndex(ctx context.Context) ([]ListWarrantiesForIndexRow, error)
 	// Scope list: org_ids NULL = whole brand (brand/all scope);
 	// holder_user_id for scope customer (portal).
 	ListWarrantiesInScope(ctx context.Context, arg ListWarrantiesInScopeParams) ([]Warranty, error)

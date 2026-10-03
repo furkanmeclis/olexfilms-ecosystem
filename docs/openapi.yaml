@@ -7670,6 +7670,9 @@ paths:
         vehicles.read. Only vehicles whose customer is linked to an
         organization in scope (domain brand). `customer_uuid` outside the
         scope answers 404; `plate` is a prefix of the normalized plate.
+        `q` (TEC-209) searches plate and VIN: the vehicles search index
+        when it is up (same scope, hits reloaded from the database),
+        otherwise a prefix of the normalized plate or the VIN.
       security:
         - bearerAuth: []
       parameters:
@@ -7682,6 +7685,9 @@ paths:
         - name: vin
           in: query
           schema: { type: string }
+        - name: q
+          in: query
+          schema: { type: string, maxLength: 100 }
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
       responses:

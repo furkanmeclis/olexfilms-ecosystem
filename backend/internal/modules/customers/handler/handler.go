@@ -227,6 +227,7 @@ func (h *Handler) ListVehicles(w http.ResponseWriter, r *http.Request) {
 	q := apiquery.Parse(r.URL.Query())
 	items, total, err := h.svc.ListVehicles(r.Context(), caller(r), cu.VehicleFilter{
 		CustomerUUID: customer, Plate: r.URL.Query().Get("plate"), VIN: r.URL.Query().Get("vin"),
+		Q:     r.URL.Query().Get("q"),
 		Limit: q.Limit, Offset: q.Offset,
 	})
 	if err != nil {

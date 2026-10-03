@@ -4138,7 +4138,7 @@ export interface paths {
         };
         /**
          * Vehicles of customers in scope
-         * @description vehicles.read. Only vehicles whose customer is linked to an organization in scope (domain brand). `customer_uuid` outside the scope answers 404; `plate` is a prefix of the normalized plate.
+         * @description vehicles.read. Only vehicles whose customer is linked to an organization in scope (domain brand). `customer_uuid` outside the scope answers 404; `plate` is a prefix of the normalized plate. `q` (TEC-209) searches plate and VIN: the vehicles search index when it is up (same scope, hits reloaded from the database), otherwise a prefix of the normalized plate or the VIN.
          */
         get: operations["listVehicles"];
         put?: never;
@@ -18864,6 +18864,7 @@ export interface operations {
                 customer_uuid?: string;
                 plate?: string;
                 vin?: string;
+                q?: string;
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
             };

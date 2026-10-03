@@ -23,6 +23,7 @@ import (
 	notifmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/providers"
 	notifusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/usecase"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/indexsync"
 	servicereview "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/review"
 	servicesusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/usecase"
 	stockrebuild "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/rebuild"
@@ -121,9 +122,15 @@ func main() {
 		searchadapters.NewRoles(queries),
 		catalogusecase.NewSearchAdapter(queries),
 		customersusecase.NewSearchAdapter(queries), // TEC-164
+		// TEC-209: services, warranties, vehicles (plate / VIN).
+		servicesusecase.NewSearchAdapter(queries),
+		warrantyusecase.NewSearchAdapter(queries),
+		customersusecase.NewVehicleSearchAdapter(queries),
 	)
 	searchClient := searchengine.NewClient(cfg.Search, log)
 	searchIndexer := searchengine.NewIndexer(searchClient, searchReg, nil, log)
+	// TEC-209: service / warranty / vehicle outbox events refresh the indexes.
+	indexsync.Register(eventBus, queries, searchIndexer, log)
 	// TEC-145: product import/export runs here; the import reindexes products.
 	catalogSvc := catalogusecase.New(queries, searchIndexer)
 	// Exports only read the ledger: no poster, no feature checker.

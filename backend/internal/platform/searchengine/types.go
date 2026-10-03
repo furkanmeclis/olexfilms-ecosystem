@@ -47,6 +47,13 @@ type Document struct {
 	BrandIDs        []int64 `json:"brand_ids,omitempty"`
 	// Status is the filterable record status (list scoped specs).
 	Status string `json:"status,omitempty"`
+	// TEC-209: filterable record relations of the services, warranties and
+	// vehicles specs. CustomerUserID is the customer / holder / owner,
+	// CreatedByUserID the creator (own / assigned scopes).
+	CustomerUserID  int64 `json:"customer_user_id,omitempty"`
+	CreatedByUserID int64 `json:"created_by_user_id,omitempty"`
+	VehicleID       int64 `json:"vehicle_id,omitempty"`
+	ProductID       int64 `json:"product_id,omitempty"`
 }
 
 // Hit is a normalized search result returned to clients.

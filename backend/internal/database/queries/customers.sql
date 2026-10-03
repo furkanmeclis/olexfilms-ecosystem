@@ -318,6 +318,8 @@ WHERE v.deleted_at IS NULL
   )
   AND (sqlc.narg(plate_normalized)::text IS NULL OR v.plate_normalized LIKE sqlc.narg(plate_normalized) || '%')
   AND (sqlc.narg(vin)::text IS NULL OR v.vin = sqlc.narg(vin))
+  AND (sqlc.narg(q)::text IS NULL OR v.plate_normalized LIKE sqlc.narg(q)::text || '%' OR v.vin LIKE sqlc.narg(q)::text || '%')
+  AND (sqlc.narg(uuids)::uuid[] IS NULL OR v.uuid = ANY (sqlc.narg(uuids)::uuid[]))
 ORDER BY v.created_at DESC, v.id DESC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
@@ -334,7 +336,8 @@ WHERE v.deleted_at IS NULL
       AND (sqlc.narg(org_ids)::bigint[] IS NULL OR co.organization_id = ANY (sqlc.narg(org_ids)::bigint[]))
   )
   AND (sqlc.narg(plate_normalized)::text IS NULL OR v.plate_normalized LIKE sqlc.narg(plate_normalized) || '%')
-  AND (sqlc.narg(vin)::text IS NULL OR v.vin = sqlc.narg(vin));
+  AND (sqlc.narg(vin)::text IS NULL OR v.vin = sqlc.narg(vin))
+  AND (sqlc.narg(q)::text IS NULL OR v.plate_normalized LIKE sqlc.narg(q)::text || '%' OR v.vin LIKE sqlc.narg(q)::text || '%');
 
 -- TEC-164: Meilisearch customers index. One document per customer linked to
 -- at least one organization; anonymized, merged and deleted users never
