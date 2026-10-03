@@ -1,7 +1,13 @@
 "use client";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { ArrowLeftRight, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import {
+  ArrowLeftRight,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Undo2,
+} from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -15,12 +21,14 @@ import { routes } from "@/config/routes";
 import {
   pageCount,
   TRANSFER_DIRECTIONS,
+  TRANSFER_KINDS,
   TRANSFER_STATUSES,
   transferStatusTone,
 } from "@/features/transfers/lib/transfers";
 import {
   transferKeys,
   transfersService,
+  type StockTransferKind,
   type StockTransferStatus,
   type TransferDirection,
   type TransferListQuery,
@@ -48,16 +56,18 @@ export function TransfersListPage({ slug }: { slug: string }) {
     ALL,
   );
   const [status, setStatus] = useState<StockTransferStatus | typeof ALL>(ALL);
+  const [kind, setKind] = useState<StockTransferKind | typeof ALL>(ALL);
   const [page, setPage] = useState(0);
 
   const query = useMemo<TransferListQuery>(
     () => ({
+      ...(kind === ALL ? {} : { kind }),
       ...(direction === ALL ? {} : { direction }),
       ...(status === ALL ? {} : { status }),
       limit: TRANSFER_PAGE_SIZE,
       offset: page * TRANSFER_PAGE_SIZE,
     }),
-    [direction, status, page],
+    [kind, direction, status, page],
   );
 
   const list = useQuery({
@@ -79,15 +89,26 @@ export function TransfersListPage({ slug }: { slug: string }) {
       ]}
       actions={
         canCreate ? (
-          <Button asChild>
-            <Link
-              href={routes.tenant.transfers.create(slug)}
-              data-testid="transfer-new"
-            >
-              <Plus className="size-4" />
-              {t("transfers.list.new")}
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link
+                href={routes.tenant.transfers.createReturn(slug)}
+                data-testid="transfer-new-return"
+              >
+                <Undo2 className="size-4" />
+                {t("transfers.return.new")}
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link
+                href={routes.tenant.transfers.create(slug)}
+                data-testid="transfer-new"
+              >
+                <Plus className="size-4" />
+                {t("transfers.list.new")}
+              </Link>
+            </Button>
+          </div>
         ) : null
       }
     />
@@ -114,6 +135,31 @@ export function TransfersListPage({ slug }: { slug: string }) {
       {header}
       <Card>
         <CardContent className="space-y-4 pt-6">
+          <div
+            className="flex flex-wrap gap-2"
+            role="group"
+            aria-label={t("transfers.kind.label")}
+          >
+            {[ALL, ...TRANSFER_KINDS].map((k) => {
+              const active = kind === k;
+              return (
+                <Button
+                  key={k}
+                  type="button"
+                  size="sm"
+                  variant={active ? "default" : "outline"}
+                  aria-pressed={active}
+                  data-kind={k}
+                  onClick={() => {
+                    setKind(k as StockTransferKind | typeof ALL);
+                    setPage(0);
+                  }}
+                >
+                  {t(`transfers.kind.${k}`)}
+                </Button>
+              );
+            })}
+          </div>
           <div
             className="flex flex-wrap gap-2"
             role="group"
@@ -232,6 +278,9 @@ export function TransfersListPage({ slug }: { slug: string }) {
                           </Link>
                           <div className="text-muted-foreground text-xs">
                             {t(`transfers.role.${r.role}`)}
+                            {r.kind === "return"
+                              ? ` · ${t("transfers.kind.return")}`
+                              : null}
                           </div>
                         </td>
                         <td className="p-2">

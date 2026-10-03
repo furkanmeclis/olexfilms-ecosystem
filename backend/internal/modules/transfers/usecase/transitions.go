@@ -80,9 +80,58 @@ var transitions = map[string]map[string][]grant{
 	},
 }
 
-// lookupTransition returns the grants of from -> to, or ok=false.
+// Request kinds (stock_transfer_requests.kind, migration 000065).
+const (
+	// KindSibling is a K13 transfer between siblings (TEC-197).
+	KindSibling = "sibling"
+	// KindReturn is a return to the giver's direct parent (TEC-223).
+	KindReturn = "return"
+)
+
+// IsKind reports whether k is a known request kind.
+func IsKind(k string) bool { return k == KindSibling || k == KindReturn }
+
+// returnTransitions is the state machine of a return (TEC-223); the
+// receiver is the parent, so every receiving step belongs to it:
+//
+//	requested -> approved | rejected (parent; rejected writes no movement)
+//	requested -> cancelled (giver or parent; no movement)
+//	approved -> shipped (giver; transfer_out per unit, in transit to the parent)
+//	approved -> cancelled (giver or parent; no movement)
+//	shipped -> received (parent; transfer_in per unit + accounting reversal)
+//	shipped -> cancelled (giver: the goods are back; transfer_cancel_restore)
+var returnTransitions = map[string]map[string][]grant{
+	StatusRequested: {
+		StatusApproved:  {{PartyParent, approvePerm}},
+		StatusRejected:  {{PartyParent, approvePerm}},
+		StatusCancelled: {{PartySender, reqPerm}, {PartyParent, approvePerm}},
+	},
+	StatusApproved: {
+		StatusShipped:   {{PartySender, reqPerm}},
+		StatusCancelled: {{PartySender, reqPerm}, {PartyParent, approvePerm}},
+	},
+	StatusShipped: {
+		StatusReceived:  {{PartyParent, []string{rbac.PermTransfersApprove, rbac.PermTransfersRequest}}},
+		StatusCancelled: {{PartySender, reqPerm}},
+	},
+}
+
+func machine(kind string) map[string]map[string][]grant {
+	if kind == KindReturn {
+		return returnTransitions
+	}
+	return transitions
+}
+
+// lookupTransition returns the grants of from -> to of a sibling transfer,
+// or ok=false.
 func lookupTransition(from, to string) ([]grant, bool) {
-	g, ok := transitions[from][to]
+	return lookupKindTransition(KindSibling, from, to)
+}
+
+// lookupKindTransition returns the grants of from -> to for a request kind.
+func lookupKindTransition(kind, from, to string) ([]grant, bool) {
+	g, ok := machine(kind)[from][to]
 	return g, ok
 }
 
@@ -103,14 +152,19 @@ func allowed(gs []grant, p Party, can func(slug string) bool) bool {
 }
 
 // availableTransitions lists the statuses a caller on side p may move a
-// request in status from to, in flow order.
+// sibling request in status from to, in flow order.
 func availableTransitions(from string, p Party, can func(slug string) bool) []string {
+	return availableKindTransitions(KindSibling, from, p, can)
+}
+
+// availableKindTransitions is availableTransitions for a request kind.
+func availableKindTransitions(kind, from string, p Party, can func(slug string) bool) []string {
 	out := []string{}
 	if p == "" {
 		return out
 	}
 	for _, to := range Statuses {
-		if gs, ok := lookupTransition(from, to); ok && allowed(gs, p, can) {
+		if gs, ok := lookupKindTransition(kind, from, to); ok && allowed(gs, p, can) {
 			out = append(out, to)
 		}
 	}

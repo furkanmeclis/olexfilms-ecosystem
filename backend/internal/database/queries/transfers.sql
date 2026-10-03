@@ -5,11 +5,12 @@
 -- name: InsertTransferRequest :one
 INSERT INTO stock_transfer_requests (
     organization_id, brand_id, from_org_id, to_org_id, approver_org_id,
-    currency, reason, requested_by_user_id
+    currency, reason, requested_by_user_id, kind
 )
 VALUES (
     sqlc.arg(from_org_id), sqlc.arg(brand_id), sqlc.arg(from_org_id), sqlc.arg(to_org_id),
-    sqlc.arg(approver_org_id), sqlc.arg(currency), sqlc.narg(reason), sqlc.narg(requested_by_user_id)
+    sqlc.arg(approver_org_id), sqlc.arg(currency), sqlc.narg(reason), sqlc.narg(requested_by_user_id),
+    COALESCE(NULLIF(sqlc.arg(kind)::text, ''), 'sibling')
 )
 RETURNING *;
 
@@ -34,6 +35,7 @@ WHERE brand_id = sqlc.arg(brand_id)
       OR (sqlc.arg(direction)::text IN ('', 'approval') AND approver_org_id = sqlc.arg(org_id)::bigint)
   )
   AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
+  AND (sqlc.narg(kind)::text IS NULL OR kind = sqlc.narg(kind)::text)
 ORDER BY created_at DESC, id DESC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
@@ -45,7 +47,8 @@ WHERE brand_id = sqlc.arg(brand_id)
       OR (sqlc.arg(direction)::text IN ('', 'incoming') AND to_org_id = sqlc.arg(org_id)::bigint)
       OR (sqlc.arg(direction)::text IN ('', 'approval') AND approver_org_id = sqlc.arg(org_id)::bigint)
   )
-  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text);
+  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
+  AND (sqlc.narg(kind)::text IS NULL OR kind = sqlc.narg(kind)::text);
 
 -- name: DecideTransferRequest :one
 UPDATE stock_transfer_requests
@@ -156,3 +159,18 @@ JOIN permissions p ON p.id = rp.permission_id
 WHERE om.organization_id = sqlc.arg(organization_id)
   AND p.slug = sqlc.arg(permission_slug)::text
 ORDER BY om.user_id;
+
+-- TEC-223: the price a unit was sold at to buyer by seller (its latest
+-- order line with the unit assigned, the order not cancelled), in currency.
+-- name: GetUnitLastOrderPrice :one
+SELECT oi.unit_price
+FROM order_item_units oiu
+JOIN order_items oi ON oi.id = oiu.order_item_id
+JOIN orders o ON o.id = oi.order_id
+WHERE oiu.unit_id = sqlc.arg(unit_id)
+  AND o.seller_org_id = sqlc.arg(seller_org_id)
+  AND o.buyer_org_id = sqlc.arg(buyer_org_id)
+  AND o.currency = sqlc.arg(currency)::text
+  AND o.status NOT IN ('draft', 'cancelling', 'cancelled')
+ORDER BY oiu.assigned_at DESC, oiu.id DESC
+LIMIT 1;

@@ -242,6 +242,11 @@ export function TransferDetailPage({
         </CardHeader>
         <CardContent>
           <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Field label={t("transfers.kind.label")}>
+              <span data-testid="transfer-kind">
+                {t(`transfers.kind.${r.kind}`)}
+              </span>
+            </Field>
             <Field label={t("transfers.columns.sender")}>{r.sender.name}</Field>
             <Field label={t("transfers.columns.receiver")}>
               {r.receiver.name}

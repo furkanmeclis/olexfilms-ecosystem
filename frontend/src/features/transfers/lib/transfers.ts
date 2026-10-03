@@ -1,6 +1,7 @@
 import type {
   StockTransfer,
   StockTransferCreateInput,
+  StockTransferKind,
   StockTransferStatus,
   TransferDirection,
 } from "@/features/transfers/services/transfers.service";
@@ -17,6 +18,9 @@ export const TRANSFER_STATUSES: StockTransferStatus[] = [
   "received",
   "cancelled",
 ];
+
+/** Request kinds (TEC-223): sibling transfers and returns to the parent. */
+export const TRANSFER_KINDS: StockTransferKind[] = ["sibling", "return"];
 
 export const TRANSFER_DIRECTIONS: TransferDirection[] = [
   "outgoing",
@@ -92,15 +96,20 @@ export function validQuantity(raw: string): boolean {
   return v === "" || /^[1-9][0-9]{0,6}$/.test(v);
 }
 
-/** Request body of the form; null while the form is incomplete. */
+/**
+ * Request body of the form; null while the form is incomplete. A return
+ * (TEC-223) carries kind=return and its parent as to_org_uuid.
+ */
 export function buildCreateBody(
   toOrgUuid: string,
   lines: TransferLine[],
   note: string,
+  kind: StockTransferKind = "sibling",
 ): StockTransferCreateInput | null {
   if (toOrgUuid === "" || lines.length === 0) return null;
   if (!lines.every((l) => validQuantity(l.quantity))) return null;
   const body: StockTransferCreateInput = {
+    ...(kind === "return" ? { kind } : {}),
     to_org_uuid: toOrgUuid,
     items: lines.map((l) =>
       l.quantity.trim() === ""

@@ -18,6 +18,7 @@ import (
 // Error codes specific to transfers.
 const (
 	CodeNotSibling        = "TRANSFER_NOT_SIBLING"
+	CodeNotParent         = "TRANSFER_NOT_PARENT"
 	CodeInvalidTransition = "TRANSFER_INVALID_TRANSITION"
 	CodeStockUnavailable  = "TRANSFER_STOCK_UNAVAILABLE"
 )
@@ -46,6 +47,9 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, tr.ErrNotSibling):
 		response.Error(w, r, http.StatusUnprocessableEntity, CodeNotSibling,
 			"Stock can be transferred only to a sibling under the same parent organization")
+	case errors.Is(err, tr.ErrNotParent):
+		response.Error(w, r, http.StatusUnprocessableEntity, CodeNotParent,
+			"Stock can be returned only to the direct parent organization")
 	case errors.Is(err, tr.ErrInvalidTransition):
 		response.Conflict(w, r, CodeInvalidTransition, "The transfer status does not allow this transition")
 	case errors.Is(err, tr.ErrRateNotFound):
@@ -77,11 +81,12 @@ func decode(w http.ResponseWriter, r *http.Request, dst any) bool {
 	return true
 }
 
-// List (GET /v1/stock-transfers?direction&status&limit&offset).
+// List (GET /v1/stock-transfers?kind&direction&status&limit&offset).
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	q := apiquery.Parse(r.URL.Query())
 	v := r.URL.Query()
 	items, total, err := h.svc.List(r.Context(), caller(r), tr.ListFilter{
+		Kind:      strings.TrimSpace(v.Get("kind")),
 		Direction: strings.TrimSpace(v.Get("direction")), Status: strings.TrimSpace(v.Get("status")),
 		Limit: q.Limit, Offset: q.Offset,
 	})
@@ -92,9 +97,10 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
 }
 
-// Targets (GET /v1/stock-transfers/targets): siblings of the active organization.
+// Targets (GET /v1/stock-transfers/targets?kind): siblings of the active
+// organization, or its direct parent for kind=return (TEC-223).
 func (h *Handler) Targets(w http.ResponseWriter, r *http.Request) {
-	items, err := h.svc.Targets(r.Context(), caller(r))
+	items, err := h.svc.Targets(r.Context(), caller(r), r.URL.Query().Get("kind"))
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -122,6 +128,7 @@ type itemBody struct {
 }
 
 type createBody struct {
+	Kind      string     `json:"kind"`
 	ToOrgUUID string     `json:"to_org_uuid"`
 	Note      *string    `json:"note"`
 	Items     []itemBody `json:"items"`
@@ -137,7 +144,9 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	for _, it := range body.Items {
 		items = append(items, tr.ItemInput{Barcode: it.Barcode, Quantity: it.Quantity})
 	}
-	v, err := h.svc.Create(r.Context(), caller(r), tr.CreateInput{ToOrgUUID: body.ToOrgUUID, Note: body.Note, Items: items})
+	v, err := h.svc.Create(r.Context(), caller(r), tr.CreateInput{
+		Kind: body.Kind, ToOrgUUID: body.ToOrgUUID, Note: body.Note, Items: items,
+	})
 	if err != nil {
 		writeError(w, r, err)
 		return

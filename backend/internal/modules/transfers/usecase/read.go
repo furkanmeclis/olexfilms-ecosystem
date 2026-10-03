@@ -48,8 +48,10 @@ type ItemView struct {
 // TransferView is a request as the API returns it. Role is the active
 // organization's side (sender, receiver, parent).
 type TransferView struct {
-	UUID         uuid.UUID  `json:"uuid"`
-	TransferNo   string     `json:"transfer_no"`
+	UUID       uuid.UUID `json:"uuid"`
+	TransferNo string    `json:"transfer_no"`
+	// Kind is sibling (K13 transfer) or return (to the parent, TEC-223).
+	Kind         string     `json:"kind"`
 	Status       string     `json:"status"`
 	Role         string     `json:"role"`
 	Sender       OrgRef     `json:"sender"`
@@ -126,14 +128,14 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, r db.Sto
 	}
 	party := partyOf(c, r)
 	return TransferView{
-		UUID: r.Uuid, TransferNo: r.TransferNo, Status: r.Status, Role: string(party),
+		UUID: r.Uuid, TransferNo: r.TransferNo, Kind: r.Kind, Status: r.Status, Role: string(party),
 		Sender: sender, Receiver: receiver, Parent: parent,
 		Currency: strings.TrimSpace(r.Currency), Total: numericTextPtr(r.Total, 2),
 		Note: textPtr(r.Reason), DecisionNote: textPtr(r.DecisionNote), CancelReason: textPtr(r.CancelReason),
 		ItemCount: n, DecidedAt: tsPtr(r.DecidedAt), ShippedAt: tsPtr(r.ShippedAt),
 		ReceivedAt: tsPtr(r.ReceivedAt), CancelledAt: tsPtr(r.CancelledAt),
 		CreatedAt: r.CreatedAt.Time, UpdatedAt: r.UpdatedAt.Time,
-		AvailableTransitions: availableTransitions(r.Status, party, c.can),
+		AvailableTransitions: availableKindTransitions(r.Kind, r.Status, party, c.can),
 	}, nil
 }
 
@@ -190,6 +192,8 @@ const (
 
 // ListFilter narrows the request list.
 type ListFilter struct {
+	// Kind narrows to sibling transfers or returns ("": both).
+	Kind      string
 	Direction string
 	Status    string
 	Limit     int32
@@ -215,15 +219,22 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]TransferV
 		}
 		status = pgtype.Text{String: st, Valid: true}
 	}
+	kind := pgtype.Text{}
+	if k := strings.TrimSpace(f.Kind); k != "" {
+		if !IsKind(k) {
+			return nil, 0, invalid("kind", "must be sibling or return")
+		}
+		kind = pgtype.Text{String: k, Valid: true}
+	}
 	rows, err := s.q.ListTransferRequestsForOrg(ctx, db.ListTransferRequestsForOrgParams{
-		BrandID: c.Org.BrandID, Direction: dir, OrgID: c.Org.InternalID, Status: status,
+		BrandID: c.Org.BrandID, Direction: dir, OrgID: c.Org.InternalID, Status: status, Kind: kind,
 		RowLimit: f.Limit, RowOffset: f.Offset,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("transfers: list: %w", err)
 	}
 	total, err := s.q.CountTransferRequestsForOrg(ctx, db.CountTransferRequestsForOrgParams{
-		BrandID: c.Org.BrandID, Direction: dir, OrgID: c.Org.InternalID, Status: status,
+		BrandID: c.Org.BrandID, Direction: dir, OrgID: c.Org.InternalID, Status: status, Kind: kind,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("transfers: count: %w", err)

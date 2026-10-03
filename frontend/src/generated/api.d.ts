@@ -6152,13 +6152,13 @@ export interface paths {
         };
         /**
          * Stock transfer requests of the active organization
-         * @description Requests where the active organization is the giver (outgoing), the receiver (incoming) or the common parent (approval); direction narrows the list. Needs transfers.request or transfers.approve and the dealer_transfers module. List rows carry no items.
+         * @description Requests where the active organization is the giver (outgoing), the receiver (incoming) or the common parent (approval); direction narrows the list. Needs transfers.request or transfers.approve and the dealer_transfers module. List rows carry no items. kind narrows to sibling transfers or returns to the parent (TEC-223).
          */
         get: operations["listStockTransfers"];
         put?: never;
         /**
          * Request a stock transfer to a sibling organization (K13)
-         * @description The active organization (dealer or distributor) gives units it holds to a sibling: same brand, same type, same parent. Any other target (another parent, brand or type, the parent itself) is 422 TRANSFER_NOT_SIBLING. Units are named by barcode; a fixed barcode needs a quantity, pieces and rolls move whole. A unit not in the giver's stock, reserved by an order or on another open request is 400 with detail code TRANSFER_UNIT_NOT_AVAILABLE, TRANSFER_UNIT_RESERVED or TRANSFER_INSUFFICIENT_STOCK. Needs transfers.request. Writes transfers.requested; no stock moves yet.
+         * @description The active organization (dealer or distributor) gives units it holds to a sibling: same brand, same type, same parent. Any other target (another parent, brand or type, the parent itself) is 422 TRANSFER_NOT_SIBLING. Units are named by barcode; a fixed barcode needs a quantity, pieces and rolls move whole. A unit not in the giver's stock, reserved by an order or on another open request is 400 with detail code TRANSFER_UNIT_NOT_AVAILABLE, TRANSFER_UNIT_RESERVED or TRANSFER_INSUFFICIENT_STOCK. Needs transfers.request. Writes transfers.requested; no stock moves yet. With kind=return (TEC-223) the units go back to the active organization's direct parent: to_org_uuid may be omitted, and when set it must name that parent, else 422 TRANSFER_NOT_PARENT (also for an organization without a parent, such as the center).
          */
         post: operations["createStockTransfer"];
         delete?: never;
@@ -6176,7 +6176,7 @@ export interface paths {
         };
         /**
          * Siblings the active organization may transfer to
-         * @description Live organizations of the same brand, type and parent as the active organization (empty for the center). Needs transfers.request.
+         * @description Live organizations of the same brand, type and parent as the active organization (empty for the center). With kind=return, the direct parent only (TEC-223). Needs transfers.request.
          */
         get: operations["listStockTransferTargets"];
         put?: never;
@@ -6218,7 +6218,7 @@ export interface paths {
         put?: never;
         /**
          * Move a stock transfer request to another status
-         * @description requested -> approved | rejected (receiver with transfers.request or the common parent with transfers.approve; approval freezes the giver's purchase price per unit, K13; a rejection writes no stock movement); requested -> cancelled (giver or parent); approved -> shipped (giver: one ledger transfer_out per unit with idempotency key transfer:transfer_item:<id>:transfer_out:<barcode>, serial units go in_transit owned by the receiver; 409 TRANSFER_STOCK_UNAVAILABLE when the ledger refuses); approved -> cancelled (any party, no movement); shipped -> received (receiver: one transfer_in per unit, available at the receiver); shipped -> cancelled (giver, once the goods are back: one transfer_cancel_restore per unit). rejected, received and cancelled are final. A request for the current status is a no-op; other moves answer 409 TRANSFER_INVALID_TRANSITION. Every move writes a transfers.* outbox event. On receipt the giver books income on the receiver's cari and the receiver a purchase expense on the giver's cari for the line totals frozen at approval, in the same transaction (K13, source stock_transfer); 400 RATE_NOT_FOUND rolls the receipt back when an organization's currency has no rate for the day.
+         * @description requested -> approved | rejected (receiver with transfers.request or the common parent with transfers.approve; approval freezes the giver's purchase price per unit, K13; a rejection writes no stock movement); requested -> cancelled (giver or parent); approved -> shipped (giver: one ledger transfer_out per unit with idempotency key transfer:transfer_item:<id>:transfer_out:<barcode>, serial units go in_transit owned by the receiver; 409 TRANSFER_STOCK_UNAVAILABLE when the ledger refuses); approved -> cancelled (any party, no movement); shipped -> received (receiver: one transfer_in per unit, available at the receiver); shipped -> cancelled (giver, once the goods are back: one transfer_cancel_restore per unit). rejected, received and cancelled are final. A request for the current status is a no-op; other moves answer 409 TRANSFER_INVALID_TRANSITION. Every move writes a transfers.* outbox event. On receipt the giver books income on the receiver's cari and the receiver a purchase expense on the giver's cari for the line totals frozen at approval, in the same transaction (K13, source stock_transfer); 400 RATE_NOT_FOUND rolls the receipt back when an organization's currency has no rate for the day. A return (kind=return, TEC-223) has the parent as receiver: the parent (transfers.approve) approves or rejects, the giver ships or cancels, the parent receives; approval freezes the unit's order price to the giver (else the giver's purchase price), and the receipt books the reversal of the parent's sale (the giver income on the parent's cari, the parent a purchase expense on the giver's cari, source stock_return).
          */
         post: operations["transitionStockTransfer"];
         delete?: never;
@@ -11135,6 +11135,11 @@ export interface components {
         };
         /** @enum {string} */
         StockTransferStatus: "requested" | "approved" | "rejected" | "shipped" | "received" | "cancelled";
+        /**
+         * @description sibling is a K13 transfer between siblings; return goes back to the direct parent (TEC-223)
+         * @enum {string}
+         */
+        StockTransferKind: "sibling" | "return";
         StockTransferItem: {
             /** Format: uuid */
             uuid: string;
@@ -11162,6 +11167,7 @@ export interface components {
             /** Format: uuid */
             uuid: string;
             transfer_no: string;
+            kind: components["schemas"]["StockTransferKind"];
             status: components["schemas"]["StockTransferStatus"];
             /**
              * @description Side of the active organization
@@ -11201,8 +11207,12 @@ export interface components {
             quantity?: number;
         };
         StockTransferCreateInput: {
-            /** Format: uuid */
-            to_org_uuid: string;
+            kind?: components["schemas"]["StockTransferKind"];
+            /**
+             * Format: uuid
+             * @description Required for a sibling transfer; optional for a return (must be the direct parent)
+             */
+            to_org_uuid?: string;
             note?: string;
             items: components["schemas"]["StockTransferItemInput"][];
         };
@@ -22613,6 +22623,7 @@ export interface operations {
     listStockTransfers: {
         parameters: {
             query?: {
+                kind?: components["schemas"]["StockTransferKind"];
                 direction?: "outgoing" | "incoming" | "approval";
                 status?: components["schemas"]["StockTransferStatus"];
                 limit?: number;
@@ -22668,7 +22679,9 @@ export interface operations {
     };
     listStockTransferTargets: {
         parameters: {
-            query?: never;
+            query?: {
+                kind?: components["schemas"]["StockTransferKind"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
