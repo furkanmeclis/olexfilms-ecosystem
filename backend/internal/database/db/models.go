@@ -1711,6 +1711,43 @@ type WarehouseLocation struct {
 	SortOrder      int32              `json:"sort_order"`
 }
 
+type WarehouseTransfer struct {
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	TransferNo        string             `json:"transfer_no"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	FromWarehouseID   int64              `json:"from_warehouse_id"`
+	ToWarehouseID     int64              `json:"to_warehouse_id"`
+	ToLocationID      pgtype.Int8        `json:"to_location_id"`
+	Status            string             `json:"status"`
+	Note              pgtype.Text        `json:"note"`
+	CreatedByUserID   pgtype.Int8        `json:"created_by_user_id"`
+	ShippedByUserID   pgtype.Int8        `json:"shipped_by_user_id"`
+	CompletedByUserID pgtype.Int8        `json:"completed_by_user_id"`
+	CancelledByUserID pgtype.Int8        `json:"cancelled_by_user_id"`
+	ShippedAt         pgtype.Timestamptz `json:"shipped_at"`
+	CompletedAt       pgtype.Timestamptz `json:"completed_at"`
+	CancelledAt       pgtype.Timestamptz `json:"cancelled_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type WarehouseTransferLine struct {
+	ID                  int64              `json:"id"`
+	Uuid                uuid.UUID          `json:"uuid"`
+	TransferID          int64              `json:"transfer_id"`
+	UnitID              int64              `json:"unit_id"`
+	SourceLocationID    pgtype.Int8        `json:"source_location_id"`
+	TargetLocationID    pgtype.Int8        `json:"target_location_id"`
+	IsOpen              bool               `json:"is_open"`
+	OutMovementID       pgtype.Int8        `json:"out_movement_id"`
+	InMovementID        pgtype.Int8        `json:"in_movement_id"`
+	PlacementMovementID pgtype.Int8        `json:"placement_movement_id"`
+	RestoreMovementID   pgtype.Int8        `json:"restore_movement_id"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+}
+
 type Warranty struct {
 	ID             int64              `json:"id"`
 	Uuid           uuid.UUID          `json:"uuid"`

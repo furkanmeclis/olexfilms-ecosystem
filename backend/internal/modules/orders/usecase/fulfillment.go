@@ -430,6 +430,14 @@ func checkSerialStock(ctx context.Context, q *db.Queries, u db.Unit, seller int6
 	if len(active) > 0 {
 		return ErrUnitReserved
 	}
+	// TEC-205: a unit on an open warehouse transfer is held by it.
+	open, err := q.CountOpenWarehouseTransferLinesByUnit(ctx, u.ID)
+	if err != nil {
+		return fmt.Errorf("orders: open warehouse transfers: %w", err)
+	}
+	if open > 0 {
+		return ErrUnitReserved
+	}
 	return nil
 }
 
