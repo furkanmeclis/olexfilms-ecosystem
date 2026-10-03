@@ -450,6 +450,8 @@ var ukCatalog = map[string]string{
 	// TEC-196: service PDF.
 	"export.title.tenant.services.pdf":      "Звіт про послугу",
 	"resources.tenant.services.pdf":         "Звіт про послугу",
+	"export.title.portal.service_pdf":       "Звіт про послугу",
+	"resources.portal.service_pdf":          "Мій звіт про послугу",
 	"services.pdf.status":                   "Статус",
 	"services.pdf.created_at":               "Створено",
 	"services.pdf.completed_at":             "Завершено",

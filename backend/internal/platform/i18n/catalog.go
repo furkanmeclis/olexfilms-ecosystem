@@ -451,6 +451,8 @@ var trCatalog = map[string]string{
 	// TEC-196: service PDF.
 	"export.title.tenant.services.pdf":      "Hizmet raporu",
 	"resources.tenant.services.pdf":         "Hizmet raporu",
+	"export.title.portal.service_pdf":       "Hizmet raporu",
+	"resources.portal.service_pdf":          "Hizmet raporum",
 	"services.pdf.status":                   "Durum",
 	"services.pdf.created_at":               "Oluşturulma",
 	"services.pdf.completed_at":             "Tamamlanma",
@@ -961,6 +963,8 @@ var enCatalog = map[string]string{
 	// TEC-196: service PDF.
 	"export.title.tenant.services.pdf":      "Service report",
 	"resources.tenant.services.pdf":         "Service report",
+	"export.title.portal.service_pdf":       "Service report",
+	"resources.portal.service_pdf":          "My service report",
 	"services.pdf.status":                   "Status",
 	"services.pdf.created_at":               "Created",
 	"services.pdf.completed_at":             "Completed",

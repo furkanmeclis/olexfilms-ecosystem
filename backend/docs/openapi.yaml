@@ -1694,6 +1694,86 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/portal/services/{uuid}:
+    get:
+      tags: [Portal]
+      operationId: getPortalService
+      summary: Service detail of the signed-in customer
+      description: >-
+        TEC-239. Portal session (services.read, scope customer). A service of
+        the domain brand the user owns (its customer, or the holder of one of
+        its warranties after a vehicle transfer); anything else answers 404.
+        Returns the applied parts (vehicle part picker SVG keys), the products
+        used (name and category, no price), the dealer card (WhatsApp in
+        E.164) and the warranties the user holds. Measurement fields, prices,
+        unit barcodes, consumed amounts and staff notes are never returned.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Service detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePortalService"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/portal/services/{uuid}/pdf:
+    get:
+      tags: [Portal]
+      operationId: getPortalServicePdf
+      summary: Service PDF of the signed-in customer
+      description: >-
+        TEC-239. Portal session (services.read, scope customer); same
+        ownership rule as GET /v1/portal/services/{uuid} (else 404). Uses the
+        service PDF render (TEC-196) and prints only the warranties the user
+        holds. A completed render of the same locale, newer than the last
+        service change and younger than 24 hours, answers 200 with its
+        download_url; otherwise a running job (younger than 15 minutes) is
+        returned or a new one is queued, with 202. Poll and download through
+        /v1/portal/exports/{uuid}.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - name: locale
+          in: query
+          required: false
+          description: Document language (one of the 13 supported locales); defaults to the user language.
+          schema: { type: string }
+      responses:
+        "200":
+          description: A completed render exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "202":
+          description: Render queued or running
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          description: Exports are not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /v1/me/organizations:
     get:
       tags: [Auth]
@@ -21526,4 +21606,83 @@ components:
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    PortalServiceProduct:
+      type: object
+      required: [service_item_uuid, name, category, applied_parts]
+      properties:
+        service_item_uuid: { type: string, format: uuid }
+        name: { type: string }
+        category: { type: string }
+        applied_parts:
+          type: array
+          items: { type: string }
+
+    PortalServiceDealer:
+      type: object
+      required: [uuid, name, city, district, address, whatsapp]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        city: { type: string }
+        district: { type: string }
+        address: { type: string }
+        whatsapp:
+          type: [string, "null"]
+          description: Organization phone in E.164 (WhatsApp); null when unset.
+
+    PortalServiceWarranty:
+      type: object
+      required: [uuid, public_code, service_item_uuid, product_name, item_kind, status, start_at, end_at, expired_at, voided_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        public_code: { type: string }
+        service_item_uuid: { type: string, format: uuid }
+        product_name: { type: string }
+        item_kind: { type: string }
+        status: { type: string, enum: [active, expired, void] }
+        start_at: { type: string, format: date-time }
+        end_at: { type: string, format: date-time }
+        expired_at: { type: [string, "null"], format: date-time }
+        voided_at: { type: [string, "null"], format: date-time }
+
+    PortalService:
+      type: object
+      description: >-
+        TEC-239 portal projection of a service. Carries no measurement
+        fields, prices, unit barcodes, consumed amounts, staff notes or
+        customer contact data.
+      required: [uuid, service_no, status, status_label, vehicle_uuid, car_brand, car_model, model_year, plate, created_at, completed_at, applied_parts, products, dealer, warranties]
+      properties:
+        uuid: { type: string, format: uuid }
+        service_no: { type: string }
+        status: { type: string }
+        status_label: { type: string }
+        vehicle_uuid: { type: string, format: uuid }
+        car_brand: { $ref: "#/components/schemas/ServiceRef" }
+        car_model: { $ref: "#/components/schemas/ServiceRef" }
+        model_year: { type: [integer, "null"] }
+        plate: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+        completed_at: { type: [string, "null"], format: date-time }
+        applied_parts:
+          type: array
+          description: Union of the applied parts (vehicle part picker SVG keys), sorted.
+          items: { type: string }
+        products:
+          type: array
+          items: { $ref: "#/components/schemas/PortalServiceProduct" }
+        dealer: { $ref: "#/components/schemas/PortalServiceDealer" }
+        warranties:
+          type: array
+          description: Only the warranties the user holds.
+          items: { $ref: "#/components/schemas/PortalServiceWarranty" }
+
+    EnvelopePortalService:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PortalService" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }

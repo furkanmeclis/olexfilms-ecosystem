@@ -450,6 +450,8 @@ var ruCatalog = map[string]string{
 	// TEC-196: service PDF.
 	"export.title.tenant.services.pdf":      "Отчёт об услуге",
 	"resources.tenant.services.pdf":         "Отчёт об услуге",
+	"export.title.portal.service_pdf":       "Отчёт об услуге",
+	"resources.portal.service_pdf":          "Мой отчёт об услуге",
 	"services.pdf.status":                   "Статус",
 	"services.pdf.created_at":               "Создано",
 	"services.pdf.completed_at":             "Завершено",
