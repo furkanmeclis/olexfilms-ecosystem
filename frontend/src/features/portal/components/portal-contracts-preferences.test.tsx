@@ -1,0 +1,230 @@
+// @vitest-environment jsdom
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, createElement } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const portal = vi.hoisted(() => ({
+  listContracts: vi.fn(),
+  getNotificationPreferences: vi.fn(),
+  updateNotificationPreferences: vi.fn(),
+}));
+const toasts = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
+
+vi.mock("next/link", () => ({
+  default: ({
+    href,
+    children,
+    ...rest
+  }: {
+    href: string;
+    children: unknown;
+  } & Record<string, unknown>) =>
+    createElement("a", { href, ...rest }, children as never),
+}));
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/portal/contracts",
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+}));
+vi.mock("sonner", () => ({ toast: toasts }));
+vi.mock("@/providers/locale-provider", () => ({
+  useLocale: () => ({
+    locale: "en",
+    dir: "ltr",
+    t: (key: string, params?: Record<string, string | number>) =>
+      params ? `${key} ${JSON.stringify(params)}` : key,
+    format: {
+      number: (v: number) => String(v),
+      date: (v: string) => `date(${v})`,
+      dateTime: (v: string) => `dt(${v})`,
+    },
+  }),
+}));
+vi.mock("@/features/portal/lib/portal-client", async (orig) => ({
+  ...(await orig<object>()),
+  portalApi: portal,
+}));
+
+import type {
+  PortalContract,
+  PortalNotificationPreferences,
+} from "@/features/portal/lib/portal-client";
+import { isPortalReadOnly } from "@/features/portal/lib/portal-vehicles";
+
+import { PortalContracts } from "./portal-contracts";
+import { PortalNav } from "./portal-nav";
+import { PortalPreferences } from "./portal-preferences";
+
+(
+  globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
+
+let container: HTMLDivElement;
+let root: Root;
+
+beforeEach(() => {
+  container = document.createElement("div");
+  document.body.appendChild(container);
+  root = createRoot(container);
+});
+
+afterEach(() => {
+  act(() => root.unmount());
+  container.remove();
+  vi.clearAllMocks();
+});
+
+async function flush() {
+  for (let i = 0; i < 5; i++) {
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+  }
+}
+
+async function render(node: ReturnType<typeof createElement>) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  await act(async () => {
+    root.render(createElement(QueryClientProvider, { client }, node));
+  });
+  await flush();
+}
+
+async function click(el: Element | null) {
+  if (!(el instanceof HTMLElement)) throw new Error("element not found");
+  await act(async () => {
+    el.click();
+  });
+  await flush();
+}
+
+function contract(): PortalContract {
+  return {
+    service: { uuid: "s-1", service_no: "SRV-0001" },
+    status: "completed",
+    organization: { uuid: "o-1", name: "Bayi Kadıköy", type: "dealer" },
+    vehicle_uuid: "v-1",
+    car_brand_name: "BMW",
+    car_model_name: "320i",
+    model_year: 2021,
+    plate: "34 ABC 123",
+    plate_country: "TR",
+    created_at: "2026-05-01T10:00:00Z",
+  };
+}
+
+describe("PortalContracts", () => {
+  it("shows the empty state when the user has no contract", async () => {
+    portal.listContracts.mockResolvedValue({
+      items: [],
+      total: 0,
+      limit: 20,
+      offset: 0,
+    });
+    await render(createElement(PortalContracts));
+    expect(portal.listContracts).toHaveBeenCalledWith(20, 0);
+    const empty = container.querySelector(
+      '[data-testid="portal-contracts-empty"]',
+    );
+    expect(empty?.textContent).toContain("portal.contracts.empty_title");
+    expect(empty?.textContent).toContain("portal.contracts.empty_description");
+    expect(container.querySelector('[data-testid="portal-contract"]')).toBe(
+      null,
+    );
+  });
+
+  it("lists a contract with a link to its service", async () => {
+    portal.listContracts.mockResolvedValue({
+      items: [contract()],
+      total: 1,
+      limit: 20,
+      offset: 0,
+    });
+    await render(createElement(PortalContracts));
+    const rows = container.querySelectorAll('[data-testid="portal-contract"]');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].textContent).toContain("SRV-0001");
+    expect(rows[0].querySelector("a")?.getAttribute("href")).toBe(
+      "/portal/services/s-1",
+    );
+  });
+});
+
+describe("PortalPreferences", () => {
+  const prefs: PortalNotificationPreferences = {
+    email_enabled: true,
+    inapp_enabled: true,
+    realtime_enabled: true,
+    push_enabled: false,
+    rules: [{ event_code: null, channel: "email", enabled: true }],
+  };
+
+  it("toggles a channel and sends the whole preferences back", async () => {
+    portal.getNotificationPreferences.mockResolvedValue(prefs);
+    portal.updateNotificationPreferences.mockImplementation(
+      async (body: PortalNotificationPreferences) => body,
+    );
+    await render(createElement(PortalPreferences));
+    const email = container.querySelector(
+      '[data-testid="portal-pref-email_enabled"]',
+    );
+    expect(email?.getAttribute("aria-checked")).toBe("true");
+
+    await click(email);
+    expect(portal.updateNotificationPreferences).toHaveBeenCalledWith({
+      ...prefs,
+      email_enabled: false,
+    });
+    expect(
+      container
+        .querySelector('[data-testid="portal-pref-email_enabled"]')
+        ?.getAttribute("aria-checked"),
+    ).toBe("false");
+    expect(
+      container
+        .querySelector('[data-testid="portal-pref-inapp_enabled"]')
+        ?.getAttribute("aria-checked"),
+    ).toBe("true");
+    expect(toasts.success).toHaveBeenCalledWith("portal.preferences.saved");
+  });
+
+  it("keeps the saved value when the update fails", async () => {
+    portal.getNotificationPreferences.mockResolvedValue(prefs);
+    portal.updateNotificationPreferences.mockRejectedValue(new Error("boom"));
+    await render(createElement(PortalPreferences));
+    await click(
+      container.querySelector('[data-testid="portal-pref-inapp_enabled"]'),
+    );
+    expect(toasts.error).toHaveBeenCalledWith("portal.preferences.failed");
+    expect(
+      container
+        .querySelector('[data-testid="portal-pref-inapp_enabled"]')
+        ?.getAttribute("aria-checked"),
+    ).toBe("true");
+  });
+});
+
+describe("portal read-only and nav (TEC-245)", () => {
+  it("treats only a fleet-only session as read only", () => {
+    expect(isPortalReadOnly(["fleet"])).toBe(true);
+    expect(isPortalReadOnly(["customer"])).toBe(false);
+    expect(isPortalReadOnly(["fleet", "customer"])).toBe(false);
+    expect(isPortalReadOnly(undefined)).toBe(false);
+  });
+
+  it("links the contracts and preferences pages", async () => {
+    await render(createElement(PortalNav));
+    const hrefs = Array.from(container.querySelectorAll("a")).map((a) =>
+      a.getAttribute("href"),
+    );
+    expect(hrefs).toContain("/portal/contracts");
+    expect(hrefs).toContain("/portal/preferences");
+    expect(
+      container
+        .querySelector('a[href="/portal/contracts"]')
+        ?.getAttribute("aria-current"),
+    ).toBe("page");
+  });
+});

@@ -141,6 +141,9 @@ export const routes = {
     vehicles: "/portal/vehicles",
     vehicle: (uuid: string) => `/portal/vehicles/${encodeURIComponent(uuid)}`,
     service: (uuid: string) => `/portal/services/${encodeURIComponent(uuid)}`,
+    /** TEC-245: signed contracts and notification preferences. */
+    contracts: "/portal/contracts",
+    preferences: "/portal/preferences",
   },
   guest: {
     login: "/platform/login",
