@@ -43,6 +43,9 @@ type ItemView struct {
 	Shipped   bool       `json:"shipped"`
 	Received  bool       `json:"received"`
 	Restored  bool       `json:"restored"`
+	// AccountingExcluded (TEC-229): the return line was received without an
+	// accounting row because a dispute already reversed its order sale.
+	AccountingExcluded bool `json:"accounting_excluded"`
 }
 
 // TransferView is a request as the API returns it. Role is the active
@@ -157,6 +160,7 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, r db.StockT
 			Meters:  numericTextPtr(it.Meters, 2), UnitPrice: numericTextPtr(it.UnitPrice, 4),
 			LineTotal: numericTextPtr(it.LineTotal, 2),
 			Shipped:   it.OutMovementID.Valid, Received: it.InMovementID.Valid, Restored: it.RestoreMovementID.Valid,
+			AccountingExcluded: it.AccountingExcluded,
 		}
 		if it.Quantity.Valid {
 			qv := it.Quantity.Int32
