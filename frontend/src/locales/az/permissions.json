@@ -176,5 +176,11 @@
   "labels.integrations.glorian.manage": "Glorian inteqrasiyasını idarə et",
   "groups.integrations": "İnteqrasiyalar",
   "labels.measurements.write": "Ölçmələri yüklə",
-  "groups.measurements": "Ölçmələr"
+  "groups.measurements": "Ölçmələr",
+  "labels.announcements.read": "Elanları oxu",
+  "labels.announcements.write": "Elan yaz",
+  "labels.library.read": "Sənəd kitabxanasını oxu",
+  "labels.library.manage": "Sənəd kitabxanasını idarə et",
+  "groups.announcements": "Elanlar",
+  "groups.library": "Sənəd kitabxanası"
 }

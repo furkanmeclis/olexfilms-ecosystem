@@ -176,5 +176,11 @@
   "labels.integrations.glorian.manage": "Διαχείριση ενσωμάτωσης Glorian",
   "groups.integrations": "Ενσωματώσεις",
   "labels.measurements.write": "Μεταφόρτωση μετρήσεων",
-  "groups.measurements": "Μετρήσεις"
+  "groups.measurements": "Μετρήσεις",
+  "labels.announcements.read": "Ανάγνωση ανακοινώσεων",
+  "labels.announcements.write": "Σύνταξη ανακοινώσεων",
+  "labels.library.read": "Ανάγνωση βιβλιοθήκης εγγράφων",
+  "labels.library.manage": "Διαχείριση βιβλιοθήκης εγγράφων",
+  "groups.announcements": "Ανακοινώσεις",
+  "groups.library": "Βιβλιοθήκη εγγράφων"
 }

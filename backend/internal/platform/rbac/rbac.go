@@ -202,6 +202,12 @@ const (
 	// TEC-233 (000076): minimal measurement upload from the mobile app
 	// (K28); F3-02 (TEC-113) adds the read side.
 	PermMeasurementsWrite = "measurements.write"
+
+	// TEC-329 (000086): announcements and the document library (F3-05).
+	PermAnnouncementsRead  = "announcements.read"
+	PermAnnouncementsWrite = "announcements.write"
+	PermLibraryRead        = "library.read"
+	PermLibraryManage      = "library.manage"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

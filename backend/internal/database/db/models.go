@@ -46,6 +46,50 @@ type ActivityEvent struct {
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 }
 
+type Announcement struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	DefaultLocale  string             `json:"default_locale"`
+	Title          string             `json:"title"`
+	Body           string             `json:"body"`
+	BodyFormat     string             `json:"body_format"`
+	Status         string             `json:"status"`
+	Pinned         bool               `json:"pinned"`
+	Notify         bool               `json:"notify"`
+	PublishAt      pgtype.Timestamptz `json:"publish_at"`
+	ExpiresAt      pgtype.Timestamptz `json:"expires_at"`
+	AuthorUserID   pgtype.Int8        `json:"author_user_id"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type AnnouncementAudience struct {
+	ID                   int64              `json:"id"`
+	AnnouncementID       int64              `json:"announcement_id"`
+	TargetType           string             `json:"target_type"`
+	RoleSlug             pgtype.Text        `json:"role_slug"`
+	TargetOrganizationID pgtype.Int8        `json:"target_organization_id"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+}
+
+type AnnouncementLocale struct {
+	ID             int64              `json:"id"`
+	AnnouncementID int64              `json:"announcement_id"`
+	Locale         string             `json:"locale"`
+	Title          string             `json:"title"`
+	Body           string             `json:"body"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type AnnouncementRead struct {
+	AnnouncementID int64              `json:"announcement_id"`
+	UserID         int64              `json:"user_id"`
+	ReadAt         pgtype.Timestamptz `json:"read_at"`
+}
+
 type AppLog struct {
 	ID        int64              `json:"id"`
 	Uuid      uuid.UUID          `json:"uuid"`
@@ -682,6 +726,51 @@ type LegalText struct {
 	Body      string             `json:"body"`
 	CreatedBy pgtype.Int8        `json:"created_by"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type LibraryFolder struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	ParentID        pgtype.Int8        `json:"parent_id"`
+	Name            string             `json:"name"`
+	SortOrder       int32              `json:"sort_order"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type LibraryItem struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	FolderID        pgtype.Int8        `json:"folder_id"`
+	Name            string             `json:"name"`
+	Description     pgtype.Text        `json:"description"`
+	Tags            []string           `json:"tags"`
+	AccessLevel     string             `json:"access_level"`
+	RoleSlug        pgtype.Text        `json:"role_slug"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type LibraryItemVersion struct {
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	ItemID           int64              `json:"item_id"`
+	Locale           string             `json:"locale"`
+	VersionNo        int32              `json:"version_no"`
+	StorageKey       string             `json:"storage_key"`
+	Mime             string             `json:"mime"`
+	SizeBytes        int64              `json:"size_bytes"`
+	Sha256           string             `json:"sha256"`
+	UploadedByUserID pgtype.Int8        `json:"uploaded_by_user_id"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 }
 
 type LogPurgeRule struct {

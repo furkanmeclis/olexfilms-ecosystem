@@ -176,5 +176,11 @@
   "labels.integrations.glorian.manage": "Керування інтеграцією Glorian",
   "groups.integrations": "Інтеграції",
   "labels.measurements.write": "Завантаження вимірювань",
-  "groups.measurements": "Вимірювання"
+  "groups.measurements": "Вимірювання",
+  "labels.announcements.read": "Читати оголошення",
+  "labels.announcements.write": "Писати оголошення",
+  "labels.library.read": "Переглядати бібліотеку документів",
+  "labels.library.manage": "Керувати бібліотекою документів",
+  "groups.announcements": "Оголошення",
+  "groups.library": "Бібліотека документів"
 }

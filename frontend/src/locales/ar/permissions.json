@@ -176,5 +176,11 @@
   "labels.integrations.glorian.manage": "إدارة تكامل Glorian",
   "groups.integrations": "التكاملات",
   "labels.measurements.write": "رفع القياسات",
-  "groups.measurements": "القياسات"
+  "groups.measurements": "القياسات",
+  "labels.announcements.read": "قراءة الإعلانات",
+  "labels.announcements.write": "كتابة الإعلانات",
+  "labels.library.read": "تصفح مكتبة المستندات",
+  "labels.library.manage": "إدارة مكتبة المستندات",
+  "groups.announcements": "الإعلانات",
+  "groups.library": "مكتبة المستندات"
 }

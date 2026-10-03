@@ -176,5 +176,11 @@
   "labels.integrations.glorian.manage": "Glorian entegrasyonunu yönet",
   "groups.integrations": "Entegrasyonlar",
   "labels.measurements.write": "Ölçüm yükle",
-  "groups.measurements": "Ölçümler"
+  "groups.measurements": "Ölçümler",
+  "labels.announcements.read": "Duyuruları oku",
+  "labels.announcements.write": "Duyuru yaz",
+  "labels.library.read": "Doküman kütüphanesini oku",
+  "labels.library.manage": "Doküman kütüphanesini yönet",
+  "groups.announcements": "Duyurular",
+  "groups.library": "Doküman kütüphanesi"
 }

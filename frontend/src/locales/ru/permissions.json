@@ -176,5 +176,11 @@
   "labels.integrations.glorian.manage": "Управление интеграцией Glorian",
   "groups.integrations": "Интеграции",
   "labels.measurements.write": "Загрузка измерений",
-  "groups.measurements": "Измерения"
+  "groups.measurements": "Измерения",
+  "labels.announcements.read": "Читать объявления",
+  "labels.announcements.write": "Писать объявления",
+  "labels.library.read": "Просматривать библиотеку документов",
+  "labels.library.manage": "Управлять библиотекой документов",
+  "groups.announcements": "Объявления",
+  "groups.library": "Библиотека документов"
 }

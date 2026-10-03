@@ -387,6 +387,28 @@ var Permissions = []PermissionDef{
 		Slug: PermMeasurementsWrite, Name: "Upload measurements", Module: "measurements", Scopes: scopesOrg,
 		Description: "Upload paint thickness measurements from the mobile app into the active organization (K28).",
 	},
+
+	// TEC-329: announcements and the document library (F3-05). Appended
+	// last; migration 000086 seeds them. Every network role reads in its
+	// own organization (managed); the center writes for its brand, the
+	// distributor owner writes announcements for its subtree.
+	{
+		Slug: PermAnnouncementsRead, Name: "Read announcements", Module: "announcements", Scopes: scopesOrg,
+		Description: "Read the announcements published to the organization and mark them as read.",
+	},
+	{
+		Slug: PermAnnouncementsWrite, Name: "Write announcements", Module: "announcements",
+		Scopes:      []Scope{ScopeSubtree, ScopeBrand, ScopeAll},
+		Description: "Write, publish and archive announcements (center: the brand network; distributor: its subtree).",
+	},
+	{
+		Slug: PermLibraryRead, Name: "Read the document library", Module: "library", Scopes: scopesOrg,
+		Description: "Browse and download the guides and materials of the document library allowed to the organization.",
+	},
+	{
+		Slug: PermLibraryManage, Name: "Manage the document library", Module: "library", Scopes: scopesSupplier,
+		Description: "Create folders, upload documents and new language versions, set access levels (center only).",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -477,6 +499,11 @@ var Roles = []RoleDef{
 			PermTransfersApprove: ScopeBrand,
 			// TEC-233 (000076).
 			PermMeasurementsWrite: ScopeManaged,
+			// TEC-329 (000086).
+			PermAnnouncementsRead:  ScopeManaged,
+			PermAnnouncementsWrite: ScopeBrand,
+			PermLibraryRead:        ScopeManaged,
+			PermLibraryManage:      ScopeBrand,
 		}),
 	},
 	{
@@ -506,6 +533,9 @@ var Roles = []RoleDef{
 			// TEC-228 (000070): decides and receives returns sent to the
 			// center.
 			PermTransfersApprove: ScopeBrand,
+			// TEC-329 (000086).
+			PermAnnouncementsRead: ScopeManaged,
+			PermLibraryRead:       ScopeManaged,
 		}),
 	},
 	{
@@ -526,6 +556,9 @@ var Roles = []RoleDef{
 			PermOrdersRead:              ScopeBrand,
 			PermTasksRead:               ScopeBrand, // TEC-214 (000058)
 			PermTasksWrite:              ScopeBrand,
+			// TEC-329 (000086).
+			PermAnnouncementsRead: ScopeManaged,
+			PermLibraryRead:       ScopeManaged,
 		}),
 	},
 	{
@@ -545,6 +578,11 @@ var Roles = []RoleDef{
 			PermSocialWrite:        ScopeBrand,
 			PermTasksRead:          ScopeBrand, // TEC-214 (000058)
 			PermTasksWrite:         ScopeBrand,
+			// TEC-329 (000086).
+			PermAnnouncementsRead:  ScopeManaged,
+			PermAnnouncementsWrite: ScopeBrand,
+			PermLibraryRead:        ScopeManaged,
+			PermLibraryManage:      ScopeBrand,
 		}),
 	},
 	{
@@ -596,6 +634,10 @@ var Roles = []RoleDef{
 			PermTransfersRequest: ScopeManaged,
 			// TEC-233 (000076).
 			PermMeasurementsWrite: ScopeManaged,
+			// TEC-329 (000086).
+			PermAnnouncementsRead:  ScopeManaged,
+			PermAnnouncementsWrite: ScopeSubtree,
+			PermLibraryRead:        ScopeManaged,
 		}),
 	},
 	{
@@ -615,6 +657,9 @@ var Roles = []RoleDef{
 			PermWarrantiesRead:     ScopeSubtree,
 			PermVehiclesTransfer:   ScopeSubtree,
 			PermMeasurementsWrite:  ScopeManaged, // TEC-233 (000076)
+			// TEC-329 (000086).
+			PermAnnouncementsRead: ScopeManaged,
+			PermLibraryRead:       ScopeManaged,
 		}),
 	},
 	{
@@ -631,6 +676,9 @@ var Roles = []RoleDef{
 			PermOrdersRead:         ScopeManaged,
 			PermOrdersShip:         ScopeManaged,
 			PermOrdersReceive:      ScopeManaged,
+			// TEC-329 (000086).
+			PermAnnouncementsRead: ScopeManaged,
+			PermLibraryRead:       ScopeManaged,
 		}),
 	},
 	{
@@ -648,6 +696,9 @@ var Roles = []RoleDef{
 			PermPricingSaleWrite:       ScopeManaged,
 			PermPricingRecommendedRead: ScopeManaged,
 			PermOrdersRead:             ScopeManaged,
+			// TEC-329 (000086).
+			PermAnnouncementsRead: ScopeManaged,
+			PermLibraryRead:       ScopeManaged,
 		}),
 	},
 	{
@@ -689,6 +740,9 @@ var Roles = []RoleDef{
 			PermVehiclesTransfer: ScopeManaged,
 			// TEC-233 (000076).
 			PermMeasurementsWrite: ScopeManaged,
+			// TEC-329 (000086).
+			PermAnnouncementsRead: ScopeManaged,
+			PermLibraryRead:       ScopeManaged,
 		}),
 	},
 	{
@@ -709,6 +763,9 @@ var Roles = []RoleDef{
 			PermWarrantiesRead:     ScopeManaged,
 			PermVehiclesTransfer:   ScopeOwn,
 			PermMeasurementsWrite:  ScopeManaged, // TEC-233 (000076)
+			// TEC-329 (000086).
+			PermAnnouncementsRead: ScopeManaged,
+			PermLibraryRead:       ScopeManaged,
 		}),
 	},
 	{
@@ -724,6 +781,9 @@ var Roles = []RoleDef{
 			PermPricingSaleRead:        ScopeManaged,
 			PermPricingRecommendedRead: ScopeManaged,
 			PermOrdersRead:             ScopeManaged,
+			// TEC-329 (000086).
+			PermAnnouncementsRead: ScopeManaged,
+			PermLibraryRead:       ScopeManaged,
 		}),
 	},
 	{

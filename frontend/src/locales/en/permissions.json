@@ -176,5 +176,11 @@
   "labels.integrations.glorian.manage": "Manage Glorian integration",
   "groups.integrations": "Integrations",
   "labels.measurements.write": "Upload measurements",
-  "groups.measurements": "Measurements"
+  "groups.measurements": "Measurements",
+  "labels.announcements.read": "Read announcements",
+  "labels.announcements.write": "Write announcements",
+  "labels.library.read": "Read the document library",
+  "labels.library.manage": "Manage the document library",
+  "groups.announcements": "Announcements",
+  "groups.library": "Document library"
 }

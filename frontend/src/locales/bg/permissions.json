@@ -176,5 +176,11 @@
   "labels.integrations.glorian.manage": "Управление на интеграцията с Glorian",
   "groups.integrations": "Интеграции",
   "labels.measurements.write": "Качване на измервания",
-  "groups.measurements": "Измервания"
+  "groups.measurements": "Измервания",
+  "labels.announcements.read": "Четене на съобщения",
+  "labels.announcements.write": "Писане на съобщения",
+  "labels.library.read": "Преглед на библиотеката с документи",
+  "labels.library.manage": "Управление на библиотеката с документи",
+  "groups.announcements": "Съобщения",
+  "groups.library": "Библиотека с документи"
 }

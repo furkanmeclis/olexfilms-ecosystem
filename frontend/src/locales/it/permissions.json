@@ -176,5 +176,11 @@
   "labels.integrations.glorian.manage": "Gestisci l'integrazione Glorian",
   "groups.integrations": "Integrazioni",
   "labels.measurements.write": "Caricare misurazioni",
-  "groups.measurements": "Misurazioni"
+  "groups.measurements": "Misurazioni",
+  "labels.announcements.read": "Leggere gli annunci",
+  "labels.announcements.write": "Scrivere annunci",
+  "labels.library.read": "Consultare la libreria documenti",
+  "labels.library.manage": "Gestire la libreria documenti",
+  "groups.announcements": "Annunci",
+  "groups.library": "Libreria documenti"
 }
