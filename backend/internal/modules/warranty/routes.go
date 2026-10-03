@@ -16,10 +16,14 @@ import (
 
 // RegisterPublicRoutes mounts the public warranty lookup (TEC-189). The
 // frontend page /garanti/{public_code} reads it; no authentication, a per-IP
-// limit of limit hits per window.
-func RegisterPublicRoutes(mux *http.ServeMux, q *db.Queries, limiter *ratelimit.Limiter, limit int, window time.Duration) {
-	h := handler.NewPublic(usecase.NewPublicLookup(q), limiter, limit, window)
+// limit of limit hits per window. The anonymous PDF (TEC-248) has its own,
+// tighter bucket of pdfLimit hits per window; renderer draws it and
+// frontendURL is the origin of its QR link.
+func RegisterPublicRoutes(mux *http.ServeMux, q *db.Queries, limiter *ratelimit.Limiter, limit int, window time.Duration,
+	renderer handler.PDFRenderer, frontendURL string, pdfLimit int) {
+	h := handler.NewPublic(usecase.NewPublicLookup(q), limiter, limit, window).WithPDF(renderer, frontendURL, pdfLimit)
 	mux.HandleFunc("GET /v1/public/warranties/{public_code}", h.Get)
+	mux.HandleFunc("GET /v1/public/warranties/{public_code}/pdf", h.PDF)
 }
 
 // RegisterCertificateRoutes mounts the warranty certificate PDF (TEC-188).

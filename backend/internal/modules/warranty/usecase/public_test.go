@@ -88,13 +88,37 @@ func TestPublicWarrantyJSONHasNoPII(t *testing.T) {
 func TestValidPublicCode(t *testing.T) {
 	for code, want := range map[string]bool{
 		"AbCdEfGhIjKlMnOpQrSt_-": true,
-		"short":                  false,
+		"abc":                    false,
+		"DS7K2M9QX4":             true, // old hub service number format
+		"SRV-2025-00042":         true,
+		"1234":                   true,
 		"AbCdEfGhIjKl MnOpQrSt":  false,
 		"AbCdEfGhIjKl+nOpQrSt/=": false,
 		strings.Repeat("a", 33):  false,
 	} {
 		if got := ValidPublicCode(code); got != want {
 			t.Errorf("ValidPublicCode(%q) = %v", code, got)
+		}
+	}
+}
+
+// TEC-248: the anonymous PDF is built from the public projection only; the
+// full plate, full VIN and holder never reach the document.
+func TestPublicCertificateHTMLHasNoPII(t *testing.T) {
+	now := time.Date(2026, 10, 2, 12, 0, 0, 0, time.UTC)
+	w := BuildPublicWarranty(publicRow(now), PublicWarrantyBrand{Name: "Olex", Slug: "olex"}, now)
+	doc, err := PublicCertificateHTML(w, PublicVerifyURL("https://olexfilms.app/", w.PublicCode), time.UTC, "tr", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, banned := range []string{"34 ABC 112", "ABC", "WVWZZZ1JZ3W386752", "06 X 99"} {
+		if strings.Contains(doc, banned) {
+			t.Errorf("document carries %q", banned)
+		}
+	}
+	for _, want := range []string{"34 *** 12", "6752", "Film X", "Dealer A", "https://olexfilms.app/garanti/" + w.PublicCode} {
+		if !strings.Contains(doc, want) {
+			t.Errorf("document lacks %q", want)
 		}
 	}
 }

@@ -20,10 +20,14 @@ import (
 // another brand. The three cases are indistinguishable to the caller.
 var ErrPublicNotFound = errors.New("warranty: public code not found")
 
-// publicCodeRe is the chk_warranties_public_code constraint of migration
-// 000051 (new codes are 22 base64url characters). Anything else cannot be
-// stored, so it is rejected without a database round trip.
-var publicCodeRe = regexp.MustCompile(`^[A-Za-z0-9_-]{12,32}$`)
+// publicCodeRe is the path check of the public lookup. New codes are 22
+// base64url characters (chk_warranties_public_code of migration 000051);
+// the old hub's warranty numbers are shorter (generated "DS" + 8
+// alphanumerics, physical card numbers) and the migrator keeps them as the
+// public code (TEC-248, F2-01i), so the path accepts 4..32 URL-safe
+// characters (VARCHAR(32)). Anything else is rejected without a database
+// round trip.
+var publicCodeRe = regexp.MustCompile(`^[A-Za-z0-9_-]{4,32}$`)
 
 // ValidPublicCode reports whether code has the shape of a stored public code.
 func ValidPublicCode(code string) bool { return publicCodeRe.MatchString(code) }
