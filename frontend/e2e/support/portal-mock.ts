@@ -268,6 +268,16 @@ export class PortalMock {
     if (method === "GET" && service) {
       return owns ? ok(this.service(service)) : fail(404, "NOT_FOUND");
     }
+    // TEC-244: review state of the service (no review, dealer without a
+    // Google link); the card is not under test here.
+    const reviewed = SERVICES.find(
+      (s) => path === `portal/services/${s.uuid}/review`,
+    );
+    if (method === "GET" && reviewed) {
+      return owns
+        ? ok({ review: null, can_review: true, google_business_url: null })
+        : fail(404, "NOT_FOUND");
+    }
     const transfers = `portal/vehicles/${PORTAL_VEHICLE}/transfers`;
     if (method === "GET" && path === transfers) {
       return ok({ items: this.transfer ? [this.transfer] : [] });
