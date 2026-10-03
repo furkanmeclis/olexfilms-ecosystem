@@ -173,7 +173,7 @@ func (s *Service) items(ctx context.Context, q *db.Queries, r db.StockTransferRe
 }
 
 func movementMeta(r db.StockTransferRequest) map[string]any {
-	return map[string]any{"transfer_uuid": r.Uuid.String(), "transfer_no": r.TransferNo}
+	return map[string]any{"transfer_uuid": r.Uuid.String(), "transfer_no": r.TransferNo, "kind": r.Kind}
 }
 
 // ship posts a transfer_out for every line.
@@ -330,7 +330,8 @@ func fixedSource(ctx context.Context, q *db.Queries, unitID, from int64, qty int
 }
 
 // freezePrices locks the giver's purchase price into every line (K13: the
-// transfer price is A's purchase price) and returns the request total. A
+// transfer price is A's purchase price; a return takes the unit's order
+// price to the giver first, TEC-223) and returns the request total. A
 // line without a price stays unpriced and the total is then NULL.
 func (s *Service) freezePrices(ctx context.Context, q *db.Queries, r db.StockTransferRequest) (pgtype.Numeric, error) {
 	rows, err := s.items(ctx, q, r)
@@ -351,14 +352,30 @@ func (s *Service) freezePrices(ctx context.Context, q *db.Queries, r db.StockTra
 	}
 	total, complete := new(big.Rat), true
 	for _, it := range rows {
-		p, ok := prices[it.ProductID]
-		if !ok {
-			complete = false
-			continue
+		var price *big.Rat
+		if r.Kind == KindReturn {
+			// TEC-223: a return is priced at what the parent sold the unit
+			// for to the child (its order line), else the child's
+			// purchase price below.
+			op, err := q.GetUnitLastOrderPrice(ctx, db.GetUnitLastOrderPriceParams{
+				UnitID: it.UnitID, SellerOrgID: r.ToOrgID, BuyerOrgID: r.FromOrgID, Currency: strings.TrimSpace(r.Currency),
+			})
+			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+				return pgtype.Numeric{}, fmt.Errorf("transfers: order price: %w", err)
+			}
+			if err == nil {
+				price = numericRat(op)
+			}
 		}
-		price, err := parseRat(p.Price)
-		if err != nil {
-			return pgtype.Numeric{}, err
+		if price == nil {
+			p, ok := prices[it.ProductID]
+			if !ok {
+				complete = false
+				continue
+			}
+			if price, err = parseRat(p.Price); err != nil {
+				return pgtype.Numeric{}, err
+			}
 		}
 		line := new(big.Rat).Mul(price, lineAmount(it))
 		up, err := numeric(price.FloatString(4))

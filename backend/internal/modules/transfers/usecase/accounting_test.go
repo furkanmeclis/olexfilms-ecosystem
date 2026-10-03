@@ -41,12 +41,12 @@ func TestNotifyParties(t *testing.T) {
 		events.TransfersCancelled: {PartySender, PartyReceiver, PartyParent},
 	}
 	for ev, want := range cases {
-		if got := notifyParties(ev); !slices.Equal(got, want) {
+		if got := notifyParties(KindSibling, ev); !slices.Equal(got, want) {
 			t.Errorf("%s = %v, want %v", ev, got, want)
 		}
 	}
 	for _, to := range Statuses {
-		if eventFor(to) != "" && notifyParties(eventFor(to)) == nil {
+		if eventFor(to) != "" && notifyParties(KindSibling, eventFor(to)) == nil {
 			t.Errorf("%s has no recipients", to)
 		}
 	}

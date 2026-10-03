@@ -77,6 +77,7 @@ export const routes = {
     transfers: {
       list: (slug: string) => `/t/${slug}/transfers`,
       create: (slug: string) => `/t/${slug}/transfers/new`,
+      createReturn: (slug: string) => `/t/${slug}/transfers/returns/new`,
       detail: (slug: string, uuid: string) => `/t/${slug}/transfers/${uuid}`,
     },
     /** TEC-224 dealer "My stock" (units on hand, consumed in services). */

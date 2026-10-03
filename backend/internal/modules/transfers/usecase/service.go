@@ -36,6 +36,10 @@ var (
 	// (another parent, brand or organization type) or the active
 	// organization cannot transfer at all (the center, K13).
 	ErrNotSibling = errors.New("transfers: target is not a sibling organization")
+	// ErrNotParent: a return names another organization than the active
+	// organization's direct parent, or the active organization has no
+	// parent to return to (TEC-223).
+	ErrNotParent = errors.New("transfers: a return goes to the direct parent only")
 	// ErrInvalidTransition: the request's status does not allow the move.
 	ErrInvalidTransition = errors.New("transfers: invalid status transition")
 	// ErrStockUnavailable: a unit left the giver's stock or the ledger
@@ -154,13 +158,15 @@ func textOrNull(p *string) pgtype.Text {
 // --- Parties -------------------------------------------------------------------
 
 func partyOf(c Caller, r db.StockTransferRequest) Party {
+	// The parent is checked before the receiver: on a return (TEC-223) the
+	// receiver is the parent; on a sibling transfer they always differ.
 	switch c.Org.InternalID {
 	case r.FromOrgID:
 		return PartySender
-	case r.ToOrgID:
-		return PartyReceiver
 	case r.ApproverOrgID:
 		return PartyParent
+	case r.ToOrgID:
+		return PartyReceiver
 	}
 	return ""
 }
@@ -185,16 +191,48 @@ func sibling(from, target db.Organization) (int64, bool) {
 	return from.ParentID.Int64, true
 }
 
-// Targets lists the siblings the active organization may transfer to.
-func (s *Service) Targets(ctx context.Context, c Caller) ([]OrgRef, error) {
+// returnParent returns the organization a return of from goes to: its
+// direct parent in the same brand (TEC-223); ok is false when from cannot
+// return (the center, or no parent).
+func returnParent(ctx context.Context, q *db.Queries, from db.Organization) (db.Organization, bool, error) {
+	if (from.Type != OrgDealer && from.Type != OrgDistributor) || !from.ParentID.Valid {
+		return db.Organization{}, false, nil
+	}
+	parent, err := q.GetOrganizationByID(ctx, from.ParentID.Int64)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return db.Organization{}, false, nil
+	}
+	if err != nil {
+		return db.Organization{}, false, fmt.Errorf("transfers: parent: %w", err)
+	}
+	if parent.BrandID != from.BrandID {
+		return db.Organization{}, false, nil
+	}
+	return parent, true, nil
+}
+
+// Targets lists the organizations the active organization may transfer to:
+// its siblings, or for kind return its direct parent (TEC-223).
+func (s *Service) Targets(ctx context.Context, c Caller, kind string) ([]OrgRef, error) {
 	if c.Org.InternalID == 0 || !c.can(rbac.PermTransfersRequest) {
 		return nil, ErrForbidden
+	}
+	kind = strings.TrimSpace(kind)
+	if kind != "" && !IsKind(kind) {
+		return nil, invalid("kind", "must be sibling or return")
 	}
 	from, err := s.q.GetOrganizationByID(ctx, c.Org.InternalID)
 	if err != nil {
 		return nil, fmt.Errorf("transfers: organization: %w", err)
 	}
 	out := []OrgRef{}
+	if kind == KindReturn {
+		parent, ok, err := returnParent(ctx, s.q, from)
+		if err != nil || !ok {
+			return out, err
+		}
+		return append(out, OrgRef{UUID: parent.Uuid, Name: parent.Name, Type: parent.Type}), nil
+	}
 	if (from.Type != OrgDealer && from.Type != OrgDistributor) || !from.ParentID.Valid {
 		return out, nil
 	}
@@ -220,7 +258,10 @@ type ItemInput struct {
 }
 
 // CreateInput is a new request of the active organization (the giver).
+// Kind is sibling (default) or return; a return goes to the direct parent
+// and ToOrgUUID, when set, must name it.
 type CreateInput struct {
+	Kind      string
 	ToOrgUUID string
 	Note      *string
 	Items     []ItemInput
@@ -231,9 +272,19 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (Transfe
 	if c.Org.InternalID == 0 || !c.can(rbac.PermTransfersRequest) {
 		return TransferView{}, ErrForbidden
 	}
-	toID, err := uuid.Parse(strings.TrimSpace(in.ToOrgUUID))
-	if err != nil {
-		return TransferView{}, invalid("to_org_uuid", "must be a UUID")
+	kind := strings.TrimSpace(in.Kind)
+	if kind == "" {
+		kind = KindSibling
+	}
+	if !IsKind(kind) {
+		return TransferView{}, invalid("kind", "must be sibling or return")
+	}
+	var toID uuid.UUID
+	if raw := strings.TrimSpace(in.ToOrgUUID); raw != "" || kind == KindSibling {
+		var err error
+		if toID, err = uuid.Parse(raw); err != nil {
+			return TransferView{}, invalid("to_org_uuid", "must be a UUID")
+		}
 	}
 	if len(in.Items) == 0 {
 		return TransferView{}, invalid("items", "at least one unit is required")
@@ -242,21 +293,14 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (Transfe
 		return TransferView{}, invalid("items", fmt.Sprintf("at most %d units", MaxItems))
 	}
 	var created db.StockTransferRequest
-	err = s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
+	err := s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		from, err := q.GetOrganizationByID(ctx, c.Org.InternalID)
 		if err != nil {
 			return fmt.Errorf("transfers: organization: %w", err)
 		}
-		target, err := q.GetOrganizationByUUID(ctx, toID)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrNotSibling
-		}
+		target, parent, err := s.resolveTarget(ctx, q, kind, from, toID)
 		if err != nil {
-			return fmt.Errorf("transfers: target: %w", err)
-		}
-		parent, ok := sibling(from, target)
-		if !ok {
-			return ErrNotSibling
+			return err
 		}
 		brand, err := q.GetBrandByID(ctx, from.BrandID)
 		if err != nil {
@@ -265,6 +309,7 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (Transfe
 		r, err := q.InsertTransferRequest(ctx, db.InsertTransferRequestParams{
 			FromOrgID: from.ID, BrandID: from.BrandID, ToOrgID: target.ID, ApproverOrgID: parent,
 			Currency: strings.TrimSpace(brand.Currency), Reason: textOrNull(in.Note), RequestedByUserID: c.actor(),
+			Kind: kind,
 		})
 		if err != nil {
 			return fmt.Errorf("transfers: create: %w", err)
@@ -294,6 +339,35 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (Transfe
 		return TransferView{}, err
 	}
 	return s.view(ctx, s.q, c, created)
+}
+
+// resolveTarget returns the receiver and the approver of a new request: a
+// sibling and the common parent (K13), or for a return the direct parent
+// twice (TEC-223). toID is uuid.Nil for a return without an explicit target.
+func (s *Service) resolveTarget(ctx context.Context, q *db.Queries, kind string, from db.Organization,
+	toID uuid.UUID) (db.Organization, int64, error) {
+	if kind == KindReturn {
+		parent, ok, err := returnParent(ctx, q, from)
+		if err != nil {
+			return db.Organization{}, 0, err
+		}
+		if !ok || (toID != uuid.Nil && toID != parent.Uuid) {
+			return db.Organization{}, 0, ErrNotParent
+		}
+		return parent, parent.ID, nil
+	}
+	target, err := q.GetOrganizationByUUID(ctx, toID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return db.Organization{}, 0, ErrNotSibling
+	}
+	if err != nil {
+		return db.Organization{}, 0, fmt.Errorf("transfers: target: %w", err)
+	}
+	parent, ok := sibling(from, target)
+	if !ok {
+		return db.Organization{}, 0, ErrNotSibling
+	}
+	return target, parent, nil
 }
 
 // --- Transitions -------------------------------------------------------------------
@@ -336,7 +410,7 @@ func (s *Service) Transition(ctx context.Context, c Caller, id uuid.UUID, in Tra
 		if r.Status == to {
 			return nil
 		}
-		gs, ok := lookupTransition(r.Status, to)
+		gs, ok := lookupKindTransition(r.Kind, r.Status, to)
 		if !ok {
 			return ErrInvalidTransition
 		}
@@ -367,7 +441,8 @@ func (s *Service) Transition(ctx context.Context, c Caller, id uuid.UUID, in Tra
 				r, err = q.ReceiveTransferRequest(ctx, db.ReceiveTransferRequestParams{ID: r.ID, ActorUserID: c.actor()})
 			}
 			if err == nil {
-				// K13: A alacak / B borç, same transaction as transfer_in.
+				// K13: A alacak / B borç (a return: the reversal of the
+				// parent's sale), same transaction as transfer_in.
 				err = s.book(ctx, q, tx, c, r)
 			}
 		case StatusCancelled:
@@ -411,6 +486,7 @@ func (s *Service) emit(ctx context.Context, tx pgx.Tx, name string, r db.StockTr
 		"to_org_id":       r.ToOrgID,
 		"approver_org_id": r.ApproverOrgID,
 		"brand_id":        r.BrandID,
+		"kind":            r.Kind,
 	}
 	if from != "" && from != r.Status {
 		payload["from_status"] = from
@@ -443,8 +519,21 @@ func (s *Service) emit(ctx context.Context, tx pgx.Tx, name string, r db.StockTr
 // notifyParties lists the sides told about a transfer event (TEC-200):
 // a new request goes to the deciders (receiver, common parent), a decision
 // to the giver and the receiver, a shipment to the receiver, a receipt to
-// the giver, a cancel to every side.
-func notifyParties(event string) []Party {
+// the giver, a cancel to every side. On a return (TEC-223) the receiver is
+// the parent: the giver's steps go to the parent, the parent's steps go to
+// the giver, a cancel to both.
+func notifyParties(kind, event string) []Party {
+	if kind == KindReturn {
+		switch event {
+		case events.TransfersRequested, events.TransfersShipped:
+			return []Party{PartyParent}
+		case events.TransfersApproved, events.TransfersRejected, events.TransfersReceived:
+			return []Party{PartySender}
+		case events.TransfersCancelled:
+			return []Party{PartySender, PartyParent}
+		}
+		return nil
+	}
 	switch event {
 	case events.TransfersRequested:
 		return []Party{PartyReceiver, PartyParent}
@@ -467,7 +556,7 @@ func notifyParties(event string) []Party {
 func (s *Service) notifyUserIDs(ctx context.Context, q *db.Queries, event string, r db.StockTransferRequest, c Caller) ([]int64, error) {
 	out := []int64{}
 	seen := map[int64]bool{c.Principal.UserInternal: true}
-	for _, p := range notifyParties(event) {
+	for _, p := range notifyParties(r.Kind, event) {
 		org, perm := r.FromOrgID, rbac.PermTransfersRequest
 		switch p {
 		case PartyReceiver:

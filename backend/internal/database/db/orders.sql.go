@@ -89,7 +89,7 @@ SET status = 'approved',
     decided_at = NOW(),
     decision_note = $5
 WHERE id = $6 AND status = 'requested'
-RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at
+RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind
 `
 
 type ApproveStockTransferRequestParams struct {
@@ -146,6 +146,7 @@ func (q *Queries) ApproveStockTransferRequest(ctx context.Context, arg ApproveSt
 		&i.CancelledByUserID,
 		&i.ShippedAt,
 		&i.ReceivedAt,
+		&i.Kind,
 	)
 	return i, err
 }
@@ -154,7 +155,7 @@ const cancelStockTransferRequest = `-- name: CancelStockTransferRequest :one
 UPDATE stock_transfer_requests
 SET status = 'cancelled', cancelled_at = NOW()
 WHERE id = $1 AND status IN ('requested', 'approved')
-RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at
+RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind
 `
 
 func (q *Queries) CancelStockTransferRequest(ctx context.Context, id int64) (StockTransferRequest, error) {
@@ -194,6 +195,7 @@ func (q *Queries) CancelStockTransferRequest(ctx context.Context, id int64) (Sto
 		&i.CancelledByUserID,
 		&i.ShippedAt,
 		&i.ReceivedAt,
+		&i.Kind,
 	)
 	return i, err
 }
@@ -202,7 +204,7 @@ const completeStockTransferRequest = `-- name: CompleteStockTransferRequest :one
 UPDATE stock_transfer_requests
 SET status = 'completed', completed_at = NOW()
 WHERE id = $1 AND status = 'approved'
-RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at
+RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind
 `
 
 func (q *Queries) CompleteStockTransferRequest(ctx context.Context, id int64) (StockTransferRequest, error) {
@@ -242,6 +244,7 @@ func (q *Queries) CompleteStockTransferRequest(ctx context.Context, id int64) (S
 		&i.CancelledByUserID,
 		&i.ShippedAt,
 		&i.ReceivedAt,
+		&i.Kind,
 	)
 	return i, err
 }
@@ -637,7 +640,7 @@ VALUES (
     $4, $5, $6, $7,
     $8, $9, $10, $11
 )
-RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at
+RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind
 `
 
 type CreateStockTransferRequestParams struct {
@@ -705,6 +708,7 @@ func (q *Queries) CreateStockTransferRequest(ctx context.Context, arg CreateStoc
 		&i.CancelledByUserID,
 		&i.ShippedAt,
 		&i.ReceivedAt,
+		&i.Kind,
 	)
 	return i, err
 }
@@ -1020,7 +1024,7 @@ func (q *Queries) GetStockReservation(ctx context.Context, id int64) (StockReser
 }
 
 const getStockTransferRequest = `-- name: GetStockTransferRequest :one
-SELECT id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at FROM stock_transfer_requests
+SELECT id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind FROM stock_transfer_requests
 WHERE id = $1 AND brand_id = $2
 `
 
@@ -1066,12 +1070,13 @@ func (q *Queries) GetStockTransferRequest(ctx context.Context, arg GetStockTrans
 		&i.CancelledByUserID,
 		&i.ShippedAt,
 		&i.ReceivedAt,
+		&i.Kind,
 	)
 	return i, err
 }
 
 const getStockTransferRequestByUUID = `-- name: GetStockTransferRequestByUUID :one
-SELECT id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at FROM stock_transfer_requests
+SELECT id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind FROM stock_transfer_requests
 WHERE uuid = $1 AND brand_id = $2
 `
 
@@ -1117,6 +1122,7 @@ func (q *Queries) GetStockTransferRequestByUUID(ctx context.Context, arg GetStoc
 		&i.CancelledByUserID,
 		&i.ShippedAt,
 		&i.ReceivedAt,
+		&i.Kind,
 	)
 	return i, err
 }
@@ -1700,7 +1706,7 @@ func (q *Queries) ListReservationsByOrder(ctx context.Context, orderID int64) ([
 }
 
 const listStockTransferRequestsInScope = `-- name: ListStockTransferRequestsInScope :many
-SELECT id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at FROM stock_transfer_requests
+SELECT id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind FROM stock_transfer_requests
 WHERE brand_id = $1
   AND ($2::bigint[] IS NULL
        OR organization_id = ANY ($2::bigint[])
@@ -1770,6 +1776,7 @@ func (q *Queries) ListStockTransferRequestsInScope(ctx context.Context, arg List
 			&i.CancelledByUserID,
 			&i.ShippedAt,
 			&i.ReceivedAt,
+			&i.Kind,
 		); err != nil {
 			return nil, err
 		}
@@ -2040,7 +2047,7 @@ func (q *Queries) LockStockReservation(ctx context.Context, id int64) (StockRese
 }
 
 const lockStockTransferRequest = `-- name: LockStockTransferRequest :one
-SELECT id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at FROM stock_transfer_requests
+SELECT id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind FROM stock_transfer_requests
 WHERE id = $1 AND brand_id = $2
 FOR UPDATE
 `
@@ -2087,6 +2094,7 @@ func (q *Queries) LockStockTransferRequest(ctx context.Context, arg LockStockTra
 		&i.CancelledByUserID,
 		&i.ShippedAt,
 		&i.ReceivedAt,
+		&i.Kind,
 	)
 	return i, err
 }
@@ -2153,7 +2161,7 @@ SET status = 'rejected',
     decided_at = NOW(),
     decision_note = $2
 WHERE id = $3 AND status = 'requested'
-RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at
+RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind
 `
 
 type RejectStockTransferRequestParams struct {
@@ -2199,6 +2207,7 @@ func (q *Queries) RejectStockTransferRequest(ctx context.Context, arg RejectStoc
 		&i.CancelledByUserID,
 		&i.ShippedAt,
 		&i.ReceivedAt,
+		&i.Kind,
 	)
 	return i, err
 }

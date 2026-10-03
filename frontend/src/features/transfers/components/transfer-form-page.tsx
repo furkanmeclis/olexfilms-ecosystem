@@ -33,6 +33,7 @@ import {
 import {
   transferKeys,
   transfersService,
+  type StockTransferKind,
 } from "@/features/transfers/services/transfers.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
@@ -42,9 +43,17 @@ import { usePermission } from "@/providers/permission-provider";
  * Tenant > Transfers > new (TEC-197): pick a sibling (same parent, K13),
  * scan or type the barcodes of the units to hand over (a fixed barcode
  * takes a quantity), add a note and send the request. The server checks
- * every unit against the active organization's stock.
+ * every unit against the active organization's stock. With kind="return"
+ * (TEC-223) the units go back to the direct parent, the only target.
  */
-export function TransferFormPage({ slug }: { slug: string }) {
+export function TransferFormPage({
+  slug,
+  kind = "sibling",
+}: {
+  slug: string;
+  kind?: StockTransferKind;
+}) {
+  const isReturn = kind === "return";
   const { t } = useLocale();
   const { can } = usePermission();
   const router = useRouter();
@@ -60,12 +69,14 @@ export function TransferFormPage({ slug }: { slug: string }) {
   } | null>(null);
 
   const targets = useQuery({
-    queryKey: transferKeys.targets,
-    queryFn: () => transfersService.targets(),
+    queryKey: isReturn ? transferKeys.targetsOf(kind) : transferKeys.targets,
+    queryFn: () => transfersService.targets(isReturn ? kind : undefined),
     enabled: canCreate,
   });
 
-  const body = buildCreateBody(target, lines, note);
+  // A return has one possible target: the parent the server lists.
+  const chosen = isReturn ? (targets.data?.items[0]?.uuid ?? "") : target;
+  const body = buildCreateBody(chosen, lines, note, kind);
   const mutation = useMutation({
     mutationFn: () => {
       if (!body) throw new Error("incomplete");
@@ -73,7 +84,9 @@ export function TransferFormPage({ slug }: { slug: string }) {
     },
     onSuccess: (created) => {
       void qc.invalidateQueries({ queryKey: transferKeys.all });
-      toast.success(t("transfers.form.success"));
+      toast.success(
+        t(isReturn ? "transfers.return.success" : "transfers.form.success"),
+      );
       router.push(routes.tenant.transfers.detail(slug, created.uuid));
     },
     onError: (err) => {
@@ -85,12 +98,16 @@ export function TransferFormPage({ slug }: { slug: string }) {
     },
   });
 
-  const title = t("transfers.form.title");
+  const title = t(isReturn ? "transfers.return.title" : "transfers.form.title");
   const header = (
     <PageHeader
       title={title}
       icon={<ArrowLeftRight className="size-6" />}
-      description={t("transfers.form.description")}
+      description={t(
+        isReturn
+          ? "transfers.return.description"
+          : "transfers.form.description",
+      )}
       breadcrumbs={[
         { label: t("layout.breadcrumb_home"), href: routes.tenant.home(slug) },
         {
@@ -140,8 +157,21 @@ export function TransferFormPage({ slug }: { slug: string }) {
               className="text-muted-foreground text-sm"
               data-testid="no-targets"
             >
-              {t("transfers.form.no_targets")}
+              {t(
+                isReturn
+                  ? "transfers.return.no_parent"
+                  : "transfers.form.no_targets",
+              )}
             </p>
+          ) : isReturn ? (
+            <>
+              <p className="font-medium" data-testid="return-parent">
+                {siblings[0]?.name}
+              </p>
+              <p className="text-muted-foreground text-xs">
+                {t("transfers.return.target_hint")}
+              </p>
+            </>
           ) : (
             <>
               <Label htmlFor="transfer-target">
@@ -293,7 +323,9 @@ export function TransferFormPage({ slug }: { slug: string }) {
               disabled={!body || mutation.isPending}
               onClick={() => mutation.mutate()}
             >
-              {t("transfers.form.submit")}
+              {t(
+                isReturn ? "transfers.return.submit" : "transfers.form.submit",
+              )}
             </Button>
           </div>
         </CardContent>
