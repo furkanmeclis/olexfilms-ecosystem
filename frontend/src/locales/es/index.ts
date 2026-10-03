@@ -22,6 +22,7 @@ import form from "./form.json";
 import geo from "./geo.json";
 import imports from "./imports.json";
 import integrations from "./integrations.json";
+import landing from "./landing.json";
 import layout from "./layout.json";
 import logs from "./logs.json";
 import modules from "./modules.json";
@@ -70,6 +71,7 @@ const catalog: LocaleCatalog = {
   geo,
   imports,
   integrations,
+  landing,
   layout,
   logs,
   modules,

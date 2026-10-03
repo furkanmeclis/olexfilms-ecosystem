@@ -5885,6 +5885,460 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/mobile/warehouse/warehouses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mobile: Warehouses of the active organization
+         * @description Mobile mirror (TEC-235) of `GET /v1/warehouse/warehouses`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+         *
+         *     Needs `warehouse.read`; center and distributor organizations only (403 for dealers, K12). Works on the active organization's own warehouses. Ordered by sort_order. `active` filters.
+         */
+        get: operations["mobileListWarehouses"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mobile: Resolve one scanned code (location QR, unit barcode, SKU, short code)
+         * @description Mobile mirror (TEC-235) of `POST /v1/warehouse/scan`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+         *
+         *     Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Resolution order: `OFW:LOC:<full_code>` -> a location of the active organization (404 SCAN_LOCATION_NOT_FOUND otherwise, nothing else is tried); `OFW:UNIT:<barcode>` -> that unit; a unit barcode (generated `<PREFIX>-<8 digits>`, roll split `<barcode>-S<n>`, legacy/import barcodes; exact, then upper-cased); a bare location full_code when `scan.bare_location_code_enabled`; a product SKU of the active brand when `scan.sku_enabled`; a 1-8 digit short code (optionally `-S<n>`) expanded to `<PREFIX>-<8 digits>` when `scan.short_code_enabled` (prefix `scan.short_code_prefix`, else the brand's default prefix). Units follow the caller's `stock.read` reach like the barcode history (a distributor sees its dealers' units, TEC-216); a unit outside the reach, or any unknown code, is 404 SCAN_NO_MATCH. An empty code is 400 VALIDATION_ERROR.
+         */
+        post: operations["mobileResolveWarehouseScan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mobile: Stock counts of the active organization
+         * @description Mobile mirror (TEC-235) of `GET /v1/warehouse/stock-counts`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+         *
+         *     Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Newest first; no expected values.
+         */
+        get: operations["mobileListStockCounts"];
+        put?: never;
+        /**
+         * Mobile: Open a draft stock count
+         * @description Mobile mirror (TEC-235) of `POST /v1/warehouse/stock-counts`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+         *
+         *     Needs `warehouse.write`. The count covers one warehouse of the active organization and a scope inside it: `warehouse` (default), `room` (`room_uuid`), `location` (`location_uuid`, the location and its subtree) or `product` (`product_uuid`, a product of the active brand inside the warehouse). Methods: `location_first` (a location is required for every unit scan), `unit_first` (the location is optional for serial units), `product_qty` (SKUs of serial products and fixed barcodes with a quantity per location), `initial_placement` (the organization's unlocated units are placed into the scope's locations; needs `approve-start`; no product scope). `blind` never returns expected values while counting, `guided` does.
+         */
+        post: operations["mobileCreateStockCount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-counts/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mobile: Stock count detail
+         * @description Mobile mirror (TEC-235) of `GET /v1/warehouse/stock-counts/{uuid}`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+         *
+         *     Needs `warehouse.read`. Carries `progress`; `expected` (per location) only for a guided count while it is draft or in progress (a blind count never has it); `summary` once completed.
+         */
+        get: operations["mobileGetStockCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-counts/{uuid}/approve-start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mobile: Approve the start of a draft count
+         * @description Mobile mirror (TEC-235) of `POST /v1/warehouse/stock-counts/{uuid}/approve-start`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+         *
+         *     Needs `warehouse.write`. Required before `start` for `initial_placement`; idempotent. 409 COUNT_INVALID_STATUS unless draft.
+         */
+        post: operations["mobileApproveStockCountStart"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-counts/{uuid}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mobile: Start scanning
+         * @description Mobile mirror (TEC-235) of `POST /v1/warehouse/stock-counts/{uuid}/start`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+         *
+         *     Needs `warehouse.write`. draft -> in_progress. 409 COUNT_START_APPROVAL_REQUIRED for an unapproved initial_placement, 409 COUNT_INVALID_STATUS unless draft.
+         */
+        post: operations["mobileStartStockCount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-counts/{uuid}/scans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mobile: Recorded scans of a count
+         * @description Mobile mirror (TEC-235) of `GET /v1/warehouse/stock-counts/{uuid}/scans`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+         *
+         *     Needs `warehouse.read`. No expected values.
+         */
+        get: operations["mobileListStockCountScans"];
+        put?: never;
+        /**
+         * Mobile: Record one scan
+         * @description Mobile mirror (TEC-235) of `POST /v1/warehouse/stock-counts/{uuid}/scans`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+         *
+         *     Needs `warehouse.write`; the count must be in progress (409 COUNT_INVALID_STATUS). The code is resolved by the TEC-203 resolver (units follow the caller's `stock.read` reach; 404 SCAN_NO_MATCH). A location scan sets the scanning user's location context; a unit or SKU scan is counted at `location_uuid`, else at that context. 422 COUNT_LOCATION_OUT_OF_SCOPE for a location outside the scope (nothing is recorded), 422 COUNT_LOCATION_REQUIRED when the method needs a location, 422 COUNT_PRODUCT_OUT_OF_SCOPE for another product of a product-scoped count, 422 COUNT_SCAN_KIND_NOT_ALLOWED (serial units in product_qty, SKUs outside product_qty, SKUs of fixed-barcode products), 409 COUNT_UNIT_ALREADY_SCANNED for a serial unit counted twice. `quantity` counts fixed barcodes and SKUs; `meters` is the measured length of a roll. `expected` is present for guided counts only.
+         */
+        post: operations["mobileScanStockCount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-counts/{uuid}/scans/{scan_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Mobile: Remove a scan of an in-progress count
+         * @description Mobile mirror (TEC-235) of `DELETE /v1/warehouse/stock-counts/{uuid}/scans/{scan_uuid}`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+         *
+         *     Needs `warehouse.write`. 409 COUNT_INVALID_STATUS unless in progress.
+         */
+        delete: operations["mobileDeleteStockCountScan"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-counts/{uuid}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mobile: Complete scanning and compute the differences
+         * @description Mobile mirror (TEC-235) of `POST /v1/warehouse/stock-counts/{uuid}/complete`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+         *
+         *     Needs `warehouse.write`. in_progress -> pending_review. Builds the lines against the ledger (matched, missing, wrong_location, unlocated, unexpected, qty_variance, meter_variance). No stock is changed.
+         */
+        post: operations["mobileCompleteStockCount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-counts/{uuid}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mobile: Count report (lines with expected and counted values)
+         * @description Mobile mirror (TEC-235) of `GET /v1/warehouse/stock-counts/{uuid}/report`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+         *
+         *     Needs `warehouse.read`. Completed counts only (409 COUNT_INVALID_STATUS before completion).
+         */
+        get: operations["mobileGetStockCountReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-counts/{uuid}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mobile: Approve a completed count and apply the resolutions
+         * @description Mobile mirror (TEC-235) of `POST /v1/warehouse/stock-counts/{uuid}/approve`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+         *
+         *     Needs `warehouse.write` and `stock.adjust` (403 COUNT_ADJUST_FORBIDDEN). Every line that is not matched needs a resolution from its `allowed_resolutions` (400 VALIDATION_ERROR otherwise). In one transaction, through the stock ledger with the idempotency keys `stock_count:stock_count_line:<line>:<type>:<barcode>`: void_missing -> void; relocate -> placement to the counted location (and a count_adjustment of measured roll meters); increase_unlocated -> count_adjustment to the counted fixed quantity or roll meters; ignore -> nothing. 409 COUNT_STALE (nothing applied) when the stock changed since completion; 409 COUNT_INVALID_STATUS unless pending_review (a second approval writes nothing).
+         */
+        post: operations["mobileApproveStockCount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-counts/{uuid}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mobile: Cancel a count
+         * @description Mobile mirror (TEC-235) of `POST /v1/warehouse/stock-counts/{uuid}/cancel`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+         *
+         *     Needs `warehouse.write`. draft, in_progress or pending_review -> cancelled; no stock is changed. 409 COUNT_INVALID_STATUS otherwise.
+         */
+        post: operations["mobileCancelStockCount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/transfers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mobile: List the warehouse transfers of the active organization
+         * @description Mobile mirror (TEC-235) of `GET /v1/warehouse/transfers`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+         *
+         *     Needs `warehouse.read`. Newest first. Transfers between organizations are `/v1/transfers` (TEC-197). An unknown status is 400 VALIDATION_ERROR.
+         */
+        get: operations["mobileListWarehouseTransfers"];
+        put?: never;
+        /**
+         * Mobile: Open a draft warehouse -> warehouse transfer (TEC-205)
+         * @description Mobile mirror (TEC-235) of `POST /v1/warehouse/transfers`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+         *
+         *     Needs `warehouse.write`. Both warehouses must be active warehouses of the active organization (center or distributor) and differ. `to_location_uuid` is an optional default target location in the target warehouse.
+         */
+        post: operations["mobileCreateWarehouseTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/transfers/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mobile: One warehouse transfer with its lines
+         * @description Mobile mirror (TEC-235) of `GET /v1/warehouse/transfers/{uuid}`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+         */
+        get: operations["mobileGetWarehouseTransfer"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/transfers/{uuid}/lines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mobile: Add scanned units to a draft warehouse transfer
+         * @description Mobile mirror (TEC-235) of `POST /v1/warehouse/transfers/{uuid}/lines`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+         *
+         *     Needs `warehouse.write`. Each barcode must be a serial unit of the active brand placed in the source warehouse (409 WAREHOUSE_UNIT_UNAVAILABLE), not in transit, not on another open warehouse transfer, not reserved by an order and not on an open stock transfer request (409 WAREHOUSE_UNIT_BUSY). Fixed barcodes are 400. A transfer that is no longer a draft is 409 WAREHOUSE_TRANSFER_STATE.
+         */
+        post: operations["mobileAddWarehouseTransferLines"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/transfers/{uuid}/lines/{line_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Mobile: Remove a line from a draft warehouse transfer
+         * @description Mobile mirror (TEC-235) of `DELETE /v1/warehouse/transfers/{uuid}/lines/{line_uuid}`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+         */
+        delete: operations["mobileDeleteWarehouseTransferLine"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/transfers/{uuid}/place": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mobile: Set the target location of transfer lines (pick or scan)
+         * @description Mobile mirror (TEC-235) of `POST /v1/warehouse/transfers/{uuid}/place`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+         *
+         *     Needs `warehouse.write`, draft or in_transit. Exactly one of `location_uuid` or `location_code`; the location must be active and in the target warehouse (400 otherwise). Lines: `line_uuids`, or the lines of the scanned `barcodes`, or every line.
+         */
+        post: operations["mobilePlaceWarehouseTransferLines"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/transfers/{uuid}/ship": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mobile: Ship a warehouse transfer (ledger transfer_out, draft -> in_transit)
+         * @description Mobile mirror (TEC-235) of `POST /v1/warehouse/transfers/{uuid}/ship`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+         *
+         *     Needs `warehouse.write`. In one transaction every line gets a `transfer_out` (key `warehouse_transfer:warehouse_transfer_line:<line id>:transfer_out:<barcode>`); the unit is in transit, owned by the organization, and no other flow can pick it. 409 WAREHOUSE_TRANSFER_STATE when not a draft (a second ship writes nothing), WAREHOUSE_TRANSFER_EMPTY without lines, WAREHOUSE_UNIT_UNAVAILABLE / WAREHOUSE_UNIT_BUSY when a unit left the source warehouse or got reserved, WAREHOUSE_LEDGER_REFUSED when the ledger refuses (nothing is written).
+         */
+        post: operations["mobileShipWarehouseTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/transfers/{uuid}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mobile: Receive a warehouse transfer (transfer_in + placement, in_transit -> completed)
+         * @description Mobile mirror (TEC-235) of `POST /v1/warehouse/transfers/{uuid}/complete`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+         *
+         *     Needs `warehouse.write`. In one transaction every line gets the paired `transfer_in` and a `placement` onto its target location (line target, else the optional body location, else the transfer's default location; 409 WAREHOUSE_TRANSFER_UNPLACED when none). 409 WAREHOUSE_TRANSFER_STATE when not in transit. The body is optional.
+         */
+        post: operations["mobileCompleteWarehouseTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/transfers/{uuid}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mobile: Cancel a warehouse transfer
+         * @description Mobile mirror (TEC-235) of `POST /v1/warehouse/transfers/{uuid}/cancel`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+         *
+         *     Needs `warehouse.write`. A draft closes without stock; an in-transit transfer posts `transfer_cancel_restore` per line in one transaction (each unit goes back to its source location and status). 409 WAREHOUSE_TRANSFER_STATE when completed or cancelled.
+         */
+        post: operations["mobileCancelWarehouseTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/qr/start": {
         parameters: {
             query?: never;
@@ -7115,6 +7569,66 @@ export interface paths {
          * @description Needs tasks.read; the active organization must be the brand center.
          */
         get: operations["listTaskAssignees"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/vehicles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The portal user's vehicles (TEC-238)
+         * @description Portal session (aud=portal) with vehicles.read: only the vehicles the signed-in user owns in the domain brand (K20). Glorian vehicles never come back (K1/K2). Counts cover the user's non-draft services and active warranties of each vehicle. No measurement data.
+         */
+        get: operations["listPortalVehicles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/vehicles/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One vehicle of the portal user with services and active warranties (TEC-238)
+         * @description The vehicle, a summary of the user's services on it across every organization of the domain brand, the latest services (at most 50; the full history is GET /v1/portal/services) and the active warranties with days and percent left. Another user's vehicle, a Glorian vehicle or an invalid uuid answers 404. No measurement data.
+         */
+        get: operations["getPortalVehicle"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The portal user's services across every organization (TEC-238)
+         * @description Portal session (aud=portal) with services.read: the signed-in user's services at every dealer / distributor of the domain brand in one list, newest first. A service is the user's when the user is its customer or holds one of its warranties (TEC-239 rule: a new owner with a transferred warranty sees it). Draft services and Glorian rows are not listed. No measurement data.
+         */
+        get: operations["listPortalServices"];
         put?: never;
         post?: never;
         delete?: never;
@@ -12995,6 +13509,126 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["PortalService"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        PortalNamedRef: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+        };
+        PortalOrganizationRef: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            type: string;
+        };
+        /** @description A vehicle of the portal user (TEC-238). No measurement data. */
+        PortalVehicle: {
+            /** Format: uuid */
+            uuid: string;
+            car_brand: null | components["schemas"]["PortalNamedRef"];
+            car_model: null | components["schemas"]["PortalNamedRef"];
+            model_year: number | null;
+            plate: string | null;
+            plate_country: string | null;
+            vin: string | null;
+            /** Format: int64 */
+            service_count: number;
+            /** Format: int64 */
+            active_warranty_count: number;
+            /** Format: date-time */
+            last_service_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        /** @description A service of the portal user at any organization (TEC-238). No measurement data. */
+        PortalServiceListItem: {
+            /** Format: uuid */
+            uuid: string;
+            service_no: string;
+            /** @enum {string} */
+            status: "pending" | "processing" | "ready" | "completed" | "cancelled";
+            package: string | null;
+            organization: components["schemas"]["PortalOrganizationRef"];
+            /** Format: uuid */
+            vehicle_uuid: string;
+            car_brand_name: string;
+            car_model_name: string;
+            model_year: number | null;
+            plate: string | null;
+            plate_country: string | null;
+            /** Format: date-time */
+            completed_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        PortalActiveWarranty: {
+            /** Format: uuid */
+            uuid: string;
+            public_code: string;
+            /** Format: date-time */
+            start_at: string;
+            /** Format: date-time */
+            end_at: string;
+            /** @description Whole days left, rounded up. */
+            days_left: number;
+            /** @description Share of the warranty period still left. */
+            percent_left: number;
+            product: {
+                /** Format: uuid */
+                uuid: string;
+                sku: string;
+                name: string;
+            };
+            service: {
+                /** Format: uuid */
+                uuid: string;
+                service_no: string;
+            };
+            organization: components["schemas"]["PortalOrganizationRef"];
+        };
+        PortalVehicleDetail: components["schemas"]["PortalVehicle"] & {
+            service_summary: {
+                /** Format: int64 */
+                total: number;
+                /** Format: int64 */
+                completed: number;
+                /** Format: int64 */
+                organization_count: number;
+                /** Format: date-time */
+                last_service_at: string | null;
+            };
+            services: components["schemas"]["PortalServiceListItem"][];
+            active_warranties: components["schemas"]["PortalActiveWarranty"][];
+        };
+        EnvelopePortalVehiclePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["PortalVehicle"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePortalVehicleDetail: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PortalVehicleDetail"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePortalServicePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["PortalServiceListItem"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
             meta: components["schemas"]["ResponseMeta"];
         };
     };
@@ -23538,6 +24172,767 @@ export interface operations {
             };
         };
     };
+    mobileListWarehouses: {
+        parameters: {
+            query?: {
+                active?: boolean;
+            };
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Warehouses */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["UnprocessableEntity"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileResolveWarehouseScan: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseScanInput"];
+            };
+        };
+        responses: {
+            /** @description Resolved entity */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseScanResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            /** @description SCAN_NO_MATCH or SCAN_LOCATION_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileListStockCounts: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["StockCountStatus"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of counts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockCountPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileCreateStockCount: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockCountInput"];
+            };
+        };
+        responses: {
+            /** @description Draft count */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockCount"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileGetStockCount: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Count */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockCount"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileApproveStockCountStart: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Count */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockCount"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileStartStockCount: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Count */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockCount"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileListStockCountScans: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Scans, oldest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockCountScanList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileScanStockCount: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockCountScanInput"];
+            };
+        };
+        responses: {
+            /** @description Recorded scan */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockCountScanResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            /** @description COUNT_NOT_FOUND, SCAN_NO_MATCH or SCAN_LOCATION_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            409: components["responses"]["Conflict"];
+            /** @description COUNT_LOCATION_OUT_OF_SCOPE, COUNT_LOCATION_REQUIRED, COUNT_PRODUCT_OUT_OF_SCOPE or COUNT_SCAN_KIND_NOT_ALLOWED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileDeleteStockCountScan: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                scan_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileCompleteStockCount: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Count with its summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockCount"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileGetStockCountReport: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockCountReport"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileApproveStockCount: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockCountApproveInput"];
+            };
+        };
+        responses: {
+            /** @description Approved count with its lines */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockCountReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileCancelStockCount: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Count */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockCount"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileListWarehouseTransfers: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["WarehouseTransferStatus"];
+                limit?: number;
+                offset?: number;
+            };
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Transfers (without lines) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseTransferPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileCreateWarehouseTransfer: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseTransferInput"];
+            };
+        };
+        responses: {
+            /** @description Draft transfer */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseTransfer"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileGetWarehouseTransfer: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Transfer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseTransfer"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileAddWarehouseTransferLines: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseTransferLinesInput"];
+            };
+        };
+        responses: {
+            /** @description Transfer with the new lines */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseTransfer"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileDeleteWarehouseTransferLine: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                line_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Transfer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseTransfer"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobilePlaceWarehouseTransferLines: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockEntryPlaceInput"];
+            };
+        };
+        responses: {
+            /** @description Transfer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseTransfer"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileShipWarehouseTransfer: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description In-transit transfer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseTransfer"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileCompleteWarehouseTransfer: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["WarehouseTransferCompleteInput"];
+            };
+        };
+        responses: {
+            /** @description Completed transfer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseTransfer"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileCancelWarehouseTransfer: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancelled transfer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseTransfer"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
     postAuthQRStart: {
         parameters: {
             query?: never;
@@ -25798,6 +27193,82 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeTaskAssigneeList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listPortalVehicles: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Vehicles */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePortalVehiclePage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getPortalVehicle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Vehicle detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePortalVehicleDetail"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listPortalServices: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Services */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePortalServicePage"];
                 };
             };
             401: components["responses"]["Unauthenticated"];

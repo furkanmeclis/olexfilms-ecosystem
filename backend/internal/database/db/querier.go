@@ -139,6 +139,8 @@ type Querier interface {
 	CountPermissions(ctx context.Context, q_ pgtype.Text) (int64, error)
 	CountPhoneOTPsSince(ctx context.Context, arg CountPhoneOTPsSinceParams) (int64, error)
 	CountPlatformNotifications(ctx context.Context, arg CountPlatformNotificationsParams) (int64, error)
+	CountPortalServices(ctx context.Context, arg CountPortalServicesParams) (int64, error)
+	CountPortalVehicles(ctx context.Context, arg CountPortalVehiclesParams) (int64, error)
 	CountPricedProducts(ctx context.Context, arg CountPricedProductsParams) (int64, error)
 	CountProductCategories(ctx context.Context, arg CountProductCategoriesParams) (int64, error)
 	CountProducts(ctx context.Context, arg CountProductsParams) (int64, error)
@@ -540,6 +542,9 @@ type Querier interface {
 	GetPendingVehicleTransfer(ctx context.Context, vehicleID int64) (VehicleTransfer, error)
 	GetPermissionBySlug(ctx context.Context, slug string) (Permission, error)
 	GetPlateFormatByCountry(ctx context.Context, iso2 string) (GetPlateFormatByCountryRow, error)
+	GetPortalVehicle(ctx context.Context, arg GetPortalVehicleParams) (GetPortalVehicleRow, error)
+	// Service summary of one vehicle across every organization of the brand.
+	GetPortalVehicleServiceSummary(ctx context.Context, arg GetPortalVehicleServiceSummaryParams) (GetPortalVehicleServiceSummaryRow, error)
 	GetProduct(ctx context.Context, arg GetProductParams) (Product, error)
 	// TEC-157 (F1-02e): reclassification requests (barcode kept, product
 	// changed). Scope narrowing happens in modules/stock/usecase.
@@ -968,6 +973,21 @@ type Querier interface {
 	ListPlateFormats(ctx context.Context, activeOnly bool) ([]ListPlateFormatsRow, error)
 	ListPlatformNotifications(ctx context.Context, arg ListPlatformNotificationsParams) ([]Notification, error)
 	ListPlatformNotificationsForExport(ctx context.Context, arg ListPlatformNotificationsForExportParams) ([]Notification, error)
+	// Services of the user across every organization of the brand (one list,
+	// newest first). vehicle_id narrows to one vehicle (vehicle detail).
+	ListPortalServices(ctx context.Context, arg ListPortalServicesParams) ([]ListPortalServicesRow, error)
+	// Active warranties of one vehicle held by the user (soonest end first).
+	ListPortalVehicleActiveWarranties(ctx context.Context, arg ListPortalVehicleActiveWarrantiesParams) ([]ListPortalVehicleActiveWarrantiesRow, error)
+	// TEC-238 (F2-03a): customer portal "my vehicles" reads.
+	//
+	// Every query is bound to the signed-in user (vehicles.user_id,
+	// warranties.holder_user_id; a service is the user's when the user is
+	// its customer OR holds one of its warranties, the TEC-239 rule, so a new
+	// owner who received a transferred warranty sees the service) and to the domain
+	// brand (K20). Glorian rows never come back (K1/K2: service, warranty and
+	// customer are closed to Glorian), even on a Glorian host. Draft services
+	// are dealer-internal and stay out. No measurement column is selected.
+	ListPortalVehicles(ctx context.Context, arg ListPortalVehiclesParams) ([]ListPortalVehiclesRow, error)
 	// TEC-146: batch reads for the effective price views and the distributor's
 	// dealer prices (000041).
 	// Products of the brand for the price list view.
