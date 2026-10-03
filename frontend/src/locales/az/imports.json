@@ -73,6 +73,8 @@
   "columns.format": "Format",
   "columns.status": "Vəziyyət",
   "columns.created_at": "Yaradılıb",
+  "columns.actor": "Yükləyən",
+  "columns.file": "Fayl",
   "columns.actions": "Əməliyyatlar",
   "resources.platform.users": "İstifadəçilər",
   "resources.platform.roles": "Rollar",

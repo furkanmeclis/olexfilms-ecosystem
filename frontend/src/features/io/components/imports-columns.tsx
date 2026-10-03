@@ -69,6 +69,26 @@ export function useImportsColumns({
           </Badge>
         ),
       }),
+      // TEC-211: who uploaded the job and the uploaded file name.
+      createColumn<ImportJob>({
+        id: "actor",
+        labelKey: "imports.columns.actor",
+        enableColumnFilter: false,
+        enableSorting: false,
+        cell: ({ row }) => row.original.actor?.name || "—",
+      }),
+      createColumn<ImportJob>({
+        id: "source_filename",
+        accessorKey: "source_filename",
+        labelKey: "imports.columns.file",
+        enableColumnFilter: false,
+        enableSorting: false,
+        cell: ({ row }) => (
+          <span className="font-mono text-xs">
+            {row.original.source_filename || "—"}
+          </span>
+        ),
+      }),
       createColumn<ImportJob>({
         id: "created_at",
         accessorKey: "created_at",

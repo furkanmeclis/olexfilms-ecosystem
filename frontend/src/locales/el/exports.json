@@ -43,6 +43,8 @@
   "columns.status": "Κατάσταση",
   "columns.rows": "Πλήθος γραμμών",
   "columns.created_at": "Δημιουργήθηκε",
+  "columns.actor": "Αιτήθηκε από",
+  "columns.file": "Αρχείο",
   "columns.actions": "Ενέργειες",
   "resources.platform.users": "Χρήστες",
   "resources.platform.roles": "Ρόλοι",

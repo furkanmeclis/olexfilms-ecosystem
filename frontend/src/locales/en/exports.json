@@ -43,6 +43,8 @@
   "columns.status": "Status",
   "columns.rows": "Row count",
   "columns.created_at": "Created",
+  "columns.actor": "Requested by",
+  "columns.file": "File",
   "columns.actions": "Actions",
   "resources.platform.users": "Users",
   "resources.platform.roles": "Roles",

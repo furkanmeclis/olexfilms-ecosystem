@@ -38,6 +38,7 @@ import search from "./search.json";
 import services from "./services.json";
 import settings from "./settings.json";
 import stepup from "./stepup.json";
+import stock from "./stock.json";
 import storage from "./storage.json";
 import table from "./table.json";
 import transfers from "./transfers.json";
@@ -83,6 +84,7 @@ const catalog: LocaleCatalog = {
   services,
   settings,
   stepup,
+  stock,
   storage,
   table,
   transfers,

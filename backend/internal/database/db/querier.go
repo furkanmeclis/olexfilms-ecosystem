@@ -737,7 +737,8 @@ type Querier interface {
 	ListEnabledLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
 	ListExchangeRatesByDate(ctx context.Context, arg ListExchangeRatesByDateParams) ([]ListExchangeRatesByDateRow, error)
 	ListExportJobsForActor(ctx context.Context, arg ListExportJobsForActorParams) ([]ExportJob, error)
-	ListExportJobsForOrganization(ctx context.Context, arg ListExportJobsForOrganizationParams) ([]ExportJob, error)
+	// TEC-211: the organization list carries who requested each job.
+	ListExportJobsForOrganization(ctx context.Context, arg ListExportJobsForOrganizationParams) ([]ListExportJobsForOrganizationRow, error)
 	ListFinanceAccountBalances(ctx context.Context, organizationID int64) ([]FinanceAccountBalance, error)
 	// ListFinanceAccountBalancesAsOf is every cash/bank account of the book with
 	// its balance over the rows written before created_to (NULL = all rows).
@@ -763,7 +764,8 @@ type Querier interface {
 	ListGrantsByRoleSlugs(ctx context.Context, roleSlugs []string) ([]ListGrantsByRoleSlugsRow, error)
 	ListImportChangesForJob(ctx context.Context, jobID int64) ([]ImportChange, error)
 	ListImportJobsForActor(ctx context.Context, arg ListImportJobsForActorParams) ([]ImportJob, error)
-	ListImportJobsForOrganization(ctx context.Context, arg ListImportJobsForOrganizationParams) ([]ImportJob, error)
+	// TEC-211: the organization list carries who uploaded each job.
+	ListImportJobsForOrganization(ctx context.Context, arg ListImportJobsForOrganizationParams) ([]ListImportJobsForOrganizationRow, error)
 	// TEC-202: label templates and barcode batches.
 	// ---------------------------------------------------------------------------
 	// Label templates.
@@ -848,6 +850,8 @@ type Querier interface {
 	ListProductPrices(ctx context.Context, arg ListProductPricesParams) ([]ProductPrice, error)
 	ListProductPricesForProducts(ctx context.Context, arg ListProductPricesForProductsParams) ([]ListProductPricesForProductsRow, error)
 	ListProducts(ctx context.Context, arg ListProductsParams) ([]Product, error)
+	// TEC-211: product refs of the brand for the catalog export price columns.
+	ListProductsByUUIDs(ctx context.Context, arg ListProductsByUUIDsParams) ([]ListProductsByUUIDsRow, error)
 	// Search indexer only (full reindex across brands).
 	ListProductsForIndex(ctx context.Context) ([]Product, error)
 	ListProvincesByCountry(ctx context.Context, countryID int64) ([]ListProvincesByCountryRow, error)

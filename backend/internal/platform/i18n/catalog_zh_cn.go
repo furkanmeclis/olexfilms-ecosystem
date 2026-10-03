@@ -240,6 +240,8 @@ var zhCNCatalog = map[string]string{
 	"catalog.products.uuid":                    "UUID",
 	"catalog.products.warranty_months":         "质保（月）",
 	"catalog.products.micron_thickness":        "厚度（微米）",
+	"catalog.products.purchase_price":          "采购价",
+	"catalog.products.recommended_price":       "建议销售价",
 	"catalog.products.uses_fixed_barcode":      "固定条码",
 	"catalog.services.name":                    "服务名称",
 	"catalog.services.category":                "类别",

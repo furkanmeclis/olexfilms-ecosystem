@@ -73,6 +73,8 @@
   "columns.format": "Format",
   "columns.status": "Status",
   "columns.created_at": "Created",
+  "columns.actor": "Uploaded by",
+  "columns.file": "File",
   "columns.actions": "Actions",
   "resources.platform.users": "Users",
   "resources.platform.roles": "Roles",

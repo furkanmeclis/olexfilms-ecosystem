@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 
 import { PageHeader } from "@/components/layout";
+import { StockSummaryWidget } from "@/features/stock";
 import { TopVehicleModelsWidget } from "@/features/vehicle-catalog";
 import { useLocale } from "@/providers/locale-provider";
 
@@ -17,6 +18,7 @@ export default function TenantHomePage() {
       />
       <div className="grid gap-6 xl:grid-cols-2">
         <TopVehicleModelsWidget slug={params.slug} />
+        <StockSummaryWidget slug={params.slug} />
       </div>
     </div>
   );

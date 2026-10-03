@@ -73,6 +73,8 @@
   "columns.format": "Формат",
   "columns.status": "Статус",
   "columns.created_at": "Створено",
+  "columns.actor": "Завантажив",
+  "columns.file": "Файл",
   "columns.actions": "Дії",
   "resources.platform.users": "Користувачі",
   "resources.platform.roles": "Ролі",

@@ -15,8 +15,10 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	notifmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
 	"github.com/google/uuid"
@@ -83,14 +85,25 @@ func New(
 
 // ExportJobView is API projection.
 type ExportJobView struct {
-	UUID      uuid.UUID `json:"uuid"`
-	Resource  string    `json:"resource"`
-	Format    string    `json:"format"`
-	Status    string    `json:"status"`
-	RowCount  int32     `json:"row_count"`
-	Error     *string   `json:"error,omitempty"`
-	Download  *string   `json:"download_url,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
+	UUID     uuid.UUID `json:"uuid"`
+	Resource string    `json:"resource"`
+	Format   string    `json:"format"`
+	Status   string    `json:"status"`
+	RowCount int32     `json:"row_count"`
+	Error    *string   `json:"error,omitempty"`
+	Download *string   `json:"download_url,omitempty"`
+	// Filename is the download name of the file (TEC-211).
+	Filename string `json:"filename"`
+	// Actor is the user who requested the job; set on the organization
+	// list (TEC-211).
+	Actor     *ActorView `json:"actor,omitempty"`
+	CreatedAt time.Time  `json:"created_at"`
+}
+
+// ActorView names the user who requested a job.
+type ActorView struct {
+	UUID uuid.UUID `json:"uuid"`
+	Name string    `json:"name"`
 }
 
 // RequestExport queues an export job.
@@ -107,7 +120,6 @@ func (s *Service) RequestExport(
 	if err != nil {
 		return ExportJobView{}, fmt.Errorf("%w: %v", ErrInvalidRequest, err)
 	}
-	_ = adapter
 	if format != ioengine.ExportPDF && format != ioengine.ExportXLSX && format != ioengine.ExportCSV && format != ioengine.ExportJSON {
 		return ExportJobView{}, fmt.Errorf("%w: invalid format", ErrInvalidRequest)
 	}
@@ -115,6 +127,13 @@ func (s *Service) RequestExport(
 		query = ioengine.ExportQuery{}
 	}
 	delete(query, ioengine.QueryOrganizationID)
+	// TEC-211: snapshot the permission backed columns the requester may
+	// read; the worker re-evaluates the dataset against this set.
+	granted, err := s.grantedColumns(ctx, adapter, organizationID)
+	if err != nil {
+		return ExportJobView{}, err
+	}
+	ioengine.SetGrantedPermissions(query, granted)
 	qb, _ := json.Marshal(query)
 	expires := time.Now().UTC().Add(7 * 24 * time.Hour)
 	params := db.CreateExportJobParams{
@@ -174,6 +193,9 @@ func (s *Service) ProcessExport(ctx context.Context, jobID int64) error {
 	if err != nil {
 		return s.fail(ctx, jobID, err.Error())
 	}
+	// TEC-211: drop the columns the stored grants do not unlock, whatever
+	// the adapter returned.
+	ds = ioengine.ApplyColumnVisibility(ds, ioengine.GrantedPermissions(query))
 	lh, err := s.letterheadForJob(ctx, job)
 	if err != nil {
 		return s.fail(ctx, jobID, err.Error())
@@ -223,6 +245,47 @@ func (s *Service) ProcessExport(ctx context.Context, jobID int64) error {
 	}
 	_ = completed
 	return nil
+}
+
+// grantedColumns returns the permission slugs of the adapter's columns the
+// request principal holds. Tenant jobs need the scope the organization type
+// requires (brand for the center, managed below it, like pricing's
+// ViewerFrom); platform jobs only need the grant. Without a principal on
+// the context (worker, tests) nothing is granted, so permission backed
+// columns stay out of the file.
+func (s *Service) grantedColumns(ctx context.Context, adapter ioengine.ResourceAdapter, organizationID *int64) ([]string, error) {
+	needed := ioengine.ColumnPermissions(adapter.ExportColumns())
+	if len(needed) == 0 {
+		return nil, nil
+	}
+	p, ok := authctx.PrincipalFrom(ctx)
+	if !ok {
+		return nil, nil
+	}
+	need := rbac.Scope("")
+	if organizationID != nil && *organizationID > 0 {
+		org, err := s.q.GetOrganizationByID(ctx, *organizationID)
+		if err != nil {
+			return nil, fmt.Errorf("export grants: organization: %w", err)
+		}
+		need = rbac.ScopeManaged
+		if org.Type == rbac.OrgTypeCenter {
+			need = rbac.ScopeBrand
+		}
+	}
+	granted := make([]string, 0, len(needed))
+	for _, slug := range needed {
+		if need == "" {
+			if p.HasPermission(slug) {
+				granted = append(granted, slug)
+			}
+			continue
+		}
+		if p.Can(slug, need) {
+			granted = append(granted, slug)
+		}
+	}
+	return granted, nil
 }
 
 func (s *Service) fail(ctx context.Context, jobID int64, msg string) error {
@@ -346,7 +409,9 @@ func (s *Service) ListOrgJobs(ctx context.Context, orgID int64, limit, offset in
 	}
 	out := make([]ExportJobView, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, mapExportJob(r))
+		v := mapExportJob(r.ExportJob)
+		v.Actor = &ActorView{UUID: r.ActorUuid, Name: strings.TrimSpace(r.ActorName + " " + r.ActorSurname)}
+		out = append(out, v)
 	}
 	return out, total, nil
 }
@@ -426,6 +491,7 @@ func mapExportJob(row db.ExportJob) ExportJobView {
 	return ExportJobView{
 		UUID: row.Uuid, Resource: row.Resource, Format: row.Format, Status: row.Status,
 		RowCount: row.RowCount, Error: errMsg, Download: dl, CreatedAt: row.CreatedAt.Time,
+		Filename: ioengine.ExportDownloadFilename(row.Resource, ioengine.ExportFormat(row.Format), row.CreatedAt.Time),
 	}
 }
 

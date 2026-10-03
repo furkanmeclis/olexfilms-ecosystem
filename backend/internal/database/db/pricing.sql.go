@@ -579,6 +579,51 @@ func (q *Queries) ListProductPricesForProducts(ctx context.Context, arg ListProd
 	return items, nil
 }
 
+const listProductsByUUIDs = `-- name: ListProductsByUUIDs :many
+SELECT id, uuid, sku, name
+FROM products
+WHERE brand_id = $1 AND uuid = ANY($2::uuid[])
+ORDER BY id ASC
+`
+
+type ListProductsByUUIDsParams struct {
+	BrandID int64       `json:"brand_id"`
+	Uuids   []uuid.UUID `json:"uuids"`
+}
+
+type ListProductsByUUIDsRow struct {
+	ID   int64     `json:"id"`
+	Uuid uuid.UUID `json:"uuid"`
+	Sku  string    `json:"sku"`
+	Name string    `json:"name"`
+}
+
+// TEC-211: product refs of the brand for the catalog export price columns.
+func (q *Queries) ListProductsByUUIDs(ctx context.Context, arg ListProductsByUUIDsParams) ([]ListProductsByUUIDsRow, error) {
+	rows, err := q.db.Query(ctx, listProductsByUUIDs, arg.BrandID, arg.Uuids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListProductsByUUIDsRow{}
+	for rows.Next() {
+		var i ListProductsByUUIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.Sku,
+			&i.Name,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const upsertDistributorDealerPrice = `-- name: UpsertDistributorDealerPrice :one
 INSERT INTO distributor_dealer_prices (product_id, brand_id, distributor_org_id, currency, price)
 VALUES (

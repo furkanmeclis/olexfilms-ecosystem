@@ -73,6 +73,8 @@
   "columns.format": "Dateiformat",
   "columns.status": "Status",
   "columns.created_at": "Erstellt",
+  "columns.actor": "Hochgeladen von",
+  "columns.file": "Datei",
   "columns.actions": "Aktionen",
   "resources.platform.users": "Benutzer",
   "resources.platform.roles": "Rollen",

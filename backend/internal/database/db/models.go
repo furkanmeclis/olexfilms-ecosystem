@@ -524,6 +524,7 @@ type ImportJob struct {
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 	OrganizationID pgtype.Int8        `json:"organization_id"`
+	SourceFilename string             `json:"source_filename"`
 }
 
 type KvkkNotice struct {

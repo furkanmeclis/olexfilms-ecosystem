@@ -1,6 +1,6 @@
 -- name: CreateImportJob :one
-INSERT INTO import_jobs (resource, actor_id, format, locale, status, file_key, organization_id)
-VALUES ($1, $2, $3, $4, 'uploaded', $5, sqlc.narg(organization_id))
+INSERT INTO import_jobs (resource, actor_id, format, locale, status, file_key, organization_id, source_filename)
+VALUES ($1, $2, $3, $4, 'uploaded', $5, sqlc.narg(organization_id), sqlc.arg(source_filename))
 RETURNING *;
 
 -- name: UpdateImportJobFileKey :one
@@ -90,9 +90,12 @@ LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 SELECT COUNT(*)::bigint FROM import_jobs WHERE organization_id IS NULL;
 
 -- name: ListImportJobsForOrganization :many
-SELECT * FROM import_jobs
-WHERE organization_id = sqlc.arg(organization_id)::bigint
-ORDER BY created_at DESC
+-- TEC-211: the organization list carries who uploaded each job.
+SELECT sqlc.embed(import_jobs), u.uuid AS actor_uuid, u.name AS actor_name, u.surname AS actor_surname
+FROM import_jobs
+JOIN users u ON u.id = import_jobs.actor_id
+WHERE import_jobs.organization_id = sqlc.arg(organization_id)::bigint
+ORDER BY import_jobs.created_at DESC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
 -- name: CountImportJobsForOrganization :one
