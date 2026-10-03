@@ -142,7 +142,7 @@ func TestIntegrationWarehouseScan(t *testing.T) {
 		}
 		u, err := it.q.CreateUnit(ctx, db.CreateUnitParams{
 			OrganizationID: center.ID, BrandID: center.BrandID, ProductID: prod.ID, Barcode: barcode,
-			UnitKind: ledger.KindSerial, Source: "import", Status: string(ledger.StatusPrinted),
+			UnitKind: ledger.KindSerial, Source: "imported", Status: string(ledger.StatusPrinted),
 			InitialMeters: m, RemainingMeters: m,
 		})
 		if err != nil {
