@@ -212,6 +212,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/search/global": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cmd+K global search of the active organization (TEC-213)
+         * @description Searches every index the caller may read in the active organization and
+         *     groups the hits by spec (customers, vehicles, services, warranties, orders,
+         *     organizations, stock_units, plus tenant / brand scoped specs such as
+         *     catalog products). Each list scoped group runs through its module list
+         *     (`GET /v1/<module>?q=`) with the list permission, scope and module
+         *     feature, so the index is never the only access check. A group the caller
+         *     lacks the permission or the module feature for is not queried and not
+         *     returned. When Meilisearch is off the allowed groups come back empty
+         *     with `info = search_disabled`.
+         */
+        get: operations["getSearchGlobal"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/step-up": {
         parameters: {
             query?: never;
@@ -4048,6 +4076,204 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/warehouse/moves": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move scanned units onto a location (bin <-> bin, TEC-205)
+         * @description Needs `warehouse.write`. One step: every scanned serial unit (`barcodes`, also `OFW:UNIT:<barcode>`) gets one ledger `placement` onto the location (`location_uuid`, or `location_code`: a scanned `OFW:LOC:<full_code>` QR or a bare full_code), all in one transaction. A placed unit stays in its warehouse (moving to another warehouse is a warehouse transfer, 400 VALIDATION_ERROR); an unplaced unit of the organization may go to any of its warehouses. Fixed barcodes are 400. 409 WAREHOUSE_UNIT_UNAVAILABLE when the unit is not on hand in the organization, WAREHOUSE_UNIT_BUSY when it is in transit or on an open warehouse transfer. The idempotency key is `warehouse_move:stock_movement:<last movement id>:placement:<barcode>`.
+         */
+        post: operations["moveWarehouseUnits"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/orders/{uuid}/place": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Shelve the received units of an order (center -> distributor, TEC-205)
+         * @description Needs `warehouse.write`. The order must be bought by the active organization (404 otherwise) and received (409 WAREHOUSE_ORDER_NOT_RECEIVED); the order module has already moved the stock (order_out / received). Every received serial unit still unplaced in the organization gets one `placement` onto the location (`location_uuid` / `location_code`, default the order's buyer location; 400 when neither exists). `barcodes` limits the units. Fixed barcodes (`skipped: fixed`) and units already shelved or moved on (`skipped: not_on_hand`) are skipped. Key `warehouse_order:order_item_unit:<assignment id>:placement:<barcode>`.
+         */
+        post: operations["placeReceivedOrderUnits"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/transfers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the warehouse transfers of the active organization
+         * @description Needs `warehouse.read`. Newest first. Transfers between organizations are `/v1/transfers` (TEC-197). An unknown status is 400 VALIDATION_ERROR.
+         */
+        get: operations["listWarehouseTransfers"];
+        put?: never;
+        /**
+         * Open a draft warehouse -> warehouse transfer (TEC-205)
+         * @description Needs `warehouse.write`. Both warehouses must be active warehouses of the active organization (center or distributor) and differ. `to_location_uuid` is an optional default target location in the target warehouse.
+         */
+        post: operations["createWarehouseTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/transfers/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One warehouse transfer with its lines */
+        get: operations["getWarehouseTransfer"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/transfers/{uuid}/lines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add scanned units to a draft warehouse transfer
+         * @description Needs `warehouse.write`. Each barcode must be a serial unit of the active brand placed in the source warehouse (409 WAREHOUSE_UNIT_UNAVAILABLE), not in transit, not on another open warehouse transfer, not reserved by an order and not on an open stock transfer request (409 WAREHOUSE_UNIT_BUSY). Fixed barcodes are 400. A transfer that is no longer a draft is 409 WAREHOUSE_TRANSFER_STATE.
+         */
+        post: operations["addWarehouseTransferLines"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/transfers/{uuid}/lines/{line_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a line from a draft warehouse transfer */
+        delete: operations["deleteWarehouseTransferLine"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/transfers/{uuid}/place": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set the target location of transfer lines (pick or scan)
+         * @description Needs `warehouse.write`, draft or in_transit. Exactly one of `location_uuid` or `location_code`; the location must be active and in the target warehouse (400 otherwise). Lines: `line_uuids`, or the lines of the scanned `barcodes`, or every line.
+         */
+        post: operations["placeWarehouseTransferLines"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/transfers/{uuid}/ship": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ship a warehouse transfer (ledger transfer_out, draft -> in_transit)
+         * @description Needs `warehouse.write`. In one transaction every line gets a `transfer_out` (key `warehouse_transfer:warehouse_transfer_line:<line id>:transfer_out:<barcode>`); the unit is in transit, owned by the organization, and no other flow can pick it. 409 WAREHOUSE_TRANSFER_STATE when not a draft (a second ship writes nothing), WAREHOUSE_TRANSFER_EMPTY without lines, WAREHOUSE_UNIT_UNAVAILABLE / WAREHOUSE_UNIT_BUSY when a unit left the source warehouse or got reserved, WAREHOUSE_LEDGER_REFUSED when the ledger refuses (nothing is written).
+         */
+        post: operations["shipWarehouseTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/transfers/{uuid}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Receive a warehouse transfer (transfer_in + placement, in_transit -> completed)
+         * @description Needs `warehouse.write`. In one transaction every line gets the paired `transfer_in` and a `placement` onto its target location (line target, else the optional body location, else the transfer's default location; 409 WAREHOUSE_TRANSFER_UNPLACED when none). 409 WAREHOUSE_TRANSFER_STATE when not in transit. The body is optional.
+         */
+        post: operations["completeWarehouseTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/transfers/{uuid}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel a warehouse transfer
+         * @description Needs `warehouse.write`. A draft closes without stock; an in-transit transfer posts `transfer_cancel_restore` per line in one transaction (each unit goes back to its source location and status). 409 WAREHOUSE_TRANSFER_STATE when completed or cancelled.
+         */
+        post: operations["cancelWarehouseTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/product-images/{key}": {
         parameters: {
             query?: never;
@@ -6745,6 +6971,26 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["SearchHitsData"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        SearchGlobalGroup: {
+            /** @example customers */
+            spec: string;
+            /** @example search.specs_customers */
+            label_key: string;
+            icon?: string | null;
+            items: components["schemas"]["SearchHit"][];
+        };
+        SearchGlobalData: {
+            enabled: boolean;
+            /** @enum {string|null} */
+            info: "search_disabled" | null;
+            groups: components["schemas"]["SearchGlobalGroup"][];
+        };
+        EnvelopeSearchGlobal: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["SearchGlobalData"];
             meta: components["schemas"]["ResponseMeta"];
         };
         ErrorDetail: {
@@ -10206,6 +10452,121 @@ export interface components {
             };
             meta: components["schemas"]["ResponseMeta"];
         };
+        WarehouseMoveInput: {
+            barcodes: string[];
+            /** Format: uuid */
+            location_uuid?: string | null;
+            /** @description Scanned OFW:LOC:<full_code> or a bare full_code. */
+            location_code?: string;
+        };
+        WarehouseOrderPlaceInput: {
+            /** @description Limits the units; empty means every unit of the order. */
+            barcodes?: string[];
+            /** Format: uuid */
+            location_uuid?: string | null;
+            location_code?: string;
+        };
+        WarehouseMovedUnit: {
+            /** Format: uuid */
+            unit_uuid: string;
+            barcode: string;
+            from_location: null | components["schemas"]["StockEntryLocation"];
+            /** Format: uuid */
+            movement_uuid: string | null;
+            /**
+             * @description Order placement only.
+             * @enum {string}
+             */
+            skipped?: "fixed" | "not_on_hand";
+        };
+        WarehouseMoveResult: {
+            location: components["schemas"]["StockEntryLocation"];
+            units: components["schemas"]["WarehouseMovedUnit"][];
+        };
+        EnvelopeWarehouseMoveResult: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WarehouseMoveResult"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        WarehouseTransferStatus: "draft" | "in_transit" | "completed" | "cancelled";
+        WarehouseTransferInput: {
+            /** Format: uuid */
+            from_warehouse_uuid: string;
+            /** Format: uuid */
+            to_warehouse_uuid: string;
+            /** Format: uuid */
+            to_location_uuid?: string | null;
+            note?: string | null;
+        };
+        WarehouseTransferLinesInput: {
+            barcodes: string[];
+        };
+        WarehouseTransferCompleteInput: {
+            /** Format: uuid */
+            location_uuid?: string | null;
+            location_code?: string;
+        };
+        WarehouseTransferLine: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            unit_uuid: string;
+            barcode: string;
+            unit_status: string;
+            product: components["schemas"]["StockEntryProduct"];
+            source_location: null | components["schemas"]["StockEntryLocation"];
+            target_location: null | components["schemas"]["StockEntryLocation"];
+            /** Format: uuid */
+            out_movement_uuid: string | null;
+            /** Format: uuid */
+            in_movement_uuid: string | null;
+            /** Format: uuid */
+            placement_movement_uuid: string | null;
+            /** Format: uuid */
+            restore_movement_uuid: string | null;
+        };
+        WarehouseTransfer: {
+            /** Format: uuid */
+            uuid: string;
+            transfer_no: string;
+            status: components["schemas"]["WarehouseTransferStatus"];
+            note: string | null;
+            from_warehouse: components["schemas"]["StockEntryWarehouse"];
+            to_warehouse: components["schemas"]["StockEntryWarehouse"];
+            to_location: null | components["schemas"]["StockEntryLocation"];
+            /** Format: int64 */
+            line_count: number;
+            /** @description Detail responses only. */
+            lines?: components["schemas"]["WarehouseTransferLine"][];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            shipped_at: string | null;
+            /** Format: date-time */
+            completed_at: string | null;
+            /** Format: date-time */
+            cancelled_at: string | null;
+        };
+        EnvelopeWarehouseTransfer: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WarehouseTransfer"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWarehouseTransferPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["WarehouseTransfer"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
         /** @enum {string} */
         StockReclassificationStatus: "pending" | "approved" | "rejected" | "cancelled";
         StockReclassificationInput: {
@@ -12694,6 +13055,36 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeSearchHits"];
                 };
             };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getSearchGlobal: {
+        parameters: {
+            query?: {
+                q?: string;
+                /** @description Narrow the answer to one group. */
+                spec?: string;
+                /** @description Hits per group. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Grouped hits */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeSearchGlobal"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             500: components["responses"]["InternalError"];
@@ -19593,6 +19984,326 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeStockEntry"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    moveWarehouseUnits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseMoveInput"];
+            };
+        };
+        responses: {
+            /** @description Moved units */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseMoveResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    placeReceivedOrderUnits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseOrderPlaceInput"];
+            };
+        };
+        responses: {
+            /** @description Placed and skipped units */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseMoveResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listWarehouseTransfers: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["WarehouseTransferStatus"];
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Transfers (without lines) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseTransferPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createWarehouseTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseTransferInput"];
+            };
+        };
+        responses: {
+            /** @description Draft transfer */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseTransfer"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getWarehouseTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Transfer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseTransfer"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    addWarehouseTransferLines: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseTransferLinesInput"];
+            };
+        };
+        responses: {
+            /** @description Transfer with the new lines */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseTransfer"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    deleteWarehouseTransferLine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                line_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Transfer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseTransfer"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    placeWarehouseTransferLines: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockEntryPlaceInput"];
+            };
+        };
+        responses: {
+            /** @description Transfer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseTransfer"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    shipWarehouseTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description In-transit transfer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseTransfer"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    completeWarehouseTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["WarehouseTransferCompleteInput"];
+            };
+        };
+        responses: {
+            /** @description Completed transfer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseTransfer"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    cancelWarehouseTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancelled transfer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseTransfer"];
                 };
             };
             401: components["responses"]["Unauthenticated"];

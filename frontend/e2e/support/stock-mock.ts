@@ -221,6 +221,42 @@ export class StockMock {
       });
       return page(rows);
     }
+    // TEC-213: Cmd+K global search (stock units group by barcode).
+    if (method === "GET" && path === "/v1/search/specs") {
+      return ok({ items: [], enabled: true });
+    }
+    if (method === "GET" && path === "/v1/search/global") {
+      const q = (url.searchParams.get("q") ?? "").toLowerCase();
+      const hits = (this.units[ORG] ?? [])
+        .filter((u) => u.status !== "used")
+        .filter((u) => q && String(u.barcode).toLowerCase().includes(q))
+        .map((u) => ({
+          spec: "stock_units",
+          id: u.uuid,
+          title: u.barcode,
+          subtitle: (u.product as Json).name,
+          href: `/stock/units/${u.barcode}`,
+          icon: "barcode",
+        }));
+      return ok({
+        enabled: true,
+        info: null,
+        groups: [
+          {
+            spec: "organizations",
+            label_key: "search.specs_organizations",
+            icon: "building",
+            items: [],
+          },
+          {
+            spec: "stock_units",
+            label_key: "search.specs_stock_units",
+            icon: "barcode",
+            items: hits,
+          },
+        ],
+      });
+    }
     const products = path.match(
       /^\/v1\/stock\/organizations\/([^/]+)\/products$/,
     );

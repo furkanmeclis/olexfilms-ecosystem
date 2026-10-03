@@ -1,6 +1,8 @@
 import {
   Activity,
+  Barcode,
   Bell,
+  Building2,
   Car,
   Download,
   HardDrive,
@@ -11,10 +13,12 @@ import {
   ScrollText,
   Settings2,
   Shield,
+  ShieldCheck,
   Tags,
   Upload,
   Users,
   Wallet,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 
@@ -42,6 +46,11 @@ const ICONS: Record<string, LucideIcon> = {
   tenant_finance_accounts: Wallet,
   tenant_finance_categories: Tags,
   tenant_finance_transactions: Receipt,
+  // TEC-213 record indexes.
+  wrench: Wrench,
+  "shield-check": ShieldCheck,
+  building: Building2,
+  barcode: Barcode,
 };
 
 export function resolveSearchIcon(name?: string): LucideIcon {

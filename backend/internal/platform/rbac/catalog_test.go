@@ -226,7 +226,7 @@ func TestDefaultMemberRole(t *testing.T) {
 
 // TEC-165 (K6/K13/K20): the seller approves and ships, the buyer receives;
 // dealers never approve or ship orders, only distributors approve sibling
-// transfers, and no non-super_admin role reaches orders at scope all.
+// transfers (and center staff/warehouse returns, TEC-228), and no non-super_admin role reaches orders at scope all.
 func TestOrderGrants(t *testing.T) {
 	staff, _ := RoleBySlug(RoleCenterStaff)
 	if staff.Grants[PermOrdersApprove] != ScopeBrand {
@@ -258,8 +258,15 @@ func TestOrderGrants(t *testing.T) {
 				}
 			}
 		}
-		if _, ok := r.Grants[PermTransfersApprove]; ok && r.OrgType != OrgTypeDistributor {
+		// TEC-228: besides the distributor (sibling transfers), the center
+		// staff and the center warehouse decide returns sent to the center;
+		// center accounting and center social do not.
+		centerApprover := r.Slug == RoleCenterStaff || r.Slug == RoleCenterWarehouse
+		if _, ok := r.Grants[PermTransfersApprove]; ok && r.OrgType != OrgTypeDistributor && !centerApprover {
 			t.Fatalf("%s must not hold transfers.approve", r.Slug)
+		}
+		if centerApprover && r.Grants[PermTransfersApprove] != ScopeBrand {
+			t.Fatalf("%s transfers.approve = %q, want brand", r.Slug, r.Grants[PermTransfersApprove])
 		}
 	}
 }

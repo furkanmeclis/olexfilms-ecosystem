@@ -11,6 +11,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -209,5 +210,104 @@ func TestIntegrationStockReturnRequests(t *testing.T) {
 	}
 	if rows := finance(r2.UUID); len(rows) != 0 {
 		t.Fatalf("rows after rejection = %+v", rows)
+	}
+}
+
+// TEC-228 acceptance: a distributor returns units to the center (its direct
+// parent). The center warehouse role decides and receives the return and
+// the center staff role may reject one; neither needs super_admin. The
+// center accounting role, the returning distributor, another distributor
+// and a dealer cannot approve it.
+func TestIntegrationCenterDecidesDistributorReturn(t *testing.T) {
+	it := newIntegration(t)
+	ctx := context.Background()
+	center := it.brandCenter("olex")
+	dist := it.org("t228-dist", "distributor", center)
+	dealer := it.org("t228-dealer", "dealer", dist)
+	dist2 := it.org("t228-dist2", "distributor", center)
+
+	ud, dpw := it.user("t228-dist-owner")
+	it.member(dist, ud, "owner")
+	ud2, d2pw := it.user("t228-dist2-owner")
+	it.member(dist2, ud2, "owner")
+	ul, lpw := it.user("t228-dealer-owner")
+	it.member(dealer, ul, "owner")
+	uw, wpw := it.user("t228-center-wh")
+	it.member(center, uw, "staff", rbac.RoleCenterWarehouse)
+	us, spw := it.user("t228-center-staff")
+	it.member(center, us, "staff", rbac.RoleCenterStaff)
+	ua, apw := it.user("t228-center-acc")
+	it.member(center, ua, "staff", rbac.RoleCenterAccounting)
+	dTok := it.loginOrg(ud, dpw, dist)
+	d2Tok := it.loginOrg(ud2, d2pw, dist2)
+	lTok := it.loginOrg(ul, lpw, dealer)
+	wTok := it.loginOrg(uw, wpw, center)
+	sTok := it.loginOrg(us, spw, center)
+	aTok := it.loginOrg(ua, apw, center)
+
+	piece := it.product(center, "T228P")
+	chain := it.stockChain()
+	loc := chain.location(center, "T228")
+	atDist := ledger.Owner{Type: ledger.OwnerOrganization, ID: dist.ID, OrgID: dist.ID}
+	var units []db.Unit
+	for i := 1; i <= 2; i++ {
+		u := chain.unit(center, piece, 2280+i)
+		chain.post(ledger.TypeEntry, u, chain.nextRef(), loc)
+		chain.ship(u, ledger.TypeTransferOut, ledger.TypeTransferIn, dist, atDist)
+		units = append(units, u)
+	}
+	createReturn := func(u db.Unit) stockTransferView {
+		t.Helper()
+		v, _ := it.transferCall("POST", "/v1/stock-transfers", dTok, map[string]any{
+			"kind":  "return",
+			"items": []map[string]any{{"barcode": u.Barcode}},
+		}, http.StatusCreated)
+		if v.Status != "requested" || v.Receiver.UUID != center.Uuid.String() {
+			t.Fatalf("distributor return = %+v", v)
+		}
+		return v
+	}
+	move := func(tok, id, status string) {
+		t.Helper()
+		if code, ec := it.transferMove(tok, id, status); code != http.StatusOK {
+			t.Fatalf("%s %s = %d %s", id, status, code, ec)
+		}
+	}
+
+	r1 := createReturn(units[0])
+
+	// Nobody but a center role holding transfers.approve decides it.
+	for _, c := range []struct {
+		name string
+		tok  string
+		want int
+	}{
+		{"returning distributor", dTok, http.StatusForbidden},
+		{"other distributor", d2Tok, http.StatusNotFound},
+		{"dealer under the distributor", lTok, http.StatusNotFound},
+		{"center accounting", aTok, http.StatusForbidden},
+	} {
+		if code, ec := it.transferMove(c.tok, r1.UUID, "approved"); code != c.want {
+			t.Fatalf("%s approves = %d %s, want %d", c.name, code, ec, c.want)
+		}
+	}
+
+	// The center warehouse sees itself as the parent and decides.
+	if v, _ := it.transferCall("GET", "/v1/stock-transfers/"+r1.UUID, wTok, nil, http.StatusOK); v.Role != "parent" ||
+		strings.Join(v.AvailableTransitions, ",") != "approved,rejected,cancelled" {
+		t.Fatalf("center warehouse view = %+v", v)
+	}
+	move(wTok, r1.UUID, "approved")
+	move(dTok, r1.UUID, "shipped")
+	move(wTok, r1.UUID, "received")
+	if st, err := it.q.GetUnitCurrentState(ctx, units[0].ID); err != nil || st.HolderOrgID != center.ID || st.Status != "available" {
+		t.Fatalf("returned unit = %+v, %v", st, err)
+	}
+
+	// The center staff role rejects the second return; the unit stays.
+	r2 := createReturn(units[1])
+	move(sTok, r2.UUID, "rejected")
+	if st, err := it.q.GetUnitCurrentState(ctx, units[1].ID); err != nil || st.HolderOrgID != dist.ID || st.Status != "available" {
+		t.Fatalf("rejected unit = %+v, %v", st, err)
 	}
 }

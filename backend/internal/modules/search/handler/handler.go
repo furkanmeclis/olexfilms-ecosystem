@@ -1,11 +1,13 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
 
 	searchusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/usecase"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
 )
@@ -40,4 +42,29 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 		items = []searchengine.Hit{}
 	}
 	response.JSON(w, r, http.StatusOK, map[string]any{"items": items})
+}
+
+// Global answers GET /v1/search/global (TEC-213): the hits of every index
+// the caller may read in the active organization, grouped by spec.
+func (h *Handler) Global(w http.ResponseWriter, r *http.Request) {
+	v := r.URL.Query()
+	limit := searchusecase.DefaultGroupLimit
+	if raw := strings.TrimSpace(v.Get("limit")); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n < 1 || n > searchusecase.MaxGroupLimit {
+			response.ValidationError(w, r, []response.Detail{{Field: "limit", Message: "must be between 1 and 20"}})
+			return
+		}
+		limit = n
+	}
+	res, err := h.svc.Global(r.Context(), orgctx.MustScope(r.Context()), v.Get("q"), v.Get("spec"), limit)
+	if errors.Is(err, searchusecase.ErrQueryTooLong) {
+		response.ValidationError(w, r, []response.Detail{{Field: "q", Message: "must be at most 100 characters"}})
+		return
+	}
+	if err != nil {
+		response.InternalErr(w, r, err, "global search failed")
+		return
+	}
+	response.JSON(w, r, http.StatusOK, res)
 }

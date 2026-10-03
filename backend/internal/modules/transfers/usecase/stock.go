@@ -121,6 +121,14 @@ func (s *Service) checkSerialFree(ctx context.Context, q *db.Queries, u db.Unit,
 	if n > 0 {
 		return errReserved
 	}
+	// TEC-205: a unit on an open warehouse transfer (draft or in transit)
+	// is held by it.
+	if n, err = q.CountOpenWarehouseTransferLinesByUnit(ctx, u.ID); err != nil {
+		return fmt.Errorf("transfers: open warehouse transfers: %w", err)
+	}
+	if n > 0 {
+		return errReserved
+	}
 	return nil
 }
 

@@ -4,6 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { createElement, useCallback, useMemo, useState } from "react";
 
 import type { AppLayoutVariant } from "@/components/layout/app-layout";
+import { Permission } from "@/config/permissions";
+import {
+  detectQueryKind,
+  prioritizeGroups,
+} from "@/features/search-engine/lib/detect-query";
 import { buildNavPageItems } from "@/features/search-engine/lib/nav-pages";
 import { parsePaletteQuery } from "@/features/search-engine/lib/parse-query";
 import { resolveSearchHitHref } from "@/features/search-engine/lib/hit-href";
@@ -14,6 +19,7 @@ import {
 } from "@/features/search-engine/lib/spec-prefixes";
 import { resolveSearchIcon } from "@/features/search-engine/lib/icons";
 import {
+  fetchGlobalSearch,
   fetchSearchHits,
   fetchSearchSpecs,
 } from "@/features/search-engine/services/search.service";
@@ -22,6 +28,29 @@ import { useEnabledFeatures } from "@/features/modules/hooks/use-features";
 import { useActiveOrganization } from "@/hooks/use-active-organization";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
+
+/**
+ * TEC-213: record indexes of the tenant global search (GET /v1/search/global)
+ * with the list permission each needs. The server checks the permission,
+ * scope and module feature again and leaves out what the caller cannot read.
+ */
+export const RECORD_SPECS = [
+  { id: "customers", permission: Permission.CustomersRead, icon: "users" },
+  { id: "vehicles", permission: Permission.VehiclesRead, icon: "car" },
+  { id: "services", permission: Permission.ServicesRead, icon: "wrench" },
+  {
+    id: "warranties",
+    permission: Permission.WarrantiesRead,
+    icon: "shield-check",
+  },
+  { id: "orders", permission: Permission.OrdersRead, icon: "receipt" },
+  {
+    id: "organizations",
+    permission: Permission.OrganizationsRead,
+    icon: "building",
+  },
+  { id: "stock_units", permission: Permission.StockRead, icon: "barcode" },
+] as const;
 
 export function useCommandPaletteData(
   variant: AppLayoutVariant,
@@ -63,9 +92,19 @@ export function useCommandPaletteData(
     staleTime: 60_000,
   });
 
+  const globalMode = variant === "tenant";
+
   const remoteSpecs = useMemo(() => {
     const items = specsQuery.data?.items ?? [];
-    return items.filter((spec) => {
+    const records = globalMode
+      ? RECORD_SPECS.filter((spec) => can(spec.permission)).map((spec) => ({
+          id: spec.id,
+          label_key: `search.specs_${spec.id}`,
+          permission: spec.permission as string,
+          icon: spec.icon as string,
+        }))
+      : [];
+    const indexed = items.filter((spec) => {
       // Brand-scoped specs (catalog products, TEC-145) filter on the active
       // organization's brand, so they belong to the tenant shell too.
       const tenantOnly = Boolean(spec.tenant_scoped || spec.brand_scoped);
@@ -73,7 +112,8 @@ export function useCommandPaletteData(
       if (!tenantOnly && variant === "tenant") return false;
       return !spec.permission || can(spec.permission);
     });
-  }, [can, specsQuery.data?.items, variant]);
+    return [...records, ...indexed];
+  }, [can, globalMode, specsQuery.data?.items, variant]);
 
   const prefixMap = useMemo(() => {
     const entries: SpecPrefixEntry[] = [
@@ -119,25 +159,50 @@ export function useCommandPaletteData(
   const remoteQuery = useQuery({
     queryKey: ["search", "hits", searchText, effectiveSpec],
     queryFn: () => fetchSearchHits(searchText, effectiveSpec),
-    enabled: Boolean(searchText) && specsQuery.data?.enabled !== false,
+    enabled:
+      !globalMode && Boolean(searchText) && specsQuery.data?.enabled !== false,
     staleTime: 15_000,
   });
 
+  // TEC-213: the tenant shell searches every record index at once.
+  const globalQuery = useQuery({
+    queryKey: ["search", "global", tenantSlug, searchText, effectiveSpec],
+    queryFn: () => fetchGlobalSearch(searchText, effectiveSpec),
+    enabled: globalMode && Boolean(searchText) && effectiveSpec !== "pages",
+    staleTime: 15_000,
+  });
+
+  const queryKind = useMemo(() => detectQueryKind(searchText), [searchText]);
+
+  const globalItems = useMemo(() => {
+    const groups = prioritizeGroups(globalQuery.data?.groups ?? [], queryKind);
+    return groups.flatMap((group) =>
+      group.items.map<PaletteItem>((hit) => ({
+        id: `${hit.spec}:${hit.id}`,
+        spec: hit.spec,
+        label: hit.title,
+        description: hit.subtitle,
+        href: resolveSearchHitHref(hit.href, tenantSlug),
+        iconKey: hit.icon ?? group.icon ?? undefined,
+        group: t(group.label_key),
+      })),
+    );
+  }, [globalQuery.data?.groups, queryKind, t, tenantSlug]);
+
   const remoteItems = useMemo(() => {
+    if (globalMode) return globalItems;
     const hits = remoteQuery.data ?? [];
     return hits.map<PaletteItem>((hit) => ({
       id: `${hit.spec}:${hit.id}`,
       spec: hit.spec,
       label: hit.title,
       description: hit.subtitle,
-      href: resolveSearchHitHref(
-        hit.href,
-        variant === "tenant" ? tenantSlug : null,
-      ),
+      // Outside the tenant shell hit links are absolute.
+      href: resolveSearchHitHref(hit.href, null),
       iconKey: hit.icon,
       group: t(`search.specs_${hit.spec}`),
     }));
-  }, [remoteQuery.data, t, tenantSlug, variant]);
+  }, [globalItems, globalMode, remoteQuery.data, t]);
 
   const specOptions = useMemo(() => {
     const options = [
@@ -172,17 +237,29 @@ export function useCommandPaletteData(
         recent.map((item) => ({ ...item, group: t("search.group_recent") })),
       );
     }
-    push(filteredPages);
-    push(remoteItems);
+    // A recognised barcode / plate / VIN puts its record group first.
+    if (queryKind) {
+      push(remoteItems);
+      push(filteredPages);
+    } else {
+      push(filteredPages);
+      push(remoteItems);
+    }
     return groups;
   }, [
     effectiveSpec,
     filteredPages,
+    queryKind,
     recentQuery.data,
     remoteItems,
     searchText,
     t,
   ]);
+
+  const infoText =
+    globalMode && globalQuery.data?.info === "search_disabled"
+      ? t("search.global_disabled")
+      : undefined;
 
   return {
     query,
@@ -193,7 +270,8 @@ export function useCommandPaletteData(
     searchText,
     specOptions,
     groupedItems,
-    loading: remoteQuery.isFetching,
+    loading: globalMode ? globalQuery.isFetching : remoteQuery.isFetching,
+    infoText,
     remoteEnabled: specsQuery.data?.enabled ?? true,
     placeholder: t("search.placeholder"),
     emptyText: t("search.empty"),

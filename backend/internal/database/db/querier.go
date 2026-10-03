@@ -45,6 +45,7 @@ type Querier interface {
 	CancelStockTransferRequest(ctx context.Context, id int64) (StockTransferRequest, error)
 	CancelTransferRequest(ctx context.Context, arg CancelTransferRequestParams) (StockTransferRequest, error)
 	CancelVehicleTransfer(ctx context.Context, id int64) (VehicleTransfer, error)
+	CancelWarehouseTransfer(ctx context.Context, arg CancelWarehouseTransferParams) (WarehouseTransfer, error)
 	// Vehicle transfer (decision 6): the active warranties of the vehicle move
 	// to the new owner in the transfer transaction.
 	ChangeWarrantyHolderByVehicle(ctx context.Context, arg ChangeWarrantyHolderByVehicleParams) ([]Warranty, error)
@@ -73,10 +74,13 @@ type Querier interface {
 	// when nothing is left, chk_users_email_or_phone). Runs before the target
 	// takes the identifiers over (unique indexes are checked per statement).
 	CloseMergedUser(ctx context.Context, arg CloseMergedUserParams) (User, error)
+	// Releases the unit lock when the transfer is completed or cancelled.
+	CloseWarehouseTransferLines(ctx context.Context, transferID int64) error
 	CompleteService(ctx context.Context, arg CompleteServiceParams) (Service, error)
 	CompleteStockCount(ctx context.Context, arg CompleteStockCountParams) (StockCount, error)
 	CompleteStockTransferRequest(ctx context.Context, id int64) (StockTransferRequest, error)
 	CompleteVehicleTransfer(ctx context.Context, arg CompleteVehicleTransferParams) (VehicleTransfer, error)
+	CompleteWarehouseTransfer(ctx context.Context, arg CompleteWarehouseTransferParams) (WarehouseTransfer, error)
 	ConfirmStockEntry(ctx context.Context, arg ConfirmStockEntryParams) (StockEntry, error)
 	ConfirmUserTOTP(ctx context.Context, arg ConfirmUserTOTPParams) (UserTotp, error)
 	ConsumeOTP(ctx context.Context, id int64) error
@@ -114,6 +118,8 @@ type Querier interface {
 	// A unit is on at most one open (requested or approved) request; the
 	// caller holds the unit row lock.
 	CountOpenTransferItemsByUnit(ctx context.Context, arg CountOpenTransferItemsByUnitParams) (int64, error)
+	// Used by other flows (stock transfer requests) to respect the lock.
+	CountOpenWarehouseTransferLinesByUnit(ctx context.Context, unitID int64) (int64, error)
 	CountOrdersByBuyer(ctx context.Context, arg CountOrdersByBuyerParams) (int64, error)
 	CountOrdersBySeller(ctx context.Context, arg CountOrdersBySellerParams) (int64, error)
 	CountOrdersInScope(ctx context.Context, arg CountOrdersInScopeParams) (int64, error)
@@ -155,6 +161,8 @@ type Querier interface {
 	CountUserCariAccounts(ctx context.Context, userID pgtype.Int8) (int64, error)
 	CountUsers(ctx context.Context, arg CountUsersParams) (int64, error)
 	CountUsersWithRole(ctx context.Context, roleSlug string) (int64, error)
+	CountWarehouseTransferLines(ctx context.Context, transferID int64) (int64, error)
+	CountWarehouseTransfers(ctx context.Context, arg CountWarehouseTransfersParams) (int64, error)
 	CountWarrantiesInScope(ctx context.Context, arg CountWarrantiesInScopeParams) (int64, error)
 	CountWarrantyRows(ctx context.Context, arg CountWarrantyRowsParams) (int64, error)
 	CreateBarcodeBatch(ctx context.Context, arg CreateBarcodeBatchParams) (BarcodeBatch, error)
@@ -276,6 +284,9 @@ type Querier interface {
 	// ---------------------------------------------------------------------------
 	// Warehouse locations (minimal; TEC-95 extends).
 	CreateWarehouseLocation(ctx context.Context, arg CreateWarehouseLocationParams) (WarehouseLocation, error)
+	// TEC-205: warehouse -> warehouse transfer documents (draft -> in_transit ->
+	// completed / cancelled) inside one organization.
+	CreateWarehouseTransfer(ctx context.Context, arg CreateWarehouseTransferParams) (WarehouseTransfer, error)
 	// TEC-185 (F1-06a): warranties and vehicle ownership transfers (migration
 	// 000051). Panel reads are brand-bound (K20); the public lookup by
 	// public_code is brand-bound too (a warranty of another brand is 404).
@@ -355,6 +366,7 @@ type Querier interface {
 	DeleteUnitCurrentStateForRepair(ctx context.Context, unitID int64) error
 	DeleteUserTOTP(ctx context.Context, userID int64) error
 	DeleteWarehouse(ctx context.Context, arg DeleteWarehouseParams) (int64, error)
+	DeleteWarehouseTransferLine(ctx context.Context, arg DeleteWarehouseTransferLineParams) (int64, error)
 	DeleteWebAuthnCredentialByCredentialID(ctx context.Context, credentialID string) error
 	DeleteWebAuthnCredentialByUUID(ctx context.Context, arg DeleteWebAuthnCredentialByUUIDParams) error
 	// Every organization below the given one (not including itself).
@@ -385,6 +397,8 @@ type Querier interface {
 	// Another draft entry (or, for serial units, a confirmed one whose line
 	// was not undone) already holding the unit.
 	FindOpenStockEntryForUnit(ctx context.Context, arg FindOpenStockEntryForUnitParams) (FindOpenStockEntryForUnitRow, error)
+	// The open (draft or in_transit) warehouse transfer holding the unit.
+	FindOpenWarehouseTransferForUnit(ctx context.Context, unitID int64) (FindOpenWarehouseTransferForUnitRow, error)
 	// The rate of a pair (either direction) on the latest day within
 	// [min_date, on_date]; on that day manual > tcmb > ecb, direct before inverse.
 	FindPairRate(ctx context.Context, arg FindPairRateParams) (FindPairRateRow, error)
@@ -628,6 +642,7 @@ type Querier interface {
 	// code.
 	GetWarehouseLocationByCode(ctx context.Context, arg GetWarehouseLocationByCodeParams) (WarehouseLocation, error)
 	GetWarehouseLocationByUUID(ctx context.Context, argUuid uuid.UUID) (WarehouseLocation, error)
+	GetWarehouseTransferByUUID(ctx context.Context, arg GetWarehouseTransferByUUIDParams) (WarehouseTransfer, error)
 	GetWarranty(ctx context.Context, arg GetWarrantyParams) (Warranty, error)
 	// Public page /garanti/{public_code} (decision 1).
 	GetWarrantyByPublicCode(ctx context.Context, arg GetWarrantyByPublicCodeParams) (Warranty, error)
@@ -728,6 +743,7 @@ type Querier interface {
 	// Unit current state (serial units; one active owner).
 	InsertUnitCurrentState(ctx context.Context, arg InsertUnitCurrentStateParams) (UnitCurrentState, error)
 	InsertUserRole(ctx context.Context, arg InsertUserRoleParams) error
+	InsertWarehouseTransferLine(ctx context.Context, arg InsertWarehouseTransferLineParams) (WarehouseTransferLine, error)
 	InsertWhatsAppConnectionEvent(ctx context.Context, arg InsertWhatsAppConnectionEventParams) (WhatsappConnectionEvent, error)
 	InvalidateActiveOTPs(ctx context.Context, arg InvalidateActiveOTPsParams) error
 	InvalidateActivePhoneOTPs(ctx context.Context, arg InvalidateActivePhoneOTPsParams) error
@@ -1103,6 +1119,8 @@ type Querier interface {
 	// Scope.
 	// Typed locations of a warehouse, optionally one room.
 	ListWarehouseScopeLocationIDs(ctx context.Context, arg ListWarehouseScopeLocationIDsParams) ([]int64, error)
+	ListWarehouseTransferLines(ctx context.Context, transferID int64) ([]WarehouseTransferLine, error)
+	ListWarehouseTransfers(ctx context.Context, arg ListWarehouseTransfersParams) ([]WarehouseTransfer, error)
 	// TEC-201: warehouse and location tree (000059). Every query is bound to
 	// one organization; the warehouse side is brand-independent (K20).
 	// ---------------------------------------------------------------------------
@@ -1215,6 +1233,7 @@ type Querier interface {
 	// Locks both users in id order (no deadlock between two opposite merges).
 	LockUsersForMerge(ctx context.Context, ids []int64) ([]User, error)
 	LockVehicleTransferByUUID(ctx context.Context, arg LockVehicleTransferByUUIDParams) (VehicleTransfer, error)
+	LockWarehouseTransferByUUID(ctx context.Context, arg LockWarehouseTransferByUUIDParams) (WarehouseTransfer, error)
 	LockWarranty(ctx context.Context, arg LockWarrantyParams) (Warranty, error)
 	MarkAllNotificationsReadForUser(ctx context.Context, userID pgtype.Int8) (int64, error)
 	MarkBarcodeBatchPrinted(ctx context.Context, id int64) (BarcodeBatch, error)
@@ -1375,9 +1394,14 @@ type Querier interface {
 	SetVehicleOwner(ctx context.Context, arg SetVehicleOwnerParams) (Vehicle, error)
 	SetVehicleTransferVerified(ctx context.Context, arg SetVehicleTransferVerifiedParams) (VehicleTransfer, error)
 	SetWarehouseSortOrder(ctx context.Context, arg SetWarehouseSortOrderParams) (int64, error)
+	SetWarehouseTransferLineIn(ctx context.Context, arg SetWarehouseTransferLineInParams) error
+	SetWarehouseTransferLineOut(ctx context.Context, arg SetWarehouseTransferLineOutParams) error
+	SetWarehouseTransferLineRestore(ctx context.Context, arg SetWarehouseTransferLineRestoreParams) error
+	SetWarehouseTransferLineTarget(ctx context.Context, arg SetWarehouseTransferLineTargetParams) (int64, error)
 	SetWhatsAppInstance(ctx context.Context, arg SetWhatsAppInstanceParams) (WhatsappSetting, error)
 	SetWhatsAppSMSFallback(ctx context.Context, smsFallbackEnabled bool) (WhatsappSetting, error)
 	ShipTransferRequest(ctx context.Context, arg ShipTransferRequestParams) (StockTransferRequest, error)
+	ShipWarehouseTransfer(ctx context.Context, arg ShipWarehouseTransferParams) (WarehouseTransfer, error)
 	SlugExists(ctx context.Context, slug string) (bool, error)
 	SoftDeleteVehicle(ctx context.Context, id int64) (int64, error)
 	StartStockCount(ctx context.Context, arg StartStockCountParams) (StockCount, error)

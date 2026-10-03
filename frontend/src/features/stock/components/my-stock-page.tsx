@@ -52,7 +52,17 @@ const selectClass =
  * that dealer's stock as is (stock.read at scope subtree, TEC-216). The
  * purchase price column shows only when the API answers a price (K8).
  */
-export function MyStockPage({ slug }: { slug: string }) {
+export function MyStockPage({
+  slug,
+  initialBarcode,
+  initialOrganization,
+}: {
+  slug: string;
+  /** TEC-213: palette deep link (?barcode=). */
+  initialBarcode?: string;
+  /** TEC-213: palette deep link to an organization's stock (?organization=). */
+  initialOrganization?: string;
+}) {
   const { t, format } = useLocale();
   const { can } = usePermission();
   const org = useActiveOrganization(slug);
@@ -60,8 +70,12 @@ export function MyStockPage({ slug }: { slug: string }) {
   const isDistributor = org?.type === "distributor";
 
   const [tab, setTab] = useState<StockTab>("stock");
-  const [dealer, setDealer] = useState<string>(OWN);
-  const [filters, setFilters] = useState<StockListFilters>(EMPTY_STOCK_FILTERS);
+  const [dealer, setDealer] = useState<string>(initialOrganization || OWN);
+  const [filters, setFilters] = useState<StockListFilters>(() =>
+    initialBarcode
+      ? { ...EMPTY_STOCK_FILTERS, barcode: initialBarcode }
+      : EMPTY_STOCK_FILTERS,
+  );
   const [page, setPage] = useState(0);
   const q = useDebounce(filters.q, 300);
   const barcode = useDebounce(filters.barcode, 300);
