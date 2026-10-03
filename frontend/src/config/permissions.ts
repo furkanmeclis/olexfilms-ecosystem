@@ -405,4 +405,7 @@ export const permissions = {
     read: Permission.VehicleCatalogRead,
     write: Permission.VehicleCatalogWrite,
   },
+  stock: {
+    read: Permission.StockRead,
+  },
 } as const;
