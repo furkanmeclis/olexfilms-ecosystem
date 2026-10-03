@@ -7053,6 +7053,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portal/vehicles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The portal user's vehicles (TEC-238)
+         * @description Portal session (aud=portal) with vehicles.read: only the vehicles the signed-in user owns in the domain brand (K20). Glorian vehicles never come back (K1/K2). Counts cover the user's non-draft services and active warranties of each vehicle. No measurement data.
+         */
+        get: operations["listPortalVehicles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/vehicles/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One vehicle of the portal user with services and active warranties (TEC-238)
+         * @description The vehicle, a summary of the user's services on it across every organization of the domain brand, the latest services (at most 50; the full history is GET /v1/portal/services) and the active warranties with days and percent left. Another user's vehicle, a Glorian vehicle or an invalid uuid answers 404. No measurement data.
+         */
+        get: operations["getPortalVehicle"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The portal user's services across every organization (TEC-238)
+         * @description Portal session (aud=portal) with services.read: the signed-in user's services at every dealer / distributor of the domain brand in one list, newest first. Draft services and Glorian rows are not listed. No measurement data.
+         */
+        get: operations["listPortalServices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -12854,6 +12914,126 @@ export interface components {
             success: true;
             data: {
                 items: components["schemas"]["EodReport"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        PortalNamedRef: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+        };
+        PortalOrganizationRef: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            type: string;
+        };
+        /** @description A vehicle of the portal user (TEC-238). No measurement data. */
+        PortalVehicle: {
+            /** Format: uuid */
+            uuid: string;
+            car_brand: null | components["schemas"]["PortalNamedRef"];
+            car_model: null | components["schemas"]["PortalNamedRef"];
+            model_year: number | null;
+            plate: string | null;
+            plate_country: string | null;
+            vin: string | null;
+            /** Format: int64 */
+            service_count: number;
+            /** Format: int64 */
+            active_warranty_count: number;
+            /** Format: date-time */
+            last_service_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        /** @description A service of the portal user at any organization (TEC-238). No measurement data. */
+        PortalService: {
+            /** Format: uuid */
+            uuid: string;
+            service_no: string;
+            /** @enum {string} */
+            status: "pending" | "processing" | "ready" | "completed" | "cancelled";
+            package: string | null;
+            organization: components["schemas"]["PortalOrganizationRef"];
+            /** Format: uuid */
+            vehicle_uuid: string;
+            car_brand_name: string;
+            car_model_name: string;
+            model_year: number | null;
+            plate: string | null;
+            plate_country: string | null;
+            /** Format: date-time */
+            completed_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        PortalActiveWarranty: {
+            /** Format: uuid */
+            uuid: string;
+            public_code: string;
+            /** Format: date-time */
+            start_at: string;
+            /** Format: date-time */
+            end_at: string;
+            /** @description Whole days left, rounded up. */
+            days_left: number;
+            /** @description Share of the warranty period still left. */
+            percent_left: number;
+            product: {
+                /** Format: uuid */
+                uuid: string;
+                sku: string;
+                name: string;
+            };
+            service: {
+                /** Format: uuid */
+                uuid: string;
+                service_no: string;
+            };
+            organization: components["schemas"]["PortalOrganizationRef"];
+        };
+        PortalVehicleDetail: components["schemas"]["PortalVehicle"] & {
+            service_summary: {
+                /** Format: int64 */
+                total: number;
+                /** Format: int64 */
+                completed: number;
+                /** Format: int64 */
+                organization_count: number;
+                /** Format: date-time */
+                last_service_at: string | null;
+            };
+            services: components["schemas"]["PortalService"][];
+            active_warranties: components["schemas"]["PortalActiveWarranty"][];
+        };
+        EnvelopePortalVehiclePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["PortalVehicle"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePortalVehicleDetail: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PortalVehicleDetail"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePortalServicePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["PortalService"][];
                 /** Format: int64 */
                 total: number;
                 limit: number;
@@ -25540,6 +25720,82 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeTaskAssigneeList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listPortalVehicles: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Vehicles */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePortalVehiclePage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getPortalVehicle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Vehicle detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePortalVehicleDetail"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listPortalServices: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Services */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePortalServicePage"];
                 };
             };
             401: components["responses"]["Unauthenticated"];
