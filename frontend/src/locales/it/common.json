@@ -46,5 +46,13 @@
   "day.pick": "Scegli un giorno",
   "choose_file": "Scegli file",
   "image_formats": "PNG, JPG, WEBP o SVG",
-  "open": "Apri"
+  "open": "Apri",
+  "short_link.page_title": "Link breve",
+  "short_link.expired_title": "Questo link è scaduto",
+  "short_link.expired_body": "Il link che hai aperto non è più valido. Chiedine uno nuovo al mittente.",
+  "short_link.not_found_title": "Link non trovato",
+  "short_link.not_found_body": "Questo link non esiste. Verifica che sia stato copiato per intero.",
+  "short_link.error_title": "Impossibile aprire il link",
+  "short_link.error_body": "Qualcosa è andato storto. Riprova tra un momento.",
+  "short_link.home": "Vai alla home page"
 }

@@ -143,6 +143,7 @@ type Querier interface {
 	CountPermissions(ctx context.Context, q_ pgtype.Text) (int64, error)
 	CountPhoneOTPsSince(ctx context.Context, arg CountPhoneOTPsSinceParams) (int64, error)
 	CountPlatformNotifications(ctx context.Context, arg CountPlatformNotificationsParams) (int64, error)
+	CountPortalContracts(ctx context.Context, arg CountPortalContractsParams) (int64, error)
 	CountPortalServices(ctx context.Context, arg CountPortalServicesParams) (int64, error)
 	CountPortalVehicles(ctx context.Context, arg CountPortalVehiclesParams) (int64, error)
 	CountPricedProducts(ctx context.Context, arg CountPricedProductsParams) (int64, error)
@@ -260,6 +261,9 @@ type Querier interface {
 	// cancelled.
 	CreateServiceItem(ctx context.Context, arg CreateServiceItemParams) (ServiceItem, error)
 	CreateServiceItemCorrection(ctx context.Context, arg CreateServiceItemCorrectionParams) (ServiceItemCorrection, error)
+	// TEC-249 (F2-04d): short URLs behind /s/{token}.
+	// ON CONFLICT on the token returns no row: the caller draws a new token.
+	CreateShortURL(ctx context.Context, arg CreateShortURLParams) (CreateShortURLRow, error)
 	// TEC-206: stock counts (000068). Every query is bound to one organization;
 	// the warehouse side is brand-independent (K20).
 	CreateStockCount(ctx context.Context, arg CreateStockCountParams) (StockCount, error)
@@ -605,6 +609,10 @@ type Querier interface {
 	// connection and remote product id.
 	GetProductPushLink(ctx context.Context, id int64) (GetProductPushLinkRow, error)
 	GetProvinceByID(ctx context.Context, id int64) (Province, error)
+	// TEC-250: the public showcase of one active, serving (access window open)
+	// dealer or distributor of a brand. Only the showcase columns: no tax id,
+	// account, members or settings.
+	GetPublicDealerBySlug(ctx context.Context, arg GetPublicDealerBySlugParams) (GetPublicDealerBySlugRow, error)
 	// Public warranty lookup (TEC-189): only the fields the public page shows.
 	// No users join: the holder's personal data is never read, so an anonymized
 	// customer's warranty answers the same way (K19). Vehicle fields come from
@@ -638,6 +646,9 @@ type Querier interface {
 	// Display references of one service (organization, customer, vehicle and
 	// the car brand / model snapshot) for the API view (TEC-179).
 	GetServiceRefs(ctx context.Context, id int64) (GetServiceRefsRow, error)
+	// Tells an expired token of the brand apart from an unknown one.
+	GetShortURLExpiry(ctx context.Context, arg GetShortURLExpiryParams) (pgtype.Timestamptz, error)
+	GetShortURLStats(ctx context.Context, token string) (GetShortURLStatsRow, error)
 	GetStepupSettings(ctx context.Context) (StepupSetting, error)
 	GetStockCountByUUID(ctx context.Context, arg GetStockCountByUUIDParams) (StockCount, error)
 	GetStockCountScanByUUID(ctx context.Context, arg GetStockCountScanByUUIDParams) (StockCountScan, error)
@@ -714,6 +725,8 @@ type Querier interface {
 	GetWebAuthnCredentialByUUID(ctx context.Context, arg GetWebAuthnCredentialByUUIDParams) (WebauthnCredential, error)
 	// WhatsApp gateway, KVKK notices, conversations and messages (TEC-92).
 	GetWhatsAppSettings(ctx context.Context) (WhatsappSetting, error)
+	// Resolves a live token of the brand and counts the hit in one statement.
+	HitShortURL(ctx context.Context, arg HitShortURLParams) (HitShortURLRow, error)
 	// TEC-258: ledger.Import appends a recorded (historical) movement as is: its
 	// uuid and time come from the import (migration_map, the legacy timestamp).
 	// Idempotent like InsertStockMovement (no row on a repeated key).
@@ -1049,6 +1062,11 @@ type Querier interface {
 	ListPlateFormats(ctx context.Context, activeOnly bool) ([]ListPlateFormatsRow, error)
 	ListPlatformNotifications(ctx context.Context, arg ListPlatformNotificationsParams) ([]Notification, error)
 	ListPlatformNotificationsForExport(ctx context.Context, arg ListPlatformNotificationsForExportParams) ([]Notification, error)
+	// TEC-245 (F2-03e): the user's signed vehicle intake contracts. Until the
+	// contracts module (F3) lands a contract is only services.contract_id, so
+	// the list is the user's services that carry one (same ownership, brand,
+	// Glorian and draft rules as ListPortalServices); empty until F3 fills it.
+	ListPortalContracts(ctx context.Context, arg ListPortalContractsParams) ([]ListPortalContractsRow, error)
 	// Services of the user across every organization of the brand (one list,
 	// newest first). vehicle_id narrows to one vehicle (vehicle detail).
 	ListPortalServices(ctx context.Context, arg ListPortalServicesParams) ([]ListPortalServicesRow, error)

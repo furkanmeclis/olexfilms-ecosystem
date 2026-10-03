@@ -48,5 +48,13 @@
   "day.pick": "Выберите день",
   "choose_file": "Выбрать файл",
   "image_formats": "PNG, JPG, WEBP или SVG",
-  "open": "Открыть"
+  "open": "Открыть",
+  "short_link.page_title": "Короткая ссылка",
+  "short_link.expired_title": "Срок действия ссылки истёк",
+  "short_link.expired_body": "Открытая вами ссылка больше не действительна. Попросите отправителя прислать новую.",
+  "short_link.not_found_title": "Ссылка не найдена",
+  "short_link.not_found_body": "Такой ссылки не существует. Проверьте, что она скопирована полностью.",
+  "short_link.error_title": "Не удалось открыть ссылку",
+  "short_link.error_body": "Что-то пошло не так. Попробуйте ещё раз через минуту.",
+  "short_link.home": "На главную"
 }

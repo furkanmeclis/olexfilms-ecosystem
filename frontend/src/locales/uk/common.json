@@ -48,5 +48,13 @@
   "day.pick": "Виберіть день",
   "choose_file": "Вибрати файл",
   "image_formats": "PNG, JPG, WEBP або SVG",
-  "open": "Відкрити"
+  "open": "Відкрити",
+  "short_link.page_title": "Коротке посилання",
+  "short_link.expired_title": "Термін дії посилання минув",
+  "short_link.expired_body": "Відкрите вами посилання більше не дійсне. Попросіть відправника надіслати нове.",
+  "short_link.not_found_title": "Посилання не знайдено",
+  "short_link.not_found_body": "Такого посилання не існує. Перевірте, що його скопійовано повністю.",
+  "short_link.error_title": "Не вдалося відкрити посилання",
+  "short_link.error_body": "Щось пішло не так. Спробуйте ще раз за хвилину.",
+  "short_link.home": "На головну"
 }

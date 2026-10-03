@@ -50,5 +50,13 @@
   "day.pick": "اختر يومًا",
   "choose_file": "اختيار ملف",
   "image_formats": "PNG أو JPG أو WEBP أو SVG",
-  "open": "فتح"
+  "open": "فتح",
+  "short_link.page_title": "رابط مختصر",
+  "short_link.expired_title": "انتهت صلاحية هذا الرابط",
+  "short_link.expired_body": "الرابط الذي فتحته لم يعد صالحًا. اطلب رابطًا جديدًا من المرسل.",
+  "short_link.not_found_title": "الرابط غير موجود",
+  "short_link.not_found_body": "هذا الرابط غير موجود. تحقق من نسخه بالكامل.",
+  "short_link.error_title": "تعذر فتح الرابط",
+  "short_link.error_body": "حدث خطأ ما. يرجى المحاولة مرة أخرى بعد قليل.",
+  "short_link.home": "الانتقال إلى الصفحة الرئيسية"
 }

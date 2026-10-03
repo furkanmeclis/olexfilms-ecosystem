@@ -38,6 +38,14 @@ type Config struct {
 	Warranty   WarrantyConfig
 	Services   ServicesConfig
 	Glorian    GlorianConfig
+	ShortURLs  ShortURLsConfig
+}
+
+// ShortURLsConfig caps the public short URL resolver
+// GET /v1/public/short-urls/{token} per client IP (TEC-249).
+type ShortURLsConfig struct {
+	PublicRateLimit  int
+	PublicRateWindow time.Duration
 }
 
 // GlorianConfig is the outbound Inventory API connection to the Glorian hub
@@ -396,6 +404,10 @@ func Load() (Config, error) {
 			PublicRateLimit:    getInt("WARRANTY_PUBLIC_RATE_LIMIT", 30),
 			PublicRateWindow:   getDuration("WARRANTY_PUBLIC_RATE_WINDOW", time.Minute),
 			PublicPDFRateLimit: getInt("WARRANTY_PUBLIC_PDF_RATE_LIMIT", 5),
+		},
+		ShortURLs: ShortURLsConfig{
+			PublicRateLimit:  getInt("SHORT_URL_PUBLIC_RATE_LIMIT", 60),
+			PublicRateWindow: getDuration("SHORT_URL_PUBLIC_RATE_WINDOW", time.Minute),
 		},
 		Services: ServicesConfig{
 			ReviewRequestDelay: getDuration("SERVICE_REVIEW_REQUEST_DELAY", 24*time.Hour),

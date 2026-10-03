@@ -58,6 +58,7 @@ const SEGMENT_ALIASES: Record<string, Module> = {
   warranty: "warranty",
   warranties: "warranty",
   garanti: "warranty",
+  bayi: "org",
   accounting: "accounting",
   ledger: "accounting",
   notification: "notification",
