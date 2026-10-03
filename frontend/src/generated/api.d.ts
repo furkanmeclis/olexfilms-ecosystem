@@ -965,6 +965,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portal/services/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Service detail of the signed-in customer
+         * @description TEC-239. Portal session (services.read, scope customer). A service of the domain brand the user owns (its customer, or the holder of one of its warranties after a vehicle transfer); anything else answers 404. Returns the applied parts (vehicle part picker SVG keys), the products used (name and category, no price), the dealer card (WhatsApp in E.164) and the warranties the user holds. Measurement fields, prices, unit barcodes, consumed amounts and staff notes are never returned.
+         */
+        get: operations["getPortalService"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/services/{uuid}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Service PDF of the signed-in customer
+         * @description TEC-239. Portal session (services.read, scope customer); same ownership rule as GET /v1/portal/services/{uuid} (else 404). Uses the service PDF render (TEC-196) and prints only the warranties the user holds. A completed render of the same locale, newer than the last service change and younger than 24 hours, answers 200 with its download_url; otherwise a running job (younger than 15 minutes) is returned or a new one is queued, with 202. Poll and download through /v1/portal/exports/{uuid}.
+         */
+        get: operations["getPortalServicePdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/organizations": {
         parameters: {
             query?: never;
@@ -12921,6 +12961,72 @@ export interface components {
             };
             meta: components["schemas"]["ResponseMeta"];
         };
+        PortalServiceProduct: {
+            /** Format: uuid */
+            service_item_uuid: string;
+            name: string;
+            category: string;
+            applied_parts: string[];
+        };
+        PortalServiceDealer: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            city: string;
+            district: string;
+            address: string;
+            /** @description Organization phone in E.164 (WhatsApp); null when unset. */
+            whatsapp: string | null;
+        };
+        PortalServiceWarranty: {
+            /** Format: uuid */
+            uuid: string;
+            public_code: string;
+            /** Format: uuid */
+            service_item_uuid: string;
+            product_name: string;
+            item_kind: string;
+            /** @enum {string} */
+            status: "active" | "expired" | "void";
+            /** Format: date-time */
+            start_at: string;
+            /** Format: date-time */
+            end_at: string;
+            /** Format: date-time */
+            expired_at: string | null;
+            /** Format: date-time */
+            voided_at: string | null;
+        };
+        /** @description TEC-239 portal projection of a service. Carries no measurement fields, prices, unit barcodes, consumed amounts, staff notes or customer contact data. */
+        PortalService: {
+            /** Format: uuid */
+            uuid: string;
+            service_no: string;
+            status: string;
+            status_label: string;
+            /** Format: uuid */
+            vehicle_uuid: string;
+            car_brand: components["schemas"]["ServiceRef"];
+            car_model: components["schemas"]["ServiceRef"];
+            model_year: number | null;
+            plate: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            completed_at: string | null;
+            /** @description Union of the applied parts (vehicle part picker SVG keys), sorted. */
+            applied_parts: string[];
+            products: components["schemas"]["PortalServiceProduct"][];
+            dealer: components["schemas"]["PortalServiceDealer"];
+            /** @description Only the warranties the user holds. */
+            warranties: components["schemas"]["PortalServiceWarranty"][];
+        };
+        EnvelopePortalService: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PortalService"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
         PortalNamedRef: {
             /** Format: uuid */
             uuid: string;
@@ -12952,7 +13058,7 @@ export interface components {
             created_at: string;
         };
         /** @description A service of the portal user at any organization (TEC-238). No measurement data. */
-        PortalService: {
+        PortalServiceListItem: {
             /** Format: uuid */
             uuid: string;
             service_no: string;
@@ -13008,7 +13114,7 @@ export interface components {
                 /** Format: date-time */
                 last_service_at: string | null;
             };
-            services: components["schemas"]["PortalService"][];
+            services: components["schemas"]["PortalServiceListItem"][];
             active_warranties: components["schemas"]["PortalActiveWarranty"][];
         };
         EnvelopePortalVehiclePage: {
@@ -13033,7 +13139,7 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: {
-                items: components["schemas"]["PortalService"][];
+                items: components["schemas"]["PortalServiceListItem"][];
                 /** Format: int64 */
                 total: number;
                 limit: number;
@@ -14738,6 +14844,79 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getPortalService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePortalService"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getPortalServicePdf: {
+        parameters: {
+            query?: {
+                /** @description Document language (one of the 13 supported locales); defaults to the user language. */
+                locale?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A completed render exists */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            /** @description Render queued or running */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Exports are not configured */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     getMeOrganizations: {

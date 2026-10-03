@@ -487,6 +487,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		servicesusecase.NewPDFAdapter(servicePDF),
 		// TEC-207: end-of-day report PDF.
 		warehouseusecase.NewEODPDFAdapter(eodPDF),
+		// TEC-239: service PDF requested from the portal.
+		servicesusecase.NewPortalPDFAdapter(servicePDF),
 	)
 	exportSvc := exportusecase.New(deps.Queries, deps.Storage, ioReg, deps.Queue, notifSvc, activityRec, log)
 	exportSvc.SetDocumentPDF(pdfClient)
@@ -494,6 +496,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	customersH.WithExports(exportSvc)
 	warrantymodule.RegisterCertificateRoutes(mux, warrantyhandler.NewCertificate(warrantyCert, exportSvc), tokens, loader, deps.Queries, featureSvc)
 	servicesmodule.RegisterPDFRoutes(mux, serviceshandler.NewPDF(servicePDF, exportSvc), tokens, loader, deps.Queries, featureSvc)
+	// TEC-239: portal service detail and PDF.
+	servicesmodule.RegisterPortalDetailRoutes(mux, serviceshandler.NewPortalDetail(servicesSvc, servicePDF, exportSvc), tokens, loader)
 	// A nil *queue.Client must reach the import service as a nil Enqueuer
 	// (sync mode); a typed nil would fail every confirm.
 	var importQueue importusecase.Enqueuer

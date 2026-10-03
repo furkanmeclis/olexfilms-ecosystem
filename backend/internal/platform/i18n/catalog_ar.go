@@ -450,6 +450,8 @@ var arCatalog = map[string]string{
 	// TEC-196: service PDF.
 	"export.title.tenant.services.pdf":      "تقرير الخدمة",
 	"resources.tenant.services.pdf":         "تقرير الخدمة",
+	"export.title.portal.service_pdf":       "تقرير الخدمة",
+	"resources.portal.service_pdf":          "تقرير خدمتي",
 	"services.pdf.status":                   "الحالة",
 	"services.pdf.created_at":               "تاريخ الإنشاء",
 	"services.pdf.completed_at":             "تاريخ الإكمال",

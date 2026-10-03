@@ -58,3 +58,23 @@ LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
 -- name: CountExportJobsForOrganization :one
 SELECT COUNT(*)::bigint FROM export_jobs WHERE organization_id = $1;
+
+-- TEC-239: the newest reusable portal job of the actor for one service
+-- (no organization): a completed job created at or after not_before, or a
+-- queued / processing one created at or after pending_after. Failed and
+-- expired jobs are never reused.
+-- name: GetReusablePortalServiceJob :one
+SELECT * FROM export_jobs
+WHERE actor_id = sqlc.arg(actor_id)
+  AND resource = sqlc.arg(resource)::text
+  AND organization_id IS NULL
+  AND format = 'pdf'
+  AND locale = sqlc.arg(locale)::text
+  AND query_json->>'service_uuid' = sqlc.arg(service_uuid)::text
+  AND (expires_at IS NULL OR expires_at > NOW())
+  AND (
+    (status = 'completed' AND created_at >= sqlc.arg(not_before)::timestamptz)
+    OR (status IN ('queued', 'processing') AND created_at >= sqlc.arg(pending_after)::timestamptz)
+  )
+ORDER BY created_at DESC
+LIMIT 1;

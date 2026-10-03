@@ -450,6 +450,8 @@ var deCatalog = map[string]string{
 	// TEC-196: service PDF.
 	"export.title.tenant.services.pdf":      "Servicebericht",
 	"resources.tenant.services.pdf":         "Servicebericht",
+	"export.title.portal.service_pdf":       "Servicebericht",
+	"resources.portal.service_pdf":          "Mein Servicebericht",
 	"services.pdf.status":                   "Status",
 	"services.pdf.created_at":               "Erstellt",
 	"services.pdf.completed_at":             "Abgeschlossen",

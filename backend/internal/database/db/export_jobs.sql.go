@@ -146,6 +146,66 @@ func (q *Queries) GetExportJobByUUID(ctx context.Context, argUuid uuid.UUID) (Ex
 	return i, err
 }
 
+const getReusablePortalServiceJob = `-- name: GetReusablePortalServiceJob :one
+SELECT id, uuid, resource, actor_id, format, query_json, locale, status, file_key, row_count, error, expires_at, created_at, updated_at, organization_id FROM export_jobs
+WHERE actor_id = $1
+  AND resource = $2::text
+  AND organization_id IS NULL
+  AND format = 'pdf'
+  AND locale = $3::text
+  AND query_json->>'service_uuid' = $4::text
+  AND (expires_at IS NULL OR expires_at > NOW())
+  AND (
+    (status = 'completed' AND created_at >= $5::timestamptz)
+    OR (status IN ('queued', 'processing') AND created_at >= $6::timestamptz)
+  )
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+type GetReusablePortalServiceJobParams struct {
+	ActorID      int64              `json:"actor_id"`
+	Resource     string             `json:"resource"`
+	Locale       string             `json:"locale"`
+	ServiceUuid  string             `json:"service_uuid"`
+	NotBefore    pgtype.Timestamptz `json:"not_before"`
+	PendingAfter pgtype.Timestamptz `json:"pending_after"`
+}
+
+// TEC-239: the newest reusable portal job of the actor for one service
+// (no organization): a completed job created at or after not_before, or a
+// queued / processing one created at or after pending_after. Failed and
+// expired jobs are never reused.
+func (q *Queries) GetReusablePortalServiceJob(ctx context.Context, arg GetReusablePortalServiceJobParams) (ExportJob, error) {
+	row := q.db.QueryRow(ctx, getReusablePortalServiceJob,
+		arg.ActorID,
+		arg.Resource,
+		arg.Locale,
+		arg.ServiceUuid,
+		arg.NotBefore,
+		arg.PendingAfter,
+	)
+	var i ExportJob
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.Resource,
+		&i.ActorID,
+		&i.Format,
+		&i.QueryJson,
+		&i.Locale,
+		&i.Status,
+		&i.FileKey,
+		&i.RowCount,
+		&i.Error,
+		&i.ExpiresAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.OrganizationID,
+	)
+	return i, err
+}
+
 const listAllExportJobs = `-- name: ListAllExportJobs :many
 SELECT id, uuid, resource, actor_id, format, query_json, locale, status, file_key, row_count, error, expires_at, created_at, updated_at, organization_id FROM export_jobs
 ORDER BY created_at DESC
