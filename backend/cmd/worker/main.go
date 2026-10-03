@@ -116,6 +116,8 @@ func main() {
 	reviewQueue := queue.NewClient(cfg.Redis)
 	defer func() { _ = reviewQueue.Close() }()
 	servicereview.RegisterEventHandlers(eventBus, reviewQueue, cfg.Services.ReviewRequestDelay, log)
+	// TEC-270: glorian stock entries/placements and exits schedule the push.
+	glorian.RegisterEventHandlers(eventBus, queries, reviewQueue, log)
 	outboxStore := outbox.NewStore(pool, queries)
 	outboxPub := outbox.NewPublisher(outboxStore, eventBus, log)
 	outboxStop := outboxPub.StartRun(ctx)
@@ -211,6 +213,7 @@ func main() {
 		log.Error("encryption_init_failed", "error", err)
 		os.Exit(1)
 	}
+	glorianPusher := glorian.NewPusher(queries, secretBox, glorian.HTTPClientFactory(glorian.OptionsFromConfig(cfg.Glorian)), log)
 	waSvc := whatsappmodule.NewService(cfg.Wuzapi, pool, queries, secretBox, notifSvc, log)
 	notifSvc.RegisterProvider(providers.WhatsAppProvider{WA: waSvc.Provider()})
 
@@ -237,6 +240,8 @@ func main() {
 		WithWarehouseEOD(eodSvc.DailyTask(log)).
 		// TEC-268: Glorian catalog and dealer pull (active connections only).
 		WithGlorianPull(glorian.NewPuller(queries, secretBox, glorian.HTTPClientFactory(glorian.OptionsFromConfig(cfg.Glorian)), searchIndexer, log).Task).
+		// TEC-270: Glorian barcode bulk push and outbound PATCH by barcode.
+		WithGlorianPush(glorianPusher.PushTask, glorianPusher.PatchTask).
 		WithSearch(
 			searchIndexer.ProcessUpsert,
 			searchIndexer.ProcessDelete,
