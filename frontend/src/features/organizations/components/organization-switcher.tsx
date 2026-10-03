@@ -18,6 +18,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { routes } from "@/config/routes";
 import { useMyOrganizations } from "@/features/organizations/hooks/use-my-organizations";
+import {
+  beginOrgSwitch,
+  endOrgSwitch,
+} from "@/features/organizations/lib/org-switch";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { useLocale } from "@/providers/locale-provider";
@@ -26,7 +30,9 @@ import { authService } from "@/services/auth.service";
 /**
  * Header organization switcher. Lists the caller's memberships for the
  * domain's brand; choosing one re-scopes the session (`oid`) and opens
- * the organization's panel.
+ * the organization's panel. The switch is one-way (TEC-227): while it is in
+ * flight the previous organization's context pauses its own sync, and the
+ * target organization's context ends the switch once it mounts.
  */
 export function OrganizationSwitcher({ className }: { className?: string }) {
   const { t } = useLocale();
@@ -46,6 +52,7 @@ export function OrganizationSwitcher({ className }: { className?: string }) {
   const select = async (slug: string) => {
     if (slug === activeSlug || pendingSlug) return;
     setPendingSlug(slug);
+    beginOrgSwitch(slug);
     try {
       await authService.switchOrganizationContext(slug);
       await update();
@@ -53,6 +60,7 @@ export function OrganizationSwitcher({ className }: { className?: string }) {
       router.push(routes.tenant.home(slug));
       void queryClient.invalidateQueries();
     } catch {
+      endOrgSwitch(slug);
       toast.error(t("organizations.switcher.error"));
     } finally {
       setPendingSlug(null);
