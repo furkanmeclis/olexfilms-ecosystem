@@ -94,3 +94,21 @@ export function portalTransferError(err: {
 export function publicWarrantyPath(publicCode: string): string {
   return `/garanti/${encodeURIComponent(publicCode)}`;
 }
+
+/** Query key of the portal session hydration (GET /v1/auth/me). */
+export const PORTAL_ME_KEY = ["portal", "me"] as const;
+
+/**
+ * Whether the portal session is a read-only fleet account (TEC-245): the
+ * fleet role without the customer role. The API refuses the writes with
+ * 403 PORTAL_READ_ONLY; the UI hides them.
+ */
+export function isPortalReadOnly(
+  roles: readonly string[] | undefined,
+): boolean {
+  if (!roles) return false;
+  return roles.includes("fleet") && !roles.includes("customer");
+}
+
+/** Page size of /portal/contracts (TEC-245). */
+export const PORTAL_CONTRACT_PAGE_SIZE = 20;

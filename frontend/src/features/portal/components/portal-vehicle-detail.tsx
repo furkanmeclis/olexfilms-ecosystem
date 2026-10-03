@@ -17,6 +17,7 @@ import {
   type PortalActiveWarranty,
 } from "@/features/portal/lib/portal-client";
 import { portalVehicleTitle } from "@/features/portal/lib/portal-vehicles";
+import { usePortalReadOnly } from "@/features/portal/lib/use-portal-read-only";
 import { serviceStatusTone } from "@/features/services/lib/detail";
 import { WarrantyCertificateButton } from "@/features/warranty/components/warranty-certificate-button";
 import { WarrantyProgressBar } from "@/features/warranty/components/warranty-progress";
@@ -102,6 +103,8 @@ export function PortalVehicleDetail({
     retry: (count, error) =>
       !(error instanceof PortalApiError && error.status === 404) && count < 2,
   });
+  // TEC-245: a fleet account is read only; the transfer is hidden.
+  const readOnly = usePortalReadOnly();
   const back = {
     href: routes.portal.vehicles,
     label: t("portal.vehicle.back"),
@@ -192,9 +195,18 @@ export function PortalVehicleDetail({
               }
             />
           </div>
-          <div className="flex justify-end">
-            <PortalVehicleTransferDialog vehicleUuid={v.uuid} />
-          </div>
+          {readOnly ? (
+            <p
+              className="text-muted-foreground text-end text-xs"
+              data-testid="portal-read-only"
+            >
+              {t("portal.read_only.notice")}
+            </p>
+          ) : (
+            <div className="flex justify-end">
+              <PortalVehicleTransferDialog vehicleUuid={v.uuid} />
+            </div>
+          )}
         </CardContent>
       </Card>
 
