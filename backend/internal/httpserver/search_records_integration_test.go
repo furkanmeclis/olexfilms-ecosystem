@@ -324,14 +324,17 @@ func TestIntegrationSearchRecordIndexes(t *testing.T) {
 		return listUUIDs(t, it.custDo("GET", path, tok, nil, http.StatusOK))
 	}
 	token := url.QueryEscape("T209" + sfx)
+	// directService writes no plate snapshot: the services share the
+	// service number prefix (T186-<suffix>-...).
+	svcToken := url.QueryEscape("T186-" + it.suffix[len(it.suffix)-10:])
 	for _, leaky := range []bool{false, true} {
 		mem.leaky = leaky
 		label := fmt.Sprintf("leaky=%v", leaky)
-		got := get("/v1/services?q="+token, tokA)
+		got := get("/v1/services?q="+svcToken, tokA)
 		if !got[svcA.String()] || got[svcB.String()] || got[svcG.Uuid.String()] {
 			t.Fatalf("%s dealer A services = %v", label, got)
 		}
-		got = get("/v1/services?q="+token, tokCenter)
+		got = get("/v1/services?q="+svcToken, tokCenter)
 		if !got[svcA.String()] || !got[svcB.String()] || got[svcG.Uuid.String()] {
 			t.Fatalf("%s center services (brand filter) = %v", label, got)
 		}
