@@ -268,3 +268,75 @@ func (u *AuthUseCase) MobileSwitchOrganization(ctx context.Context, userUUID, si
 	u.RevokeAccessSession(ctx, sid)
 	return tokens, nil
 }
+
+// IssueLegacyMobileAccess turns an access token just issued by a mobile
+// sign-in into the old hub app's long-lived token (TEC-284, F2-FIX-3). The
+// old app has no refresh flow (its Sanctum token never expired), so the
+// token lives as long as its device session (JWT_MOBILE_REFRESH_TTL) and
+// carries the legacy claim, which only the /v1/mobile/legacy aliases
+// accept. It is bound to the session (sid): CheckLegacyMobileSession ends
+// it with logout, device revoke or a password change / deactivation.
+func (u *AuthUseCase) IssueLegacyMobileAccess(ctx context.Context, access string) (string, error) {
+	claims, err := u.tokens.ParseAccess(access)
+	if err != nil {
+		return "", err
+	}
+	if claims.Realm() != jwt.AudienceMobile || claims.ImpersonatorID != nil {
+		return "", ErrNotMobileSession
+	}
+	userUUID, err := claims.UserUUID()
+	if err != nil {
+		return "", err
+	}
+	s, err := u.legacySession(ctx, userUUID, claims.SessionUUID())
+	if err != nil {
+		return "", err
+	}
+	orgUUID, err := claims.OrganizationUUID()
+	if err != nil {
+		return "", err
+	}
+	token, _, err := u.tokens.IssueLegacyAccess(jwt.AccessInput{
+		UserID: userUUID, Roles: claims.Roles, IsSuperAdmin: claims.IsSuperAdmin,
+		SessionID: s.UUID, OrganizationID: orgUUID,
+	}, s.ExpiresAt)
+	return token, err
+}
+
+// CheckLegacyMobileSession reports whether the device session of a legacy
+// token is still live. Revocation markers in Redis outlive an access token
+// only by its 15 minutes, so a legacy token is checked against its session
+// row on every request: a revoked (logout, device revoke, logout-all,
+// password change, deactivation), rotated or expired session ends it.
+func (u *AuthUseCase) CheckLegacyMobileSession(ctx context.Context, claims jwt.Claims) error {
+	if !claims.Legacy {
+		return nil
+	}
+	userUUID, err := claims.UserUUID()
+	if err != nil {
+		return err
+	}
+	_, err = u.legacySession(ctx, userUUID, claims.SessionUUID())
+	return err
+}
+
+func (u *AuthUseCase) legacySession(ctx context.Context, userUUID, sid uuid.UUID) (model.RefreshSession, error) {
+	user, err := u.repo.FindUserByUUID(ctx, userUUID)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return model.RefreshSession{}, ErrSessionRevoked
+		}
+		return model.RefreshSession{}, err
+	}
+	if user.Status != "active" {
+		return model.RefreshSession{}, ErrUserDisabled
+	}
+	s, err := u.MobileSession(ctx, user.ID, sid)
+	if err != nil {
+		return model.RefreshSession{}, err
+	}
+	if s.RotatedAt != nil || !s.ExpiresAt.After(u.now()) {
+		return model.RefreshSession{}, ErrSessionRevoked
+	}
+	return s, nil
+}

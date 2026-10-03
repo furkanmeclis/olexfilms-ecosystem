@@ -38,6 +38,11 @@ type Claims struct {
 	ImpersonatorID *string  `json:"imp,omitempty"`
 	SessionID      string   `json:"sid,omitempty"`
 	OrganizationID *string  `json:"oid,omitempty"`
+	// Legacy marks a long-lived access token of the old hub mobile app
+	// (TEC-284, F2-FIX-3): aud=mobile, valid until its device session
+	// expires. Only a manager from AcceptLegacy parses it; every other
+	// route rejects it as an invalid token.
+	Legacy bool `json:"legacy,omitempty"`
 	jwtlib.RegisteredClaims
 }
 
@@ -59,6 +64,8 @@ type Manager struct {
 	accessTTL    time.Duration
 	refreshTTL   time.Duration
 	now          func() time.Time
+	// acceptLegacy: ParseAccess also accepts legacy tokens (AcceptLegacy).
+	acceptLegacy bool
 }
 
 // NewManager creates a token manager from a non-empty access signing secret.
@@ -83,13 +90,51 @@ func (m *Manager) AccessTTL() time.Duration { return m.accessTTL }
 // RefreshTTL returns the configured opaque refresh token lifetime.
 func (m *Manager) RefreshTTL() time.Duration { return m.refreshTTL }
 
+// SetClock replaces the clock used to issue and validate tokens (tests
+// that move time forward). nil restores time.Now. Copies made by
+// AcceptLegacy afterwards share the new clock.
+func (m *Manager) SetClock(now func() time.Time) {
+	if now == nil {
+		now = time.Now
+	}
+	m.now = now
+}
+
+// AcceptLegacy returns a manager that also parses legacy tokens (Claims.Legacy).
+// Only the old hub mobile app's alias routes (/v1/mobile/legacy/*) use it.
+func (m *Manager) AcceptLegacy() *Manager {
+	c := *m
+	c.acceptLegacy = true
+	return &c
+}
+
 // IssueAccess creates a short-lived access token.
 func (m *Manager) IssueAccess(in AccessInput) (string, time.Time, error) {
+	now := m.now().UTC()
+	return m.issue(in, now, now.Add(m.accessTTL), false)
+}
+
+// IssueLegacyAccess creates the old hub mobile app's access token (TEC-284):
+// aud=mobile, the legacy claim, and expiry at expiresAt (the end of its
+// device session; the old app has no refresh flow). It needs a session id,
+// so the token can be revoked with its session.
+func (m *Manager) IssueLegacyAccess(in AccessInput, expiresAt time.Time) (string, time.Time, error) {
+	now := m.now().UTC()
+	if in.SessionID == uuid.Nil {
+		return "", time.Time{}, errors.New("jwt: legacy token needs a session id")
+	}
+	if !expiresAt.After(now) {
+		return "", time.Time{}, errors.New("jwt: legacy token expiry is in the past")
+	}
+	in.Audience = AudienceMobile
+	in.ImpersonatorID = nil
+	return m.issue(in, now, expiresAt.UTC(), true)
+}
+
+func (m *Manager) issue(in AccessInput, now, expiresAt time.Time, legacy bool) (string, time.Time, error) {
 	if in.UserID == uuid.Nil {
 		return "", time.Time{}, errors.New("jwt: user id is required")
 	}
-	now := m.now().UTC()
-	expiresAt := now.Add(m.accessTTL)
 	roles := in.Roles
 	if roles == nil {
 		roles = []string{}
@@ -114,6 +159,7 @@ func (m *Manager) IssueAccess(in AccessInput) (string, time.Time, error) {
 		ImpersonatorID: imp,
 		SessionID:      sid,
 		OrganizationID: oid,
+		Legacy:         legacy,
 		RegisteredClaims: jwtlib.RegisteredClaims{
 			Subject:   in.UserID.String(),
 			Audience:  jwtlib.ClaimStrings{NormalizeAudience(in.Audience)},
@@ -129,7 +175,8 @@ func (m *Manager) IssueAccess(in AccessInput) (string, time.Time, error) {
 	return signed, expiresAt, nil
 }
 
-// ParseAccess validates an access token and returns claims.
+// ParseAccess validates an access token and returns claims. A legacy token
+// (Claims.Legacy) is invalid unless the manager comes from AcceptLegacy.
 func (m *Manager) ParseAccess(token string) (Claims, error) {
 	var claims Claims
 	parsed, err := jwtlib.ParseWithClaims(token, &claims, func(token *jwtlib.Token) (any, error) {
@@ -137,8 +184,11 @@ func (m *Manager) ParseAccess(token string) (Claims, error) {
 			return nil, ErrInvalidToken
 		}
 		return m.accessSecret, nil
-	})
+	}, jwtlib.WithTimeFunc(m.now))
 	if err != nil || !parsed.Valid || claims.Subject == "" {
+		return Claims{}, ErrInvalidToken
+	}
+	if claims.Legacy && (!m.acceptLegacy || claims.Realm() != AudienceMobile || claims.SessionUUID() == uuid.Nil) {
 		return Claims{}, ErrInvalidToken
 	}
 	if _, err := uuid.Parse(claims.Subject); err != nil {

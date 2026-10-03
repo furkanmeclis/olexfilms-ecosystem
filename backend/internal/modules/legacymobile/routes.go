@@ -15,6 +15,16 @@
 // https://<host>/api/v1/mobile/legacy (the BFF passthrough /api/v1/mobile/*
 // forwards it and a mobile token, aud=mobile, is accepted).
 //
+// Token (TEC-284, F2-FIX-3): the hub's Sanctum token never expired and the
+// old app has no refresh flow, so a 15 minute access token would sign it
+// out mid-shift. The legacy login answers a long-lived token instead
+// (jwt.IssueLegacyAccess: aud=mobile, legacy claim, valid until its device
+// session ends, JWT_MOBILE_REFRESH_TTL). Only these aliases accept it
+// (jwt.Manager.AcceptLegacy); every other route rejects it as an invalid
+// token. Each request checks its device session row (LegacySessions), so
+// logout, device revoke, logout-all, a password change or deactivation end
+// it at once.
+//
 // Bodies: requests and answers are the old shapes (auth.go, services.go,
 // reports.go) inside the old envelope (envelope.go);
 // testdata/legacy_mobile/*.json pins them, derived from the old
@@ -27,10 +37,13 @@
 package legacymobile
 
 import (
+	"context"
+	"errors"
 	"net/http"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/middleware"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
@@ -52,6 +65,43 @@ type Handlers struct {
 	CreateMeasurement  http.HandlerFunc // measurements Handler.Create
 	PutPushToken       http.HandlerFunc // auth MobileHandler.PutPushToken
 	DeletePushToken    http.HandlerFunc // auth MobileHandler.DeletePushToken
+	Logout             http.HandlerFunc // auth MobileHandler.Logout
+	// Sessions issues and checks the long-lived legacy token. Nil: the
+	// login answers the regular access token and a legacy token is refused.
+	Sessions LegacySessions
+}
+
+// LegacySessions is the auth use case side of the legacy token
+// (*usecase.AuthUseCase implements it).
+type LegacySessions interface {
+	// IssueLegacyMobileAccess turns the access token a mobile sign-in just
+	// issued into the legacy token of the same device session.
+	IssueLegacyMobileAccess(ctx context.Context, access string) (string, error)
+	// CheckLegacyMobileSession fails when the legacy token's device session
+	// is no longer live (revoked, rotated, expired, user not active).
+	CheckLegacyMobileSession(ctx context.Context, claims jwt.Claims) error
+}
+
+var errLegacyUnchecked = errors.New("legacy token without a session checker")
+
+// legacyLoader checks a legacy token's device session before the regular
+// identity load (whose Redis revocation markers only outlive a 15 minute
+// token).
+type legacyLoader struct {
+	inner    middleware.IdentityLoader
+	sessions LegacySessions
+}
+
+func (l legacyLoader) LoadPrincipal(r *http.Request, c jwt.Claims) (authctx.Principal, error) {
+	if c.Legacy {
+		if l.sessions == nil {
+			return authctx.Principal{}, errLegacyUnchecked
+		}
+		if err := l.sessions.CheckLegacyMobileSession(r.Context(), c); err != nil {
+			return authctx.Principal{}, err
+		}
+	}
+	return l.inner.LoadPrincipal(r, c)
 }
 
 // Gates of the aliases: the adapted route's gate minus the version header.
@@ -82,6 +132,7 @@ var Routes = []Route{
 	{"measurement", "POST", Prefix + "/nexptg-reports", "POST /v1/mobile/measurements", GateMeasurements},
 	{"push_token", "PUT", Prefix + "/push-token", "PUT /v1/mobile/push-token", GateMobile},
 	{"push_token_delete", "DELETE", Prefix + "/push-token", "DELETE /v1/mobile/push-token", GateMobile},
+	{"logout", "POST", Prefix + "/auth/logout", "POST /v1/mobile/auth/logout", GateMobile},
 }
 
 // byName returns the adapted handler of an alias and the adapter that
@@ -103,6 +154,8 @@ func (a *adapters) byName(name string) (target, adapter http.HandlerFunc) {
 		return a.h.PutPushToken, a.putPushToken
 	case "push_token_delete":
 		return a.h.DeletePushToken, a.deletePushToken
+	case "logout":
+		return a.h.Logout, a.logout
 	}
 	return nil, nil
 }
@@ -124,7 +177,9 @@ func RegisterRoutes(
 	if !enabled {
 		return
 	}
-	authn := middleware.Authenticate(tokens, loader)
+	// The aliases (and only they) accept the legacy token.
+	tokens = tokens.AcceptLegacy()
+	authn := middleware.Authenticate(tokens, legacyLoader{inner: loader, sessions: h.Sessions})
 	org := middleware.RequireOrganization(tokens, q)
 	gates := map[string][]func(http.Handler) http.Handler{
 		GatePublic: nil,

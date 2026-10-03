@@ -35,6 +35,7 @@ func stubHandlers() Handlers {
 		ListServices: stub("services_list"), GetService: stub("service_detail"),
 		CreateMeasurement: stub("measurement"),
 		PutPushToken:      stub("push_token"), DeletePushToken: stub("push_token_delete"),
+		Logout: stub("logout"),
 	}
 }
 
@@ -130,6 +131,7 @@ func TestFixturesMatchRoutes(t *testing.T) {
 	oldPaths := map[string]string{
 		"login": "/auth/login", "me": "/auth/me", "services_list": "/services", "service_detail": "/services/{service}",
 		"measurement": "/nexptg-reports", "push_token": "/push-token", "push_token_delete": "/push-token",
+		"logout": "/auth/logout",
 	}
 	for i, f := range fixtures(t) {
 		r := Routes[i]

@@ -1,0 +1,16 @@
+{
+  "name": "logout",
+  "method": "POST",
+  "path": "/v1/mobile/legacy/auth/logout",
+  "adapts": "POST /v1/mobile/auth/logout",
+  "source": "olexfilms routes/api.php POST /api/v1/mobile/auth/logout; app/Http/Controllers/Api/V1/AuthController.php logout (current token deleted, data null, auth.logout_success). The device session ends, so the legacy token (TEC-284, F2-FIX-3) stops working and the device's push tokens are dropped.",
+  "request": {
+    "headers": {"Accept": "application/json", "Accept-Language": "tr", "Authorization": "Bearer {{access_token}}"},
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "message": "Çıkış yapıldı.",
+    "data_null": true
+  }
+}

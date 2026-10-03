@@ -170,6 +170,9 @@ type Deps struct {
 	// SearchFinder replaces the Meilisearch client in the module lists
 	// (TEC-209 tests: an in-memory index). Nil: the configured client.
 	SearchFinder searchengine.ListFinder
+	// Clock replaces the access token clock (issue and expiry check), so a
+	// test can move time forward (TEC-284 legacy token). Nil: time.Now.
+	Clock func() time.Time
 }
 
 // Server is the HTTP composition root for infrastructure routes.
@@ -234,6 +237,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	tokens, err := jwt.NewManager(cfg.JWT.AccessSecret, cfg.JWT.AccessTTL, cfg.JWT.RefreshTTL)
 	if err != nil {
 		return nil, fmt.Errorf("httpserver: jwt: %w", err)
+	}
+	if deps.Clock != nil {
+		tokens.SetClock(deps.Clock)
 	}
 
 	// Pass a nil interface (not a typed-nil *queue.Client) when the queue is
@@ -453,6 +459,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		ListServices: servicesH.List, GetService: servicesH.Get,
 		CreateMeasurement: measurementsH.Create,
 		PutPushToken:      mobileH.PutPushToken, DeletePushToken: mobileH.DeletePushToken,
+		Logout: mobileH.Logout,
+		// TEC-284 (F2-FIX-3): long-lived legacy token bound to the device session.
+		Sessions: uc,
 	}, tokens, loader, deps.Queries, featureSvc)
 	pdfClient := pdfrender.NewWithOptions(cfg.Gotenberg.URL, pdfrender.Options{MaxConnsPerHost: cfg.Queue.Concurrency})
 	realtime.RegisterRoutes(mux, realtime.NewHandler(rtIssuer, uc), tokens, loader)
