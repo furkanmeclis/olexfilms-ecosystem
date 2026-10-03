@@ -1386,6 +1386,12 @@ type Querier interface {
 	MergeConflictingCustomerOrganizations(ctx context.Context, arg MergeConflictingCustomerOrganizationsParams) (int64, error)
 	MigratorAssignMemberRole(ctx context.Context, arg MigratorAssignMemberRoleParams) (int64, error)
 	MigratorAssignUserRole(ctx context.Context, arg MigratorAssignUserRoleParams) (int64, error)
+	// TEC-256: migrator steps 3-4 (vehicle catalog, product catalog and the
+	// warehouse product match). Written only by cmd/migrator inside a step
+	// transaction.
+	MigratorCarBrandByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorCarBrandByUUIDRow, error)
+	MigratorCarModelIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
+	MigratorCategoryIDByUUID(ctx context.Context, arg MigratorCategoryIDByUUIDParams) (int64, error)
 	// Whether another live user already holds the e-mail or the phone.
 	MigratorContactTaken(ctx context.Context, arg MigratorContactTakenParams) (MigratorContactTakenRow, error)
 	// The live distributor owning the country-level territory of a brand.
@@ -1400,8 +1406,22 @@ type Querier interface {
 	// A merged or changed legacy customer only fills what the account lacks;
 	// values set in the new app (or by an earlier source) are kept.
 	MigratorFillCustomerUser(ctx context.Context, arg MigratorFillCustomerUserParams) (int64, error)
+	// An existing brand with the legacy external id, else with the same name
+	// (case insensitive, like uq_car_brands_name).
+	MigratorFindCarBrand(ctx context.Context, arg MigratorFindCarBrandParams) (MigratorFindCarBrandRow, error)
+	// An existing model with the legacy external id, else with the same name
+	// under the brand (case insensitive, like uq_car_models_brand_name).
+	MigratorFindCarModel(ctx context.Context, arg MigratorFindCarModelParams) (uuid.UUID, error)
+	MigratorFindCategory(ctx context.Context, arg MigratorFindCategoryParams) (uuid.UUID, error)
+	MigratorFindProductBySKU(ctx context.Context, arg MigratorFindProductBySKUParams) (uuid.UUID, error)
+	// Products of the brand with the name (case insensitive); the warehouse
+	// match uses it only when exactly one row comes back.
+	MigratorFindProductsByName(ctx context.Context, arg MigratorFindProductsByNameParams) ([]uuid.UUID, error)
 	// An existing account with the e-mail (preferred) or the phone.
 	MigratorFindUserByContact(ctx context.Context, arg MigratorFindUserByContactParams) (MigratorFindUserByContactRow, error)
+	MigratorInsertCarBrand(ctx context.Context, arg MigratorInsertCarBrandParams) (int64, error)
+	MigratorInsertCarModel(ctx context.Context, arg MigratorInsertCarModelParams) (int64, error)
+	MigratorInsertCategory(ctx context.Context, arg MigratorInsertCategoryParams) (int64, error)
 	// TEC-255: migrator step 2 (hub customers -> users, customer_profiles,
 	// customer_organizations). Written only by cmd/migrator inside a step
 	// transaction.
@@ -1409,6 +1429,7 @@ type Querier interface {
 	// customer without a resolved phone (K26, K29, migration 000078).
 	MigratorInsertCustomerUser(ctx context.Context, arg MigratorInsertCustomerUserParams) (int64, error)
 	MigratorInsertOrganization(ctx context.Context, arg MigratorInsertOrganizationParams) (int64, error)
+	MigratorInsertProduct(ctx context.Context, arg MigratorInsertProductParams) (int64, error)
 	MigratorInsertUser(ctx context.Context, arg MigratorInsertUserParams) (int64, error)
 	// One row per serving organization (K11: the customer is global, a dealer
 	// sees it through this link).
@@ -1420,9 +1441,18 @@ type Querier interface {
 	// folded, case insensitive.
 	MigratorMatchProvince(ctx context.Context, arg MigratorMatchProvinceParams) (int64, error)
 	MigratorOrganizationIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
+	MigratorProductIDByUUID(ctx context.Context, arg MigratorProductIDByUUIDParams) (int64, error)
 	MigratorRoleOrgTypes(ctx context.Context, slugs []string) ([]MigratorRoleOrgTypesRow, error)
+	MigratorSetCarBrandLogo(ctx context.Context, arg MigratorSetCarBrandLogoParams) error
+	// Legacy-sourced fields of a brand the migrator created; the logo is set
+	// separately.
+	MigratorUpdateCarBrand(ctx context.Context, arg MigratorUpdateCarBrandParams) error
+	MigratorUpdateCarModel(ctx context.Context, arg MigratorUpdateCarModelParams) error
+	MigratorUpdateCategory(ctx context.Context, arg MigratorUpdateCategoryParams) error
 	// Legacy-sourced fields only; slug and parent stay as the new app has them.
 	MigratorUpdateOrganization(ctx context.Context, arg MigratorUpdateOrganizationParams) error
+	// Legacy-sourced fields only; images, unit type and the sync columns stay.
+	MigratorUpdateProduct(ctx context.Context, arg MigratorUpdateProductParams) error
 	// The password is replaced only while the account still holds a migrated
 	// hash (bcrypt or the reset marker); a password set in the new app wins.
 	MigratorUpdateUser(ctx context.Context, arg MigratorUpdateUserParams) error
