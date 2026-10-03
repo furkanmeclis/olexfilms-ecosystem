@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { routes } from "@/config/routes";
 import { PortalCarParts } from "@/features/portal/components/portal-car-parts";
 import { PortalPage } from "@/features/portal/components/portal-page";
+import { PortalServiceReview } from "@/features/portal/components/portal-service-review";
 import {
   PortalApiError,
   portalApi,
@@ -296,6 +297,8 @@ export function PortalServiceView({
           ) : null}
         </CardContent>
       </Card>
+
+      <PortalServiceReview serviceUuid={service.uuid} />
     </div>
   );
 }

@@ -193,5 +193,22 @@
   "dealer_page.error_title": "The dealer page cannot be shown right now",
   "dealer_page.error_body": "Please try again later.",
   "dealer_page.og_description": "{{name}}: authorized dealer in {{locality}}. Address, map and WhatsApp contact.",
-  "dealer_page.og_description_short": "{{name}}: authorized dealer. Address, map and WhatsApp contact."
+  "dealer_page.og_description_short": "{{name}}: authorized dealer. Address, map and WhatsApp contact.",
+  "review.title": "Rate this service",
+  "review.description": "Rate our platform and the quality of the products used; your feedback matters to us.",
+  "review.platform_rating": "Platform quality",
+  "review.product_rating": "Product quality",
+  "review.comment": "Your comment (optional)",
+  "review.comment_hint": "Up to {{max}} characters.",
+  "review.submit": "Submit",
+  "review.submitting": "Submitting…",
+  "review.thanks": "Thank you for your review.",
+  "review.your_review": "Your review",
+  "review.rating_required": "Please choose both ratings.",
+  "review.star": "{{value}} out of 5",
+  "review.google": "Review on Google",
+  "review.google_hint": "If you are happy, you can also review the dealer on Google.",
+  "review.not_completed": "You can rate the service once it is completed.",
+  "review.failed": "The review could not be sent. Try again.",
+  "review.already": "This service has already been reviewed."
 }

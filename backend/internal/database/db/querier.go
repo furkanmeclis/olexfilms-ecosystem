@@ -261,6 +261,9 @@ type Querier interface {
 	// cancelled.
 	CreateServiceItem(ctx context.Context, arg CreateServiceItemParams) (ServiceItem, error)
 	CreateServiceItemCorrection(ctx context.Context, arg CreateServiceItemCorrectionParams) (ServiceItemCorrection, error)
+	// ON CONFLICT DO NOTHING: a second review of the same service returns no
+	// row (pgx.ErrNoRows), which the use case answers with 409.
+	CreateServiceReview(ctx context.Context, arg CreateServiceReviewParams) (ServiceReview, error)
 	// TEC-249 (F2-04d): short URLs behind /s/{token}.
 	// ON CONFLICT on the token returns no row: the caller draws a new token.
 	CreateShortURL(ctx context.Context, arg CreateShortURLParams) (CreateShortURLRow, error)
@@ -655,6 +658,8 @@ type Querier interface {
 	// Display references of one service (organization, customer, vehicle and
 	// the car brand / model snapshot) for the API view (TEC-179).
 	GetServiceRefs(ctx context.Context, id int64) (GetServiceRefsRow, error)
+	// TEC-244 (F2-03h): the portal service review form (one per service).
+	GetServiceReviewByService(ctx context.Context, serviceID int64) (ServiceReview, error)
 	// Tells an expired token of the brand apart from an unknown one.
 	GetShortURLExpiry(ctx context.Context, arg GetShortURLExpiryParams) (pgtype.Timestamptz, error)
 	GetShortURLStats(ctx context.Context, token string) (GetShortURLStatsRow, error)
