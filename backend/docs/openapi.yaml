@@ -7585,6 +7585,389 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /v1/warehouse/moves:
+    post:
+      tags: [Warehouse]
+      operationId: moveWarehouseUnits
+      summary: Move scanned units onto a location (bin <-> bin, TEC-205)
+      description: >-
+        Needs `warehouse.write`. One step: every scanned serial unit
+        (`barcodes`, also `OFW:UNIT:<barcode>`) gets one ledger `placement`
+        onto the location (`location_uuid`, or `location_code`: a scanned
+        `OFW:LOC:<full_code>` QR or a bare full_code), all in one
+        transaction. A placed unit stays in its warehouse (moving to another
+        warehouse is a warehouse transfer, 400 VALIDATION_ERROR); an
+        unplaced unit of the organization may go to any of its warehouses.
+        Fixed barcodes are 400. 409 WAREHOUSE_UNIT_UNAVAILABLE when the unit
+        is not on hand in the organization, WAREHOUSE_UNIT_BUSY when it is in
+        transit or on an open warehouse transfer. The idempotency key is
+        `warehouse_move:stock_movement:<last movement id>:placement:<barcode>`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseMoveInput" }
+      responses:
+        "200":
+          description: Moved units
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseMoveResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/orders/{uuid}/place:
+    post:
+      tags: [Warehouse]
+      operationId: placeReceivedOrderUnits
+      summary: Shelve the received units of an order (center -> distributor, TEC-205)
+      description: >-
+        Needs `warehouse.write`. The order must be bought by the active
+        organization (404 otherwise) and received (409
+        WAREHOUSE_ORDER_NOT_RECEIVED); the order module has already moved
+        the stock (order_out / received). Every received serial unit still
+        unplaced in the organization gets one `placement` onto the location
+        (`location_uuid` / `location_code`, default the order's buyer
+        location; 400 when neither exists). `barcodes` limits the units.
+        Fixed barcodes (`skipped: fixed`) and units already shelved or moved
+        on (`skipped: not_on_hand`) are skipped. Key
+        `warehouse_order:order_item_unit:<assignment id>:placement:<barcode>`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseOrderPlaceInput" }
+      responses:
+        "200":
+          description: Placed and skipped units
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseMoveResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/transfers:
+    get:
+      tags: [Warehouse]
+      operationId: listWarehouseTransfers
+      summary: List the warehouse transfers of the active organization
+      description: >-
+        Needs `warehouse.read`. Newest first. Transfers between
+        organizations are `/v1/transfers` (TEC-197). An unknown status is
+        400 VALIDATION_ERROR.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/WarehouseTransferStatus" }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0 }
+      responses:
+        "200":
+          description: Transfers (without lines)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseTransferPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Warehouse]
+      operationId: createWarehouseTransfer
+      summary: Open a draft warehouse -> warehouse transfer (TEC-205)
+      description: >-
+        Needs `warehouse.write`. Both warehouses must be active warehouses of
+        the active organization (center or distributor) and differ.
+        `to_location_uuid` is an optional default target location in the
+        target warehouse.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseTransferInput" }
+      responses:
+        "201":
+          description: Draft transfer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseTransfer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/warehouse/transfers/{uuid}:
+    get:
+      tags: [Warehouse]
+      operationId: getWarehouseTransfer
+      summary: One warehouse transfer with its lines
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Transfer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseTransfer"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/warehouse/transfers/{uuid}/lines:
+    post:
+      tags: [Warehouse]
+      operationId: addWarehouseTransferLines
+      summary: Add scanned units to a draft warehouse transfer
+      description: >-
+        Needs `warehouse.write`. Each barcode must be a serial unit of the
+        active brand placed in the source warehouse (409
+        WAREHOUSE_UNIT_UNAVAILABLE), not in transit, not on another open
+        warehouse transfer, not reserved by an order and not on an open
+        stock transfer request (409 WAREHOUSE_UNIT_BUSY). Fixed barcodes are
+        400. A transfer that is no longer a draft is 409
+        WAREHOUSE_TRANSFER_STATE.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseTransferLinesInput" }
+      responses:
+        "200":
+          description: Transfer with the new lines
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseTransfer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/transfers/{uuid}/lines/{line_uuid}:
+    delete:
+      tags: [Warehouse]
+      operationId: deleteWarehouseTransferLine
+      summary: Remove a line from a draft warehouse transfer
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - name: line_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Transfer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseTransfer"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/transfers/{uuid}/place:
+    post:
+      tags: [Warehouse]
+      operationId: placeWarehouseTransferLines
+      summary: Set the target location of transfer lines (pick or scan)
+      description: >-
+        Needs `warehouse.write`, draft or in_transit. Exactly one of
+        `location_uuid` or `location_code`; the location must be active and
+        in the target warehouse (400 otherwise). Lines: `line_uuids`, or the
+        lines of the scanned `barcodes`, or every line.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockEntryPlaceInput" }
+      responses:
+        "200":
+          description: Transfer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseTransfer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/transfers/{uuid}/ship:
+    post:
+      tags: [Warehouse]
+      operationId: shipWarehouseTransfer
+      summary: Ship a warehouse transfer (ledger transfer_out, draft -> in_transit)
+      description: >-
+        Needs `warehouse.write`. In one transaction every line gets a
+        `transfer_out` (key
+        `warehouse_transfer:warehouse_transfer_line:<line id>:transfer_out:<barcode>`);
+        the unit is in transit, owned by the organization, and no other
+        flow can pick it. 409 WAREHOUSE_TRANSFER_STATE when not a draft (a
+        second ship writes nothing), WAREHOUSE_TRANSFER_EMPTY without lines,
+        WAREHOUSE_UNIT_UNAVAILABLE / WAREHOUSE_UNIT_BUSY when a unit left
+        the source warehouse or got reserved, WAREHOUSE_LEDGER_REFUSED when
+        the ledger refuses (nothing is written).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: In-transit transfer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseTransfer"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/transfers/{uuid}/complete:
+    post:
+      tags: [Warehouse]
+      operationId: completeWarehouseTransfer
+      summary: Receive a warehouse transfer (transfer_in + placement, in_transit -> completed)
+      description: >-
+        Needs `warehouse.write`. In one transaction every line gets the
+        paired `transfer_in` and a `placement` onto its target location
+        (line target, else the optional body location, else the transfer's
+        default location; 409 WAREHOUSE_TRANSFER_UNPLACED when none). 409
+        WAREHOUSE_TRANSFER_STATE when not in transit. The body is optional.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseTransferCompleteInput" }
+      responses:
+        "200":
+          description: Completed transfer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseTransfer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/transfers/{uuid}/cancel:
+    post:
+      tags: [Warehouse]
+      operationId: cancelWarehouseTransfer
+      summary: Cancel a warehouse transfer
+      description: >-
+        Needs `warehouse.write`. A draft closes without stock; an in-transit
+        transfer posts `transfer_cancel_restore` per line in one transaction
+        (each unit goes back to its source location and status). 409
+        WAREHOUSE_TRANSFER_STATE when completed or cancelled.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Cancelled transfer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseTransfer"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   /v1/public/product-images/{key}:
     get:
       tags: [Catalog]
@@ -17827,6 +18210,164 @@ components:
             items:
               type: array
               items: { $ref: "#/components/schemas/StockEntry" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    WarehouseMoveInput:
+      type: object
+      additionalProperties: false
+      required: [barcodes]
+      properties:
+        barcodes:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items: { type: string, minLength: 1, maxLength: 128 }
+        location_uuid: { type: [string, "null"], format: uuid }
+        location_code: { type: string, maxLength: 200, description: "Scanned OFW:LOC:<full_code> or a bare full_code." }
+
+    WarehouseOrderPlaceInput:
+      type: object
+      additionalProperties: false
+      properties:
+        barcodes:
+          type: array
+          maxItems: 1000
+          items: { type: string, minLength: 1, maxLength: 128 }
+          description: Limits the units; empty means every unit of the order.
+        location_uuid: { type: [string, "null"], format: uuid }
+        location_code: { type: string, maxLength: 200 }
+
+    WarehouseMovedUnit:
+      type: object
+      required: [unit_uuid, barcode, from_location, movement_uuid]
+      properties:
+        unit_uuid: { type: string, format: uuid }
+        barcode: { type: string }
+        from_location:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockEntryLocation"
+        movement_uuid: { type: [string, "null"], format: uuid }
+        skipped: { type: string, enum: [fixed, not_on_hand], description: Order placement only. }
+
+    WarehouseMoveResult:
+      type: object
+      required: [location, units]
+      properties:
+        location: { $ref: "#/components/schemas/StockEntryLocation" }
+        units:
+          type: array
+          items: { $ref: "#/components/schemas/WarehouseMovedUnit" }
+
+    EnvelopeWarehouseMoveResult:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/WarehouseMoveResult" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    WarehouseTransferStatus:
+      type: string
+      enum: [draft, in_transit, completed, cancelled]
+
+    WarehouseTransferInput:
+      type: object
+      additionalProperties: false
+      required: [from_warehouse_uuid, to_warehouse_uuid]
+      properties:
+        from_warehouse_uuid: { type: string, format: uuid }
+        to_warehouse_uuid: { type: string, format: uuid }
+        to_location_uuid: { type: [string, "null"], format: uuid }
+        note: { type: [string, "null"], maxLength: 500 }
+
+    WarehouseTransferLinesInput:
+      type: object
+      additionalProperties: false
+      required: [barcodes]
+      properties:
+        barcodes:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items: { type: string, minLength: 1, maxLength: 128 }
+
+    WarehouseTransferCompleteInput:
+      type: object
+      additionalProperties: false
+      properties:
+        location_uuid: { type: [string, "null"], format: uuid }
+        location_code: { type: string, maxLength: 200 }
+
+    WarehouseTransferLine:
+      type: object
+      required: [uuid, unit_uuid, barcode, unit_status, product, source_location, target_location, out_movement_uuid, in_movement_uuid, placement_movement_uuid, restore_movement_uuid]
+      properties:
+        uuid: { type: string, format: uuid }
+        unit_uuid: { type: string, format: uuid }
+        barcode: { type: string }
+        unit_status: { type: string }
+        product: { $ref: "#/components/schemas/StockEntryProduct" }
+        source_location:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockEntryLocation"
+        target_location:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockEntryLocation"
+        out_movement_uuid: { type: [string, "null"], format: uuid }
+        in_movement_uuid: { type: [string, "null"], format: uuid }
+        placement_movement_uuid: { type: [string, "null"], format: uuid }
+        restore_movement_uuid: { type: [string, "null"], format: uuid }
+
+    WarehouseTransfer:
+      type: object
+      required: [uuid, transfer_no, status, note, from_warehouse, to_warehouse, to_location, line_count, created_at, shipped_at, completed_at, cancelled_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        transfer_no: { type: string }
+        status: { $ref: "#/components/schemas/WarehouseTransferStatus" }
+        note: { type: [string, "null"] }
+        from_warehouse: { $ref: "#/components/schemas/StockEntryWarehouse" }
+        to_warehouse: { $ref: "#/components/schemas/StockEntryWarehouse" }
+        to_location:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockEntryLocation"
+        line_count: { type: integer, format: int64 }
+        lines:
+          type: array
+          description: Detail responses only.
+          items: { $ref: "#/components/schemas/WarehouseTransferLine" }
+        created_at: { type: string, format: date-time }
+        shipped_at: { type: [string, "null"], format: date-time }
+        completed_at: { type: [string, "null"], format: date-time }
+        cancelled_at: { type: [string, "null"], format: date-time }
+
+    EnvelopeWarehouseTransfer:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/WarehouseTransfer" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeWarehouseTransferPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/WarehouseTransfer" }
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }
