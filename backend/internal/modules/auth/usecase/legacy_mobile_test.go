@@ -49,7 +49,7 @@ func TestLegacyMobileAccess(t *testing.T) {
 		t.Fatal("the regular manager must reject the legacy token")
 	}
 	c, err := tokens.AcceptLegacy().ParseAccess(legacy)
-	if err != nil || !c.Legacy || c.SessionUUID() != sid || !c.ExpiresAt.Time.Equal(session.ExpiresAt) {
+	if err != nil || !c.Legacy || c.SessionUUID() != sid || !c.ExpiresAt.Equal(session.ExpiresAt) {
 		t.Fatalf("legacy claims = %+v %v", c, err)
 	}
 	if o, _ := c.OrganizationUUID(); o == nil || *o != oid {
