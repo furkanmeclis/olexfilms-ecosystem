@@ -155,3 +155,57 @@ export function parseBarcodes(text: string): string[] {
   }
   return out;
 }
+
+// --- TEC-232 (slice 2) -----------------------------------------------------
+
+/**
+ * New warehouse transfer (TEC-205): two different active warehouses of the
+ * organization and an optional note.
+ */
+export function transferFormSchema(t: Translate) {
+  return z
+    .object({
+      from_warehouse_uuid: z
+        .string()
+        .min(1, t("warehouse.validation.warehouse")),
+      to_warehouse_uuid: z.string().min(1, t("warehouse.validation.warehouse")),
+      note: z
+        .string()
+        .trim()
+        .max(500, t("warehouse.validation.too_long", { max: 500 })),
+    })
+    .superRefine((v, ctx) => {
+      if (
+        v.from_warehouse_uuid &&
+        v.from_warehouse_uuid === v.to_warehouse_uuid
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["to_warehouse_uuid"],
+          message: t("warehouse.validation.same_warehouse"),
+        });
+      }
+    });
+}
+
+export type TransferFormValues = z.output<
+  ReturnType<typeof transferFormSchema>
+>;
+
+/** Quantity of a count scan: a whole number from 1 (empty means 1). */
+export const COUNT_QTY_MAX = 100000;
+
+export function countQuantityError(value: string, t: Translate): string | null {
+  const v = value.trim();
+  if (v === "") return null;
+  if (!/^\d+$/.test(v) || Number(v) < 1 || Number(v) > COUNT_QTY_MAX) {
+    return t("warehouse.validation.quantity", { max: COUNT_QTY_MAX });
+  }
+  return null;
+}
+
+export function countMetersError(value: string, t: Translate): string | null {
+  const v = value.trim();
+  if (v === "") return null;
+  return METERS_RE.test(v) ? null : t("warehouse.validation.meters");
+}
