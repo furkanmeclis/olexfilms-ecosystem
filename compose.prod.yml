@@ -100,6 +100,16 @@ x-backend-environment: &backend-environment
   WUZAPI_WEBHOOK_SECRET: ${WUZAPI_WEBHOOK_SECRET:?WUZAPI_WEBHOOK_SECRET is required}
   # Registered on the wuzapi instance user; must match WUZAPI_GLOBAL_WEBHOOK.
   WUZAPI_WEBHOOK_URL: ${WUZAPI_WEBHOOK_URL:-http://backend.${APP_NETWORK_NAME:-${NAME_PREFIX:-app}-app}:8080/hooks/wuzapi}
+  # Old hub mobile app aliases /v1/mobile/legacy/* (TEC-234, F2 cutover):
+  # "true" turns them on; off = 404. Removed in F5.
+  MOBILE_LEGACY_ALIASES: ${MOBILE_LEGACY_ALIASES:-false}
+  # App version gate (TEC-236): 426 UPDATE_REQUIRED below MOBILE_APP_MIN_VERSION
+  # (empty = no gate). The system settings mobile.* override these values.
+  MOBILE_APP_MIN_VERSION: ${MOBILE_APP_MIN_VERSION:-}
+  MOBILE_APP_STORE_URL_IOS: ${MOBILE_APP_STORE_URL_IOS:-}
+  MOBILE_APP_STORE_URL_ANDROID: ${MOBILE_APP_STORE_URL_ANDROID:-}
+  MOBILE_APP_VERSION_REQUIRED: ${MOBILE_APP_VERSION_REQUIRED:-false}
+  MOBILE_APP_UA_PRODUCTS: ${MOBILE_APP_UA_PRODUCTS:-OlexFilms}
   LOG_LEVEL: ${LOG_LEVEL:-info}
   LOG_FORMAT: ${LOG_FORMAT:-json}
 
