@@ -21,7 +21,7 @@ import (
 const TaskGlorianPushBarcodes = "glorian:push_barcodes"
 
 // TaskGlorianPatchStockItem sends PATCH /stock-items/by-barcode for one
-// exit, transfer or shipment movement of a synced unit.
+// exit (external_outbound) movement of a synced unit.
 const TaskGlorianPatchStockItem = "glorian:patch_stock_item"
 
 // Push cron: every 15 minutes, between the pull runs.
