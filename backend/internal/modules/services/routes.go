@@ -58,6 +58,10 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/services/{uuid}/images", route(h.UploadImage, write))
 	mux.Handle("GET /v1/services/{uuid}/images/{image}", route(h.DownloadImage))
 	mux.Handle("DELETE /v1/services/{uuid}/images/{image}", route(h.DeleteImage, write))
+	// TEC-230: consumption correction of a completed service (center only,
+	// services.cancel; the use case checks the scope and the time window).
+	mux.Handle("POST /v1/services/{uuid}/items/{item}/consumption-correction",
+		route(h.CorrectConsumption, middleware.RequirePermission(rbac.PermServicesCancel)))
 
 	// TEC-151: top-10 car brands / models of completed services (center
 	// dashboard). Same gates as the reads; the use case additionally needs

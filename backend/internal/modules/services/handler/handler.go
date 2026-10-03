@@ -28,6 +28,12 @@ const (
 	CodeUnitInUse         = "SERVICE_UNIT_IN_USE"
 	CodeUnitNotAvailable  = "SERVICE_UNIT_NOT_AVAILABLE"
 	CodeTooManyImages     = "SERVICE_TOO_MANY_IMAGES"
+
+	// TEC-230: consumption correction.
+	CodeCorrectionWindowClosed   = "SERVICE_CORRECTION_WINDOW_CLOSED"
+	CodeItemWarrantyActive       = "SERVICE_ITEM_WARRANTY_ACTIVE"
+	CodeConsumptionNotReversible = "SERVICE_CONSUMPTION_NOT_REVERSIBLE"
+	CodeItemAlreadyCorrected     = "SERVICE_ITEM_ALREADY_CORRECTED"
 )
 
 // imageField is the multipart field of the image upload.
@@ -66,6 +72,17 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Conflict(w, r, CodeUnitNotAvailable, "The unit is not available to this organization")
 	case errors.Is(err, svcuc.ErrTooManyImages):
 		response.Error(w, r, http.StatusUnprocessableEntity, CodeTooManyImages, "The image limit of the service is reached")
+	case errors.Is(err, svcuc.ErrCorrectionWindowClosed):
+		response.Error(w, r, http.StatusUnprocessableEntity, CodeCorrectionWindowClosed,
+			"The consumption of this service can no longer be corrected")
+	case errors.Is(err, svcuc.ErrItemWarrantyActive):
+		response.Error(w, r, http.StatusUnprocessableEntity, CodeItemWarrantyActive,
+			"The item has a warranty that is not void; void it first")
+	case errors.Is(err, svcuc.ErrConsumptionNotReversible):
+		response.Error(w, r, http.StatusUnprocessableEntity, CodeConsumptionNotReversible,
+			"Only a whole consumption can be corrected")
+	case errors.Is(err, svcuc.ErrItemAlreadyCorrected):
+		response.Conflict(w, r, CodeItemAlreadyCorrected, "The consumption of this item was already corrected")
 	default:
 		response.InternalErr(w, r, err, "service request failed")
 	}
@@ -273,6 +290,38 @@ func (h *Handler) Transition(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v, err := h.svc.Transition(r.Context(), caller(r), id, svcuc.TransitionInput{Status: b.Status, Note: b.Note})
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, v)
+}
+
+type correctionBody struct {
+	Reason             string  `json:"reason"`
+	ReplacementBarcode *string `json:"replacement_barcode"`
+}
+
+// CorrectConsumption (POST /v1/services/{uuid}/items/{item}/consumption-correction,
+// TEC-230): the item's unit goes back to stock (ledger return), optionally
+// the replacement unit is consumed instead. Center only (services.cancel),
+// within svcuc.CorrectionWindow of the completion.
+func (h *Handler) CorrectConsumption(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	item, ok := pathUUID(w, r, "item")
+	if !ok {
+		return
+	}
+	var b correctionBody
+	if !decode(w, r, &b) {
+		return
+	}
+	v, err := h.svc.CorrectConsumption(r.Context(), caller(r), id, item, svcuc.CorrectionInput{
+		Reason: b.Reason, ReplacementBarcode: b.ReplacementBarcode,
+	})
 	if err != nil {
 		writeError(w, r, err)
 		return

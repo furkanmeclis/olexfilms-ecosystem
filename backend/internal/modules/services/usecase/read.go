@@ -64,6 +64,18 @@ type ItemView struct {
 	AppliedParts []string   `json:"applied_parts"`
 	Notes        *string    `json:"notes"`
 	CreatedAt    time.Time  `json:"created_at"`
+	// Correction is the consumption correction of the item (TEC-230): the
+	// unit went back to stock, ReplacementBarcode (if any) was consumed
+	// instead. nil when the item was not corrected.
+	Correction *ItemCorrectionView `json:"correction"`
+}
+
+// ItemCorrectionView is the consumption correction of an item (TEC-230).
+type ItemCorrectionView struct {
+	UUID               uuid.UUID `json:"uuid"`
+	Reason             string    `json:"reason"`
+	ReplacementBarcode *string   `json:"replacement_barcode"`
+	CreatedAt          time.Time `json:"created_at"`
 }
 
 // ImageView is one service image; URL is the authenticated download path.
@@ -204,6 +216,17 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, svc db.Serv
 	if err != nil {
 		return ServiceView{}, fmt.Errorf("services: items: %w", err)
 	}
+	corrections, err := q.ListServiceItemCorrections(ctx, svc.ID)
+	if err != nil {
+		return ServiceView{}, fmt.Errorf("services: corrections: %w", err)
+	}
+	correctionByItem := make(map[int64]*ItemCorrectionView, len(corrections))
+	for _, cr := range corrections {
+		correctionByItem[cr.ServiceItemID] = &ItemCorrectionView{
+			UUID: cr.Uuid, Reason: cr.Reason, ReplacementBarcode: textPtr(cr.ReplacementBarcode),
+			CreatedAt: cr.CreatedAt.Time,
+		}
+	}
 	v.Items = make([]ItemView, 0, len(items))
 	itemByID := make(map[int64]ItemView, len(items))
 	for _, it := range items {
@@ -221,6 +244,7 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, svc db.Serv
 			UUID: it.Uuid, Product: ProductRef{UUID: p.Uuid, SKU: p.Sku, Name: p.Name, UnitType: p.UnitType},
 			Barcode: u.Barcode, UnitKind: u.UnitKind, Kind: it.Kind, Meters: numericTextPtr(it.Meters),
 			AppliedParts: parts, Notes: textPtr(it.Notes), CreatedAt: it.CreatedAt.Time,
+			Correction: correctionByItem[it.ID],
 		}
 		if it.Quantity.Valid {
 			qv := it.Quantity.Int32
