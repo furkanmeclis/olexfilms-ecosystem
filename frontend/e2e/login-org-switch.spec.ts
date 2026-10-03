@@ -92,11 +92,11 @@ test("login on the tenant page, then switch organization", async ({
   await expect(page.getByTestId("organization-switcher")).toContainText(
     "Beta Distribütör",
   );
-  // The switcher asks for beta first and the session ends on beta. (Today
-  // the still-mounted acme context may bounce back to acme once before the
-  // navigation lands; only the first and the last switch are pinned.)
+  // TEC-227: the switch is one-way. The still-mounted acme context pauses
+  // its sync while the switch is in flight, so every intermediate
+  // org-context call goes to beta (never back to acme).
+  await expect.poll(() => switches.length).toBeGreaterThan(0);
   expect(switches[0]).toBe("beta");
-  await expect.poll(() => switches.at(-1)).toBe("beta");
   // The session cookie (what the BFF sends to Go) is scoped to beta.
   await expect
     .poll(async () => {
@@ -106,6 +106,8 @@ test("login on the tenant page, then switch organization", async ({
     })
     .toBe(BETA.uuid);
   expect(api.activeOrg).toBe(BETA.uuid);
+  // No call ever scoped the session back to acme.
+  expect(switches.filter((slug) => slug !== "beta")).toEqual([]);
   const after = await request.get(
     `http://127.0.0.1:${E2E_UPSTREAM_PORT}/__calls`,
   );
