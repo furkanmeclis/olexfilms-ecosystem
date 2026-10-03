@@ -515,6 +515,10 @@ type Querier interface {
 	// A movement with its unit's barcode and the product's sync link, for the
 	// outbound PATCH of one barcode.
 	GetGlorianPushMovement(ctx context.Context, id int64) (GetGlorianPushMovementRow, error)
+	// A serial unit of the brand outside the synced set (e.g. its product is
+	// not linked yet), so a remote item with its barcode is paired instead of
+	// being reported as remote only.
+	GetGlorianReconcileUnitByBarcode(ctx context.Context, arg GetGlorianReconcileUnitByBarcodeParams) (GetGlorianReconcileUnitByBarcodeRow, error)
 	GetImportJobByID(ctx context.Context, id int64) (ImportJob, error)
 	GetImportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ImportJob, error)
 	// TEC-270 (F2-02e): Glorian barcode push. Units of products synced from a
@@ -970,6 +974,12 @@ type Querier interface {
 	// (created_at, id), for the products synced from the connection. A unit
 	// placed twice comes twice; the caller deduplicates by barcode.
 	ListGlorianPushUnits(ctx context.Context, arg ListGlorianPushUnitsParams) ([]ListGlorianPushUnitsRow, error)
+	// TEC-272 (F2-02g): Glorian reconcile (read only). The local side of the
+	// drift report: serial units of the connection's brand that belong to the
+	// sync (their product is synced from the connection, or the unit already
+	// mirrors a remote stock item of it), with the product's remote id and the
+	// unit's current owner from the ledger projection.
+	ListGlorianReconcileUnits(ctx context.Context, arg ListGlorianReconcileUnitsParams) ([]ListGlorianReconcileUnitsRow, error)
 	// Grants of global roles (user_roles / JWT roles claim).
 	ListGrantsByRoleSlugs(ctx context.Context, roleSlugs []string) ([]ListGrantsByRoleSlugsRow, error)
 	// Held outbounds of a connection (0: every connection) after the keyset
