@@ -53,6 +53,8 @@ func Schedules() []Periodic {
 		{Cron: tasksDueScanCron, Type: TaskTasksDueScan, Queue: QueueMaintenance, Opts: tasksDueScanOpts(), New: NewTasksDueScanTask},
 		// TEC-207: hourly end-of-day warehouse reports (idempotent).
 		{Cron: warehouseEODCron, Type: TaskWarehouseEODReports, Queue: QueueMaintenance, Opts: warehouseEODOpts(), New: NewWarehouseEODTask},
+		// TEC-268: Glorian catalog and dealer pull every 15 minutes.
+		{Cron: glorianPullCron, Type: TaskGlorianPullCatalog, Queue: QueueMaintenance, Opts: glorianPullOpts(), New: NewGlorianPullCatalogTask},
 	}
 }
 
