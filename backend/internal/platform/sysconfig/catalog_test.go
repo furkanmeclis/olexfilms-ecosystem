@@ -29,6 +29,9 @@ func TestValidate(t *testing.T) {
 		{KeySMTPHost, "12", ""},
 		{KeySMTPHost, "", ""},
 		{KeySMTPHost, "null", ""},
+		{KeyScanShortCodeEnabled, "false", "false"},
+		{KeyScanShortCodePrefix, `"OLEX"`, `"OLEX"`},
+		{KeyScanShortCodePrefix, `"TOOLONGPFX"`, ""},
 	}
 	for _, c := range cases {
 		d, ok := Lookup(c.key)

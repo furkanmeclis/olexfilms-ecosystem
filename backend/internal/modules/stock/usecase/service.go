@@ -533,3 +533,50 @@ func abs(v int32) int32 {
 	}
 	return v
 }
+
+// MetersString renders a meters NUMERIC with two decimals (nil when null).
+func MetersString(n pgtype.Numeric) *string { return numericPtr(n) }
+
+// ReachedUnit is a unit the viewer reaches, with its current owner: State
+// for a serial unit in stock (nil before entry), Holdings for the fixed
+// barcode holdings inside the viewer's reach.
+type ReachedUnit struct {
+	Unit     db.Unit
+	State    *db.UnitCurrentState
+	Holdings []db.FixedBarcodeHolding
+}
+
+// ReachableUnit finds the unit of a barcode under the same reach rule as
+// UnitHistory (TEC-203 scanner): barcodes are unique per brand, the active
+// brand wins, and a unit held outside the stock.read filter is not found
+// (ErrNotFound).
+func (s *Service) ReachableUnit(ctx context.Context, org orgctx.Scope, f scopefilter.Filter, barcode string) (ReachedUnit, error) {
+	barcode = strings.TrimSpace(barcode)
+	if barcode == "" {
+		return ReachedUnit{}, ErrNotFound
+	}
+	units, err := s.q.ListUnitsByBarcode(ctx, barcode)
+	if err != nil {
+		return ReachedUnit{}, fmt.Errorf("stock: units: %w", err)
+	}
+	if len(units) == 0 {
+		return ReachedUnit{}, ErrNotFound
+	}
+	v, err := s.viewer(ctx, org, f)
+	if err != nil {
+		return ReachedUnit{}, err
+	}
+	slices.SortStableFunc(units, func(a, b db.Unit) int {
+		return boolRank(a.BrandID == org.BrandID) - boolRank(b.BrandID == org.BrandID)
+	})
+	for _, u := range units {
+		state, holdings, visible, err := s.unitReach(ctx, v, u)
+		if err != nil {
+			return ReachedUnit{}, err
+		}
+		if visible {
+			return ReachedUnit{Unit: u, State: state, Holdings: holdings}, nil
+		}
+	}
+	return ReachedUnit{}, ErrNotFound
+}
