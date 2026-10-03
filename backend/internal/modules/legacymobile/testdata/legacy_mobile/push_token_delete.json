@@ -3,13 +3,14 @@
   "method": "DELETE",
   "path": "/v1/mobile/legacy/push-token",
   "adapts": "DELETE /v1/mobile/push-token",
-  "source": "New mobile contract (docs/openapi.yaml, TEC-91).",
+  "source": "olexfilms routes/api.php DELETE /api/v1/mobile/push-token; app/Http/Requests/Api/PushToken/DeletePushTokenRequest.php (expo_push_token); app/Http/Controllers/Api/V1/PushTokenController.php destroy (data null, push_tokens.deleted).",
   "request": {
-    "headers": {"Authorization": "Bearer {{access_token}}"},
+    "headers": {"Accept": "application/json", "Accept-Language": "tr", "Authorization": "Bearer {{access_token}}"},
     "body": {"expo_push_token": "{{expo_push_token}}"}
   },
   "response": {
     "status": 200,
-    "data_keys": ["status"]
+    "message": "Push token silindi.",
+    "data_null": true
   }
 }

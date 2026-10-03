@@ -1,6 +1,6 @@
 "use client";
 
-import { Car, House, ShieldCheck } from "lucide-react";
+import { Car, House, ShieldCheck, Store } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -16,6 +16,7 @@ const ITEMS = [
     key: "portal.nav.warranties",
     icon: ShieldCheck,
   },
+  { href: routes.portal.dealers, key: "portal.nav.dealers", icon: Store },
 ] as const;
 
 /** Whether a nav item is the current section (home matches only itself). */

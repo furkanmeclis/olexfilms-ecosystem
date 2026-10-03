@@ -102,5 +102,16 @@
   "system.reset": "Standarta qaytar",
   "system.toast.saved": "Ayar yadda saxlanıldı.",
   "system.toast.reset": "Ayar standarta qaytarıldı.",
-  "system.toast.failed": "Ayar yadda saxlanılmadı."
+  "system.toast.failed": "Ayar yadda saxlanılmadı.",
+  "coordinates.title": "Xəritə mövqeyi",
+  "coordinates.hint": "Diler axtarışında görünmək üçün koordinatları daxil edin və ya xəritədə mövqeyi seçin.",
+  "coordinates.latitude": "Enlik",
+  "coordinates.longitude": "Uzunluq",
+  "coordinates.map_label": "Mövqe seçmə xəritəsi",
+  "coordinates.pick_hint": "Mövqeyi seçmək üçün xəritəyə toxunun.",
+  "coordinates.clear": "Mövqeyi təmizlə",
+  "coordinates.marker": "Seçilmiş mövqe",
+  "coordinates.errors.latitude": "Enlik -90 ilə 90 arasında rəqəm olmalıdır.",
+  "coordinates.errors.longitude": "Uzunluq -180 ilə 180 arasında rəqəm olmalıdır.",
+  "coordinates.errors.pair": "Enlik və uzunluğu birlikdə daxil edin və ya hər ikisini boş buraxın."
 }

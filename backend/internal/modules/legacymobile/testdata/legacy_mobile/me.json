@@ -3,13 +3,17 @@
   "method": "GET",
   "path": "/v1/mobile/legacy/auth/me",
   "adapts": "GET /v1/mobile/auth/me",
-  "source": "New mobile contract (docs/openapi.yaml, TEC-91). Old shape to be confirmed (TEC-234 comment).",
+  "source": "olexfilms routes/api.php GET /api/v1/mobile/auth/me; app/Http/Controllers/Api/V1/AuthController.php me (successResponse(new UserResource), message null); app/Http/Resources/Api/UserResource.php.",
   "request": {
-    "headers": {"Authorization": "Bearer {{access_token}}"},
+    "headers": {"Accept": "application/json", "Accept-Language": "tr", "Authorization": "Bearer {{access_token}}"},
     "body": null
   },
   "response": {
     "status": 200,
-    "data_keys": ["user", "roles", "permissions", "active_organization_uuid", "organizations", "session"]
+    "message": null,
+    "data_keys": ["id", "name", "email", "phone", "locale", "avatar_url", "dealer_id", "roles", "dealer"],
+    "nested_keys": {
+      "dealer": ["id", "name", "is_active"]
+    }
   }
 }
