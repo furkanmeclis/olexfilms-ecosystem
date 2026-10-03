@@ -542,4 +542,5 @@ var ruCatalog = map[string]string{
 	"warehouse.eod.type.reclassification":          "Переклассификация",
 	"warehouse.eod.type.void":                      "Аннулирование",
 	"warehouse.eod.type.external_outbound":         "Внешняя отгрузка",
+	"mobile.update_required":                       "Эта версия приложения больше не поддерживается. Обновите приложение, чтобы продолжить.",
 }

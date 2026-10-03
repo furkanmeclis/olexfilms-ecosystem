@@ -64,6 +64,8 @@
   "system.groups.warehouse_hint": "Поведінка складу й запасів.",
   "system.groups.scanning": "Сканування",
   "system.groups.scanning_hint": "Налаштування сканування штрихкодів і QR.",
+  "system.groups.mobile": "Мобільний застосунок",
+  "system.groups.mobile_hint": "Мінімальна версія застосунку та посилання на магазини; старіші версії мають оновитися.",
   "system.keys.forecast_min_days": "Мінімальний період прогнозу (дні)",
   "system.keys.forecast_min_days_hint": "Мінімальна історія рухів, перш ніж прогноз щось запропонує.",
   "system.keys.contract_grace_days": "Пільговий період договору (дні)",
@@ -100,5 +102,16 @@
   "system.reset": "Скинути до типового",
   "system.toast.saved": "Налаштування збережено.",
   "system.toast.reset": "Налаштування скинуто.",
-  "system.toast.failed": "Не вдалося зберегти налаштування."
+  "system.toast.failed": "Не вдалося зберегти налаштування.",
+  "coordinates.title": "Позиція на карті",
+  "coordinates.hint": "Введіть координати або виберіть позицію на карті, щоб відображатися в пошуку дилерів.",
+  "coordinates.latitude": "Широта",
+  "coordinates.longitude": "Довгота",
+  "coordinates.map_label": "Карта вибору позиції",
+  "coordinates.pick_hint": "Торкніться карти, щоб вибрати позицію.",
+  "coordinates.clear": "Очистити позицію",
+  "coordinates.marker": "Вибрана позиція",
+  "coordinates.errors.latitude": "Широта має бути числом від -90 до 90.",
+  "coordinates.errors.longitude": "Довгота має бути числом від -180 до 180.",
+  "coordinates.errors.pair": "Введіть широту й довготу разом або залиште обидва поля порожніми."
 }

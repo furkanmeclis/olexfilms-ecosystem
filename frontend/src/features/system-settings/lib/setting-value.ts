@@ -16,6 +16,7 @@ export const GROUP_ORDER: SystemSettingGroup[] = [
   "smtp",
   "warehouse",
   "scanning",
+  "mobile",
 ];
 
 export function groupSettings(items: SystemSetting[]) {

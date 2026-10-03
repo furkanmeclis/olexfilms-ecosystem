@@ -138,12 +138,27 @@ tags:
       otherwise 426 `MOBILE_API_VERSION_UNSUPPORTED`. Also the QR web sign-in
       (`/v1/auth/qr/*`).
 
-      Legacy aliases (TEC-234, removed in F5): with `MOBILE_LEGACY_ALIASES`
-      on (default off, otherwise 404), the old hub app reaches
-      `/v1/mobile/legacy/{auth/login, auth/me, services, services/{uuid},
-      measurements, push-token}`, adapters over the routes above and
-      `/v1/services` with the same gates and bodies but without the
-      `X-Mobile-Api-Version` header. They are not listed as paths.
+      App version gate (TEC-236): the app sends its release in `X-App-Version`
+      (e.g. `2.4.1`; without it a `OlexFilms/2.4.1` User-Agent token is read,
+      tokens set by `MOBILE_APP_UA_PRODUCTS`). Below the minimum
+      (system setting `mobile.app_min_version`, else `MOBILE_APP_MIN_VERSION`;
+      both empty = no gate) every `/v1/mobile/*` route, legacy aliases
+      included, answers 426 `UPDATE_REQUIRED` with a localized message and
+      `data.store_urls` before any other check. An unknown version passes
+      unless `mobile.app_version_required` (or
+      `MOBILE_APP_VERSION_REQUIRED`) is on.
+
+      Legacy aliases (TEC-234, TEC-284, removed in F5): with
+      `MOBILE_LEGACY_ALIASES` on (default off, otherwise 404), the old hub
+      app keeps its own paths and bodies under the base URL
+      `/v1/mobile/legacy` (it was `/api/v1/mobile` on the hub):
+      `POST auth/login`, `GET auth/me`, `GET services`,
+      `GET services/{service}` (integer id or uuid), `POST nexptg-reports`
+      (stored as a measurement upload), `PUT|DELETE push-token`. They are
+      adapters over the routes above and `/v1/services` with the same
+      gates, without the `X-Mobile-Api-Version` header, and answer in the
+      hub's envelope (`success`, `message`, `data` / `errors`; validation
+      errors are 422 there, as on the hub). They are not listed as paths.
 
 paths:
   /healthz:
@@ -15047,11 +15062,15 @@ components:
 
   responses:
     MobileApiVersionUnsupported:
-      description: 426 MOBILE_API_VERSION_UNSUPPORTED (missing or unsupported X-Mobile-Api-Version; update the app)
+      description: >-
+        426 MOBILE_API_VERSION_UNSUPPORTED (missing or unsupported
+        X-Mobile-Api-Version) or 426 UPDATE_REQUIRED (X-App-Version below the
+        minimum, TEC-236; `data` carries the minimum and the store links).
+        Either way the app asks the user to update.
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/Error"
+            $ref: "#/components/schemas/UpdateRequiredError"
     QRLoginExpired:
       description: 410 QR_LOGIN_EXPIRED
       content:
@@ -15623,6 +15642,41 @@ components:
           $ref: "#/components/schemas/ErrorBody"
         meta:
           $ref: "#/components/schemas/ResponseMeta"
+
+    UpdateRequiredError:
+      description: >-
+        Error envelope of a 426. `data` is present for UPDATE_REQUIRED only
+        (TEC-236).
+      type: object
+      required: [success, error, meta]
+      properties:
+        success:
+          type: boolean
+          enum: [false]
+        error:
+          $ref: "#/components/schemas/ErrorBody"
+        data:
+          $ref: "#/components/schemas/UpdateRequiredInfo"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+
+    UpdateRequiredInfo:
+      type: object
+      required: [min_version, store_urls]
+      properties:
+        min_version:
+          type: string
+          description: Minimum supported app release
+          examples: ["2.4.0"]
+        current_version:
+          type: [string, "null"]
+          description: The release the request reported; null when unknown
+        store_urls:
+          type: object
+          required: [ios, android]
+          properties:
+            ios: { type: [string, "null"], format: uri }
+            android: { type: [string, "null"], format: uri }
 
     Tokens:
       type: object
@@ -18229,7 +18283,7 @@ components:
       required: [key, group, kind, default, description, value, is_default, schema_version]
       properties:
         key: { type: string, example: contract_grace_days }
-        group: { type: string, enum: [general, contracts, forecast, services, smtp, warehouse, scanning] }
+        group: { type: string, enum: [general, contracts, forecast, services, smtp, warehouse, scanning, mobile] }
         kind: { type: string, enum: [int, bool, string] }
         default: { $ref: "#/components/schemas/SystemSettingValue" }
         description: { type: string }

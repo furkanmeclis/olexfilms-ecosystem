@@ -32,6 +32,16 @@ func TestValidate(t *testing.T) {
 		{KeyScanShortCodeEnabled, "false", "false"},
 		{KeyScanShortCodePrefix, `"OLEX"`, `"OLEX"`},
 		{KeyScanShortCodePrefix, `"TOOLONGPFX"`, ""},
+		{KeyMobileAppMinVersion, `""`, `""`},
+		{KeyMobileAppMinVersion, `"2.4.0"`, `"2.4.0"`},
+		{KeyMobileAppMinVersion, `" v3.1 "`, `"v3.1"`},
+		{KeyMobileAppMinVersion, `"latest"`, ""},
+		{KeyMobileAppMinVersion, "2", ""},
+		{KeyMobileAppStoreURLIOS, `"https://apps.apple.com/app/id1"`, `"https://apps.apple.com/app/id1"`},
+		{KeyMobileAppStoreURLIOS, `""`, `""`},
+		{KeyMobileAppStoreURLIOS, `"http://apps.apple.com/app/id1"`, ""},
+		{KeyMobileAppStoreURLAndroid, `"play.google.com/store"`, ""},
+		{KeyMobileAppVersionRequired, "true", "true"},
 	}
 	for _, c := range cases {
 		d, ok := Lookup(c.key)
@@ -68,5 +78,25 @@ func TestCatalogDefaults(t *testing.T) {
 	}
 	if n := len(Catalog()); n != len(catalog) {
 		t.Fatalf("Catalog() len %d != %d", n, len(catalog))
+	}
+}
+
+func TestMobileAppWithFallback(t *testing.T) {
+	env := MobileApp{MinVersion: "2.0.0", StoreURLIOS: "https://ios.env", StoreURLAndroid: "https://android.env"}
+	if got := (MobileApp{}).WithFallback(env); got != env {
+		t.Fatalf("unset = %+v, want env %+v", got, env)
+	}
+	stored := MobileApp{MinVersion: "2.5.0", StoreURLAndroid: "https://android.db", VersionRequired: true}
+	want := MobileApp{MinVersion: "2.5.0", StoreURLIOS: "https://ios.env", StoreURLAndroid: "https://android.db", VersionRequired: true}
+	if got := stored.WithFallback(env); got != want {
+		t.Fatalf("stored = %+v, want %+v", got, want)
+	}
+	if got := (MobileApp{}).WithFallback(MobileApp{VersionRequired: true}); !got.VersionRequired {
+		t.Fatal("env VersionRequired lost")
+	}
+	for _, k := range []string{KeyMobileAppMinVersion, KeyMobileAppStoreURLIOS, KeyMobileAppStoreURLAndroid} {
+		if d, _ := Lookup(k); d.Default != "" || d.Group != GroupMobile {
+			t.Fatalf("%s default %v group %s, want empty (env fallback) in mobile", k, d.Default, d.Group)
+		}
 	}
 }

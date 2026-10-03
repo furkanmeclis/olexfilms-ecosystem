@@ -64,6 +64,8 @@
   "system.groups.warehouse_hint": "Поведение на склада и наличностите.",
   "system.groups.scanning": "Сканиране",
   "system.groups.scanning_hint": "Настройки за сканиране на баркод и QR.",
+  "system.groups.mobile": "Мобилно приложение",
+  "system.groups.mobile_hint": "Минимална версия на приложението и линкове към магазините; по-старите версии трябва да се обновят.",
   "system.keys.forecast_min_days": "Минимален период за прогноза (дни)",
   "system.keys.forecast_min_days_hint": "Минимална история на движенията, преди прогнозата да предложи нещо.",
   "system.keys.contract_grace_days": "Гратисен период на договора (дни)",
@@ -100,5 +102,16 @@
   "system.reset": "Възстанови по подразбиране",
   "system.toast.saved": "Настройката е запазена.",
   "system.toast.reset": "Настройката е възстановена.",
-  "system.toast.failed": "Настройката не можа да се запази."
+  "system.toast.failed": "Настройката не можа да се запази.",
+  "coordinates.title": "Позиция на картата",
+  "coordinates.hint": "Въведете координатите или изберете позицията на картата, за да се показвате в търсачката на дилъри.",
+  "coordinates.latitude": "Географска ширина",
+  "coordinates.longitude": "Географска дължина",
+  "coordinates.map_label": "Карта за избор на позиция",
+  "coordinates.pick_hint": "Докоснете картата, за да изберете позицията.",
+  "coordinates.clear": "Изчисти позицията",
+  "coordinates.marker": "Избрана позиция",
+  "coordinates.errors.latitude": "Географската ширина трябва да е число между -90 и 90.",
+  "coordinates.errors.longitude": "Географската дължина трябва да е число между -180 и 180.",
+  "coordinates.errors.pair": "Въведете ширина и дължина заедно или оставете и двете празни."
 }

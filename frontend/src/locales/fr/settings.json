@@ -64,6 +64,8 @@
   "system.groups.warehouse_hint": "Comportement de l'entrepôt et du stock.",
   "system.groups.scanning": "Numérisation",
   "system.groups.scanning_hint": "Paramètres de lecture des codes-barres et QR.",
+  "system.groups.mobile": "Application mobile",
+  "system.groups.mobile_hint": "Version minimale de l'application et liens vers les stores ; les versions plus anciennes doivent être mises à jour.",
   "system.keys.forecast_min_days": "Période minimale de prévision (jours)",
   "system.keys.forecast_min_days_hint": "Historique minimal de mouvements avant toute proposition de prévision.",
   "system.keys.contract_grace_days": "Délai de grâce du contrat (jours)",
@@ -100,5 +102,16 @@
   "system.reset": "Rétablir la valeur par défaut",
   "system.toast.saved": "Paramètre enregistré.",
   "system.toast.reset": "Paramètre rétabli par défaut.",
-  "system.toast.failed": "Impossible d'enregistrer le paramètre."
+  "system.toast.failed": "Impossible d'enregistrer le paramètre.",
+  "coordinates.title": "Position sur la carte",
+  "coordinates.hint": "Saisissez les coordonnées ou choisissez la position sur la carte pour apparaître dans la recherche de revendeurs.",
+  "coordinates.latitude": "Latitude",
+  "coordinates.longitude": "Longitude",
+  "coordinates.map_label": "Carte de sélection de la position",
+  "coordinates.pick_hint": "Touchez la carte pour choisir la position.",
+  "coordinates.clear": "Effacer la position",
+  "coordinates.marker": "Position choisie",
+  "coordinates.errors.latitude": "La latitude doit être un nombre entre -90 et 90.",
+  "coordinates.errors.longitude": "La longitude doit être un nombre entre -180 et 180.",
+  "coordinates.errors.pair": "Saisissez la latitude et la longitude ensemble, ou laissez les deux vides."
 }

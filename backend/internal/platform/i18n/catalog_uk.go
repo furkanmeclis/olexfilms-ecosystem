@@ -542,4 +542,5 @@ var ukCatalog = map[string]string{
 	"warehouse.eod.type.reclassification":          "Перекласифікація",
 	"warehouse.eod.type.void":                      "Анулювання",
 	"warehouse.eod.type.external_outbound":         "Зовнішнє відвантаження",
+	"mobile.update_required":                       "Ця версія застосунку більше не підтримується. Оновіть застосунок, щоб продовжити.",
 }
