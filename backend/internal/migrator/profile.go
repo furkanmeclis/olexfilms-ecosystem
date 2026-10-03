@@ -51,6 +51,11 @@ func olexSteps() []Step {
 		// products and the warehouse product match.
 		VehicleCatalogStep{},
 		CatalogStep{},
+
+		// TEC-257: warehouse structure, stock units and their initial
+		// ownership.
+		WarehousesStep{},
+		UnitsStep{},
 	}
 }
 
