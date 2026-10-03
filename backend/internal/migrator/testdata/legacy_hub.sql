@@ -592,7 +592,11 @@ INSERT INTO legacy_hub.service_customer_transfers (id, service_id, current_custo
 
 INSERT INTO legacy_hub.short_urls (id, token, target_url, created_at, updated_at) VALUES
     (1, 'synA1b2C3', 'https://hub.example.test/garanti/SYN-S-0001', '2025-03-10 17:00:00', '2025-03-10 17:00:00'),
-    (2, 'synD4e5F6', 'https://hub.example.test/bayi/SYN00001', '2025-03-11 10:00:00', '2025-03-11 10:00:00');
+    (2, 'synD4e5F6', 'https://hub.example.test/bayi/SYN00001', '2025-03-11 10:00:00', '2025-03-11 10:00:00'),
+    -- TEC-263: the hub's real shapes. customer.notify (Crypt ile şifreli
+    -- müşteri id'si) -> /portal; Google Business gibi dış hedef eşlenemez.
+    (3, 'synG7h8J9', 'https://hub.example.test/customer/eyJpdiI6InN5bnRoZXRpYyJ9', '2025-03-12 10:00:00', '2025-03-12 10:00:00'),
+    (4, 'synK0m1N2', 'https://g.page/r/SYNTHETIC-review', '2025-03-12 11:00:00', '2025-03-12 11:00:00');
 
 INSERT INTO legacy_hub.sms_logs (id, phone, message, sender, message_type, message_content_type, channel, status, response_id, quantity, amount, number_count, description, response_data, invalid_phones, notifiable_type, notifiable_id, bulk_sms_id, sent_by, sent_at, created_at, updated_at) VALUES
     (1, '05551112233', 'Sentetik hizmet mesajı', 'SYNSENDER', 'normal', 'bilgi', 'sms', 'sent', 900001, 1, 0.10, 1, NULL, '{"ok": true}', NULL, 'App\Models\Customer', 1, NULL, 3, '2025-03-10 17:01:00', '2025-03-10 17:01:00', '2025-03-10 17:01:00'),

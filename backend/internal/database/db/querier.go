@@ -21,6 +21,8 @@ type Querier interface {
 	// Clears every personal profile field (identity numbers: ciphertext and
 	// mask together); anonymized_at keeps the first anonymization instant.
 	AnonymizeCustomerProfile(ctx context.Context, userID int64) (CustomerProfile, error)
+	// K19: masks a person's archived messages; returns the rows masked.
+	AnonymizeLegacyMessages(ctx context.Context, arg AnonymizeLegacyMessagesParams) (int32, error)
 	// Irreversible: name "Anonim", no surname or phone, a unique placeholder
 	// e-mail that satisfies chk_users_email_or_phone, a password hash nobody
 	// knows and status anonymized (every login path requires status active).
@@ -119,6 +121,7 @@ type Querier interface {
 	CountExportJobsForOrganization(ctx context.Context, organizationID pgtype.Int8) (int64, error)
 	CountImportJobsForActor(ctx context.Context, actorID int64) (int64, error)
 	CountImportJobsForOrganization(ctx context.Context, organizationID int64) (int64, error)
+	CountLegacyMessagesByChannel(ctx context.Context, brandID int64) ([]CountLegacyMessagesByChannelRow, error)
 	CountMessagesByExternalID(ctx context.Context, arg CountMessagesByExternalIDParams) (int64, error)
 	CountMigrationMap(ctx context.Context) ([]CountMigrationMapRow, error)
 	CountNotificationDeliveries(ctx context.Context, arg CountNotificationDeliveriesParams) (int64, error)
@@ -970,6 +973,12 @@ type Querier interface {
 	ListLabelTemplates(ctx context.Context, arg ListLabelTemplatesParams) ([]LabelTemplate, error)
 	ListLatestKVKKNotices(ctx context.Context) ([]KvkkNotice, error)
 	ListLatestLegalTexts(ctx context.Context, kind string) ([]LegalText, error)
+	// TEC-263: read-only access to the old hub's message archive
+	// (legacy_messages). No UI; the table is append-only and only the K19
+	// anonymization may mask a row.
+	// A person's archived messages of a brand, newest first (keyset paging on
+	// sent_at, id; pass NULL cursors for the first page).
+	ListLegacyMessagesByUser(ctx context.Context, arg ListLegacyMessagesByUserParams) ([]ListLegacyMessagesByUserRow, error)
 	ListLegalTextVersions(ctx context.Context, arg ListLegalTextVersionsParams) ([]LegalText, error)
 	// A location and everything below it.
 	ListLocationSubtreeIDs(ctx context.Context, arg ListLocationSubtreeIDsParams) ([]int64, error)
@@ -1481,14 +1490,20 @@ type Querier interface {
 	// customer without a resolved phone (K26, K29, migration 000078).
 	MigratorInsertCustomerUser(ctx context.Context, arg MigratorInsertCustomerUserParams) (int64, error)
 	MigratorInsertFixedHolding(ctx context.Context, arg MigratorInsertFixedHoldingParams) error
+	// legacy_messages is append-only: a row already imported is left alone.
+	MigratorInsertLegacyMessage(ctx context.Context, arg MigratorInsertLegacyMessageParams) (int64, error)
 	// warehouse_id and full_code are derived by trg_warehouse_locations_derive.
 	MigratorInsertLocation(ctx context.Context, arg MigratorInsertLocationParams) (MigratorInsertLocationRow, error)
 	MigratorInsertOrganization(ctx context.Context, arg MigratorInsertOrganizationParams) (int64, error)
 	MigratorInsertProduct(ctx context.Context, arg MigratorInsertProductParams) (int64, error)
 	MigratorInsertRoom(ctx context.Context, arg MigratorInsertRoomParams) (int64, error)
+	// A legacy token is kept as is (old links keep resolving); migrated links
+	// are brand-wide (no organization) and never expire, like the hub's.
+	MigratorInsertShortURL(ctx context.Context, arg MigratorInsertShortURLParams) (int64, error)
 	MigratorInsertUnit(ctx context.Context, arg MigratorInsertUnitParams) (int64, error)
 	MigratorInsertUser(ctx context.Context, arg MigratorInsertUserParams) (int64, error)
 	MigratorInsertWarehouse(ctx context.Context, arg MigratorInsertWarehouseParams) (int64, error)
+	MigratorLegacyMessageExists(ctx context.Context, arg MigratorLegacyMessageExistsParams) (bool, error)
 	// One row per serving organization (K11: the customer is global, a dealer
 	// sees it through this link).
 	MigratorLinkCustomerOrganization(ctx context.Context, arg MigratorLinkCustomerOrganizationParams) (int64, error)
@@ -1508,6 +1523,11 @@ type Querier interface {
 	// The full_code prefix of the room's root locations (<warehouse>-<room>).
 	MigratorRoomFullCodePrefix(ctx context.Context, arg MigratorRoomFullCodePrefixParams) (string, error)
 	MigratorSetCarBrandLogo(ctx context.Context, arg MigratorSetCarBrandLogoParams) error
+	// TEC-263: migrator steps 10-11 (hub short_urls -> short_urls, hub
+	// sms_logs / notifications -> legacy_messages). Written only by
+	// cmd/migrator inside a step transaction.
+	MigratorShortURLByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorShortURLByUUIDRow, error)
+	MigratorShortURLTokenTaken(ctx context.Context, token string) (bool, error)
 	MigratorUnitByUUID(ctx context.Context, arg MigratorUnitByUUIDParams) (MigratorUnitByUUIDRow, error)
 	// TEC-258: a movement this application wrote (not an imported legacy one).
 	MigratorUnitHasLedgerMovements(ctx context.Context, unitID int64) (bool, error)
@@ -1526,6 +1546,7 @@ type Querier interface {
 	// Legacy-sourced fields only; images, unit type and the sync columns stay.
 	MigratorUpdateProduct(ctx context.Context, arg MigratorUpdateProductParams) error
 	MigratorUpdateRoom(ctx context.Context, arg MigratorUpdateRoomParams) error
+	MigratorUpdateShortURL(ctx context.Context, arg MigratorUpdateShortURLParams) error
 	// Product and status only: issuer, brand, barcode and kind are immutable.
 	MigratorUpdateUnit(ctx context.Context, arg MigratorUpdateUnitParams) error
 	// The password is replaced only while the account still holds a migrated

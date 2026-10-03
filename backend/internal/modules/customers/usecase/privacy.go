@@ -27,6 +27,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine/adapters"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // ErrPanelAccount: the customer also has a panel account (organization
@@ -101,6 +102,14 @@ func (s *Service) AnonymizeCustomer(ctx context.Context, c Caller, id uuid.UUID,
 		}
 		if err := s.requireCustomerOnly(ctx, q, user.ID); err != nil {
 			return err
+		}
+		// TEC-263: the old hub's archived messages to this person (by
+		// account and by phone, read before the phone is cleared) are
+		// masked; the only change legacy_messages allows.
+		if _, err := q.AnonymizeLegacyMessages(ctx, db.AnonymizeLegacyMessagesParams{
+			UserID: pgtype.Int8{Int64: user.ID, Valid: true}, Phone: user.PhoneE164,
+		}); err != nil {
+			return fmt.Errorf("customers: anonymize legacy messages: %w", err)
 		}
 		hash, err := unusablePasswordHash()
 		if err != nil {

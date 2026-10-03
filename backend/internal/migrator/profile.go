@@ -61,6 +61,11 @@ func olexSteps() []Step {
 		// TEC-258: legacy stock movements -> ledger opening, projection
 		// rebuild.
 		LedgerStep{},
+
+		// TEC-263: hub short URLs (tokens kept) and the read-only message
+		// archive (sms_logs incl. WhatsApp, notifications).
+		ShortURLsStep{},
+		LegacyMessagesStep{},
 	}
 }
 
