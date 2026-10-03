@@ -9,6 +9,7 @@ import { StatusChip } from "@/components/common/status-chip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { routes } from "@/config/routes";
 import { PortalPage } from "@/features/portal/components/portal-page";
+import { PortalVehicleTransferDialog } from "@/features/portal/components/portal-vehicle-transfer";
 import { PortalWarrantyQr } from "@/features/portal/components/portal-warranty-qr";
 import {
   PortalApiError,
@@ -190,6 +191,9 @@ export function PortalVehicleDetail({
                   : "—"
               }
             />
+          </div>
+          <div className="flex justify-end">
+            <PortalVehicleTransferDialog vehicleUuid={v.uuid} />
           </div>
         </CardContent>
       </Card>

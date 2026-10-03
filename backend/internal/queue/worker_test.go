@@ -28,6 +28,10 @@ func wireAll(w *Worker, hits map[string]int, tag string) *Worker {
 		WithVehicleTransferExpire(func(context.Context) error { hit(TaskVehicleTransferExpire); return nil }).
 		WithWarehouseEOD(func(context.Context) error { hit(TaskWarehouseEODReports); return nil }).
 		WithGlorianPull(func(context.Context) error { hit(TaskGlorianPullCatalog); return nil }).
+		WithGlorianPush(
+			func(context.Context, int64) error { hit(TaskGlorianPushBarcodes); return nil },
+			func(context.Context, int64) error { hit(TaskGlorianPatchStockItem); return nil },
+		).
 		WithSearch(
 			func(context.Context, string, string) error { hit(TaskSearchUpsert); return nil },
 			func(context.Context, string, string) error { hit(TaskSearchDelete); return nil },
@@ -52,7 +56,7 @@ func TestWorkerSettersAreIdempotent(t *testing.T) {
 		wireAll(w, hits, "second")
 	}()
 
-	for _, typ := range []string{TaskNotificationPurge, TaskWhatsAppStatusPoll, TaskLogPurgeSweep, TaskRatesFetch, TaskWarrantyExpire, TaskWarrantyExpiringScan, TaskWarrantyRepairScan, TaskVehicleTransferExpire, TaskWarehouseEODReports, TaskGlorianPullCatalog} {
+	for _, typ := range []string{TaskNotificationPurge, TaskWhatsAppStatusPoll, TaskLogPurgeSweep, TaskRatesFetch, TaskWarrantyExpire, TaskWarrantyExpiringScan, TaskWarrantyRepairScan, TaskVehicleTransferExpire, TaskWarehouseEODReports, TaskGlorianPullCatalog, TaskGlorianPushBarcodes, TaskGlorianPatchStockItem} {
 		if err := w.mux.ProcessTask(context.Background(), asynq.NewTask(typ, []byte("{}"))); err != nil {
 			t.Fatalf("%s: %v", typ, err)
 		}
@@ -65,7 +69,7 @@ func TestWorkerSettersAreIdempotent(t *testing.T) {
 // Unwired periodic tasks are acknowledged, not failed.
 func TestWorkerMissingPeriodicHandlersAreNoops(t *testing.T) {
 	w := NewWorker(config.Config{Redis: config.RedisConfig{Addr: "127.0.0.1:0"}}, nil, nil)
-	for _, typ := range []string{TaskNotificationPurge, TaskWhatsAppStatusPoll, TaskWarrantyExpire, TaskWarrantyExpiringScan, TaskWarehouseEODReports, TaskGlorianPullCatalog} {
+	for _, typ := range []string{TaskNotificationPurge, TaskWhatsAppStatusPoll, TaskWarrantyExpire, TaskWarrantyExpiringScan, TaskWarehouseEODReports, TaskGlorianPullCatalog, TaskGlorianPushBarcodes, TaskGlorianPatchStockItem} {
 		if err := w.mux.ProcessTask(context.Background(), asynq.NewTask(typ, []byte("{}"))); err != nil {
 			t.Fatalf("%s: %v", typ, err)
 		}

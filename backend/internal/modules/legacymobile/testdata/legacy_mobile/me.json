@@ -1,0 +1,15 @@
+{
+  "name": "me",
+  "method": "GET",
+  "path": "/v1/mobile/legacy/auth/me",
+  "adapts": "GET /v1/mobile/auth/me",
+  "source": "New mobile contract (docs/openapi.yaml, TEC-91). Old shape to be confirmed (TEC-234 comment).",
+  "request": {
+    "headers": {"Authorization": "Bearer {{access_token}}"},
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "data_keys": ["user", "roles", "permissions", "active_organization_uuid", "organizations", "session"]
+  }
+}
