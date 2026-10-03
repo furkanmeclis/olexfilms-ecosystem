@@ -677,9 +677,17 @@ func (r *serviceRun) mappedService(ctx context.Context, legacyID int64) (*servic
 func (r *serviceRun) children(ctx context.Context, legacyID int64, ref *serviceRef,
 	items []legacyServiceItem, images []legacyServiceImage, logs []legacyStatusLog) error {
 	if ref == nil {
-		r.c.add("items_skipped_service_unmapped", int64(len(items)))
-		r.c.add("images_skipped_service_unmapped", int64(len(images)))
-		r.c.add("logs_skipped_service_unmapped", int64(len(logs)))
+		// Every child is reported with its own id: the validation report
+		// (report.go) matches skipped rows by id.
+		for _, it := range items {
+			r.report("item_skipped_service_unmapped", it.ID)
+		}
+		for _, im := range images {
+			r.report("image_skipped_service_unmapped", im.ID)
+		}
+		for _, l := range logs {
+			r.report("log_skipped_service_unmapped", l.ID)
+		}
 		if len(items)+len(images)+len(logs) > 0 {
 			r.c.inc("children_skipped_service_unmapped:" + strconv.FormatInt(legacyID, 10))
 		}
@@ -862,28 +870,28 @@ func (r *serviceRun) importImage(ctx context.Context, ref *serviceRef, im legacy
 	// The file first: a missing one leaves the image unmapped, so a later
 	// run with the file imports it.
 	if r.dst.LegacyFiles == nil || r.dst.Storage == nil {
-		r.c.inc("image_skipped_no_storage")
+		r.report("image_skipped_no_storage", im.ID)
 		return nil
 	}
 	body, err := readLegacyFile(r.dst.LegacyFiles, im.Path, maxLegacyServiceImageBytes)
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
-		r.report("image_missing", im.ID)
+		r.report("image_skipped_missing", im.ID)
 		return nil
 	case errors.Is(err, errFileTooLarge):
-		r.report("image_too_large", im.ID)
+		r.report("image_skipped_too_large", im.ID)
 		return nil
 	case err != nil:
 		return fmt.Errorf("read image %q: %w", im.Path, err)
 	}
 	mime, err := storage.DetectLogoMIME("", body)
 	if err != nil {
-		r.report("image_unsupported", im.ID)
+		r.report("image_skipped_unsupported", im.ID)
 		return nil
 	}
 	ext, err := storage.LogoExtForMIME(mime)
 	if err != nil {
-		r.report("image_unsupported", im.ID)
+		r.report("image_skipped_unsupported", im.ID)
 		return nil
 	}
 

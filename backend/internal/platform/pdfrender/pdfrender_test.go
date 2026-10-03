@@ -271,3 +271,28 @@ func TestIsRTL(t *testing.T) {
 		}
 	}
 }
+
+func TestPingHealth(t *testing.T) {
+	var path string
+	status := http.StatusOK
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path = r.Method + " " + r.URL.Path
+		w.WriteHeader(status)
+	}))
+	defer srv.Close()
+	c := NewWithOptions(srv.URL+"/", fastOpts())
+	if err := c.Ping(context.Background()); err != nil {
+		t.Fatalf("Ping: %v", err)
+	}
+	if path != "GET /health" {
+		t.Fatalf("request = %q", path)
+	}
+	status = http.StatusServiceUnavailable
+	var se *StatusError
+	if err := c.Ping(context.Background()); !errors.As(err, &se) || se.Code != http.StatusServiceUnavailable {
+		t.Fatalf("Ping on 503 = %v", err)
+	}
+	if err := New("").Ping(context.Background()); !errors.Is(err, ErrNotConfigured) {
+		t.Fatalf("unconfigured Ping = %v", err)
+	}
+}

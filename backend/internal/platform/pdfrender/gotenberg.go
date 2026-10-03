@@ -118,6 +118,28 @@ func NewWithOptions(baseURL string, opts Options) *Client {
 // Configured reports whether a Gotenberg URL is set.
 func (c *Client) Configured() bool { return c != nil && c.baseURL != "" }
 
+// Ping calls Gotenberg's GET /health (TEC-275 preflight); any non-2xx
+// answer is an error.
+func (c *Client) Ping(ctx context.Context) error {
+	if !c.Configured() {
+		return ErrNotConfigured
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/health", nil)
+	if err != nil {
+		return fmt.Errorf("pdfrender: health request: %w", err)
+	}
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("pdfrender: health: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return &StatusError{Code: resp.StatusCode, Body: strings.TrimSpace(string(body))}
+	}
+	return nil
+}
+
 // HTMLToPDF converts an HTML document to PDF bytes (A4, no footer).
 func (c *Client) HTMLToPDF(ctx context.Context, html string) ([]byte, error) {
 	return c.Convert(ctx, Request{HTML: html})

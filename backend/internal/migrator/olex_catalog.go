@@ -433,6 +433,7 @@ func (s CatalogStep) matchWHProduct(ctx context.Context, q *db.Queries, m *Mappe
 	case "":
 		c.inc("wh_brand_unknown")
 		c.inc("wh_brand_unknown:" + strings.TrimSpace(p.Brand))
+		c.inc("wh_product_skipped_brand_unknown:" + p.ID)
 		return nil
 	}
 	key := Key{System: s.whSystem(), Table: "products", ID: p.ID, TargetTable: "products"}
@@ -465,6 +466,7 @@ func (s CatalogStep) matchWHProduct(ctx context.Context, q *db.Queries, m *Mappe
 	if how == "" {
 		c.inc("wh_unmatched")
 		c.inc("wh_unmatched:" + sku)
+		c.inc("wh_product_skipped_unmatched:" + p.ID)
 		return nil
 	}
 	linked, err := m.Link(ctx, key, target, Checksum(p.SKU, p.Name, p.Brand))

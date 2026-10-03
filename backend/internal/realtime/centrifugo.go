@@ -96,3 +96,41 @@ var (
 	_ Publisher = (*CentrifugoClient)(nil)
 	_ Publisher = NoopPublisher{}
 )
+
+// Ping calls the server API's info method with the API key (TEC-275
+// preflight): it proves the endpoint the publisher uses answers and accepts
+// the key. A nil client (realtime disabled) is an error.
+func (c *CentrifugoClient) Ping(ctx context.Context) error {
+	if c == nil {
+		return fmt.Errorf("realtime: centrifugo is disabled")
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.apiURL+"/api",
+		strings.NewReader(`{"method":"info","params":{}}`))
+	if err != nil {
+		return fmt.Errorf("realtime: new request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "apikey "+c.apiKey)
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("realtime: info request: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("realtime: info status %d: %s", resp.StatusCode, string(body))
+	}
+	var out struct {
+		Error *struct {
+			Code    int    `json:"code"`
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(body, &out); err != nil {
+		return fmt.Errorf("realtime: info response: %w", err)
+	}
+	if out.Error != nil {
+		return fmt.Errorf("realtime: info error %d: %s", out.Error.Code, out.Error.Message)
+	}
+	return nil
+}

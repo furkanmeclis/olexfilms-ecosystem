@@ -401,7 +401,8 @@ func (s UnitsStep) hubSide(ctx context.Context, u *unitCtx, it hubStockItem, c c
 	}
 	own, ok := hubOwnership(it.Location, it.Status, dealerOrg, u.centerID)
 	if !ok {
-		c.inc("hub_skipped_state:" + it.Location + "/" + it.Status)
+		c.inc("hub_state_unknown:" + it.Location + "/" + it.Status)
+		c.inc("hub_skipped_state:" + id)
 		return nil, "", nil
 	}
 	if strings.EqualFold(strings.TrimSpace(it.Status), "reserved") {
@@ -424,6 +425,7 @@ func (s UnitsStep) whSide(ctx context.Context, u *unitCtx, b whBarcode, c counts
 		return nil, "", nil
 	case "":
 		c.inc("wh_brand_unknown:" + strings.TrimSpace(b.Brand))
+		c.inc("wh_skipped_brand_unknown:" + b.ID)
 		return nil, "", nil
 	}
 	if b.DeletedAt.Valid {
@@ -451,7 +453,8 @@ func (s UnitsStep) whSide(ctx context.Context, u *unitCtx, b whBarcode, c counts
 	}
 	own, ok := whOwnership(b.Status, locationID, u.centerID, b.Quantity)
 	if !ok {
-		c.inc("wh_skipped_status:" + b.Status)
+		c.inc("wh_status_unknown:" + b.Status)
+		c.inc("wh_skipped_status:" + b.ID)
 		return nil, "", nil
 	}
 	return &unitSide{
@@ -552,6 +555,13 @@ func (s UnitsStep) importUnit(ctx context.Context, u *unitCtx, cand *unitCandida
 	if product.UnitType == "roll_meter" {
 		// Roll units need meters the legacy rows do not have.
 		c.inc("unit_skipped_roll_meter:" + cand.Barcode)
+		// Each legacy row by id, for the validation report (report.go).
+		if cand.Hub != nil {
+			c.inc("hub_skipped_roll_meter:" + cand.Hub.Key.ID)
+		}
+		if cand.WH != nil {
+			c.inc("wh_skipped_roll_meter:" + cand.WH.Key.ID)
+		}
 		return nil
 	}
 	kind := "serial"

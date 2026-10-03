@@ -268,6 +268,18 @@ func (r *warrantyRun) report(key string, id int64) {
 	r.c.inc(key + ":" + strconv.FormatInt(id, 10))
 }
 
+// skipGroup reports a skipped group: the total counts groups, and every row
+// of the group gets its own id key, as the validation report (report.go)
+// matches skipped rows by id.
+func (r *warrantyRun) skipGroup(key string, g warrantyGroup) {
+	r.report(key, g.Kept.ID)
+	for _, lw := range g.All {
+		if lw.ID != g.Kept.ID {
+			r.c.inc(key + ":" + strconv.FormatInt(lw.ID, 10))
+		}
+	}
+}
+
 func (r *warrantyRun) key(id int64) Key {
 	return Key{System: r.step.system(), Table: "warranties", ID: strconv.FormatInt(id, 10), TargetTable: "warranties"}
 }
@@ -465,7 +477,7 @@ func (r *warrantyRun) mapGroup(ctx context.Context, g warrantyGroup, target uuid
 // item resolves the service item of a group (nil: skipped, reported).
 func (r *warrantyRun) item(ctx context.Context, g warrantyGroup) (*db.MigratorWarrantyServiceItemRow, error) {
 	if !g.Kept.ItemID.Valid {
-		r.report("warranty_skipped_item_missing", g.Kept.ID)
+		r.skipGroup("warranty_skipped_item_missing", g)
 		return nil, nil
 	}
 	target, ok, err := r.m.Lookup(ctx, r.step.system(), "service_items", strconv.FormatInt(g.Kept.ItemID.Int64, 10))
@@ -473,12 +485,12 @@ func (r *warrantyRun) item(ctx context.Context, g warrantyGroup) (*db.MigratorWa
 		return nil, err
 	}
 	if !ok {
-		r.report("warranty_skipped_item_unmapped", g.Kept.ID)
+		r.skipGroup("warranty_skipped_item_unmapped", g)
 		return nil, nil
 	}
 	row, err := r.q.MigratorWarrantyServiceItem(ctx, target)
 	if errors.Is(err, pgx.ErrNoRows) {
-		r.report("warranty_skipped_item_unmapped", g.Kept.ID)
+		r.skipGroup("warranty_skipped_item_unmapped", g)
 		return nil, nil
 	}
 	if err != nil {
@@ -510,11 +522,11 @@ func (r *warrantyRun) importGroup(ctx context.Context, g warrantyGroup) error {
 		return err
 	}
 	if it.ServiceStatus != serviceCompleted {
-		r.report("warranty_skipped_service_not_completed", g.Kept.ID)
+		r.skipGroup("warranty_skipped_service_not_completed", g)
 		return nil
 	}
 	if it.Corrected {
-		r.report("warranty_skipped_item_corrected", g.Kept.ID)
+		r.skipGroup("warranty_skipped_item_corrected", g)
 		return nil
 	}
 	// A warranty the application opened for the item (repair scan).
@@ -532,7 +544,7 @@ func (r *warrantyRun) importGroup(ctx context.Context, g warrantyGroup) error {
 
 	startAt, endAt := legacyWarrantyPeriod(g.Start, g.End, locationOf(it.Timezone))
 	if !endAt.After(startAt) {
-		r.report("warranty_skipped_period_invalid", g.Kept.ID)
+		r.skipGroup("warranty_skipped_period_invalid", g)
 		return nil
 	}
 	st := legacyWarrantyState(g.Active, endAt, r.now, g.Kept.UpdatedAt)

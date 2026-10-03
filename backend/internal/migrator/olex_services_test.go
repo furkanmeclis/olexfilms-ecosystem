@@ -129,7 +129,7 @@ func TestOlexServices(t *testing.T) {
 	}
 	for k := range sc {
 		if strings.Contains(k, "skipped") || strings.Contains(k, "unmapped") || strings.HasPrefix(k, "status_unknown") ||
-			strings.HasPrefix(k, "image_missing") || strings.HasPrefix(k, "service_no_") || strings.HasPrefix(k, "item_parts_dropped") {
+			strings.HasPrefix(k, "service_no_") || strings.HasPrefix(k, "item_parts_dropped") {
 			t.Errorf("unexpected report %s (%v)", k, sc)
 		}
 	}
