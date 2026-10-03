@@ -203,6 +203,14 @@ const (
 	// (K28); F3-02 (TEC-113) adds the read side.
 	PermMeasurementsWrite = "measurements.write"
 
+	// TEC-285 (000083): vehicle intake / service sale contracts (F3-01).
+	// Templates and void are center-only; read and write follow the roles
+	// that open services.
+	PermContractsTemplatesManage = "contracts.templates.manage"
+	PermContractsRead            = "contracts.read"
+	PermContractsWrite           = "contracts.write"
+	PermContractsVoid            = "contracts.void"
+
 	// TEC-305 (000084): non-product service catalog (center only) and
 	// service subscriptions; distributors assign to their subtree without a
 	// margin, dealers and distributors request early cancellation, the

@@ -368,6 +368,49 @@ func TestTaskGrants(t *testing.T) {
 	}
 }
 
+// TEC-285: contracts.* are in the catalog; templates.manage and void are
+// center-only (brand scope); every role that writes services reads and
+// writes contracts at its services.read / services.write scope.
+func TestContractGrants(t *testing.T) {
+	for _, slug := range []string{PermContractsTemplatesManage, PermContractsRead, PermContractsWrite, PermContractsVoid} {
+		def, ok := PermissionBySlug(slug)
+		if !ok || def.Module != "contracts" {
+			t.Fatalf("catalog misses %s", slug)
+		}
+	}
+	for _, r := range Roles {
+		if r.Slug == RoleSuperAdmin {
+			continue
+		}
+		for _, slug := range []string{PermContractsTemplatesManage, PermContractsVoid} {
+			if _, ok := r.Grants[slug]; ok && r.OrgType != OrgTypeCenter {
+				t.Fatalf("%s must not hold %s", r.Slug, slug)
+			}
+		}
+		if _, ok := r.Grants[PermServicesWrite]; ok {
+			if r.Grants[PermContractsRead] != r.Grants[PermServicesRead] {
+				t.Fatalf("%s contracts.read = %q, want services.read scope %q",
+					r.Slug, r.Grants[PermContractsRead], r.Grants[PermServicesRead])
+			}
+			if r.Grants[PermContractsWrite] != r.Grants[PermServicesWrite] {
+				t.Fatalf("%s contracts.write = %q, want services.write scope %q",
+					r.Slug, r.Grants[PermContractsWrite], r.Grants[PermServicesWrite])
+			}
+		}
+	}
+	staff, _ := RoleBySlug(RoleCenterStaff)
+	if staff.Grants[PermContractsTemplatesManage] != ScopeBrand || staff.Grants[PermContractsVoid] != ScopeBrand {
+		t.Fatalf("center_staff contract grants = %q %q",
+			staff.Grants[PermContractsTemplatesManage], staff.Grants[PermContractsVoid])
+	}
+	g := RoleGrants(RoleDef{Slug: RoleSuperAdmin})
+	for _, slug := range []string{PermContractsTemplatesManage, PermContractsRead, PermContractsWrite, PermContractsVoid} {
+		if g[slug] != ScopeAll {
+			t.Fatalf("super_admin %s = %q", slug, g[slug])
+		}
+	}
+}
+
 // TEC-305: catalog management and cancellation approval are center-only;
 // distributors assign to their subtree; dealers only read and request
 // cancellation.
