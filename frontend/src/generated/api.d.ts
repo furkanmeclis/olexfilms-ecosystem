@@ -1825,7 +1825,7 @@ export interface paths {
         };
         /**
          * Organizations inside the caller's organizations.read scope
-         * @description managed: the active organization; subtree: a distributor and its dealers; brand: every organization of the brand. Never leaves the request brand.
+         * @description managed: the active organization; subtree: a distributor and its dealers; brand: every organization of the brand. Never leaves the request brand. `q` (TEC-210) searches the name and the dealer code (slug); when Meilisearch is up the organizations index answers it inside the same scope (hits are reloaded from Postgres), otherwise SQL.
          */
         get: operations["listTenantOrganizations"];
         put?: never;
@@ -3037,7 +3037,7 @@ export interface paths {
         };
         /**
          * Units held by an organization
-         * @description Needs `stock.read`; the organization must be inside the viewer's reach (404 otherwise). The distributor roles distributor_owner and distributor_warehouse_staff hold `stock.read` at scope `subtree` (TEC-216, migration 000061), so a distributor lists the units of its own dealers; it still cannot write or adjust them. Serial units come from `unit_current_state` (one row, `quantity` 1), fixed barcodes from `fixed_barcode_holdings` (one row per barcode with the quantity on hand). Without `status` the list holds the units counted as stock (available, placed); `status` lists exactly that status. `barcode` is an exact match, `product_uuid` narrows to one product, `q` matches a part of the product name, SKU or barcode. `purchase_price` is the price the holding organization pays for the product (K8, in the organization's currency); it is null when the viewer's `pricing.purchase.read` does not reach the organization (a direct parent sees its child's purchase price through its own `pricing.sale.read`), for the center, or when no price is set.
+         * @description Needs `stock.read`; the organization must be inside the viewer's reach (404 otherwise). The distributor roles distributor_owner and distributor_warehouse_staff hold `stock.read` at scope `subtree` (TEC-216, migration 000061), so a distributor lists the units of its own dealers; it still cannot write or adjust them. Serial units come from `unit_current_state` (one row, `quantity` 1), fixed barcodes from `fixed_barcode_holdings` (one row per barcode with the quantity on hand). Without `status` the list holds the units counted as stock (available, placed); `status` lists exactly that status. `barcode` is an exact match, `product_uuid` narrows to one product, `q` matches a part of the product name, SKU or barcode (TEC-210: when Meilisearch is up and no `barcode` is given the stock units index answers it, which also matches the bin full_code; hits are reloaded from Postgres with the same filters). `purchase_price` is the price the holding organization pays for the product (K8, in the organization's currency); it is null when the viewer's `pricing.purchase.read` does not reach the organization (a direct parent sees its child's purchase price through its own `pricing.sale.read`), for the center, or when no price is set.
          */
         get: operations["listStockOrganizationUnits"];
         put?: never;
@@ -3901,6 +3901,147 @@ export interface paths {
          * @description Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Resolution order: `OFW:LOC:<full_code>` -> a location of the active organization (404 SCAN_LOCATION_NOT_FOUND otherwise, nothing else is tried); `OFW:UNIT:<barcode>` -> that unit; a unit barcode (generated `<PREFIX>-<8 digits>`, roll split `<barcode>-S<n>`, legacy/import barcodes; exact, then upper-cased); a bare location full_code when `scan.bare_location_code_enabled`; a product SKU of the active brand when `scan.sku_enabled`; a 1-8 digit short code (optionally `-S<n>`) expanded to `<PREFIX>-<8 digits>` when `scan.short_code_enabled` (prefix `scan.short_code_prefix`, else the brand's default prefix). Units follow the caller's `stock.read` reach like the barcode history (a distributor sees its dealers' units, TEC-216); a unit outside the reach, or any unknown code, is 404 SCAN_NO_MATCH. An empty code is 400 VALIDATION_ERROR.
          */
         post: operations["resolveWarehouseScan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the stock entry documents of the active organization
+         * @description Needs `warehouse.read` with the warehouse module on (center or distributor, K12). Newest first; entries written by an applied stock import (TEC-158) have mode `import`. An unknown status is 400 VALIDATION_ERROR.
+         */
+        get: operations["listStockEntries"];
+        put?: never;
+        /**
+         * Open a draft stock entry at a warehouse (TEC-204)
+         * @description Needs `warehouse.write`. The warehouse must be an active warehouse of the active organization. `with_existing` links printed barcodes, `generate_new` reserves new barcodes (TEC-202; center only, 403 STOCK_ENTRY_CENTER_ONLY otherwise, K14).
+         */
+        post: operations["createStockEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-entries/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One stock entry with its lines and label links */
+        get: operations["getStockEntry"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-entries/{uuid}/lines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Link or reserve barcodes on a draft entry
+         * @description Needs `warehouse.write`. `with_existing`: `barcodes` (also `OFW:UNIT:<barcode>` scans) of the active brand; each must be a printed (or reserved) label not yet in stock (409 STOCK_ENTRY_UNIT_NOT_PRINTED) and not on another open entry (409 STOCK_ENTRY_UNIT_TAKEN); a fixed barcode may enter again. `generate_new`: `product_uuid`, `quantity` barcodes (1-1000), `meters` for rolls, optional `prefix` and `template_uuid`; the batch is reserved through the TEC-202 rules in the same transaction. `fixed_quantity` is the stock quantity of each fixed barcode. A confirmed or cancelled entry is 409 STOCK_ENTRY_NOT_DRAFT.
+         */
+        post: operations["addStockEntryLines"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-entries/{uuid}/lines/{line_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a line from a draft entry
+         * @description Needs `warehouse.write`. A generated label stays printed and can be linked again with `with_existing`.
+         */
+        delete: operations["deleteStockEntryLine"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-entries/{uuid}/place": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Place lines of a draft entry on a location (pick or scan)
+         * @description Needs `warehouse.write`. Exactly one of `location_uuid` or `location_code` (a scanned `OFW:LOC:<full_code>` QR or a bare full_code); the location must be active and in the entry's warehouse (400 VALIDATION_ERROR otherwise). Lines: `line_uuids`, or the lines of the scanned `barcodes`, or every line when both are empty.
+         */
+        post: operations["placeStockEntryLines"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-entries/{uuid}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm a stock entry (ledger entry + placement)
+         * @description Needs `warehouse.write`. In one transaction every line is posted through the stock ledger with the idempotency key `stock_entry:stock_entry_line:<line id>:<type>:<barcode>`: serial units get an `entry` into the organization and a `placement` on their location; fixed barcodes an `entry` straight into their location. Printed -> entry happens at a center only (403 STOCK_ENTRY_CENTER_ONLY, K14). 409 STOCK_ENTRY_NOT_DRAFT when the entry is already confirmed (a second confirm writes nothing), STOCK_ENTRY_EMPTY without lines, STOCK_ENTRY_UNPLACED while a line has no location, STOCK_ENTRY_LEDGER_REFUSED when the ledger refuses a movement (nothing is written).
+         */
+        post: operations["confirmStockEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-entries/{uuid}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel a draft stock entry
+         * @description Needs `warehouse.write`. Only a draft can be cancelled (409 STOCK_ENTRY_NOT_DRAFT).
+         */
+        post: operations["cancelStockEntry"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6256,7 +6397,7 @@ export interface paths {
         };
         /**
          * Orders inside the orders.read scope (sales and purchases)
-         * @description Every order where an organization of the orders.read scope is the seller or the buyer (managed: the active organization's own sales and purchases; a dealer never sees its distributor's other dealers). side=seller|buyer limits the list to the active organization's sales or purchases. List rows carry no items or history.
+         * @description Every order where an organization of the orders.read scope is the seller or the buyer (managed: the active organization's own sales and purchases; a dealer never sees its distributor's other dealers). side=seller|buyer limits the list to the active organization's sales or purchases. List rows carry no items or history. `q` (TEC-210) searches the order number, tracking number and external reference; when Meilisearch is up (and no created_from / created_to is given) the orders index answers it, which also matches the seller and buyer names and dealer codes, inside the same scope (hits are reloaded from Postgres).
          */
         get: operations["listOrders"];
         put?: never;
@@ -9936,6 +10077,133 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["WarehouseScanResult"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        StockEntryStatus: "draft" | "confirmed" | "cancelled" | "undone";
+        /** @enum {string} */
+        StockEntryMode: "with_existing" | "generate_new" | "import";
+        StockEntryInput: {
+            /** Format: uuid */
+            warehouse_uuid: string;
+            /** @enum {string} */
+            mode: "with_existing" | "generate_new";
+            note?: string | null;
+        };
+        StockEntryLinesInput: {
+            /** @description with_existing only. */
+            barcodes?: string[];
+            /**
+             * Format: uuid
+             * @description generate_new only.
+             */
+            product_uuid?: string;
+            /** @description generate_new: barcodes to reserve. */
+            quantity?: number;
+            /** @description generate_new, roll products: length of each roll. */
+            meters?: string;
+            prefix?: string;
+            /** Format: uuid */
+            template_uuid?: string;
+            /** @description Stock quantity of each fixed barcode (default 1). */
+            fixed_quantity?: number | null;
+        };
+        StockEntryPlaceInput: {
+            line_uuids?: string[];
+            barcodes?: string[];
+            /** Format: uuid */
+            location_uuid?: string | null;
+            /** @description Scanned OFW:LOC:<full_code> or a bare full_code. */
+            location_code?: string;
+        };
+        StockEntryWarehouse: {
+            /** Format: uuid */
+            uuid: string;
+            code: string;
+            name: string;
+        };
+        StockEntryProduct: {
+            /** Format: uuid */
+            uuid: string;
+            sku: string;
+            name: string;
+        };
+        StockEntryLocation: {
+            /** Format: uuid */
+            uuid: string;
+            code: string;
+            full_code: string | null;
+        };
+        StockEntryLabelBatch: {
+            /** Format: uuid */
+            batch_uuid: string;
+            /** @description TEC-202 batch label sheet. */
+            labels_url: string;
+        };
+        StockEntryLine: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            unit_uuid: string;
+            barcode: string;
+            /** @enum {string} */
+            unit_kind: "serial" | "fixed";
+            unit_status: string;
+            quantity: number;
+            product: components["schemas"]["StockEntryProduct"];
+            location: null | components["schemas"]["StockEntryLocation"];
+            /** @description TEC-202 unit label PDF. */
+            label_url: string;
+            /** Format: uuid */
+            entry_movement_uuid: string | null;
+            /** Format: uuid */
+            placement_movement_uuid: string | null;
+            /** @description Voided by an import undo (mode import). */
+            undone: boolean;
+        };
+        StockEntry: {
+            /** Format: uuid */
+            uuid: string;
+            mode: components["schemas"]["StockEntryMode"];
+            status: components["schemas"]["StockEntryStatus"];
+            note: string | null;
+            warehouse: null | components["schemas"]["StockEntryWarehouse"];
+            /** Format: uuid */
+            import_batch_uuid: string | null;
+            /** Format: int64 */
+            line_count: number;
+            /**
+             * Format: int64
+             * @description Detail responses only.
+             */
+            placed_count?: number;
+            /** @description Detail responses only. */
+            lines?: components["schemas"]["StockEntryLine"][];
+            /** @description Detail responses only. */
+            label_batches?: components["schemas"]["StockEntryLabelBatch"][];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            confirmed_at: string | null;
+            /** Format: date-time */
+            cancelled_at: string | null;
+        };
+        EnvelopeStockEntry: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["StockEntry"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeStockEntryPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["StockEntry"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
@@ -15101,6 +15369,8 @@ export interface operations {
         parameters: {
             query?: {
                 type?: components["schemas"]["OrganizationType"];
+                /** @description Part of the organization name or dealer code (slug). */
+                q?: string;
                 limit?: number;
                 offset?: number;
             };
@@ -15119,6 +15389,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeScopedOrganizationList"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
         };
@@ -19085,6 +19356,249 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+        };
+    };
+    listStockEntries: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["StockEntryStatus"];
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Entries (without lines) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntryPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createStockEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockEntryInput"];
+            };
+        };
+        responses: {
+            /** @description Draft entry */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntry"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            /** @description Not center/distributor, or STOCK_ENTRY_CENTER_ONLY */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getStockEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Entry */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntry"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    addStockEntryLines: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockEntryLinesInput"];
+            };
+        };
+        responses: {
+            /** @description Entry with the new lines */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntry"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    deleteStockEntryLine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                line_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Entry */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntry"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    placeStockEntryLines: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockEntryPlaceInput"];
+            };
+        };
+        responses: {
+            /** @description Entry */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntry"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    confirmStockEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Confirmed entry */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntry"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            /** @description Not center/distributor, or STOCK_ENTRY_CENTER_ONLY */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    cancelStockEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancelled entry */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntry"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     getPublicProductImage: {
@@ -23280,6 +23794,7 @@ export interface operations {
         parameters: {
             query?: {
                 side?: "seller" | "buyer";
+                q?: components["parameters"]["Q"];
                 status?: components["schemas"]["OrderStatus"];
                 /** @description Inclusive lower bound of created_at (TEC-170): RFC3339, or a YYYY-MM-DD day in UTC. */
                 created_from?: string;

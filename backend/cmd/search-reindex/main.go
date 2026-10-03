@@ -11,7 +11,10 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/logging"
 	catalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/catalog/usecase"
 	customersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/customers/usecase"
+	ordersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/orders/usecase"
+	orgusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
 	servicesusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/usecase"
+	stockusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/usecase"
 	warrantyusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
 	searchadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine/adapters"
@@ -55,6 +58,10 @@ func main() {
 		servicesusecase.NewSearchAdapter(queries),
 		warrantyusecase.NewSearchAdapter(queries),
 		customersusecase.NewVehicleSearchAdapter(queries),
+		// TEC-210: organizations (dealer code), orders, stock units (barcode).
+		orgusecase.NewSearchAdapter(queries),
+		ordersusecase.NewSearchAdapter(queries),
+		stockusecase.NewSearchAdapter(queries),
 	)
 	indexer := searchengine.NewIndexer(client, reg, nil, log)
 	if err := indexer.ProcessReindex(ctx, ""); err != nil {

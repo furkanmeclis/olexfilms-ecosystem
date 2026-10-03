@@ -14,7 +14,10 @@ package usecase
 //     (source imported) and posts an entry movement through ledger.Post.
 //     The idempotency key is import:stock_import_row:<row id>:entry:<barcode>
 //     (batch + row), and an applied batch is never applied again, so a
-//     second confirm writes no movement.
+//     second confirm writes no movement. The same transaction records the
+//     batch as a confirmed stock entry document (TEC-204, mode import, one
+//     line per applied row); the undo marks its lines (and, when every row
+//     is undone, the entry) undone.
 //   - Undo (rollback): in one transaction every applied row whose unit saw
 //     no other movement is reversed with a void movement through
 //     ledger.Post (key import_undo:stock_import_row:<row id>:void:<barcode>);
@@ -451,10 +454,57 @@ func (im *Importer) Apply(ctx context.Context, job ioengine.ImportJob) (ioengine
 		if err != nil {
 			return err
 		}
+		if err := recordImportEntry(ctx, q, c, job, batch, rows); err != nil {
+			return fmt.Errorf("stock import entry: %w", err)
+		}
 		summary, err = im.summary(ctx, q, c, batch, rows)
 		return err
 	})
 	return summary, err
+}
+
+// recordImportEntry writes the stock entry document of an applied batch
+// (TEC-204, mode import): confirmed at once, one line per applied row with
+// its entry movement. A batch without applied rows records no document.
+func recordImportEntry(ctx context.Context, q *db.Queries, c *importCtx, job ioengine.ImportJob,
+	batch db.StockImportBatch, rows []db.StockImportRow,
+) error {
+	applied := 0
+	for _, r := range rows {
+		if r.RowStatus == ImportRowApplied {
+			applied++
+		}
+	}
+	if applied == 0 {
+		return nil
+	}
+	entry, err := q.CreateImportStockEntry(ctx, db.CreateImportStockEntryParams{
+		OrganizationID: c.org.ID, BrandID: c.org.BrandID, ImportBatchID: i8(batch.ID), UserID: i8(job.ActorID),
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil // recorded before
+	}
+	if err != nil {
+		return err
+	}
+	for _, r := range rows {
+		if r.RowStatus != ImportRowApplied {
+			continue
+		}
+		arg := db.InsertStockEntryLineParams{
+			EntryID: entry.ID, UnitID: r.UnitID.Int64, Quantity: 1, EntryMovementID: r.MovementID,
+		}
+		if r.Quantity.Valid && r.Quantity.Int32 > 0 {
+			arg.Quantity = r.Quantity.Int32
+		}
+		if r.TargetOwnerType.String == string(ledger.OwnerWarehouseLocation) {
+			arg.LocationID = r.TargetOwnerID
+		}
+		if _, err := q.InsertStockEntryLine(ctx, arg); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // applyRow creates the unit of a new row and enters it through the ledger.
@@ -536,6 +586,13 @@ func (im *Importer) Undo(ctx context.Context, job ioengine.ImportJob) (ioengine.
 		default:
 			return fmt.Errorf("%w: batch is %s", ioengine.ErrImportRejected, batch.Status)
 		}
+		// The TEC-204 entry document of the batch (absent for batches
+		// applied before it existed).
+		entry, err := q.GetStockEntryByImportBatch(ctx, i8(batch.ID))
+		hasEntry := err == nil
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return err
+		}
 		rejected := 0
 		for i, row := range rows {
 			if row.RowStatus != ImportRowApplied {
@@ -547,11 +604,24 @@ func (im *Importer) Undo(ctx context.Context, job ioengine.ImportJob) (ioengine.
 			}
 			if !undone {
 				rejected++
+				continue
+			}
+			if hasEntry {
+				if err := q.SetStockEntryLineUndone(ctx, db.SetStockEntryLineUndoneParams{
+					UndoMovementID: rows[i].UndoMovementID, EntryID: entry.ID, UnitID: rows[i].UnitID.Int64,
+				}); err != nil {
+					return err
+				}
 			}
 		}
 		status := "undone"
 		if rejected > 0 {
 			status = "partially_undone"
+		}
+		if hasEntry && rejected == 0 {
+			if _, err := q.MarkStockEntryUndone(ctx, entry.ID); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+				return err
+			}
 		}
 		if batch, err = q.SetStockImportBatchState(ctx, batchState(batch.ID, status, rows)); err != nil {
 			return err

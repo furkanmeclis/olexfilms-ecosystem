@@ -162,6 +162,9 @@ func (m *memIndex) filterMatches(d searchengine.Document, filter string, allowed
 		if op == "in" {
 			for _, v := range strings.Split(strings.Trim(val, "[]"), ",") {
 				if v = strings.TrimSpace(v); v != "" {
+					if s, err := strconv.Unquote(v); err == nil {
+						v = s // TEC-210: status IN ["available", "placed"]
+					}
 					want = append(want, v)
 				}
 			}

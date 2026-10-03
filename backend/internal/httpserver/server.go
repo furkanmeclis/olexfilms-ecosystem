@@ -252,6 +252,10 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		servicesusecase.NewSearchAdapter(deps.Queries),
 		warrantyusecase.NewSearchAdapter(deps.Queries),
 		customersusecase.NewVehicleSearchAdapter(deps.Queries),
+		// TEC-210: organizations (dealer code), orders, stock units (barcode).
+		orgusecase.NewSearchAdapter(deps.Queries),
+		ordersusecase.NewSearchAdapter(deps.Queries),
+		stockusecase.NewSearchAdapter(deps.Queries),
 	)
 	searchClient := searchengine.NewClient(cfg.Search, log)
 	searchIndexer := searchengine.NewIndexer(searchClient, searchReg, deps.Queue, log)
@@ -332,6 +336,11 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	orgSvc := orgusecase.New(deps.DB, deps.Queries)
 	geoSvc := geo.New(deps.DB, deps.Queries)
 	orgSvc.SetGeo(geoSvc)
+	// TEC-210: organization.* events; q searches the organizations index.
+	orgSvc.SetOutbox(outbox.NewStore(deps.DB, deps.Queries))
+	if listFinder != nil {
+		orgSvc.SetFinder(listFinder)
+	}
 	ratesSvc := fxrates.New(deps.Queries, fxrates.NewFetcher(cfg.Rates.TCMBURL, cfg.Rates.ECBURL), log)
 	uc.SetOrganizationResolver(orgSvc)
 	authmodule.RegisterRoutes(mux, h, tokens, loader, stepUpSvc)
@@ -403,6 +412,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-169: a received order books seller income / buyer purchase.
 	ordersSvc := ordersusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries), ratesSvc).
 		WithReceiptHook(ordersusecase.NewAccountingBridge(accountingPoster))
+	if listFinder != nil {
+		ordersSvc.SetFinder(listFinder) // TEC-210
+	}
 	ordersmodule.RegisterRoutes(mux, ordershandler.New(ordersSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-197: stock transfer requests between siblings (K13).
 	// TEC-200: a received transfer books A alacak / B borç.
@@ -526,7 +538,11 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	catalogmodule.RegisterRoutes(mux, cataloghandler.New(catalogSvc, exportSvc, importSvc, deps.Storage, activityRec), featureSvc, tokens, loader, deps.Queries)
 	// TEC-155: stock read API (barcode history, organization/bin stock).
 	// TEC-157: reclassification (request, approval applies it via the ledger).
-	stockmodule.RegisterRoutes(mux, stockhandler.New(stockusecase.New(deps.Queries)),
+	stockSvc := stockusecase.New(deps.Queries)
+	if listFinder != nil {
+		stockSvc.SetFinder(listFinder) // TEC-210: unit list q
+	}
+	stockmodule.RegisterRoutes(mux, stockhandler.New(stockSvc),
 		stockhandler.NewReclassify(stockusecase.NewReclassifications(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries))),
 		featureSvc, tokens, loader, deps.Queries, stepUpSvc)
 	// TEC-184: roll split (meters cut off a roll as a new unit).
@@ -569,6 +585,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-203: universal scan resolver (scan.* settings from sysconfig).
 	warehousemodule.RegisterScanRoutes(mux, warehousehandler.NewScan(warehouseusecase.NewScanner(deps.Queries, sysSvc)),
 		featureSvc, tokens, loader, deps.Queries)
+	// TEC-204: stock entry documents (confirm posts entry + placement via the ledger).
+	warehousemodule.RegisterEntryRoutes(mux, warehousehandler.NewEntries(warehouseusecase.NewStockEntries(deps.DB, deps.Queries,
+		outbox.NewStore(deps.DB, deps.Queries))), featureSvc, tokens, loader, deps.Queries)
 	settingsmodule.RegisterRoutes(mux, settingshandler.New(settingsusecase.New(deps.Queries), deps.Storage),
 		settingshandler.NewSystem(sysSvc), tokens, loader)
 	accessmodule.RegisterRoutes(mux, accesshandler.New(stepUpSvc, activityRec), tokens, loader)

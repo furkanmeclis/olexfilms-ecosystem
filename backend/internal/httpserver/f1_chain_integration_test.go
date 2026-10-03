@@ -85,6 +85,60 @@ func ratOfText(t *testing.T, s string) *big.Rat {
 // fixture unit in the brand currency everywhere; this one adds the API
 // product, the import, three currencies and two consumed units.
 func TestIntegrationF1ChainEURUAH(t *testing.T) {
+	c := runF1Chain(t)
+
+	// 8. Rate freeze: the day's rates change after the receipts; the
+	// booked rows and the caris stay as they were.
+	for _, r := range []struct{ base, rate string }{{"EUR", "50"}, {"UAH", "0.5"}} {
+		if r.base != c.cur {
+			c.upsertRate(r.base, c.cur, r.rate)
+		}
+	}
+	c.readBooks("after a rate change")
+}
+
+// f1Frozen is the rate snapshot an order froze at approval.
+type f1Frozen struct{ snap fxrates.Snapshot }
+
+// f1Book is one expected order row of the chain in one organization's book.
+type f1Book struct {
+	name      string
+	token     string
+	owner, cp db.Organization
+	order     string
+	frozen    f1Frozen
+	direction string
+	category  string
+	total     string
+}
+
+// f1Chain is the state runF1Chain leaves behind for the scenarios that
+// continue from it (TEC-219).
+type f1Chain struct {
+	it                           *itest
+	cur                          string
+	toOrg                        map[string]*big.Rat
+	center, dist, dealer         db.Organization
+	staff                        db.User
+	staffTok, distTok, dealerTok string
+	item                         catalogItem
+	rolls                        [2]db.Unit
+	a, b                         orderView
+	svcID                        int64
+	svcUUID                      string
+	centerStockBefore            int32
+	books                        []f1Book
+
+	upsertRate func(base, quote, rate string)
+	owned      func(step string, status, ownerType string, ownerID, holder int64, moves string)
+	stockOf    func(tok string, org db.Organization) int32
+	readBooks  func(step string)
+}
+
+// runF1Chain runs steps 0-7 of the F1 gate chain (see
+// TestIntegrationF1ChainEURUAH) and returns its state.
+func runF1Chain(t *testing.T) *f1Chain {
+	t.Helper()
 	store := storage.NewMemory()
 	it := newIntegrationWithDeps(t, nil, func(d *Deps) { d.Storage = store })
 	it.cleanupCatalog()
@@ -241,13 +295,22 @@ func TestIntegrationF1ChainEURUAH(t *testing.T) {
 		}
 	}
 	owned("import", "available", "warehouse_location", loc.ID, center.ID, "entry")
+	stockOf := func(tok string, org db.Organization) int32 {
+		t.Helper()
+		code, page := it.productStock(tok, "/v1/stock/organizations/"+org.Uuid.String()+"/products?product_uuid="+item.UUID)
+		if code != http.StatusOK {
+			t.Fatalf("stock of %s = %d", org.Slug, code)
+		}
+		q, _ := page.qty(item.UUID)
+		return q
+	}
+	centerStockBefore := stockOf(staffTok, center)
 
 	line := []any{map[string]any{"product_uuid": item.UUID, "meters": "50"}}
 	whole := [][]map[string]any{{{"barcode": rolls[0].Barcode}, {"barcode": rolls[1].Barcode}}}
-	type frozen struct{ snap fxrates.Snapshot }
-	freeze := func(name string, o orderView) frozen {
+	freeze := func(name string, o orderView) f1Frozen {
 		t.Helper()
-		var f frozen
+		var f f1Frozen
 		if err := json.Unmarshal(o.RateSnapshot, &f.snap); err != nil || f.snap.RateDate == "" ||
 			f.snap.Base != cur || f.snap.Quote != "TRY" || o.TryRate == nil {
 			t.Fatalf("%s rate snapshot = %s try_rate %v (%v)", name, o.RateSnapshot, o.TryRate, err)
@@ -287,15 +350,6 @@ func TestIntegrationF1ChainEURUAH(t *testing.T) {
 		t.Fatalf("receive B = %d %s", code, ec)
 	}
 	owned("B received", "available", "organization", dealer.ID, dealer.ID, "entry,order_out,received,order_out,received")
-	stockOf := func(tok string, org db.Organization) int32 {
-		t.Helper()
-		code, page := it.productStock(tok, "/v1/stock/organizations/"+org.Uuid.String()+"/products?product_uuid="+item.UUID)
-		if code != http.StatusOK {
-			t.Fatalf("stock of %s = %d", org.Slug, code)
-		}
-		q, _ := page.qty(item.UUID)
-		return q
-	}
 	if got := stockOf(dealerTok, dealer); got != 2 {
 		t.Fatalf("dealer stock after B = %d, want 2", got)
 	}
@@ -363,17 +417,7 @@ func TestIntegrationF1ChainEURUAH(t *testing.T) {
 	// 7. The three books. Each received order is one income row at the
 	// seller (on the buyer's cari) and one purchase expense at the buyer
 	// (on the seller's cari), each in its organization's currency.
-	type want struct {
-		name      string
-		token     string
-		owner, cp db.Organization
-		order     string
-		frozen    frozen
-		direction string
-		category  string
-		total     string
-	}
-	checks := []want{
+	checks := []f1Book{
 		{"center sells A", staffTok, center, dist, a.UUID, fa, "income", "sale", "200"},
 		{"distributor buys A", distTok, dist, center, a.UUID, fa, "expense", "purchase", "200"},
 		{"distributor sells B", distTok, dist, dealer, b.UUID, fb, "income", "sale", "300"},
@@ -428,13 +472,10 @@ func TestIntegrationF1ChainEURUAH(t *testing.T) {
 	if fa.snap.RateDate != day || fb.snap.RateDate != day {
 		t.Fatalf("frozen rate days = %s %s, want %s", fa.snap.RateDate, fb.snap.RateDate, day)
 	}
-
-	// 8. Rate freeze: the day's rates change after the receipts; the
-	// booked rows and the caris stay as they were.
-	for _, r := range []struct{ base, rate string }{{"EUR", "50"}, {"UAH", "0.5"}} {
-		if r.base != cur {
-			upsertRate(r.base, cur, r.rate)
-		}
+	return &f1Chain{
+		it: it, cur: cur, toOrg: toOrg, center: center, dist: dist, dealer: dealer, staff: staff,
+		staffTok: staffTok, distTok: distTok, dealerTok: dealerTok, item: item, rolls: rolls,
+		a: a, b: b, svcID: svcID, svcUUID: s.UUID, centerStockBefore: centerStockBefore, books: checks,
+		upsertRate: upsertRate, owned: owned, stockOf: stockOf, readBooks: readBooks,
 	}
-	readBooks("after a rate change")
 }

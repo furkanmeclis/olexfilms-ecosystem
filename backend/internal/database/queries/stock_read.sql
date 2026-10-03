@@ -163,6 +163,7 @@ WHERE (sqlc.narg(brand_id)::bigint IS NULL OR u.brand_id = sqlc.narg(brand_id)::
   AND ((sqlc.narg(status)::text IS NULL AND u.status IN ('available', 'placed'))
        OR u.status = sqlc.narg(status)::text)
   AND (sqlc.narg(barcode)::text IS NULL OR u.barcode = sqlc.narg(barcode)::text)
+  AND (sqlc.narg(uuids)::uuid[] IS NULL OR u.uuid = ANY (sqlc.narg(uuids)::uuid[]))
   AND (
     sqlc.narg(q)::text IS NULL
     OR p.name ILIKE '%' || sqlc.narg(q)::text || '%'

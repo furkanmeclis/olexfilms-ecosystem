@@ -334,14 +334,6 @@ type CountResolution struct {
 // ---------------------------------------------------------------------------
 // Helpers.
 
-func tsPtr(t pgtype.Timestamptz) *time.Time {
-	if !t.Valid {
-		return nil
-	}
-	v := t.Time
-	return &v
-}
-
 func i8(v int64) pgtype.Int8 { return pgtype.Int8{Int64: v, Valid: v > 0} }
 
 func userArg(c ScanCaller) pgtype.Int8 { return i8(c.Principal.UserInternal) }

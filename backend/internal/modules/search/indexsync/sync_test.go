@@ -17,8 +17,15 @@ func (r *rec) EnqueueUpsert(_ context.Context, spec, id string) {
 }
 
 type store struct {
-	row  db.ListSearchUuidsByUserIDRow
-	user int64
+	row    db.ListSearchUuidsByUserIDRow
+	user   int64
+	orders []uuid.UUID
+	org    int64
+}
+
+func (s *store) ListOrderUuidsByOrganization(_ context.Context, id int64) ([]uuid.UUID, error) {
+	s.org = id
+	return s.orders, nil
 }
 
 func (s *store) ListSearchUuidsByUserID(_ context.Context, id int64) (db.ListSearchUuidsByUserIDRow, error) {
@@ -66,6 +73,33 @@ func TestSyncRoutesEvents(t *testing.T) {
 	_ = bus.Publish(ctx, ev(events.CustomerMerged, "user", uuid.New(), map[string]any{"target_user_id": int64(8)}))
 	if st.user != 8 || len(r.upserts) != 3 {
 		t.Fatalf("merged: user %d upserts %v", st.user, r.upserts)
+	}
+}
+
+// TEC-210: organization, order and ledger (stock.*) events refresh the
+// organizations, orders and stock units documents.
+func TestSyncRoutesTEC210Events(t *testing.T) {
+	r := &rec{}
+	ord := uuid.New()
+	st := &store{orders: []uuid.UUID{ord}}
+	bus := events.NewBus(nil)
+	Register(bus, st, r, nil)
+	ctx := context.Background()
+
+	org, o1, mv, unit := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	_ = bus.Publish(ctx, ev(events.OrganizationCreated, "organization", org, map[string]any{"organization_id": int64(5)}))
+	_ = bus.Publish(ctx, ev(events.OrdersShipped, "order", o1, nil))
+	_ = bus.Publish(ctx, ev(events.StockTransferIn, "stock_movement", mv, map[string]any{"unit_uuid": unit.String()}))
+	want := []string{"organizations/" + org.String(), "orders/" + o1.String(), "stock_units/" + unit.String()}
+	if !slices.Equal(r.upserts, want) || st.org != 0 {
+		t.Fatalf("upserts = %v (org %d), want %v", r.upserts, st.org, want)
+	}
+
+	// organization.updated also refreshes the orders carrying its name.
+	r.upserts = nil
+	_ = bus.Publish(ctx, ev(events.OrganizationUpdated, "organization", org, map[string]any{"organization_id": float64(5)}))
+	if st.org != 5 || !slices.Equal(r.upserts, []string{"organizations/" + org.String(), "orders/" + ord.String()}) {
+		t.Fatalf("updated: org %d upserts %v", st.org, r.upserts)
 	}
 }
 

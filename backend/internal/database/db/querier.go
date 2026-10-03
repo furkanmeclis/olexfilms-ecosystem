@@ -41,6 +41,7 @@ type Querier interface {
 	AttachNotificationDelivery(ctx context.Context, arg AttachNotificationDeliveryParams) error
 	CancelService(ctx context.Context, arg CancelServiceParams) (Service, error)
 	CancelStockCount(ctx context.Context, id int64) (StockCount, error)
+	CancelStockEntry(ctx context.Context, id int64) (StockEntry, error)
 	CancelStockTransferRequest(ctx context.Context, id int64) (StockTransferRequest, error)
 	CancelTransferRequest(ctx context.Context, arg CancelTransferRequestParams) (StockTransferRequest, error)
 	CancelVehicleTransfer(ctx context.Context, id int64) (VehicleTransfer, error)
@@ -76,6 +77,7 @@ type Querier interface {
 	CompleteStockCount(ctx context.Context, arg CompleteStockCountParams) (StockCount, error)
 	CompleteStockTransferRequest(ctx context.Context, id int64) (StockTransferRequest, error)
 	CompleteVehicleTransfer(ctx context.Context, arg CompleteVehicleTransferParams) (VehicleTransfer, error)
+	ConfirmStockEntry(ctx context.Context, arg ConfirmStockEntryParams) (StockEntry, error)
 	ConfirmUserTOTP(ctx context.Context, arg ConfirmUserTOTPParams) (UserTotp, error)
 	ConsumeOTP(ctx context.Context, id int64) error
 	ConsumeOTPAt(ctx context.Context, arg ConsumeOTPAtParams) error
@@ -135,6 +137,8 @@ type Querier interface {
 	CountServicesInScope(ctx context.Context, arg CountServicesInScopeParams) (int64, error)
 	CountServicesOfUser(ctx context.Context, customerUserID int64) (int64, error)
 	CountStockCounts(ctx context.Context, arg CountStockCountsParams) (int64, error)
+	CountStockEntries(ctx context.Context, arg CountStockEntriesParams) (int64, error)
+	CountStockEntryLines(ctx context.Context, entryID int64) (int64, error)
 	CountStockMovementsByUnit(ctx context.Context, unitID int64) (int64, error)
 	CountStockReclassificationsScoped(ctx context.Context, arg CountStockReclassificationsScopedParams) (int64, error)
 	CountStockSplitsBySource(ctx context.Context, sourceUnitID int64) (int64, error)
@@ -181,6 +185,8 @@ type Querier interface {
 	// Cash and bank accounts.
 	CreateFinanceAccount(ctx context.Context, arg CreateFinanceAccountParams) (FinanceAccount, error)
 	CreateImportJob(ctx context.Context, arg CreateImportJobParams) (ImportJob, error)
+	// An applied import batch is a confirmed entry at once.
+	CreateImportStockEntry(ctx context.Context, arg CreateImportStockEntryParams) (StockEntry, error)
 	CreateLabelTemplate(ctx context.Context, arg CreateLabelTemplateParams) (LabelTemplate, error)
 	CreateLogPurgeRule(ctx context.Context, arg CreateLogPurgeRuleParams) (LogPurgeRule, error)
 	CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error)
@@ -232,6 +238,9 @@ type Querier interface {
 	// TEC-206: stock counts (000068). Every query is bound to one organization;
 	// the warehouse side is brand-independent (K20).
 	CreateStockCount(ctx context.Context, arg CreateStockCountParams) (StockCount, error)
+	// TEC-204: stock entry documents (draft -> lines -> place -> confirm) and
+	// the entry written by an applied stock import (TEC-158).
+	CreateStockEntry(ctx context.Context, arg CreateStockEntryParams) (StockEntry, error)
 	// ---------------------------------------------------------------------------
 	// Stock import staging.
 	CreateStockImportBatch(ctx context.Context, arg CreateStockImportBatchParams) (StockImportBatch, error)
@@ -333,6 +342,7 @@ type Querier interface {
 	DeleteServiceItemsByService(ctx context.Context, serviceID int64) (int64, error)
 	DeleteStaleQRLoginChallenges(ctx context.Context) (int64, error)
 	DeleteStockCountScan(ctx context.Context, arg DeleteStockCountScanParams) (int64, error)
+	DeleteStockEntryLine(ctx context.Context, arg DeleteStockEntryLineParams) (int64, error)
 	DeleteStockImportRows(ctx context.Context, batchID int64) (int64, error)
 	DeleteStorageShare(ctx context.Context, argUuid uuid.UUID) error
 	DeleteStorageStar(ctx context.Context, arg DeleteStorageStarParams) error
@@ -370,6 +380,9 @@ type Querier interface {
 	// Both have a profile: the target keeps its values and only fills its empty
 	// fields from the source (an identity number moves with its mask).
 	FillCustomerProfileFromSource(ctx context.Context, arg FillCustomerProfileFromSourceParams) (int64, error)
+	// Another draft entry (or, for serial units, a confirmed one whose line
+	// was not undone) already holding the unit.
+	FindOpenStockEntryForUnit(ctx context.Context, arg FindOpenStockEntryForUnitParams) (FindOpenStockEntryForUnitRow, error)
 	// The rate of a pair (either direction) on the latest day within
 	// [min_date, on_date]; on that day manual > tcmb > ecb, direct before inverse.
 	FindPairRate(ctx context.Context, arg FindPairRateParams) (FindPairRateRow, error)
@@ -486,6 +499,7 @@ type Querier interface {
 	GetOrder(ctx context.Context, arg GetOrderParams) (Order, error)
 	GetOrderByExternalReference(ctx context.Context, arg GetOrderByExternalReferenceParams) (Order, error)
 	GetOrderByUUID(ctx context.Context, arg GetOrderByUUIDParams) (Order, error)
+	GetOrderForIndex(ctx context.Context, argUuid uuid.UUID) (GetOrderForIndexRow, error)
 	GetOrderItem(ctx context.Context, arg GetOrderItemParams) (OrderItem, error)
 	GetOrderItemByUUID(ctx context.Context, arg GetOrderItemByUUIDParams) (OrderItem, error)
 	GetOrderItemUnit(ctx context.Context, arg GetOrderItemUnitParams) (OrderItemUnit, error)
@@ -495,6 +509,7 @@ type Querier interface {
 	GetOrganizationByUUID(ctx context.Context, argUuid uuid.UUID) (Organization, error)
 	// Country of an organization for the default phone region (K29).
 	GetOrganizationCountryISO2(ctx context.Context, id int64) (string, error)
+	GetOrganizationForIndex(ctx context.Context, argUuid uuid.UUID) (GetOrganizationForIndexRow, error)
 	GetOrganizationMember(ctx context.Context, arg GetOrganizationMemberParams) (GetOrganizationMemberRow, error)
 	GetOrganizationMemberByUserAndOrgUUID(ctx context.Context, arg GetOrganizationMemberByUserAndOrgUUIDParams) (GetOrganizationMemberByUserAndOrgUUIDRow, error)
 	GetOrganizationMemberByUserAndSlug(ctx context.Context, arg GetOrganizationMemberByUserAndSlugParams) (GetOrganizationMemberByUserAndSlugRow, error)
@@ -552,8 +567,11 @@ type Querier interface {
 	GetStepupSettings(ctx context.Context) (StepupSetting, error)
 	GetStockCountByUUID(ctx context.Context, arg GetStockCountByUUIDParams) (StockCount, error)
 	GetStockCountScanByUUID(ctx context.Context, arg GetStockCountScanByUUIDParams) (StockCountScan, error)
+	GetStockEntryByImportBatch(ctx context.Context, importBatchID pgtype.Int8) (StockEntry, error)
+	GetStockEntryByUUID(ctx context.Context, arg GetStockEntryByUUIDParams) (StockEntry, error)
 	GetStockImportBatch(ctx context.Context, arg GetStockImportBatchParams) (StockImportBatch, error)
 	GetStockImportBatchByJob(ctx context.Context, importJobID pgtype.Int8) (StockImportBatch, error)
+	GetStockImportBatchUUID(ctx context.Context, id int64) (uuid.UUID, error)
 	GetStockMovement(ctx context.Context, id int64) (StockMovement, error)
 	GetStockMovementByIdempotencyKey(ctx context.Context, idempotencyKey string) (StockMovement, error)
 	GetStockReclassification(ctx context.Context, arg GetStockReclassificationParams) (StockReclassification, error)
@@ -562,6 +580,7 @@ type Querier interface {
 	GetStockSplitByKey(ctx context.Context, arg GetStockSplitByKeyParams) (StockSplit, error)
 	GetStockTransferRequest(ctx context.Context, arg GetStockTransferRequestParams) (StockTransferRequest, error)
 	GetStockTransferRequestByUUID(ctx context.Context, arg GetStockTransferRequestByUUIDParams) (StockTransferRequest, error)
+	GetStockUnitForIndex(ctx context.Context, argUuid uuid.UUID) (GetStockUnitForIndexRow, error)
 	GetStorageLinkBySlug(ctx context.Context, slug pgtype.Text) (StorageLink, error)
 	GetStorageLinkByTokenHash(ctx context.Context, tokenHash pgtype.Text) (StorageLink, error)
 	GetStorageLinkByUUID(ctx context.Context, argUuid uuid.UUID) (StorageLink, error)
@@ -575,6 +594,7 @@ type Querier interface {
 	GetTransferRequestByUUID(ctx context.Context, arg GetTransferRequestByUUIDParams) (StockTransferRequest, error)
 	GetTypedLocationByUUID(ctx context.Context, arg GetTypedLocationByUUIDParams) (WarehouseLocation, error)
 	GetUnit(ctx context.Context, id int64) (Unit, error)
+	GetUnitBatchUUID(ctx context.Context, id int64) (uuid.UUID, error)
 	GetUnitByBarcode(ctx context.Context, arg GetUnitByBarcodeParams) (Unit, error)
 	GetUnitByUUID(ctx context.Context, argUuid uuid.UUID) (Unit, error)
 	GetUnitCurrentState(ctx context.Context, unitID int64) (UnitCurrentState, error)
@@ -677,6 +697,7 @@ type Querier interface {
 	// ---------------------------------------------------------------------------
 	// Scans.
 	InsertStockCountScan(ctx context.Context, arg InsertStockCountScanParams) (StockCountScan, error)
+	InsertStockEntryLine(ctx context.Context, arg InsertStockEntryLineParams) (StockEntryLine, error)
 	InsertStockImportRow(ctx context.Context, arg InsertStockImportRowParams) (StockImportRow, error)
 	// ---------------------------------------------------------------------------
 	// Stock movements (append-only: insert and read only).
@@ -856,10 +877,14 @@ type Querier interface {
 	ListOrderItemUnitsByOrder(ctx context.Context, orderID int64) ([]ListOrderItemUnitsByOrderRow, error)
 	ListOrderItems(ctx context.Context, orderID int64) ([]OrderItem, error)
 	ListOrderStatusHistory(ctx context.Context, orderID int64) ([]OrderStatusHistory, error)
+	// Orders an organization sells or buys: their documents carry the
+	// organization's name and dealer code, refreshed when it changes.
+	ListOrderUuidsByOrganization(ctx context.Context, organizationID int64) ([]uuid.UUID, error)
 	// Buyer side: orders the organization buys.
 	ListOrdersByBuyer(ctx context.Context, arg ListOrdersByBuyerParams) ([]Order, error)
 	// Seller side: orders the organization sells.
 	ListOrdersBySeller(ctx context.Context, arg ListOrdersBySellerParams) ([]Order, error)
+	ListOrdersForIndex(ctx context.Context) ([]ListOrdersForIndexRow, error)
 	// Scope list: orders where any of org_ids is the seller or the buyer
 	// (org_ids NULL = whole brand, for brand/all scopes).
 	ListOrdersInScope(ctx context.Context, arg ListOrdersInScopeParams) ([]Order, error)
@@ -883,6 +908,12 @@ type Querier interface {
 	ListOrganizationStockUnitRows(ctx context.Context, arg ListOrganizationStockUnitRowsParams) ([]ListOrganizationStockUnitRowsRow, error)
 	ListOrganizationsByIDs(ctx context.Context, ids []int64) ([]Organization, error)
 	ListOrganizationsFiltered(ctx context.Context, arg ListOrganizationsFilteredParams) ([]ListOrganizationsFilteredRow, error)
+	// TEC-210: organizations (name, dealer code = slug), orders (order number,
+	// parties) and stock units (barcode, product, status, location) indexes.
+	// Same contract as search_index.sql (TEC-209): the list endpoints filter
+	// the index on the caller's scope and reload the hits from Postgres with
+	// that scope, so the index is never the only access check.
+	ListOrganizationsForIndex(ctx context.Context) ([]ListOrganizationsForIndexRow, error)
 	// Organizations reachable by a scope filter: an explicit id set
 	// (managed/subtree) or a whole brand (brand), or every brand (all, both NULL).
 	ListOrganizationsInScope(ctx context.Context, arg ListOrganizationsInScopeParams) ([]ListOrganizationsInScopeRow, error)
@@ -980,6 +1011,8 @@ type Querier interface {
 	ListStockCountScans(ctx context.Context, countID int64) ([]StockCountScan, error)
 	ListStockCountUnits(ctx context.Context, ids []int64) ([]ListStockCountUnitsRow, error)
 	ListStockCounts(ctx context.Context, arg ListStockCountsParams) ([]StockCount, error)
+	ListStockEntries(ctx context.Context, arg ListStockEntriesParams) ([]StockEntry, error)
+	ListStockEntryLines(ctx context.Context, entryID int64) ([]StockEntryLine, error)
 	ListStockImportBatches(ctx context.Context, organizationID int64) ([]StockImportBatch, error)
 	ListStockImportRows(ctx context.Context, arg ListStockImportRowsParams) ([]StockImportRow, error)
 	ListStockMovementsByOrganization(ctx context.Context, arg ListStockMovementsByOrganizationParams) ([]StockMovement, error)
@@ -999,6 +1032,11 @@ type Querier interface {
 	// Scope list: requests where any of org_ids is the giver, the receiver or
 	// the approver (org_ids NULL = whole brand).
 	ListStockTransferRequestsInScope(ctx context.Context, arg ListStockTransferRequestsInScopeParams) ([]StockTransferRequest, error)
+	// Stock units: holder_org_ids are the organizations whose unit list
+	// (GET /v1/stock/organizations/{uuid}/units) shows the unit (serial
+	// current state, fixed barcode holdings with quantity on hand) and
+	// location_codes the bins it sits in (full_code, else code).
+	ListStockUnitsForIndex(ctx context.Context) ([]ListStockUnitsForIndexRow, error)
 	ListStorageActivity(ctx context.Context, arg ListStorageActivityParams) ([]ListStorageActivityRow, error)
 	ListStorageLinksByKey(ctx context.Context, objectKey string) ([]StorageLink, error)
 	ListStorageSharesByKey(ctx context.Context, objectKey string) ([]ListStorageSharesByKeyRow, error)
@@ -1132,6 +1170,7 @@ type Querier interface {
 	// completions sharing a unit).
 	LockServiceItems(ctx context.Context, serviceID int64) ([]ServiceItem, error)
 	LockStockCountByUUID(ctx context.Context, arg LockStockCountByUUIDParams) (StockCount, error)
+	LockStockEntryByUUID(ctx context.Context, arg LockStockEntryByUUIDParams) (StockEntry, error)
 	LockStockImportBatch(ctx context.Context, id int64) (StockImportBatch, error)
 	// TEC-158: safe bulk stock import (staging, dry run, batch, undo). The
 	// batch belongs to one ioengine import job; rows are staged by the preview
@@ -1199,6 +1238,7 @@ type Querier interface {
 	MarkOutboxPublished(ctx context.Context, id int64) error
 	MarkOutboxRetry(ctx context.Context, arg MarkOutboxRetryParams) error
 	MarkQRLoginChallengeScanned(ctx context.Context, code string) (QrLoginChallenge, error)
+	MarkStockEntryUndone(ctx context.Context, id int64) (StockEntry, error)
 	MarkStockImportRowUndone(ctx context.Context, arg MarkStockImportRowUndoneParams) (StockImportRow, error)
 	MarkUserPhoneVerified(ctx context.Context, id int64) error
 	// Stamped in the notification transaction; a second run is a no-op.
@@ -1304,6 +1344,9 @@ type Querier interface {
 	// Written in the completion transaction before the status flips.
 	SetServiceItemMovement(ctx context.Context, arg SetServiceItemMovementParams) (ServiceItem, error)
 	SetServiceReviewRequestSent(ctx context.Context, id int64) (Service, error)
+	SetStockEntryLineLocation(ctx context.Context, arg SetStockEntryLineLocationParams) (int64, error)
+	SetStockEntryLineMovements(ctx context.Context, arg SetStockEntryLineMovementsParams) error
+	SetStockEntryLineUndone(ctx context.Context, arg SetStockEntryLineUndoneParams) error
 	SetStockImportBatchState(ctx context.Context, arg SetStockImportBatchStateParams) (StockImportBatch, error)
 	SetStockImportRowErrors(ctx context.Context, arg SetStockImportRowErrorsParams) (StockImportRow, error)
 	// TEC-212: bulk engine adapter (assign one task, logged + undoable).

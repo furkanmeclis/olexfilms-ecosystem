@@ -1,5 +1,6 @@
 // Package indexsync keeps the TEC-209 record indexes (services,
-// warranties, vehicles) in step with the outbox: every service, warranty
+// warranties, vehicles) and the TEC-210 ones (organizations, orders, stock
+// units) in step with the outbox: every service, warranty
 // and vehicle event the outbox publisher hands to the bus enqueues an
 // upsert of the touched document. The adapter rebuilds the document from
 // Postgres, so the event payload is only a pointer (no personal data is
@@ -24,9 +25,11 @@ type Indexer interface {
 	EnqueueUpsert(ctx context.Context, spec, id string)
 }
 
-// Store lists the records of one customer (*db.Queries).
+// Store lists the records of one customer and the orders of one
+// organization (*db.Queries).
 type Store interface {
 	ListSearchUuidsByUserID(ctx context.Context, userID int64) (db.ListSearchUuidsByUserIDRow, error)
+	ListOrderUuidsByOrganization(ctx context.Context, organizationID int64) ([]uuid.UUID, error)
 }
 
 // Sync is the outbox -> search index bridge.
@@ -58,6 +61,10 @@ func Register(bus events.Bus, q Store, idx Indexer, log *slog.Logger) {
 	bus.Subscribe("warranty.*", s.HandleWarranty)
 	bus.Subscribe("vehicle.*", s.HandleVehicle)
 	bus.Subscribe(events.CustomerMerged, s.HandleCustomerMerged)
+	// TEC-210: organizations, orders, stock units (ledger movements).
+	bus.Subscribe("organization.*", s.HandleOrganization)
+	bus.Subscribe("orders.*", s.HandleOrder)
+	bus.Subscribe("stock.*", s.HandleStock)
 }
 
 // HandleService refreshes the service document; a new service may link
@@ -101,6 +108,50 @@ func (s *Sync) HandleVehicle(ctx context.Context, ev events.Event) error {
 func (s *Sync) HandleCustomerMerged(ctx context.Context, ev events.Event) error {
 	if uid, ok := payloadInt(ev.Payload, "target_user_id"); ok {
 		s.refreshUser(ctx, uid, true)
+	}
+	return nil
+}
+
+// HandleOrganization refreshes the organization document; the orders it
+// sells or buys carry its name and dealer code, so an edit refreshes them
+// too (TEC-210).
+func (s *Sync) HandleOrganization(ctx context.Context, ev events.Event) error {
+	if id := entityUUID(ev, "organization", "organization_uuid"); id != "" {
+		s.idx.EnqueueUpsert(ctx, searchengine.SpecOrganizations, id)
+	}
+	if ev.Name != events.OrganizationUpdated || s.q == nil {
+		return nil
+	}
+	orgID, ok := payloadInt(ev.Payload, "organization_id")
+	if !ok {
+		return nil
+	}
+	ids, err := s.q.ListOrderUuidsByOrganization(ctx, orgID)
+	if err != nil {
+		s.log.Warn("search_sync_org_orders_failed", "organization_id", orgID, "error", err)
+		return nil
+	}
+	for _, u := range ids {
+		s.idx.EnqueueUpsert(ctx, searchengine.SpecOrders, u.String())
+	}
+	return nil
+}
+
+// HandleOrder refreshes the order document (created, items, every status
+// transition).
+func (s *Sync) HandleOrder(ctx context.Context, ev events.Event) error {
+	if id := entityUUID(ev, "order", "order_uuid"); id != "" {
+		s.idx.EnqueueUpsert(ctx, searchengine.SpecOrders, id)
+	}
+	return nil
+}
+
+// HandleStock refreshes the unit document after a ledger movement (holder,
+// status, bin or product changed). The event entity is the movement; the
+// unit is in the payload.
+func (s *Sync) HandleStock(ctx context.Context, ev events.Event) error {
+	if id := entityUUID(ev, "stock_unit", "unit_uuid"); id != "" {
+		s.idx.EnqueueUpsert(ctx, searchengine.SpecStockUnits, id)
 	}
 	return nil
 }

@@ -335,6 +335,14 @@ const (
 	VehicleDeleted = "vehicle.deleted"
 )
 
+// Organization record events (TEC-210): written in the transaction that
+// registers an organization or edits its name, dealer code, address or
+// parent; the search sync refreshes the organizations index from them.
+const (
+	OrganizationCreated = "organization.created"
+	OrganizationUpdated = "organization.updated"
+)
+
 // ValidateEventName checks the naming standard without requiring catalog membership.
 func ValidateEventName(name string) error {
 	name = strings.TrimSpace(name)
@@ -595,6 +603,8 @@ func catalogConstants() []string {
 		VehicleDeleted,
 		TasksDueSoon,
 		TasksOverdue,
+		OrganizationCreated,
+		OrganizationUpdated,
 	}
 }
 
