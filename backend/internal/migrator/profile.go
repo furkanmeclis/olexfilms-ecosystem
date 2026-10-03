@@ -69,6 +69,9 @@ func olexSteps() []Step {
 		// archive (sms_logs incl. WhatsApp, notifications).
 		ShortURLsStep{},
 		LegacyMessagesStep{},
+
+		// TEC-259: services, items, images and status logs.
+		ServicesStep{},
 	}
 }
 
