@@ -74,6 +74,9 @@ type Worker struct {
 	// TEC-270: Glorian barcode push (bulk upsert) and outbound PATCH.
 	glorianPush  GlorianPushBarcodesFunc
 	glorianPatch GlorianPatchStockItemFunc
+	// TEC-271: Glorian order outbound and held replay.
+	glorianOrder  GlorianOrderOutboundFunc
+	glorianReplay GlorianOrderReplayFunc
 }
 
 // NewWorker builds a worker that handles known task types on every queue.
@@ -146,6 +149,8 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskGlorianPullCatalog, w.handleGlorianPull)
 	mux.HandleFunc(TaskGlorianPushBarcodes, w.handleGlorianPush)
 	mux.HandleFunc(TaskGlorianPatchStockItem, w.handleGlorianPatch)
+	mux.HandleFunc(TaskGlorianOrderOutbound, w.handleGlorianOrderOutbound)
+	mux.HandleFunc(TaskGlorianOrderReplay, w.handleGlorianOrderReplay)
 	return w
 }
 

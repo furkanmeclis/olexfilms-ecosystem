@@ -16,8 +16,8 @@ import (
 // TEC-270 (F2-02e): barcode push. Serial units of products synced from a
 // connection are pushed to the hub when they enter or are placed into a
 // center bin (one bulk upsert per batch, location=center,
-// status=available) and patched by barcode when they leave (exit, transfer
-// or shipment). The client is the product's connection; a missing or
+// status=available) and patched by barcode when they exit (a shipment goes
+// through the hub order, TEC-271). The client is the product's connection; a missing or
 // inactive connection makes no request and leaves a held sync run.
 //
 // Bulk cursor: the push_barcodes run's watermark is the created_at of the
@@ -199,15 +199,16 @@ func (p *Pusher) nextBatch(ctx context.Context, conn db.IntegrationConnection, c
 }
 
 // Patch of a movement type: the hub state of a unit after it.
+//
+// TEC-271 aligned this with the warehouse (MarkOrderBarcodesExternalOutboundAction):
+// only an exit sends a PATCH, {status: external_outbound, location: center}.
+// A shipment (order_out) and its cancel restore go through the hub order
+// instead (TEC-271 order outbound: POST /orders reserves the barcodes,
+// ship/receive/cancel move them); a PATCH there would hit a reserved item
+// (409 on the hub). Transfers between dealers are not pushed (the warehouse
+// never patched them).
 var patchByMovement = map[string]StockItemPatch{
-	// Exit: the unit left the warehouse (to trash, status used).
-	"external_outbound": {Status: StockStatusExternalOutbound},
-	// Transfer and shipment to another organization.
-	"transfer_out": {Status: StockStatusExternalOutbound, Location: StockLocationDealer},
-	"order_out":    {Status: StockStatusExternalOutbound, Location: StockLocationDealer},
-	// A cancelled transfer or order puts the unit back into the center.
-	"transfer_cancel_restore": {Status: StockStatusAvailable, Location: StockLocationCenter},
-	"order_cancel_restore":    {Status: StockStatusAvailable, Location: StockLocationCenter},
+	"external_outbound": {Status: StockStatusExternalOutbound, Location: StockLocationCenter},
 }
 
 // PatchMovementTypes are the stock movement types that send a PATCH.

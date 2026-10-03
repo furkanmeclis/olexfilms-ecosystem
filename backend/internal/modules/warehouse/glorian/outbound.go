@@ -67,6 +67,7 @@ func Permanent(err error) bool {
 	for _, target := range []error{
 		ErrValidation, ErrConflict, ErrUnauthorized, ErrForbidden, ErrUnsupportedVersion,
 		ErrNotImplemented, ErrInvalidInput, ErrMisconfigured, ErrInvalidResponse,
+		ErrOrderTransition,
 	} {
 		if errors.Is(err, target) {
 			return true

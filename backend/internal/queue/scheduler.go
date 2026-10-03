@@ -57,6 +57,8 @@ func Schedules() []Periodic {
 		{Cron: glorianPullCron, Type: TaskGlorianPullCatalog, Queue: QueueMaintenance, Opts: glorianPullOpts(), New: NewGlorianPullCatalogTask},
 		// TEC-270: Glorian barcode push safety net (every active connection).
 		{Cron: glorianPushCron, Type: TaskGlorianPushBarcodes, Queue: QueueMaintenance, Opts: glorianPushCronOpts(), New: NewGlorianPushAllTask},
+		// TEC-271: replay of held Glorian order outbounds (every connection).
+		{Cron: glorianOrderReplayCron, Type: TaskGlorianOrderReplay, Queue: QueueMaintenance, Opts: glorianOrderReplayCronOpts(), New: NewGlorianOrderReplayAllTask},
 	}
 }
 
