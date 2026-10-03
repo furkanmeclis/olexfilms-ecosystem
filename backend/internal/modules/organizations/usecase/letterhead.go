@@ -122,19 +122,22 @@ func (s *Service) PatchTenantSettings(ctx context.Context, orgID int64, in Lette
 		}
 		in.Phone = &p
 	}
-	row, err := s.q.UpdateOrganizationLetterhead(ctx, db.UpdateOrganizationLetterheadParams{
-		ID:           orgID,
-		Name:         textNarg(in.CompanyName),
-		City:         textNarg(in.City),
-		District:     textNarg(in.District),
-		Phone:        textNarg(in.Phone),
-		Address:      textNarg(in.Address),
-		Email:        textNarg(in.Email),
-		Website:      textNarg(in.Website),
-		Tagline:      textNarg(in.Tagline),
-		FooterText:   textNarg(in.FooterText),
-		PaperSize:    textNarg(in.PaperSize),
-		PrimaryColor: textNarg(in.PrimaryColor),
+	// TEC-210: name / city / phone feed the organizations index.
+	row, err := s.updateWithEvent(ctx, func(q *db.Queries) (db.Organization, error) {
+		return q.UpdateOrganizationLetterhead(ctx, db.UpdateOrganizationLetterheadParams{
+			ID:           orgID,
+			Name:         textNarg(in.CompanyName),
+			City:         textNarg(in.City),
+			District:     textNarg(in.District),
+			Phone:        textNarg(in.Phone),
+			Address:      textNarg(in.Address),
+			Email:        textNarg(in.Email),
+			Website:      textNarg(in.Website),
+			Tagline:      textNarg(in.Tagline),
+			FooterText:   textNarg(in.FooterText),
+			PaperSize:    textNarg(in.PaperSize),
+			PrimaryColor: textNarg(in.PrimaryColor),
+		})
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

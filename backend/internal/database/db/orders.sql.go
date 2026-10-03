@@ -286,6 +286,10 @@ WHERE brand_id = $1
   AND ($3::text IS NULL OR status = $3::text)
   AND ($4::timestamptz IS NULL OR created_at >= $4::timestamptz)
   AND ($5::timestamptz IS NULL OR created_at < $5::timestamptz)
+  AND ($6::text IS NULL
+       OR order_no ILIKE '%' || $6::text || '%'
+       OR tracking_no ILIKE '%' || $6::text || '%'
+       OR external_reference ILIKE '%' || $6::text || '%')
 `
 
 type CountOrdersByBuyerParams struct {
@@ -294,6 +298,7 @@ type CountOrdersByBuyerParams struct {
 	Status      pgtype.Text        `json:"status"`
 	CreatedFrom pgtype.Timestamptz `json:"created_from"`
 	CreatedTo   pgtype.Timestamptz `json:"created_to"`
+	Q           pgtype.Text        `json:"q"`
 }
 
 func (q *Queries) CountOrdersByBuyer(ctx context.Context, arg CountOrdersByBuyerParams) (int64, error) {
@@ -303,6 +308,7 @@ func (q *Queries) CountOrdersByBuyer(ctx context.Context, arg CountOrdersByBuyer
 		arg.Status,
 		arg.CreatedFrom,
 		arg.CreatedTo,
+		arg.Q,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -316,6 +322,10 @@ WHERE brand_id = $1
   AND ($3::text IS NULL OR status = $3::text)
   AND ($4::timestamptz IS NULL OR created_at >= $4::timestamptz)
   AND ($5::timestamptz IS NULL OR created_at < $5::timestamptz)
+  AND ($6::text IS NULL
+       OR order_no ILIKE '%' || $6::text || '%'
+       OR tracking_no ILIKE '%' || $6::text || '%'
+       OR external_reference ILIKE '%' || $6::text || '%')
 `
 
 type CountOrdersBySellerParams struct {
@@ -324,6 +334,7 @@ type CountOrdersBySellerParams struct {
 	Status      pgtype.Text        `json:"status"`
 	CreatedFrom pgtype.Timestamptz `json:"created_from"`
 	CreatedTo   pgtype.Timestamptz `json:"created_to"`
+	Q           pgtype.Text        `json:"q"`
 }
 
 func (q *Queries) CountOrdersBySeller(ctx context.Context, arg CountOrdersBySellerParams) (int64, error) {
@@ -333,6 +344,7 @@ func (q *Queries) CountOrdersBySeller(ctx context.Context, arg CountOrdersBySell
 		arg.Status,
 		arg.CreatedFrom,
 		arg.CreatedTo,
+		arg.Q,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -348,6 +360,10 @@ WHERE brand_id = $1
   AND ($3::text IS NULL OR status = $3::text)
   AND ($4::timestamptz IS NULL OR created_at >= $4::timestamptz)
   AND ($5::timestamptz IS NULL OR created_at < $5::timestamptz)
+  AND ($6::text IS NULL
+       OR order_no ILIKE '%' || $6::text || '%'
+       OR tracking_no ILIKE '%' || $6::text || '%'
+       OR external_reference ILIKE '%' || $6::text || '%')
 `
 
 type CountOrdersInScopeParams struct {
@@ -356,6 +372,7 @@ type CountOrdersInScopeParams struct {
 	Status      pgtype.Text        `json:"status"`
 	CreatedFrom pgtype.Timestamptz `json:"created_from"`
 	CreatedTo   pgtype.Timestamptz `json:"created_to"`
+	Q           pgtype.Text        `json:"q"`
 }
 
 func (q *Queries) CountOrdersInScope(ctx context.Context, arg CountOrdersInScopeParams) (int64, error) {
@@ -365,6 +382,7 @@ func (q *Queries) CountOrdersInScope(ctx context.Context, arg CountOrdersInScope
 		arg.Status,
 		arg.CreatedFrom,
 		arg.CreatedTo,
+		arg.Q,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -1408,8 +1426,13 @@ WHERE brand_id = $1
   AND ($3::text IS NULL OR status = $3::text)
   AND ($4::timestamptz IS NULL OR created_at >= $4::timestamptz)
   AND ($5::timestamptz IS NULL OR created_at < $5::timestamptz)
+  AND ($6::text IS NULL
+       OR order_no ILIKE '%' || $6::text || '%'
+       OR tracking_no ILIKE '%' || $6::text || '%'
+       OR external_reference ILIKE '%' || $6::text || '%')
+  AND ($7::uuid[] IS NULL OR uuid = ANY ($7::uuid[]))
 ORDER BY created_at DESC, id DESC
-LIMIT $7 OFFSET $6
+LIMIT $9 OFFSET $8
 `
 
 type ListOrdersByBuyerParams struct {
@@ -1418,6 +1441,8 @@ type ListOrdersByBuyerParams struct {
 	Status      pgtype.Text        `json:"status"`
 	CreatedFrom pgtype.Timestamptz `json:"created_from"`
 	CreatedTo   pgtype.Timestamptz `json:"created_to"`
+	Q           pgtype.Text        `json:"q"`
+	Uuids       []uuid.UUID        `json:"uuids"`
 	RowOffset   int32              `json:"row_offset"`
 	RowLimit    int32              `json:"row_limit"`
 }
@@ -1430,6 +1455,8 @@ func (q *Queries) ListOrdersByBuyer(ctx context.Context, arg ListOrdersByBuyerPa
 		arg.Status,
 		arg.CreatedFrom,
 		arg.CreatedTo,
+		arg.Q,
+		arg.Uuids,
 		arg.RowOffset,
 		arg.RowLimit,
 	)
@@ -1494,8 +1521,13 @@ WHERE brand_id = $1
   AND ($3::text IS NULL OR status = $3::text)
   AND ($4::timestamptz IS NULL OR created_at >= $4::timestamptz)
   AND ($5::timestamptz IS NULL OR created_at < $5::timestamptz)
+  AND ($6::text IS NULL
+       OR order_no ILIKE '%' || $6::text || '%'
+       OR tracking_no ILIKE '%' || $6::text || '%'
+       OR external_reference ILIKE '%' || $6::text || '%')
+  AND ($7::uuid[] IS NULL OR uuid = ANY ($7::uuid[]))
 ORDER BY created_at DESC, id DESC
-LIMIT $7 OFFSET $6
+LIMIT $9 OFFSET $8
 `
 
 type ListOrdersBySellerParams struct {
@@ -1504,6 +1536,8 @@ type ListOrdersBySellerParams struct {
 	Status      pgtype.Text        `json:"status"`
 	CreatedFrom pgtype.Timestamptz `json:"created_from"`
 	CreatedTo   pgtype.Timestamptz `json:"created_to"`
+	Q           pgtype.Text        `json:"q"`
+	Uuids       []uuid.UUID        `json:"uuids"`
 	RowOffset   int32              `json:"row_offset"`
 	RowLimit    int32              `json:"row_limit"`
 }
@@ -1516,6 +1550,8 @@ func (q *Queries) ListOrdersBySeller(ctx context.Context, arg ListOrdersBySeller
 		arg.Status,
 		arg.CreatedFrom,
 		arg.CreatedTo,
+		arg.Q,
+		arg.Uuids,
 		arg.RowOffset,
 		arg.RowLimit,
 	)
@@ -1582,8 +1618,13 @@ WHERE brand_id = $1
   AND ($3::text IS NULL OR status = $3::text)
   AND ($4::timestamptz IS NULL OR created_at >= $4::timestamptz)
   AND ($5::timestamptz IS NULL OR created_at < $5::timestamptz)
+  AND ($6::text IS NULL
+       OR order_no ILIKE '%' || $6::text || '%'
+       OR tracking_no ILIKE '%' || $6::text || '%'
+       OR external_reference ILIKE '%' || $6::text || '%')
+  AND ($7::uuid[] IS NULL OR uuid = ANY ($7::uuid[]))
 ORDER BY created_at DESC, id DESC
-LIMIT $7 OFFSET $6
+LIMIT $9 OFFSET $8
 `
 
 type ListOrdersInScopeParams struct {
@@ -1592,6 +1633,8 @@ type ListOrdersInScopeParams struct {
 	Status      pgtype.Text        `json:"status"`
 	CreatedFrom pgtype.Timestamptz `json:"created_from"`
 	CreatedTo   pgtype.Timestamptz `json:"created_to"`
+	Q           pgtype.Text        `json:"q"`
+	Uuids       []uuid.UUID        `json:"uuids"`
 	RowOffset   int32              `json:"row_offset"`
 	RowLimit    int32              `json:"row_limit"`
 }
@@ -1605,6 +1648,8 @@ func (q *Queries) ListOrdersInScope(ctx context.Context, arg ListOrdersInScopePa
 		arg.Status,
 		arg.CreatedFrom,
 		arg.CreatedTo,
+		arg.Q,
+		arg.Uuids,
 		arg.RowOffset,
 		arg.RowLimit,
 	)

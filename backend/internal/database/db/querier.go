@@ -489,6 +489,7 @@ type Querier interface {
 	GetOrder(ctx context.Context, arg GetOrderParams) (Order, error)
 	GetOrderByExternalReference(ctx context.Context, arg GetOrderByExternalReferenceParams) (Order, error)
 	GetOrderByUUID(ctx context.Context, arg GetOrderByUUIDParams) (Order, error)
+	GetOrderForIndex(ctx context.Context, argUuid uuid.UUID) (GetOrderForIndexRow, error)
 	GetOrderItem(ctx context.Context, arg GetOrderItemParams) (OrderItem, error)
 	GetOrderItemByUUID(ctx context.Context, arg GetOrderItemByUUIDParams) (OrderItem, error)
 	GetOrderItemUnit(ctx context.Context, arg GetOrderItemUnitParams) (OrderItemUnit, error)
@@ -498,6 +499,7 @@ type Querier interface {
 	GetOrganizationByUUID(ctx context.Context, argUuid uuid.UUID) (Organization, error)
 	// Country of an organization for the default phone region (K29).
 	GetOrganizationCountryISO2(ctx context.Context, id int64) (string, error)
+	GetOrganizationForIndex(ctx context.Context, argUuid uuid.UUID) (GetOrganizationForIndexRow, error)
 	GetOrganizationMember(ctx context.Context, arg GetOrganizationMemberParams) (GetOrganizationMemberRow, error)
 	GetOrganizationMemberByUserAndOrgUUID(ctx context.Context, arg GetOrganizationMemberByUserAndOrgUUIDParams) (GetOrganizationMemberByUserAndOrgUUIDRow, error)
 	GetOrganizationMemberByUserAndSlug(ctx context.Context, arg GetOrganizationMemberByUserAndSlugParams) (GetOrganizationMemberByUserAndSlugRow, error)
@@ -566,6 +568,7 @@ type Querier interface {
 	GetStockSplitByKey(ctx context.Context, arg GetStockSplitByKeyParams) (StockSplit, error)
 	GetStockTransferRequest(ctx context.Context, arg GetStockTransferRequestParams) (StockTransferRequest, error)
 	GetStockTransferRequestByUUID(ctx context.Context, arg GetStockTransferRequestByUUIDParams) (StockTransferRequest, error)
+	GetStockUnitForIndex(ctx context.Context, argUuid uuid.UUID) (GetStockUnitForIndexRow, error)
 	GetStorageLinkBySlug(ctx context.Context, slug pgtype.Text) (StorageLink, error)
 	GetStorageLinkByTokenHash(ctx context.Context, tokenHash pgtype.Text) (StorageLink, error)
 	GetStorageLinkByUUID(ctx context.Context, argUuid uuid.UUID) (StorageLink, error)
@@ -842,10 +845,14 @@ type Querier interface {
 	ListOrderItemUnitsByOrder(ctx context.Context, orderID int64) ([]ListOrderItemUnitsByOrderRow, error)
 	ListOrderItems(ctx context.Context, orderID int64) ([]OrderItem, error)
 	ListOrderStatusHistory(ctx context.Context, orderID int64) ([]OrderStatusHistory, error)
+	// Orders an organization sells or buys: their documents carry the
+	// organization's name and dealer code, refreshed when it changes.
+	ListOrderUuidsByOrganization(ctx context.Context, organizationID int64) ([]uuid.UUID, error)
 	// Buyer side: orders the organization buys.
 	ListOrdersByBuyer(ctx context.Context, arg ListOrdersByBuyerParams) ([]Order, error)
 	// Seller side: orders the organization sells.
 	ListOrdersBySeller(ctx context.Context, arg ListOrdersBySellerParams) ([]Order, error)
+	ListOrdersForIndex(ctx context.Context) ([]ListOrdersForIndexRow, error)
 	// Scope list: orders where any of org_ids is the seller or the buyer
 	// (org_ids NULL = whole brand, for brand/all scopes).
 	ListOrdersInScope(ctx context.Context, arg ListOrdersInScopeParams) ([]Order, error)
@@ -869,6 +876,12 @@ type Querier interface {
 	ListOrganizationStockUnitRows(ctx context.Context, arg ListOrganizationStockUnitRowsParams) ([]ListOrganizationStockUnitRowsRow, error)
 	ListOrganizationsByIDs(ctx context.Context, ids []int64) ([]Organization, error)
 	ListOrganizationsFiltered(ctx context.Context, arg ListOrganizationsFilteredParams) ([]ListOrganizationsFilteredRow, error)
+	// TEC-210: organizations (name, dealer code = slug), orders (order number,
+	// parties) and stock units (barcode, product, status, location) indexes.
+	// Same contract as search_index.sql (TEC-209): the list endpoints filter
+	// the index on the caller's scope and reload the hits from Postgres with
+	// that scope, so the index is never the only access check.
+	ListOrganizationsForIndex(ctx context.Context) ([]ListOrganizationsForIndexRow, error)
 	// Organizations reachable by a scope filter: an explicit id set
 	// (managed/subtree) or a whole brand (brand), or every brand (all, both NULL).
 	ListOrganizationsInScope(ctx context.Context, arg ListOrganizationsInScopeParams) ([]ListOrganizationsInScopeRow, error)
@@ -982,6 +995,11 @@ type Querier interface {
 	// Scope list: requests where any of org_ids is the giver, the receiver or
 	// the approver (org_ids NULL = whole brand).
 	ListStockTransferRequestsInScope(ctx context.Context, arg ListStockTransferRequestsInScopeParams) ([]StockTransferRequest, error)
+	// Stock units: holder_org_ids are the organizations whose unit list
+	// (GET /v1/stock/organizations/{uuid}/units) shows the unit (serial
+	// current state, fixed barcode holdings with quantity on hand) and
+	// location_codes the bins it sits in (full_code, else code).
+	ListStockUnitsForIndex(ctx context.Context) ([]ListStockUnitsForIndexRow, error)
 	ListStorageActivity(ctx context.Context, arg ListStorageActivityParams) ([]ListStorageActivityRow, error)
 	ListStorageLinksByKey(ctx context.Context, objectKey string) ([]StorageLink, error)
 	ListStorageSharesByKey(ctx context.Context, objectKey string) ([]ListStorageSharesByKeyRow, error)

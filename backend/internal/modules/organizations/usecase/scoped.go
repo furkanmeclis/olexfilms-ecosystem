@@ -13,7 +13,10 @@ import (
 
 // ScopedListInput filters GET /v1/tenant/organizations.
 type ScopedListInput struct {
-	Type   string
+	Type string
+	// Q searches name and dealer code (slug); the index answers it when
+	// it is up (TEC-210).
+	Q      string
 	Limit  int32
 	Offset int32
 }
@@ -39,15 +42,26 @@ func (s *Service) ListInScope(ctx context.Context, f scopefilter.Filter, in Scop
 	if in.Offset < 0 {
 		in.Offset = 0
 	}
-	rows, err := s.q.ListOrganizationsInScope(ctx, db.ListOrganizationsInScopeParams{
+	p := db.ListOrganizationsInScopeParams{
 		OrgIds:      f.OrgIDsArg(),
 		BrandID:     pgtype.Int8{Int64: brand.ID, Valid: true},
 		Type:        typ,
+		Q:           scopedQuery(in.Q),
 		LimitCount:  in.Limit,
 		OffsetCount: in.Offset,
-	})
-	if err != nil {
-		return nil, err
+	}
+	var (
+		rows    []db.ListOrganizationsInScopeRow
+		indexed bool
+	)
+	if p.Q.Valid && s.indexEnabled() {
+		rows, indexed = s.searchIndexed(ctx, brand.ID, p)
+	}
+	if !indexed {
+		rows, err = s.q.ListOrganizationsInScope(ctx, p)
+		if err != nil {
+			return nil, err
+		}
 	}
 	out := make([]Organization, 0, len(rows))
 	for _, row := range rows {

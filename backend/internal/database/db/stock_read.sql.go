@@ -469,13 +469,13 @@ const listOrganizationStockUnitRows = `-- name: ListOrganizationStockUnitRows :m
 WITH held AS (
     SELECT s.unit_id, 1::int AS quantity, s.owner_type, s.owner_id, s.updated_at
     FROM unit_current_state s
-    WHERE s.holder_org_id = $8
+    WHERE s.holder_org_id = $9
       AND s.owner_type IN ('organization', 'warehouse_location')
     UNION ALL
     SELECT h.unit_id, SUM(h.quantity_on_hand)::int AS quantity,
            NULL::varchar AS owner_type, NULL::bigint AS owner_id, MAX(h.updated_at) AS updated_at
     FROM fixed_barcode_holdings h
-    WHERE h.holder_org_id = $8
+    WHERE h.holder_org_id = $9
       AND h.owner_type IN ('organization', 'warehouse_location')
     GROUP BY h.unit_id
     HAVING SUM(h.quantity_on_hand) > 0
@@ -495,14 +495,15 @@ WHERE ($1::bigint IS NULL OR u.brand_id = $1::bigint)
   AND (($3::text IS NULL AND u.status IN ('available', 'placed'))
        OR u.status = $3::text)
   AND ($4::text IS NULL OR u.barcode = $4::text)
+  AND ($5::uuid[] IS NULL OR u.uuid = ANY ($5::uuid[]))
   AND (
-    $5::text IS NULL
-    OR p.name ILIKE '%' || $5::text || '%'
-    OR p.sku ILIKE '%' || $5::text || '%'
-    OR u.barcode ILIKE '%' || $5::text || '%'
+    $6::text IS NULL
+    OR p.name ILIKE '%' || $6::text || '%'
+    OR p.sku ILIKE '%' || $6::text || '%'
+    OR u.barcode ILIKE '%' || $6::text || '%'
   )
 ORDER BY p.name, u.barcode, u.id
-LIMIT $7 OFFSET $6
+LIMIT $8 OFFSET $7
 `
 
 type ListOrganizationStockUnitRowsParams struct {
@@ -510,6 +511,7 @@ type ListOrganizationStockUnitRowsParams struct {
 	ProductID      pgtype.Int8 `json:"product_id"`
 	Status         pgtype.Text `json:"status"`
 	Barcode        pgtype.Text `json:"barcode"`
+	Uuids          []uuid.UUID `json:"uuids"`
 	Q              pgtype.Text `json:"q"`
 	OffsetCount    int32       `json:"offset_count"`
 	LimitCount     int32       `json:"limit_count"`
@@ -548,6 +550,7 @@ func (q *Queries) ListOrganizationStockUnitRows(ctx context.Context, arg ListOrg
 		arg.ProductID,
 		arg.Status,
 		arg.Barcode,
+		arg.Uuids,
 		arg.Q,
 		arg.OffsetCount,
 		arg.LimitCount,

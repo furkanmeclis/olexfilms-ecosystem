@@ -15,6 +15,10 @@ const (
 	SpecServices   = "services"
 	SpecWarranties = "warranties"
 	SpecVehicles   = "vehicles"
+	// TEC-210: organizations (dealer code), orders, stock units (barcode).
+	SpecOrganizations = "organizations"
+	SpecOrders        = "orders"
+	SpecStockUnits    = "stock_units"
 )
 
 // ListFinder runs a filtered index query for a module list endpoint
@@ -53,6 +57,19 @@ func (f *Filter) In(field string, values []int64) *Filter {
 	strs := make([]string, len(values))
 	for i, v := range values {
 		strs[i] = strconv.FormatInt(v, 10)
+	}
+	f.parts = append(f.parts, field+" IN ["+strings.Join(strs, ", ")+"]")
+	return f
+}
+
+// InStrings adds `field IN ["a", "b"]` (skipped when values is empty).
+func (f *Filter) InStrings(field string, values []string) *Filter {
+	if len(values) == 0 {
+		return f
+	}
+	strs := make([]string, len(values))
+	for i, v := range values {
+		strs[i] = strconv.Quote(v)
 	}
 	f.parts = append(f.parts, field+" IN ["+strings.Join(strs, ", ")+"]")
 	return f

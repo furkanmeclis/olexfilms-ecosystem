@@ -3099,7 +3099,10 @@ paths:
       description: >-
         managed: the active organization; subtree: a distributor and its
         dealers; brand: every organization of the brand. Never leaves the
-        request brand.
+        request brand. `q` (TEC-210) searches the name and the dealer code
+        (slug); when Meilisearch is up the organizations index answers it
+        inside the same scope (hits are reloaded from Postgres), otherwise
+        SQL.
       security:
         - bearerAuth: []
       parameters:
@@ -3107,6 +3110,10 @@ paths:
           in: query
           schema:
             $ref: "#/components/schemas/OrganizationType"
+        - name: q
+          in: query
+          description: Part of the organization name or dealer code (slug).
+          schema: { type: string, maxLength: 200 }
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 200 }
@@ -3120,6 +3127,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeScopedOrganizationList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "403":
@@ -5532,7 +5541,10 @@ paths:
         the quantity on hand). Without `status` the list holds the units
         counted as stock (available, placed); `status` lists exactly that
         status. `barcode` is an exact match, `product_uuid` narrows to one
-        product, `q` matches a part of the product name, SKU or barcode.
+        product, `q` matches a part of the product name, SKU or barcode
+        (TEC-210: when Meilisearch is up and no `barcode` is given the stock
+        units index answers it, which also matches the bin full_code; hits
+        are reloaded from Postgres with the same filters).
         `purchase_price` is the price the holding organization pays for
         the product (K8, in the organization's currency); it is null when
         the viewer's `pricing.purchase.read` does not reach the
@@ -11734,13 +11746,19 @@ paths:
         seller or the buyer (managed: the active organization's own sales and
         purchases; a dealer never sees its distributor's other dealers).
         side=seller|buyer limits the list to the active organization's sales
-        or purchases. List rows carry no items or history.
+        or purchases. List rows carry no items or history. `q` (TEC-210)
+        searches the order number, tracking number and external reference;
+        when Meilisearch is up (and no created_from / created_to is given)
+        the orders index answers it, which also matches the seller and
+        buyer names and dealer codes, inside the same scope (hits are
+        reloaded from Postgres).
       security:
         - bearerAuth: []
       parameters:
         - name: side
           in: query
           schema: { type: string, enum: [seller, buyer] }
+        - $ref: "#/components/parameters/Q"
         - name: status
           in: query
           schema: { $ref: "#/components/schemas/OrderStatus" }

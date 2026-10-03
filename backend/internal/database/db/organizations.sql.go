@@ -1153,14 +1153,18 @@ WHERE o.deleted_at IS NULL
   AND ($1::bigint[] IS NULL OR o.id = ANY ($1::bigint[]))
   AND ($2::bigint IS NULL OR o.brand_id = $2)
   AND ($3::text IS NULL OR o.type = $3)
+  AND ($4::text IS NULL OR o.name ILIKE '%' || $4::text || '%' OR o.slug ILIKE '%' || $4::text || '%')
+  AND ($5::uuid[] IS NULL OR o.uuid = ANY ($5::uuid[]))
 ORDER BY o.type ASC, o.name ASC
-LIMIT $5 OFFSET $4
+LIMIT $7 OFFSET $6
 `
 
 type ListOrganizationsInScopeParams struct {
 	OrgIds      []int64     `json:"org_ids"`
 	BrandID     pgtype.Int8 `json:"brand_id"`
 	Type        pgtype.Text `json:"type"`
+	Q           pgtype.Text `json:"q"`
+	Uuids       []uuid.UUID `json:"uuids"`
 	OffsetCount int32       `json:"offset_count"`
 	LimitCount  int32       `json:"limit_count"`
 }
@@ -1179,6 +1183,8 @@ func (q *Queries) ListOrganizationsInScope(ctx context.Context, arg ListOrganiza
 		arg.OrgIds,
 		arg.BrandID,
 		arg.Type,
+		arg.Q,
+		arg.Uuids,
 		arg.OffsetCount,
 		arg.LimitCount,
 	)

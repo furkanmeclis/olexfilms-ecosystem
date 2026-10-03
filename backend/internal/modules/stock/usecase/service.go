@@ -25,6 +25,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -44,6 +45,9 @@ const (
 // Service reads the stock ledger.
 type Service struct {
 	q *db.Queries
+	// finder answers the unit list q from the stock units index (TEC-210;
+	// nil: SQL only).
+	finder searchengine.ListFinder
 }
 
 // New builds the service.

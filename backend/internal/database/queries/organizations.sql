@@ -260,5 +260,7 @@ WHERE o.deleted_at IS NULL
   AND (sqlc.narg(org_ids)::bigint[] IS NULL OR o.id = ANY (sqlc.narg(org_ids)::bigint[]))
   AND (sqlc.narg(brand_id)::bigint IS NULL OR o.brand_id = sqlc.narg(brand_id))
   AND (sqlc.narg(type)::text IS NULL OR o.type = sqlc.narg(type))
+  AND (sqlc.narg(q)::text IS NULL OR o.name ILIKE '%' || sqlc.narg(q)::text || '%' OR o.slug ILIKE '%' || sqlc.narg(q)::text || '%')
+  AND (sqlc.narg(uuids)::uuid[] IS NULL OR o.uuid = ANY (sqlc.narg(uuids)::uuid[]))
 ORDER BY o.type ASC, o.name ASC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
