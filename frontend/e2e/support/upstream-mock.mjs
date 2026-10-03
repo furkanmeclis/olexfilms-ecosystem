@@ -1,13 +1,14 @@
 // Mocked Go API for the server side of the e2e build (TEC-218).
 //
-// `page.route` only sees browser traffic. Two flows call Go from the Next.js
-// server instead: the Auth.js credentials login (auth/login + the adapter's
-// user lookup) and the public warranty page (/garanti/{code}, rendered on
-// the server). The organization switch also goes through the real BFF so
-// it can rewrite the session cookie. This tiny server answers exactly
-// those; every other path
-// drops the connection, so the rest of the build still fails fast as it
-// did with the closed-port API_URL.
+// `page.route` only sees browser traffic. Three flows call Go from the
+// Next.js server instead: the Auth.js credentials login (auth/login + the
+// adapter's user lookup), the public warranty page (/garanti/{code},
+// rendered on the server) and the portal phone OTP sign-in
+// (auth/otp/verify, TEC-246). The organization switch also goes through
+// the real BFF so it can rewrite the session cookie. This tiny server
+// answers exactly those; every other path drops the connection, so the
+// rest of the build still fails fast as it did with the closed-port
+// API_URL.
 //
 // Fixtures must match e2e/support/mock-api.ts (USER, ORG) and the specs.
 import { createServer } from "node:http";
@@ -20,6 +21,35 @@ const ORG = "0b9c4c1e-0000-4000-8000-000000000001";
 /** Memberships of the login spec by slug (organization switcher). */
 const ORGS = { acme: ORG, beta: "0b9c4c1e-0000-4000-8000-000000000003" };
 const LOGIN = { email: "e2e@example.com", password: "e2e-password-1" };
+
+/**
+ * Portal OTP sign-in (TEC-246): the code the fake WhatsApp sender of the
+ * portal spec delivers per E.164 phone and the portal user it signs in.
+ * Keep in sync with E2E_PORTAL in e2e/support/constants.ts.
+ */
+const PORTAL_OTP = {
+  "+905551110001": {
+    code: "246001",
+    sub: "0b9c4c1e-0000-4000-8000-000000000246",
+  },
+  "+905551110002": {
+    code: "246002",
+    sub: "0b9c4c1e-0000-4000-8000-000000000247",
+  },
+};
+
+/** TR national digits as typed ("555 111 00 01", "0555...") to E.164. */
+function toE164(phone, country) {
+  const digits = String(phone ?? "").replace(/\D/g, "");
+  if (
+    String(phone ?? "")
+      .trim()
+      .startsWith("+")
+  )
+    return `+${digits}`;
+  if (country && country !== "TR") return `+${digits}`;
+  return `+90${digits.replace(/^0/, "").replace(/^90(?=\d{10}$)/, "")}`;
+}
 
 /** Public codes of the warranty spec: one per screen. */
 const WARRANTY_OK = "E2EWARRANTY0001";
@@ -46,9 +76,9 @@ const warranty = {
 
 const b64url = (v) => Buffer.from(JSON.stringify(v)).toString("base64url");
 /** Unsigned access token: the frontend only reads its claims (oid, aud). */
-const accessToken = (oid = ORG) =>
+const accessToken = (oid = ORG, sub = USER) =>
   `${b64url({ alg: "none", typ: "JWT" })}.${b64url({
-    sub: USER,
+    sub,
     oid,
     exp: Math.floor(Date.now() / 1000) + 3600,
   })}.e2e`;
@@ -95,6 +125,23 @@ const server = createServer(async (req, res) => {
       data: {
         access_token: accessToken(),
         refresh_token: "e2e-refresh",
+        expires_in: 3600,
+      },
+    });
+  }
+
+  // Portal phone OTP (TEC-246): the code the fake WhatsApp sender delivered.
+  if (req.method === "POST" && path === "/v1/auth/otp/verify") {
+    const body = await readJson(req);
+    const user = PORTAL_OTP[toE164(body.phone, body.country)];
+    if (body.purpose !== "customer_login" || !user || body.code !== user.code) {
+      return send(res, 401, error("INVALID_OTP_CODE", "Invalid code"));
+    }
+    return send(res, 200, {
+      success: true,
+      data: {
+        access_token: accessToken(null, user.sub),
+        refresh_token: "e2e-portal-refresh",
         expires_in: 3600,
       },
     });
