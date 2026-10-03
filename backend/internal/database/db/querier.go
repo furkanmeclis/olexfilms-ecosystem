@@ -952,6 +952,10 @@ type Querier interface {
 	// System rows plus the org / dealer_standard rows of the given organizations.
 	ListModuleFlagsForOrgs(ctx context.Context, orgIds []int64) ([]ListModuleFlagsForOrgsRow, error)
 	ListModules(ctx context.Context) ([]Module, error)
+	// Active, serving (access window open) dealers and distributors of a brand
+	// with coordinates, within radius_km of (lat, lng). Distance is the
+	// haversine great-circle distance in km (mean Earth radius 6371.0088).
+	ListNearbyDealers(ctx context.Context, arg ListNearbyDealersParams) ([]ListNearbyDealersRow, error)
 	ListNotificationChannelSettings(ctx context.Context) ([]NotificationChannelSetting, error)
 	ListNotificationDeliveries(ctx context.Context, arg ListNotificationDeliveriesParams) ([]ListNotificationDeliveriesRow, error)
 	ListNotificationPreferenceRows(ctx context.Context, userID int64) ([]NotificationPreference, error)
@@ -1614,6 +1618,9 @@ type Querier interface {
 	// caller has locked the row and validated the transition.
 	UpdateOrderStatus(ctx context.Context, arg UpdateOrderStatusParams) (Order, error)
 	UpdateOrderTotals(ctx context.Context, arg UpdateOrderTotalsParams) (Order, error)
+	// TEC-240: dealer coordinates and the public "nearby dealers" lookup.
+	// Sets or clears (both NULL) the map position of an organization.
+	UpdateOrganizationCoordinates(ctx context.Context, arg UpdateOrganizationCoordinatesParams) (Organization, error)
 	UpdateOrganizationLetterhead(ctx context.Context, arg UpdateOrganizationLetterheadParams) (Organization, error)
 	UpdateOrganizationParent(ctx context.Context, arg UpdateOrganizationParentParams) (Organization, error)
 	UpdateOrganizationPlatform(ctx context.Context, arg UpdateOrganizationPlatformParams) (Organization, error)

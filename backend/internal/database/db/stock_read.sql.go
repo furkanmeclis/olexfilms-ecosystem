@@ -594,7 +594,7 @@ func (q *Queries) ListOrganizationStockUnitRows(ctx context.Context, arg ListOrg
 }
 
 const listOrganizationsByIDs = `-- name: ListOrganizationsByIDs :many
-SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url FROM organizations WHERE id = ANY($1::bigint[])
+SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude FROM organizations WHERE id = ANY($1::bigint[])
 `
 
 func (q *Queries) ListOrganizationsByIDs(ctx context.Context, ids []int64) ([]Organization, error) {
@@ -643,6 +643,8 @@ func (q *Queries) ListOrganizationsByIDs(ctx context.Context, ids []int64) ([]Or
 			&i.DistrictID,
 			&i.PhoneRaw,
 			&i.GoogleBusinessUrl,
+			&i.Latitude,
+			&i.Longitude,
 		); err != nil {
 			return nil, err
 		}

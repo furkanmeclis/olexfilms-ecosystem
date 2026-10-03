@@ -8,7 +8,9 @@ import (
 )
 
 // TaskGlorianPullCatalog pulls the Glorian hub's categories, products and
-// dealers changed since the last run into the glorian brand (TEC-268, K2).
+// dealers changed since the last run into the glorian brand (TEC-268, K2),
+// then mirrors the changed stock items onto units.external_status
+// (TEC-269; no ledger movement).
 // Only active connections are pulled; the upserts are idempotent, so an
 // overlapping or repeated run writes nothing new.
 const TaskGlorianPullCatalog = "glorian:pull_catalog"
@@ -16,7 +18,7 @@ const TaskGlorianPullCatalog = "glorian:pull_catalog"
 // Every 15 minutes, offset from the other maintenance runs.
 const glorianPullCron = "4,19,34,49 * * * *"
 
-// GlorianPullFunc runs one catalog and dealer pull pass.
+// GlorianPullFunc runs one catalog, dealer and stock item pull pass.
 type GlorianPullFunc func(ctx context.Context) error
 
 // NewGlorianPullCatalogTask builds the pull task.
