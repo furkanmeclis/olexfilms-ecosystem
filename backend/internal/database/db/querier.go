@@ -511,9 +511,17 @@ type Querier interface {
 	GetFinanceEntryReversal(ctx context.Context, entryID pgtype.Int8) (FinanceEntry, error)
 	GetFixedHoldingQuantity(ctx context.Context, arg GetFixedHoldingQuantityParams) (int32, error)
 	GetGitHubAppSettings(ctx context.Context) (GithubAppSetting, error)
+	// TEC-271 (F2-02f): Glorian order outbound. An order of the glorian brand
+	// whose lines hold products synced from a connection is sent to that
+	// connection's hub as one order per connection (order_outbounds).
+	GetGlorianOutboundOrder(ctx context.Context, id int64) (Order, error)
 	// A movement with its unit's barcode and the product's sync link, for the
 	// outbound PATCH of one barcode.
 	GetGlorianPushMovement(ctx context.Context, id int64) (GetGlorianPushMovementRow, error)
+	// A serial unit of the brand outside the synced set (e.g. its product is
+	// not linked yet), so a remote item with its barcode is paired instead of
+	// being reported as remote only.
+	GetGlorianReconcileUnitByBarcode(ctx context.Context, arg GetGlorianReconcileUnitByBarcodeParams) (GetGlorianReconcileUnitByBarcodeRow, error)
 	GetImportJobByID(ctx context.Context, id int64) (ImportJob, error)
 	GetImportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ImportJob, error)
 	// TEC-270 (F2-02e): Glorian barcode push. Units of products synced from a
@@ -565,6 +573,7 @@ type Querier interface {
 	GetOrderItemByUUID(ctx context.Context, arg GetOrderItemByUUIDParams) (OrderItem, error)
 	GetOrderItemUnit(ctx context.Context, arg GetOrderItemUnitParams) (OrderItemUnit, error)
 	GetOrderOutbound(ctx context.Context, arg GetOrderOutboundParams) (OrderOutbound, error)
+	GetOrderOutboundByID(ctx context.Context, id int64) (OrderOutbound, error)
 	GetOrgModuleFlag(ctx context.Context, arg GetOrgModuleFlagParams) (ModuleFlag, error)
 	GetOrganizationByID(ctx context.Context, id int64) (Organization, error)
 	GetOrganizationBySlug(ctx context.Context, slug string) (Organization, error)
@@ -959,12 +968,28 @@ type Querier interface {
 	// the organization owner itself), per barcode, for the listed products.
 	ListFixedBarcodeQuantitiesByHolder(ctx context.Context, arg ListFixedBarcodeQuantitiesByHolderParams) ([]ListFixedBarcodeQuantitiesByHolderRow, error)
 	ListFixedBarcodeQuantitiesByLocation(ctx context.Context, arg ListFixedBarcodeQuantitiesByLocationParams) ([]ListFixedBarcodeQuantitiesByLocationRow, error)
+	// Serial units assigned to the order's lines whose product is synced from
+	// a connection, in line order. Olex and local products have no connection
+	// and never appear.
+	ListGlorianOrderUnits(ctx context.Context, orderID int64) ([]ListGlorianOrderUnitsRow, error)
+	// Active dealers of the connection with the buyer's phone: the order's
+	// customer link (exactly one match links, none or several hold).
+	ListGlorianPartiesByPhone(ctx context.Context, arg ListGlorianPartiesByPhoneParams) ([]IntegrationExternalParty, error)
 	// Serial units entered or placed into a warehouse bin after the keyset
 	// (created_at, id), for the products synced from the connection. A unit
 	// placed twice comes twice; the caller deduplicates by barcode.
 	ListGlorianPushUnits(ctx context.Context, arg ListGlorianPushUnitsParams) ([]ListGlorianPushUnitsRow, error)
+	// TEC-272 (F2-02g): Glorian reconcile (read only). The local side of the
+	// drift report: serial units of the connection's brand that belong to the
+	// sync (their product is synced from the connection, or the unit already
+	// mirrors a remote stock item of it), with the product's remote id and the
+	// unit's current owner from the ledger projection.
+	ListGlorianReconcileUnits(ctx context.Context, arg ListGlorianReconcileUnitsParams) ([]ListGlorianReconcileUnitsRow, error)
 	// Grants of global roles (user_roles / JWT roles claim).
 	ListGrantsByRoleSlugs(ctx context.Context, roleSlugs []string) ([]ListGrantsByRoleSlugsRow, error)
+	// Held outbounds of a connection (0: every connection) after the keyset
+	// id, oldest first.
+	ListHeldOrderOutbounds(ctx context.Context, arg ListHeldOrderOutboundsParams) ([]OrderOutbound, error)
 	ListImportChangesForJob(ctx context.Context, jobID int64) ([]ImportChange, error)
 	ListImportJobsForActor(ctx context.Context, arg ListImportJobsForActorParams) ([]ImportJob, error)
 	// TEC-211: the organization list carries who uploaded each job.
@@ -1013,6 +1038,7 @@ type Querier interface {
 	ListOrderItemUnitsByItem(ctx context.Context, orderItemID int64) ([]OrderItemUnit, error)
 	ListOrderItemUnitsByOrder(ctx context.Context, orderID int64) ([]ListOrderItemUnitsByOrderRow, error)
 	ListOrderItems(ctx context.Context, orderID int64) ([]OrderItem, error)
+	ListOrderOutboundsByOrder(ctx context.Context, orderID int64) ([]OrderOutbound, error)
 	ListOrderOutboundsByState(ctx context.Context, arg ListOrderOutboundsByStateParams) ([]OrderOutbound, error)
 	ListOrderStatusHistory(ctx context.Context, orderID int64) ([]OrderStatusHistory, error)
 	// Orders an organization sells or buys: their documents carry the

@@ -578,6 +578,28 @@ var actionStatus = map[string]string{
 	"cancel":  "cancelled",
 }
 
+// actionFrom lists the statuses an action may start from, as in the hub's
+// InventoryOrderService: an action that finds the order already in its
+// target status returns it unchanged (200; ship keeps the first cargo
+// data), any other start is a 422. cancel works from anything but
+// delivered.
+var actionFrom = map[string][]string{
+	"prepare": {"pending", "processing"},
+	"ship":    {"processing"},
+	"deliver": {"shipped"},
+	"receive": {"shipped"},
+	"cancel":  {"pending", "processing", "shipped"},
+}
+
+func allowedFrom(action, status string) bool {
+	for _, s := range actionFrom[action] {
+		if s == status {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *Server) transition(w http.ResponseWriter, id, action string, body []byte, reqID string) {
 	status, ok := actionStatus[action]
 	if !ok {
@@ -587,6 +609,15 @@ func (s *Server) transition(w http.ResponseWriter, id, action string, body []byt
 	row, ok := s.orders[id]
 	if !ok {
 		s.fail(w, http.StatusNotFound, glorian.CodeNotFound, "Resource not found.", reqID)
+		return
+	}
+	cur := str(row["status"])
+	if cur == status && action != "prepare" {
+		s.ok(w, http.StatusOK, row, reqID)
+		return
+	}
+	if !allowedFrom(action, cur) {
+		s.validation(w, "status", "Order cannot be "+action+" from "+cur+" status.", reqID)
 		return
 	}
 	var in struct {
@@ -609,9 +640,27 @@ func (s *Server) transition(w http.ResponseWriter, id, action string, body []byt
 			row["tracking_number"] = in.TrackingNumber
 		}
 	}
+	if action == "cancel" {
+		// Cancelling releases the reserved stock items back to the center.
+		s.releaseOrderStock(row)
+	}
 	row["status"] = status
 	row["updated_at"] = s.ts()
 	s.ok(w, http.StatusOK, row, reqID)
+}
+
+func (s *Server) releaseOrderStock(order Row) {
+	items, _ := order["items"].([]any)
+	for _, it := range items {
+		item, _ := it.(Row)
+		barcodes, _ := item["barcodes"].([]any)
+		for _, bc := range barcodes {
+			if row, ok := s.stock[str(bc)]; ok && str(row["status"]) == glorian.StockStatusReserved {
+				row["status"] = glorian.StockStatusAvailable
+				row["updated_at"] = s.ts()
+			}
+		}
+	}
 }
 
 func (s *Server) ts() string { return s.now.Format(time.RFC3339) }
