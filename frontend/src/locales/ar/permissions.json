@@ -168,5 +168,8 @@
   "labels.warranties.read": "عرض الضمانات",
   "labels.warranties.void": "إلغاء الضمانات",
   "labels.vehicles.transfer": "نقل ملكية المركبات",
-  "groups.warranties": "الضمانات"
+  "groups.warranties": "الضمانات",
+  "labels.tasks.read": "عرض المهام",
+  "labels.tasks.write": "إدارة المهام",
+  "groups.tasks": "المهام"
 }

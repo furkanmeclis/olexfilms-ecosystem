@@ -168,5 +168,8 @@
   "labels.warranties.read": "Προβολή εγγυήσεων",
   "labels.warranties.void": "Ακύρωση εγγυήσεων",
   "labels.vehicles.transfer": "Μεταβίβαση οχημάτων",
-  "groups.warranties": "Εγγυήσεις"
+  "groups.warranties": "Εγγυήσεις",
+  "labels.tasks.read": "Προβολή εργασιών",
+  "labels.tasks.write": "Διαχείριση εργασιών",
+  "groups.tasks": "Εργασίες"
 }

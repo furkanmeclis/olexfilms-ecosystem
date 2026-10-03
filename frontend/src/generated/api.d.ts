@@ -6293,6 +6293,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/tasks/assignees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Members of the active center for the task assignee picker (TEC-221)
+         * @description Needs tasks.read; the active organization must be the brand center.
+         */
+        get: operations["listTaskAssignees"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -11253,6 +11273,14 @@ export interface components {
                 total: number;
                 limit: number;
                 offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeTaskAssigneeList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["TaskUserRef"][];
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -22620,6 +22648,10 @@ export interface operations {
                 assignee_user_uuid?: string;
                 /** @description Only tasks assigned to the caller */
                 mine?: boolean;
+                /** @description Only tasks due at or after this instant (TEC-221); tasks without a due date are left out */
+                due_after?: string;
+                /** @description Only tasks due before this instant (TEC-221); tasks without a due date are left out */
+                due_before?: string;
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
             };
@@ -22819,6 +22851,28 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listTaskAssignees: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Center members */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTaskAssigneeList"];
+                };
+            };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
         };

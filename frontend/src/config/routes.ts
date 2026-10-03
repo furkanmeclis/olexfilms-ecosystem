@@ -94,6 +94,12 @@ export const routes = {
     vehicles: {
       detail: (slug: string, uuid: string) => `/t/${slug}/vehicles/${uuid}`,
     },
+    /** TEC-221 center tasks: list, new, detail (edit, status, comments). */
+    tasks: {
+      list: (slug: string) => `/t/${slug}/tasks`,
+      create: (slug: string) => `/t/${slug}/tasks/new`,
+      detail: (slug: string, uuid: string) => `/t/${slug}/tasks/${uuid}`,
+    },
   },
   /** Customer / fleet portal (TEC-90): its own Auth.js instance and BFF. */
   portal: {

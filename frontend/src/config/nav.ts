@@ -33,6 +33,8 @@ import {
   UserRound,
   Users,
   Wrench,
+  ListTodo,
+  Plus,
 } from "lucide-react";
 
 import { appleNavIcon } from "@/components/icons/apple-icon";
@@ -569,6 +571,34 @@ export function tenantNav(slug: string) {
             permission: permissions.stock.read,
             feature: "stock",
             orgTypes: ["distributor", "dealer"],
+          },
+        ],
+      },
+      {
+        // TEC-221: center tasks about distributors and dealers (center
+        // roles only hold tasks.*; same gates as /v1/tasks).
+        id: "tasks",
+        labelKey: "tasks.nav",
+        icon: ListTodo,
+        defaultOpen: true,
+        permission: permissions.tasks.read,
+        orgTypes: ["center"],
+        items: [
+          {
+            id: "tasks-list",
+            titleKey: "tasks.nav_list",
+            href: routes.tenant.tasks.list(slug),
+            icon: ListTodo,
+            permission: permissions.tasks.read,
+            orgTypes: ["center"],
+          },
+          {
+            id: "tasks-new",
+            titleKey: "tasks.nav_new",
+            href: routes.tenant.tasks.create(slug),
+            icon: Plus,
+            permission: permissions.tasks.write,
+            orgTypes: ["center"],
           },
         ],
       },
