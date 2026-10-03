@@ -67,6 +67,8 @@ type Worker struct {
 	serviceReviewRequest ServiceReviewRequestFunc
 	// TEC-221: center task due date reminders.
 	tasksDueScan TasksDueScanFunc
+	// TEC-207: end-of-day warehouse reports.
+	warehouseEOD WarehouseEODFunc
 }
 
 // NewWorker builds a worker that handles known task types on every queue.
@@ -135,6 +137,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskVehicleTransferExpire, w.handleVehicleTransferExpire)
 	mux.HandleFunc(TaskServiceReviewRequest, w.handleServiceReviewRequest)
 	mux.HandleFunc(TaskTasksDueScan, w.handleTasksDueScan)
+	mux.HandleFunc(TaskWarehouseEODReports, w.handleWarehouseEOD)
 	return w
 }
 

@@ -51,6 +51,8 @@ func Schedules() []Periodic {
 		{Cron: inventoryRebuildCron, Type: TaskInventoryRebuild, Queue: QueueMaintenance, New: newNightlyInventoryRebuildTask},
 		// TEC-221: hourly center task due date reminders (idempotent).
 		{Cron: tasksDueScanCron, Type: TaskTasksDueScan, Queue: QueueMaintenance, Opts: tasksDueScanOpts(), New: NewTasksDueScanTask},
+		// TEC-207: hourly end-of-day warehouse reports (idempotent).
+		{Cron: warehouseEODCron, Type: TaskWarehouseEODReports, Queue: QueueMaintenance, Opts: warehouseEODOpts(), New: NewWarehouseEODTask},
 	}
 }
 

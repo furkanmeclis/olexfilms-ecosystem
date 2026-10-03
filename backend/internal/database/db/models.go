@@ -408,6 +408,24 @@ type DocumentTemplate struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
+type EodReport struct {
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	WarehouseID       pgtype.Int8        `json:"warehouse_id"`
+	ReportDate        pgtype.Date        `json:"report_date"`
+	Timezone          string             `json:"timezone"`
+	PeriodStart       pgtype.Timestamptz `json:"period_start"`
+	PeriodEnd         pgtype.Timestamptz `json:"period_end"`
+	Kind              string             `json:"kind"`
+	Summary           []byte             `json:"summary"`
+	GeneratedByUserID pgtype.Int8        `json:"generated_by_user_id"`
+	GeneratedAt       pgtype.Timestamptz `json:"generated_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
 type ExchangeRate struct {
 	ID              int64              `json:"id"`
 	RateDate        pgtype.Date        `json:"rate_date"`
