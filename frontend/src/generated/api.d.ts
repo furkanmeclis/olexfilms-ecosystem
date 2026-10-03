@@ -830,6 +830,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/dealers/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public dealer showcase (page /bayi/{code})
+         * @description TEC-250. No authentication. `code` is the organization slug. Returns
+         *     the showcase of an active, serving (access window open) dealer or
+         *     distributor of the brand resolved from the request domain: name,
+         *     logo, address, province / district, coordinates and WhatsApp.
+         *     Suspended / pending / expired organizations, other brands' dealers
+         *     (e.g. Glorian on the Olex domain) and non-dealer organizations are
+         *     404. Internal fields (tax number, account, members, e-mail,
+         *     settings) are never returned. `latitude` / `longitude` are null
+         *     together when the dealer has no map position; `whatsapp` is the
+         *     organization phone when it is E.164, otherwise null. Rate limited
+         *     per client IP (120 per minute); over the limit 429 with Retry-After.
+         */
+        get: operations["getPublicDealerShowcase"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/warranties/{public_code}": {
         parameters: {
             query?: never;
@@ -881,6 +911,37 @@ export interface paths {
          *     over the limit 429 with Retry-After.
          */
         get: operations["getPublicWarrantyPdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/short-urls/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Resolve a short URL (frontend /s/{token})
+         * @description TEC-249. No authentication. Resolves a short URL token inside the
+         *     brand of the request domain (K3) and counts the hit (`hit_count`,
+         *     `last_hit_at`). The target is always an internal path of the brand
+         *     frontend under `/portal`, `/garanti` or `/bayi` (never another
+         *     origin); the frontend route `/s/{token}` answers 302 to it. Tokens are
+         *     case-sensitive base62: new tokens are 10 characters, the old hub's
+         *     migrated tokens 8 (TEC-263). Malformed (outside
+         *     `^[A-Za-z0-9]{4,16}$`), unknown and other-brand tokens share the same
+         *     404 body; an expired token is 410 SHORT_URL_EXPIRED. Rate limited per
+         *     client IP (SHORT_URL_PUBLIC_RATE_LIMIT per
+         *     SHORT_URL_PUBLIC_RATE_WINDOW); over the limit 429 with Retry-After.
+         *     Responses carry `Cache-Control: no-store` and `X-Robots-Tag: noindex`.
+         */
+        get: operations["getPublicShortUrl"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7698,7 +7759,7 @@ export interface paths {
         put?: never;
         /**
          * The owner starts the transfer of their vehicle with two codes (TEC-243)
-         * @description Portal session with vehicles.read; the vehicle must be the signed-in user's (else 404). Runs the TEC-190 flow unchanged: one 6 digit code to the owner, one to the new owner (WhatsApp, SMS fallback), 15 minute expiry, the same 409 / 429 / 502 / 503 codes. The transfer's organization (phone country, message sender, the organization the new owner is linked to) is the organization that registered the vehicle, else the owner's first organization link in the brand, else the brand center.
+         * @description Portal session with vehicles.read; the vehicle must be the signed-in user's (else 404). Runs the TEC-190 flow unchanged: one 6 digit code to the owner, one to the new owner (WhatsApp, SMS fallback), 15 minute expiry, the same 409 / 429 / 502 / 503 codes. The transfer's organization (phone country, message sender, the organization the new owner is linked to) is the organization that registered the vehicle, else the owner's first organization link in the brand, else the brand center. A fleet session (read only, TEC-245) answers 403 PORTAL_READ_ONLY.
          */
         post: operations["startPortalVehicleTransfer"];
         delete?: never;
@@ -7718,7 +7779,7 @@ export interface paths {
         put?: never;
         /**
          * The owner enters the two codes; completes the transfer (TEC-243)
-         * @description Portal session with vehicles.read; only a transfer the signed-in user started as the owner (else 404). Same rules as POST /v1/vehicle-transfers/{uuid}/verify: codes together or one by one, 422 VEHICLE_TRANSFER_INVALID_CODE with the attempts left, 409 VEHICLE_TRANSFER_LOCKED / EXPIRED / NOT_PENDING (a cancelled transfer), new_owner_name required when the new owner has no account yet.
+         * @description Portal session with vehicles.read; only a transfer the signed-in user started as the owner (else 404). Same rules as POST /v1/vehicle-transfers/{uuid}/verify: codes together or one by one, 422 VEHICLE_TRANSFER_INVALID_CODE with the attempts left, 409 VEHICLE_TRANSFER_LOCKED / EXPIRED / NOT_PENDING (a cancelled transfer), new_owner_name required when the new owner has no account yet. A fleet session (read only, TEC-245) answers 403 PORTAL_READ_ONLY.
          */
         post: operations["verifyPortalVehicleTransfer"];
         delete?: never;
@@ -7738,9 +7799,53 @@ export interface paths {
         put?: never;
         /**
          * The owner cancels a pending transfer (TEC-243)
-         * @description Portal session with vehicles.read; only a transfer the signed-in user started as the owner (else 404). 409 VEHICLE_TRANSFER_NOT_PENDING / VEHICLE_TRANSFER_EXPIRED as in the panel.
+         * @description Portal session with vehicles.read; only a transfer the signed-in user started as the owner (else 404). 409 VEHICLE_TRANSFER_NOT_PENDING / VEHICLE_TRANSFER_EXPIRED as in the panel. A fleet session (read only, TEC-245) answers 403 PORTAL_READ_ONLY.
          */
         post: operations["cancelPortalVehicleTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/contracts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The portal user's signed vehicle intake contracts (TEC-245)
+         * @description Portal session (aud=portal) with services.read; customer and fleet sessions alike. Until the contracts module (F3) lands a contract is only the service's contract_id, so the list is the user's services that carry one (same ownership, brand, Glorian and draft rules as GET /v1/portal/services), newest first. With no contract the answer is 200 with an empty list.
+         */
+        get: operations["listPortalContracts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/notification-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Own notification preferences from the portal (TEC-245)
+         * @description Same handler and model as GET /v1/notification-preferences (F0-10), mounted for the portal realm (the panel path answers 403 REALM_FORBIDDEN to a portal token).
+         */
+        get: operations["getPortalNotificationPreferences"];
+        /**
+         * Update own notification preferences from the portal (TEC-245)
+         * @description Same handler and rules as PUT /v1/notification-preferences. The preferences are the user's own account settings, so a read-only fleet session may change them too.
+         */
+        put: operations["putPortalNotificationPreferences"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -9192,6 +9297,23 @@ export interface components {
             data: components["schemas"]["PublicWarranty"];
             meta: components["schemas"]["ResponseMeta"];
         };
+        PublicShortUrl: {
+            /** @example aZ3kP9qXbT */
+            token: string;
+            /**
+             * @description Internal path (with optional query / fragment) under /portal, /garanti or /bayi.
+             * @example /garanti/AbCdEfGhIjKlMnOpQrSt_-
+             */
+            target_path: string;
+            /** Format: date-time */
+            expires_at: string | null;
+        };
+        EnvelopePublicShortUrl: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PublicShortUrl"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
         EnvelopeTokens: {
             /** @enum {boolean} */
             success: true;
@@ -9719,6 +9841,27 @@ export interface components {
             data: {
                 items: components["schemas"]["NearbyDealer"][];
             };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @description TEC-250 public dealer showcase; showcase fields only. */
+        PublicDealer: {
+            /** @description Organization slug (the /bayi/{code} path) */
+            code: string;
+            name: string;
+            /** @description Public logo path (/v1/public/organizations/logo/{uuid}) */
+            logo_url: string | null;
+            address: string;
+            city: string;
+            district: string;
+            latitude: number | null;
+            longitude: number | null;
+            /** @description E.164 phone */
+            whatsapp: string | null;
+        };
+        EnvelopePublicDealer: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PublicDealer"];
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeTenantSettings: {
@@ -13808,6 +13951,38 @@ export interface components {
             };
             meta: components["schemas"]["ResponseMeta"];
         };
+        /** @description A signed vehicle intake contract of the portal user (TEC-245). Until F3 a contract is only the service's contract_id: the item names the service, the vehicle and the organization; F3 adds the signing details and the PDF. */
+        PortalContract: {
+            service: {
+                /** Format: uuid */
+                uuid: string;
+                service_no: string;
+            };
+            /** @enum {string} */
+            status: "pending" | "processing" | "ready" | "completed" | "cancelled";
+            organization: components["schemas"]["PortalOrganizationRef"];
+            /** Format: uuid */
+            vehicle_uuid: string;
+            car_brand_name: string;
+            car_model_name: string;
+            model_year: number | null;
+            plate: string | null;
+            plate_country: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        EnvelopePortalContractPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["PortalContract"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
     };
     responses: {
         /** @description 426 MOBILE_API_VERSION_UNSUPPORTED (missing or unsupported X-Mobile-Api-Version) or 426 UPDATE_REQUIRED (X-App-Version below the minimum, TEC-236; `data` carries the minimum and the store links). Either way the app asks the user to update. */
@@ -15312,6 +15487,41 @@ export interface operations {
             500: components["responses"]["InternalError"];
         };
     };
+    getPublicDealerShowcase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dealer showcase */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePublicDealer"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description Rate limited per client IP */
+            429: {
+                headers: {
+                    /** @description Seconds until the window resets */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
     getPublicWarranty: {
         parameters: {
             query?: never;
@@ -15394,6 +15604,50 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+        };
+    };
+    getPublicShortUrl: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Target of the short URL */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePublicShortUrl"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description The short URL has expired (SHORT_URL_EXPIRED) */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited per client IP */
+            429: {
+                headers: {
+                    /** @description Seconds until the window resets */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
         };
     };
     requestServicePdf: {
@@ -27629,6 +27883,78 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    listPortalContracts: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Contracts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePortalContractPage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getPortalNotificationPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Preferences */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePreferences"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    putPortalNotificationPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationPreferences"];
+            };
+        };
+        responses: {
+            /** @description Preferences */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePreferences"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
         };
     };
 }

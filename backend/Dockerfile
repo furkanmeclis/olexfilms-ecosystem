@@ -24,7 +24,9 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build -trimpath -ldflags="-s -w" -o /out/roles-sync ./cmd/roles-sync && \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -trimpath -ldflags="-s -w" -o /out/migrator ./cmd/migrator
+    go build -trimpath -ldflags="-s -w" -o /out/migrator ./cmd/migrator && \
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -trimpath -ldflags="-s -w" -o /out/cutover-delta-report ./cmd/cutover-delta-report
 
 FROM migrate/migrate:v4.19.1 AS migrate
 
@@ -41,6 +43,7 @@ COPY --from=builder /out/worker /app/worker
 COPY --from=builder /out/create-super-admin /app/create-super-admin
 COPY --from=builder /out/roles-sync /app/roles-sync
 COPY --from=builder /out/migrator /app/migrator
+COPY --from=builder /out/cutover-delta-report /app/cutover-delta-report
 COPY migrations /app/migrations
 COPY deploy/docker/entrypoint.sh /app/entrypoint.sh
 

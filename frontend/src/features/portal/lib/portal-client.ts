@@ -200,6 +200,12 @@ export type PortalVehicleTransfer = components["schemas"]["VehicleTransfer"];
 export type PortalVehicleTransferVerifyInput =
   components["schemas"]["VehicleTransferVerifyInput"];
 
+/** TEC-245: a signed vehicle intake contract (empty list until F3). */
+export type PortalContract = components["schemas"]["PortalContract"];
+/** TEC-245: the F0-10 notification preferences, as the portal reads them. */
+export type PortalNotificationPreferences =
+  components["schemas"]["NotificationPreferences"];
+
 export type PortalPage<T> = {
   items: T[];
   total: number;
@@ -217,6 +223,8 @@ export const portalApi = {
   me() {
     return portalRequest<{
       user: { name?: string; surname?: string; email?: string | null };
+      /** Global roles: customer and / or fleet (TEC-245 read-only check). */
+      roles?: string[];
     }>("auth/me");
   },
   pendingConsents(locale: string) {
@@ -293,6 +301,24 @@ export const portalApi = {
     return portalRequest<PortalVehicleTransfer>(
       `portal/vehicle-transfers/${encodeURIComponent(transferUuid)}/cancel`,
       { method: "POST", body: {} },
+    );
+  },
+  /** Signed vehicle intake contracts of the user (TEC-245). */
+  listContracts(limit: number, offset: number) {
+    return portalRequest<PortalPage<PortalContract>>(
+      `portal/contracts?limit=${limit}&offset=${offset}`,
+    );
+  },
+  /** Own notification preferences from the portal (TEC-245). */
+  getNotificationPreferences() {
+    return portalRequest<PortalNotificationPreferences>(
+      "portal/notification-preferences",
+    );
+  },
+  updateNotificationPreferences(body: PortalNotificationPreferences) {
+    return portalRequest<PortalNotificationPreferences>(
+      "portal/notification-preferences",
+      { method: "PUT", body },
     );
   },
   forgotPassword(email: string) {

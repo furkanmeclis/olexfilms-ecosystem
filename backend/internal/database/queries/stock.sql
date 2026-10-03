@@ -404,3 +404,26 @@ SET row_status = sqlc.arg(row_status),
     movement_id = sqlc.narg(movement_id)
 WHERE id = sqlc.arg(id)
 RETURNING *;
+
+-- name: ImportStockMovement :one
+-- TEC-258: ledger.Import appends a recorded (historical) movement as is: its
+-- uuid and time come from the import (migration_map, the legacy timestamp).
+-- Idempotent like InsertStockMovement (no row on a repeated key).
+INSERT INTO stock_movements (
+    uuid, organization_id, brand_id, unit_id, product_id, type,
+    quantity_delta, meters_delta,
+    from_owner_type, from_owner_id, to_owner_type, to_owner_id,
+    from_status, to_status, reference_type, reference_id,
+    actor_user_id, reason, metadata, idempotency_key, created_at
+)
+VALUES (
+    COALESCE(sqlc.narg(uuid)::uuid, gen_random_uuid()), sqlc.arg(organization_id), sqlc.arg(brand_id),
+    sqlc.arg(unit_id), sqlc.arg(product_id), sqlc.arg(type),
+    sqlc.arg(quantity_delta), sqlc.arg(meters_delta),
+    sqlc.narg(from_owner_type), sqlc.narg(from_owner_id), sqlc.narg(to_owner_type), sqlc.narg(to_owner_id),
+    sqlc.narg(from_status), sqlc.narg(to_status), sqlc.narg(reference_type), sqlc.narg(reference_id),
+    sqlc.narg(actor_user_id), sqlc.narg(reason), sqlc.arg(metadata), sqlc.arg(idempotency_key),
+    COALESCE(sqlc.narg(created_at)::timestamptz, NOW())
+)
+ON CONFLICT (idempotency_key) DO NOTHING
+RETURNING *;

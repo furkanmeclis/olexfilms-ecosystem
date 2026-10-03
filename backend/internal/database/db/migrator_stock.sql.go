@@ -456,6 +456,21 @@ func (q *Queries) MigratorUnitByUUID(ctx context.Context, arg MigratorUnitByUUID
 	return i, err
 }
 
+const migratorUnitHasLedgerMovements = `-- name: MigratorUnitHasLedgerMovements :one
+SELECT EXISTS (
+    SELECT 1 FROM stock_movements
+    WHERE unit_id = $1::bigint AND idempotency_key NOT LIKE 'legacy:%'
+)
+`
+
+// TEC-258: a movement this application wrote (not an imported legacy one).
+func (q *Queries) MigratorUnitHasLedgerMovements(ctx context.Context, unitID int64) (bool, error) {
+	row := q.db.QueryRow(ctx, migratorUnitHasLedgerMovements, unitID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const migratorUnitHasMovements = `-- name: MigratorUnitHasMovements :one
 SELECT EXISTS (SELECT 1 FROM stock_movements WHERE unit_id = $1::bigint)
 `
@@ -465,6 +480,37 @@ func (q *Queries) MigratorUnitHasMovements(ctx context.Context, unitID int64) (b
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+const migratorUnitsWithoutMovements = `-- name: MigratorUnitsWithoutMovements :many
+SELECT u.id FROM units u
+WHERE u.brand_id = $1
+  AND (EXISTS (SELECT 1 FROM unit_current_state s WHERE s.unit_id = u.id)
+       OR EXISTS (SELECT 1 FROM fixed_barcode_holdings h WHERE h.unit_id = u.id))
+  AND NOT EXISTS (SELECT 1 FROM stock_movements m WHERE m.unit_id = u.id)
+ORDER BY u.id
+`
+
+// TEC-258: units of the brand whose ownership was written without a movement
+// (TEC-257): they need an opening movement before the projection rebuild.
+func (q *Queries) MigratorUnitsWithoutMovements(ctx context.Context, brandID int64) ([]int64, error) {
+	rows, err := q.db.Query(ctx, migratorUnitsWithoutMovements, brandID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int64{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const migratorUpdateLocation = `-- name: MigratorUpdateLocation :exec
