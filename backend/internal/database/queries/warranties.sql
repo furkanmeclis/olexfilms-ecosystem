@@ -43,7 +43,9 @@ WHERE public_code = sqlc.arg(public_code) AND brand_id = sqlc.arg(brand_id);
 -- Public warranty lookup (TEC-189): only the fields the public page shows.
 -- No users join: the holder's personal data is never read, so an anonymized
 -- customer's warranty answers the same way (K19). Vehicle fields come from
--- the service snapshot first, then the vehicle.
+-- the service snapshot first, then the vehicle. TEC-260: an old hub number
+-- merged into another warranty resolves through warranty_public_code_aliases
+-- to the kept warranty; the row carries that warranty's own public_code.
 -- name: GetPublicWarrantyByCode :one
 SELECT w.public_code, w.status, w.start_at, w.end_at,
        p.name AS product_name,
@@ -64,7 +66,12 @@ JOIN services s ON s.id = w.service_id
 JOIN car_brands cb ON cb.id = s.car_brand_id
 JOIN car_models cm ON cm.id = s.car_model_id
 JOIN vehicles v ON v.id = w.vehicle_id
-WHERE w.public_code = sqlc.arg(public_code) AND w.brand_id = sqlc.arg(brand_id);
+WHERE w.brand_id = sqlc.arg(brand_id)::bigint
+  AND (w.public_code = sqlc.arg(public_code)::text
+       OR w.id = (SELECT a.warranty_id FROM warranty_public_code_aliases a
+                  WHERE a.code = sqlc.arg(public_code)::text AND a.brand_id = sqlc.arg(brand_id)::bigint))
+ORDER BY (w.public_code = sqlc.arg(public_code)::text) DESC
+LIMIT 1;
 
 -- Warranty certificate (TEC-188, one PDF per service, decision 2): the
 -- active warranties of a service with the covered product, unit and item.
