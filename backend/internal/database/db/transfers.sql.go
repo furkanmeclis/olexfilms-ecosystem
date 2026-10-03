@@ -17,7 +17,7 @@ UPDATE stock_transfer_requests
 SET status = 'cancelled', cancelled_by_user_id = $1, cancelled_at = NOW(),
     cancel_reason = $2
 WHERE id = $3 AND status IN ('requested', 'approved', 'shipped')
-RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at
+RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind
 `
 
 type CancelTransferRequestParams struct {
@@ -63,6 +63,7 @@ func (q *Queries) CancelTransferRequest(ctx context.Context, arg CancelTransferR
 		&i.CancelledByUserID,
 		&i.ShippedAt,
 		&i.ReceivedAt,
+		&i.Kind,
 	)
 	return i, err
 }
@@ -109,6 +110,7 @@ WHERE brand_id = $1
       OR ($2::text IN ('', 'approval') AND approver_org_id = $3::bigint)
   )
   AND ($4::text IS NULL OR status = $4::text)
+  AND ($5::text IS NULL OR kind = $5::text)
 `
 
 type CountTransferRequestsForOrgParams struct {
@@ -116,6 +118,7 @@ type CountTransferRequestsForOrgParams struct {
 	Direction string      `json:"direction"`
 	OrgID     int64       `json:"org_id"`
 	Status    pgtype.Text `json:"status"`
+	Kind      pgtype.Text `json:"kind"`
 }
 
 func (q *Queries) CountTransferRequestsForOrg(ctx context.Context, arg CountTransferRequestsForOrgParams) (int64, error) {
@@ -124,6 +127,7 @@ func (q *Queries) CountTransferRequestsForOrg(ctx context.Context, arg CountTran
 		arg.Direction,
 		arg.OrgID,
 		arg.Status,
+		arg.Kind,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -138,7 +142,7 @@ SET status = $1::text,
     decided_at = NOW(),
     decision_note = $4
 WHERE id = $5 AND status = 'requested'
-RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at
+RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind
 `
 
 type DecideTransferRequestParams struct {
@@ -192,12 +196,13 @@ func (q *Queries) DecideTransferRequest(ctx context.Context, arg DecideTransferR
 		&i.CancelledByUserID,
 		&i.ShippedAt,
 		&i.ReceivedAt,
+		&i.Kind,
 	)
 	return i, err
 }
 
 const getTransferRequestByUUID = `-- name: GetTransferRequestByUUID :one
-SELECT id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at FROM stock_transfer_requests
+SELECT id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind FROM stock_transfer_requests
 WHERE uuid = $1 AND brand_id = $2
 `
 
@@ -243,21 +248,58 @@ func (q *Queries) GetTransferRequestByUUID(ctx context.Context, arg GetTransferR
 		&i.CancelledByUserID,
 		&i.ShippedAt,
 		&i.ReceivedAt,
+		&i.Kind,
 	)
 	return i, err
+}
+
+const getUnitLastOrderPrice = `-- name: GetUnitLastOrderPrice :one
+SELECT oi.unit_price
+FROM order_item_units oiu
+JOIN order_items oi ON oi.id = oiu.order_item_id
+JOIN orders o ON o.id = oi.order_id
+WHERE oiu.unit_id = $1
+  AND o.seller_org_id = $2
+  AND o.buyer_org_id = $3
+  AND o.currency = $4::text
+  AND o.status NOT IN ('draft', 'cancelling', 'cancelled')
+ORDER BY oiu.assigned_at DESC, oiu.id DESC
+LIMIT 1
+`
+
+type GetUnitLastOrderPriceParams struct {
+	UnitID      int64  `json:"unit_id"`
+	SellerOrgID int64  `json:"seller_org_id"`
+	BuyerOrgID  int64  `json:"buyer_org_id"`
+	Currency    string `json:"currency"`
+}
+
+// TEC-223: the price a unit was sold at to buyer by seller (its latest
+// order line with the unit assigned, the order not cancelled), in currency.
+func (q *Queries) GetUnitLastOrderPrice(ctx context.Context, arg GetUnitLastOrderPriceParams) (pgtype.Numeric, error) {
+	row := q.db.QueryRow(ctx, getUnitLastOrderPrice,
+		arg.UnitID,
+		arg.SellerOrgID,
+		arg.BuyerOrgID,
+		arg.Currency,
+	)
+	var unit_price pgtype.Numeric
+	err := row.Scan(&unit_price)
+	return unit_price, err
 }
 
 const insertTransferRequest = `-- name: InsertTransferRequest :one
 
 INSERT INTO stock_transfer_requests (
     organization_id, brand_id, from_org_id, to_org_id, approver_org_id,
-    currency, reason, requested_by_user_id
+    currency, reason, requested_by_user_id, kind
 )
 VALUES (
     $1, $2, $1, $3,
-    $4, $5, $6, $7
+    $4, $5, $6, $7,
+    COALESCE(NULLIF($8::text, ''), 'sibling')
 )
-RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at
+RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind
 `
 
 type InsertTransferRequestParams struct {
@@ -268,6 +310,7 @@ type InsertTransferRequestParams struct {
 	Currency          string      `json:"currency"`
 	Reason            pgtype.Text `json:"reason"`
 	RequestedByUserID pgtype.Int8 `json:"requested_by_user_id"`
+	Kind              string      `json:"kind"`
 }
 
 // Stock transfer requests between siblings (TEC-197, K13). The giver
@@ -282,6 +325,7 @@ func (q *Queries) InsertTransferRequest(ctx context.Context, arg InsertTransferR
 		arg.Currency,
 		arg.Reason,
 		arg.RequestedByUserID,
+		arg.Kind,
 	)
 	var i StockTransferRequest
 	err := row.Scan(
@@ -318,6 +362,7 @@ func (q *Queries) InsertTransferRequest(ctx context.Context, arg InsertTransferR
 		&i.CancelledByUserID,
 		&i.ShippedAt,
 		&i.ReceivedAt,
+		&i.Kind,
 	)
 	return i, err
 }
@@ -495,7 +540,7 @@ func (q *Queries) ListTransferRequestItems(ctx context.Context, requestID int64)
 }
 
 const listTransferRequestsForOrg = `-- name: ListTransferRequestsForOrg :many
-SELECT id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at FROM stock_transfer_requests
+SELECT id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind FROM stock_transfer_requests
 WHERE brand_id = $1
   AND (
       ($2::text IN ('', 'outgoing') AND from_org_id = $3::bigint)
@@ -503,8 +548,9 @@ WHERE brand_id = $1
       OR ($2::text IN ('', 'approval') AND approver_org_id = $3::bigint)
   )
   AND ($4::text IS NULL OR status = $4::text)
+  AND ($5::text IS NULL OR kind = $5::text)
 ORDER BY created_at DESC, id DESC
-LIMIT $6 OFFSET $5
+LIMIT $7 OFFSET $6
 `
 
 type ListTransferRequestsForOrgParams struct {
@@ -512,6 +558,7 @@ type ListTransferRequestsForOrgParams struct {
 	Direction string      `json:"direction"`
 	OrgID     int64       `json:"org_id"`
 	Status    pgtype.Text `json:"status"`
+	Kind      pgtype.Text `json:"kind"`
 	RowOffset int32       `json:"row_offset"`
 	RowLimit  int32       `json:"row_limit"`
 }
@@ -525,6 +572,7 @@ func (q *Queries) ListTransferRequestsForOrg(ctx context.Context, arg ListTransf
 		arg.Direction,
 		arg.OrgID,
 		arg.Status,
+		arg.Kind,
 		arg.RowOffset,
 		arg.RowLimit,
 	)
@@ -569,6 +617,7 @@ func (q *Queries) ListTransferRequestsForOrg(ctx context.Context, arg ListTransf
 			&i.CancelledByUserID,
 			&i.ShippedAt,
 			&i.ReceivedAt,
+			&i.Kind,
 		); err != nil {
 			return nil, err
 		}
@@ -661,7 +710,7 @@ func (q *Queries) ListTransferSiblings(ctx context.Context, arg ListTransferSibl
 }
 
 const lockTransferRequestByUUID = `-- name: LockTransferRequestByUUID :one
-SELECT id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at FROM stock_transfer_requests
+SELECT id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind FROM stock_transfer_requests
 WHERE uuid = $1 AND brand_id = $2
 FOR UPDATE
 `
@@ -708,6 +757,7 @@ func (q *Queries) LockTransferRequestByUUID(ctx context.Context, arg LockTransfe
 		&i.CancelledByUserID,
 		&i.ShippedAt,
 		&i.ReceivedAt,
+		&i.Kind,
 	)
 	return i, err
 }
@@ -716,7 +766,7 @@ const receiveTransferRequest = `-- name: ReceiveTransferRequest :one
 UPDATE stock_transfer_requests
 SET status = 'received', received_by_user_id = $1, received_at = NOW()
 WHERE id = $2 AND status = 'shipped'
-RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at
+RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind
 `
 
 type ReceiveTransferRequestParams struct {
@@ -761,6 +811,7 @@ func (q *Queries) ReceiveTransferRequest(ctx context.Context, arg ReceiveTransfe
 		&i.CancelledByUserID,
 		&i.ShippedAt,
 		&i.ReceivedAt,
+		&i.Kind,
 	)
 	return i, err
 }
@@ -831,7 +882,7 @@ const shipTransferRequest = `-- name: ShipTransferRequest :one
 UPDATE stock_transfer_requests
 SET status = 'shipped', shipped_by_user_id = $1, shipped_at = NOW()
 WHERE id = $2 AND status = 'approved'
-RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at
+RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind
 `
 
 type ShipTransferRequestParams struct {
@@ -876,6 +927,7 @@ func (q *Queries) ShipTransferRequest(ctx context.Context, arg ShipTransferReque
 		&i.CancelledByUserID,
 		&i.ShippedAt,
 		&i.ReceivedAt,
+		&i.Kind,
 	)
 	return i, err
 }

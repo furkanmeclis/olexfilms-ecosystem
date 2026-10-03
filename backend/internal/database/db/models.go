@@ -1434,6 +1434,7 @@ type StockTransferRequest struct {
 	CancelledByUserID pgtype.Int8        `json:"cancelled_by_user_id"`
 	ShippedAt         pgtype.Timestamptz `json:"shipped_at"`
 	ReceivedAt        pgtype.Timestamptz `json:"received_at"`
+	Kind              string             `json:"kind"`
 }
 
 type StockTransferRequestItem struct {

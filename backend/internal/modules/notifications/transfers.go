@@ -37,6 +37,7 @@ func transferDispatcher(code string) func(events.Event) (notifmodel.DispatchInpu
 				"transfer_uuid": stringFromPayload(event.Payload, "transfer_uuid"),
 				"transfer_no":   vars["transfer_no"],
 				"status":        stringFromPayload(event.Payload, "status"),
+				"kind":          stringFromPayload(event.Payload, "kind"),
 			},
 		}
 		if brand, ok := int64FromPayload(event.Payload, "brand_id"); ok && brand > 0 {

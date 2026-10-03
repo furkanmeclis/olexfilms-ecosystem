@@ -12053,10 +12053,14 @@ paths:
         Requests where the active organization is the giver (outgoing), the
         receiver (incoming) or the common parent (approval); direction
         narrows the list. Needs transfers.request or transfers.approve and
-        the dealer_transfers module. List rows carry no items.
+        the dealer_transfers module. List rows carry no items. kind narrows
+        to sibling transfers or returns to the parent (TEC-223).
       security:
         - bearerAuth: []
       parameters:
+        - name: kind
+          in: query
+          schema: { $ref: "#/components/schemas/StockTransferKind" }
         - name: direction
           in: query
           schema: { type: string, enum: [outgoing, incoming, approval] }
@@ -12096,6 +12100,10 @@ paths:
         400 with detail code TRANSFER_UNIT_NOT_AVAILABLE,
         TRANSFER_UNIT_RESERVED or TRANSFER_INSUFFICIENT_STOCK. Needs
         transfers.request. Writes transfers.requested; no stock moves yet.
+        With kind=return (TEC-223) the units go back to the active
+        organization's direct parent: to_org_uuid may be omitted, and when
+        set it must name that parent, else 422 TRANSFER_NOT_PARENT (also for
+        an organization without a parent, such as the center).
       security:
         - bearerAuth: []
       requestBody:
@@ -12127,9 +12135,14 @@ paths:
       summary: Siblings the active organization may transfer to
       description: >-
         Live organizations of the same brand, type and parent as the active
-        organization (empty for the center). Needs transfers.request.
+        organization (empty for the center). With kind=return, the direct
+        parent only (TEC-223). Needs transfers.request.
       security:
         - bearerAuth: []
+      parameters:
+        - name: kind
+          in: query
+          schema: { $ref: "#/components/schemas/StockTransferKind" }
       responses:
         "200":
           description: Sibling organizations
@@ -12195,7 +12208,14 @@ paths:
         receiver's cari and the receiver a purchase expense on the giver's
         cari for the line totals frozen at approval, in the same transaction
         (K13, source stock_transfer); 400 RATE_NOT_FOUND rolls the receipt
-        back when an organization's currency has no rate for the day.
+        back when an organization's currency has no rate for the day. A
+        return (kind=return, TEC-223) has the parent as receiver: the parent
+        (transfers.approve) approves or rejects, the giver ships or cancels,
+        the parent receives; approval freezes the unit's order price to the
+        giver (else the giver's purchase price), and the receipt books the
+        reversal of the parent's sale (the giver income on the parent's cari,
+        the parent a purchase expense on the giver's cari, source
+        stock_return).
       security:
         - bearerAuth: []
       parameters:
@@ -19281,6 +19301,11 @@ components:
       type: string
       enum: [requested, approved, rejected, shipped, received, cancelled]
 
+    StockTransferKind:
+      type: string
+      enum: [sibling, return]
+      description: sibling is a K13 transfer between siblings; return goes back to the direct parent (TEC-223)
+
     StockTransferItem:
       type: object
       required: [uuid, unit_uuid, barcode, unit_kind, product, quantity, meters, unit_price, line_total, shipped, received, restored]
@@ -19300,10 +19325,11 @@ components:
 
     StockTransfer:
       type: object
-      required: [uuid, transfer_no, status, role, sender, receiver, parent, currency, total, note, decision_note, cancel_reason, item_count, decided_at, shipped_at, received_at, cancelled_at, created_at, updated_at, available_transitions]
+      required: [uuid, transfer_no, kind, status, role, sender, receiver, parent, currency, total, note, decision_note, cancel_reason, item_count, decided_at, shipped_at, received_at, cancelled_at, created_at, updated_at, available_transitions]
       properties:
         uuid: { type: string, format: uuid }
         transfer_no: { type: string }
+        kind: { $ref: "#/components/schemas/StockTransferKind" }
         status: { $ref: "#/components/schemas/StockTransferStatus" }
         role: { type: string, enum: [sender, receiver, parent], description: Side of the active organization }
         sender: { $ref: "#/components/schemas/OrderOrgRef" }
@@ -19338,9 +19364,10 @@ components:
 
     StockTransferCreateInput:
       type: object
-      required: [to_org_uuid, items]
+      required: [items]
       properties:
-        to_org_uuid: { type: string, format: uuid }
+        kind: { $ref: "#/components/schemas/StockTransferKind" }
+        to_org_uuid: { type: string, format: uuid, description: Required for a sibling transfer; optional for a return (must be the direct parent) }
         note: { type: string }
         items:
           type: array

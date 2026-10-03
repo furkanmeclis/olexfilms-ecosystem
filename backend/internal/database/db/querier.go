@@ -575,6 +575,9 @@ type Querier interface {
 	GetUnitByBarcode(ctx context.Context, arg GetUnitByBarcodeParams) (Unit, error)
 	GetUnitByUUID(ctx context.Context, argUuid uuid.UUID) (Unit, error)
 	GetUnitCurrentState(ctx context.Context, unitID int64) (UnitCurrentState, error)
+	// TEC-223: the price a unit was sold at to buyer by seller (its latest
+	// order line with the unit assigned, the order not cancelled), in currency.
+	GetUnitLastOrderPrice(ctx context.Context, arg GetUnitLastOrderPriceParams) (pgtype.Numeric, error)
 	GetUserByEmail(ctx context.Context, email pgtype.Text) (User, error)
 	GetUserByID(ctx context.Context, id int64) (User, error)
 	GetUserByPhone(ctx context.Context, phoneE164 pgtype.Text) (User, error)

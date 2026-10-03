@@ -49,6 +49,7 @@ import { Permission } from "@/config/permissions";
 import type { StockTransfer } from "@/features/transfers/services/transfers.service";
 
 import { TransferDetailPage } from "./transfer-detail-page";
+import { TransferFormPage } from "./transfer-form-page";
 import { TransfersListPage } from "./transfers-list-page";
 
 (
@@ -95,6 +96,7 @@ function transfer(patch: Partial<StockTransfer> = {}): StockTransfer {
   return {
     uuid: "t-1",
     transfer_no: "TRF-00000001",
+    kind: "sibling",
     status: "requested",
     role: "receiver",
     sender: org("Bayi A"),
@@ -204,5 +206,67 @@ describe("TransfersListPage (TEC-197)", () => {
     expect(api.list).toHaveBeenLastCalledWith(
       expect.objectContaining({ direction: "approval", offset: 0 }),
     );
+  });
+});
+
+describe("Returns (TEC-223)", () => {
+  it("filters the list by kind", async () => {
+    state.grants = new Set([Permission.TransfersRequest]);
+    api.list.mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 });
+    await render(createElement(TransfersListPage, { slug: "s" }));
+    expect(
+      container.querySelector('[data-testid="transfer-new-return"]'),
+    ).not.toBeNull();
+    await act(async () => {
+      (container.querySelector('[data-kind="return"]') as HTMLElement).click();
+    });
+    await flush();
+    expect(api.list).toHaveBeenLastCalledWith(
+      expect.objectContaining({ kind: "return", offset: 0 }),
+    );
+  });
+
+  it("sends a return to the parent the server lists", async () => {
+    state.grants = new Set([Permission.TransfersRequest]);
+    api.targets.mockResolvedValue({
+      items: [{ ...org("Dist"), type: "distributor" }],
+    });
+    api.create.mockResolvedValue(transfer({ kind: "return", role: "sender" }));
+    await render(
+      createElement(TransferFormPage, { slug: "s", kind: "return" }),
+    );
+    expect(api.targets).toHaveBeenCalledWith("return");
+    expect(
+      container.querySelector('[data-testid="return-parent"]')?.textContent,
+    ).toBe("Dist");
+    const input = container.querySelector(
+      '[data-testid="transfer-scan"]',
+    ) as HTMLInputElement;
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value",
+      )?.set;
+      setter?.call(input, "OLX-9");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await act(async () => {
+      (
+        container.querySelector('[data-testid="transfer-add"]') as HTMLElement
+      ).click();
+    });
+    await act(async () => {
+      (
+        container.querySelector(
+          '[data-testid="transfer-submit"]',
+        ) as HTMLElement
+      ).click();
+    });
+    await flush();
+    expect(api.create).toHaveBeenCalledWith({
+      kind: "return",
+      to_org_uuid: "Dist-uuid",
+      items: [{ barcode: "OLX-9" }],
+    });
   });
 });

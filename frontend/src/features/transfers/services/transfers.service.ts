@@ -5,6 +5,8 @@ type Schemas = components["schemas"];
 
 export type StockTransfer = Schemas["StockTransfer"];
 export type StockTransferStatus = Schemas["StockTransferStatus"];
+/** sibling (K13 transfer) or return to the direct parent (TEC-223). */
+export type StockTransferKind = Schemas["StockTransferKind"];
 export type StockTransferItem = Schemas["StockTransferItem"];
 export type StockTransferCreateInput = Schemas["StockTransferCreateInput"];
 export type TransferOrgRef = Schemas["OrderOrgRef"];
@@ -14,6 +16,7 @@ export type TransferDirection = "outgoing" | "incoming" | "approval";
 
 /** GET /v1/stock-transfers filters (TEC-197). */
 export type TransferListQuery = {
+  kind?: StockTransferKind;
   direction?: TransferDirection;
   status?: StockTransferStatus;
   limit: number;
@@ -40,10 +43,12 @@ export const transfersService = {
       query: params,
     });
   },
-  targets() {
+  /** Siblings, or the direct parent for kind=return (TEC-223). */
+  targets(kind?: StockTransferKind) {
     return platformRequest<{ items: TransferOrgRef[] }>(
       "GET",
       "/v1/stock-transfers/targets",
+      kind ? { query: { kind } } : undefined,
     );
   },
   get(uuid: string) {
@@ -72,4 +77,6 @@ export const transferKeys = {
     ["stock-transfers", "list", params] as const,
   detail: (uuid: string) => ["stock-transfers", "detail", uuid] as const,
   targets: ["stock-transfers", "targets"] as const,
+  targetsOf: (kind: StockTransferKind) =>
+    ["stock-transfers", "targets", kind] as const,
 };
