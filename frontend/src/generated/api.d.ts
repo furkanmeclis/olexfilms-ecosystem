@@ -212,6 +212,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/search/global": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cmd+K global search of the active organization (TEC-213)
+         * @description Searches every index the caller may read in the active organization and
+         *     groups the hits by spec (customers, vehicles, services, warranties, orders,
+         *     organizations, stock_units, plus tenant / brand scoped specs such as
+         *     catalog products). Each list scoped group runs through its module list
+         *     (`GET /v1/<module>?q=`) with the list permission, scope and module
+         *     feature, so the index is never the only access check. A group the caller
+         *     lacks the permission or the module feature for is not queried and not
+         *     returned. When Meilisearch is off the allowed groups come back empty
+         *     with `info = search_disabled`.
+         */
+        get: operations["getSearchGlobal"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/step-up": {
         parameters: {
             query?: never;
@@ -6945,6 +6973,26 @@ export interface components {
             data: components["schemas"]["SearchHitsData"];
             meta: components["schemas"]["ResponseMeta"];
         };
+        SearchGlobalGroup: {
+            /** @example customers */
+            spec: string;
+            /** @example search.specs_customers */
+            label_key: string;
+            icon?: string | null;
+            items: components["schemas"]["SearchHit"][];
+        };
+        SearchGlobalData: {
+            enabled: boolean;
+            /** @enum {string|null} */
+            info: "search_disabled" | null;
+            groups: components["schemas"]["SearchGlobalGroup"][];
+        };
+        EnvelopeSearchGlobal: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["SearchGlobalData"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
         ErrorDetail: {
             field?: string;
             message: string;
@@ -13007,6 +13055,36 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeSearchHits"];
                 };
             };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getSearchGlobal: {
+        parameters: {
+            query?: {
+                q?: string;
+                /** @description Narrow the answer to one group. */
+                spec?: string;
+                /** @description Hits per group. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Grouped hits */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeSearchGlobal"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             500: components["responses"]["InternalError"];

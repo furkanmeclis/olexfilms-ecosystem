@@ -9,6 +9,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -20,6 +21,11 @@ type Service struct {
 	reg    *searchengine.Registry
 	q      *db.Queries
 	log    *slog.Logger
+	// TEC-213 global search (SetGroups).
+	finder   searchengine.ListFinder
+	tree     scopefilter.TreeReader
+	features FeatureChecker
+	groups   []Group
 }
 
 // New creates a search service.
@@ -48,7 +54,9 @@ func (s *Service) ListSpecs(ctx context.Context) []searchengine.Spec {
 	out := make([]searchengine.Spec, 0, len(s.reg.Specs()))
 	for _, spec := range s.reg.Specs() {
 		if spec.ListScoped {
-			continue // TEC-164: only the module list applies its scope
+			// TEC-164: only the module list applies its scope; the global
+			// search (TEC-213) reaches these specs through their list.
+			continue
 		}
 		if spec.Permission != "" && !p.HasPermission(spec.Permission) {
 			continue

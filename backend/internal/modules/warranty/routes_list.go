@@ -27,6 +27,8 @@ import (
 // Portal (/v1/portal/warranties): a portal session (aud=portal) with
 // warranties.read; the use case returns only the warranties the user holds
 // in the domain brand.
+//
+// It returns the reader so the global search (TEC-213) runs the same list.
 func RegisterListRoutes(
 	mux *http.ServeMux,
 	pool *pgxpool.Pool,
@@ -37,7 +39,7 @@ func RegisterListRoutes(
 	checker middleware.FeatureChecker,
 	stepUp middleware.StepUpChecker,
 	finder searchengine.ListFinder,
-) {
+) *usecase.Reader {
 	reader := usecase.NewReader(pool, q, outbox.NewStore(pool, q), frontendURL)
 	// TEC-209: q searches the warranties index (nil finder: SQL only).
 	if finder != nil {
@@ -61,4 +63,5 @@ func RegisterListRoutes(
 	mux.Handle("POST /v1/warranties/{uuid}/void", void)
 	mux.Handle("GET /v1/portal/warranties", portal(h.PortalList))
 	mux.Handle("GET /v1/portal/warranties/{uuid}", portal(h.PortalGet))
+	return reader
 }
