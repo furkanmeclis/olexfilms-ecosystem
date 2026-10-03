@@ -245,6 +245,17 @@ WITH page AS (
       AND s.completed_at <= sqlc.arg(until)
       AND s.id > sqlc.arg(after_service_id)::bigint
       AND (sqlc.arg(organization_id)::bigint = 0 OR s.organization_id = sqlc.arg(organization_id)::bigint)
+      -- TEC-260: a service the migrator brought over already completed is
+      -- legacy data; its items were left without a warranty on purpose
+      -- (or skipped with warranty_skipped_*), so the scan must not open
+      -- one. A migrated service completed in the new app after its
+      -- migration stays in scope. idx_migration_map_target covers it.
+      AND NOT EXISTS (
+          SELECT 1 FROM migration_map mm
+          WHERE mm.target_table = 'services'
+            AND mm.target_uuid = s.uuid
+            AND s.completed_at <= mm.migrated_at
+      )
       AND EXISTS (
           SELECT 1 FROM service_items si
           WHERE si.service_id = s.id

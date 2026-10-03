@@ -169,3 +169,77 @@ func TestIntegrationWarrantyRepairScan(t *testing.T) {
 		t.Fatalf("glorian scan = %+v", res)
 	}
 }
+
+// TEC-260 (F2-FIX-5): the repair scan leaves migrated legacy services
+// alone. A service the migrator brought over already completed (its
+// completed_at is not after migration_map.migrated_at) gets no warranty
+// and no warranty.created event from the scan; a migrated service that was
+// completed in the new app after its migration is still repaired.
+func TestIntegrationWarrantyRepairScanSkipsMigrated(t *testing.T) {
+	it := newIntegration(t)
+	ctx := context.Background()
+	center := it.brandCenter("olex")
+	dist := it.org("t260-dist", "distributor", center)
+	dealer := it.org("t260-dealer", "dealer", dist)
+	cust, veh := it.svcCustomer(dealer, "t260-cust", "34R260"+it.suffix[len(it.suffix)-4:])
+
+	p12 := it.product(center, "T260A")
+	it.setWarrantyMonths(p12, 12)
+	c := it.stockChain()
+	uLegacy := c.unit(center, p12, 26001)
+	uAfter := c.unit(center, p12, 26002)
+	full := func(u db.Unit) db.CreateServiceItemParams {
+		return db.CreateServiceItemParams{ProductID: p12.ID, UnitID: u.ID, Kind: "full"}
+	}
+
+	// mapService records svc as migrated at migratedAt (own source_system so
+	// the migrator tests' cleanups never see it)
+	// and moves its completion to completedAt.
+	mapService := func(svc db.Service, completedAt, migratedAt string) {
+		t.Helper()
+		if _, err := it.pool.Exec(ctx, `UPDATE services SET completed_at = now() - $2::interval WHERE id = $1`,
+			svc.ID, completedAt); err != nil {
+			t.Fatalf("completed_at: %v", err)
+		}
+		if _, err := it.pool.Exec(ctx, `INSERT INTO migration_map
+			(source_system, source_table, source_id, target_table, target_uuid, migrated_at)
+			VALUES ('t260-test', 'services', $1, 'services', $2, now() - $3::interval)`,
+			svc.Uuid.String(), svc.Uuid, migratedAt); err != nil {
+			t.Fatalf("migration_map: %v", err)
+		}
+	}
+
+	// Legacy: completed in the old hub 3 days ago, migrated 2 days ago.
+	sLegacy := it.directService(dealer, cust, veh, 1, full(uLegacy))
+	mapService(sLegacy, "3 days", "2 days")
+	// After: migrated 2 days ago (still open then), completed 1 day ago in
+	// the new app without the listener running.
+	sAfter := it.directService(dealer, cust, veh, 2, full(uAfter))
+	mapService(sAfter, "1 day", "2 days")
+
+	listener := warrantymodule.NewListener(it.pool, it.q, "http://localhost:3000", nil)
+	scanner := warrantyusecase.NewRepairScanner(listener, 30, nil)
+	res, err := scanner.Scan(ctx, time.Now().Add(time.Hour), dealer.ID)
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	want := warrantyusecase.RepairResult{
+		ServicesScanned: 1, ServicesRetried: 1, ServicesRepaired: 1, WarrantiesCreated: 1,
+	}
+	if res != want {
+		t.Fatalf("scan = %+v, want %+v", res, want)
+	}
+	if n := len(it.serviceWarranties(sLegacy.ID, sLegacy.BrandID)); n != 0 {
+		t.Fatalf("legacy service got %d warranties, want 0", n)
+	}
+	if n := it.createdEvents(sLegacy.ID); n != 0 {
+		t.Fatalf("legacy service warranty.created = %d, want 0", n)
+	}
+	ws := it.serviceWarranties(sAfter.ID, sAfter.BrandID)
+	if len(ws) != 1 || ws[0].UnitID != uAfter.ID {
+		t.Fatalf("after-migration service warranties = %+v", ws)
+	}
+	if n := it.createdEvents(sAfter.ID); n != 1 {
+		t.Fatalf("after-migration service warranty.created = %d, want 1", n)
+	}
+}
