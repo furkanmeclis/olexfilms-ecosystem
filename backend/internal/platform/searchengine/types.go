@@ -54,6 +54,11 @@ type Document struct {
 	CreatedByUserID int64 `json:"created_by_user_id,omitempty"`
 	VehicleID       int64 `json:"vehicle_id,omitempty"`
 	ProductID       int64 `json:"product_id,omitempty"`
+	// TEC-210: organization type (organizations spec) and the order parties
+	// (orders spec, side=seller|buyer filters).
+	OrgType     string `json:"org_type,omitempty"`
+	SellerOrgID int64  `json:"seller_org_id,omitempty"`
+	BuyerOrgID  int64  `json:"buyer_org_id,omitempty"`
 }
 
 // Hit is a normalized search result returned to clients.

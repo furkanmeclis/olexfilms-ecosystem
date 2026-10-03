@@ -174,7 +174,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	items, total, err := h.svc.List(r.Context(), caller(r), ord.ListFilter{
 		Side: strings.TrimSpace(v.Get("side")), Status: strings.TrimSpace(v.Get("status")),
-		CreatedFrom: from, CreatedTo: to, Limit: q.Limit, Offset: q.Offset,
+		CreatedFrom: from, CreatedTo: to, Q: q.Q, Limit: q.Limit, Offset: q.Offset,
 	})
 	if err != nil {
 		writeError(w, r, err)

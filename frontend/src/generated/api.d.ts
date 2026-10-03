@@ -1825,7 +1825,7 @@ export interface paths {
         };
         /**
          * Organizations inside the caller's organizations.read scope
-         * @description managed: the active organization; subtree: a distributor and its dealers; brand: every organization of the brand. Never leaves the request brand.
+         * @description managed: the active organization; subtree: a distributor and its dealers; brand: every organization of the brand. Never leaves the request brand. `q` (TEC-210) searches the name and the dealer code (slug); when Meilisearch is up the organizations index answers it inside the same scope (hits are reloaded from Postgres), otherwise SQL.
          */
         get: operations["listTenantOrganizations"];
         put?: never;
@@ -3037,7 +3037,7 @@ export interface paths {
         };
         /**
          * Units held by an organization
-         * @description Needs `stock.read`; the organization must be inside the viewer's reach (404 otherwise). The distributor roles distributor_owner and distributor_warehouse_staff hold `stock.read` at scope `subtree` (TEC-216, migration 000061), so a distributor lists the units of its own dealers; it still cannot write or adjust them. Serial units come from `unit_current_state` (one row, `quantity` 1), fixed barcodes from `fixed_barcode_holdings` (one row per barcode with the quantity on hand). Without `status` the list holds the units counted as stock (available, placed); `status` lists exactly that status. `barcode` is an exact match, `product_uuid` narrows to one product, `q` matches a part of the product name, SKU or barcode. `purchase_price` is the price the holding organization pays for the product (K8, in the organization's currency); it is null when the viewer's `pricing.purchase.read` does not reach the organization (a direct parent sees its child's purchase price through its own `pricing.sale.read`), for the center, or when no price is set.
+         * @description Needs `stock.read`; the organization must be inside the viewer's reach (404 otherwise). The distributor roles distributor_owner and distributor_warehouse_staff hold `stock.read` at scope `subtree` (TEC-216, migration 000061), so a distributor lists the units of its own dealers; it still cannot write or adjust them. Serial units come from `unit_current_state` (one row, `quantity` 1), fixed barcodes from `fixed_barcode_holdings` (one row per barcode with the quantity on hand). Without `status` the list holds the units counted as stock (available, placed); `status` lists exactly that status. `barcode` is an exact match, `product_uuid` narrows to one product, `q` matches a part of the product name, SKU or barcode (TEC-210: when Meilisearch is up and no `barcode` is given the stock units index answers it, which also matches the bin full_code; hits are reloaded from Postgres with the same filters). `purchase_price` is the price the holding organization pays for the product (K8, in the organization's currency); it is null when the viewer's `pricing.purchase.read` does not reach the organization (a direct parent sees its child's purchase price through its own `pricing.sale.read`), for the center, or when no price is set.
          */
         get: operations["listStockOrganizationUnits"];
         put?: never;
@@ -6028,7 +6028,7 @@ export interface paths {
         };
         /**
          * Orders inside the orders.read scope (sales and purchases)
-         * @description Every order where an organization of the orders.read scope is the seller or the buyer (managed: the active organization's own sales and purchases; a dealer never sees its distributor's other dealers). side=seller|buyer limits the list to the active organization's sales or purchases. List rows carry no items or history.
+         * @description Every order where an organization of the orders.read scope is the seller or the buyer (managed: the active organization's own sales and purchases; a dealer never sees its distributor's other dealers). side=seller|buyer limits the list to the active organization's sales or purchases. List rows carry no items or history. `q` (TEC-210) searches the order number, tracking number and external reference; when Meilisearch is up (and no created_from / created_to is given) the orders index answers it, which also matches the seller and buyer names and dealer codes, inside the same scope (hits are reloaded from Postgres).
          */
         get: operations["listOrders"];
         put?: never;
@@ -14612,6 +14612,8 @@ export interface operations {
         parameters: {
             query?: {
                 type?: components["schemas"]["OrganizationType"];
+                /** @description Part of the organization name or dealer code (slug). */
+                q?: string;
                 limit?: number;
                 offset?: number;
             };
@@ -14630,6 +14632,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeScopedOrganizationList"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
         };
@@ -22415,6 +22418,7 @@ export interface operations {
         parameters: {
             query?: {
                 side?: "seller" | "buyer";
+                q?: components["parameters"]["Q"];
                 status?: components["schemas"]["OrderStatus"];
                 /** @description Inclusive lower bound of created_at (TEC-170): RFC3339, or a YYYY-MM-DD day in UTC. */
                 created_from?: string;

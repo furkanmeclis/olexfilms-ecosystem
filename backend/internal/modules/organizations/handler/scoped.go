@@ -55,7 +55,11 @@ func (h *Handler) TenantListOrganizations(w http.ResponseWriter, r *http.Request
 		response.Forbidden(w, r, "Missing permission: "+rbac.PermOrganizationsRead)
 		return
 	}
-	in := orgusecase.ScopedListInput{Type: r.URL.Query().Get("type")}
+	in := orgusecase.ScopedListInput{Type: r.URL.Query().Get("type"), Q: r.URL.Query().Get("q")}
+	if len(in.Q) > 200 {
+		response.BadRequest(w, r, response.CodeValidationError, "q is too long")
+		return
+	}
 	if v, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil {
 		in.Limit = int32(v)
 	}

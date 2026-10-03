@@ -9,8 +9,11 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/password"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/slug"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -41,6 +44,10 @@ type Service struct {
 	geo  GeoResolver
 	// parentHook runs inside the re-parenting transaction (K25, TEC-198).
 	parentHook ParentChangeHook
+	// TEC-210: organizations index search (nil: SQL only) and the outbox of
+	// the organization.* events (nil: no events).
+	finder searchengine.ListFinder
+	out    outbox.Enqueuer
 }
 
 // New creates an organizations service.
@@ -323,6 +330,9 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (RegisterResul
 	if err := addMember(ctx, qtx, org, user.ID, "owner", nil); err != nil {
 		return RegisterResult{}, err
 	}
+	if err := s.emit(ctx, tx, events.OrganizationCreated, org); err != nil {
+		return RegisterResult{}, err
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return RegisterResult{}, err
 	}
@@ -379,6 +389,9 @@ func (s *Service) RegisterOrganization(ctx context.Context, in RegisterInput, ow
 		return RegisterResult{}, err
 	}
 	if err := addMember(ctx, qtx, org, ownerUserID, "owner", nil); err != nil {
+		return RegisterResult{}, err
+	}
+	if err := s.emit(ctx, tx, events.OrganizationCreated, org); err != nil {
 		return RegisterResult{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -567,7 +580,9 @@ func (s *Service) Patch(ctx context.Context, id uuid.UUID, in PatchInput) (Organ
 			return Organization{}, err
 		}
 	}
-	if _, err := s.q.UpdateOrganizationPlatform(ctx, params); err != nil {
+	if _, err := s.updateWithEvent(ctx, func(q *db.Queries) (db.Organization, error) {
+		return q.UpdateOrganizationPlatform(ctx, params)
+	}); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return Organization{}, ErrNotFound
 		}

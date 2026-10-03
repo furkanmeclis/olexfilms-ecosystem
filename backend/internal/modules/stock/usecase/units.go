@@ -75,18 +75,31 @@ func (s *Service) OrganizationUnits(ctx context.Context, v UnitViewer, orgUUID u
 	}
 	status, barcode, q := textArg(in.Status), textArg(in.Barcode), textArg(in.Q)
 	brand := v.Filter.BrandIDArg()
-	total, err := s.q.CountOrganizationStockUnitRows(ctx, db.CountOrganizationStockUnitRowsParams{
-		OrganizationID: o.ID, BrandID: brand, ProductID: product, Status: status, Barcode: barcode, Q: q,
-	})
-	if err != nil {
-		return nil, 0, fmt.Errorf("stock: count units: %w", err)
-	}
-	rows, err := s.q.ListOrganizationStockUnitRows(ctx, db.ListOrganizationStockUnitRowsParams{
+	lp := db.ListOrganizationStockUnitRowsParams{
 		OrganizationID: o.ID, BrandID: brand, ProductID: product, Status: status, Barcode: barcode, Q: q,
 		LimitCount: in.Limit, OffsetCount: in.Offset,
-	})
-	if err != nil {
-		return nil, 0, fmt.Errorf("stock: units: %w", err)
+	}
+	var (
+		rows    []db.ListOrganizationStockUnitRowsRow
+		total   int64
+		indexed bool
+	)
+	// TEC-210: a text search goes to the stock units index when it is up;
+	// the exact barcode filter stays on SQL.
+	if q.Valid && !barcode.Valid && s.indexEnabled() {
+		rows, total, indexed = s.searchUnitsIndexed(ctx, lp)
+	}
+	if !indexed {
+		total, err = s.q.CountOrganizationStockUnitRows(ctx, db.CountOrganizationStockUnitRowsParams{
+			OrganizationID: o.ID, BrandID: brand, ProductID: product, Status: status, Barcode: barcode, Q: q,
+		})
+		if err != nil {
+			return nil, 0, fmt.Errorf("stock: count units: %w", err)
+		}
+		rows, err = s.q.ListOrganizationStockUnitRows(ctx, lp)
+		if err != nil {
+			return nil, 0, fmt.Errorf("stock: units: %w", err)
+		}
 	}
 	prices, err := s.unitPurchasePrices(ctx, v, o, rows)
 	if err != nil {

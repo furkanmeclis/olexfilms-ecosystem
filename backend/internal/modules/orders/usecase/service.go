@@ -25,6 +25,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -113,6 +114,8 @@ type Service struct {
 	// receipts is called in the received transaction (accounting, TEC-169).
 	receipts ReceiptHook
 	now      func() time.Time
+	// finder answers q from the orders index (TEC-210; nil: SQL only).
+	finder searchengine.ListFinder
 }
 
 // New creates the service.

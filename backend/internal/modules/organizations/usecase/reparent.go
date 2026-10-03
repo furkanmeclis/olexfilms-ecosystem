@@ -7,6 +7,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -57,9 +58,14 @@ func (s *Service) moveTx(ctx context.Context, child, oldParent, parent db.Organi
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 	q := s.q.WithTx(tx)
-	if _, err := q.UpdateOrganizationParent(ctx, db.UpdateOrganizationParentParams{
+	moved, err := q.UpdateOrganizationParent(ctx, db.UpdateOrganizationParentParams{
 		ID: child.ID, ParentID: pgtype.Int8{Int64: parent.ID, Valid: true},
-	}); err != nil {
+	})
+	if err != nil {
+		return err
+	}
+	// TEC-210: the organizations index document shows the parent.
+	if err := s.emit(ctx, tx, events.OrganizationUpdated, moved); err != nil {
 		return err
 	}
 	var actor pgtype.Int8

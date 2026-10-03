@@ -23,6 +23,8 @@ import (
 	notifmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/providers"
 	notifusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/usecase"
+	ordersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/orders/usecase"
+	orgusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/indexsync"
 	servicereview "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/review"
 	servicesusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/usecase"
@@ -126,6 +128,10 @@ func main() {
 		servicesusecase.NewSearchAdapter(queries),
 		warrantyusecase.NewSearchAdapter(queries),
 		customersusecase.NewVehicleSearchAdapter(queries),
+		// TEC-210: organizations (dealer code), orders, stock units (barcode).
+		orgusecase.NewSearchAdapter(queries),
+		ordersusecase.NewSearchAdapter(queries),
+		stockusecase.NewSearchAdapter(queries),
 	)
 	searchClient := searchengine.NewClient(cfg.Search, log)
 	searchIndexer := searchengine.NewIndexer(searchClient, searchReg, nil, log)
