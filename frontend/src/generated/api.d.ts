@@ -3494,6 +3494,171 @@ export interface paths {
         patch: operations["updateWarehouseLocation"];
         trace?: never;
     };
+    "/v1/stock/barcodes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List barcode batches of the center
+         * @description Needs `stock.read` in the active organization; only the center issues barcodes (K14), any other organization type answers 403 STOCK_BARCODES_CENTER_ONLY. Newest first.
+         */
+        get: operations["listBarcodeBatches"];
+        put?: never;
+        /**
+         * Reserve N barcodes for a product (center only)
+         * @description Needs `stock.write` at the center (K14; other organization types answer 403 STOCK_BARCODES_CENTER_ONLY). Allocates `quantity` barcodes `<PREFIX>-<8 digits>` (e.g. `OLEX-00000123`) from the brand's counter under its lock and creates the units in status `printed` (like the stock import); they enter stock later through the stock entry flow. Roll products need `meters` (the length of each roll); fixed-barcode products get fixed units. The prefix defaults to the brand slug (A-Z0-9, 2-8 characters). The roll split barcode `<barcode>-S<n>` never collides with this format. The response carries every unit and `labels_url`, the batch's label PDF. An inactive product answers 422 STOCK_PRODUCT_INACTIVE.
+         */
+        post: operations["createBarcodeBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock/barcodes/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Get a barcode batch with its units
+         * @description Needs `stock.read` at the center (403 STOCK_BARCODES_CENTER_ONLY elsewhere).
+         */
+        get: operations["getBarcodeBatch"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock/barcodes/{uuid}/labels.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Label sheet PDF of a batch
+         * @description Needs `stock.read` at the center. Renders one label per unit of the batch through the PDF engine (Gotenberg) with the template given by `template`, else the batch's template, else the organization's default unit template, else the built-in code128 70x37 mm sheet. Counts the print (`print_count`, `last_printed_at`). 503 STOCK_LABEL_RENDERER_UNAVAILABLE when the PDF engine is down.
+         */
+        get: operations["printBarcodeBatchLabels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock/label-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List label templates of the active organization
+         * @description Needs `stock.read`. Templates belong to the center or a distributor (the dealer has no label printing, K12). `kind` narrows to unit or location templates.
+         */
+        get: operations["listLabelTemplates"];
+        put?: never;
+        /**
+         * Create a label template
+         * @description Needs `stock.write`. Unit templates print code128 or QR (`OFW:UNIT:<barcode>`), location templates always QR (`OFW:LOC:<full_code>`). Logo modes: none, text (`logo_text`) or image (`logo_image`, a `data:image/png` or `data:image/jpeg` base64 URI up to 200 KB). Missing fields take the kind's defaults (unit: code128 70x37 mm, 3 columns; location: QR 50x50 mm, 4 columns). `is_default` makes it the default of its kind for the organization. 409 STOCK_LABEL_TEMPLATE_NAME_TAKEN on a duplicate name.
+         */
+        post: operations["createLabelTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock/label-templates/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Get a label template
+         * @description Needs `stock.read`; the template must belong to the active organization.
+         */
+        get: operations["getLabelTemplate"];
+        /**
+         * Replace a label template
+         * @description Needs `stock.write`. Replaces every editable field (the kind is fixed); omitted fields take the current values. `is_default: true` moves the default of the kind to this template.
+         */
+        put: operations["updateLabelTemplate"];
+        post?: never;
+        /**
+         * Delete a label template
+         * @description Needs `stock.write`. Batches that referenced it keep no template link.
+         */
+        delete: operations["deleteLabelTemplate"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock/labels/units.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Label sheet PDF of the given unit barcodes
+         * @description Needs `stock.read`. One label per `barcode` (repeat the parameter; at most 1000). A unit is printable when its holder is inside the caller's stock.read reach, or, while it is only printed (not in stock yet), when the caller is its issuing center. The new unit of a roll split links here (`new_unit.label_url`). Unknown or unreachable barcodes answer 404. Template as for the batch sheet.
+         */
+        get: operations["printUnitLabels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/labels/locations.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * QR label sheet PDF of warehouse locations
+         * @description Needs `warehouse.read` with the warehouse module on (center or distributor, K12). Prints every typed location of `room` and/or the listed `location` uuids of the active organization (at most 1000). Each label carries the QR payload `OFW:LOC:<full_code>` and the full_code text. Template: `template`, else the organization's default location template, else the built-in QR 50x50 mm sheet.
+         */
+        get: operations["printLocationLabels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/product-images/{key}": {
         parameters: {
             query?: never;
@@ -9265,6 +9430,8 @@ export interface components {
             status: components["schemas"]["StockUnitStatus"];
             /** @example 38.00 */
             remaining_meters: string;
+            /** @description Label print endpoint of the unit (TEC-202; set on the new unit of a split) */
+            label_url?: string;
         };
         StockSplit: {
             /** Format: uuid */
@@ -11086,6 +11253,145 @@ export interface components {
                 total: number;
                 limit: number;
                 offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        LabelTemplateKind: "unit" | "location";
+        /** @enum {string} */
+        LabelSymbology: "code128" | "qr";
+        /** @enum {string} */
+        LabelLogoMode: "none" | "text" | "image";
+        LabelTemplate: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            kind: components["schemas"]["LabelTemplateKind"];
+            symbology: components["schemas"]["LabelSymbology"];
+            logo_mode: components["schemas"]["LabelLogoMode"];
+            logo_text: string | null;
+            /** @description data:image/png or data:image/jpeg base64 URI */
+            logo_image: string | null;
+            /** @example 70.0 */
+            width_mm: string;
+            /** @example 37.0 */
+            height_mm: string;
+            columns: number;
+            show_name: boolean;
+            show_code_text: boolean;
+            is_default: boolean;
+            active: boolean;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        LabelTemplateInput: {
+            name: string;
+            /** @description Create only (default unit); ignored on update */
+            kind?: components["schemas"]["LabelTemplateKind"];
+            symbology?: components["schemas"]["LabelSymbology"];
+            logo_mode?: components["schemas"]["LabelLogoMode"];
+            logo_text?: string;
+            /** @description data:image/png or data:image/jpeg base64 URI (at most 200 KB) */
+            logo_image?: string;
+            /**
+             * @description 20-200, one decimal
+             * @example 70
+             */
+            width_mm?: string;
+            /**
+             * @description 10-200, one decimal
+             * @example 37
+             */
+            height_mm?: string;
+            columns?: number;
+            show_name?: boolean;
+            show_code_text?: boolean;
+            is_default?: boolean;
+            active?: boolean;
+        };
+        BarcodeBatchInput: {
+            /** Format: uuid */
+            product_uuid: string;
+            quantity: number;
+            /**
+             * @description Length of each roll (roll products only)
+             * @example 15.00
+             */
+            meters?: string;
+            /** @description Defaults to the brand slug */
+            prefix?: string;
+            /**
+             * Format: uuid
+             * @description Unit label template printed by default
+             */
+            template_uuid?: string;
+        };
+        BarcodeBatchUnit: {
+            /** Format: uuid */
+            uuid: string;
+            /** @example OLEX-00000123 */
+            barcode: string;
+            status: components["schemas"]["StockUnitStatus"];
+        };
+        BarcodeBatch: {
+            /** Format: uuid */
+            uuid: string;
+            product: {
+                /** Format: uuid */
+                uuid: string;
+                sku: string;
+                name: string;
+                unit_type: components["schemas"]["CatalogUnitType"];
+                uses_fixed_barcode: boolean;
+            };
+            quantity: number;
+            prefix: string;
+            first_barcode: string;
+            last_barcode: string;
+            meters: string | null;
+            /** Format: uuid */
+            template_uuid: string | null;
+            print_count: number;
+            /** Format: date-time */
+            last_printed_at: string | null;
+            /** @description Label sheet endpoint of the batch */
+            labels_url: string;
+            /** Format: date-time */
+            created_at: string;
+            /** @description Present on create and get */
+            units?: components["schemas"]["BarcodeBatchUnit"][];
+        };
+        EnvelopeBarcodeBatch: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["BarcodeBatch"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeBarcodeBatchPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["BarcodeBatch"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeLabelTemplate: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["LabelTemplate"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeLabelTemplateList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["LabelTemplate"][];
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -17444,6 +17750,332 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    listBarcodeBatches: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Batches */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBarcodeBatchPage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createBarcodeBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BarcodeBatchInput"];
+            };
+        };
+        responses: {
+            /** @description Batch reserved; units created in status printed */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBarcodeBatch"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getBarcodeBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Batch */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBarcodeBatch"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    printBarcodeBatchLabels: {
+        parameters: {
+            query?: {
+                /** @description Unit label template uuid */
+                template?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Label sheet */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description PDF engine unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listLabelTemplates: {
+        parameters: {
+            query?: {
+                kind?: components["schemas"]["LabelTemplateKind"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Templates */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLabelTemplateList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createLabelTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LabelTemplateInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLabelTemplate"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getLabelTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Template */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLabelTemplate"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateLabelTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LabelTemplateInput"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLabelTemplate"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    deleteLabelTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    printUnitLabels: {
+        parameters: {
+            query: {
+                barcode: string[];
+                template?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Label sheet */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description PDF engine unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    printLocationLabels: {
+        parameters: {
+            query?: {
+                room?: string;
+                location?: string[];
+                template?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Label sheet */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description PDF engine unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     getPublicProductImage: {

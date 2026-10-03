@@ -54,6 +54,7 @@ type Querier interface {
 	// matches no row, so only one outbox event is ever written.
 	ClaimServiceReviewRequest(ctx context.Context, arg ClaimServiceReviewRequestParams) (ClaimServiceReviewRequestRow, error)
 	ClearAppSettingsLogo(ctx context.Context) (AppSetting, error)
+	ClearDefaultLabelTemplate(ctx context.Context, arg ClearDefaultLabelTemplateParams) error
 	ClearOrganizationLogo(ctx context.Context, argUuid uuid.UUID) (Organization, error)
 	// Closes the source account. phone_e164/email are the values it keeps (the
 	// caller clears the ones handed to the target; the e-mail is a placeholder
@@ -76,6 +77,7 @@ type Querier interface {
 	CountAllImportJobs(ctx context.Context) (int64, error)
 	CountAppLogs(ctx context.Context, arg CountAppLogsParams) (int64, error)
 	CountAppLogsByLevel(ctx context.Context) ([]CountAppLogsByLevelRow, error)
+	CountBarcodeBatches(ctx context.Context, organizationID int64) (int64, error)
 	CountBinProductStockRows(ctx context.Context, arg CountBinProductStockRowsParams) (int64, error)
 	CountBulkJobsForActor(ctx context.Context, actorID int64) (int64, error)
 	CountBulkOperationsForOrganization(ctx context.Context, organizationID pgtype.Int8) (int64, error)
@@ -137,6 +139,8 @@ type Querier interface {
 	CountUsersWithRole(ctx context.Context, roleSlug string) (int64, error)
 	CountWarrantiesInScope(ctx context.Context, arg CountWarrantiesInScopeParams) (int64, error)
 	CountWarrantyRows(ctx context.Context, arg CountWarrantyRowsParams) (int64, error)
+	CreateBarcodeBatch(ctx context.Context, arg CreateBarcodeBatchParams) (BarcodeBatch, error)
+	CreateBatchUnit(ctx context.Context, arg CreateBatchUnitParams) (Unit, error)
 	CreateBulkJob(ctx context.Context, arg CreateBulkJobParams) (BulkJob, error)
 	// TEC-149: vehicle catalog (car brands and models). Global reference data:
 	// no organization/brand filter; only super_admin writes (use case + route).
@@ -164,6 +168,7 @@ type Querier interface {
 	// Cash and bank accounts.
 	CreateFinanceAccount(ctx context.Context, arg CreateFinanceAccountParams) (FinanceAccount, error)
 	CreateImportJob(ctx context.Context, arg CreateImportJobParams) (ImportJob, error)
+	CreateLabelTemplate(ctx context.Context, arg CreateLabelTemplateParams) (LabelTemplate, error)
 	CreateLogPurgeRule(ctx context.Context, arg CreateLogPurgeRuleParams) (LogPurgeRule, error)
 	CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error)
 	CreateOAuthAccount(ctx context.Context, arg CreateOAuthAccountParams) (OauthAccount, error)
@@ -283,6 +288,7 @@ type Querier interface {
 	// Draft deletion (items, images and logs must be gone first).
 	DeleteDraftService(ctx context.Context, arg DeleteDraftServiceParams) (int64, error)
 	DeleteFixedBarcodeHoldingForRepair(ctx context.Context, id int64) error
+	DeleteLabelTemplate(ctx context.Context, arg DeleteLabelTemplateParams) (int64, error)
 	DeleteLogPurgeRule(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	DeleteManualExchangeRate(ctx context.Context, arg DeleteManualExchangeRateParams) (int64, error)
 	DeleteMemberRoles(ctx context.Context, memberID int64) error
@@ -368,6 +374,7 @@ type Querier interface {
 	GetAppLogByUUID(ctx context.Context, argUuid uuid.UUID) (AppLog, error)
 	GetAppSettings(ctx context.Context) (AppSetting, error)
 	GetAuthSettings(ctx context.Context) (GetAuthSettingsRow, error)
+	GetBarcodeBatchByUUID(ctx context.Context, arg GetBarcodeBatchByUUIDParams) (BarcodeBatch, error)
 	GetBrandByID(ctx context.Context, id int64) (Brand, error)
 	GetBrandBySlug(ctx context.Context, slug string) (Brand, error)
 	GetBrandCenter(ctx context.Context, brandID int64) (Organization, error)
@@ -405,6 +412,7 @@ type Querier interface {
 	GetCustomerOrganization(ctx context.Context, arg GetCustomerOrganizationParams) (CustomerOrganization, error)
 	GetCustomerProfile(ctx context.Context, userID int64) (CustomerProfile, error)
 	GetCustomerProfileForUpdate(ctx context.Context, userID int64) (CustomerProfile, error)
+	GetDefaultLabelTemplate(ctx context.Context, arg GetDefaultLabelTemplateParams) (LabelTemplate, error)
 	GetDistributorPriceOverride(ctx context.Context, arg GetDistributorPriceOverrideParams) (GetDistributorPriceOverrideRow, error)
 	GetDistrictByID(ctx context.Context, id int64) (District, error)
 	GetDocumentRenderByID(ctx context.Context, id int64) (DocumentRender, error)
@@ -427,6 +435,8 @@ type Querier interface {
 	GetGitHubAppSettings(ctx context.Context) (GithubAppSetting, error)
 	GetImportJobByID(ctx context.Context, id int64) (ImportJob, error)
 	GetImportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ImportJob, error)
+	GetLabelTemplateByID(ctx context.Context, id int64) (LabelTemplate, error)
+	GetLabelTemplateByUUID(ctx context.Context, arg GetLabelTemplateByUUIDParams) (LabelTemplate, error)
 	GetLatestConsent(ctx context.Context, arg GetLatestConsentParams) (Consent, error)
 	GetLatestKVKKNotice(ctx context.Context, locale string) (KvkkNotice, error)
 	// Portal legal texts and consents (TEC-90).
@@ -685,6 +695,7 @@ type Querier interface {
 	ListAllRoles(ctx context.Context) ([]Role, error)
 	ListAppLogSources(ctx context.Context) ([]string, error)
 	ListAppLogs(ctx context.Context, arg ListAppLogsParams) ([]AppLog, error)
+	ListBarcodeBatches(ctx context.Context, arg ListBarcodeBatchesParams) ([]BarcodeBatch, error)
 	ListBinProductStockRows(ctx context.Context, arg ListBinProductStockRowsParams) ([]ListBinProductStockRowsRow, error)
 	ListBinProductStocksByLocation(ctx context.Context, locationID int64) ([]BinProductStock, error)
 	ListBinProductStocksByOrganization(ctx context.Context, organizationID int64) ([]BinProductStock, error)
@@ -763,6 +774,10 @@ type Querier interface {
 	ListImportJobsForActor(ctx context.Context, arg ListImportJobsForActorParams) ([]ImportJob, error)
 	// TEC-211: the organization list carries who uploaded each job.
 	ListImportJobsForOrganization(ctx context.Context, arg ListImportJobsForOrganizationParams) ([]ListImportJobsForOrganizationRow, error)
+	// TEC-202: label templates and barcode batches.
+	// ---------------------------------------------------------------------------
+	// Label templates.
+	ListLabelTemplates(ctx context.Context, arg ListLabelTemplatesParams) ([]LabelTemplate, error)
 	ListLatestKVKKNotices(ctx context.Context) ([]KvkkNotice, error)
 	ListLatestLegalTexts(ctx context.Context, kind string) ([]LegalText, error)
 	ListLegalTextVersions(ctx context.Context, arg ListLegalTextVersionsParams) ([]LegalText, error)
@@ -944,6 +959,10 @@ type Querier interface {
 	// Brand-independent barcode lookup for the warehouse scanner (K20): the
 	// caller narrows the result by scope.
 	ListUnitsByBarcode(ctx context.Context, barcode string) ([]Unit, error)
+	// Brand-independent (K20): the caller narrows the rows by scope.
+	ListUnitsByBarcodes(ctx context.Context, barcodes []string) ([]Unit, error)
+	ListUnitsByBatch(ctx context.Context, batchID pgtype.Int8) ([]Unit, error)
+	ListUnitsByBrandBarcodes(ctx context.Context, arg ListUnitsByBrandBarcodesParams) ([]Unit, error)
 	ListUnitsByIDs(ctx context.Context, ids []int64) ([]Unit, error)
 	ListUserIDsByRoleSlug(ctx context.Context, slug string) ([]int64, error)
 	ListUserRoleSlugs(ctx context.Context, userID int64) ([]string, error)
@@ -1014,6 +1033,10 @@ type Querier interface {
 	LockAccountingDispute(ctx context.Context, arg LockAccountingDisputeParams) (AccountingDispute, error)
 	// Active reservations of a unit (at most one for a serial unit).
 	LockActiveReservationsByUnit(ctx context.Context, unitID int64) ([]StockReservation, error)
+	// ---------------------------------------------------------------------------
+	// Barcode counters and batches.
+	// Creates the counter on first use and locks it for the batch allocation.
+	LockBarcodeCounter(ctx context.Context, arg LockBarcodeCounterParams) (BarcodeCounter, error)
 	LockBinProductStock(ctx context.Context, arg LockBinProductStockParams) (BinProductStock, error)
 	LockBulkOperationForUndo(ctx context.Context, id int64) (BulkOperation, error)
 	// ---------------------------------------------------------------------------
@@ -1066,6 +1089,7 @@ type Querier interface {
 	LockVehicleTransferByUUID(ctx context.Context, arg LockVehicleTransferByUUIDParams) (VehicleTransfer, error)
 	LockWarranty(ctx context.Context, arg LockWarrantyParams) (Warranty, error)
 	MarkAllNotificationsReadForUser(ctx context.Context, userID pgtype.Int8) (int64, error)
+	MarkBarcodeBatchPrinted(ctx context.Context, id int64) (BarcodeBatch, error)
 	MarkBulkJobCompleted(ctx context.Context, arg MarkBulkJobCompletedParams) (BulkJob, error)
 	MarkBulkJobFailed(ctx context.Context, arg MarkBulkJobFailedParams) (BulkJob, error)
 	MarkBulkJobProcessing(ctx context.Context, id int64) (BulkJob, error)
@@ -1165,6 +1189,7 @@ type Querier interface {
 	SearchFinanceEntries(ctx context.Context, arg SearchFinanceEntriesParams) ([]SearchFinanceEntriesRow, error)
 	ServiceNoExists(ctx context.Context, serviceNo string) (bool, error)
 	SetAppSettingsLogo(ctx context.Context, logoObjectKey pgtype.Text) (AppSetting, error)
+	SetBarcodeCounter(ctx context.Context, arg SetBarcodeCounterParams) error
 	SetCarBrandHero(ctx context.Context, arg SetCarBrandHeroParams) (CarBrand, error)
 	SetCarBrandLogo(ctx context.Context, arg SetCarBrandLogoParams) (CarBrand, error)
 	SetCarModelHero(ctx context.Context, arg SetCarModelHeroParams) (CarModel, error)
@@ -1253,6 +1278,7 @@ type Querier interface {
 	UpdateImportJobFileKey(ctx context.Context, arg UpdateImportJobFileKeyParams) (ImportJob, error)
 	UpdateImportJobMapping(ctx context.Context, arg UpdateImportJobMappingParams) (ImportJob, error)
 	UpdateImportJobPreview(ctx context.Context, arg UpdateImportJobPreviewParams) (ImportJob, error)
+	UpdateLabelTemplate(ctx context.Context, arg UpdateLabelTemplateParams) (LabelTemplate, error)
 	UpdateLogPurgeRule(ctx context.Context, arg UpdateLogPurgeRuleParams) (LogPurgeRule, error)
 	UpdateMessageStatusByExternalIDs(ctx context.Context, arg UpdateMessageStatusByExternalIDsParams) (int64, error)
 	UpdateModuleDefaults(ctx context.Context, arg UpdateModuleDefaultsParams) (Module, error)

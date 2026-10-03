@@ -6,8 +6,8 @@ package usecase
 // and the stock_splits row in one transaction. The caller's idempotency key
 // makes a retry return the earlier split (replayed) without writing again.
 // A roll on an open service or reserved for an order line is not split
-// here (the order flow splits before it reserves). Printing the new label
-// is TEC-95.
+// here (the order flow splits before it reserves). The new label prints
+// through the TEC-202 label endpoint (new_unit.label_url).
 
 import (
 	"context"
@@ -154,6 +154,7 @@ func SplitView(r ledger.SplitResult) model.Split {
 		NewUnit: model.SplitUnit{
 			UUID: r.New.Uuid, Barcode: r.New.Barcode, Status: r.New.Status,
 			RemainingMeters: meterString(r.New.RemainingMeters),
+			LabelURL:        UnitLabelPath(r.New.Barcode),
 		},
 		Replayed:  r.Replayed,
 		CreatedAt: r.Split.CreatedAt.Time,

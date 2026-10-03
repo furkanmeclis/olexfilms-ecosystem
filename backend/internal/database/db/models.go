@@ -84,6 +84,30 @@ type AuthSetting struct {
 	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
 }
 
+type BarcodeBatch struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	ProductID       int64              `json:"product_id"`
+	Quantity        int32              `json:"quantity"`
+	Prefix          string             `json:"prefix"`
+	FirstSeq        int64              `json:"first_seq"`
+	LastSeq         int64              `json:"last_seq"`
+	Meters          pgtype.Numeric     `json:"meters"`
+	TemplateID      pgtype.Int8        `json:"template_id"`
+	PrintCount      int32              `json:"print_count"`
+	LastPrintedAt   pgtype.Timestamptz `json:"last_printed_at"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+}
+
+type BarcodeCounter struct {
+	BrandID int64  `json:"brand_id"`
+	Prefix  string `json:"prefix"`
+	NextSeq int64  `json:"next_seq"`
+}
+
 type BinProductStock struct {
 	LocationID     int64              `json:"location_id"`
 	OrganizationID int64              `json:"organization_id"`
@@ -534,6 +558,27 @@ type KvkkNotice struct {
 	Body      string             `json:"body"`
 	CreatedBy pgtype.Int8        `json:"created_by"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type LabelTemplate struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	Name           string             `json:"name"`
+	Kind           string             `json:"kind"`
+	Symbology      string             `json:"symbology"`
+	LogoMode       string             `json:"logo_mode"`
+	LogoText       pgtype.Text        `json:"logo_text"`
+	LogoImage      pgtype.Text        `json:"logo_image"`
+	WidthMm        pgtype.Numeric     `json:"width_mm"`
+	HeightMm       pgtype.Numeric     `json:"height_mm"`
+	GridColumns    int16              `json:"grid_columns"`
+	ShowName       bool               `json:"show_name"`
+	ShowCodeText   bool               `json:"show_code_text"`
+	IsDefault      bool               `json:"is_default"`
+	Active         bool               `json:"active"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
 type LegalText struct {
@@ -1506,6 +1551,7 @@ type Unit struct {
 	ExternalStatus  pgtype.Text        `json:"external_status"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	BatchID         pgtype.Int8        `json:"batch_id"`
 }
 
 type UnitCurrentState struct {
