@@ -61,6 +61,9 @@ func olexSteps() []Step {
 		// TEC-258: legacy stock movements -> ledger opening, projection
 		// rebuild.
 		LedgerStep{},
+
+		// TEC-261: hub + warehouse orders, merged by external_reference.
+		OrdersStep{},
 	}
 }
 

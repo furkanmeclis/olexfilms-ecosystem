@@ -193,5 +193,22 @@
   "dealer_page.error_title": "لا يمكن عرض صفحة الوكيل الآن",
   "dealer_page.error_body": "يرجى المحاولة مرة أخرى لاحقًا.",
   "dealer_page.og_description": "{{name}}: وكيل معتمد في {{locality}}. العنوان والخريطة والتواصل عبر واتساب.",
-  "dealer_page.og_description_short": "{{name}}: وكيل معتمد. العنوان والخريطة والتواصل عبر واتساب."
+  "dealer_page.og_description_short": "{{name}}: وكيل معتمد. العنوان والخريطة والتواصل عبر واتساب.",
+  "review.title": "قيّم الخدمة",
+  "review.description": "قيّم منصتنا وجودة المنتجات المستخدمة؛ رأيك يهمنا.",
+  "review.platform_rating": "جودة المنصة",
+  "review.product_rating": "جودة المنتجات",
+  "review.comment": "تعليقك (اختياري)",
+  "review.comment_hint": "{{max}} حرفًا كحد أقصى.",
+  "review.submit": "إرسال",
+  "review.submitting": "جارٍ الإرسال…",
+  "review.thanks": "شكرًا لتقييمك.",
+  "review.your_review": "تقييمك",
+  "review.rating_required": "يرجى اختيار التقييمين.",
+  "review.star": "{{value}} / 5",
+  "review.google": "قيّم على Google",
+  "review.google_hint": "إذا كنت راضيًا، يمكنك أيضًا تقييم الوكيل على Google.",
+  "review.not_completed": "يمكنك تقييم الخدمة بعد اكتمالها.",
+  "review.failed": "تعذّر إرسال التقييم. حاول مرة أخرى.",
+  "review.already": "تم تقييم هذه الخدمة بالفعل."
 }
