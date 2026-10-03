@@ -27,12 +27,16 @@ import (
 // brand: categories and products into the catalog (brand=glorian, remote
 // fields locked), dealers into integration_external_parties. Each kind is
 // one integration_sync_runs row with its counts and watermark.
+//
+// TEC-269 (F2-02d): the same pass then pulls stock_items into the
+// external_status mirror of the local units (see pull_stock.go).
 
 // Sync run kinds of the pull (chk_integration_sync_runs_kind).
 const (
 	KindPullCategories = "pull_categories"
 	KindPullProducts   = "pull_products"
 	KindPullDealers    = "pull_dealers"
+	KindPullStock      = "pull_stock"
 )
 
 // Sync run statuses.
@@ -73,6 +77,9 @@ type PullCounts struct {
 	Unchanged int `json:"unchanged"`
 	Skipped   int `json:"skipped"`
 	Pages     int `json:"pages"`
+	// Unmatched counts remote stock items without a local unit of the same
+	// barcode (pull_stock only); they are reconcile input (TEC-269).
+	Unmatched int `json:"unmatched,omitempty"`
 }
 
 // PullIndexer refreshes the product search index (searchengine.Indexer).
@@ -129,8 +136,9 @@ func (p *Puller) Run(ctx context.Context) error {
 	return errors.Join(errs...)
 }
 
-// PullConnection runs the three pulls of one connection: categories first
-// (products point at them), then products, then dealers.
+// PullConnection runs the four pulls of one connection: categories first
+// (products point at them), then products, then dealers, then the stock
+// item status mirror.
 func (p *Puller) PullConnection(ctx context.Context, conn db.IntegrationConnection) error {
 	if !conn.Active {
 		return fmt.Errorf("%w: connection %q", ErrInactiveConnection, conn.Key)
@@ -148,6 +156,7 @@ func (p *Puller) PullConnection(ctx context.Context, conn db.IntegrationConnecti
 		p.runKind(ctx, conn, KindPullCategories, run.categories),
 		p.runKind(ctx, conn, KindPullProducts, run.products),
 		p.runKind(ctx, conn, KindPullDealers, run.dealers),
+		p.runKind(ctx, conn, KindPullStock, run.stockItems),
 	)
 }
 

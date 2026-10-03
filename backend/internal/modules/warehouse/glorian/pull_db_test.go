@@ -222,8 +222,10 @@ func TestPullCreatesThenIsIdempotent(t *testing.T) {
 		}
 	}
 	runs := f.runs(t)
-	if len(runs) != 3 {
-		t.Fatalf("runs = %d, want 3", len(runs))
+	// Four kinds: categories, products, dealers and the stock item mirror
+	// (TEC-269).
+	if len(runs) != 4 {
+		t.Fatalf("runs = %d, want 4", len(runs))
 	}
 	for kind, want := range map[string]int{glorian.KindPullCategories: 2, glorian.KindPullProducts: 3, glorian.KindPullDealers: 2} {
 		run := latestRun(t, runs, kind)
