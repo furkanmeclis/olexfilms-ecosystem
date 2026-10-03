@@ -261,6 +261,15 @@ func TestIntegrationLegacyMobileTokenLifetime(t *testing.T) {
 	org := it.org("t284f", "dealer", center)
 	owner, pw := it.user("t284f-owner")
 	it.member(org, owner, "owner")
+	// The services fixture checks the keys of data.0: one service in the org.
+	cust, veh := it.svcCustomer(org, "t284f-cust", "34T284F")
+	if _, err := it.q.CreateService(ctx, db.CreateServiceParams{
+		ServiceNo:      fmt.Sprintf("T284F-%s", it.suffix[len(it.suffix)-10:]),
+		OrganizationID: org.ID, BrandID: org.BrandID, CustomerUserID: cust.ID, VehicleID: veh.ID,
+		CarBrandID: veh.CarBrandID.Int64, CarModelID: veh.CarModelID.Int64, Status: "draft",
+	}); err != nil {
+		t.Fatalf("service: %v", err)
+	}
 	t.Cleanup(func() {
 		bg := context.Background()
 		_, _ = it.pool.Exec(bg, "DELETE FROM measurement_results WHERE organization_id = $1", org.ID)
