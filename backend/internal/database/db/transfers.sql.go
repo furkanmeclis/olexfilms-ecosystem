@@ -297,7 +297,7 @@ INSERT INTO stock_transfer_requests (
 VALUES (
     $1, $2, $1, $3,
     $4, $5, $6, $7,
-    $8::text
+    COALESCE(NULLIF($8::text, ''), 'sibling')
 )
 RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind
 `

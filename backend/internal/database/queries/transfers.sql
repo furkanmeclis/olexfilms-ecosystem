@@ -10,7 +10,7 @@ INSERT INTO stock_transfer_requests (
 VALUES (
     sqlc.arg(from_org_id), sqlc.arg(brand_id), sqlc.arg(from_org_id), sqlc.arg(to_org_id),
     sqlc.arg(approver_org_id), sqlc.arg(currency), sqlc.narg(reason), sqlc.narg(requested_by_user_id),
-    sqlc.arg(kind)::text
+    COALESCE(NULLIF(sqlc.arg(kind)::text, ''), 'sibling')
 )
 RETURNING *;
 
