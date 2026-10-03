@@ -64,6 +64,8 @@
   "system.groups.warehouse_hint": "Anbar və stok davranışı.",
   "system.groups.scanning": "Skan",
   "system.groups.scanning_hint": "Barkod və QR skan ayarları.",
+  "system.groups.mobile": "Mobil tətbiq",
+  "system.groups.mobile_hint": "Minimum tətbiq versiyası və mağaza linkləri; köhnə versiyalardan yeniləmə tələb olunur.",
   "system.keys.forecast_min_days": "Minimum proqnoz müddəti (gün)",
   "system.keys.forecast_min_days_hint": "Proqnoz təklif verməzdən əvvəl tələb olunan minimum hərəkət tarixçəsi.",
   "system.keys.contract_grace_days": "Müqavilə güzəşt müddəti (gün)",

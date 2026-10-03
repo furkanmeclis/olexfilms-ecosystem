@@ -8169,6 +8169,29 @@ export interface components {
             error: components["schemas"]["ErrorBody"];
             meta: components["schemas"]["ResponseMeta"];
         };
+        /** @description Error envelope of a 426. `data` is present for UPDATE_REQUIRED only (TEC-236). */
+        UpdateRequiredError: {
+            /** @enum {boolean} */
+            success: false;
+            error: components["schemas"]["ErrorBody"];
+            data?: components["schemas"]["UpdateRequiredInfo"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        UpdateRequiredInfo: {
+            /**
+             * @description Minimum supported app release
+             * @example 2.4.0
+             */
+            min_version: string;
+            /** @description The release the request reported; null when unknown */
+            current_version?: string | null;
+            store_urls: {
+                /** Format: uri */
+                ios: string | null;
+                /** Format: uri */
+                android: string | null;
+            };
+        };
         Tokens: {
             access_token: string;
             refresh_token: string;
@@ -9999,7 +10022,7 @@ export interface components {
             /** @example contract_grace_days */
             key: string;
             /** @enum {string} */
-            group: "general" | "contracts" | "forecast" | "services" | "smtp" | "warehouse" | "scanning";
+            group: "general" | "contracts" | "forecast" | "services" | "smtp" | "warehouse" | "scanning" | "mobile";
             /** @enum {string} */
             kind: "int" | "bool" | "string";
             default: components["schemas"]["SystemSettingValue"];
@@ -13863,13 +13886,13 @@ export interface components {
         };
     };
     responses: {
-        /** @description 426 MOBILE_API_VERSION_UNSUPPORTED (missing or unsupported X-Mobile-Api-Version; update the app) */
+        /** @description 426 MOBILE_API_VERSION_UNSUPPORTED (missing or unsupported X-Mobile-Api-Version) or 426 UPDATE_REQUIRED (X-App-Version below the minimum, TEC-236; `data` carries the minimum and the store links). Either way the app asks the user to update. */
         MobileApiVersionUnsupported: {
             headers: {
                 [name: string]: unknown;
             };
             content: {
-                "application/json": components["schemas"]["Error"];
+                "application/json": components["schemas"]["UpdateRequiredError"];
             };
         };
         /** @description 410 QR_LOGIN_EXPIRED */

@@ -542,4 +542,5 @@ var elCatalog = map[string]string{
 	"warehouse.eod.type.reclassification":          "Επαναταξινόμηση",
 	"warehouse.eod.type.void":                      "Ακύρωση",
 	"warehouse.eod.type.external_outbound":         "Εξωτερική έξοδος",
+	"mobile.update_required":                       "Αυτή η έκδοση της εφαρμογής δεν υποστηρίζεται πλέον. Ενημερώστε την εφαρμογή για να συνεχίσετε.",
 }

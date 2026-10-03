@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/appversion"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
 )
 
@@ -56,6 +58,102 @@ func MobileAPIVersion(minVersion, maxVersion int) func(http.Handler) http.Handle
 				return
 			}
 			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// AppVersionHeader carries the mobile app release ("2.4.1"), unlike
+// X-Mobile-Api-Version, which is the API contract major (TEC-236).
+const AppVersionHeader = "X-App-Version"
+
+// MobilePathPrefix is the root the app version gate applies to; the legacy
+// aliases (/v1/mobile/legacy/*) are under it too.
+const MobilePathPrefix = "/v1/mobile/"
+
+// AppVersionPolicy is the effective gate of one request. An empty or
+// unparsable MinVersion disables the gate.
+type AppVersionPolicy struct {
+	MinVersion      string
+	StoreURLIOS     string
+	StoreURLAndroid string
+	// VersionRequired refuses a request whose version cannot be read.
+	VersionRequired bool
+}
+
+// UpdateRequiredData is the data of a 426 UPDATE_REQUIRED.
+type UpdateRequiredData struct {
+	MinVersion     string         `json:"min_version"`
+	CurrentVersion *string        `json:"current_version"`
+	StoreURLs      AppStoreURLSet `json:"store_urls"`
+}
+
+// AppStoreURLSet holds the store links (null when not configured).
+type AppStoreURLSet struct {
+	IOS     *string `json:"ios"`
+	Android *string `json:"android"`
+}
+
+func optional(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+// RequestAppVersion reads the app release from X-App-Version, else from a
+// User-Agent token of one of uaProducts ("OlexFilms/2.4.1 ..."). A present
+// but malformed header counts as unknown.
+func RequestAppVersion(r *http.Request, uaProducts []string) (appversion.Version, bool) {
+	if raw := strings.TrimSpace(r.Header.Get(AppVersionHeader)); raw != "" {
+		return appversion.Parse(raw)
+	}
+	return appversion.FromUserAgent(r.UserAgent(), uaProducts)
+}
+
+// MobileAppVersion is the app version gate (TEC-236, F2-05d). It wraps the
+// whole router and acts on /v1/mobile/* only, legacy aliases included, so
+// it runs before routing, authentication and the X-Mobile-Api-Version
+// check: an app below the minimum gets 426 UPDATE_REQUIRED, the localized
+// message (i18n "mobile.update_required", Accept-Language) and the store
+// links, whatever route it calls. An app at or above the minimum passes.
+// An app whose version cannot be read (no header, no known User-Agent
+// token: the old hub app) passes unless VersionRequired is on.
+//
+// policy is read per request (system settings with a short cache, env
+// fallback), so changing the minimum needs no restart.
+func MobileAppVersion(policy func(*http.Request) AppVersionPolicy, uaProducts []string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if !strings.HasPrefix(r.URL.Path, MobilePathPrefix) || r.Method == http.MethodOptions {
+				next.ServeHTTP(w, r)
+				return
+			}
+			p := policy(r)
+			minV, gated := appversion.Parse(p.MinVersion)
+			if !gated {
+				next.ServeHTTP(w, r)
+				return
+			}
+			v, known := RequestAppVersion(r, uaProducts)
+			if (known && appversion.Compare(v, minV) >= 0) || (!known && !p.VersionRequired) {
+				next.ServeHTTP(w, r)
+				return
+			}
+			data := UpdateRequiredData{
+				MinVersion: minV.String(),
+				StoreURLs:  AppStoreURLSet{IOS: optional(p.StoreURLIOS), Android: optional(p.StoreURLAndroid)},
+			}
+			if known {
+				data.CurrentVersion = optional(v.String())
+			}
+			loc := i18n.FromContext(r.Context()).Locale
+			response.ErrorWithData(w, r, http.StatusUpgradeRequired, response.CodeUpdateRequired,
+				i18n.Translate(loc, "mobile.update_required"),
+				[]response.Detail{{
+					Field:   AppVersionHeader,
+					Message: "minimum version: " + data.MinVersion,
+					Code:    "update_required",
+				}}, data)
 		})
 	}
 }

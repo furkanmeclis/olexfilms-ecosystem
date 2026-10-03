@@ -67,6 +67,15 @@ type MobileConfig struct {
 	// /v1/mobile/legacy/* (TEC-234, MOBILE_LEGACY_ALIASES, default off;
 	// removed in F5).
 	LegacyAliases bool
+	// App version gate (TEC-236): environment defaults of the mobile.*
+	// system settings. AppMinVersion empty = no gate unless the setting is
+	// stored. AppUserAgentProducts are the User-Agent product tokens read as
+	// the app version when X-App-Version is missing.
+	AppMinVersion        string
+	AppStoreURLIOS       string
+	AppStoreURLAndroid   string
+	AppVersionRequired   bool
+	AppUserAgentProducts []string
 }
 
 // WarrantyConfig tunes the periodic warranty tasks. RepairScanDays is the
@@ -396,6 +405,12 @@ func Load() (Config, error) {
 			MaxAPIVersion: getInt("MOBILE_API_MAX_VERSION", 1),
 			QRLoginTTL:    getDuration("QR_LOGIN_TTL", 120*time.Second),
 			LegacyAliases: getBool("MOBILE_LEGACY_ALIASES", false),
+
+			AppMinVersion:        getEnv("MOBILE_APP_MIN_VERSION", ""),
+			AppStoreURLIOS:       getEnv("MOBILE_APP_STORE_URL_IOS", ""),
+			AppStoreURLAndroid:   getEnv("MOBILE_APP_STORE_URL_ANDROID", ""),
+			AppVersionRequired:   getBool("MOBILE_APP_VERSION_REQUIRED", false),
+			AppUserAgentProducts: splitCSV(getEnv("MOBILE_APP_UA_PRODUCTS", "OlexFilms")),
 		},
 		Glorian: GlorianConfig{
 			Enabled:        getBool("GLORIAN_INVENTORY_ENABLED", false),

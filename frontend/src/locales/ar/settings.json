@@ -64,6 +64,8 @@
   "system.groups.warehouse_hint": "سلوك المستودع والمخزون.",
   "system.groups.scanning": "المسح",
   "system.groups.scanning_hint": "إعدادات مسح الباركود وQR.",
+  "system.groups.mobile": "تطبيق الجوال",
+  "system.groups.mobile_hint": "الحد الأدنى لإصدار التطبيق وروابط المتجر؛ يُطلب من الإصدارات الأقدم التحديث.",
   "system.keys.forecast_min_days": "الحد الأدنى لفترة التوقع (أيام)",
   "system.keys.forecast_min_days_hint": "الحد الأدنى من سجل الحركات قبل أن يقترح التوقع شيئًا.",
   "system.keys.contract_grace_days": "فترة سماح العقد (أيام)",

@@ -71,6 +71,9 @@ type Worker struct {
 	warehouseEOD WarehouseEODFunc
 	// TEC-268: Glorian catalog and dealer pull.
 	glorianPull GlorianPullFunc
+	// TEC-270: Glorian barcode push (bulk upsert) and outbound PATCH.
+	glorianPush  GlorianPushBarcodesFunc
+	glorianPatch GlorianPatchStockItemFunc
 }
 
 // NewWorker builds a worker that handles known task types on every queue.
@@ -141,6 +144,8 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskTasksDueScan, w.handleTasksDueScan)
 	mux.HandleFunc(TaskWarehouseEODReports, w.handleWarehouseEOD)
 	mux.HandleFunc(TaskGlorianPullCatalog, w.handleGlorianPull)
+	mux.HandleFunc(TaskGlorianPushBarcodes, w.handleGlorianPush)
+	mux.HandleFunc(TaskGlorianPatchStockItem, w.handleGlorianPatch)
 	return w
 }
 

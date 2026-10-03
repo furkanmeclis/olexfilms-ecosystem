@@ -109,6 +109,21 @@ func ErrorWithDetails(w http.ResponseWriter, r *http.Request, status int, code, 
 	})
 }
 
+// ErrorWithData writes a failed envelope that also carries data, for errors
+// the client acts on (426 UPDATE_REQUIRED: the store links).
+func ErrorWithData(w http.ResponseWriter, r *http.Request, status int, code, message string, details []Detail, data any) {
+	body := &ErrorBody{Code: code, Message: message}
+	if len(details) > 0 {
+		body.Details = details
+	}
+	write(w, r, status, Envelope{
+		Success: false,
+		Data:    data,
+		Error:   body,
+		Meta:    metaFrom(r),
+	})
+}
+
 // ValidationError writes HTTP 400 with code VALIDATION_ERROR and field details.
 func ValidationError(w http.ResponseWriter, r *http.Request, details []Detail) {
 	msg := "Request validation failed"

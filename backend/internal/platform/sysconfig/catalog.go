@@ -11,8 +11,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"net/url"
 	"sort"
 	"strings"
+
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/appversion"
 )
 
 // Kind is the JSON type a setting holds.
@@ -36,6 +39,7 @@ const (
 	GroupSMTP      Group = "smtp"
 	GroupWarehouse Group = "warehouse"
 	GroupScanning  Group = "scanning"
+	GroupMobile    Group = "mobile"
 )
 
 // SchemaVersion is stored with every row; bump it when a key's shape
@@ -71,6 +75,17 @@ const (
 	KeyScanShortCodeEnabled        = "scan.short_code_enabled"
 	KeyScanShortCodePrefix         = "scan.short_code_prefix"
 	KeyScanBareLocationCodeEnabled = "scan.bare_location_code_enabled"
+
+	// Mobile app version gate (TEC-236): apps below the minimum release get
+	// 426 UPDATE_REQUIRED with the store links. Empty values fall back to
+	// the environment (MOBILE_APP_MIN_VERSION, MOBILE_APP_STORE_URL_*).
+	KeyMobileAppMinVersion      = "mobile.app_min_version"
+	KeyMobileAppStoreURLIOS     = "mobile.app_store_url_ios"
+	KeyMobileAppStoreURLAndroid = "mobile.app_store_url_android"
+	// KeyMobileAppVersionRequired refuses a /v1/mobile/* request whose app
+	// version cannot be read (no X-App-Version, no known User-Agent token)
+	// while a minimum is set. Off: such requests pass.
+	KeyMobileAppVersionRequired = "mobile.app_version_required"
 )
 
 // DefaultBulkUndoWindowHours is the catalog default of KeyBulkUndoWindowHours.
@@ -93,6 +108,27 @@ type Definition struct {
 	MaxLen int    `json:"max_len,omitempty"`
 	// Secret values are masked on read (SecretMask).
 	Secret bool `json:"secret,omitempty"`
+	// check further validates a non-empty KindString value; it returns the
+	// error message or "".
+	check func(string) string
+}
+
+func checkAppVersion(s string) string {
+	if s != "" && !appversion.Valid(s) {
+		return "must be a version such as 2.4.0"
+	}
+	return ""
+}
+
+func checkHTTPSURL(s string) string {
+	if s == "" {
+		return ""
+	}
+	u, err := url.Parse(s)
+	if err != nil || u.Scheme != "https" || u.Host == "" {
+		return "must be an https:// URL"
+	}
+	return ""
 }
 
 func i64(v int64) *int64 { return &v }
@@ -126,6 +162,14 @@ var catalog = []Definition{
 		Description: "Barcode prefix of short codes (A-Z0-9, 2-8 characters); empty = the brand's default prefix"},
 	{Key: KeyScanBareLocationCodeEnabled, Group: GroupScanning, Kind: KindBool, Default: false,
 		Description: "Scanner also resolves a location full_code typed without the OFW:LOC: prefix"},
+	{Key: KeyMobileAppMinVersion, Group: GroupMobile, Kind: KindString, Default: "", MaxLen: 32, check: checkAppVersion,
+		Description: "Minimum mobile app version (e.g. 2.4.0); older apps get 426 UPDATE_REQUIRED. Empty = MOBILE_APP_MIN_VERSION from the environment; both empty = no gate"},
+	{Key: KeyMobileAppStoreURLIOS, Group: GroupMobile, Kind: KindString, Default: "", MaxLen: 500, check: checkHTTPSURL,
+		Description: "App Store link sent with UPDATE_REQUIRED; empty = MOBILE_APP_STORE_URL_IOS from the environment"},
+	{Key: KeyMobileAppStoreURLAndroid, Group: GroupMobile, Kind: KindString, Default: "", MaxLen: 500, check: checkHTTPSURL,
+		Description: "Google Play link sent with UPDATE_REQUIRED; empty = MOBILE_APP_STORE_URL_ANDROID from the environment"},
+	{Key: KeyMobileAppVersionRequired, Group: GroupMobile, Kind: KindBool, Default: false,
+		Description: "While a minimum version is set, also refuse mobile requests whose app version is unknown (no X-App-Version header or app User-Agent token)"},
 }
 
 var byKey = func() map[string]Definition {
@@ -213,6 +257,12 @@ func (d Definition) Validate(raw json.RawMessage) (json.RawMessage, error) {
 		}
 		if d.MaxLen > 0 && len([]rune(s)) > d.MaxLen {
 			return fail(fmt.Sprintf("must be at most %d characters", d.MaxLen))
+		}
+		if d.check != nil {
+			if msg := d.check(strings.TrimSpace(s)); msg != "" {
+				return fail(msg)
+			}
+			s = strings.TrimSpace(s)
 		}
 		return mustJSON(s), nil
 	}

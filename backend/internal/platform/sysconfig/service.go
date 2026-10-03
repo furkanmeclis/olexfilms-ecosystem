@@ -157,6 +157,41 @@ func (s *Service) SMTP(ctx context.Context) SMTP {
 	}
 }
 
+// MobileApp is the mobile app version gate (TEC-236). An empty MinVersion
+// means no gate.
+type MobileApp struct {
+	MinVersion      string
+	StoreURLIOS     string
+	StoreURLAndroid string
+	VersionRequired bool
+}
+
+// WithFallback fills the empty string fields from env (the environment
+// defaults), so a stored setting wins and an unset one keeps the env value.
+func (m MobileApp) WithFallback(env MobileApp) MobileApp {
+	if m.MinVersion == "" {
+		m.MinVersion = env.MinVersion
+	}
+	if m.StoreURLIOS == "" {
+		m.StoreURLIOS = env.StoreURLIOS
+	}
+	if m.StoreURLAndroid == "" {
+		m.StoreURLAndroid = env.StoreURLAndroid
+	}
+	m.VersionRequired = m.VersionRequired || env.VersionRequired
+	return m
+}
+
+// MobileApp returns the stored mobile.* overrides (empty = not set).
+func (s *Service) MobileApp(ctx context.Context) MobileApp {
+	return MobileApp{
+		MinVersion:      s.String(ctx, KeyMobileAppMinVersion),
+		StoreURLIOS:     s.String(ctx, KeyMobileAppStoreURLIOS),
+		StoreURLAndroid: s.String(ctx, KeyMobileAppStoreURLAndroid),
+		VersionRequired: s.Bool(ctx, KeyMobileAppVersionRequired),
+	}
+}
+
 // List returns every catalog entry with its effective value; secrets are
 // masked.
 func (s *Service) List(ctx context.Context) ([]Entry, error) {
