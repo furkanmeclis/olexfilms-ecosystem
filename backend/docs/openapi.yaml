@@ -21865,6 +21865,22 @@ components:
         rate_date: { type: string, format: date }
         source: { type: string, example: tcmb }
         via: { type: string, description: Pivot currency of a cross rate }
+        pairs:
+          type: array
+          description: >-
+            Extra rates frozen at the same moment, from the order currency to
+            each party's ledger currency (K7, TEC-226). Missing on orders
+            approved before TEC-226.
+          items:
+            type: object
+            required: [base, quote, rate, rate_date, source]
+            properties:
+              base: { type: string }
+              quote: { type: string }
+              rate: { type: string }
+              rate_date: { type: string, format: date }
+              source: { type: string }
+              via: { type: string }
 
     Order:
       type: object

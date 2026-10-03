@@ -70,6 +70,29 @@ type Snapshot struct {
 	Source   string `json:"source"`
 	// Via is the pivot currency of a cross rate (TRY or EUR).
 	Via string `json:"via,omitempty"`
+	// Pairs holds extra rates frozen at the same moment, e.g. from the order
+	// currency to each party's ledger currency (K7: the value is frozen, not
+	// only the day). Nested pairs never carry Pairs themselves.
+	Pairs []Snapshot `json:"pairs,omitempty"`
+}
+
+// Find returns the frozen rate for base/quote: the snapshot itself or one of
+// its Pairs. ok is false when neither matches.
+func (s *Snapshot) Find(base, quote string) (Snapshot, bool) {
+	if s == nil {
+		return Snapshot{}, false
+	}
+	if s.Base == base && s.Quote == quote {
+		out := *s
+		out.Pairs = nil
+		return out, true
+	}
+	for _, p := range s.Pairs {
+		if p.Base == base && p.Quote == quote {
+			return p, true
+		}
+	}
+	return Snapshot{}, false
 }
 
 // NormalizeCode upper-cases and validates an ISO 4217 code.
