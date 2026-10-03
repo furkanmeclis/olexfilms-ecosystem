@@ -1487,6 +1487,7 @@ type Querier interface {
 	// warehouse product match). Written only by cmd/migrator inside a step
 	// transaction.
 	MigratorCarBrandByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorCarBrandByUUIDRow, error)
+	MigratorCarModelByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorCarModelByUUIDRow, error)
 	MigratorCarModelIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	MigratorCategoryIDByUUID(ctx context.Context, arg MigratorCategoryIDByUUIDParams) (int64, error)
 	// Whether another live user already holds the e-mail or the phone.
@@ -1496,6 +1497,9 @@ type Querier interface {
 	MigratorCountLocationUnits(ctx context.Context, arg MigratorCountLocationUnitsParams) (int64, error)
 	// The live distributor owning the country-level territory of a brand.
 	MigratorCountryDistributor(ctx context.Context, arg MigratorCountryDistributorParams) (int64, error)
+	// The account a migrated customer maps to; a merged account resolves to the
+	// account it was merged into.
+	MigratorCustomerUserByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	MigratorDeleteFixedHoldings(ctx context.Context, unitID int64) error
 	MigratorDeleteUnitState(ctx context.Context, unitID int64) error
 	MigratorDistributorBySlug(ctx context.Context, arg MigratorDistributorBySlugParams) (int64, error)
@@ -1528,6 +1532,9 @@ type Querier interface {
 	MigratorFindUnitByBarcode(ctx context.Context, arg MigratorFindUnitByBarcodeParams) (uuid.UUID, error)
 	// An existing account with the e-mail (preferred) or the phone.
 	MigratorFindUserByContact(ctx context.Context, arg MigratorFindUserByContactParams) (MigratorFindUserByContactRow, error)
+	// A live vehicle of the customer with the VIN, else with the plate (one
+	// that has no other VIN). The VIN match wins.
+	MigratorFindVehicle(ctx context.Context, arg MigratorFindVehicleParams) (MigratorFindVehicleRow, error)
 	// TEC-257: migrator step 5 (warehouse structure, stock units and their
 	// initial ownership). Written only by cmd/migrator inside a step
 	// transaction. The ownership rows carry no movement (last_movement_id NULL);
@@ -1556,11 +1563,16 @@ type Querier interface {
 	MigratorInsertOrganization(ctx context.Context, arg MigratorInsertOrganizationParams) (int64, error)
 	MigratorInsertProduct(ctx context.Context, arg MigratorInsertProductParams) (int64, error)
 	MigratorInsertRoom(ctx context.Context, arg MigratorInsertRoomParams) (int64, error)
+	MigratorInsertService(ctx context.Context, arg MigratorInsertServiceParams) (int64, error)
+	MigratorInsertServiceImage(ctx context.Context, arg MigratorInsertServiceImageParams) (int64, error)
+	MigratorInsertServiceItem(ctx context.Context, arg MigratorInsertServiceItemParams) (int64, error)
+	MigratorInsertServiceStatusLog(ctx context.Context, arg MigratorInsertServiceStatusLogParams) error
 	// A legacy token is kept as is (old links keep resolving); migrated links
 	// are brand-wide (no organization) and never expire, like the hub's.
 	MigratorInsertShortURL(ctx context.Context, arg MigratorInsertShortURLParams) (int64, error)
 	MigratorInsertUnit(ctx context.Context, arg MigratorInsertUnitParams) (int64, error)
 	MigratorInsertUser(ctx context.Context, arg MigratorInsertUserParams) (int64, error)
+	MigratorInsertVehicle(ctx context.Context, arg MigratorInsertVehicleParams) (int64, error)
 	MigratorInsertWarehouse(ctx context.Context, arg MigratorInsertWarehouseParams) (int64, error)
 	MigratorLegacyMessageExists(ctx context.Context, arg MigratorLegacyMessageExistsParams) (bool, error)
 	// One row per serving organization (K11: the customer is global, a dealer
@@ -1583,14 +1595,29 @@ type Querier interface {
 	// so the migrator no longer rewrites it.
 	MigratorOrderByUUID(ctx context.Context, arg MigratorOrderByUUIDParams) (MigratorOrderByUUIDRow, error)
 	MigratorOrderItemByUUID(ctx context.Context, arg MigratorOrderItemByUUIDParams) (MigratorOrderItemByUUIDRow, error)
+	// TEC-259: migrator step 7a (services, items, images, status logs). Written
+	// only by cmd/migrator inside a step transaction. Nothing here writes the
+	// outbox: the import starts no warranty and sends no notification.
+	MigratorOrganizationByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorOrganizationByUUIDRow, error)
 	MigratorOrganizationIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
+	MigratorOrganizationUUIDByID(ctx context.Context, id int64) (uuid.UUID, error)
 	MigratorProductForUnit(ctx context.Context, arg MigratorProductForUnitParams) (MigratorProductForUnitRow, error)
 	MigratorProductIDByUUID(ctx context.Context, arg MigratorProductIDByUUIDParams) (int64, error)
 	MigratorRoleOrgTypes(ctx context.Context, slugs []string) ([]MigratorRoleOrgTypesRow, error)
 	MigratorRoomByUUID(ctx context.Context, arg MigratorRoomByUUIDParams) (MigratorRoomByUUIDRow, error)
 	// The full_code prefix of the room's root locations (<warehouse>-<room>).
 	MigratorRoomFullCodePrefix(ctx context.Context, arg MigratorRoomFullCodePrefixParams) (string, error)
+	MigratorServiceByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorServiceByUUIDRow, error)
+	MigratorServiceImageByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
+	MigratorServiceItemByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
+	// Another service already holds the number.
+	MigratorServiceNoTaken(ctx context.Context, arg MigratorServiceNoTakenParams) (bool, error)
+	// A unit of the brand with its product and the category's part keys.
+	MigratorServiceUnit(ctx context.Context, arg MigratorServiceUnitParams) (MigratorServiceUnitRow, error)
 	MigratorSetCarBrandLogo(ctx context.Context, arg MigratorSetCarBrandLogoParams) error
+	// The legacy status of a service that is not final yet. A final status is
+	// written after the items, which are locked afterwards.
+	MigratorSetServiceStatus(ctx context.Context, arg MigratorSetServiceStatusParams) error
 	// TEC-263: migrator steps 10-11 (hub short_urls -> short_urls, hub
 	// sms_logs / notifications -> legacy_messages). Written only by
 	// cmd/migrator inside a step transaction.
@@ -1618,6 +1645,10 @@ type Querier interface {
 	// Legacy-sourced fields only; images, unit type and the sync columns stay.
 	MigratorUpdateProduct(ctx context.Context, arg MigratorUpdateProductParams) error
 	MigratorUpdateRoom(ctx context.Context, arg MigratorUpdateRoomParams) error
+	// A changed legacy service. The status is written by MigratorSetServiceStatus.
+	MigratorUpdateService(ctx context.Context, arg MigratorUpdateServiceParams) error
+	MigratorUpdateServiceImage(ctx context.Context, arg MigratorUpdateServiceImageParams) error
+	MigratorUpdateServiceItem(ctx context.Context, arg MigratorUpdateServiceItemParams) error
 	MigratorUpdateShortURL(ctx context.Context, arg MigratorUpdateShortURLParams) error
 	// Product and status only: issuer, brand, barcode and kind are immutable.
 	MigratorUpdateUnit(ctx context.Context, arg MigratorUpdateUnitParams) error
@@ -1631,6 +1662,7 @@ type Querier interface {
 	MigratorUpsertUnitState(ctx context.Context, arg MigratorUpsertUnitStateParams) (int64, error)
 	MigratorUserByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorUserByUUIDRow, error)
 	MigratorUserIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
+	MigratorVehicleByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorVehicleByUUIDRow, error)
 	MigratorWarehouseIDByUUID(ctx context.Context, arg MigratorWarehouseIDByUUIDParams) (int64, error)
 	// Consents the target has not decided yet; a decision the target already
 	// made for the same legal text wins and the source's stays as a record.
