@@ -90,3 +90,25 @@ WHERE d.uuid = sqlc.arg(uuid)
   AND (sqlc.narg(org_ids)::bigint[] IS NULL
        OR d.organization_id = ANY (sqlc.narg(org_ids)::bigint[])
        OR d.counterparty_org_id = ANY (sqlc.narg(org_ids)::bigint[]));
+
+-- TEC-229: locks the order a dispute reversal would reverse (by its
+-- accounting source uuid) against a concurrent return receipt
+-- (LockOrdersOfTransferRequest).
+-- name: LockOrderForDisputeReversal :one
+SELECT id FROM orders
+WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id)
+FOR UPDATE;
+
+-- TEC-229: booked return lines of an order (a received return whose line
+-- was priced and not excluded); a dispute on that order's sale cannot then
+-- be resolved with a reversal.
+-- name: CountBookedReturnItemsOfOrder :one
+SELECT COUNT(*)
+FROM stock_transfer_request_items i
+JOIN stock_transfer_requests r ON r.id = i.request_id
+JOIN order_items oi ON oi.id = i.order_item_id
+WHERE oi.order_id = sqlc.arg(order_id)
+  AND r.kind = 'return'
+  AND r.status = 'received'
+  AND i.line_total IS NOT NULL
+  AND NOT i.accounting_excluded;

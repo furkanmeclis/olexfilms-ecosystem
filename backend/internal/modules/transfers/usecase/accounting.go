@@ -39,6 +39,10 @@ import (
 // organization's currency on the receipt day; nothing is written.
 var ErrRateNotFound = errors.New("transfers: exchange rate not found")
 
+// orderSourceType is the accounting source type of an order sale
+// (orders usecase AccountingSourceType); a dispute on that sale carries it.
+const orderSourceType = "order"
+
 // AccountingPoster is the part of *posting.Poster the bridge uses.
 type AccountingPoster interface {
 	PostSiblingTransferTx(ctx context.Context, tx pgx.Tx, t posting.SiblingTransfer) (posting.SaleResult, error)
@@ -85,6 +89,11 @@ func (s *Service) book(ctx context.Context, q *db.Queries, tx pgx.Tx, c Caller, 
 	if err != nil {
 		return err
 	}
+	if r.Kind == KindReturn {
+		if rows, err = s.excludeReversedSales(ctx, q, r, rows); err != nil {
+			return err
+		}
+	}
 	amount, ok := frozenTotal(rows)
 	if !ok {
 		return nil
@@ -109,6 +118,46 @@ func (s *Service) book(ctx context.Context, q *db.Queries, tx pgx.Tx, c Caller, 
 		return fmt.Errorf("transfers: accounting of %s: %w", r.TransferNo, err)
 	}
 	return nil
+}
+
+// excludeReversedSales (TEC-229, K24) drops the return lines whose order
+// sale a dispute already reversed (resolution reversal): booking them again
+// would reverse the same sale twice. The lines are still received (the
+// stock moves) but marked accounting_excluded and left out of the amount,
+// so no accounting row is written for them; the transfer view shows the
+// flag as the warning. The orders are locked FOR SHARE first so a
+// concurrent dispute reversal of the same order waits for this receipt
+// (and then sees it, ErrDisputeSaleReturned in accounting).
+func (s *Service) excludeReversedSales(ctx context.Context, q *db.Queries, r db.StockTransferRequest,
+	rows []db.ListTransferRequestItemsRow) ([]db.ListTransferRequestItemsRow, error) {
+	if _, err := q.LockOrdersOfTransferRequest(ctx, r.ID); err != nil {
+		return nil, fmt.Errorf("transfers: lock orders of %s: %w", r.TransferNo, err)
+	}
+	ids, err := q.ListTransferItemsOfReversedSales(ctx, db.ListTransferItemsOfReversedSalesParams{
+		RequestID: r.ID, SourceType: orderSourceType,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("transfers: reversed sales of %s: %w", r.TransferNo, err)
+	}
+	if len(ids) == 0 {
+		return rows, nil
+	}
+	if err := q.SetTransferItemsAccountingExcluded(ctx, db.SetTransferItemsAccountingExcludedParams{
+		RequestID: r.ID, Ids: ids,
+	}); err != nil {
+		return nil, fmt.Errorf("transfers: exclude reversed lines of %s: %w", r.TransferNo, err)
+	}
+	skip := make(map[int64]bool, len(ids))
+	for _, id := range ids {
+		skip[id] = true
+	}
+	kept := make([]db.ListTransferRequestItemsRow, 0, len(rows))
+	for _, it := range rows {
+		if !skip[it.ID] {
+			kept = append(kept, it)
+		}
+	}
+	return kept, nil
 }
 
 // VoidAccountingTx reverses every open accounting row of the request (both

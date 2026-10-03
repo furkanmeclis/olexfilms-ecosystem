@@ -11923,6 +11923,9 @@ paths:
         reposts corrected_amount (in the entry's orig_currency, at the
         frozen rate) as revision + 1 in the same transaction; reject needs a
         note and posts nothing. A final dispute answers 409 DISPUTE_NOT_OPEN.
+        A reversal of an order sale that already has a received and booked
+        return (TEC-223) answers 422 DISPUTE_SALE_RETURNED and writes
+        nothing (the return already reversed it; revise or reject instead).
         Writes accounting.dispute_resolved or accounting.dispute_rejected.
       security:
         - bearerAuth: []
@@ -11951,6 +11954,12 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "422":
+          description: DISPUTE_SALE_RETURNED, the order sale already has a booked return (TEC-229)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /v1/accounting/cari/{uuid}/statement:
     get:
@@ -20871,7 +20880,7 @@ components:
 
     StockTransferItem:
       type: object
-      required: [uuid, unit_uuid, barcode, unit_kind, product, quantity, meters, unit_price, line_total, shipped, received, restored]
+      required: [uuid, unit_uuid, barcode, unit_kind, product, quantity, meters, unit_price, line_total, shipped, received, restored, accounting_excluded]
       properties:
         uuid: { type: string, format: uuid }
         unit_uuid: { type: string, format: uuid }
@@ -20885,6 +20894,13 @@ components:
         shipped: { type: boolean, description: The transfer_out movement is written }
         received: { type: boolean, description: The transfer_in movement is written }
         restored: { type: boolean, description: The transfer_cancel_restore movement is written }
+        accounting_excluded:
+          type: boolean
+          description: >-
+            Warning (TEC-229, K24): the return line was received without an
+            accounting row because a dispute already reversed the sale of
+            its order (the sale is not reversed twice); its line_total is
+            not booked.
 
     StockTransfer:
       type: object

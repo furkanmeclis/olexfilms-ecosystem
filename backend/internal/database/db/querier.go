@@ -97,6 +97,10 @@ type Querier interface {
 	CountAppLogsByLevel(ctx context.Context) ([]CountAppLogsByLevelRow, error)
 	CountBarcodeBatches(ctx context.Context, organizationID int64) (int64, error)
 	CountBinProductStockRows(ctx context.Context, arg CountBinProductStockRowsParams) (int64, error)
+	// TEC-229: booked return lines of an order (a received return whose line
+	// was priced and not excluded); a dispute on that order's sale cannot then
+	// be resolved with a reversal.
+	CountBookedReturnItemsOfOrder(ctx context.Context, orderID int64) (int64, error)
 	CountBulkJobsForActor(ctx context.Context, actorID int64) (int64, error)
 	CountBulkOperationsForOrganization(ctx context.Context, organizationID pgtype.Int8) (int64, error)
 	CountCarBrands(ctx context.Context, arg CountCarBrandsParams) (int64, error)
@@ -617,7 +621,7 @@ type Querier interface {
 	GetUnitCurrentState(ctx context.Context, unitID int64) (UnitCurrentState, error)
 	// TEC-223: the price a unit was sold at to buyer by seller (its latest
 	// order line with the unit assigned, the order not cancelled), in currency.
-	GetUnitLastOrderPrice(ctx context.Context, arg GetUnitLastOrderPriceParams) (pgtype.Numeric, error)
+	GetUnitLastOrderPrice(ctx context.Context, arg GetUnitLastOrderPriceParams) (GetUnitLastOrderPriceRow, error)
 	GetUserByEmail(ctx context.Context, email pgtype.Text) (User, error)
 	GetUserByID(ctx context.Context, id int64) (User, error)
 	GetUserByPhone(ctx context.Context, phoneE164 pgtype.Text) (User, error)
@@ -1077,6 +1081,10 @@ type Querier interface {
 	ListTaskComments(ctx context.Context, arg ListTaskCommentsParams) ([]ListTaskCommentsRow, error)
 	ListTasks(ctx context.Context, arg ListTasksParams) ([]ListTasksRow, error)
 	ListTerritories(ctx context.Context, arg ListTerritoriesParams) ([]ListTerritoriesRow, error)
+	// TEC-229: return lines of a request whose order sale was already reversed
+	// by a dispute (accounting source source_type + orders.uuid, status
+	// resolved_reversal); they are received without an accounting row.
+	ListTransferItemsOfReversedSales(ctx context.Context, arg ListTransferItemsOfReversedSalesParams) ([]int64, error)
 	// Members of an organization whose organization roles grant a permission
 	// (TEC-200: recipients of the transfers.* notifications).
 	ListTransferNotifyUserIDs(ctx context.Context, arg ListTransferNotifyUserIDsParams) ([]int64, error)
@@ -1191,8 +1199,16 @@ type Querier interface {
 	LockOTPSubject(ctx context.Context, subject string) error
 	LockOrder(ctx context.Context, arg LockOrderParams) (Order, error)
 	LockOrderByUUID(ctx context.Context, arg LockOrderByUUIDParams) (Order, error)
+	// TEC-229: locks the order a dispute reversal would reverse (by its
+	// accounting source uuid) against a concurrent return receipt
+	// (LockOrdersOfTransferRequest).
+	LockOrderForDisputeReversal(ctx context.Context, arg LockOrderForDisputeReversalParams) (int64, error)
 	LockOrderItem(ctx context.Context, arg LockOrderItemParams) (OrderItem, error)
 	LockOrderItems(ctx context.Context, orderID int64) ([]OrderItem, error)
+	// TEC-229: locks (FOR SHARE) the orders the return lines of a request were
+	// sold on, so a dispute reversal of the same order (LockOrderForDisputeReversal,
+	// FOR UPDATE) and the receipt of the return are serialized.
+	LockOrdersOfTransferRequest(ctx context.Context, requestID int64) ([]int64, error)
 	LockOrganizationProductStock(ctx context.Context, arg LockOrganizationProductStockParams) (OrganizationProductStock, error)
 	LockService(ctx context.Context, arg LockServiceParams) (Service, error)
 	LockServiceByUUID(ctx context.Context, arg LockServiceByUUIDParams) (Service, error)
@@ -1384,8 +1400,10 @@ type Querier interface {
 	SetTaskAssignee(ctx context.Context, arg SetTaskAssigneeParams) (Task, error)
 	SetTransferItemInMovement(ctx context.Context, arg SetTransferItemInMovementParams) error
 	SetTransferItemOutMovement(ctx context.Context, arg SetTransferItemOutMovementParams) error
+	// order_item_id (TEC-229): the parent's order line a return line reverses.
 	SetTransferItemPrice(ctx context.Context, arg SetTransferItemPriceParams) error
 	SetTransferItemRestoreMovement(ctx context.Context, arg SetTransferItemRestoreMovementParams) error
+	SetTransferItemsAccountingExcluded(ctx context.Context, arg SetTransferItemsAccountingExcludedParams) error
 	SetUnitRemainingMetersForRepair(ctx context.Context, arg SetUnitRemainingMetersForRepairParams) error
 	SetUnitStatusForRepair(ctx context.Context, arg SetUnitStatusForRepairParams) error
 	SetUserEmailVerified(ctx context.Context, id int64) (User, error)

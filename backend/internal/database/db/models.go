@@ -1519,22 +1519,24 @@ type StockTransferRequest struct {
 }
 
 type StockTransferRequestItem struct {
-	ID                int64              `json:"id"`
-	Uuid              uuid.UUID          `json:"uuid"`
-	RequestID         int64              `json:"request_id"`
-	OrganizationID    int64              `json:"organization_id"`
-	BrandID           int64              `json:"brand_id"`
-	UnitID            int64              `json:"unit_id"`
-	ProductID         int64              `json:"product_id"`
-	Quantity          pgtype.Int4        `json:"quantity"`
-	Meters            pgtype.Numeric     `json:"meters"`
-	UnitPrice         pgtype.Numeric     `json:"unit_price"`
-	LineTotal         pgtype.Numeric     `json:"line_total"`
-	OutMovementID     pgtype.Int8        `json:"out_movement_id"`
-	InMovementID      pgtype.Int8        `json:"in_movement_id"`
-	RestoreMovementID pgtype.Int8        `json:"restore_movement_id"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	ID                 int64              `json:"id"`
+	Uuid               uuid.UUID          `json:"uuid"`
+	RequestID          int64              `json:"request_id"`
+	OrganizationID     int64              `json:"organization_id"`
+	BrandID            int64              `json:"brand_id"`
+	UnitID             int64              `json:"unit_id"`
+	ProductID          int64              `json:"product_id"`
+	Quantity           pgtype.Int4        `json:"quantity"`
+	Meters             pgtype.Numeric     `json:"meters"`
+	UnitPrice          pgtype.Numeric     `json:"unit_price"`
+	LineTotal          pgtype.Numeric     `json:"line_total"`
+	OutMovementID      pgtype.Int8        `json:"out_movement_id"`
+	InMovementID       pgtype.Int8        `json:"in_movement_id"`
+	RestoreMovementID  pgtype.Int8        `json:"restore_movement_id"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	OrderItemID        pgtype.Int8        `json:"order_item_id"`
+	AccountingExcluded bool               `json:"accounting_excluded"`
 }
 
 type StorageActivity struct {
