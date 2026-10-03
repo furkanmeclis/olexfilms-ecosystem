@@ -119,6 +119,18 @@ describe("orderActions (role and status)", () => {
     ).toEqual(["start_preparing", "cancel"]);
   });
 
+  it("seller processing: start preparing and cancel (TEC-261)", () => {
+    expect(
+      kinds(
+        order({
+          role: "seller",
+          status: "processing",
+          available_transitions: ["preparing", "cancelled"],
+        }),
+      ),
+    ).toEqual(["start_preparing", "cancel"]);
+  });
+
   it("buyer shipped: receive and request cancellation", () => {
     expect(
       kinds(

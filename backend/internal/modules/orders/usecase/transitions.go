@@ -57,9 +57,11 @@ type rule struct {
 //	draft -> submitted (buyer, orders.write)
 //	submitted -> approved (seller, orders.approve; prices and rate freeze)
 //	approved -> preparing | processing (seller, orders.ship or orders.approve)
+//	processing -> preparing (seller, orders.ship; TEC-261: a migrated hub or
+//	    warehouse order sent to the warehouse continues on the barcode path)
 //	preparing -> ready (seller, orders.ship; every line fully assigned)
 //	ready -> shipped (seller, orders.ship; order_out per assigned unit)
-//	draft | submitted | approved | preparing | ready -> cancelled
+//	draft | submitted | approved | processing | preparing | ready -> cancelled
 //	    (either side, orders.cancel; active reservations are released)
 //
 // and after shipping (TEC-168):
@@ -86,6 +88,10 @@ var transitions = map[string]map[string]rule{
 		StatusPreparing:  {PartySeller, []string{rbac.PermOrdersShip, rbac.PermOrdersApprove}},
 		StatusProcessing: {PartySeller, []string{rbac.PermOrdersShip, rbac.PermOrdersApprove}},
 		StatusCancelled:  {PartyEither, []string{rbac.PermOrdersCancel}},
+	},
+	StatusProcessing: {
+		StatusPreparing: {PartySeller, []string{rbac.PermOrdersShip}},
+		StatusCancelled: {PartyEither, []string{rbac.PermOrdersCancel}},
 	},
 	StatusPreparing: {
 		StatusReady:     {PartySeller, []string{rbac.PermOrdersShip}},
