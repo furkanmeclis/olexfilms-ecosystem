@@ -13700,6 +13700,97 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /v1/portal/vehicles:
+    get:
+      tags: [Portal]
+      operationId: listPortalVehicles
+      summary: The portal user's vehicles (TEC-238)
+      description: >-
+        Portal session (aud=portal) with vehicles.read: only the vehicles the
+        signed-in user owns in the domain brand (K20). Glorian vehicles never
+        come back (K1/K2). Counts cover the user's non-draft services and
+        active warranties of each vehicle. No measurement data.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Vehicles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePortalVehiclePage"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/portal/vehicles/{uuid}:
+    get:
+      tags: [Portal]
+      operationId: getPortalVehicle
+      summary: One vehicle of the portal user with services and active warranties (TEC-238)
+      description: >-
+        The vehicle, a summary of the user's services on it across every
+        organization of the domain brand, the latest services (at most 50;
+        the full history is GET /v1/portal/services) and the active
+        warranties with days and percent left. Another user's vehicle, a
+        Glorian vehicle or an invalid uuid answers 404. No measurement data.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Vehicle detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePortalVehicleDetail"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/portal/services:
+    get:
+      tags: [Portal]
+      operationId: listPortalServices
+      summary: The portal user's services across every organization (TEC-238)
+      description: >-
+        Portal session (aud=portal) with services.read: the signed-in user's
+        services at every dealer / distributor of the domain brand in one
+        list, newest first. A service is the user's when the user is its
+        customer or holds one of its warranties (TEC-239 rule: a new owner
+        with a transferred warranty sees it). Draft services and Glorian
+        rows are not listed. No measurement data.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Services
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePortalServicePage"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -21685,4 +21776,159 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/PortalService" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    PortalNamedRef:
+      type: object
+      required: [uuid, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+
+    PortalOrganizationRef:
+      type: object
+      required: [uuid, name, type]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        type: { type: string }
+
+    PortalVehicle:
+      type: object
+      description: A vehicle of the portal user (TEC-238). No measurement data.
+      required: [uuid, car_brand, car_model, model_year, plate, plate_country, vin,
+        service_count, active_warranty_count, last_service_at, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        car_brand:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/PortalNamedRef"
+        car_model:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/PortalNamedRef"
+        model_year: { type: [integer, "null"] }
+        plate: { type: [string, "null"] }
+        plate_country: { type: [string, "null"] }
+        vin: { type: [string, "null"] }
+        service_count: { type: integer, format: int64 }
+        active_warranty_count: { type: integer, format: int64 }
+        last_service_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+
+    PortalServiceListItem:
+      type: object
+      description: A service of the portal user at any organization (TEC-238). No measurement data.
+      required: [uuid, service_no, status, package, organization, vehicle_uuid, car_brand_name,
+        car_model_name, model_year, plate, plate_country, completed_at, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        service_no: { type: string }
+        status: { type: string, enum: [pending, processing, ready, completed, cancelled] }
+        package: { type: [string, "null"] }
+        organization: { $ref: "#/components/schemas/PortalOrganizationRef" }
+        vehicle_uuid: { type: string, format: uuid }
+        car_brand_name: { type: string }
+        car_model_name: { type: string }
+        model_year: { type: [integer, "null"] }
+        plate: { type: [string, "null"] }
+        plate_country: { type: [string, "null"] }
+        completed_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+
+    PortalActiveWarranty:
+      type: object
+      required: [uuid, public_code, start_at, end_at, days_left, percent_left, product, service, organization]
+      properties:
+        uuid: { type: string, format: uuid }
+        public_code: { type: string }
+        start_at: { type: string, format: date-time }
+        end_at: { type: string, format: date-time }
+        days_left:
+          type: integer
+          minimum: 0
+          description: Whole days left, rounded up.
+        percent_left:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Share of the warranty period still left.
+        product:
+          type: object
+          required: [uuid, sku, name]
+          properties:
+            uuid: { type: string, format: uuid }
+            sku: { type: string }
+            name: { type: string }
+        service:
+          type: object
+          required: [uuid, service_no]
+          properties:
+            uuid: { type: string, format: uuid }
+            service_no: { type: string }
+        organization: { $ref: "#/components/schemas/PortalOrganizationRef" }
+
+    PortalVehicleDetail:
+      allOf:
+        - $ref: "#/components/schemas/PortalVehicle"
+        - type: object
+          required: [service_summary, services, active_warranties]
+          properties:
+            service_summary:
+              type: object
+              required: [total, completed, organization_count, last_service_at]
+              properties:
+                total: { type: integer, format: int64 }
+                completed: { type: integer, format: int64 }
+                organization_count: { type: integer, format: int64 }
+                last_service_at: { type: [string, "null"], format: date-time }
+            services:
+              type: array
+              maxItems: 50
+              items: { $ref: "#/components/schemas/PortalServiceListItem" }
+            active_warranties:
+              type: array
+              items: { $ref: "#/components/schemas/PortalActiveWarranty" }
+
+    EnvelopePortalVehiclePage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/PortalVehicle" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePortalVehicleDetail:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PortalVehicleDetail" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePortalServicePage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/PortalServiceListItem" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
         meta: { $ref: "#/components/schemas/ResponseMeta" }

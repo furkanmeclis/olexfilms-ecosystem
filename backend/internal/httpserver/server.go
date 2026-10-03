@@ -73,6 +73,9 @@ import (
 	ordersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/orders/usecase"
 	orgmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations"
 	orgusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
+	portalvehiclesmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/portalvehicles"
+	portalvehicleshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/portalvehicles/handler"
+	portalvehiclesusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/portalvehicles/usecase"
 	pricingmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/pricing"
 	pricinghandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/pricing/handler"
 	pricingusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/pricing/usecase"
@@ -630,6 +633,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		tokens,
 		loader,
 	)
+	// TEC-238: customer portal vehicles, vehicle detail and service history.
+	portalvehiclesmodule.RegisterRoutes(mux, portalvehicleshandler.New(portalvehiclesusecase.New(deps.Queries)), tokens, loader)
 
 	var brandResolver *brandctx.Resolver
 	if deps.Queries != nil {
