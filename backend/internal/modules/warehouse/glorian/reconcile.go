@@ -262,7 +262,7 @@ func (r *Reconciler) ReconcileConnection(ctx context.Context, conn db.Integratio
 	rep.ConnectionUUID, rep.RunUUID = conn.Uuid, run.row.Uuid
 	counts.ReconcileSummary = rep.Summary
 	counts.Remote, counts.Local, counts.Skipped = rep.Remote, rep.Local, rep.Skipped
-	counts.Details = rep.ReconcileDetails.Limit(ReconcileDetailLimit)
+	counts.Details = rep.Limit(ReconcileDetailLimit)
 	r.log.Info("glorian_reconcile_done", "connection", conn.Uuid, "remote", rep.Remote, "local", rep.Local,
 		DriftOnlyRemote, rep.Summary.OnlyRemote, DriftOnlyLocal, rep.Summary.OnlyLocal,
 		DriftStatus, rep.Summary.StatusDrift, DriftProduct, rep.Summary.ProductDrift, DriftOwner, rep.Summary.OwnerDrift)

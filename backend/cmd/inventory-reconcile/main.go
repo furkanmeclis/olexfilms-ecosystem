@@ -61,7 +61,7 @@ func main() {
 	if *asJSON {
 		out := make([]glorian.ReconcileReport, 0, len(reports))
 		for _, rep := range reports {
-			rep.ReconcileDetails = rep.ReconcileDetails.Limit(*limit)
+			rep.ReconcileDetails = rep.Limit(*limit)
 			out = append(out, rep)
 		}
 		enc := json.NewEncoder(os.Stdout)
@@ -84,7 +84,7 @@ func printText(w io.Writer, rep glorian.ReconcileReport, limit int) {
 	s := rep.Summary
 	_, _ = fmt.Fprintf(w, "inventory reconcile %s (run %s): %d remote, %d local\n",
 		rep.ConnectionUUID, rep.RunUUID, rep.Remote, rep.Local)
-	d := rep.ReconcileDetails.Limit(limit)
+	d := rep.Limit(limit)
 	for _, c := range []struct {
 		name  string
 		count int
