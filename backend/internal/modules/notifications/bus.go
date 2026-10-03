@@ -120,6 +120,11 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	on(events.ServiceReviewRequested, serviceReviewDispatch)
 	// TEC-164: a new customer gets the WhatsApp welcome with the portal link.
 	on(events.CustomerCreated, customerWelcomeDispatch)
+	// TEC-200: sibling stock transfer events go to the notified sides
+	// (notify_user_ids resolved by the transfer use case).
+	for name, code := range TransferEventCodes {
+		on(name, transferDispatcher(code))
+	}
 	on(events.AIDraftCreated, func(event events.Event) (notifmodel.DispatchInput, bool) {
 		ids := userIDsFromAIEvent(event)
 		return notifmodel.DispatchInput{
