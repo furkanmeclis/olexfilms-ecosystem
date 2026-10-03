@@ -10982,6 +10982,831 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  # --- TEC-235: mobile warehouse mirrors (tag Mobile) -------------------
+  /v1/mobile/warehouse/warehouses:
+    get:
+      tags:
+      - Mobile
+      operationId: mobileListWarehouses
+      summary: 'Mobile: Warehouses of the active organization'
+      description: |
+        Mobile mirror (TEC-235) of `GET /v1/warehouse/warehouses`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+
+        Needs `warehouse.read`; center and distributor organizations only (403 for dealers, K12). Works on the active organization's own warehouses. Ordered by sort_order. `active` filters.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/MobileApiVersion'
+      - name: active
+        in: query
+        required: false
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: Warehouses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeWarehouseList'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '426':
+          $ref: '#/components/responses/MobileApiVersionUnsupported'
+  /v1/mobile/warehouse/scan:
+    post:
+      tags:
+      - Mobile
+      operationId: mobileResolveWarehouseScan
+      summary: 'Mobile: Resolve one scanned code (location QR, unit barcode, SKU, short code)'
+      description: |
+        Mobile mirror (TEC-235) of `POST /v1/warehouse/scan`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+
+        Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Resolution order: `OFW:LOC:<full_code>` -> a location of the active organization (404 SCAN_LOCATION_NOT_FOUND otherwise, nothing else is tried); `OFW:UNIT:<barcode>` -> that unit; a unit barcode (generated `<PREFIX>-<8 digits>`, roll split `<barcode>-S<n>`, legacy/import barcodes; exact, then upper-cased); a bare location full_code when `scan.bare_location_code_enabled`; a product SKU of the active brand when `scan.sku_enabled`; a 1-8 digit short code (optionally `-S<n>`) expanded to `<PREFIX>-<8 digits>` when `scan.short_code_enabled` (prefix `scan.short_code_prefix`, else the brand's default prefix). Units follow the caller's `stock.read` reach like the barcode history (a distributor sees its dealers' units, TEC-216); a unit outside the reach, or any unknown code, is 404 SCAN_NO_MATCH. An empty code is 400 VALIDATION_ERROR.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WarehouseScanInput'
+      responses:
+        '200':
+          description: Resolved entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeWarehouseScanResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: SCAN_NO_MATCH or SCAN_LOCATION_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '426':
+          $ref: '#/components/responses/MobileApiVersionUnsupported'
+      parameters:
+      - $ref: '#/components/parameters/MobileApiVersion'
+  /v1/mobile/warehouse/stock-counts:
+    get:
+      tags:
+      - Mobile
+      operationId: mobileListStockCounts
+      summary: 'Mobile: Stock counts of the active organization'
+      description: |
+        Mobile mirror (TEC-235) of `GET /v1/warehouse/stock-counts`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+
+        Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Newest first; no expected values.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/MobileApiVersion'
+      - name: status
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/StockCountStatus'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Page of counts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeStockCountPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '426':
+          $ref: '#/components/responses/MobileApiVersionUnsupported'
+    post:
+      tags:
+      - Mobile
+      operationId: mobileCreateStockCount
+      summary: 'Mobile: Open a draft stock count'
+      description: |
+        Mobile mirror (TEC-235) of `POST /v1/warehouse/stock-counts`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+
+        Needs `warehouse.write`. The count covers one warehouse of the active organization and a scope inside it: `warehouse` (default), `room` (`room_uuid`), `location` (`location_uuid`, the location and its subtree) or `product` (`product_uuid`, a product of the active brand inside the warehouse). Methods: `location_first` (a location is required for every unit scan), `unit_first` (the location is optional for serial units), `product_qty` (SKUs of serial products and fixed barcodes with a quantity per location), `initial_placement` (the organization's unlocated units are placed into the scope's locations; needs `approve-start`; no product scope). `blind` never returns expected values while counting, `guided` does.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockCountInput'
+      responses:
+        '201':
+          description: Draft count
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeStockCount'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '426':
+          $ref: '#/components/responses/MobileApiVersionUnsupported'
+      parameters:
+      - $ref: '#/components/parameters/MobileApiVersion'
+  /v1/mobile/warehouse/stock-counts/{uuid}:
+    get:
+      tags:
+      - Mobile
+      operationId: mobileGetStockCount
+      summary: 'Mobile: Stock count detail'
+      description: |
+        Mobile mirror (TEC-235) of `GET /v1/warehouse/stock-counts/{uuid}`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+
+        Needs `warehouse.read`. Carries `progress`; `expected` (per location) only for a guided count while it is draft or in progress (a blind count never has it); `summary` once completed.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/MobileApiVersion'
+      - $ref: '#/components/parameters/ResourceUUID'
+      responses:
+        '200':
+          description: Count
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeStockCount'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '426':
+          $ref: '#/components/responses/MobileApiVersionUnsupported'
+  /v1/mobile/warehouse/stock-counts/{uuid}/approve-start:
+    post:
+      tags:
+      - Mobile
+      operationId: mobileApproveStockCountStart
+      summary: 'Mobile: Approve the start of a draft count'
+      description: |
+        Mobile mirror (TEC-235) of `POST /v1/warehouse/stock-counts/{uuid}/approve-start`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+
+        Needs `warehouse.write`. Required before `start` for `initial_placement`; idempotent. 409 COUNT_INVALID_STATUS unless draft.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/MobileApiVersion'
+      - $ref: '#/components/parameters/ResourceUUID'
+      responses:
+        '200':
+          description: Count
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeStockCount'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '426':
+          $ref: '#/components/responses/MobileApiVersionUnsupported'
+  /v1/mobile/warehouse/stock-counts/{uuid}/start:
+    post:
+      tags:
+      - Mobile
+      operationId: mobileStartStockCount
+      summary: 'Mobile: Start scanning'
+      description: |
+        Mobile mirror (TEC-235) of `POST /v1/warehouse/stock-counts/{uuid}/start`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+
+        Needs `warehouse.write`. draft -> in_progress. 409 COUNT_START_APPROVAL_REQUIRED for an unapproved initial_placement, 409 COUNT_INVALID_STATUS unless draft.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/MobileApiVersion'
+      - $ref: '#/components/parameters/ResourceUUID'
+      responses:
+        '200':
+          description: Count
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeStockCount'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '426':
+          $ref: '#/components/responses/MobileApiVersionUnsupported'
+  /v1/mobile/warehouse/stock-counts/{uuid}/scans:
+    get:
+      tags:
+      - Mobile
+      operationId: mobileListStockCountScans
+      summary: 'Mobile: Recorded scans of a count'
+      description: |
+        Mobile mirror (TEC-235) of `GET /v1/warehouse/stock-counts/{uuid}/scans`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+
+        Needs `warehouse.read`. No expected values.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/MobileApiVersion'
+      - $ref: '#/components/parameters/ResourceUUID'
+      responses:
+        '200':
+          description: Scans, oldest first
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeStockCountScanList'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '426':
+          $ref: '#/components/responses/MobileApiVersionUnsupported'
+    post:
+      tags:
+      - Mobile
+      operationId: mobileScanStockCount
+      summary: 'Mobile: Record one scan'
+      description: |
+        Mobile mirror (TEC-235) of `POST /v1/warehouse/stock-counts/{uuid}/scans`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+
+        Needs `warehouse.write`; the count must be in progress (409 COUNT_INVALID_STATUS). The code is resolved by the TEC-203 resolver (units follow the caller's `stock.read` reach; 404 SCAN_NO_MATCH). A location scan sets the scanning user's location context; a unit or SKU scan is counted at `location_uuid`, else at that context. 422 COUNT_LOCATION_OUT_OF_SCOPE for a location outside the scope (nothing is recorded), 422 COUNT_LOCATION_REQUIRED when the method needs a location, 422 COUNT_PRODUCT_OUT_OF_SCOPE for another product of a product-scoped count, 422 COUNT_SCAN_KIND_NOT_ALLOWED (serial units in product_qty, SKUs outside product_qty, SKUs of fixed-barcode products), 409 COUNT_UNIT_ALREADY_SCANNED for a serial unit counted twice. `quantity` counts fixed barcodes and SKUs; `meters` is the measured length of a roll. `expected` is present for guided counts only.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/MobileApiVersion'
+      - $ref: '#/components/parameters/ResourceUUID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockCountScanInput'
+      responses:
+        '201':
+          description: Recorded scan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeStockCountScanResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: COUNT_NOT_FOUND, SCAN_NO_MATCH or SCAN_LOCATION_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          description: COUNT_LOCATION_OUT_OF_SCOPE, COUNT_LOCATION_REQUIRED, COUNT_PRODUCT_OUT_OF_SCOPE
+            or COUNT_SCAN_KIND_NOT_ALLOWED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '426':
+          $ref: '#/components/responses/MobileApiVersionUnsupported'
+  /v1/mobile/warehouse/stock-counts/{uuid}/scans/{scan_uuid}:
+    delete:
+      tags:
+      - Mobile
+      operationId: mobileDeleteStockCountScan
+      summary: 'Mobile: Remove a scan of an in-progress count'
+      description: |
+        Mobile mirror (TEC-235) of `DELETE /v1/warehouse/stock-counts/{uuid}/scans/{scan_uuid}`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+
+        Needs `warehouse.write`. 409 COUNT_INVALID_STATUS unless in progress.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/MobileApiVersion'
+      - $ref: '#/components/parameters/ResourceUUID'
+      - name: scan_uuid
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Removed
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '426':
+          $ref: '#/components/responses/MobileApiVersionUnsupported'
+  /v1/mobile/warehouse/stock-counts/{uuid}/complete:
+    post:
+      tags:
+      - Mobile
+      operationId: mobileCompleteStockCount
+      summary: 'Mobile: Complete scanning and compute the differences'
+      description: |
+        Mobile mirror (TEC-235) of `POST /v1/warehouse/stock-counts/{uuid}/complete`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+
+        Needs `warehouse.write`. in_progress -> pending_review. Builds the lines against the ledger (matched, missing, wrong_location, unlocated, unexpected, qty_variance, meter_variance). No stock is changed.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/MobileApiVersion'
+      - $ref: '#/components/parameters/ResourceUUID'
+      responses:
+        '200':
+          description: Count with its summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeStockCount'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '426':
+          $ref: '#/components/responses/MobileApiVersionUnsupported'
+  /v1/mobile/warehouse/stock-counts/{uuid}/report:
+    get:
+      tags:
+      - Mobile
+      operationId: mobileGetStockCountReport
+      summary: 'Mobile: Count report (lines with expected and counted values)'
+      description: |
+        Mobile mirror (TEC-235) of `GET /v1/warehouse/stock-counts/{uuid}/report`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+
+        Needs `warehouse.read`. Completed counts only (409 COUNT_INVALID_STATUS before completion).
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/MobileApiVersion'
+      - $ref: '#/components/parameters/ResourceUUID'
+      responses:
+        '200':
+          description: Report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeStockCountReport'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '426':
+          $ref: '#/components/responses/MobileApiVersionUnsupported'
+  /v1/mobile/warehouse/stock-counts/{uuid}/approve:
+    post:
+      tags:
+      - Mobile
+      operationId: mobileApproveStockCount
+      summary: 'Mobile: Approve a completed count and apply the resolutions'
+      description: |
+        Mobile mirror (TEC-235) of `POST /v1/warehouse/stock-counts/{uuid}/approve`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+
+        Needs `warehouse.write` and `stock.adjust` (403 COUNT_ADJUST_FORBIDDEN). Every line that is not matched needs a resolution from its `allowed_resolutions` (400 VALIDATION_ERROR otherwise). In one transaction, through the stock ledger with the idempotency keys `stock_count:stock_count_line:<line>:<type>:<barcode>`: void_missing -> void; relocate -> placement to the counted location (and a count_adjustment of measured roll meters); increase_unlocated -> count_adjustment to the counted fixed quantity or roll meters; ignore -> nothing. 409 COUNT_STALE (nothing applied) when the stock changed since completion; 409 COUNT_INVALID_STATUS unless pending_review (a second approval writes nothing).
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/MobileApiVersion'
+      - $ref: '#/components/parameters/ResourceUUID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockCountApproveInput'
+      responses:
+        '200':
+          description: Approved count with its lines
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeStockCountReport'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '426':
+          $ref: '#/components/responses/MobileApiVersionUnsupported'
+  /v1/mobile/warehouse/stock-counts/{uuid}/cancel:
+    post:
+      tags:
+      - Mobile
+      operationId: mobileCancelStockCount
+      summary: 'Mobile: Cancel a count'
+      description: |
+        Mobile mirror (TEC-235) of `POST /v1/warehouse/stock-counts/{uuid}/cancel`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+
+        Needs `warehouse.write`. draft, in_progress or pending_review -> cancelled; no stock is changed. 409 COUNT_INVALID_STATUS otherwise.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/MobileApiVersion'
+      - $ref: '#/components/parameters/ResourceUUID'
+      responses:
+        '200':
+          description: Count
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeStockCount'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '426':
+          $ref: '#/components/responses/MobileApiVersionUnsupported'
+  /v1/mobile/warehouse/transfers:
+    get:
+      tags:
+      - Mobile
+      operationId: mobileListWarehouseTransfers
+      summary: 'Mobile: List the warehouse transfers of the active organization'
+      description: |
+        Mobile mirror (TEC-235) of `GET /v1/warehouse/transfers`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+
+        Needs `warehouse.read`. Newest first. Transfers between organizations are `/v1/transfers` (TEC-197). An unknown status is 400 VALIDATION_ERROR.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/MobileApiVersion'
+      - name: status
+        in: query
+        schema:
+          $ref: '#/components/schemas/WarehouseTransferStatus'
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          minimum: 0
+      responses:
+        '200':
+          description: Transfers (without lines)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeWarehouseTransferPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '426':
+          $ref: '#/components/responses/MobileApiVersionUnsupported'
+    post:
+      tags:
+      - Mobile
+      operationId: mobileCreateWarehouseTransfer
+      summary: 'Mobile: Open a draft warehouse -> warehouse transfer (TEC-205)'
+      description: |
+        Mobile mirror (TEC-235) of `POST /v1/warehouse/transfers`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+
+        Needs `warehouse.write`. Both warehouses must be active warehouses of the active organization (center or distributor) and differ. `to_location_uuid` is an optional default target location in the target warehouse.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WarehouseTransferInput'
+      responses:
+        '201':
+          description: Draft transfer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeWarehouseTransfer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '426':
+          $ref: '#/components/responses/MobileApiVersionUnsupported'
+      parameters:
+      - $ref: '#/components/parameters/MobileApiVersion'
+  /v1/mobile/warehouse/transfers/{uuid}:
+    get:
+      tags:
+      - Mobile
+      operationId: mobileGetWarehouseTransfer
+      summary: 'Mobile: One warehouse transfer with its lines'
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/MobileApiVersion'
+      - $ref: '#/components/parameters/ResourceUUID'
+      responses:
+        '200':
+          description: Transfer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeWarehouseTransfer'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '426':
+          $ref: '#/components/responses/MobileApiVersionUnsupported'
+      description: |+
+        Mobile mirror (TEC-235) of `GET /v1/warehouse/transfers/{uuid}`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+
+
+  /v1/mobile/warehouse/transfers/{uuid}/lines:
+    post:
+      tags:
+      - Mobile
+      operationId: mobileAddWarehouseTransferLines
+      summary: 'Mobile: Add scanned units to a draft warehouse transfer'
+      description: |
+        Mobile mirror (TEC-235) of `POST /v1/warehouse/transfers/{uuid}/lines`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+
+        Needs `warehouse.write`. Each barcode must be a serial unit of the active brand placed in the source warehouse (409 WAREHOUSE_UNIT_UNAVAILABLE), not in transit, not on another open warehouse transfer, not reserved by an order and not on an open stock transfer request (409 WAREHOUSE_UNIT_BUSY). Fixed barcodes are 400. A transfer that is no longer a draft is 409 WAREHOUSE_TRANSFER_STATE.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/MobileApiVersion'
+      - $ref: '#/components/parameters/ResourceUUID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WarehouseTransferLinesInput'
+      responses:
+        '200':
+          description: Transfer with the new lines
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeWarehouseTransfer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '426':
+          $ref: '#/components/responses/MobileApiVersionUnsupported'
+  /v1/mobile/warehouse/transfers/{uuid}/lines/{line_uuid}:
+    delete:
+      tags:
+      - Mobile
+      operationId: mobileDeleteWarehouseTransferLine
+      summary: 'Mobile: Remove a line from a draft warehouse transfer'
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/MobileApiVersion'
+      - $ref: '#/components/parameters/ResourceUUID'
+      - name: line_uuid
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Transfer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeWarehouseTransfer'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '426':
+          $ref: '#/components/responses/MobileApiVersionUnsupported'
+      description: |+
+        Mobile mirror (TEC-235) of `DELETE /v1/warehouse/transfers/{uuid}/lines/{line_uuid}`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+
+
+  /v1/mobile/warehouse/transfers/{uuid}/place:
+    post:
+      tags:
+      - Mobile
+      operationId: mobilePlaceWarehouseTransferLines
+      summary: 'Mobile: Set the target location of transfer lines (pick or scan)'
+      description: |
+        Mobile mirror (TEC-235) of `POST /v1/warehouse/transfers/{uuid}/place`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+
+        Needs `warehouse.write`, draft or in_transit. Exactly one of `location_uuid` or `location_code`; the location must be active and in the target warehouse (400 otherwise). Lines: `line_uuids`, or the lines of the scanned `barcodes`, or every line.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/MobileApiVersion'
+      - $ref: '#/components/parameters/ResourceUUID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockEntryPlaceInput'
+      responses:
+        '200':
+          description: Transfer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeWarehouseTransfer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '426':
+          $ref: '#/components/responses/MobileApiVersionUnsupported'
+  /v1/mobile/warehouse/transfers/{uuid}/ship:
+    post:
+      tags:
+      - Mobile
+      operationId: mobileShipWarehouseTransfer
+      summary: 'Mobile: Ship a warehouse transfer (ledger transfer_out, draft -> in_transit)'
+      description: |
+        Mobile mirror (TEC-235) of `POST /v1/warehouse/transfers/{uuid}/ship`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+
+        Needs `warehouse.write`. In one transaction every line gets a `transfer_out` (key `warehouse_transfer:warehouse_transfer_line:<line id>:transfer_out:<barcode>`); the unit is in transit, owned by the organization, and no other flow can pick it. 409 WAREHOUSE_TRANSFER_STATE when not a draft (a second ship writes nothing), WAREHOUSE_TRANSFER_EMPTY without lines, WAREHOUSE_UNIT_UNAVAILABLE / WAREHOUSE_UNIT_BUSY when a unit left the source warehouse or got reserved, WAREHOUSE_LEDGER_REFUSED when the ledger refuses (nothing is written).
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/MobileApiVersion'
+      - $ref: '#/components/parameters/ResourceUUID'
+      responses:
+        '200':
+          description: In-transit transfer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeWarehouseTransfer'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '426':
+          $ref: '#/components/responses/MobileApiVersionUnsupported'
+  /v1/mobile/warehouse/transfers/{uuid}/complete:
+    post:
+      tags:
+      - Mobile
+      operationId: mobileCompleteWarehouseTransfer
+      summary: 'Mobile: Receive a warehouse transfer (transfer_in + placement, in_transit -> completed)'
+      description: |
+        Mobile mirror (TEC-235) of `POST /v1/warehouse/transfers/{uuid}/complete`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+
+        Needs `warehouse.write`. In one transaction every line gets the paired `transfer_in` and a `placement` onto its target location (line target, else the optional body location, else the transfer's default location; 409 WAREHOUSE_TRANSFER_UNPLACED when none). 409 WAREHOUSE_TRANSFER_STATE when not in transit. The body is optional.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/MobileApiVersion'
+      - $ref: '#/components/parameters/ResourceUUID'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WarehouseTransferCompleteInput'
+      responses:
+        '200':
+          description: Completed transfer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeWarehouseTransfer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '426':
+          $ref: '#/components/responses/MobileApiVersionUnsupported'
+  /v1/mobile/warehouse/transfers/{uuid}/cancel:
+    post:
+      tags:
+      - Mobile
+      operationId: mobileCancelWarehouseTransfer
+      summary: 'Mobile: Cancel a warehouse transfer'
+      description: |
+        Mobile mirror (TEC-235) of `POST /v1/warehouse/transfers/{uuid}/cancel`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+
+        Needs `warehouse.write`. A draft closes without stock; an in-transit transfer posts `transfer_cancel_restore` per line in one transaction (each unit goes back to its source location and status). 409 WAREHOUSE_TRANSFER_STATE when completed or cancelled.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/MobileApiVersion'
+      - $ref: '#/components/parameters/ResourceUUID'
+      responses:
+        '200':
+          description: Cancelled transfer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeWarehouseTransfer'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '426':
+          $ref: '#/components/responses/MobileApiVersionUnsupported'
+
   # --- TEC-91: QR web sign-in (web side) ---------------------------------
   /v1/auth/qr/start:
     post:
