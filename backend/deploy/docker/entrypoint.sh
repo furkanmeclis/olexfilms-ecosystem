@@ -43,13 +43,16 @@ case "${ROLE}" in
     exec migrate -path /app/migrations -database "${DATABASE_URL}" up
     ;;
   migrator)
-    # Legacy-system import (design K26/K27). The binary arrives in F2; until
-    # then the profile is a no-op that says so instead of starting the API.
-    if [ -x /app/migrator ]; then
-      exec /app/migrator
+    # Legacy-system import (design K26/K27, TEC-252). Arguments win, then
+    # MIGRATOR_ARGS, else a full run of MIGRATOR_PROFILE.
+    if [ "$#" -gt 0 ]; then
+      exec /app/migrator "$@"
     fi
-    echo "migrator: not implemented yet (F2) — nothing was imported" >&2
-    exit 1
+    if [ -n "${MIGRATOR_ARGS:-}" ]; then
+      # shellcheck disable=SC2086
+      exec /app/migrator ${MIGRATOR_ARGS}
+    fi
+    exec /app/migrator run --profile="${MIGRATOR_PROFILE:-olex}"
     ;;
   create-super-admin)
     exec /app/create-super-admin \

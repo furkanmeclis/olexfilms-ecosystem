@@ -15,7 +15,7 @@ make prod-config        # docker compose config: eksik zorunlu anahtar varsa bur
 - `--rotate` secret'ları yeniler. `DB_PASSWORD` ve S3 anahtarları değişirse çalışan Postgres rolünü ve SeaweedFS kimliğini elle güncelleyin.
 - `APP_ENCRYPTION_KEY` `--rotate` ile değişmez, yalnızca `--rotate-encryption-key` ile değişir. Değişirse şifreli saklanan veriler okunamaz.
 - `WUZAPI_GLOBAL_ENCRYPTION_KEY` script tarafından hiç döndürülmez, çünkü değişirse WhatsApp oturumları kaybolur. Yenilemek için satırı silip script'i tekrar çalıştırın.
-- Elle doldurulacaklar: `SMTP_*` (veya `--smtp-*`), `WUZAPI_WEBHOOK_URL`, `MIGRATOR_*_DSN` (F2), `SA_*`.
+- Elle doldurulacaklar: `SMTP_*` (veya `--smtp-*`), `WUZAPI_WEBHOOK_URL`, `LEGACY_*_DSN` (F2), `SA_*`.
 
 ## 2. Domain eşlemesi (Traefik / Dokploy)
 
