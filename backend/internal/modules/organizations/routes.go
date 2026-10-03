@@ -41,6 +41,7 @@ func RegisterRoutes(
 	mux.HandleFunc("GET /v1/public/organizations/logo/{uuid}", h.PublicStreamLogo)
 	mux.HandleFunc("GET /v1/public/brand", h.PublicBrand)
 	mux.HandleFunc("GET /v1/public/dealers/nearby", h.PublicNearbyDealers)
+	mux.HandleFunc("GET /v1/public/dealers/{code}", h.PublicDealerShowcase)
 	mux.Handle("GET /v1/me/organizations", middleware.Chain(http.HandlerFunc(h.MeOrganizations), authn))
 
 	mux.Handle("GET /v1/platform/organizations/meta", middleware.Chain(

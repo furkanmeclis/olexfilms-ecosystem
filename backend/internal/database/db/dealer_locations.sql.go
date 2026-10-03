@@ -8,8 +8,71 @@ package db
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const getPublicDealerBySlug = `-- name: GetPublicDealerBySlug :one
+SELECT o.uuid,
+       o.slug,
+       o.name,
+       o.logo_object_key,
+       o.address,
+       COALESCE(NULLIF(btrim(o.city), ''), p.name, '')::text AS city,
+       COALESCE(NULLIF(btrim(o.district), ''), d.name, '')::text AS district,
+       o.latitude,
+       o.longitude,
+       o.phone
+FROM organizations o
+LEFT JOIN provinces p ON p.id = o.province_id
+LEFT JOIN districts d ON d.id = o.district_id
+WHERE o.slug = $1
+  AND o.brand_id = $2
+  AND o.deleted_at IS NULL
+  AND o.status = 'active'
+  AND o.type IN ('dealer', 'distributor')
+  AND o.access_starts_at <= NOW()
+  AND (o.access_ends_at IS NULL OR o.access_ends_at > NOW())
+`
+
+type GetPublicDealerBySlugParams struct {
+	Slug    string `json:"slug"`
+	BrandID int64  `json:"brand_id"`
+}
+
+type GetPublicDealerBySlugRow struct {
+	Uuid          uuid.UUID      `json:"uuid"`
+	Slug          string         `json:"slug"`
+	Name          string         `json:"name"`
+	LogoObjectKey pgtype.Text    `json:"logo_object_key"`
+	Address       string         `json:"address"`
+	City          string         `json:"city"`
+	District      string         `json:"district"`
+	Latitude      pgtype.Numeric `json:"latitude"`
+	Longitude     pgtype.Numeric `json:"longitude"`
+	Phone         string         `json:"phone"`
+}
+
+// TEC-250: the public showcase of one active, serving (access window open)
+// dealer or distributor of a brand. Only the showcase columns: no tax id,
+// account, members or settings.
+func (q *Queries) GetPublicDealerBySlug(ctx context.Context, arg GetPublicDealerBySlugParams) (GetPublicDealerBySlugRow, error) {
+	row := q.db.QueryRow(ctx, getPublicDealerBySlug, arg.Slug, arg.BrandID)
+	var i GetPublicDealerBySlugRow
+	err := row.Scan(
+		&i.Uuid,
+		&i.Slug,
+		&i.Name,
+		&i.LogoObjectKey,
+		&i.Address,
+		&i.City,
+		&i.District,
+		&i.Latitude,
+		&i.Longitude,
+		&i.Phone,
+	)
+	return i, err
+}
 
 const listNearbyDealers = `-- name: ListNearbyDealers :many
 SELECT n.slug, n.name, n.city, n.district, n.latitude, n.longitude, n.phone, n.distance_km
