@@ -46,6 +46,7 @@ func olexSteps() []Step {
 	return []Step{
 		OrganizationsStep{}, // TEC-254: center, TR distributor, dealers
 		UsersStep{},         // TEC-254: users, memberships, roles
+		CustomersStep{},     // TEC-255: customers -> users, profiles, dealer links
 	}
 }
 

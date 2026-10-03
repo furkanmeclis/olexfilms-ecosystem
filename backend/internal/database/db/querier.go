@@ -1371,6 +1371,8 @@ type Querier interface {
 	MarkQRLoginChallengeScanned(ctx context.Context, code string) (QrLoginChallenge, error)
 	MarkStockEntryUndone(ctx context.Context, id int64) (StockEntry, error)
 	MarkStockImportRowUndone(ctx context.Context, arg MarkStockImportRowUndoneParams) (StockImportRow, error)
+	// A verified phone also claims a migrated "unverified" customer (K26,
+	// TEC-255): the legacy marker and the unresolved legacy phone are cleared.
 	MarkUserPhoneVerified(ctx context.Context, id int64) error
 	// Stamped in the notification transaction; a second run is a no-op.
 	MarkWarrantyNotified30(ctx context.Context, arg MarkWarrantyNotified30Params) (int64, error)
@@ -1385,13 +1387,28 @@ type Querier interface {
 	// The live distributor owning the country-level territory of a brand.
 	MigratorCountryDistributor(ctx context.Context, arg MigratorCountryDistributorParams) (int64, error)
 	MigratorDistributorBySlug(ctx context.Context, arg MigratorDistributorBySlugParams) (int64, error)
+	MigratorEnsureCustomerProfile(ctx context.Context, arg MigratorEnsureCustomerProfileParams) (int64, error)
 	// Adds the membership or returns the existing one; an owner grant upgrades
 	// a staff membership, never the other way round.
 	MigratorEnsureMember(ctx context.Context, arg MigratorEnsureMemberParams) (MigratorEnsureMemberRow, error)
+	// Fill-only, like MigratorFillCustomerUser.
+	MigratorFillCustomerProfile(ctx context.Context, arg MigratorFillCustomerProfileParams) (int64, error)
+	// A merged or changed legacy customer only fills what the account lacks;
+	// values set in the new app (or by an earlier source) are kept.
+	MigratorFillCustomerUser(ctx context.Context, arg MigratorFillCustomerUserParams) (int64, error)
 	// An existing account with the e-mail (preferred) or the phone.
 	MigratorFindUserByContact(ctx context.Context, arg MigratorFindUserByContactParams) (MigratorFindUserByContactRow, error)
+	// TEC-255: migrator step 2 (hub customers -> users, customer_profiles,
+	// customer_organizations). Written only by cmd/migrator inside a step
+	// transaction.
+	// A legacy customer becomes a users row (K11). legacy_unverified marks a
+	// customer without a resolved phone (K26, K29, migration 000078).
+	MigratorInsertCustomerUser(ctx context.Context, arg MigratorInsertCustomerUserParams) (int64, error)
 	MigratorInsertOrganization(ctx context.Context, arg MigratorInsertOrganizationParams) (int64, error)
 	MigratorInsertUser(ctx context.Context, arg MigratorInsertUserParams) (int64, error)
+	// One row per serving organization (K11: the customer is global, a dealer
+	// sees it through this link).
+	MigratorLinkCustomerOrganization(ctx context.Context, arg MigratorLinkCustomerOrganizationParams) (int64, error)
 	MigratorMatchDistrict(ctx context.Context, arg MigratorMatchDistrictParams) (int64, error)
 	// TEC-254: migrator step 1 (center, TR distributor, dealers, users, roles).
 	// Written only by cmd/migrator inside a step transaction.
