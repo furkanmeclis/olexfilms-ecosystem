@@ -41,6 +41,28 @@ func (q *Queries) CountAccountingDisputes(ctx context.Context, arg CountAccounti
 	return count, err
 }
 
+const countBookedReturnItemsOfOrder = `-- name: CountBookedReturnItemsOfOrder :one
+SELECT COUNT(*)
+FROM stock_transfer_request_items i
+JOIN stock_transfer_requests r ON r.id = i.request_id
+JOIN order_items oi ON oi.id = i.order_item_id
+WHERE oi.order_id = $1
+  AND r.kind = 'return'
+  AND r.status = 'received'
+  AND i.line_total IS NOT NULL
+  AND NOT i.accounting_excluded
+`
+
+// TEC-229: booked return lines of an order (a received return whose line
+// was priced and not excluded); a dispute on that order's sale cannot then
+// be resolved with a reversal.
+func (q *Queries) CountBookedReturnItemsOfOrder(ctx context.Context, orderID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, countBookedReturnItemsOfOrder, orderID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getAccountingDisputeView = `-- name: GetAccountingDisputeView :one
 SELECT d.id, d.uuid, d.organization_id, d.brand_id, d.counterparty_org_id, d.entry_id, d.source_type, d.source_uuid, d.status, d.reason, d.corrected_amount, d.resolution_note, d.reversal_entry_id, d.revision_entry_id, d.opened_by_user_id, d.resolved_by_user_id, d.resolved_at, d.created_at, d.updated_at,
        o.uuid AS organization_uuid, o.name AS organization_name,
@@ -387,6 +409,27 @@ func (q *Queries) LockAccountingDispute(ctx context.Context, arg LockAccountingD
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const lockOrderForDisputeReversal = `-- name: LockOrderForDisputeReversal :one
+SELECT id FROM orders
+WHERE uuid = $1 AND brand_id = $2
+FOR UPDATE
+`
+
+type LockOrderForDisputeReversalParams struct {
+	Uuid    uuid.UUID `json:"uuid"`
+	BrandID int64     `json:"brand_id"`
+}
+
+// TEC-229: locks the order a dispute reversal would reverse (by its
+// accounting source uuid) against a concurrent return receipt
+// (LockOrdersOfTransferRequest).
+func (q *Queries) LockOrderForDisputeReversal(ctx context.Context, arg LockOrderForDisputeReversalParams) (int64, error) {
+	row := q.db.QueryRow(ctx, lockOrderForDisputeReversal, arg.Uuid, arg.BrandID)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }
 
 const resolveAccountingDispute = `-- name: ResolveAccountingDispute :one

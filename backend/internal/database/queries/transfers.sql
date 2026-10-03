@@ -102,8 +102,10 @@ ORDER BY i.id;
 SELECT COUNT(*) FROM stock_transfer_request_items WHERE request_id = sqlc.arg(request_id);
 
 -- name: SetTransferItemPrice :exec
+-- order_item_id (TEC-229): the parent's order line a return line reverses.
 UPDATE stock_transfer_request_items
-SET unit_price = sqlc.narg(unit_price), line_total = sqlc.narg(line_total)
+SET unit_price = sqlc.narg(unit_price), line_total = sqlc.narg(line_total),
+    order_item_id = sqlc.narg(order_item_id)
 WHERE id = sqlc.arg(id);
 
 -- name: SetTransferItemOutMovement :exec
@@ -163,7 +165,7 @@ ORDER BY om.user_id;
 -- TEC-223: the price a unit was sold at to buyer by seller (its latest
 -- order line with the unit assigned, the order not cancelled), in currency.
 -- name: GetUnitLastOrderPrice :one
-SELECT oi.unit_price
+SELECT oi.id AS order_item_id, oi.unit_price
 FROM order_item_units oiu
 JOIN order_items oi ON oi.id = oiu.order_item_id
 JOIN orders o ON o.id = oi.order_id
@@ -174,3 +176,40 @@ WHERE oiu.unit_id = sqlc.arg(unit_id)
   AND o.status NOT IN ('draft', 'cancelling', 'cancelled')
 ORDER BY oiu.assigned_at DESC, oiu.id DESC
 LIMIT 1;
+
+-- TEC-229: locks (FOR SHARE) the orders the return lines of a request were
+-- sold on, so a dispute reversal of the same order (LockOrderForDisputeReversal,
+-- FOR UPDATE) and the receipt of the return are serialized.
+-- name: LockOrdersOfTransferRequest :many
+SELECT o.id
+FROM orders o
+WHERE o.id IN (
+    SELECT oi.order_id
+    FROM stock_transfer_request_items i
+    JOIN order_items oi ON oi.id = i.order_item_id
+    WHERE i.request_id = sqlc.arg(request_id)
+)
+ORDER BY o.id
+FOR SHARE;
+
+-- TEC-229: return lines of a request whose order sale was already reversed
+-- by a dispute (accounting source source_type + orders.uuid, status
+-- resolved_reversal); they are received without an accounting row.
+-- name: ListTransferItemsOfReversedSales :many
+SELECT i.id
+FROM stock_transfer_request_items i
+JOIN order_items oi ON oi.id = i.order_item_id
+JOIN orders o ON o.id = oi.order_id
+WHERE i.request_id = sqlc.arg(request_id)
+  AND EXISTS (
+      SELECT 1 FROM accounting_disputes d
+      WHERE d.source_type = sqlc.arg(source_type)::text
+        AND d.source_uuid = o.uuid
+        AND d.status = 'resolved_reversal'
+  )
+ORDER BY i.id;
+
+-- name: SetTransferItemsAccountingExcluded :exec
+UPDATE stock_transfer_request_items
+SET accounting_excluded = true
+WHERE request_id = sqlc.arg(request_id) AND id = ANY (sqlc.arg(ids)::bigint[]);

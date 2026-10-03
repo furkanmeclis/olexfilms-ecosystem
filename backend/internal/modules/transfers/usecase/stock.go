@@ -361,6 +361,7 @@ func (s *Service) freezePrices(ctx context.Context, q *db.Queries, r db.StockTra
 	total, complete := new(big.Rat), true
 	for _, it := range rows {
 		var price *big.Rat
+		var orderItem pgtype.Int8
 		if r.Kind == KindReturn {
 			// TEC-223: a return is priced at what the parent sold the unit
 			// for to the child (its order line), else the child's
@@ -372,7 +373,9 @@ func (s *Service) freezePrices(ctx context.Context, q *db.Queries, r db.StockTra
 				return pgtype.Numeric{}, fmt.Errorf("transfers: order price: %w", err)
 			}
 			if err == nil {
-				price = numericRat(op)
+				price = numericRat(op.UnitPrice)
+				// TEC-229: the order line this return line reverses.
+				orderItem = pgtype.Int8{Int64: op.OrderItemID, Valid: true}
 			}
 		}
 		if price == nil {
@@ -394,7 +397,7 @@ func (s *Service) freezePrices(ctx context.Context, q *db.Queries, r db.StockTra
 		if err != nil {
 			return pgtype.Numeric{}, err
 		}
-		if err := q.SetTransferItemPrice(ctx, db.SetTransferItemPriceParams{ID: it.ID, UnitPrice: up, LineTotal: lt}); err != nil {
+		if err := q.SetTransferItemPrice(ctx, db.SetTransferItemPriceParams{ID: it.ID, UnitPrice: up, LineTotal: lt, OrderItemID: orderItem}); err != nil {
 			return pgtype.Numeric{}, fmt.Errorf("transfers: item price: %w", err)
 		}
 		total.Add(total, line)

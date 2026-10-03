@@ -24,7 +24,8 @@ import (
 // (the counterparty of the cari, accounting.resolve) resolves it:
 //
 //   - reversal: every open row of the source is reversed (VoidBySourceTx),
-//     on both ledgers;
+//     on both ledgers; not for an order sale with a booked return
+//     (ErrDisputeSaleReturned, TEC-229);
 //   - revision: the source is reversed and reposted with the corrected
 //     amount as revision + 1, in the same transaction;
 //   - reject: nothing is posted; the note says why.
@@ -67,7 +68,15 @@ var (
 	// ErrDisputeNotResolvable: the ledger no longer allows the requested
 	// resolution (e.g. revising a source that is already reversed).
 	ErrDisputeNotResolvable = errors.New("accounting: dispute cannot be resolved this way")
+	// ErrDisputeSaleReturned (TEC-229, K24): the disputed order sale has a
+	// received (and booked) return; a reversal would reverse the same sale
+	// a second time. Revise or reject the dispute instead.
+	ErrDisputeSaleReturned = errors.New("accounting: the disputed sale already has a booked return")
 )
+
+// disputeSourceOrder is the accounting source type of an order sale (orders
+// usecase AccountingSourceType).
+const disputeSourceOrder = "order"
 
 // WithOutbox sets the outbox the dispute events go to (nil: none).
 func (s *Service) WithOutbox(out outbox.Enqueuer) *Service {
@@ -375,6 +384,9 @@ func (s *Service) ResolveDispute(ctx context.Context, c Caller, id uuid.UUID, in
 		event := events.AccountingDisputeResolved
 		switch in.Resolution {
 		case ResolutionReversal:
+			if err := checkSaleNotReturned(ctx, q, d); err != nil {
+				return err
+			}
 			res, err := s.poster.VoidBySourceTx(ctx, tx, src, desc, c.actor())
 			if err != nil {
 				return err
@@ -440,6 +452,32 @@ func (s *Service) ResolveDispute(ctx context.Context, c Caller, id uuid.UUID, in
 		return Dispute{}, postingErr(err)
 	}
 	return out, nil
+}
+
+// checkSaleNotReturned (TEC-229, K24): a dispute on an order sale cannot be
+// reversed once a return of a line of that order was received and booked
+// (PostStockReturnTx already reversed that part of the sale). The order is
+// locked FOR UPDATE so a concurrent return receipt (which locks it FOR
+// SHARE) is serialized with this check.
+func checkSaleNotReturned(ctx context.Context, q *db.Queries, d db.AccountingDispute) error {
+	if d.SourceType != disputeSourceOrder {
+		return nil
+	}
+	orderID, err := q.LockOrderForDisputeReversal(ctx, db.LockOrderForDisputeReversalParams{Uuid: d.SourceUuid, BrandID: d.BrandID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("accounting: disputed order: %w", err)
+	}
+	n, err := q.CountBookedReturnItemsOfOrder(ctx, orderID)
+	if err != nil {
+		return fmt.Errorf("accounting: returns of disputed order: %w", err)
+	}
+	if n > 0 {
+		return ErrDisputeSaleReturned
+	}
+	return nil
 }
 
 // reversalOf returns the reversal of entry among rows, or the reversal an

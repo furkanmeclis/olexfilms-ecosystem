@@ -6286,7 +6286,7 @@ export interface paths {
         put?: never;
         /**
          * Resolve a dispute addressed to the active organization
-         * @description Needs accounting.resolve; only the parent the disputed entry came from resolves (other disputes read as 404). reversal reverses every open row of the source on both ledgers; revision reverses them and reposts corrected_amount (in the entry's orig_currency, at the frozen rate) as revision + 1 in the same transaction; reject needs a note and posts nothing. A final dispute answers 409 DISPUTE_NOT_OPEN. Writes accounting.dispute_resolved or accounting.dispute_rejected.
+         * @description Needs accounting.resolve; only the parent the disputed entry came from resolves (other disputes read as 404). reversal reverses every open row of the source on both ledgers; revision reverses them and reposts corrected_amount (in the entry's orig_currency, at the frozen rate) as revision + 1 in the same transaction; reject needs a note and posts nothing. A final dispute answers 409 DISPUTE_NOT_OPEN. A reversal of an order sale that already has a received and booked return (TEC-223) answers 422 DISPUTE_SALE_RETURNED and writes nothing (the return already reversed it; revise or reject instead). Writes accounting.dispute_resolved or accounting.dispute_rejected.
          */
         post: operations["resolveAccountingDispute"];
         delete?: never;
@@ -12413,6 +12413,8 @@ export interface components {
             received: boolean;
             /** @description The transfer_cancel_restore movement is written */
             restored: boolean;
+            /** @description Warning (TEC-229, K24): the return line was received without an accounting row because a dispute already reversed the sale of its order (the sale is not reversed twice); its line_total is not booked. */
+            accounting_excluded: boolean;
         };
         StockTransfer: {
             /** Format: uuid */
@@ -24230,6 +24232,15 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            /** @description DISPUTE_SALE_RETURNED, the order sale already has a booked return (TEC-229) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     getAccountingCariStatement: {
