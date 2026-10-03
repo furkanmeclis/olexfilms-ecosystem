@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef, Table } from "@tanstack/react-table";
 import { CircleCheck, CircleOff, FolderTree } from "lucide-react";
 import Link from "next/link";
@@ -45,11 +45,10 @@ import {
   type CatalogUnitType,
   type ListProductsParams,
 } from "@/features/catalog/services/catalog.service";
+import { useBulkMutation } from "@/features/bulk-engine/hooks/use-bulk-mutation";
 import { ExportMenu } from "@/features/io/components/export-menu";
 import { ImportButton } from "@/features/io/components/import-button";
-import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
 
 const ALL = "all";
 const RESOURCE = "tenant.catalog.products" as const;
@@ -116,18 +115,9 @@ export function ProductsPage({ slug }: { slug: string }) {
     enabled: catalog.canRead,
   });
 
-  const bulk = useMutation({
-    mutationFn: (vars: { uuids: string[]; active: boolean }) =>
-      catalogService.bulkActive(vars.uuids, vars.active),
-    onSuccess: async (res) => {
-      await queryClient.invalidateQueries({ queryKey: catalogKeys.all });
-      appToast.success(t("catalog.toast.bulk_done", { count: res.updated }));
-    },
-    onError: (error: unknown) =>
-      appToast.error(
-        isApiError(error) ? error.message : t("catalog.toast.failed"),
-      ),
-  });
+  // TEC-212: activate / deactivate run through the bulk engine, which logs
+  // the operation and offers "undo" on the result toast.
+  const bulk = useBulkMutation();
 
   const baseColumns = useMemo(
     () =>
@@ -232,10 +222,15 @@ export function ProductsPage({ slug }: { slug: string }) {
       (selected: CatalogProduct[], table: Table<CatalogProduct>) => {
         const uuids = selected.map((p) => p.uuid).slice(0, BULK_ACTIVE_MAX);
         if (!uuids.length) return;
-        bulk.mutate(
-          { uuids, active: value },
-          { onSuccess: () => table.resetRowSelection() },
-        );
+        bulk.mutate({
+          resource: "catalog.products",
+          action: value ? "activate" : "deactivate",
+          target: { scope: "ids", ids: uuids },
+          onComplete: () => {
+            table.resetRowSelection();
+            void queryClient.invalidateQueries({ queryKey: catalogKeys.all });
+          },
+        });
       };
     return [
       {
@@ -253,7 +248,7 @@ export function ProductsPage({ slug }: { slug: string }) {
         disabled: () => bulk.isPending,
       },
     ];
-  }, [bulk, catalog.canWrite, t]);
+  }, [bulk, catalog.canWrite, queryClient, t]);
 
   const categoryOptions: FilterOption[] = [
     { value: ALL, label: t("catalog.filters.all_categories") },

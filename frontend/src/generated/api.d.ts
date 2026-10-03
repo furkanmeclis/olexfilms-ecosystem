@@ -696,6 +696,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/platform/bulk-operations/{uuid}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo a platform bulk operation (TEC-212)
+         * @description Restores the values a platform bulk run (users, roles) changed. Only operations without an organization are visible here. Rules: the caller holds the action's permission, the operation is undone once (second call 409 BULK_UNDO_UNAVAILABLE) and within `bulk_undo_window_hours` (409 BULK_UNDO_EXPIRED). A record changed after the run is skipped and listed in `undo_result.skipped`.
+         */
+        post: operations["undoPlatformBulkOperation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/bulk-operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bulk operation log of the active organization (TEC-212) */
+        get: operations["listTenantBulkOperations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/bulk-operations/{uuid}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo a bulk operation of the active organization (TEC-212)
+         * @description Restores the previous values of the records a bulk run changed. Only operations of the active organization are visible (another organization's operation is 404). The caller must hold the action's permission; an operation is undone once (second call 409 BULK_UNDO_UNAVAILABLE) and within `bulk_undo_window_hours` (409 BULK_UNDO_EXPIRED). Records changed after the run are skipped (`undo_result.skipped`, reason `conflict` or `gone`); nothing is overwritten.
+         */
+        post: operations["undoTenantBulkOperation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/brand": {
         parameters: {
             query?: never;
@@ -2708,6 +2765,26 @@ export interface paths {
          * @description At most 500 uuids per request. Uuids outside the active brand are ignored; `updated` counts the products whose state changed.
          */
         post: operations["bulkSetCatalogProductsActive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/catalog/products/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run a logged, undoable bulk action on products (TEC-212)
+         * @description Actions `activate` / `deactivate` (center only, catalog.write) on target scope `ids`. The run is logged as a bulk operation; undo it through `/v1/tenant/bulk-operations/{uuid}/undo`.
+         */
+        post: operations["bulkCatalogProducts"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6031,6 +6108,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/tasks/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run a logged, undoable bulk action on center tasks (TEC-212)
+         * @description Action `assign` with `target.params.assignee_uuid` (a member of the center, tasks.write) on target scope `ids`; closed tasks fail per item. Undo through `/v1/tenant/bulk-operations/{uuid}/undo`.
+         */
+        post: operations["bulkTasks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -7618,6 +7715,7 @@ export interface components {
             data: {
                 sync?: boolean;
                 summary?: components["schemas"]["BulkSummary"];
+                operation?: components["schemas"]["BulkOperation"] | null;
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -7626,6 +7724,54 @@ export interface components {
             success: true;
             data: {
                 items?: components["schemas"]["BulkJob"][];
+                total?: number;
+                limit?: number;
+                offset?: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        BulkOperation: {
+            /** Format: uuid */
+            uuid: string;
+            resource: string;
+            action: string;
+            /** Format: uuid */
+            job_uuid?: string | null;
+            summary: components["schemas"]["BulkSummary"];
+            /** @enum {string} */
+            undo_status: "none" | "available" | "undone" | "partial";
+            /** Format: date-time */
+            undo_until?: string | null;
+            /** Format: date-time */
+            undone_at?: string | null;
+            undo_result?: {
+                restored?: number;
+                skipped?: {
+                    /** Format: uuid */
+                    entity_uuid?: string;
+                    /** @enum {string} */
+                    reason?: "conflict" | "gone";
+                }[];
+                failed?: {
+                    /** Format: uuid */
+                    entity_uuid?: string;
+                    error?: string;
+                }[];
+            } | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        EnvelopeBulkOperation: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["BulkOperation"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeBulkOperationPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items?: components["schemas"]["BulkOperation"][];
                 total?: number;
                 limit?: number;
                 offset?: number;
@@ -12279,6 +12425,85 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    undoPlatformBulkOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Undone operation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkOperation"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listTenantBulkOperations: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Operation page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkOperationPage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    undoTenantBulkOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Undone operation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkOperation"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
     getPublicBrand: {
         parameters: {
             query?: never;
@@ -15937,6 +16162,42 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    bulkCatalogProducts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkExecuteRequest"];
+            };
+        };
+        responses: {
+            /** @description Sync bulk result with its undoable operation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkSyncResult"];
+                };
+            };
+            /** @description Async bulk job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     exportCatalogProducts: {
@@ -21892,6 +22153,42 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    bulkTasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkExecuteRequest"];
+            };
+        };
+        responses: {
+            /** @description Sync bulk result with its undoable operation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkSyncResult"];
+                };
+            };
+            /** @description Async bulk job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
 }

@@ -16,6 +16,7 @@
   "actions.bulk.completed": "Массовое действие завершено",
   "actions.bulk.failed": "Ошибка массового действия",
   "actions.bulk.rolled_back": "Массовое действие отменено",
+  "actions.bulk.undone": "Массовое действие отменено",
   "actions.settings.updated": "Настройки обновлены",
   "actions.access.settings.updated": "Настройки доступа обновлены",
   "actions.stepup.verified": "Подтверждение личности выполнено",

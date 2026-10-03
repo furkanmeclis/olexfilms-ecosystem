@@ -17,6 +17,12 @@ import (
 	"github.com/google/uuid"
 )
 
+// Undo error codes (TEC-212), both HTTP 409.
+const (
+	CodeBulkUndoUnavailable = "BULK_UNDO_UNAVAILABLE"
+	CodeBulkUndoExpired     = "BULK_UNDO_EXPIRED"
+)
+
 type Handler struct {
 	svc *bulkusecase.Service
 }
@@ -103,8 +109,9 @@ func (h *Handler) executeBody(w http.ResponseWriter, r *http.Request, resource s
 		return
 	}
 	response.JSON(w, r, http.StatusOK, map[string]any{
-		"sync":    true,
-		"summary": result.Summary,
+		"sync":      true,
+		"summary":   result.Summary,
+		"operation": result.Operation,
 	})
 }
 
@@ -162,8 +169,56 @@ func (h *Handler) Rollback(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, updated)
 }
 
+// UndoTenant reverts an operation of the active organization
+// (POST /v1/tenant/bulk-operations/{uuid}/undo).
+func (h *Handler) UndoTenant(w http.ResponseWriter, r *http.Request) {
+	scope := orgctx.MustScope(r.Context())
+	orgID := scope.InternalID
+	h.undo(w, r, &orgID)
+}
+
+// UndoPlatform reverts a platform operation (no organization)
+// (POST /v1/platform/bulk-operations/{uuid}/undo).
+func (h *Handler) UndoPlatform(w http.ResponseWriter, r *http.Request) {
+	h.undo(w, r, nil)
+}
+
+func (h *Handler) undo(w http.ResponseWriter, r *http.Request, orgID *int64) {
+	p := authctx.MustPrincipal(r.Context())
+	id, err := uuid.Parse(r.PathValue("uuid"))
+	if err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, "uuid is invalid")
+		return
+	}
+	op, err := h.svc.Undo(r.Context(), bulkusecase.UndoInput{
+		UUID: id, ActorID: p.UserInternal, OrganizationID: orgID, HasPermission: p.HasPermission,
+	})
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, op)
+}
+
+// ListTenantOperations pages the operations of the active organization
+// (GET /v1/tenant/bulk-operations).
+func (h *Handler) ListTenantOperations(w http.ResponseWriter, r *http.Request) {
+	scope := orgctx.MustScope(r.Context())
+	q := apiquery.Parse(r.URL.Query())
+	items, total, err := h.svc.ListOperations(r.Context(), scope.InternalID, q.Limit, q.Offset)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
+}
+
 func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
+	case errors.Is(err, bulkusecase.ErrUndoUnavailable):
+		response.Conflict(w, r, CodeBulkUndoUnavailable, "Bulk operation cannot be undone (already undone or nothing to undo)")
+	case errors.Is(err, bulkusecase.ErrUndoExpired):
+		response.Conflict(w, r, CodeBulkUndoExpired, "Bulk operation undo window has expired")
 	case errors.Is(err, bulkusecase.ErrNotFound):
 		response.NotFound(w, r, "Bulk job not found")
 	case errors.Is(err, bulkusecase.ErrForbidden):

@@ -1266,6 +1266,94 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/platform/bulk-operations/{uuid}/undo:
+    post:
+      tags: [Platform]
+      operationId: undoPlatformBulkOperation
+      summary: Undo a platform bulk operation (TEC-212)
+      description: >-
+        Restores the values a platform bulk run (users, roles) changed. Only
+        operations without an organization are visible here. Rules: the
+        caller holds the action's permission, the operation is undone once
+        (second call 409 BULK_UNDO_UNAVAILABLE) and within
+        `bulk_undo_window_hours` (409 BULK_UNDO_EXPIRED). A record changed
+        after the run is skipped and listed in `undo_result.skipped`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Undone operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkOperation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/tenant/bulk-operations:
+    get:
+      tags: [Tenant]
+      operationId: listTenantBulkOperations
+      summary: Bulk operation log of the active organization (TEC-212)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Operation page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkOperationPage"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/tenant/bulk-operations/{uuid}/undo:
+    post:
+      tags: [Tenant]
+      operationId: undoTenantBulkOperation
+      summary: Undo a bulk operation of the active organization (TEC-212)
+      description: >-
+        Restores the previous values of the records a bulk run changed. Only
+        operations of the active organization are visible (another
+        organization's operation is 404). The caller must hold the action's
+        permission; an operation is undone once (second call 409
+        BULK_UNDO_UNAVAILABLE) and within `bulk_undo_window_hours` (409
+        BULK_UNDO_EXPIRED). Records changed after the run are skipped
+        (`undo_result.skipped`, reason `conflict` or `gone`); nothing is
+        overwritten.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Undone operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkOperation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   /v1/public/brand:
     get:
       tags: [Public]
@@ -4950,6 +5038,43 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/catalog/products/bulk:
+    post:
+      tags: [Catalog]
+      operationId: bulkCatalogProducts
+      summary: Run a logged, undoable bulk action on products (TEC-212)
+      description: >-
+        Actions `activate` / `deactivate` (center only, catalog.write) on target
+        scope `ids`. The run is logged as a bulk operation; undo it through
+        `/v1/tenant/bulk-operations/{uuid}/undo`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkExecuteRequest"
+      responses:
+        "200":
+          description: Sync bulk result with its undoable operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkSyncResult"
+        "202":
+          description: Async bulk job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /v1/catalog/products/export:
     post:
@@ -11589,6 +11714,43 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/tasks/bulk:
+    post:
+      tags: [Tasks]
+      operationId: bulkTasks
+      summary: Run a logged, undoable bulk action on center tasks (TEC-212)
+      description: >-
+        Action `assign` with `target.params.assignee_uuid` (a member of the
+        center, tasks.write) on target scope `ids`; closed tasks fail per
+        item. Undo through `/v1/tenant/bulk-operations/{uuid}/undo`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkExecuteRequest"
+      responses:
+        "200":
+          description: Sync bulk result with its undoable operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkSyncResult"
+        "202":
+          description: Async bulk job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -14062,6 +14224,10 @@ components:
           properties:
             sync: { type: boolean }
             summary: { $ref: "#/components/schemas/BulkSummary" }
+            operation:
+              oneOf:
+                - $ref: "#/components/schemas/BulkOperation"
+                - type: "null"
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeBulkJobPage:
@@ -14075,6 +14241,64 @@ components:
             items:
               type: array
               items: { $ref: "#/components/schemas/BulkJob" }
+            total: { type: integer }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    BulkOperation:
+      type: object
+      required: [uuid, resource, action, summary, undo_status, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        resource: { type: string }
+        action: { type: string }
+        job_uuid: { type: [string, "null"], format: uuid }
+        summary: { $ref: "#/components/schemas/BulkSummary" }
+        undo_status:
+          type: string
+          enum: [none, available, undone, partial]
+        undo_until: { type: [string, "null"], format: date-time }
+        undone_at: { type: [string, "null"], format: date-time }
+        undo_result:
+          type: [object, "null"]
+          properties:
+            restored: { type: integer }
+            skipped:
+              type: array
+              items:
+                type: object
+                properties:
+                  entity_uuid: { type: string, format: uuid }
+                  reason: { type: string, enum: [conflict, gone] }
+            failed:
+              type: array
+              items:
+                type: object
+                properties:
+                  entity_uuid: { type: string, format: uuid }
+                  error: { type: string }
+        created_at: { type: string, format: date-time }
+
+    EnvelopeBulkOperation:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/BulkOperation" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeBulkOperationPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/BulkOperation" }
             total: { type: integer }
             limit: { type: integer }
             offset: { type: integer }

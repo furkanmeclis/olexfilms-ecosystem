@@ -16,6 +16,7 @@
   "actions.bulk.completed": "Bulk action completed",
   "actions.bulk.failed": "Bulk action failed",
   "actions.bulk.rolled_back": "Bulk action rolled back",
+  "actions.bulk.undone": "Bulk action undone",
   "actions.settings.updated": "Settings updated",
   "actions.access.settings.updated": "Access settings updated",
   "actions.stepup.verified": "Step-up verification completed",
