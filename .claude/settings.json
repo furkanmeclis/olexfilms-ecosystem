@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git worktree unlock:*)",
+      "Bash(git worktree remove:*)",
+      "Bash(git worktree prune:*)"
+    ]
+  }
+}

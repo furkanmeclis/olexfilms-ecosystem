@@ -203,6 +203,24 @@ const (
 	// (K28); F3-02 (TEC-113) adds the read side.
 	PermMeasurementsWrite = "measurements.write"
 
+	// TEC-285 (000083): vehicle intake / service sale contracts (F3-01).
+	// Templates and void are center-only; read and write follow the roles
+	// that open services.
+	PermContractsTemplatesManage = "contracts.templates.manage"
+	PermContractsRead            = "contracts.read"
+	PermContractsWrite           = "contracts.write"
+	PermContractsVoid            = "contracts.void"
+
+	// TEC-305 (000084): non-product service catalog (center only) and
+	// service subscriptions; distributors assign to their subtree without a
+	// margin, dealers and distributors request early cancellation, the
+	// center approves.
+	PermServiceCatalogManage              = "service_catalog.manage"
+	PermServiceCatalogRead                = "service_catalog.read"
+	PermServiceSubscriptionsAssign        = "service_subscriptions.assign"
+	PermServiceSubscriptionsRead          = "service_subscriptions.read"
+	PermServiceSubscriptionsCancelRequest = "service_subscriptions.cancel_request"
+	PermServiceSubscriptionsCancelApprove = "service_subscriptions.cancel_approve"
 	// TEC-293 (000085): measurement read side, before/after service links
 	// and the measuring device registry (K28).
 	PermMeasurementsRead         = "measurements.read"

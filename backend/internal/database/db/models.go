@@ -267,6 +267,118 @@ type Consent struct {
 	UserAgent   pgtype.Text        `json:"user_agent"`
 }
 
+type ContractCounter struct {
+	OrganizationID int64 `json:"organization_id"`
+	NextSeq        int64 `json:"next_seq"`
+}
+
+type ContractInstance struct {
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	ContractNo        int64              `json:"contract_no"`
+	SubjectType       string             `json:"subject_type"`
+	SubjectID         int64              `json:"subject_id"`
+	SubjectServiceID  pgtype.Int8        `json:"subject_service_id"`
+	TemplateID        int64              `json:"template_id"`
+	Kind              string             `json:"kind"`
+	Locale            string             `json:"locale"`
+	TemplateVersion   int32              `json:"template_version"`
+	OtpRequired       bool               `json:"otp_required"`
+	SignatureRequired bool               `json:"signature_required"`
+	Status            string             `json:"status"`
+	RenderedHtml      pgtype.Text        `json:"rendered_html"`
+	ContentSha256     pgtype.Text        `json:"content_sha256"`
+	PdfKey            pgtype.Text        `json:"pdf_key"`
+	ExecutedAt        pgtype.Timestamptz `json:"executed_at"`
+	VoidedAt          pgtype.Timestamptz `json:"voided_at"`
+	VoidReason        pgtype.Text        `json:"void_reason"`
+	VoidedByUserID    pgtype.Int8        `json:"voided_by_user_id"`
+	CreatedByUserID   pgtype.Int8        `json:"created_by_user_id"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ContractMedium struct {
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	InstanceID       int64              `json:"instance_id"`
+	OrganizationID   int64              `json:"organization_id"`
+	BrandID          int64              `json:"brand_id"`
+	StorageKey       string             `json:"storage_key"`
+	MimeType         string             `json:"mime_type"`
+	SizeBytes        int64              `json:"size_bytes"`
+	Sha256           string             `json:"sha256"`
+	Title            pgtype.Text        `json:"title"`
+	SortOrder        int32              `json:"sort_order"`
+	UploadedByUserID pgtype.Int8        `json:"uploaded_by_user_id"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+}
+
+type ContractSignature struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	SignerID       int64              `json:"signer_id"`
+	InstanceID     int64              `json:"instance_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	StorageKey     string             `json:"storage_key"`
+	Sha256         string             `json:"sha256"`
+	IpAddress      *netip.Addr        `json:"ip_address"`
+	UserAgent      pgtype.Text        `json:"user_agent"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
+type ContractSigner struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	InstanceID     int64              `json:"instance_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Role           string             `json:"role"`
+	UserID         pgtype.Int8        `json:"user_id"`
+	Name           string             `json:"name"`
+	PhoneE164      pgtype.Text        `json:"phone_e164"`
+	OtpCodeID      pgtype.Int8        `json:"otp_code_id"`
+	OtpVerifiedAt  pgtype.Timestamptz `json:"otp_verified_at"`
+	SignedAt       pgtype.Timestamptz `json:"signed_at"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ContractTemplate struct {
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	Name              string             `json:"name"`
+	Kind              string             `json:"kind"`
+	IsDefault         bool               `json:"is_default"`
+	OtpRequired       bool               `json:"otp_required"`
+	SignatureRequired bool               `json:"signature_required"`
+	IsActive          bool               `json:"is_active"`
+	CreatedByUserID   pgtype.Int8        `json:"created_by_user_id"`
+	UpdatedByUserID   pgtype.Int8        `json:"updated_by_user_id"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ContractTemplateLocale struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	TemplateID      int64              `json:"template_id"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	Locale          string             `json:"locale"`
+	LexicalJson     []byte             `json:"lexical_json"`
+	Html            string             `json:"html"`
+	Version         int32              `json:"version"`
+	UpdatedByUserID pgtype.Int8        `json:"updated_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Conversation struct {
 	ID             int64              `json:"id"`
 	Uuid           uuid.UUID          `json:"uuid"`
@@ -1399,6 +1511,31 @@ type Service struct {
 	MeasurementCheckedAt     pgtype.Timestamptz `json:"measurement_checked_at"`
 }
 
+type ServiceCatalogItem struct {
+	ID                 int64              `json:"id"`
+	Uuid               uuid.UUID          `json:"uuid"`
+	OrganizationID     int64              `json:"organization_id"`
+	BrandID            int64              `json:"brand_id"`
+	Name               string             `json:"name"`
+	Description        string             `json:"description"`
+	Category           string             `json:"category"`
+	DefaultPrice       pgtype.Numeric     `json:"default_price"`
+	Currency           string             `json:"currency"`
+	Recurrence         string             `json:"recurrence"`
+	CancellationFee    pgtype.Numeric     `json:"cancellation_fee"`
+	ContractTemplateID pgtype.Int8        `json:"contract_template_id"`
+	IsActive           bool               `json:"is_active"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ServiceCatalogModule struct {
+	ItemID       int64              `json:"item_id"`
+	ItemCategory string             `json:"item_category"`
+	ModuleKey    string             `json:"module_key"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
 type ServiceImage struct {
 	ID               int64              `json:"id"`
 	Uuid             uuid.UUID          `json:"uuid"`
@@ -1463,6 +1600,17 @@ type ServiceMeasurement struct {
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 }
 
+type ServicePriceOverride struct {
+	ID             int64              `json:"id"`
+	ItemID         int64              `json:"item_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Price          pgtype.Numeric     `json:"price"`
+	Currency       string             `json:"currency"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
 type ServiceReview struct {
 	ID             int64              `json:"id"`
 	Uuid           uuid.UUID          `json:"uuid"`
@@ -1487,6 +1635,60 @@ type ServiceStatusLog struct {
 	ActorOrgID     pgtype.Int8        `json:"actor_org_id"`
 	Note           pgtype.Text        `json:"note"`
 	Metadata       []byte             `json:"metadata"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
+type ServiceSubscription struct {
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	OrganizationID   int64              `json:"organization_id"`
+	BrandID          int64              `json:"brand_id"`
+	SellerOrgID      int64              `json:"seller_org_id"`
+	ItemID           int64              `json:"item_id"`
+	AssignedByOrgID  int64              `json:"assigned_by_org_id"`
+	AssignedByUserID pgtype.Int8        `json:"assigned_by_user_id"`
+	StartsOn         pgtype.Date        `json:"starts_on"`
+	EndsOn           pgtype.Date        `json:"ends_on"`
+	Recurrence       string             `json:"recurrence"`
+	Price            pgtype.Numeric     `json:"price"`
+	Currency         string             `json:"currency"`
+	RateSnapshot     []byte             `json:"rate_snapshot"`
+	CancellationFee  pgtype.Numeric     `json:"cancellation_fee"`
+	Status           string             `json:"status"`
+	ContractID       pgtype.Int8        `json:"contract_id"`
+	CancelledAt      pgtype.Timestamptz `json:"cancelled_at"`
+	ExpiredAt        pgtype.Timestamptz `json:"expired_at"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ServiceSubscriptionCancelRequest struct {
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	SubscriptionID    int64              `json:"subscription_id"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	RequestedByUserID pgtype.Int8        `json:"requested_by_user_id"`
+	RequestedByOrgID  int64              `json:"requested_by_org_id"`
+	Reason            string             `json:"reason"`
+	Status            string             `json:"status"`
+	CancellationFee   pgtype.Numeric     `json:"cancellation_fee"`
+	Currency          string             `json:"currency"`
+	DecidedByUserID   pgtype.Int8        `json:"decided_by_user_id"`
+	DecidedAt         pgtype.Timestamptz `json:"decided_at"`
+	DecisionNote      pgtype.Text        `json:"decision_note"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ServiceSubscriptionPeriod struct {
+	ID             int64              `json:"id"`
+	SubscriptionID int64              `json:"subscription_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	PeriodStart    pgtype.Date        `json:"period_start"`
+	PeriodEnd      pgtype.Date        `json:"period_end"`
+	PostedAt       pgtype.Timestamptz `json:"posted_at"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
