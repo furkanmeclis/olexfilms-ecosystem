@@ -41,14 +41,12 @@ import (
 	"syscall"
 	"text/tabwriter"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/config"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/migrator"
-	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/migrator/source"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 )
 
@@ -57,12 +55,6 @@ const usage = `usage:
   migrator report --profile=olex [--json] [--strict]
   migrator runs [--limit=20] [--json]
 `
-
-// dsnEnv maps a source name to its DSN variable.
-var dsnEnv = map[string]string{
-	migrator.SourceHub: "LEGACY_HUB_DSN",
-	migrator.SourceWH:  "LEGACY_WH_DSN",
-}
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -174,26 +166,7 @@ func cmdReport(ctx context.Context, args []string, out io.Writer) error {
 		return err
 	}
 	defer closePool()
-	srcs := migrator.Sources{}
-	defer func() {
-		for _, s := range srcs {
-			_ = s.Close()
-		}
-	}()
-	for _, name := range p.Sources {
-		s, err := openLegacy(ctx, name)
-		if err != nil {
-			return fmt.Errorf("open source %s: %w", name, err)
-		}
-		srcs[name] = s
-	}
-
-	tx, err := pool.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly, IsoLevel: pgx.RepeatableRead})
-	if err != nil {
-		return fmt.Errorf("begin read only: %w", err)
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-	rep, err := migrator.BuildReport(ctx, srcs, tx, migrator.ReportOptions{Profile: p.Name, Strict: *strict})
+	rep, err := migrator.BuildReportReadOnly(ctx, pool, p, openLegacy, migrator.ReportOptions{Profile: p.Name, Strict: *strict})
 	if err != nil {
 		return err
 	}
@@ -282,22 +255,9 @@ func openTarget(ctx context.Context) (*pgxpool.Pool, func(), error) {
 	return pool, pool.Close, nil
 }
 
-// openLegacy opens a legacy source from its DSN variable. Only placeholders
-// live in .env.example; the real DSNs are set on the server by hand.
-func openLegacy(ctx context.Context, name string) (source.LegacySource, error) {
-	key, ok := dsnEnv[name]
-	if !ok {
-		return nil, fmt.Errorf("no DSN variable for source %q", name)
-	}
-	dsn := strings.TrimSpace(os.Getenv(key))
-	if dsn == "" {
-		return nil, fmt.Errorf("%s is not set", key)
-	}
-	if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") {
-		return source.OpenPostgres(ctx, name, dsn, source.FixtureSchemas[name])
-	}
-	return source.OpenMariaDB(ctx, name, dsn)
-}
+// openLegacy opens a legacy source from its DSN variable
+// (migrator.LegacyDSNEnv).
+var openLegacy = migrator.OpenLegacyFromEnv
 
 // openMedia returns the legacy hub storage directory and the object store
 // the media steps copy into (TEC-256). Both stay nil when

@@ -234,26 +234,17 @@ func (r *Runner) Run(ctx context.Context, opts Options) (RunReport, error) {
 }
 
 func (r *Runner) openSources(ctx context.Context, p Profile, needed bool) (Sources, func(), error) {
-	srcs := Sources{}
-	closeAll := func() {
-		for _, s := range srcs {
-			_ = s.Close()
-		}
-	}
 	if !needed {
-		return srcs, closeAll, nil
+		return Sources{}, func() {}, nil
 	}
 	if r.Open == nil {
-		return srcs, closeAll, errors.New("migrator: no source opener configured")
+		return Sources{}, func() {}, errors.New("migrator: no source opener configured")
 	}
-	for _, name := range p.Sources {
-		s, err := r.Open(ctx, name)
-		if err != nil {
-			return srcs, closeAll, fmt.Errorf("migrator: open source %s: %w", name, err)
-		}
-		srcs[name] = s
+	srcs, closeAll, err := OpenSources(ctx, p, r.Open)
+	if err != nil {
+		err = fmt.Errorf("migrator: %w", err)
 	}
-	return srcs, closeAll, nil
+	return srcs, closeAll, err
 }
 
 func (r *Runner) runStep(ctx context.Context, q *db.Queries, run db.MigrationRun, profile string, opts Options, step Step, srcs Sources) (StepReport, error) {
