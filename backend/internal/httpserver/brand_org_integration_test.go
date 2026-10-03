@@ -322,7 +322,7 @@ func TestIntegrationBrandIsolation(t *testing.T) {
 	glorianCenter := it.brandCenter("glorian")
 	orgOlex := it.org("olex-dealer", "dealer", olexCenter)
 	orgGlorian := it.org("glorian-dealer", "dealer", glorianCenter)
-	_ = it.org("glorian-dealer-2", "dealer", glorianCenter)
+	orgGlorian2 := it.org("glorian-dealer-2", "dealer", glorianCenter)
 
 	u, pw := it.user("brand")
 	it.member(orgOlex, u, "owner")
@@ -387,20 +387,29 @@ func TestIntegrationBrandIsolation(t *testing.T) {
 		t.Fatalf("glorian domain memberships: %v", glorianView)
 	}
 
-	// Platform list: counts per domain match the brand's rows only.
+	// Platform list: each domain lists its own brand's rows only. Other
+	// package tests create and delete organizations in parallel against
+	// the shared database, so the brand-wide total is not stable; the
+	// check is "no cross-brand row" on the unfiltered page plus an exact
+	// match on this test's own organizations (filtered by its suffix).
 	admin, apw := it.user("admin", rbac.RoleSuperAdmin)
 	_ = admin
 	atp := it.tokensFrom(it.do("POST", "/v1/auth/login", hostOlex, "", map[string]string{
 		"email": admin.Email.String, "password": apw,
 	}))
-	totalOf := func(host string) int64 {
-		code, env := it.do("GET", "/v1/platform/organizations?limit=100", host, atp.AccessToken, nil)
+	listOf := func(host, q string) (int64, map[string]bool) {
+		path := "/v1/platform/organizations?limit=100"
+		if q != "" {
+			path += "&q=" + q // the suffix is digits only
+		}
+		code, env := it.do("GET", path, host, atp.AccessToken, nil)
 		if code != http.StatusOK {
 			t.Fatalf("platform list on %s: %d %s", host, code, errCode(env))
 		}
 		var page struct {
 			Total int64 `json:"total"`
 			Items []struct {
+				Slug  string `json:"slug"`
 				Brand struct {
 					Slug string `json:"slug"`
 				} `json:"brand"`
@@ -409,27 +418,27 @@ func TestIntegrationBrandIsolation(t *testing.T) {
 		if err := json.Unmarshal(env.Data, &page); err != nil {
 			t.Fatal(err)
 		}
+		want := map[string]string{hostOlex: "olex", hostGlorian: "glorian"}[host]
+		slugs := map[string]bool{}
 		for _, item := range page.Items {
-			want := map[string]string{hostOlex: "olex", hostGlorian: "glorian"}[host]
 			if item.Brand.Slug != want {
-				t.Fatalf("%s list leaked brand %s", host, item.Brand.Slug)
+				t.Fatalf("%s list leaked brand %s (org %s)", host, item.Brand.Slug, item.Slug)
 			}
+			slugs[item.Slug] = true
 		}
-		return page.Total
+		return page.Total, slugs
 	}
-	count := func(brandID int64) int64 {
-		var n int64
-		if err := it.pool.QueryRow(context.Background(),
-			"SELECT COUNT(*) FROM organizations WHERE brand_id = $1 AND deleted_at IS NULL", brandID).Scan(&n); err != nil {
-			t.Fatal(err)
+	for _, host := range []string{hostOlex, hostGlorian} {
+		if total, slugs := listOf(host, ""); total < int64(len(slugs)) || len(slugs) == 0 {
+			t.Fatalf("%s platform list: total %d, items %d", host, total, len(slugs))
 		}
-		return n
 	}
-	if got, want := totalOf(hostOlex), count(olexCenter.BrandID); got != want {
-		t.Fatalf("olex total = %d, want %d", got, want)
+	if total, slugs := listOf(hostOlex, it.suffix); total != 1 || len(slugs) != 1 || !slugs[orgOlex.Slug] {
+		t.Fatalf("olex own orgs: total %d, %v; want only %s", total, slugs, orgOlex.Slug)
 	}
-	if got, want := totalOf(hostGlorian), count(glorianCenter.BrandID); got != want {
-		t.Fatalf("glorian total = %d, want %d", got, want)
+	if total, slugs := listOf(hostGlorian, it.suffix); total != 2 || len(slugs) != 2 ||
+		!slugs[orgGlorian.Slug] || !slugs[orgGlorian2.Slug] {
+		t.Fatalf("glorian own orgs: total %d, %v; want %s and %s", total, slugs, orgGlorian.Slug, orgGlorian2.Slug)
 	}
 	if code, _ := it.do("GET", "/v1/platform/organizations/"+orgGlorian.Uuid.String(), hostOlex, atp.AccessToken, nil); code != http.StatusNotFound {
 		t.Fatalf("glorian org detail on olex domain must be 404, got %d", code)
