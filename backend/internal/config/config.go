@@ -37,6 +37,23 @@ type Config struct {
 	Mobile     MobileConfig
 	Warranty   WarrantyConfig
 	Services   ServicesConfig
+	Glorian    GlorianConfig
+}
+
+// GlorianConfig is the outbound Inventory API connection to the Glorian hub
+// (TEC-267, design K2). Until integration_connections lands (TEC-266) the
+// single connection comes from env; Enabled=false or an empty base URL/key
+// makes the resolver answer ErrInactiveConnection. Timeouts bound one read
+// or write attempt; RetryBaseDelay is the first GET backoff step and
+// MaxRetryAfter the longest 429 Retry-After waited in place.
+type GlorianConfig struct {
+	Enabled        bool
+	BaseURL        string
+	APIKey         string
+	Timeout        time.Duration
+	WriteTimeout   time.Duration
+	RetryBaseDelay time.Duration
+	MaxRetryAfter  time.Duration
 }
 
 // MobileConfig is the mobile API contract (TEC-91): the supported range of
@@ -371,6 +388,15 @@ func Load() (Config, error) {
 			MinAPIVersion: getInt("MOBILE_API_MIN_VERSION", 1),
 			MaxAPIVersion: getInt("MOBILE_API_MAX_VERSION", 1),
 			QRLoginTTL:    getDuration("QR_LOGIN_TTL", 120*time.Second),
+		},
+		Glorian: GlorianConfig{
+			Enabled:        getBool("GLORIAN_INVENTORY_ENABLED", false),
+			BaseURL:        getEnv("GLORIAN_INVENTORY_BASE_URL", ""),
+			APIKey:         getEnv("GLORIAN_INVENTORY_API_KEY", ""),
+			Timeout:        getDuration("GLORIAN_INVENTORY_TIMEOUT", 15*time.Second),
+			WriteTimeout:   getDuration("GLORIAN_INVENTORY_WRITE_TIMEOUT", 30*time.Second),
+			RetryBaseDelay: getDuration("GLORIAN_INVENTORY_RETRY_BASE_DELAY", 200*time.Millisecond),
+			MaxRetryAfter:  getDuration("GLORIAN_INVENTORY_MAX_RETRY_AFTER", 60*time.Second),
 		},
 	}
 
