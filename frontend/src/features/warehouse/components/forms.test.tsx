@@ -121,15 +121,13 @@ describe("NodeForm validation (TEC-231)", () => {
   });
 
   it("offers only the types the parent allows and shows a server error", async () => {
-    const onSubmit = vi
-      .fn()
-      .mockRejectedValue(
-        new ApiError({
-          status: 409,
-          code: "WAREHOUSE_CODE_TAKEN",
-          message: "taken",
-        }),
-      );
+    const onSubmit = vi.fn().mockRejectedValue(
+      new ApiError({
+        status: 409,
+        code: "WAREHOUSE_CODE_TAKEN",
+        message: "taken",
+      }),
+    );
     await render(
       m,
       createElement(NodeForm, {
