@@ -61,7 +61,7 @@ var ExpectedRowCounts = map[string]int64{
 	"legacy_hub.nexptg_report_measurements": 6,
 	"legacy_hub.service_nexptg_report":      1,
 	"legacy_hub.service_customer_transfers": 1,
-	"legacy_hub.short_urls":                 2,
+	"legacy_hub.short_urls":                 4,
 	"legacy_hub.sms_logs":                   3,
 	"legacy_hub.notifications":              2,
 

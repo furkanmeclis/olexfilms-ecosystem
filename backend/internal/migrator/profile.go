@@ -64,6 +64,11 @@ func olexSteps() []Step {
 
 		// TEC-261: hub + warehouse orders, merged by external_reference.
 		OrdersStep{},
+
+		// TEC-263: hub short URLs (tokens kept) and the read-only message
+		// archive (sms_logs incl. WhatsApp, notifications).
+		ShortURLsStep{},
+		LegacyMessagesStep{},
 	}
 }
 

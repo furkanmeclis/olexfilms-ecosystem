@@ -655,6 +655,24 @@ type LabelTemplate struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
+type LegacyMessage struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Channel        string             `json:"channel"`
+	Recipient      pgtype.Text        `json:"recipient"`
+	UserID         pgtype.Int8        `json:"user_id"`
+	Body           string             `json:"body"`
+	Payload        []byte             `json:"payload"`
+	SentAt         pgtype.Timestamptz `json:"sent_at"`
+	SourceSystem   string             `json:"source_system"`
+	SourceTable    string             `json:"source_table"`
+	SourceID       string             `json:"source_id"`
+	AnonymizedAt   pgtype.Timestamptz `json:"anonymized_at"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
 type LegalText struct {
 	ID        int64              `json:"id"`
 	Uuid      uuid.UUID          `json:"uuid"`
