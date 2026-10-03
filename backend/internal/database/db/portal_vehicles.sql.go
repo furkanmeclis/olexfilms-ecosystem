@@ -12,6 +12,31 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countPortalContracts = `-- name: CountPortalContracts :one
+SELECT COUNT(*)::bigint
+FROM services s
+JOIN brands b ON b.id = s.brand_id
+WHERE s.contract_id IS NOT NULL
+  AND (s.customer_user_id = $1::bigint
+       OR EXISTS (SELECT 1 FROM warranties hw
+                  WHERE hw.service_id = s.id AND hw.holder_user_id = $1::bigint))
+  AND s.brand_id = $2::bigint
+  AND s.status <> 'draft'
+  AND b.slug <> 'glorian'
+`
+
+type CountPortalContractsParams struct {
+	UserID  int64 `json:"user_id"`
+	BrandID int64 `json:"brand_id"`
+}
+
+func (q *Queries) CountPortalContracts(ctx context.Context, arg CountPortalContractsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countPortalContracts, arg.UserID, arg.BrandID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const countPortalServices = `-- name: CountPortalServices :one
 SELECT COUNT(*)::bigint
 FROM services s
@@ -154,6 +179,94 @@ func (q *Queries) GetPortalVehicleServiceSummary(ctx context.Context, arg GetPor
 		&i.LastServiceAt,
 	)
 	return i, err
+}
+
+const listPortalContracts = `-- name: ListPortalContracts :many
+SELECT s.uuid, s.service_no, s.status, s.plate, s.plate_country, s.model_year, s.created_at,
+       o.uuid AS organization_uuid, o.name AS organization_name, o.type AS organization_type,
+       v.uuid AS vehicle_uuid,
+       cb.name AS car_brand_name, cm.name AS car_model_name
+FROM services s
+JOIN brands b ON b.id = s.brand_id
+JOIN organizations o ON o.id = s.organization_id
+JOIN vehicles v ON v.id = s.vehicle_id
+JOIN car_brands cb ON cb.id = s.car_brand_id
+JOIN car_models cm ON cm.id = s.car_model_id
+WHERE s.contract_id IS NOT NULL
+  AND (s.customer_user_id = $1::bigint
+       OR EXISTS (SELECT 1 FROM warranties hw
+                  WHERE hw.service_id = s.id AND hw.holder_user_id = $1::bigint))
+  AND s.brand_id = $2::bigint
+  AND s.status <> 'draft'
+  AND b.slug <> 'glorian'
+ORDER BY s.created_at DESC, s.id DESC
+LIMIT $4::int OFFSET $3::int
+`
+
+type ListPortalContractsParams struct {
+	UserID    int64 `json:"user_id"`
+	BrandID   int64 `json:"brand_id"`
+	RowOffset int32 `json:"row_offset"`
+	RowLimit  int32 `json:"row_limit"`
+}
+
+type ListPortalContractsRow struct {
+	Uuid             uuid.UUID          `json:"uuid"`
+	ServiceNo        string             `json:"service_no"`
+	Status           string             `json:"status"`
+	Plate            pgtype.Text        `json:"plate"`
+	PlateCountry     pgtype.Text        `json:"plate_country"`
+	ModelYear        pgtype.Int2        `json:"model_year"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	OrganizationUuid uuid.UUID          `json:"organization_uuid"`
+	OrganizationName string             `json:"organization_name"`
+	OrganizationType string             `json:"organization_type"`
+	VehicleUuid      uuid.UUID          `json:"vehicle_uuid"`
+	CarBrandName     string             `json:"car_brand_name"`
+	CarModelName     string             `json:"car_model_name"`
+}
+
+// TEC-245 (F2-03e): the user's signed vehicle intake contracts. Until the
+// contracts module (F3) lands a contract is only services.contract_id, so
+// the list is the user's services that carry one (same ownership, brand,
+// Glorian and draft rules as ListPortalServices); empty until F3 fills it.
+func (q *Queries) ListPortalContracts(ctx context.Context, arg ListPortalContractsParams) ([]ListPortalContractsRow, error) {
+	rows, err := q.db.Query(ctx, listPortalContracts,
+		arg.UserID,
+		arg.BrandID,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPortalContractsRow{}
+	for rows.Next() {
+		var i ListPortalContractsRow
+		if err := rows.Scan(
+			&i.Uuid,
+			&i.ServiceNo,
+			&i.Status,
+			&i.Plate,
+			&i.PlateCountry,
+			&i.ModelYear,
+			&i.CreatedAt,
+			&i.OrganizationUuid,
+			&i.OrganizationName,
+			&i.OrganizationType,
+			&i.VehicleUuid,
+			&i.CarBrandName,
+			&i.CarModelName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listPortalServices = `-- name: ListPortalServices :many

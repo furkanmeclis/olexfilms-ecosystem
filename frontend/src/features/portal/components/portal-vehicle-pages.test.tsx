@@ -8,6 +8,7 @@ const portal = vi.hoisted(() => ({
   listVehicles: vi.fn(),
   getVehicle: vi.fn(),
   getService: vi.fn(),
+  me: vi.fn(),
 }));
 const lang = vi.hoisted(() => ({
   locale: "en" as string,
@@ -87,6 +88,7 @@ beforeEach(() => {
   root = createRoot(container);
   lang.locale = "en";
   lang.dir = "ltr";
+  portal.me.mockResolvedValue({ user: {}, roles: ["customer"] });
 });
 
 afterEach(() => {
@@ -247,6 +249,8 @@ describe("PortalNav", () => {
       "/portal/vehicles",
       "/portal/warranties",
       "/portal/dealers",
+      "/portal/contracts",
+      "/portal/preferences",
     ]);
     expect(
       container
@@ -396,6 +400,31 @@ describe("PortalVehicleDetail", () => {
     expect(
       container.querySelector('[data-testid="portal-transfer-open"]'),
     ).not.toBeNull();
+    expect(container.querySelector('[data-testid="portal-read-only"]')).toBe(
+      null,
+    );
+  });
+
+  it("hides the transfer from a read-only fleet session (TEC-245)", async () => {
+    portal.me.mockResolvedValue({ user: {}, roles: ["fleet"] });
+    portal.getVehicle.mockResolvedValue({
+      ...vehicle(),
+      service_summary: {
+        total: 0,
+        completed: 0,
+        organization_count: 0,
+        last_service_at: null,
+      },
+      services: [],
+      active_warranties: [],
+    } satisfies VehicleDetail);
+    await render(createElement(PortalVehicleDetail, { uuid: "v-1" }));
+    expect(
+      container.querySelector('[data-testid="portal-transfer-open"]'),
+    ).toBeNull();
+    expect(
+      container.querySelector('[data-testid="portal-read-only"]')?.textContent,
+    ).toBe("portal.read_only.notice");
   });
 });
 
