@@ -1426,6 +1426,7 @@ type Querier interface {
 	MergeConflictingCustomerOrganizations(ctx context.Context, arg MergeConflictingCustomerOrganizationsParams) (int64, error)
 	MigratorAssignMemberRole(ctx context.Context, arg MigratorAssignMemberRoleParams) (int64, error)
 	MigratorAssignUserRole(ctx context.Context, arg MigratorAssignUserRoleParams) (int64, error)
+	MigratorBrandCurrency(ctx context.Context, id int64) (string, error)
 	// TEC-256: migrator steps 3-4 (vehicle catalog, product catalog and the
 	// warehouse product match). Written only by cmd/migrator inside a step
 	// transaction.
@@ -1461,6 +1462,8 @@ type Querier interface {
 	// A typed location of the organization with the full code (rooms, aisles,
 	// shelves and bins are unique by full_code).
 	MigratorFindLocation(ctx context.Context, arg MigratorFindLocationParams) (uuid.UUID, error)
+	MigratorFindOrderByExternalReference(ctx context.Context, arg MigratorFindOrderByExternalReferenceParams) (uuid.UUID, error)
+	MigratorFindOrderItem(ctx context.Context, arg MigratorFindOrderItemParams) (uuid.UUID, error)
 	MigratorFindProductBySKU(ctx context.Context, arg MigratorFindProductBySKUParams) (uuid.UUID, error)
 	// Products of the brand with the name (case insensitive); the warehouse
 	// match uses it only when exactly one row comes back.
@@ -1487,6 +1490,11 @@ type Querier interface {
 	MigratorInsertFixedHolding(ctx context.Context, arg MigratorInsertFixedHoldingParams) error
 	// warehouse_id and full_code are derived by trg_warehouse_locations_derive.
 	MigratorInsertLocation(ctx context.Context, arg MigratorInsertLocationParams) (MigratorInsertLocationRow, error)
+	MigratorInsertOrder(ctx context.Context, arg MigratorInsertOrderParams) (int64, error)
+	// Legacy orders carry no prices: the line is frozen at 0, so a later receipt
+	// books no sale for it either (K9, no double count).
+	MigratorInsertOrderItem(ctx context.Context, arg MigratorInsertOrderItemParams) (int64, error)
+	MigratorInsertOrderItemUnit(ctx context.Context, arg MigratorInsertOrderItemUnitParams) (int64, error)
 	MigratorInsertOrganization(ctx context.Context, arg MigratorInsertOrganizationParams) (int64, error)
 	MigratorInsertProduct(ctx context.Context, arg MigratorInsertProductParams) (int64, error)
 	MigratorInsertRoom(ctx context.Context, arg MigratorInsertRoomParams) (int64, error)
@@ -1504,6 +1512,15 @@ type Querier interface {
 	// Province by name, matched like the 000035 backfill: Turkish capitals
 	// folded, case insensitive.
 	MigratorMatchProvince(ctx context.Context, arg MigratorMatchProvinceParams) (int64, error)
+	// TEC-261: migrator step 9 (orders). Written only by cmd/migrator inside a
+	// step transaction. Legacy orders are history: no status history row, no
+	// outbox event and no accounting entry is written for them (K9).
+	// A buyer organization with its parent, the order's seller (K6).
+	MigratorOrderBuyer(ctx context.Context, argUuid uuid.UUID) (MigratorOrderBuyerRow, error)
+	// touched: the application already moved the order (a status history row),
+	// so the migrator no longer rewrites it.
+	MigratorOrderByUUID(ctx context.Context, arg MigratorOrderByUUIDParams) (MigratorOrderByUUIDRow, error)
+	MigratorOrderItemByUUID(ctx context.Context, arg MigratorOrderItemByUUIDParams) (MigratorOrderItemByUUIDRow, error)
 	MigratorOrganizationIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	MigratorProductForUnit(ctx context.Context, arg MigratorProductForUnitParams) (MigratorProductForUnitRow, error)
 	MigratorProductIDByUUID(ctx context.Context, arg MigratorProductIDByUUIDParams) (int64, error)
@@ -1525,6 +1542,10 @@ type Querier interface {
 	MigratorUpdateCarModel(ctx context.Context, arg MigratorUpdateCarModelParams) error
 	MigratorUpdateCategory(ctx context.Context, arg MigratorUpdateCategoryParams) error
 	MigratorUpdateLocation(ctx context.Context, arg MigratorUpdateLocationParams) error
+	// A legacy change of an order the application has not moved yet. Parties,
+	// currency and totals stay as inserted.
+	MigratorUpdateOrder(ctx context.Context, arg MigratorUpdateOrderParams) (int64, error)
+	MigratorUpdateOrderItemQuantity(ctx context.Context, arg MigratorUpdateOrderItemQuantityParams) error
 	// Legacy-sourced fields only; slug and parent stay as the new app has them.
 	MigratorUpdateOrganization(ctx context.Context, arg MigratorUpdateOrganizationParams) error
 	// Legacy-sourced fields only; images, unit type and the sync columns stay.
@@ -1541,6 +1562,7 @@ type Querier interface {
 	// movement is the ledger's and is left alone (0 rows).
 	MigratorUpsertUnitState(ctx context.Context, arg MigratorUpsertUnitStateParams) (int64, error)
 	MigratorUserByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorUserByUUIDRow, error)
+	MigratorUserIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	MigratorWarehouseIDByUUID(ctx context.Context, arg MigratorWarehouseIDByUUIDParams) (int64, error)
 	// Consents the target has not decided yet; a decision the target already
 	// made for the same legal text wins and the source's stays as a record.
