@@ -100,5 +100,16 @@
   "system.reset": "恢复默认",
   "system.toast.saved": "设置已保存。",
   "system.toast.reset": "设置已恢复默认。",
-  "system.toast.failed": "设置保存失败。"
+  "system.toast.failed": "设置保存失败。",
+  "coordinates.title": "地图位置",
+  "coordinates.hint": "输入坐标或在地图上选择位置，以便出现在经销商查找中。",
+  "coordinates.latitude": "纬度",
+  "coordinates.longitude": "经度",
+  "coordinates.map_label": "位置选择地图",
+  "coordinates.pick_hint": "点按地图以选择位置。",
+  "coordinates.clear": "清除位置",
+  "coordinates.marker": "已选位置",
+  "coordinates.errors.latitude": "纬度必须是 -90 到 90 之间的数字。",
+  "coordinates.errors.longitude": "经度必须是 -180 到 180 之间的数字。",
+  "coordinates.errors.pair": "请同时填写纬度和经度，或两者都留空。"
 }

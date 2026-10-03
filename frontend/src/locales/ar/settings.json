@@ -100,5 +100,16 @@
   "system.reset": "استعادة الافتراضي",
   "system.toast.saved": "تم حفظ الإعداد.",
   "system.toast.reset": "تمت استعادة الإعداد الافتراضي.",
-  "system.toast.failed": "تعذّر حفظ الإعداد."
+  "system.toast.failed": "تعذّر حفظ الإعداد.",
+  "coordinates.title": "الموقع على الخريطة",
+  "coordinates.hint": "أدخل الإحداثيات أو اختر الموقع على الخريطة لتظهر في البحث عن الوكلاء.",
+  "coordinates.latitude": "خط العرض",
+  "coordinates.longitude": "خط الطول",
+  "coordinates.map_label": "خريطة اختيار الموقع",
+  "coordinates.pick_hint": "انقر على الخريطة لاختيار الموقع.",
+  "coordinates.clear": "مسح الموقع",
+  "coordinates.marker": "الموقع المحدد",
+  "coordinates.errors.latitude": "يجب أن يكون خط العرض رقمًا بين -90 و90.",
+  "coordinates.errors.longitude": "يجب أن يكون خط الطول رقمًا بين -180 و180.",
+  "coordinates.errors.pair": "أدخل خط العرض وخط الطول معًا، أو اترك كليهما فارغين."
 }

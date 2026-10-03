@@ -100,5 +100,16 @@
   "system.reset": "Reset to default",
   "system.toast.saved": "Setting saved.",
   "system.toast.reset": "Setting reset to default.",
-  "system.toast.failed": "Setting could not be saved."
+  "system.toast.failed": "Setting could not be saved.",
+  "coordinates.title": "Map position",
+  "coordinates.hint": "Enter the coordinates or pick the position on the map to appear in the dealer finder.",
+  "coordinates.latitude": "Latitude",
+  "coordinates.longitude": "Longitude",
+  "coordinates.map_label": "Position picker map",
+  "coordinates.pick_hint": "Tap the map to pick the position.",
+  "coordinates.clear": "Clear position",
+  "coordinates.marker": "Selected position",
+  "coordinates.errors.latitude": "Latitude must be a number between -90 and 90.",
+  "coordinates.errors.longitude": "Longitude must be a number between -180 and 180.",
+  "coordinates.errors.pair": "Enter latitude and longitude together, or leave both empty."
 }

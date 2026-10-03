@@ -238,13 +238,14 @@ describe("portal vehicle helpers", () => {
 });
 
 describe("PortalNav", () => {
-  it("links home, vehicles and warranties and marks the current page", async () => {
+  it("links home, vehicles, warranties and dealers and marks the current page", async () => {
     await render(createElement(PortalNav));
     const links = Array.from(container.querySelectorAll("nav a"));
     expect(links.map((a) => a.getAttribute("href"))).toEqual([
       "/portal",
       "/portal/vehicles",
       "/portal/warranties",
+      "/portal/dealers",
     ]);
     expect(
       container

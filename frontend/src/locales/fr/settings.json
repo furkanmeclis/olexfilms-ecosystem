@@ -100,5 +100,16 @@
   "system.reset": "Rétablir la valeur par défaut",
   "system.toast.saved": "Paramètre enregistré.",
   "system.toast.reset": "Paramètre rétabli par défaut.",
-  "system.toast.failed": "Impossible d'enregistrer le paramètre."
+  "system.toast.failed": "Impossible d'enregistrer le paramètre.",
+  "coordinates.title": "Position sur la carte",
+  "coordinates.hint": "Saisissez les coordonnées ou choisissez la position sur la carte pour apparaître dans la recherche de revendeurs.",
+  "coordinates.latitude": "Latitude",
+  "coordinates.longitude": "Longitude",
+  "coordinates.map_label": "Carte de sélection de la position",
+  "coordinates.pick_hint": "Touchez la carte pour choisir la position.",
+  "coordinates.clear": "Effacer la position",
+  "coordinates.marker": "Position choisie",
+  "coordinates.errors.latitude": "La latitude doit être un nombre entre -90 et 90.",
+  "coordinates.errors.longitude": "La longitude doit être un nombre entre -180 et 180.",
+  "coordinates.errors.pair": "Saisissez la latitude et la longitude ensemble, ou laissez les deux vides."
 }
