@@ -3659,6 +3659,234 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/warehouse/stock-counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stock counts of the active organization
+         * @description Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Newest first; no expected values.
+         */
+        get: operations["listStockCounts"];
+        put?: never;
+        /**
+         * Open a draft stock count
+         * @description Needs `warehouse.write`. The count covers one warehouse of the active organization and a scope inside it: `warehouse` (default), `room` (`room_uuid`), `location` (`location_uuid`, the location and its subtree) or `product` (`product_uuid`, a product of the active brand inside the warehouse). Methods: `location_first` (a location is required for every unit scan), `unit_first` (the location is optional for serial units), `product_qty` (SKUs of serial products and fixed barcodes with a quantity per location), `initial_placement` (the organization's unlocated units are placed into the scope's locations; needs `approve-start`; no product scope). `blind` never returns expected values while counting, `guided` does.
+         */
+        post: operations["createStockCount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-counts/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stock count detail
+         * @description Needs `warehouse.read`. Carries `progress`; `expected` (per location) only for a guided count while it is draft or in progress (a blind count never has it); `summary` once completed.
+         */
+        get: operations["getStockCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-counts/{uuid}/approve-start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve the start of a draft count
+         * @description Needs `warehouse.write`. Required before `start` for `initial_placement`; idempotent. 409 COUNT_INVALID_STATUS unless draft.
+         */
+        post: operations["approveStockCountStart"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-counts/{uuid}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start scanning
+         * @description Needs `warehouse.write`. draft -> in_progress. 409 COUNT_START_APPROVAL_REQUIRED for an unapproved initial_placement, 409 COUNT_INVALID_STATUS unless draft.
+         */
+        post: operations["startStockCount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-counts/{uuid}/scans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Recorded scans of a count
+         * @description Needs `warehouse.read`. No expected values.
+         */
+        get: operations["listStockCountScans"];
+        put?: never;
+        /**
+         * Record one scan
+         * @description Needs `warehouse.write`; the count must be in progress (409 COUNT_INVALID_STATUS). The code is resolved by the TEC-203 resolver (units follow the caller's `stock.read` reach; 404 SCAN_NO_MATCH). A location scan sets the scanning user's location context; a unit or SKU scan is counted at `location_uuid`, else at that context. 422 COUNT_LOCATION_OUT_OF_SCOPE for a location outside the scope (nothing is recorded), 422 COUNT_LOCATION_REQUIRED when the method needs a location, 422 COUNT_PRODUCT_OUT_OF_SCOPE for another product of a product-scoped count, 422 COUNT_SCAN_KIND_NOT_ALLOWED (serial units in product_qty, SKUs outside product_qty, SKUs of fixed-barcode products), 409 COUNT_UNIT_ALREADY_SCANNED for a serial unit counted twice. `quantity` counts fixed barcodes and SKUs; `meters` is the measured length of a roll. `expected` is present for guided counts only.
+         */
+        post: operations["scanStockCount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-counts/{uuid}/scans/{scan_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a scan of an in-progress count
+         * @description Needs `warehouse.write`. 409 COUNT_INVALID_STATUS unless in progress.
+         */
+        delete: operations["deleteStockCountScan"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-counts/{uuid}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complete scanning and compute the differences
+         * @description Needs `warehouse.write`. in_progress -> pending_review. Builds the lines against the ledger (matched, missing, wrong_location, unlocated, unexpected, qty_variance, meter_variance). No stock is changed.
+         */
+        post: operations["completeStockCount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-counts/{uuid}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Count report (lines with expected and counted values)
+         * @description Needs `warehouse.read`. Completed counts only (409 COUNT_INVALID_STATUS before completion).
+         */
+        get: operations["getStockCountReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-counts/{uuid}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Count report as CSV
+         * @description Needs `warehouse.read`. Completed counts only (409 COUNT_INVALID_STATUS).
+         */
+        get: operations["exportStockCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-counts/{uuid}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a completed count and apply the resolutions
+         * @description Needs `warehouse.write` and `stock.adjust` (403 COUNT_ADJUST_FORBIDDEN). Every line that is not matched needs a resolution from its `allowed_resolutions` (400 VALIDATION_ERROR otherwise). In one transaction, through the stock ledger with the idempotency keys `stock_count:stock_count_line:<line>:<type>:<barcode>`: void_missing -> void; relocate -> placement to the counted location (and a count_adjustment of measured roll meters); increase_unlocated -> count_adjustment to the counted fixed quantity or roll meters; ignore -> nothing. 409 COUNT_STALE (nothing applied) when the stock changed since completion; 409 COUNT_INVALID_STATUS unless pending_review (a second approval writes nothing).
+         */
+        post: operations["approveStockCount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-counts/{uuid}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel a count
+         * @description Needs `warehouse.write`. draft, in_progress or pending_review -> cancelled; no stock is changed. 409 COUNT_INVALID_STATUS otherwise.
+         */
+        post: operations["cancelStockCount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/warehouse/scan": {
         parameters: {
             query?: never;
@@ -9736,6 +9964,239 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["WarehouseGenerateResult"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        StockCountStatus: "draft" | "in_progress" | "pending_review" | "approved" | "cancelled";
+        StockCountInput: {
+            /** Format: uuid */
+            warehouse_uuid: string;
+            /** @enum {string} */
+            method: "location_first" | "unit_first" | "product_qty" | "initial_placement";
+            /** @enum {string} */
+            visibility: "blind" | "guided";
+            /**
+             * @default warehouse
+             * @enum {string}
+             */
+            scope_type: "warehouse" | "room" | "location" | "product";
+            /**
+             * Format: uuid
+             * @description scope_type=room
+             */
+            room_uuid?: string | null;
+            /**
+             * Format: uuid
+             * @description scope_type=location (the location and its subtree)
+             */
+            location_uuid?: string | null;
+            /**
+             * Format: uuid
+             * @description scope_type=product (a product of the active brand)
+             */
+            product_uuid?: string | null;
+            note?: string | null;
+        };
+        StockCountRef: {
+            /** Format: uuid */
+            uuid: string;
+            code: string;
+            name: string;
+        };
+        StockCountLocation: {
+            /** Format: uuid */
+            uuid: string;
+            full_code: string;
+            name: string;
+        };
+        StockCountProduct: {
+            /** Format: uuid */
+            uuid: string;
+            sku: string;
+            name: string;
+        };
+        StockCountUnit: {
+            /** Format: uuid */
+            uuid: string;
+            barcode: string;
+            /** @enum {string} */
+            unit_kind: "serial" | "fixed";
+        };
+        StockCount: {
+            /** Format: uuid */
+            uuid: string;
+            status: components["schemas"]["StockCountStatus"];
+            /** @enum {string} */
+            method: "location_first" | "unit_first" | "product_qty" | "initial_placement";
+            /** @enum {string} */
+            visibility: "blind" | "guided";
+            /** @enum {string} */
+            scope_type: "warehouse" | "room" | "location" | "product";
+            warehouse: components["schemas"]["StockCountRef"];
+            scope_room: null | components["schemas"]["StockCountRef"];
+            scope_location: null | components["schemas"]["StockCountLocation"];
+            scope_product: null | components["schemas"]["StockCountProduct"];
+            note: string | null;
+            /** @description initial_placement starts after approve-start. */
+            start_approval_required: boolean;
+            /** Format: date-time */
+            start_approved_at: string | null;
+            /** Format: date-time */
+            started_at: string | null;
+            /** Format: date-time */
+            completed_at: string | null;
+            /** Format: date-time */
+            approved_at: string | null;
+            /** Format: date-time */
+            cancelled_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** @description Detail responses only. */
+            progress?: {
+                scans: number;
+                serial_units: number;
+                /** Format: int64 */
+                fixed_quantity: number;
+                /** Format: int64 */
+                product_quantity: number;
+            };
+            /** @description Guided counts while draft or in progress only; never present for a blind count. */
+            expected?: {
+                serial_units: number;
+                /** Format: int64 */
+                fixed_quantity: number;
+                locations: {
+                    /** @description Null for stock held by the organization without a location. */
+                    location: null | components["schemas"]["StockCountLocation"];
+                    serial_units: number;
+                    /** Format: int64 */
+                    fixed_quantity: number;
+                }[];
+            };
+            /** @description Completed counts only. */
+            summary?: {
+                lines: number;
+                by_result: {
+                    [key: string]: number;
+                };
+                unresolved: number;
+            };
+        };
+        StockCountScanInput: {
+            /** @description Location QR, unit barcode / QR, SKU or short code (TEC-203). */
+            code: string;
+            /**
+             * Format: uuid
+             * @description Counted location; default: the user's last location scan.
+             */
+            location_uuid?: string | null;
+            /** @description Fixed barcodes and SKUs (default 1); serial units are 1. */
+            quantity?: number | null;
+            /**
+             * @description Measured roll length (roll units only).
+             * @example 8.50
+             */
+            meters?: string | null;
+        };
+        StockCountScan: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            kind: "location" | "serial" | "fixed" | "product";
+            raw_code: string;
+            unit: null | components["schemas"]["StockCountUnit"];
+            product: null | components["schemas"]["StockCountProduct"];
+            location: null | components["schemas"]["StockCountLocation"];
+            quantity: number;
+            meters: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        StockCountScanResult: {
+            scan: components["schemas"]["StockCountScan"];
+            location_context: null | components["schemas"]["StockCountLocation"];
+            /** @description Guided counts only; omitted for blind counts. */
+            expected?: {
+                in_scope: boolean;
+                location: null | components["schemas"]["StockCountLocation"];
+                /** Format: int64 */
+                quantity: number;
+                meters: string | null;
+            };
+        };
+        StockCountLine: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            line_kind: "serial" | "fixed" | "product";
+            unit: null | components["schemas"]["StockCountUnit"];
+            product: components["schemas"]["StockCountProduct"];
+            expected_location: null | components["schemas"]["StockCountLocation"];
+            counted_location: null | components["schemas"]["StockCountLocation"];
+            expected_quantity: number;
+            counted_quantity: number;
+            expected_meters: string | null;
+            counted_meters: string | null;
+            /** @enum {string} */
+            result: "matched" | "missing" | "wrong_location" | "unlocated" | "unexpected" | "qty_variance" | "meter_variance";
+            /** @enum {string|null} */
+            resolution: "ignore" | "relocate" | "void_missing" | "increase_unlocated" | null;
+            allowed_resolutions: ("ignore" | "relocate" | "void_missing" | "increase_unlocated")[];
+            note: string | null;
+            /** Format: date-time */
+            resolved_at: string | null;
+        };
+        StockCountReport: {
+            count: components["schemas"]["StockCount"];
+            lines: components["schemas"]["StockCountLine"][];
+        };
+        StockCountApproveInput: {
+            resolutions: {
+                /** Format: uuid */
+                line_uuid: string;
+                /** @enum {string} */
+                resolution: "ignore" | "relocate" | "void_missing" | "increase_unlocated";
+                note?: string | null;
+            }[];
+        };
+        EnvelopeStockCount: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["StockCount"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeStockCountPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["StockCount"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeStockCountScanResult: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["StockCountScanResult"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeStockCountScanList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["StockCountScan"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeStockCountReport: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["StockCountReport"];
             meta: components["schemas"]["ResponseMeta"];
         };
         WarehouseScanInput: {
@@ -18796,6 +19257,382 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+        };
+    };
+    listStockCounts: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["StockCountStatus"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of counts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockCountPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createStockCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockCountInput"];
+            };
+        };
+        responses: {
+            /** @description Draft count */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockCount"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getStockCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Count */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockCount"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    approveStockCountStart: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Count */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockCount"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    startStockCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Count */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockCount"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listStockCountScans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Scans, oldest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockCountScanList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    scanStockCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockCountScanInput"];
+            };
+        };
+        responses: {
+            /** @description Recorded scan */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockCountScanResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            /** @description COUNT_NOT_FOUND, SCAN_NO_MATCH or SCAN_LOCATION_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            409: components["responses"]["Conflict"];
+            /** @description COUNT_LOCATION_OUT_OF_SCOPE, COUNT_LOCATION_REQUIRED, COUNT_PRODUCT_OUT_OF_SCOPE or COUNT_SCAN_KIND_NOT_ALLOWED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    deleteStockCountScan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                scan_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    completeStockCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Count with its summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockCount"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getStockCountReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockCountReport"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    exportStockCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description CSV, one row per line */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    approveStockCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockCountApproveInput"];
+            };
+        };
+        responses: {
+            /** @description Approved count with its lines */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockCountReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    cancelStockCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Count */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockCount"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     resolveWarehouseScan: {
