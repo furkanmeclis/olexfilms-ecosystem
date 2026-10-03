@@ -116,6 +116,8 @@
   "columns.type": "النوع",
   "columns.parent": "الجهة الأعلى",
   "fields.type": "النوع",
+  "fields.register_as_warehouse": "تعريف كمستودع",
+  "fields.register_as_warehouse_hint": "عند الحفظ يُفتح مستودع (الرمز MAIN) للموزّع؛ تُضاف الغرف والمواقع لاحقًا.",
   "fields.city_hint": "يُملأ من المحافظة عند تركه فارغًا.",
   "fields.district_hint": "يُملأ من المنطقة عند تركه فارغًا.",
   "form.section_address": "العنوان",

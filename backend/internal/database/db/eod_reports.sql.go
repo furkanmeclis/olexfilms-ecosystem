@@ -292,6 +292,10 @@ LEFT JOIN stock_entry_lines sel
        ON m.reference_type = 'stock_entry_line' AND sel.id = m.reference_id
 LEFT JOIN stock_entries se
        ON se.id = sel.entry_id AND se.organization_id = $1::bigint
+LEFT JOIN warehouse_transfer_lines wtl
+       ON m.reference_type = 'warehouse_transfer_line' AND wtl.id = m.reference_id
+LEFT JOIN warehouse_transfers wt
+       ON wt.id = wtl.transfer_id AND wt.organization_id = $1::bigint
 WHERE m.created_at >= $2::timestamptz
   AND m.created_at < $3::timestamptz
   AND (m.organization_id = $1::bigint
@@ -300,7 +304,8 @@ WHERE m.created_at >= $2::timestamptz
   AND ($4::bigint IS NULL
        OR (fl.organization_id = $1::bigint AND fl.warehouse_id = $4::bigint)
        OR (tl.organization_id = $1::bigint AND tl.warehouse_id = $4::bigint)
-       OR se.warehouse_id = $4::bigint)
+       OR se.warehouse_id = $4::bigint
+       OR (m.type = 'transfer_in' AND wt.to_warehouse_id = $4::bigint))
 GROUP BY m.type, p.id, p.uuid, p.sku, p.name
 ORDER BY m.type, p.name, p.id
 `
@@ -333,7 +338,9 @@ type SummarizeEODMovementsRow struct {
 // it (holder before the movement) or when it lands on one of its locations
 // or on the organization itself. With warehouse_id, only movements that
 // leave or reach a location of that warehouse, or that a stock entry of
-// that warehouse wrote (serial entries go to the organization first).
+// that warehouse wrote (serial entries go to the organization first), and
+// warehouse transfer receipts of that target warehouse (TEC-205: the
+// transfer_in lands on the organization before its placement).
 func (q *Queries) SummarizeEODMovements(ctx context.Context, arg SummarizeEODMovementsParams) ([]SummarizeEODMovementsRow, error) {
 	rows, err := q.db.Query(ctx, summarizeEODMovements,
 		arg.OrganizationID,

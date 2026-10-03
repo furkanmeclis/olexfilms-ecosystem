@@ -1419,7 +1419,9 @@ type Querier interface {
 	// it (holder before the movement) or when it lands on one of its locations
 	// or on the organization itself. With warehouse_id, only movements that
 	// leave or reach a location of that warehouse, or that a stock entry of
-	// that warehouse wrote (serial entries go to the organization first).
+	// that warehouse wrote (serial entries go to the organization first), and
+	// warehouse transfer receipts of that target warehouse (TEC-205: the
+	// transfer_in lands on the organization before its placement).
 	SummarizeEODMovements(ctx context.Context, arg SummarizeEODMovementsParams) ([]SummarizeEODMovementsRow, error)
 	// The supplier of an organization is its parent in the tree (K9).
 	// Returns no rows for a center.

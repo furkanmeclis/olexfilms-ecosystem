@@ -116,6 +116,8 @@
   "columns.type": "Type d'organisation",
   "columns.parent": "Organisation parente",
   "fields.type": "Type d'organisation",
+  "fields.register_as_warehouse": "Définir comme entrepôt",
+  "fields.register_as_warehouse_hint": "À l'enregistrement, un entrepôt (code MAIN) est ouvert pour le distributeur ; salles et emplacements s'ajoutent ensuite.",
   "fields.city_hint": "Renseignée depuis la province si vide.",
   "fields.district_hint": "Renseigné depuis le district si vide.",
   "form.section_address": "Adresse",

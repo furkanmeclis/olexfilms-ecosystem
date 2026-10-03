@@ -116,6 +116,8 @@
   "columns.type": "Növ",
   "columns.parent": "Yuxarı təşkilat",
   "fields.type": "Növ",
+  "fields.register_as_warehouse": "Anbar kimi təyin et",
+  "fields.register_as_warehouse_hint": "Yadda saxladıqda distribyutor üçün MAIN kodlu anbar açılır; otaqlar və yerlər sonra əlavə olunur.",
   "fields.city_hint": "Boş qaldıqda vilayətdən doldurulur.",
   "fields.district_hint": "Boş qaldıqda rayondan doldurulur.",
   "form.section_address": "Ünvan",

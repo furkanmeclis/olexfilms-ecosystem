@@ -546,7 +546,7 @@ func (s *EOD) RunDaily(ctx context.Context) (int, error) {
 	written := 0
 	var errs []error
 	for _, o := range orgs {
-		n, err := s.runOrg(ctx, o.ID)
+		n, err := s.RunOrganization(ctx, o.ID)
 		written += n
 		if err != nil {
 			errs = append(errs, fmt.Errorf("organization %d: %w", o.ID, err))
@@ -555,7 +555,9 @@ func (s *EOD) RunDaily(ctx context.Context) (int, error) {
 	return written, errors.Join(errs...)
 }
 
-func (s *EOD) runOrg(ctx context.Context, orgID int64) (int, error) {
+// RunOrganization writes the missing auto reports of the previous local
+// day of one organization (system + every active warehouse).
+func (s *EOD) RunOrganization(ctx context.Context, orgID int64) (int, error) {
 	org, err := s.q.GetOrganizationByID(ctx, orgID)
 	if err != nil {
 		return 0, err

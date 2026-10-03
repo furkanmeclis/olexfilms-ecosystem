@@ -18,6 +18,8 @@ export function createOrganizationFormSchema(t: Translate) {
   return z.object({
     name: z.string().trim().min(1, t("organizations.validation.name_required")),
     type: z.enum(["dealer", "distributor"]),
+    /** K4 / TEC-207: distributor only; opens its warehouse on save. */
+    register_as_warehouse: z.boolean().optional(),
     ...addressShape,
     // Filled from the province/district on the server when left empty.
     city: z.string().trim(),
