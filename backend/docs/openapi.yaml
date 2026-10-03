@@ -12538,6 +12538,65 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /v1/services/{uuid}/items/{item}/consumption-correction:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+      - name: item
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Services]
+      operationId: correctServiceConsumption
+      summary: Correct the consumption of an item of a completed service
+      description: >-
+        TEC-230 (conservative default; a completed service still cannot be
+        cancelled). The unit consumed by mistake goes back from the service
+        into the service organization's stock with a ledger return movement
+        (a roll with the meters the consumption took, fixed pieces credited
+        back); with replacement_barcode the correct unit of the same
+        product is consumed instead (same kind and amount, held by the
+        service organization, not in an open service). Idempotency keys
+        service:service_item_correction:{item id}:{return or consumption}:{barcode}.
+        Center only (services.cancel on the service, else 403), within 24
+        hours of the completion (422 SERVICE_CORRECTION_WINDOW_CLOSED), once
+        per item (409 SERVICE_ITEM_ALREADY_CORRECTED), whole consumptions
+        only (a partial cut answers 422 SERVICE_CONSUMPTION_NOT_REVERSIBLE).
+        An item with an active or expired warranty answers 422
+        SERVICE_ITEM_WARRANTY_ACTIVE (void the warranty first); the
+        replacement gets no warranty. A service that is not completed
+        answers 409 SERVICE_NOT_EDITABLE; a replacement that is not held
+        answers 409 SERVICE_UNIT_NOT_AVAILABLE, one in an open service 409
+        SERVICE_UNIT_IN_USE. Accounting is not touched. Writes a
+        service.updated outbox event (change consumption_corrected) and the
+        stock.* events of the movements.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceConsumptionCorrectionInput"
+      responses:
+        "200":
+          description: Service with the corrected item (items[].correction)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeService"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
   /v1/stats/top-vehicle-models:
     get:
       tags: [Services]
@@ -20003,7 +20062,7 @@ components:
 
     ServiceItem:
       type: object
-      required: [uuid, product, barcode, unit_kind, kind, quantity, meters, applied_parts, notes, created_at]
+      required: [uuid, product, barcode, unit_kind, kind, quantity, meters, applied_parts, notes, created_at, correction]
       properties:
         uuid: { type: string, format: uuid }
         product:
@@ -20024,6 +20083,32 @@ components:
           items: { type: string }
         notes: { type: [string, "null"] }
         created_at: { type: string, format: date-time }
+        correction:
+          description: Consumption correction of the item (TEC-230); null when not corrected
+          oneOf:
+            - $ref: "#/components/schemas/ServiceItemCorrection"
+            - type: "null"
+
+    ServiceItemCorrection:
+      type: object
+      required: [uuid, reason, replacement_barcode, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        reason: { type: string }
+        replacement_barcode:
+          type: [string, "null"]
+          description: Unit consumed instead of the returned one
+        created_at: { type: string, format: date-time }
+
+    ServiceConsumptionCorrectionInput:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 1000 }
+        replacement_barcode:
+          type: [string, "null"]
+          maxLength: 64
+          description: Barcode of the correct unit of the same product to consume instead
 
     ServiceStockUnit:
       type: object
