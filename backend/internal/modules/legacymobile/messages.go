@@ -8,6 +8,7 @@ import "strings"
 // so do the aliases.
 const (
 	msgLoginSuccess        = "auth.login_success"
+	msgLogoutSuccess       = "auth.logout_success"
 	msgCredentialsMismatch = "auth.credentials_mismatch"
 	msgAccountInactive     = "errors.account_inactive"
 	msgPushSaved           = "push_tokens.saved"
@@ -23,6 +24,7 @@ const (
 var messages = map[string]map[string]string{
 	"tr": {
 		msgLoginSuccess:        "Giriş başarılı.",
+		msgLogoutSuccess:       "Çıkış yapıldı.",
 		msgCredentialsMismatch: "Girdiğiniz bilgiler kayıtlarımızla eşleşmiyor.",
 		msgAccountInactive:     "Hesabınız veya bağlı olduğunuz bayi pasif durumda. Lütfen yönetici ile iletişime geçin.",
 		msgPushSaved:           "Push token kaydedildi.",
@@ -36,6 +38,7 @@ var messages = map[string]map[string]string{
 	},
 	"en": {
 		msgLoginSuccess:        "Login successful.",
+		msgLogoutSuccess:       "Logged out successfully.",
 		msgCredentialsMismatch: "The credentials you entered do not match our records.",
 		msgAccountInactive:     "Your account or associated dealer is inactive. Please contact an administrator.",
 		msgPushSaved:           "Push token saved.",

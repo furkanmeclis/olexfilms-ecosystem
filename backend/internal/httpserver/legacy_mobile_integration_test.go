@@ -9,7 +9,11 @@ import (
 	"net/http/httptest"
 	"path/filepath"
 	"strconv"
+	"sync/atomic"
 	"testing"
+	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/config"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
@@ -238,4 +242,94 @@ func TestIntegrationLegacyMobileAliases(t *testing.T) {
 			t.Fatalf("flag off %s = %d %s, want 404", r.Name, code, body)
 		}
 	}
+}
+
+// TEC-284 (F2-FIX-3) acceptance: the old app has no refresh flow, so the
+// legacy login answers a long-lived token bound to its device session. With
+// the clock moved past the 15 minute access TTL it still opens me, services
+// and nexptg-reports (a regular token of the same moment is expired); it is
+// refused on the regular /v1 API; a device revoke and the legacy logout
+// end it at once, also after the Redis revocation markers are gone (the
+// session row is checked).
+func TestIntegrationLegacyMobileTokenLifetime(t *testing.T) {
+	var offset atomic.Int64
+	clock := func() time.Time { return time.Now().Add(time.Duration(offset.Load())) }
+	it := newIntegrationWithDeps(t, func(c *config.Config) { c.Mobile.LegacyAliases = true },
+		func(d *Deps) { d.Clock = clock })
+	ctx := context.Background()
+	center := it.brandCenter("olex")
+	org := it.org("t284f", "dealer", center)
+	owner, pw := it.user("t284f-owner")
+	it.member(org, owner, "owner")
+	// The services fixture checks the keys of data.0: one service in the org.
+	cust, veh := it.svcCustomer(org, "t284f-cust", "34T284F")
+	if _, err := it.q.CreateService(ctx, db.CreateServiceParams{
+		ServiceNo:      fmt.Sprintf("T284F-%s", it.suffix[len(it.suffix)-10:]),
+		OrganizationID: org.ID, BrandID: org.BrandID, CustomerUserID: cust.ID, VehicleID: veh.ID,
+		CarBrandID: veh.CarBrandID.Int64, CarModelID: veh.CarModelID.Int64, Status: "draft",
+	}); err != nil {
+		t.Fatalf("service: %v", err)
+	}
+	t.Cleanup(func() {
+		bg := context.Background()
+		_, _ = it.pool.Exec(bg, "DELETE FROM measurement_results WHERE organization_id = $1", org.ID)
+		_, _ = it.pool.Exec(bg, "DELETE FROM device_push_tokens WHERE user_id = $1", owner.ID)
+		_, _ = it.pool.Exec(bg, "DELETE FROM refresh_tokens WHERE user_id = $1", owner.ID)
+	})
+	legacyLogin := func() (string, uuid.UUID) {
+		t.Helper()
+		env := it.legacyExpect("login", map[string]string{"email": owner.Email.String, "password": pw})
+		var data struct {
+			Token string `json:"token"`
+		}
+		if err := json.Unmarshal(env.Data, &data); err != nil || data.Token == "" {
+			t.Fatalf("legacy login: %v %s", err, env.Data)
+		}
+		c, err := it.tokens.AcceptLegacy().ParseAccess(data.Token)
+		if err != nil || !c.Legacy || c.Realm() != "mobile" || c.SessionUUID() == uuid.Nil {
+			t.Fatalf("legacy token claims = %+v %v", c, err)
+		}
+		if left := time.Until(c.ExpiresAt.Time); left < 29*24*time.Hour {
+			t.Fatalf("legacy token lives %v, want the mobile session lifetime (30 days)", left)
+		}
+		return data.Token, c.SessionUUID()
+	}
+	token, _ := legacyLogin()
+	regular := it.mobileLogin(owner.Email.String, pw, org.Slug, "t284f-device-"+it.suffix).AccessToken
+	vars := map[string]string{"access_token": token}
+
+	// 1. 16 minutes later: the regular token is expired, the legacy one
+	// still opens me, services and nexptg-reports.
+	offset.Store(int64(16 * time.Minute))
+	if code, env, _ := it.doMobile("GET", "/v1/mobile/auth/me", regular, "1", nil); code != http.StatusUnauthorized {
+		t.Fatalf("regular token after 16 minutes = %d %+v, want 401", code, env)
+	}
+	it.legacyExpect("me", vars)
+	it.legacyExpect("services_list", vars)
+	it.legacyExpect("measurement", vars)
+
+	// 2. The regular /v1 API refuses the legacy token.
+	if code, env, _ := it.doMobile("GET", "/v1/mobile/auth/me", token, "1", nil); code != http.StatusUnauthorized {
+		t.Fatalf("legacy token on /v1/mobile/auth/me = %d %+v, want 401", code, env)
+	}
+	if code, env := it.do("GET", "/v1/services", hostOlex, token, nil); code != http.StatusUnauthorized {
+		t.Fatalf("legacy token on /v1/services = %d %+v, want 401", code, env)
+	}
+
+	// 3. Device revoke (sessions list of the panel) ends a legacy token,
+	// also once the Redis marker is gone.
+	revoked, sid := legacyLogin()
+	panel := it.catalogLogin(owner, pw, org, hostOlex)
+	if code, env := it.do("DELETE", "/v1/auth/sessions/"+sid.String(), hostOlex, panel, nil); code != http.StatusOK {
+		t.Fatalf("revoke device session = %d %+v", code, env)
+	}
+	it.rdb.FlushAll(ctx)
+	it.legacyFail("me", map[string]string{"access_token": revoked}, http.StatusUnauthorized)
+	it.legacyExpect("me", vars) // the other device keeps working
+
+	// 4. The legacy logout ends the token at once.
+	it.legacyExpect("logout", vars)
+	it.rdb.FlushAll(ctx)
+	it.legacyFail("me", vars, http.StatusUnauthorized)
+	it.legacyFail("services_list", vars, http.StatusUnauthorized)
 }

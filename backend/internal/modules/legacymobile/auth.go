@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/middleware"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
 )
 
 // Old role codes (olexfilms UserRoleEnum, docs/mobile-api.md "Roller").
@@ -246,9 +247,31 @@ func (a *adapters) login(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+	// The old app never refreshes: answer the long-lived legacy token of
+	// the final session (after the organization switch).
+	if a.h.Sessions != nil {
+		legacy, err := a.h.Sessions.IssueLegacyMobileAccess(r.Context(), token)
+		if err != nil {
+			response.InternalErr(w, r, err, "failed to issue the legacy mobile token")
+			return
+		}
+		token = legacy
+	}
 	writeSuccess(w, http.StatusOK, message(locale, msgLoginSuccess), map[string]any{
 		"token": token, "token_type": "Bearer", "user": a.legacyUser(r.Context(), me),
 	})
+}
+
+// logout is POST {Prefix}/auth/logout: AuthController::logout. It ends the
+// device session of the token (the legacy token stops working at once) and
+// drops the device's push tokens; the answer is data null.
+func (a *adapters) logout(w http.ResponseWriter, r *http.Request) {
+	c := run(a.h.Logout, r)
+	if !ok(c, nil) {
+		passThrough(w, c)
+		return
+	}
+	writeSuccess(w, http.StatusOK, message(legacyLocale(r), msgLogoutSuccess), nil)
 }
 
 // me is GET {Prefix}/auth/me: AuthController::me, data = UserResource.

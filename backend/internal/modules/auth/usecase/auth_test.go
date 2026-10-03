@@ -28,6 +28,8 @@ type memRepo struct {
 	memberGrants map[uuid.UUID][]model.Grant
 	// Refresh sessions revoked through RevokeSession.
 	revokedSessions []uuid.UUID
+	// refreshByUUID serves FindRefreshByUUID (TEC-284 legacy session tests).
+	refreshByUUID map[uuid.UUID]model.RefreshSession
 	// orgLocale holds {locale, timezone} per organization; center is the
 	// brand center's pair (LocaleSources).
 	orgLocale map[uuid.UUID][2]string
@@ -344,7 +346,10 @@ func (r *memRepo) RotateRefresh(context.Context, string) error { return nil }
 func (r *memRepo) FindRefreshAny(context.Context, string) (model.RefreshSession, error) {
 	return model.RefreshSession{}, repository.ErrNotFound
 }
-func (r *memRepo) FindRefreshByUUID(context.Context, uuid.UUID) (model.RefreshSession, error) {
+func (r *memRepo) FindRefreshByUUID(_ context.Context, id uuid.UUID) (model.RefreshSession, error) {
+	if s, ok := r.refreshByUUID[id]; ok {
+		return s, nil
+	}
 	return model.RefreshSession{}, repository.ErrNotFound
 }
 func (r *memRepo) RevokeRefreshFamily(context.Context, uuid.UUID) ([]uuid.UUID, error) {

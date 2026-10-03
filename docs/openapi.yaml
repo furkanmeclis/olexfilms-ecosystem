@@ -152,13 +152,19 @@ tags:
       `MOBILE_LEGACY_ALIASES` on (default off, otherwise 404), the old hub
       app keeps its own paths and bodies under the base URL
       `/v1/mobile/legacy` (it was `/api/v1/mobile` on the hub):
-      `POST auth/login`, `GET auth/me`, `GET services`,
+      `POST auth/login`, `POST auth/logout`, `GET auth/me`, `GET services`,
       `GET services/{service}` (integer id or uuid), `POST nexptg-reports`
       (stored as a measurement upload), `PUT|DELETE push-token`. They are
       adapters over the routes above and `/v1/services` with the same
       gates, without the `X-Mobile-Api-Version` header, and answer in the
       hub's envelope (`success`, `message`, `data` / `errors`; validation
       errors are 422 there, as on the hub). They are not listed as paths.
+      The old app has no refresh flow, so the legacy login answers a
+      long-lived token (aud `mobile` with a `legacy` claim) that lives as
+      long as its device session (`JWT_MOBILE_REFRESH_TTL`, 30 days) and is
+      checked against that session on every request: logout, a device
+      revoke, logout-all, a password change or deactivation end it at once.
+      Only the legacy aliases accept it; every other route answers 401.
 
 paths:
   /healthz:
