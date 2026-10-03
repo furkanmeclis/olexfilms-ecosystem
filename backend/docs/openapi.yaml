@@ -1501,6 +1501,52 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /v1/public/dealers/{code}:
+    get:
+      tags: [Public]
+      operationId: getPublicDealerShowcase
+      summary: Public dealer showcase (page /bayi/{code})
+      description: |
+        TEC-250. No authentication. `code` is the organization slug. Returns
+        the showcase of an active, serving (access window open) dealer or
+        distributor of the brand resolved from the request domain: name,
+        logo, address, province / district, coordinates and WhatsApp.
+        Suspended / pending / expired organizations, other brands' dealers
+        (e.g. Glorian on the Olex domain) and non-dealer organizations are
+        404. Internal fields (tax number, account, members, e-mail,
+        settings) are never returned. `latitude` / `longitude` are null
+        together when the dealer has no map position; `whatsapp` is the
+        organization phone when it is E.164, otherwise null. Rate limited
+        per client IP (120 per minute); over the limit 429 with Retry-After.
+      security: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: { type: string, maxLength: 100 }
+      responses:
+        "200":
+          description: Dealer showcase
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePublicDealer"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          description: Rate limited per client IP
+          headers:
+            Retry-After:
+              description: Seconds until the window resets
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /v1/public/warranties/{public_code}:
     get:
       tags: [Public]
@@ -18078,6 +18124,29 @@ components:
             items:
               type: array
               items: { $ref: "#/components/schemas/NearbyDealer" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    PublicDealer:
+      type: object
+      description: TEC-250 public dealer showcase; showcase fields only.
+      required: [code, name, logo_url, address, city, district, latitude, longitude, whatsapp]
+      properties:
+        code: { type: string, description: "Organization slug (the /bayi/{code} path)" }
+        name: { type: string }
+        logo_url: { type: [string, "null"], description: "Public logo path (/v1/public/organizations/logo/{uuid})" }
+        address: { type: string }
+        city: { type: string }
+        district: { type: string }
+        latitude: { type: [number, "null"] }
+        longitude: { type: [number, "null"] }
+        whatsapp: { type: [string, "null"], description: E.164 phone }
+
+    EnvelopePublicDealer:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PublicDealer" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeTenantSettings:

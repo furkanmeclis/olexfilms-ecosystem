@@ -178,5 +178,20 @@
   "preferences.inapp_hint": "Показывать уведомления на портале.",
   "preferences.saved": "Настройки сохранены.",
   "preferences.failed": "Не удалось сохранить настройки. Попробуйте ещё раз.",
-  "read_only.notice": "Учётная запись автопарка только для чтения; действия вроде передачи недоступны."
+  "read_only.notice": "Учётная запись автопарка только для чтения; действия вроде передачи недоступны.",
+  "dealer_page.eyebrow": "Официальный дилер",
+  "dealer_page.address": "Адрес",
+  "dealer_page.map_label": "Карта расположения дилера",
+  "dealer_page.open_map": "Открыть на карте",
+  "dealer_page.no_location": "Расположение этого дилера на карте ещё не добавлено.",
+  "dealer_page.whatsapp": "Написать в WhatsApp",
+  "dealer_page.whatsapp_text": "Здравствуйте, {{name}}, я хотел(а) бы получить информацию.",
+  "dealer_page.logo_alt": "Логотип {{name}}",
+  "dealer_page.find_other": "Найти другого дилера",
+  "dealer_page.not_found_title": "Дилер не найден",
+  "dealer_page.not_found_body": "По этому адресу нет активного дилера. Воспользуйтесь поиском дилеров, чтобы увидеть дилеров рядом с вами.",
+  "dealer_page.error_title": "Страницу дилера сейчас невозможно показать",
+  "dealer_page.error_body": "Попробуйте позже.",
+  "dealer_page.og_description": "{{name}}: официальный дилер в {{locality}}. Адрес, карта и связь через WhatsApp.",
+  "dealer_page.og_description_short": "{{name}}: официальный дилер. Адрес, карта и связь через WhatsApp."
 }

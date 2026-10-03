@@ -41,3 +41,28 @@ FROM (
 WHERE n.distance_km <= sqlc.arg(radius_km)::float8
 ORDER BY n.distance_km ASC, n.slug ASC
 LIMIT sqlc.arg(limit_count);
+
+-- name: GetPublicDealerBySlug :one
+-- TEC-250: the public showcase of one active, serving (access window open)
+-- dealer or distributor of a brand. Only the showcase columns: no tax id,
+-- account, members or settings.
+SELECT o.uuid,
+       o.slug,
+       o.name,
+       o.logo_object_key,
+       o.address,
+       COALESCE(NULLIF(btrim(o.city), ''), p.name, '')::text AS city,
+       COALESCE(NULLIF(btrim(o.district), ''), d.name, '')::text AS district,
+       o.latitude,
+       o.longitude,
+       o.phone
+FROM organizations o
+LEFT JOIN provinces p ON p.id = o.province_id
+LEFT JOIN districts d ON d.id = o.district_id
+WHERE o.slug = sqlc.arg(slug)
+  AND o.brand_id = sqlc.arg(brand_id)
+  AND o.deleted_at IS NULL
+  AND o.status = 'active'
+  AND o.type IN ('dealer', 'distributor')
+  AND o.access_starts_at <= NOW()
+  AND (o.access_ends_at IS NULL OR o.access_ends_at > NOW());
