@@ -7683,6 +7683,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portal/vehicles/{uuid}/transfers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ownership transfers of the portal user's vehicle (TEC-243)
+         * @description Portal session (aud=portal) with vehicles.read. Same list as GET /v1/vehicles/{uuid}/transfers, limited to a vehicle the signed-in user owns in the domain brand; any other vehicle answers 404.
+         */
+        get: operations["listPortalVehicleTransfers"];
+        put?: never;
+        /**
+         * The owner starts the transfer of their vehicle with two codes (TEC-243)
+         * @description Portal session with vehicles.read; the vehicle must be the signed-in user's (else 404). Runs the TEC-190 flow unchanged: one 6 digit code to the owner, one to the new owner (WhatsApp, SMS fallback), 15 minute expiry, the same 409 / 429 / 502 / 503 codes. The transfer's organization (phone country, message sender, the organization the new owner is linked to) is the organization that registered the vehicle, else the owner's first organization link in the brand, else the brand center.
+         */
+        post: operations["startPortalVehicleTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/vehicle-transfers/{uuid}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The owner enters the two codes; completes the transfer (TEC-243)
+         * @description Portal session with vehicles.read; only a transfer the signed-in user started as the owner (else 404). Same rules as POST /v1/vehicle-transfers/{uuid}/verify: codes together or one by one, 422 VEHICLE_TRANSFER_INVALID_CODE with the attempts left, 409 VEHICLE_TRANSFER_LOCKED / EXPIRED / NOT_PENDING (a cancelled transfer), new_owner_name required when the new owner has no account yet.
+         */
+        post: operations["verifyPortalVehicleTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/vehicle-transfers/{uuid}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The owner cancels a pending transfer (TEC-243)
+         * @description Portal session with vehicles.read; only a transfer the signed-in user started as the owner (else 404). 409 VEHICLE_TRANSFER_NOT_PENDING / VEHICLE_TRANSFER_EXPIRED as in the panel.
+         */
+        post: operations["cancelPortalVehicleTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -27396,6 +27460,152 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    listPortalVehicleTransfers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Transfers */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeVehicleTransferList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    startPortalVehicleTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VehicleTransferStartInput"];
+            };
+        };
+        responses: {
+            /** @description Started; both codes sent */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeVehicleTransfer"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
+            /** @description VEHICLE_TRANSFER_DELIVERY_FAILED (a code could not be delivered; nothing saved) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description VEHICLE_TRANSFER_UNAVAILABLE (no message sender configured) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    verifyPortalVehicleTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VehicleTransferVerifyInput"];
+            };
+        };
+        responses: {
+            /** @description Codes accepted (status completed when both sides are verified) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeVehicleTransfer"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            /** @description VEHICLE_TRANSFER_INVALID_CODE (details[].field names the wrong code, details[].code the attempts left) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    cancelPortalVehicleTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancelled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeVehicleTransfer"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
 }

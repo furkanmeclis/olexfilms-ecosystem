@@ -46,6 +46,50 @@ export function highlightedParts(
   return new Set(service.applied_parts);
 }
 
+/** Error codes of the transfer flow (TEC-190, reused by TEC-243). */
+const TRANSFER_ERROR_KEYS: Record<string, string> = {
+  VEHICLE_TRANSFER_LOCKED: "portal.transfer.error.locked",
+  VEHICLE_TRANSFER_EXPIRED: "portal.transfer.error.expired",
+  VEHICLE_TRANSFER_NOT_PENDING: "portal.transfer.error.not_pending",
+  VEHICLE_TRANSFER_PENDING: "portal.transfer.error.pending",
+  VEHICLE_TRANSFER_SAME_OWNER: "portal.transfer.error.same_owner",
+  VEHICLE_TRANSFER_OWNER_NO_PHONE: "portal.transfer.error.no_phone",
+  VEHICLE_TRANSFER_DELIVERY_FAILED: "portal.transfer.error.delivery",
+  VEHICLE_TRANSFER_UNAVAILABLE: "portal.transfer.error.unavailable",
+  VEHICLE_TRANSFER_OWNER_CHANGED: "portal.transfer.error.not_pending",
+};
+
+/**
+ * The message of a failed transfer request (TEC-243): a wrong code carries
+ * the attempts left (details[].code), the other codes have one text each.
+ */
+export function portalTransferError(err: {
+  status?: number;
+  code?: string | null;
+  details?: { field?: string; code?: string }[];
+}): { key: string; params?: Record<string, number> } {
+  if (err.code === "VEHICLE_TRANSFER_INVALID_CODE") {
+    const left = Number(err.details?.[0]?.code);
+    return {
+      key: "portal.transfer.error.invalid_code",
+      params: { count: Number.isFinite(left) ? left : 0 },
+    };
+  }
+  if (err.code && TRANSFER_ERROR_KEYS[err.code]) {
+    return { key: TRANSFER_ERROR_KEYS[err.code] };
+  }
+  if (err.code === "VALIDATION_ERROR") {
+    const field = err.details?.[0]?.field;
+    if (field === "phone") return { key: "portal.transfer.error.phone" };
+    if (field === "new_owner_name")
+      return { key: "portal.transfer.error.name" };
+    return { key: "portal.transfer.error.code_format" };
+  }
+  if (err.status === 429) return { key: "portal.transfer.error.rate" };
+  if (err.status === 404) return { key: "portal.transfer.error.not_found" };
+  return { key: "portal.transfer.error.generic" };
+}
+
 /** Public warranty page path (TEC-248); the QR code points here. */
 export function publicWarrantyPath(publicCode: string): string {
   return `/garanti/${encodeURIComponent(publicCode)}`;

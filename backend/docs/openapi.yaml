@@ -14772,6 +14772,163 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /v1/portal/vehicles/{uuid}/transfers:
+    get:
+      tags: [Portal]
+      operationId: listPortalVehicleTransfers
+      summary: Ownership transfers of the portal user's vehicle (TEC-243)
+      description: >-
+        Portal session (aud=portal) with vehicles.read. Same list as GET
+        /v1/vehicles/{uuid}/transfers, limited to a vehicle the signed-in
+        user owns in the domain brand; any other vehicle answers 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Transfers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicleTransferList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Portal]
+      operationId: startPortalVehicleTransfer
+      summary: The owner starts the transfer of their vehicle with two codes (TEC-243)
+      description: >-
+        Portal session with vehicles.read; the vehicle must be the signed-in
+        user's (else 404). Runs the TEC-190 flow unchanged: one 6 digit code
+        to the owner, one to the new owner (WhatsApp, SMS fallback), 15
+        minute expiry, the same 409 / 429 / 502 / 503 codes. The transfer's
+        organization (phone country, message sender, the organization the
+        new owner is linked to) is the organization that registered the
+        vehicle, else the owner's first organization link in the brand,
+        else the brand center.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VehicleTransferStartInput"
+      responses:
+        "201":
+          description: Started; both codes sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicleTransfer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "502":
+          description: VEHICLE_TRANSFER_DELIVERY_FAILED (a code could not be delivered; nothing saved)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: VEHICLE_TRANSFER_UNAVAILABLE (no message sender configured)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /v1/portal/vehicle-transfers/{uuid}/verify:
+    post:
+      tags: [Portal]
+      operationId: verifyPortalVehicleTransfer
+      summary: The owner enters the two codes; completes the transfer (TEC-243)
+      description: >-
+        Portal session with vehicles.read; only a transfer the signed-in user
+        started as the owner (else 404). Same rules as POST
+        /v1/vehicle-transfers/{uuid}/verify: codes together or one by one,
+        422 VEHICLE_TRANSFER_INVALID_CODE with the attempts left, 409
+        VEHICLE_TRANSFER_LOCKED / EXPIRED / NOT_PENDING (a cancelled
+        transfer), new_owner_name required when the new owner has no
+        account yet.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VehicleTransferVerifyInput"
+      responses:
+        "200":
+          description: Codes accepted (status completed when both sides are verified)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicleTransfer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          description: VEHICLE_TRANSFER_INVALID_CODE (details[].field names the wrong code, details[].code the attempts left)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+  /v1/portal/vehicle-transfers/{uuid}/cancel:
+    post:
+      tags: [Portal]
+      operationId: cancelPortalVehicleTransfer
+      summary: The owner cancels a pending transfer (TEC-243)
+      description: >-
+        Portal session with vehicles.read; only a transfer the signed-in user
+        started as the owner (else 404). 409 VEHICLE_TRANSFER_NOT_PENDING /
+        VEHICLE_TRANSFER_EXPIRED as in the panel.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicleTransfer"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
 components:
   securitySchemes:
     bearerAuth:

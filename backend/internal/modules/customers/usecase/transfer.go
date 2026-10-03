@@ -391,7 +391,11 @@ func (s *Service) lockScopedTransfer(ctx context.Context, q *db.Queries, c Calle
 	if err != nil {
 		return db.VehicleTransfer{}, db.Vehicle{}, fmt.Errorf("customers: transfer: %w", err)
 	}
-	if err := s.requireInScope(ctx, q, c, t.FromUserID); err != nil {
+	if c.portalUserID != 0 { // TEC-243: portal, own transfers only
+		if t.FromUserID != c.portalUserID {
+			return db.VehicleTransfer{}, db.Vehicle{}, ErrTransferNotFound
+		}
+	} else if err := s.requireInScope(ctx, q, c, t.FromUserID); err != nil {
 		if errors.Is(err, ErrCustomerNotFound) {
 			return db.VehicleTransfer{}, db.Vehicle{}, ErrTransferNotFound
 		}

@@ -27,6 +27,7 @@ vi.mock("next/link", () => ({
 }));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/portal/vehicles",
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
 }));
 vi.mock("qrcode", () => ({
   default: { toDataURL: vi.fn(async () => "data:image/png;base64,QR") },
@@ -390,6 +391,10 @@ describe("PortalVehicleDetail", () => {
       "/portal/services/s-1",
     );
     expect(history?.textContent).toContain("services.status.completed");
+    // TEC-243: the owner can start a transfer from the detail.
+    expect(
+      container.querySelector('[data-testid="portal-transfer-open"]'),
+    ).not.toBeNull();
   });
 });
 
