@@ -25,6 +25,7 @@
   "nav_logs": "Journaux de l'application",
   "nav_storage": "Stockage de fichiers",
   "nav_settings": "Paramètres",
+  "nav_system_settings": "Paramètres système",
   "nav_export_settings": "Paramètres d'export",
   "nav_access": "Accès et vérification",
   "nav_auth_settings": "Paramètres généraux",

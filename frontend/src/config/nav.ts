@@ -27,6 +27,7 @@ import {
   Settings2,
   Shield,
   ShoppingCart,
+  SlidersHorizontal,
   ShieldCheck,
   Upload,
   UserRound,
@@ -165,6 +166,14 @@ export const platformNav = defineNav({
           href: routes.platform.vehicleCatalog.root,
           icon: Car,
           permission: permissions.vehicleCatalog.write,
+        },
+        {
+          // TEC-222: system settings hub (platform.settings.read).
+          id: "system-settings",
+          titleKey: "layout.nav_system_settings",
+          href: routes.platform.systemSettings.root,
+          icon: SlidersHorizontal,
+          permission: permissions.settings.read,
         },
       ],
     },
