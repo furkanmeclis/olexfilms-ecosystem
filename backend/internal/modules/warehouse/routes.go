@@ -56,3 +56,21 @@ func RegisterRoutes(
 	mux.Handle("PATCH /v1/warehouse/locations/{uuid}", write(h.UpdateLocation))
 	mux.Handle("DELETE /v1/warehouse/locations/{uuid}", write(h.DeleteLocation))
 }
+
+// RegisterScanRoutes mounts the TEC-203 universal scan resolver. It needs
+// warehouse.read (center and distributor, K12); units additionally follow
+// the caller's stock.read reach inside the use case.
+func RegisterScanRoutes(
+	mux *http.ServeMux,
+	h *whhandler.ScanHandler,
+	checker middleware.FeatureChecker,
+	tokens *jwt.Manager,
+	loader middleware.IdentityLoader,
+	q *db.Queries,
+) {
+	authn := middleware.Authenticate(tokens, loader)
+	org := middleware.RequireOrganization(tokens, q)
+	module := middleware.RequireFeature(checker, features.ModuleWarehouse)
+	mux.Handle("POST /v1/warehouse/scan",
+		middleware.Chain(http.HandlerFunc(h.Scan), authn, org, module, middleware.RequireScope(q, rbac.PermWarehouseRead)))
+}

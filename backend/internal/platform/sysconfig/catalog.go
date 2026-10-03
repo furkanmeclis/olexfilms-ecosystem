@@ -64,6 +64,13 @@ const (
 	KeySMTPPassword = "smtp.password"
 	KeySMTPFrom     = "smtp.from"
 	KeySMTPFromName = "smtp.from_name"
+
+	// Scanner (TEC-203): which inputs the universal scan resolver accepts
+	// besides location QR payloads and unit barcodes, which always resolve.
+	KeyScanSKUEnabled              = "scan.sku_enabled"
+	KeyScanShortCodeEnabled        = "scan.short_code_enabled"
+	KeyScanShortCodePrefix         = "scan.short_code_prefix"
+	KeyScanBareLocationCodeEnabled = "scan.bare_location_code_enabled"
 )
 
 // DefaultBulkUndoWindowHours is the catalog default of KeyBulkUndoWindowHours.
@@ -111,6 +118,14 @@ var catalog = []Definition{
 		Description: "Sender address for outbound email"},
 	{Key: KeySMTPFromName, Group: GroupSMTP, Kind: KindString, Default: "", MaxLen: 255,
 		Description: "Sender display name for outbound email"},
+	{Key: KeyScanSKUEnabled, Group: GroupScanning, Kind: KindBool, Default: true,
+		Description: "Scanner resolves a product SKU to the product"},
+	{Key: KeyScanShortCodeEnabled, Group: GroupScanning, Kind: KindBool, Default: true,
+		Description: "Scanner resolves a digits-only short code (1-8 digits) to the generated barcode <PREFIX>-<8 digits>"},
+	{Key: KeyScanShortCodePrefix, Group: GroupScanning, Kind: KindString, Default: "", MaxLen: 8,
+		Description: "Barcode prefix of short codes (A-Z0-9, 2-8 characters); empty = the brand's default prefix"},
+	{Key: KeyScanBareLocationCodeEnabled, Group: GroupScanning, Kind: KindBool, Default: false,
+		Description: "Scanner also resolves a location full_code typed without the OFW:LOC: prefix"},
 }
 
 var byKey = func() map[string]Definition {
