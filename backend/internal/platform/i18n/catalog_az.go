@@ -542,4 +542,5 @@ var azCatalog = map[string]string{
 	"warehouse.eod.type.reclassification":          "Yenidən təsnifat",
 	"warehouse.eod.type.void":                      "Ləğv (silinmə)",
 	"warehouse.eod.type.external_outbound":         "Xarici çıxış",
+	"mobile.update_required":                       "Tətbiqin bu versiyası artıq dəstəklənmir. Davam etmək üçün tətbiqi yeniləyin.",
 }

@@ -64,6 +64,8 @@
   "system.groups.warehouse_hint": "Depo ve stok davranışları.",
   "system.groups.scanning": "Tarama",
   "system.groups.scanning_hint": "Barkod ve QR tarama ayarları.",
+  "system.groups.mobile": "Mobil uygulama",
+  "system.groups.mobile_hint": "Asgari uygulama sürümü ve mağaza linkleri; eşiğin altındaki sürümler güncelleme ister.",
   "system.keys.forecast_min_days": "Minimum tahmin süresi (gün)",
   "system.keys.forecast_min_days_hint": "Stok tahmini öneri üretmeden önce gereken en az hareket geçmişi.",
   "system.keys.contract_grace_days": "Sözleşme ek süresi (gün)",

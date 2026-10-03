@@ -17,7 +17,9 @@
 //
 // Differences from the adapted routes:
 //   - no X-Mobile-Api-Version gate: the old app does not send the header
-//     (version forcing is TEC-236);
+//     (version forcing is TEC-236: middleware.MobileAppVersion wraps the
+//     router, so the X-App-Version minimum applies here too; a request
+//     without a version passes unless mobile.app_version_required is on);
 //   - the request and response bodies are those of the new contract until
 //     the old shapes are confirmed; the mapping goes in this package, one
 //     adapter per route (testdata/legacy_mobile/*.json pins the contract).
