@@ -176,5 +176,13 @@
   "labels.integrations.glorian.manage": "Gérer l'intégration Glorian",
   "groups.integrations": "Intégrations",
   "labels.measurements.write": "Téléverser des mesures",
-  "groups.measurements": "Mesures"
+  "groups.measurements": "Mesures",
+  "labels.service_catalog.manage": "Gérer le catalogue de services",
+  "labels.service_catalog.read": "Consulter le catalogue de services",
+  "groups.service_catalog": "Catalogue de services",
+  "labels.service_subscriptions.assign": "Attribuer des abonnements de service",
+  "labels.service_subscriptions.read": "Consulter les abonnements de service",
+  "labels.service_subscriptions.cancel_request": "Demander la résiliation d'un abonnement",
+  "labels.service_subscriptions.cancel_approve": "Approuver la résiliation d'un abonnement",
+  "groups.service_subscriptions": "Abonnements de service"
 }

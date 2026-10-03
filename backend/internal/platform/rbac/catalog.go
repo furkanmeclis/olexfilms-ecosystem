@@ -387,6 +387,34 @@ var Permissions = []PermissionDef{
 		Slug: PermMeasurementsWrite, Name: "Upload measurements", Module: "measurements", Scopes: scopesOrg,
 		Description: "Upload paint thickness measurements from the mobile app into the active organization (K28).",
 	},
+
+	// TEC-305: service catalog and subscriptions. Appended last; migration
+	// 000084 seeds them. manage and cancel_approve are center-only, so their
+	// scopes start at brand.
+	{
+		Slug: PermServiceCatalogManage, Name: "Manage service catalog", Module: "service_catalog", Scopes: scopesSupplier,
+		Description: "Define non-product services, module bundles and distributor prices (center only).",
+	},
+	{
+		Slug: PermServiceCatalogRead, Name: "Read service catalog", Module: "service_catalog", Scopes: scopesTree,
+		Description: "Non-product services of the brand with their prices.",
+	},
+	{
+		Slug: PermServiceSubscriptionsAssign, Name: "Assign service subscriptions", Module: "service_subscriptions", Scopes: scopesTree,
+		Description: "Assign a catalog service to a distributor or dealer (distributors without a margin).",
+	},
+	{
+		Slug: PermServiceSubscriptionsRead, Name: "Read service subscriptions", Module: "service_subscriptions", Scopes: scopesTree,
+		Description: "Service subscriptions, their periods and cancellation requests.",
+	},
+	{
+		Slug: PermServiceSubscriptionsCancelRequest, Name: "Request subscription cancellation", Module: "service_subscriptions", Scopes: scopesTree,
+		Description: "Request early cancellation of a service subscription of the organization.",
+	},
+	{
+		Slug: PermServiceSubscriptionsCancelApprove, Name: "Approve subscription cancellation", Module: "service_subscriptions", Scopes: scopesSupplier,
+		Description: "Approve or reject early cancellation requests; the static cancellation fee applies (center only).",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -477,6 +505,12 @@ var Roles = []RoleDef{
 			PermTransfersApprove: ScopeBrand,
 			// TEC-233 (000076).
 			PermMeasurementsWrite: ScopeManaged,
+			// TEC-305 (000084).
+			PermServiceCatalogManage:              ScopeBrand,
+			PermServiceCatalogRead:                ScopeBrand,
+			PermServiceSubscriptionsAssign:        ScopeBrand,
+			PermServiceSubscriptionsRead:          ScopeBrand,
+			PermServiceSubscriptionsCancelApprove: ScopeBrand,
 		}),
 	},
 	{
@@ -526,6 +560,12 @@ var Roles = []RoleDef{
 			PermOrdersRead:              ScopeBrand,
 			PermTasksRead:               ScopeBrand, // TEC-214 (000058)
 			PermTasksWrite:              ScopeBrand,
+			// TEC-305 (000084).
+			PermServiceCatalogManage:              ScopeBrand,
+			PermServiceCatalogRead:                ScopeBrand,
+			PermServiceSubscriptionsAssign:        ScopeBrand,
+			PermServiceSubscriptionsRead:          ScopeBrand,
+			PermServiceSubscriptionsCancelApprove: ScopeBrand,
 		}),
 	},
 	{
@@ -596,6 +636,11 @@ var Roles = []RoleDef{
 			PermTransfersRequest: ScopeManaged,
 			// TEC-233 (000076).
 			PermMeasurementsWrite: ScopeManaged,
+			// TEC-305 (000084): assigns to its subtree without a margin.
+			PermServiceCatalogRead:                ScopeManaged,
+			PermServiceSubscriptionsAssign:        ScopeSubtree,
+			PermServiceSubscriptionsRead:          ScopeSubtree,
+			PermServiceSubscriptionsCancelRequest: ScopeManaged,
 		}),
 	},
 	{
@@ -648,6 +693,8 @@ var Roles = []RoleDef{
 			PermPricingSaleWrite:       ScopeManaged,
 			PermPricingRecommendedRead: ScopeManaged,
 			PermOrdersRead:             ScopeManaged,
+			// TEC-305 (000084).
+			PermServiceSubscriptionsRead: ScopeManaged,
 		}),
 	},
 	{
@@ -689,6 +736,9 @@ var Roles = []RoleDef{
 			PermVehiclesTransfer: ScopeManaged,
 			// TEC-233 (000076).
 			PermMeasurementsWrite: ScopeManaged,
+			// TEC-305 (000084).
+			PermServiceSubscriptionsRead:          ScopeManaged,
+			PermServiceSubscriptionsCancelRequest: ScopeManaged,
 		}),
 	},
 	{
@@ -724,6 +774,8 @@ var Roles = []RoleDef{
 			PermPricingSaleRead:        ScopeManaged,
 			PermPricingRecommendedRead: ScopeManaged,
 			PermOrdersRead:             ScopeManaged,
+			// TEC-305 (000084).
+			PermServiceSubscriptionsRead: ScopeManaged,
 		}),
 	},
 	{

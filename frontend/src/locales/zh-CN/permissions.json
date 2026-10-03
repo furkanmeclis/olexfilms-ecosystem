@@ -176,5 +176,13 @@
   "labels.integrations.glorian.manage": "管理 Glorian 集成",
   "groups.integrations": "集成",
   "labels.measurements.write": "上传测量结果",
-  "groups.measurements": "测量"
+  "groups.measurements": "测量",
+  "labels.service_catalog.manage": "管理服务目录",
+  "labels.service_catalog.read": "查看服务目录",
+  "groups.service_catalog": "服务目录",
+  "labels.service_subscriptions.assign": "分配服务订阅",
+  "labels.service_subscriptions.read": "查看服务订阅",
+  "labels.service_subscriptions.cancel_request": "申请取消订阅",
+  "labels.service_subscriptions.cancel_approve": "批准取消订阅",
+  "groups.service_subscriptions": "服务订阅"
 }
