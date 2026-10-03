@@ -16,6 +16,7 @@
   "actions.bulk.completed": "Ολοκληρώθηκε μαζική ενέργεια",
   "actions.bulk.failed": "Απέτυχε μαζική ενέργεια",
   "actions.bulk.rolled_back": "Αναιρέθηκε μαζική ενέργεια",
+  "actions.bulk.undone": "Η μαζική ενέργεια αναιρέθηκε",
   "actions.settings.updated": "Ενημερώθηκαν ρυθμίσεις",
   "actions.access.settings.updated": "Ενημερώθηκαν ρυθμίσεις πρόσβασης",
   "actions.stepup.verified": "Ολοκληρώθηκε πρόσθετη επαλήθευση",

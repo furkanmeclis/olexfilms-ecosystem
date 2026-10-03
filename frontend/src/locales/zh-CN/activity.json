@@ -16,6 +16,7 @@
   "actions.bulk.completed": "批量操作已完成",
   "actions.bulk.failed": "批量操作失败",
   "actions.bulk.rolled_back": "批量操作已回滚",
+  "actions.bulk.undone": "批量操作已撤销",
   "actions.settings.updated": "设置已更新",
   "actions.access.settings.updated": "访问设置已更新",
   "actions.stepup.verified": "二次验证已完成",

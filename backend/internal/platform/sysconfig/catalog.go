@@ -54,6 +54,9 @@ const (
 	// KeyPhotoStandardEnabled switches the vehicle intake photo standard
 	// (design §4, default off).
 	KeyPhotoStandardEnabled = "photo_standard_enabled"
+	// KeyBulkUndoWindowHours is how long a bulk operation stays undoable
+	// after it ran (TEC-212).
+	KeyBulkUndoWindowHours = "bulk_undo_window_hours"
 
 	KeySMTPHost     = "smtp.host"
 	KeySMTPPort     = "smtp.port"
@@ -62,6 +65,9 @@ const (
 	KeySMTPFrom     = "smtp.from"
 	KeySMTPFromName = "smtp.from_name"
 )
+
+// DefaultBulkUndoWindowHours is the catalog default of KeyBulkUndoWindowHours.
+const DefaultBulkUndoWindowHours = 24
 
 // SecretMask replaces a secret value on read. Writing the mask back keeps
 // the stored value, so a form can round-trip without revealing it.
@@ -91,6 +97,8 @@ var catalog = []Definition{
 		Description: "Read-only grace period after a contract expires; 0 = no grace (K23)"},
 	{Key: KeyPhotoStandardEnabled, Group: GroupServices, Kind: KindBool, Default: false,
 		Description: "Require the vehicle intake photo standard"},
+	{Key: KeyBulkUndoWindowHours, Group: GroupGeneral, Kind: KindInt, Default: int64(DefaultBulkUndoWindowHours), Min: i64(1), Max: i64(720),
+		Description: "Hours a bulk operation stays undoable after it ran (TEC-212)"},
 	{Key: KeySMTPHost, Group: GroupSMTP, Kind: KindString, Default: "", MaxLen: 253,
 		Description: "SMTP host; empty = use environment configuration"},
 	{Key: KeySMTPPort, Group: GroupSMTP, Kind: KindInt, Default: int64(0), Min: i64(0), Max: i64(65535),

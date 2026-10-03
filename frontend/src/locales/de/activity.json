@@ -16,6 +16,7 @@
   "actions.bulk.completed": "Massenaktion abgeschlossen",
   "actions.bulk.failed": "Massenaktion fehlgeschlagen",
   "actions.bulk.rolled_back": "Massenaktion rückgängig gemacht",
+  "actions.bulk.undone": "Massenaktion rückgängig gemacht",
   "actions.settings.updated": "Einstellungen aktualisiert",
   "actions.access.settings.updated": "Zugriffseinstellungen aktualisiert",
   "actions.stepup.verified": "Identitätsbestätigung abgeschlossen",

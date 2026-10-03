@@ -553,6 +553,44 @@ func (q *Queries) LockTask(ctx context.Context, arg LockTaskParams) (Task, error
 	return i, err
 }
 
+const setTaskAssignee = `-- name: SetTaskAssignee :one
+UPDATE tasks
+SET assignee_user_id = $1
+WHERE id = $2
+RETURNING id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at
+`
+
+type SetTaskAssigneeParams struct {
+	AssigneeUserID pgtype.Int8 `json:"assignee_user_id"`
+	ID             int64       `json:"id"`
+}
+
+// TEC-212: bulk engine adapter (assign one task, logged + undoable).
+func (q *Queries) SetTaskAssignee(ctx context.Context, arg SetTaskAssigneeParams) (Task, error) {
+	row := q.db.QueryRow(ctx, setTaskAssignee, arg.AssigneeUserID, arg.ID)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.SubjectOrgID,
+		&i.Title,
+		&i.Description,
+		&i.AssigneeUserID,
+		&i.Priority,
+		&i.DueAt,
+		&i.Status,
+		&i.Source,
+		&i.CreatedByUserID,
+		&i.ClosedByUserID,
+		&i.ClosedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const updateTask = `-- name: UpdateTask :one
 UPDATE tasks
 SET subject_org_id = $1,

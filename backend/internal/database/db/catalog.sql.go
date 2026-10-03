@@ -744,6 +744,47 @@ func (q *Queries) ReplaceProductImages(ctx context.Context, arg ReplaceProductIm
 	return i, err
 }
 
+const setProductActiveByUUID = `-- name: SetProductActiveByUUID :one
+UPDATE products
+SET active = $1
+WHERE uuid = $2 AND brand_id = $3
+RETURNING id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at
+`
+
+type SetProductActiveByUUIDParams struct {
+	Active  bool      `json:"active"`
+	Uuid    uuid.UUID `json:"uuid"`
+	BrandID int64     `json:"brand_id"`
+}
+
+// TEC-212: bulk engine adapter (one product, logged + undoable).
+func (q *Queries) SetProductActiveByUUID(ctx context.Context, arg SetProductActiveByUUIDParams) (Product, error) {
+	row := q.db.QueryRow(ctx, setProductActiveByUUID, arg.Active, arg.Uuid, arg.BrandID)
+	var i Product
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.CategoryID,
+		&i.Sku,
+		&i.Name,
+		&i.DescriptionMd,
+		&i.WarrantyDurationMonths,
+		&i.MicronThickness,
+		&i.Images,
+		&i.UnitType,
+		&i.UsesFixedBarcode,
+		&i.Active,
+		&i.ExternalID,
+		&i.ConnectionID,
+		&i.LockedFields,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const setProductsActive = `-- name: SetProductsActive :execrows
 UPDATE products
 SET active = $1

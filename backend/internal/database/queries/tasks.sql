@@ -102,3 +102,10 @@ WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id) AND deleted_at IS 
 SELECT u.id, u.uuid, u.name, u.surname FROM users u
 JOIN organization_members m ON m.user_id = u.id
 WHERE u.uuid = sqlc.arg(uuid) AND m.organization_id = sqlc.arg(organization_id) AND u.deleted_at IS NULL;
+
+-- TEC-212: bulk engine adapter (assign one task, logged + undoable).
+-- name: SetTaskAssignee :one
+UPDATE tasks
+SET assignee_user_id = sqlc.narg(assignee_user_id)
+WHERE id = sqlc.arg(id)
+RETURNING *;

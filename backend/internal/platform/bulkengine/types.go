@@ -1,11 +1,18 @@
 package bulkengine
 
-import "context"
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"reflect"
+
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+)
 
 // BulkActionParam is an extra input collected before a parameterized bulk action.
 type BulkActionParam struct {
 	Key      string `json:"key"`
-	Kind     string `json:"kind"` // percent | number
+	Kind     string `json:"kind"` // percent | number | uuid
 	Required bool   `json:"required"`
 	LabelKey string `json:"label_key"`
 }
@@ -56,6 +63,10 @@ type BulkItemResult struct {
 	Error      string
 	Op         string // update | delete
 	Previous   map[string]any
+	// Applied is the state after the action (the keys the action set). Undo
+	// compares it with the live row and skips a record changed since
+	// (TEC-212); nil disables the check for this item.
+	Applied map[string]any
 }
 
 // BulkSummary aggregates job results.
@@ -72,4 +83,57 @@ type BulkAdapter interface {
 	ResolveTargets(ctx context.Context, action string, target BulkTarget) ([]string, error)
 	ApplyItem(ctx context.Context, action, entityUUID string) (BulkItemResult, error)
 	RevertItem(ctx context.Context, action, entityUUID string, previous map[string]any) error
+}
+
+// TxBinder is implemented by adapters that can run on a transaction: the
+// bulk service applies every item and writes the bulk_operations log row
+// on the same transaction (TEC-212).
+type TxBinder interface {
+	WithQueries(q *db.Queries) BulkAdapter
+}
+
+// StateReader is implemented by adapters whose undo must skip records
+// changed after the bulk action: CurrentState returns the live values of
+// the keys an ApplyItem result put in Applied. ErrEntityGone marks a
+// record that no longer exists.
+type StateReader interface {
+	CurrentState(ctx context.Context, action, entityUUID string) (map[string]any, error)
+}
+
+// Bind returns the adapter bound to q when it supports transactions, else
+// the adapter itself.
+func Bind(a BulkAdapter, q *db.Queries) BulkAdapter {
+	if b, ok := a.(TxBinder); ok && q != nil {
+		return b.WithQueries(q)
+	}
+	return a
+}
+
+// ErrEntityGone is returned by StateReader.CurrentState for a record that
+// no longer exists; undo reports it as skipped.
+var ErrEntityGone = errors.New("bulkengine: entity gone")
+
+// SameState reports whether live holds every key of applied with an equal
+// JSON value (numbers compared as float64, slices element-wise).
+func SameState(applied, live map[string]any) bool {
+	for k, want := range applied {
+		got, ok := live[k]
+		if !ok || !jsonEqual(want, got) {
+			return false
+		}
+	}
+	return true
+}
+
+func jsonEqual(a, b any) bool {
+	ab, errA := json.Marshal(a)
+	bb, errB := json.Marshal(b)
+	if errA != nil || errB != nil {
+		return false
+	}
+	var av, bv any
+	if json.Unmarshal(ab, &av) != nil || json.Unmarshal(bb, &bv) != nil {
+		return false
+	}
+	return reflect.DeepEqual(av, bv)
 }
