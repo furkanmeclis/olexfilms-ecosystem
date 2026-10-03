@@ -11,6 +11,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/google/uuid"
+	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -222,6 +223,61 @@ func (r *Reconciler) ReconcileConnection(ctx context.Context, conn db.Integratio
 	if err != nil {
 		return ReconcileReport{}, err
 	}
+	return r.reconcile(ctx, conn, run)
+}
+
+// StartRun opens the running reconcile sync run of conn without doing the
+// work; ReconcileRun (the glorian:reconcile task) finishes it. The admin
+// endpoint (TEC-273) answers with this row right away.
+func (r *Reconciler) StartRun(ctx context.Context, conn db.IntegrationConnection) (db.IntegrationSyncRun, error) {
+	run, err := r.startRun(ctx, conn, KindReconcile)
+	if err != nil {
+		return db.IntegrationSyncRun{}, err
+	}
+	return run.row, nil
+}
+
+// ErrRunNotRunnable: the sync run is not a running reconcile run (already
+// finished, e.g. a redelivered task, or another kind). Nothing is done.
+var ErrRunNotRunnable = errors.New("glorian reconcile: sync run is not a running reconcile run")
+
+// ReconcileRun does the work of a run opened by StartRun.
+func (r *Reconciler) ReconcileRun(ctx context.Context, runID int64) (ReconcileReport, error) {
+	row, err := r.q.GetIntegrationSyncRunByID(ctx, runID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ReconcileReport{}, fmt.Errorf("%w: run %d not found", ErrRunNotRunnable, runID)
+	}
+	if err != nil {
+		return ReconcileReport{}, fmt.Errorf("glorian reconcile: run %d: %w", runID, err)
+	}
+	if row.Kind != KindReconcile || row.Status != RunRunning {
+		return ReconcileReport{}, fmt.Errorf("%w: run %s is %s/%s", ErrRunNotRunnable, row.Uuid, row.Kind, row.Status)
+	}
+	run := &syncRun{q: r.q, row: row}
+	conn, err := r.connection(ctx, row.ConnectionID)
+	if err != nil {
+		return ReconcileReport{}, run.finish(context.WithoutCancel(ctx), ReconcileCounts{}, time.Time{}, err)
+	}
+	return r.reconcile(ctx, conn, run)
+}
+
+// ReconcileTask is the glorian:reconcile handler. The outcome is recorded
+// on the run; a finished or missing run is skipped, nothing is retried
+// (a retry would find the run finished).
+func (r *Reconciler) ReconcileTask(ctx context.Context, runID int64) error {
+	_, err := r.ReconcileRun(ctx, runID)
+	if errors.Is(err, ErrRunNotRunnable) {
+		r.log.Warn("glorian_reconcile_run_skipped", "run_id", runID, "error", err)
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("%w: %w", asynq.SkipRetry, err)
+	}
+	return nil
+}
+
+// reconcile builds the report of conn inside run and finishes the run.
+func (r *Reconciler) reconcile(ctx context.Context, conn db.IntegrationConnection, run *syncRun) (ReconcileReport, error) {
 	// The run row is recorded even when the context was cancelled mid-run.
 	finishCtx := context.WithoutCancel(ctx)
 	var counts ReconcileCounts

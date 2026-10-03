@@ -245,6 +245,11 @@ func main() {
 		WithGlorianPush(glorianPusher.PushTask, glorianPusher.PatchTask).
 		// TEC-271: Glorian order outbound (POST /orders, ship/receive/cancel) and held replay.
 		WithGlorianOrderOutbound(glorianOrders.OrderTask, glorianOrders.ReplayTask).
+		// TEC-273: admin-triggered reconcile run and single outbound replay.
+		WithGlorianAdmin(
+			glorian.NewReconciler(queries, secretBox, glorian.HTTPClientFactory(glorian.OptionsFromConfig(cfg.Glorian)), log).ReconcileTask,
+			glorianOrders.ReplayOneTask,
+		).
 		WithSearch(
 			searchIndexer.ProcessUpsert,
 			searchIndexer.ProcessDelete,
