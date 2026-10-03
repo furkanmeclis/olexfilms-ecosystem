@@ -397,6 +397,7 @@ func (u *AuthUseCase) passwordLogin(ctx context.Context, email, rawPassword, tot
 	if err := u.repo.UpdateLastLogin(ctx, user.ID); err != nil {
 		return model.Tokens{}, err
 	}
+	upgradeLegacyHash(ctx, u.repo, user.ID, user.PasswordHash, rawPassword)
 	var orgUUID *uuid.UUID
 	if strings.TrimSpace(organizationSlug) != "" {
 		if u.orgResolver == nil {
@@ -719,6 +720,23 @@ var (
 	dummyHashOnce sync.Once
 	dummyHash     string
 )
+
+// upgradeLegacyHash replaces a migrated bcrypt hash (legacy hub, TEC-254)
+// with Argon2id after a successful login. Best effort: a failed write leaves
+// the bcrypt hash, which still verifies next time.
+func upgradeLegacyHash(ctx context.Context, repo interface {
+	UpdatePassword(ctx context.Context, userID int64, hash string) error
+}, userID int64, stored, raw string,
+) {
+	if !password.NeedsRehash(stored) {
+		return
+	}
+	hash, err := password.Rehash(raw)
+	if err != nil {
+		return
+	}
+	_ = repo.UpdatePassword(ctx, userID, hash)
+}
 
 // burnPasswordVerify runs an Argon2 verification against a throwaway hash.
 func burnPasswordVerify(raw string) {
