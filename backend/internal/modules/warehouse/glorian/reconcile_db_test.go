@@ -26,6 +26,9 @@ type reconcileUnits struct {
 
 func (f *pullFixture) reconcileBarcode(n int) string { return fmt.Sprintf("GT272-%s-%d", f.suffix, n) }
 
+// reconcileBarcodePattern is a LIKE pattern matching every reconcileBarcode.
+func (f *pullFixture) reconcileBarcodePattern() string { return "GT272-" + f.suffix + "-%" }
+
 // reconcileUnits pulls the catalog (products become synced) and creates
 // units of the synced product with remote id 10.
 func (f *pullFixture) reconcileUnits(t *testing.T) reconcileUnits {
@@ -88,23 +91,31 @@ func (f *pullFixture) inSyncHub() []fake.Row {
 	}
 }
 
-// writeSnapshot fingerprints the business tables the report must not
-// touch: the brand's units, the stock ledger and the unit projection.
+// fixtureUnits selects the units this fixture owns: units of the products
+// synced through its own connection, plus any unit carrying one of its
+// barcodes (so a unit the report wrongly created would still show up). Package tests run in parallel against
+// the shared CI database and commit units, movements and projection rows
+// for the same seeded brand, so the snapshot must not look beyond them.
+const fixtureUnits = `SELECT u.id FROM units u JOIN products p ON p.id = u.product_id WHERE p.connection_id = $1 OR u.barcode LIKE $2`
+
+// writeSnapshot fingerprints the business rows the report must not touch:
+// the fixture's units, their stock ledger and their unit projection.
 func (f *pullFixture) writeSnapshot(t *testing.T) string {
 	t.Helper()
 	var units, moves, state string
 	if err := f.tx.QueryRow(f.ctx,
-		`SELECT coalesce(md5(string_agg(u::text, '|' ORDER BY u.id)), '') FROM units u WHERE u.brand_id = $1`,
-		f.glorian.BrandID).Scan(&units); err != nil {
+		`SELECT count(*)::text || ':' || coalesce(md5(string_agg(u::text, '|' ORDER BY u.id)), '') FROM units u WHERE u.id IN (`+fixtureUnits+`)`,
+		f.conn.ID, f.reconcileBarcodePattern()).Scan(&units); err != nil {
 		t.Fatal(err)
 	}
 	if err := f.tx.QueryRow(f.ctx,
-		`SELECT count(*)::text || ':' || coalesce(max(id), 0)::text FROM stock_movements`).Scan(&moves); err != nil {
+		`SELECT count(*)::text || ':' || coalesce(md5(string_agg(m::text, '|' ORDER BY m.id)), '') FROM stock_movements m WHERE m.unit_id IN (`+fixtureUnits+`)`,
+		f.conn.ID, f.reconcileBarcodePattern()).Scan(&moves); err != nil {
 		t.Fatal(err)
 	}
 	if err := f.tx.QueryRow(f.ctx,
-		`SELECT coalesce(md5(string_agg(s::text, '|' ORDER BY s.unit_id)), '') FROM unit_current_state s WHERE s.brand_id = $1`,
-		f.glorian.BrandID).Scan(&state); err != nil {
+		`SELECT count(*)::text || ':' || coalesce(md5(string_agg(s::text, '|' ORDER BY s.unit_id)), '') FROM unit_current_state s WHERE s.unit_id IN (`+fixtureUnits+`)`,
+		f.conn.ID, f.reconcileBarcodePattern()).Scan(&state); err != nil {
 		t.Fatal(err)
 	}
 	return units + "/" + moves + "/" + state
