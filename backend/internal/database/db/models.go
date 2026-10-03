@@ -267,6 +267,118 @@ type Consent struct {
 	UserAgent   pgtype.Text        `json:"user_agent"`
 }
 
+type ContractCounter struct {
+	OrganizationID int64 `json:"organization_id"`
+	NextSeq        int64 `json:"next_seq"`
+}
+
+type ContractInstance struct {
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	ContractNo        int64              `json:"contract_no"`
+	SubjectType       string             `json:"subject_type"`
+	SubjectID         int64              `json:"subject_id"`
+	SubjectServiceID  pgtype.Int8        `json:"subject_service_id"`
+	TemplateID        int64              `json:"template_id"`
+	Kind              string             `json:"kind"`
+	Locale            string             `json:"locale"`
+	TemplateVersion   int32              `json:"template_version"`
+	OtpRequired       bool               `json:"otp_required"`
+	SignatureRequired bool               `json:"signature_required"`
+	Status            string             `json:"status"`
+	RenderedHtml      pgtype.Text        `json:"rendered_html"`
+	ContentSha256     pgtype.Text        `json:"content_sha256"`
+	PdfKey            pgtype.Text        `json:"pdf_key"`
+	ExecutedAt        pgtype.Timestamptz `json:"executed_at"`
+	VoidedAt          pgtype.Timestamptz `json:"voided_at"`
+	VoidReason        pgtype.Text        `json:"void_reason"`
+	VoidedByUserID    pgtype.Int8        `json:"voided_by_user_id"`
+	CreatedByUserID   pgtype.Int8        `json:"created_by_user_id"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ContractMedium struct {
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	InstanceID       int64              `json:"instance_id"`
+	OrganizationID   int64              `json:"organization_id"`
+	BrandID          int64              `json:"brand_id"`
+	StorageKey       string             `json:"storage_key"`
+	MimeType         string             `json:"mime_type"`
+	SizeBytes        int64              `json:"size_bytes"`
+	Sha256           string             `json:"sha256"`
+	Title            pgtype.Text        `json:"title"`
+	SortOrder        int32              `json:"sort_order"`
+	UploadedByUserID pgtype.Int8        `json:"uploaded_by_user_id"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+}
+
+type ContractSignature struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	SignerID       int64              `json:"signer_id"`
+	InstanceID     int64              `json:"instance_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	StorageKey     string             `json:"storage_key"`
+	Sha256         string             `json:"sha256"`
+	IpAddress      *netip.Addr        `json:"ip_address"`
+	UserAgent      pgtype.Text        `json:"user_agent"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
+type ContractSigner struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	InstanceID     int64              `json:"instance_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Role           string             `json:"role"`
+	UserID         pgtype.Int8        `json:"user_id"`
+	Name           string             `json:"name"`
+	PhoneE164      pgtype.Text        `json:"phone_e164"`
+	OtpCodeID      pgtype.Int8        `json:"otp_code_id"`
+	OtpVerifiedAt  pgtype.Timestamptz `json:"otp_verified_at"`
+	SignedAt       pgtype.Timestamptz `json:"signed_at"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ContractTemplate struct {
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	Name              string             `json:"name"`
+	Kind              string             `json:"kind"`
+	IsDefault         bool               `json:"is_default"`
+	OtpRequired       bool               `json:"otp_required"`
+	SignatureRequired bool               `json:"signature_required"`
+	IsActive          bool               `json:"is_active"`
+	CreatedByUserID   pgtype.Int8        `json:"created_by_user_id"`
+	UpdatedByUserID   pgtype.Int8        `json:"updated_by_user_id"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ContractTemplateLocale struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	TemplateID      int64              `json:"template_id"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	Locale          string             `json:"locale"`
+	LexicalJson     []byte             `json:"lexical_json"`
+	Html            string             `json:"html"`
+	Version         int32              `json:"version"`
+	UpdatedByUserID pgtype.Int8        `json:"updated_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Conversation struct {
 	ID             int64              `json:"id"`
 	Uuid           uuid.UUID          `json:"uuid"`
