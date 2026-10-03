@@ -117,6 +117,7 @@ type Querier interface {
 	CountImportJobsForActor(ctx context.Context, actorID int64) (int64, error)
 	CountImportJobsForOrganization(ctx context.Context, organizationID int64) (int64, error)
 	CountMessagesByExternalID(ctx context.Context, arg CountMessagesByExternalIDParams) (int64, error)
+	CountMigrationMap(ctx context.Context) ([]CountMigrationMapRow, error)
 	CountNotificationDeliveries(ctx context.Context, arg CountNotificationDeliveriesParams) (int64, error)
 	CountNotificationsForUser(ctx context.Context, arg CountNotificationsForUserParams) (int64, error)
 	// A unit is on at most one open (requested or approved) request; the
@@ -207,6 +208,7 @@ type Querier interface {
 	CreateIntegrationConnection(ctx context.Context, arg CreateIntegrationConnectionParams) (IntegrationConnection, error)
 	CreateLabelTemplate(ctx context.Context, arg CreateLabelTemplateParams) (LabelTemplate, error)
 	CreateLogPurgeRule(ctx context.Context, arg CreateLogPurgeRuleParams) (LogPurgeRule, error)
+	CreateMigrationRun(ctx context.Context, arg CreateMigrationRunParams) (MigrationRun, error)
 	CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error)
 	CreateOAuthAccount(ctx context.Context, arg CreateOAuthAccountParams) (OauthAccount, error)
 	CreateOTPCode(ctx context.Context, arg CreateOTPCodeParams) (OtpCode, error)
@@ -422,6 +424,7 @@ type Querier interface {
 	// Duplicate-VIN warning (VIN is not unique; ownership transfer is F1-06).
 	FindVehiclesByVIN(ctx context.Context, arg FindVehiclesByVINParams) ([]Vehicle, error)
 	FinishIntegrationSyncRun(ctx context.Context, arg FinishIntegrationSyncRunParams) (IntegrationSyncRun, error)
+	FinishMigrationRun(ctx context.Context, arg FinishMigrationRunParams) (MigrationRun, error)
 	GetAccountingDisputeView(ctx context.Context, arg GetAccountingDisputeViewParams) (GetAccountingDisputeViewRow, error)
 	GetActiveDocumentTemplate(ctx context.Context, arg GetActiveDocumentTemplateParams) (DocumentTemplate, error)
 	// Full-unit duplicate guard before creation (decision 3); the partial
@@ -519,6 +522,8 @@ type Querier interface {
 	// source in one organization (0: none). TEC-177 opens a new revision of an
 	// opening balance once the previous one is reversed.
 	GetMaxFinanceEntryRevisionBySource(ctx context.Context, arg GetMaxFinanceEntryRevisionBySourceParams) (int32, error)
+	// TEC-252: migrator bookkeeping (000074). Written only by cmd/migrator.
+	GetMigrationMap(ctx context.Context, arg GetMigrationMapParams) (MigrationMap, error)
 	GetModule(ctx context.Context, key string) (Module, error)
 	GetNotificationByID(ctx context.Context, id int64) (Notification, error)
 	GetNotificationByUUID(ctx context.Context, argUuid uuid.UUID) (Notification, error)
@@ -726,6 +731,9 @@ type Querier interface {
 	InsertKVKKNotice(ctx context.Context, arg InsertKVKKNoticeParams) (KvkkNotice, error)
 	InsertLegalText(ctx context.Context, arg InsertLegalTextParams) (LegalText, error)
 	InsertMessage(ctx context.Context, arg InsertMessageParams) (Message, error)
+	// ON CONFLICT DO NOTHING: a concurrent insert of the same key returns no row
+	// and the caller reads the existing one.
+	InsertMigrationMap(ctx context.Context, arg InsertMigrationMapParams) (MigrationMap, error)
 	// Idempotent on (event_id, user_id, channel): a replayed event returns no row.
 	InsertNotificationDelivery(ctx context.Context, arg InsertNotificationDeliveryParams) (NotificationDelivery, error)
 	InsertNotificationHistory(ctx context.Context, arg InsertNotificationHistoryParams) (NotificationHistory, error)
@@ -778,6 +786,8 @@ type Querier interface {
 	InsertWhatsAppConnectionEvent(ctx context.Context, arg InsertWhatsAppConnectionEventParams) (WhatsappConnectionEvent, error)
 	InvalidateActiveOTPs(ctx context.Context, arg InvalidateActiveOTPsParams) error
 	InvalidateActivePhoneOTPs(ctx context.Context, arg InvalidateActivePhoneOTPsParams) error
+	// Watermark of the last successful, non-dry-run execution of a step.
+	LastMigrationWatermark(ctx context.Context, arg LastMigrationWatermarkParams) (pgtype.Timestamptz, error)
 	// The scanning user's current location context (location_first).
 	LastStockCountLocationScan(ctx context.Context, arg LastStockCountLocationScanParams) (pgtype.Int8, error)
 	// The latest successful run of a kind; its watermark seeds the next
@@ -923,6 +933,7 @@ type Querier interface {
 	ListMemberGrants(ctx context.Context, arg ListMemberGrantsParams) ([]ListMemberGrantsRow, error)
 	ListMemberRoleSlugs(ctx context.Context, arg ListMemberRoleSlugsParams) ([]string, error)
 	ListMemberRolesByOrganization(ctx context.Context, organizationID int64) ([]ListMemberRolesByOrganizationRow, error)
+	ListMigrationRuns(ctx context.Context, limit int32) ([]MigrationRun, error)
 	// System rows plus the org / dealer_standard rows of the given organizations.
 	ListModuleFlagsForOrgs(ctx context.Context, orgIds []int64) ([]ListModuleFlagsForOrgsRow, error)
 	ListModules(ctx context.Context) ([]Module, error)
@@ -1530,6 +1541,7 @@ type Querier interface {
 	UpdateLabelTemplate(ctx context.Context, arg UpdateLabelTemplateParams) (LabelTemplate, error)
 	UpdateLogPurgeRule(ctx context.Context, arg UpdateLogPurgeRuleParams) (LogPurgeRule, error)
 	UpdateMessageStatusByExternalIDs(ctx context.Context, arg UpdateMessageStatusByExternalIDsParams) (int64, error)
+	UpdateMigrationMapChecksum(ctx context.Context, arg UpdateMigrationMapChecksumParams) error
 	UpdateModuleDefaults(ctx context.Context, arg UpdateModuleDefaultsParams) (Module, error)
 	UpdateOAuthProviderSettings(ctx context.Context, arg UpdateOAuthProviderSettingsParams) (OauthProviderSetting, error)
 	UpdateOrderDraft(ctx context.Context, arg UpdateOrderDraftParams) (Order, error)

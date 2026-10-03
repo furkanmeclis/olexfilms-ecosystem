@@ -703,6 +703,32 @@ type Message struct {
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
+type MigrationMap struct {
+	ID           int64              `json:"id"`
+	SourceSystem string             `json:"source_system"`
+	SourceTable  string             `json:"source_table"`
+	SourceID     string             `json:"source_id"`
+	TargetTable  string             `json:"target_table"`
+	TargetUuid   uuid.UUID          `json:"target_uuid"`
+	Checksum     string             `json:"checksum"`
+	MigratedAt   pgtype.Timestamptz `json:"migrated_at"`
+}
+
+type MigrationRun struct {
+	ID         int64              `json:"id"`
+	ParentID   pgtype.Int8        `json:"parent_id"`
+	Profile    string             `json:"profile"`
+	Mode       string             `json:"mode"`
+	Step       pgtype.Text        `json:"step"`
+	DryRun     bool               `json:"dry_run"`
+	StartedAt  pgtype.Timestamptz `json:"started_at"`
+	FinishedAt pgtype.Timestamptz `json:"finished_at"`
+	Watermark  pgtype.Timestamptz `json:"watermark"`
+	Counts     []byte             `json:"counts"`
+	Status     string             `json:"status"`
+	Error      pgtype.Text        `json:"error"`
+}
+
 type Module struct {
 	Key            string             `json:"key"`
 	Level          string             `json:"level"`
