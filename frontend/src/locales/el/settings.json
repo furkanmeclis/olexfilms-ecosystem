@@ -102,5 +102,16 @@
   "system.reset": "Επαναφορά προεπιλογής",
   "system.toast.saved": "Η ρύθμιση αποθηκεύτηκε.",
   "system.toast.reset": "Η ρύθμιση επανήλθε.",
-  "system.toast.failed": "Δεν ήταν δυνατή η αποθήκευση της ρύθμισης."
+  "system.toast.failed": "Δεν ήταν δυνατή η αποθήκευση της ρύθμισης.",
+  "coordinates.title": "Θέση στον χάρτη",
+  "coordinates.hint": "Εισαγάγετε τις συντεταγμένες ή επιλέξτε τη θέση στον χάρτη για να εμφανίζεστε στην εύρεση αντιπροσώπων.",
+  "coordinates.latitude": "Γεωγραφικό πλάτος",
+  "coordinates.longitude": "Γεωγραφικό μήκος",
+  "coordinates.map_label": "Χάρτης επιλογής θέσης",
+  "coordinates.pick_hint": "Πατήστε στον χάρτη για να επιλέξετε τη θέση.",
+  "coordinates.clear": "Εκκαθάριση θέσης",
+  "coordinates.marker": "Επιλεγμένη θέση",
+  "coordinates.errors.latitude": "Το γεωγραφικό πλάτος πρέπει να είναι αριθμός μεταξύ -90 και 90.",
+  "coordinates.errors.longitude": "Το γεωγραφικό μήκος πρέπει να είναι αριθμός μεταξύ -180 και 180.",
+  "coordinates.errors.pair": "Εισαγάγετε μαζί πλάτος και μήκος ή αφήστε και τα δύο κενά."
 }
