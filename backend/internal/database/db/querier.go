@@ -111,6 +111,7 @@ type Querier interface {
 	CountCustomerOrganizationLinks(ctx context.Context, arg CountCustomerOrganizationLinksParams) (CountCustomerOrganizationLinksRow, error)
 	CountDistributorPriceOverrides(ctx context.Context, arg CountDistributorPriceOverridesParams) (int64, error)
 	CountDocumentTemplates(ctx context.Context, arg CountDocumentTemplatesParams) (int64, error)
+	CountEODReports(ctx context.Context, arg CountEODReportsParams) (int64, error)
 	CountExportJobsForActor(ctx context.Context, actorID int64) (int64, error)
 	CountExportJobsForOrganization(ctx context.Context, organizationID pgtype.Int8) (int64, error)
 	CountImportJobsForActor(ctx context.Context, actorID int64) (int64, error)
@@ -374,6 +375,7 @@ type Querier interface {
 	DeleteWebAuthnCredentialByUUID(ctx context.Context, arg DeleteWebAuthnCredentialByUUIDParams) error
 	// Every organization below the given one (not including itself).
 	Descendants(ctx context.Context, id int64) ([]Organization, error)
+	EODReportExists(ctx context.Context, arg EODReportExistsParams) (bool, error)
 	// ---------------------------------------------------------------------------
 	// Product stock projections.
 	EnsureBinProductStock(ctx context.Context, arg EnsureBinProductStockParams) error
@@ -468,6 +470,7 @@ type Querier interface {
 	GetDocumentTemplateByID(ctx context.Context, id int64) (DocumentTemplate, error)
 	GetDocumentTemplateByUUID(ctx context.Context, argUuid uuid.UUID) (DocumentTemplate, error)
 	GetDraftDocumentTemplate(ctx context.Context, arg GetDraftDocumentTemplateParams) (DocumentTemplate, error)
+	GetEODReportByUUID(ctx context.Context, arg GetEODReportByUUIDParams) (EodReport, error)
 	GetExportJobByID(ctx context.Context, id int64) (ExportJob, error)
 	GetExportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ExportJob, error)
 	GetFinanceAccount(ctx context.Context, arg GetFinanceAccountParams) (FinanceAccount, error)
@@ -676,6 +679,9 @@ type Querier interface {
 	InsertBulkOperation(ctx context.Context, arg InsertBulkOperationParams) (BulkOperation, error)
 	InsertConsent(ctx context.Context, arg InsertConsentParams) (Consent, error)
 	InsertCustomerOrganization(ctx context.Context, arg InsertCustomerOrganizationParams) (CustomerOrganization, error)
+	// Cron run: writes the report only when the scope and day has none (no
+	// row returned otherwise), so a rerun or a manual report wins.
+	InsertEODReportIfMissing(ctx context.Context, arg InsertEODReportIfMissingParams) (EodReport, error)
 	// ---------------------------------------------------------------------------
 	// Ledger entries.
 	// InsertFinanceEntry appends an original row. A retried sourced write (same
@@ -829,6 +835,12 @@ type Querier interface {
 	ListDistrictsByProvince(ctx context.Context, provinceID int64) ([]District, error)
 	ListDocumentTemplateVersions(ctx context.Context, arg ListDocumentTemplateVersionsParams) ([]DocumentTemplate, error)
 	ListDocumentTemplates(ctx context.Context, arg ListDocumentTemplatesParams) ([]ListDocumentTemplatesRow, error)
+	// The organizations the cron reports on: active centers and distributors
+	// with at least one active warehouse.
+	ListEODReportOrganizations(ctx context.Context) ([]ListEODReportOrganizationsRow, error)
+	// scope: '' every report, 'system' only system reports, 'warehouse' only
+	// warehouse reports (warehouse_id narrows to one warehouse).
+	ListEODReports(ctx context.Context, arg ListEODReportsParams) ([]EodReport, error)
 	ListEnabledLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
 	ListExchangeRatesByDate(ctx context.Context, arg ListExchangeRatesByDateParams) ([]ListExchangeRatesByDateRow, error)
 	ListExportJobsForActor(ctx context.Context, arg ListExportJobsForActorParams) ([]ExportJob, error)
@@ -1418,6 +1430,17 @@ type Querier interface {
 	SumActiveReservedQuantityByUnit(ctx context.Context, arg SumActiveReservedQuantityByUnitParams) (int64, error)
 	// Fixed barcode quantity on open requests of the giver (excluding one).
 	SumOpenTransferQuantityByUnit(ctx context.Context, arg SumOpenTransferQuantityByUnitParams) (int64, error)
+	// TEC-207: end-of-day warehouse reports (000071). Every query is bound to
+	// one organization; the warehouse side is brand-independent (K20).
+	// The day's ledger movements of an organization grouped by type and
+	// product. A movement belongs to the organization when it was recorded on
+	// it (holder before the movement) or when it lands on one of its locations
+	// or on the organization itself. With warehouse_id, only movements that
+	// leave or reach a location of that warehouse, or that a stock entry of
+	// that warehouse wrote (serial entries go to the organization first), and
+	// warehouse transfer receipts of that target warehouse (TEC-205: the
+	// transfer_in lands on the organization before its placement).
+	SummarizeEODMovements(ctx context.Context, arg SummarizeEODMovementsParams) ([]SummarizeEODMovementsRow, error)
 	// The supplier of an organization is its parent in the tree (K9).
 	// Returns no rows for a center.
 	SupplierOf(ctx context.Context, id int64) (Organization, error)
@@ -1510,6 +1533,8 @@ type Querier interface {
 	UpsertDistributorPriceOverride(ctx context.Context, arg UpsertDistributorPriceOverrideParams) (UpsertDistributorPriceOverrideRow, error)
 	// One row per cache key: a repeated request returns the existing row.
 	UpsertDocumentRender(ctx context.Context, arg UpsertDocumentRenderParams) (DocumentRender, error)
+	// Manual run: (re)writes the report of the scope and day.
+	UpsertEODReport(ctx context.Context, arg UpsertEODReportParams) (EodReport, error)
 	UpsertExchangeRate(ctx context.Context, arg UpsertExchangeRateParams) error
 	UpsertFixedBarcodeHoldingForRepair(ctx context.Context, arg UpsertFixedBarcodeHoldingForRepairParams) error
 	// Catalog sync: level and sort order follow the Go catalog; admin-edited
