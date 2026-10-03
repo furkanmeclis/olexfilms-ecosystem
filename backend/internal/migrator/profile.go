@@ -42,7 +42,17 @@ var (
 
 // olexSteps lists the Olex import steps in run order. F2-01c onwards add
 // them here (organizations, users, customers, catalog, stock, services, ...).
-func olexSteps() []Step { return nil }
+func olexSteps() []Step {
+	return []Step{
+		OrganizationsStep{}, // TEC-254: center, TR distributor, dealers
+		UsersStep{},         // TEC-254: users, memberships, roles
+
+		// TEC-256: car brands, models and brand logos; product categories,
+		// products and the warehouse product match.
+		VehicleCatalogStep{},
+		CatalogStep{},
+	}
+}
 
 // Profiles returns the built-in profiles.
 func Profiles() map[string]Profile {

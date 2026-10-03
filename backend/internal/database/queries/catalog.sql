@@ -135,12 +135,14 @@ WHERE brand_id = sqlc.arg(brand_id) AND name = sqlc.arg(name);
 
 -- name: SetProductsActiveByUUIDs :many
 -- Bulk activate/deactivate by public id within one brand. Returns the rows
--- that changed so the caller can reindex them.
+-- that changed so the caller can reindex them. A product whose active flag
+-- is locked by the integration sync is skipped (TEC-268).
 UPDATE products
 SET active = sqlc.arg(active)
 WHERE brand_id = sqlc.arg(brand_id)
   AND uuid = ANY(sqlc.arg(uuids)::uuid[])
   AND active IS DISTINCT FROM sqlc.arg(active)
+  AND NOT ('active' = ANY(COALESCE(locked_fields, '{}'::text[])))
 RETURNING uuid;
 
 -- name: GetProductByUUIDForIndex :one

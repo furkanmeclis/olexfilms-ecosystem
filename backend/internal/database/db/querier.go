@@ -39,6 +39,9 @@ type Querier interface {
 	AssignMemberRoleBySlug(ctx context.Context, arg AssignMemberRoleBySlugParams) error
 	AssignUserRoleBySlug(ctx context.Context, arg AssignUserRoleBySlugParams) error
 	AttachNotificationDelivery(ctx context.Context, arg AttachNotificationDeliveryParams) error
+	// A brand with an integration connection takes its categories from the
+	// remote hub, so their remote-sourced fields are locked in the panel.
+	BrandHasIntegrationConnection(ctx context.Context, brandID int64) (bool, error)
 	CancelService(ctx context.Context, arg CancelServiceParams) (Service, error)
 	CancelStockCount(ctx context.Context, id int64) (StockCount, error)
 	CancelStockEntry(ctx context.Context, id int64) (StockEntry, error)
@@ -409,6 +412,8 @@ type Querier interface {
 	// Both have a profile: the target keeps its values and only fills its empty
 	// fields from the source (an identity number moves with its mask).
 	FillCustomerProfileFromSource(ctx context.Context, arg FillCustomerProfileFromSourceParams) (int64, error)
+	// The first upload of a repeated idempotency key or client_measurement_id.
+	FindMeasurementResultByKeys(ctx context.Context, arg FindMeasurementResultByKeysParams) (MeasurementResult, error)
 	// Another draft entry (or, for serial units, a confirmed one whose line
 	// was not undone) already holding the unit.
 	FindOpenStockEntryForUnit(ctx context.Context, arg FindOpenStockEntryForUnitParams) (FindOpenStockEntryForUnitRow, error)
@@ -565,6 +570,10 @@ type Querier interface {
 	// Service summary of one vehicle across every organization of the brand.
 	GetPortalVehicleServiceSummary(ctx context.Context, arg GetPortalVehicleServiceSummaryParams) (GetPortalVehicleServiceSummaryRow, error)
 	GetProduct(ctx context.Context, arg GetProductParams) (Product, error)
+	// TEC-268 (F2-02c): Glorian catalog pull. A synced product is found by its
+	// connection + remote id; the pull rewrites only the remote-sourced columns
+	// (images, unit type and fixed barcode stay local).
+	GetProductByConnectionExternalID(ctx context.Context, arg GetProductByConnectionExternalIDParams) (Product, error)
 	// TEC-157 (F1-02e): reclassification requests (barcode kept, product
 	// changed). Scope narrowing happens in modules/stock/usecase.
 	// Reclassification target check: a product of another brand must be told
@@ -609,6 +618,9 @@ type Querier interface {
 	GetServiceByNo(ctx context.Context, serviceNo string) (Service, error)
 	GetServiceByUUID(ctx context.Context, arg GetServiceByUUIDParams) (Service, error)
 	GetServiceForIndex(ctx context.Context, argUuid uuid.UUID) (GetServiceForIndexRow, error)
+	// The service a measurement is attached to, bounded by the active
+	// organization (a service of another organization is not found).
+	GetServiceForMeasurement(ctx context.Context, arg GetServiceForMeasurementParams) (GetServiceForMeasurementRow, error)
 	GetServiceImage(ctx context.Context, arg GetServiceImageParams) (ServiceImage, error)
 	GetServiceItem(ctx context.Context, arg GetServiceItemParams) (ServiceItem, error)
 	GetServiceItemByUUID(ctx context.Context, arg GetServiceItemByUUIDParams) (ServiceItem, error)
@@ -730,6 +742,9 @@ type Querier interface {
 	InsertIntegrationExternalParty(ctx context.Context, arg InsertIntegrationExternalPartyParams) (IntegrationExternalParty, error)
 	InsertKVKKNotice(ctx context.Context, arg InsertKVKKNoticeParams) (KvkkNotice, error)
 	InsertLegalText(ctx context.Context, arg InsertLegalTextParams) (LegalText, error)
+	// InsertMeasurementResult skips the insert when the idempotency key or the
+	// client_measurement_id was already used in the organization (no row then).
+	InsertMeasurementResult(ctx context.Context, arg InsertMeasurementResultParams) (MeasurementResult, error)
 	InsertMessage(ctx context.Context, arg InsertMessageParams) (Message, error)
 	// ON CONFLICT DO NOTHING: a concurrent insert of the same key returns no row
 	// and the caller reads the existing one.
@@ -937,6 +952,10 @@ type Querier interface {
 	// System rows plus the org / dealer_standard rows of the given organizations.
 	ListModuleFlagsForOrgs(ctx context.Context, orgIds []int64) ([]ListModuleFlagsForOrgsRow, error)
 	ListModules(ctx context.Context) ([]Module, error)
+	// Active, serving (access window open) dealers and distributors of a brand
+	// with coordinates, within radius_km of (lat, lng). Distance is the
+	// haversine great-circle distance in km (mean Earth radius 6371.0088).
+	ListNearbyDealers(ctx context.Context, arg ListNearbyDealersParams) ([]ListNearbyDealersRow, error)
 	ListNotificationChannelSettings(ctx context.Context) ([]NotificationChannelSetting, error)
 	ListNotificationDeliveries(ctx context.Context, arg ListNotificationDeliveriesParams) ([]ListNotificationDeliveriesRow, error)
 	ListNotificationPreferenceRows(ctx context.Context, userID int64) ([]NotificationPreference, error)
@@ -1363,6 +1382,64 @@ type Querier interface {
 	// Organization links the target already has: the target row keeps the
 	// earliest dates of both rows.
 	MergeConflictingCustomerOrganizations(ctx context.Context, arg MergeConflictingCustomerOrganizationsParams) (int64, error)
+	MigratorAssignMemberRole(ctx context.Context, arg MigratorAssignMemberRoleParams) (int64, error)
+	MigratorAssignUserRole(ctx context.Context, arg MigratorAssignUserRoleParams) (int64, error)
+	// TEC-256: migrator steps 3-4 (vehicle catalog, product catalog and the
+	// warehouse product match). Written only by cmd/migrator inside a step
+	// transaction.
+	MigratorCarBrandByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorCarBrandByUUIDRow, error)
+	MigratorCarModelIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
+	MigratorCategoryIDByUUID(ctx context.Context, arg MigratorCategoryIDByUUIDParams) (int64, error)
+	// Whether another live user already holds the e-mail or the phone.
+	MigratorContactTaken(ctx context.Context, arg MigratorContactTakenParams) (MigratorContactTakenRow, error)
+	// The live distributor owning the country-level territory of a brand.
+	MigratorCountryDistributor(ctx context.Context, arg MigratorCountryDistributorParams) (int64, error)
+	MigratorDistributorBySlug(ctx context.Context, arg MigratorDistributorBySlugParams) (int64, error)
+	// Adds the membership or returns the existing one; an owner grant upgrades
+	// a staff membership, never the other way round.
+	MigratorEnsureMember(ctx context.Context, arg MigratorEnsureMemberParams) (MigratorEnsureMemberRow, error)
+	// An existing brand with the legacy external id, else with the same name
+	// (case insensitive, like uq_car_brands_name).
+	MigratorFindCarBrand(ctx context.Context, arg MigratorFindCarBrandParams) (MigratorFindCarBrandRow, error)
+	// An existing model with the legacy external id, else with the same name
+	// under the brand (case insensitive, like uq_car_models_brand_name).
+	MigratorFindCarModel(ctx context.Context, arg MigratorFindCarModelParams) (uuid.UUID, error)
+	MigratorFindCategory(ctx context.Context, arg MigratorFindCategoryParams) (uuid.UUID, error)
+	MigratorFindProductBySKU(ctx context.Context, arg MigratorFindProductBySKUParams) (uuid.UUID, error)
+	// Products of the brand with the name (case insensitive); the warehouse
+	// match uses it only when exactly one row comes back.
+	MigratorFindProductsByName(ctx context.Context, arg MigratorFindProductsByNameParams) ([]uuid.UUID, error)
+	// An existing account with the e-mail (preferred) or the phone.
+	MigratorFindUserByContact(ctx context.Context, arg MigratorFindUserByContactParams) (MigratorFindUserByContactRow, error)
+	MigratorInsertCarBrand(ctx context.Context, arg MigratorInsertCarBrandParams) (int64, error)
+	MigratorInsertCarModel(ctx context.Context, arg MigratorInsertCarModelParams) (int64, error)
+	MigratorInsertCategory(ctx context.Context, arg MigratorInsertCategoryParams) (int64, error)
+	MigratorInsertOrganization(ctx context.Context, arg MigratorInsertOrganizationParams) (int64, error)
+	MigratorInsertProduct(ctx context.Context, arg MigratorInsertProductParams) (int64, error)
+	MigratorInsertUser(ctx context.Context, arg MigratorInsertUserParams) (int64, error)
+	MigratorMatchDistrict(ctx context.Context, arg MigratorMatchDistrictParams) (int64, error)
+	// TEC-254: migrator step 1 (center, TR distributor, dealers, users, roles).
+	// Written only by cmd/migrator inside a step transaction.
+	// Province by name, matched like the 000035 backfill: Turkish capitals
+	// folded, case insensitive.
+	MigratorMatchProvince(ctx context.Context, arg MigratorMatchProvinceParams) (int64, error)
+	MigratorOrganizationIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
+	MigratorProductIDByUUID(ctx context.Context, arg MigratorProductIDByUUIDParams) (int64, error)
+	MigratorRoleOrgTypes(ctx context.Context, slugs []string) ([]MigratorRoleOrgTypesRow, error)
+	MigratorSetCarBrandLogo(ctx context.Context, arg MigratorSetCarBrandLogoParams) error
+	// Legacy-sourced fields of a brand the migrator created; the logo is set
+	// separately.
+	MigratorUpdateCarBrand(ctx context.Context, arg MigratorUpdateCarBrandParams) error
+	MigratorUpdateCarModel(ctx context.Context, arg MigratorUpdateCarModelParams) error
+	MigratorUpdateCategory(ctx context.Context, arg MigratorUpdateCategoryParams) error
+	// Legacy-sourced fields only; slug and parent stay as the new app has them.
+	MigratorUpdateOrganization(ctx context.Context, arg MigratorUpdateOrganizationParams) error
+	// Legacy-sourced fields only; images, unit type and the sync columns stay.
+	MigratorUpdateProduct(ctx context.Context, arg MigratorUpdateProductParams) error
+	// The password is replaced only while the account still holds a migrated
+	// hash (bcrypt or the reset marker); a password set in the new app wins.
+	MigratorUpdateUser(ctx context.Context, arg MigratorUpdateUserParams) error
+	MigratorUserByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorUserByUUIDRow, error)
 	// Consents the target has not decided yet; a decision the target already
 	// made for the same legal text wins and the source's stays as a record.
 	MoveConsentsToUser(ctx context.Context, arg MoveConsentsToUserParams) (int64, error)
@@ -1454,7 +1531,8 @@ type Querier interface {
 	// Bulk activate/deactivate within one brand.
 	SetProductsActive(ctx context.Context, arg SetProductsActiveParams) (int64, error)
 	// Bulk activate/deactivate by public id within one brand. Returns the rows
-	// that changed so the caller can reindex them.
+	// that changed so the caller can reindex them. A product whose active flag
+	// is locked by the integration sync is skipped (TEC-268).
 	SetProductsActiveByUUIDs(ctx context.Context, arg SetProductsActiveByUUIDsParams) ([]uuid.UUID, error)
 	SetRolePermissions(ctx context.Context, roleID int64) error
 	SetRoomSortOrder(ctx context.Context, arg SetRoomSortOrderParams) (int64, error)
@@ -1553,6 +1631,9 @@ type Querier interface {
 	// caller has locked the row and validated the transition.
 	UpdateOrderStatus(ctx context.Context, arg UpdateOrderStatusParams) (Order, error)
 	UpdateOrderTotals(ctx context.Context, arg UpdateOrderTotalsParams) (Order, error)
+	// TEC-240: dealer coordinates and the public "nearby dealers" lookup.
+	// Sets or clears (both NULL) the map position of an organization.
+	UpdateOrganizationCoordinates(ctx context.Context, arg UpdateOrganizationCoordinatesParams) (Organization, error)
 	UpdateOrganizationLetterhead(ctx context.Context, arg UpdateOrganizationLetterheadParams) (Organization, error)
 	UpdateOrganizationParent(ctx context.Context, arg UpdateOrganizationParentParams) (Organization, error)
 	UpdateOrganizationPlatform(ctx context.Context, arg UpdateOrganizationPlatformParams) (Organization, error)
@@ -1575,6 +1656,7 @@ type Querier interface {
 	UpdateStepupSettings(ctx context.Context, arg UpdateStepupSettingsParams) (StepupSetting, error)
 	UpdateStockImportBatchStatus(ctx context.Context, arg UpdateStockImportBatchStatusParams) (StockImportBatch, error)
 	UpdateStockImportRowResult(ctx context.Context, arg UpdateStockImportRowResultParams) (StockImportRow, error)
+	UpdateSyncedProduct(ctx context.Context, arg UpdateSyncedProductParams) (Product, error)
 	UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, error)
 	UpdateTypedLocation(ctx context.Context, arg UpdateTypedLocationParams) (WarehouseLocation, error)
 	// Optimistic check on version in addition to the row lock.

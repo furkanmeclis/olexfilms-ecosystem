@@ -174,5 +174,7 @@
   "groups.tasks": "Görevler",
   "labels.integrations.glorian.view": "Glorian entegrasyonunu görüntüle",
   "labels.integrations.glorian.manage": "Glorian entegrasyonunu yönet",
-  "groups.integrations": "Entegrasyonlar"
+  "groups.integrations": "Entegrasyonlar",
+  "labels.measurements.write": "Ölçüm yükle",
+  "groups.measurements": "Ölçümler"
 }

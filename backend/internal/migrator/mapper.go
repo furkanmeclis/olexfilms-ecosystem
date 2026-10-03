@@ -90,6 +90,30 @@ func (m *Mapper) Upsert(ctx context.Context, key Key, checksum string) (MapResul
 	return MapResult{UUID: row.TargetUuid, Changed: row.Checksum != checksum}, nil
 }
 
+// Link maps a not yet mapped key to an existing target row (a legacy record
+// that matches an account already in this database). It reports false when
+// the key was mapped meanwhile; the caller then uses Lookup.
+func (m *Mapper) Link(ctx context.Context, key Key, target uuid.UUID, checksum string) (bool, error) {
+	if key.System == "" || key.Table == "" || key.ID == "" || key.TargetTable == "" || target == uuid.Nil {
+		return false, errors.New("migrator: mapper link is incomplete")
+	}
+	_, err := m.q.InsertMigrationMap(ctx, db.InsertMigrationMapParams{
+		SourceSystem: key.System,
+		SourceTable:  key.Table,
+		SourceID:     key.ID,
+		TargetTable:  key.TargetTable,
+		TargetUuid:   target,
+		Checksum:     checksum,
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("migrator: link map: %w", err)
+	}
+	return true, nil
+}
+
 // Lookup returns the target uuid of an already mapped key (for foreign keys
 // to rows an earlier step migrated).
 func (m *Mapper) Lookup(ctx context.Context, system, table, id string) (uuid.UUID, bool, error) {

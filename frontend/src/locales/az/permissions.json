@@ -174,5 +174,7 @@
   "groups.tasks": "Tapşırıqlar",
   "labels.integrations.glorian.view": "Glorian inteqrasiyasına bax",
   "labels.integrations.glorian.manage": "Glorian inteqrasiyasını idarə et",
-  "groups.integrations": "İnteqrasiyalar"
+  "groups.integrations": "İnteqrasiyalar",
+  "labels.measurements.write": "Ölçmələri yüklə",
+  "groups.measurements": "Ölçmələr"
 }

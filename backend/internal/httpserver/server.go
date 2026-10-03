@@ -64,6 +64,9 @@ import (
 	logsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/logs"
 	logshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/logs/handler"
 	logsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/logs/usecase"
+	measurementsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/measurements"
+	measurementshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/measurements/handler"
+	measurementsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/measurements/usecase"
 	notifmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications"
 	notifhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/handler"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/providers"
@@ -360,6 +363,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	authmodule.RegisterMobileRoutes(mux,
 		authhandler.NewMobile(uc, notifSvc, ratelimit.New(deps.Redis, cfg.App.Env)),
 		tokens, loader, cfg.Mobile.MinAPIVersion, cfg.Mobile.MaxAPIVersion)
+	// TEC-233: minimal measurement storage (K28), 202 {uuid, status}.
+	measurementsmodule.RegisterMobileRoutes(mux, measurementshandler.New(measurementsusecase.New(deps.Queries)),
+		tokens, loader, deps.Queries, cfg.Mobile.MinAPIVersion, cfg.Mobile.MaxAPIVersion)
 	var featureCache features.Cache = features.NoCache{}
 	if deps.Redis != nil {
 		featureCache = features.NewRedisCache(deps.Redis, cfg.App.Env, func(op string, err error) {

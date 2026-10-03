@@ -174,5 +174,7 @@
   "groups.tasks": "Завдання",
   "labels.integrations.glorian.view": "Перегляд інтеграції Glorian",
   "labels.integrations.glorian.manage": "Керування інтеграцією Glorian",
-  "groups.integrations": "Інтеграції"
+  "groups.integrations": "Інтеграції",
+  "labels.measurements.write": "Завантаження вимірювань",
+  "groups.measurements": "Вимірювання"
 }

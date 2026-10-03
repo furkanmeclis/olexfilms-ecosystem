@@ -178,3 +178,33 @@ SELECT * FROM order_outbounds
 WHERE connection_id = sqlc.arg(connection_id) AND state = sqlc.arg(state)
 ORDER BY id
 LIMIT sqlc.arg(row_limit);
+
+-- TEC-268 (F2-02c): Glorian catalog pull. A synced product is found by its
+-- connection + remote id; the pull rewrites only the remote-sourced columns
+-- (images, unit type and fixed barcode stay local).
+
+-- name: GetProductByConnectionExternalID :one
+SELECT * FROM products
+WHERE connection_id = sqlc.arg(connection_id) AND external_id = sqlc.arg(external_id);
+
+-- name: UpdateSyncedProduct :one
+UPDATE products
+SET category_id = sqlc.arg(category_id),
+    sku = sqlc.arg(sku),
+    name = sqlc.arg(name),
+    description_md = sqlc.arg(description_md),
+    warranty_duration_months = sqlc.narg(warranty_duration_months),
+    micron_thickness = sqlc.narg(micron_thickness),
+    active = sqlc.arg(active),
+    external_id = sqlc.arg(external_id),
+    connection_id = sqlc.arg(connection_id),
+    locked_fields = sqlc.arg(locked_fields)::text[]
+WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id)
+RETURNING *;
+
+-- name: BrandHasIntegrationConnection :one
+-- A brand with an integration connection takes its categories from the
+-- remote hub, so their remote-sourced fields are locked in the panel.
+SELECT EXISTS (
+    SELECT 1 FROM integration_connections WHERE brand_id = sqlc.arg(brand_id)
+)::bool;

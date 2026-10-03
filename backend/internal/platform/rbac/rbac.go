@@ -198,6 +198,10 @@ const (
 	// super_admin only until the Glorian settings screen lands.
 	PermIntegrationsGlorianView   = "integrations.glorian.view"
 	PermIntegrationsGlorianManage = "integrations.glorian.manage"
+
+	// TEC-233 (000076): minimal measurement upload from the mobile app
+	// (K28); F3-02 (TEC-113) adds the read side.
+	PermMeasurementsWrite = "measurements.write"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

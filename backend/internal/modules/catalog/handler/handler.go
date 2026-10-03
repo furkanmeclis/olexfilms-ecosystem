@@ -77,7 +77,15 @@ func readBody(w http.ResponseWriter, r *http.Request, dst any) (map[string]json.
 func writeError(w http.ResponseWriter, r *http.Request, err error) {
 	var verr *catalogusecase.ValidationError
 	var conflict *catalogusecase.ConflictError
+	var locked *catalogusecase.LockedError
 	switch {
+	case errors.As(err, &locked):
+		// TEC-268: fields owned by the integration sync (409 CONFLICT).
+		details := make([]response.Detail, 0, len(locked.Fields))
+		for _, f := range locked.Fields {
+			details = append(details, response.Detail{Field: f, Message: "managed by the integration sync", Code: "locked"})
+		}
+		response.ErrorWithDetails(w, r, http.StatusConflict, response.CodeConflict, "These fields are managed by the integration sync", details)
 	case errors.As(err, &verr):
 		details := make([]response.Detail, 0, len(verr.Fields))
 		for _, f := range verr.Fields {

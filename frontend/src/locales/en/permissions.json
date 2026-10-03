@@ -174,5 +174,7 @@
   "groups.tasks": "Tasks",
   "labels.integrations.glorian.view": "View Glorian integration",
   "labels.integrations.glorian.manage": "Manage Glorian integration",
-  "groups.integrations": "Integrations"
+  "groups.integrations": "Integrations",
+  "labels.measurements.write": "Upload measurements",
+  "groups.measurements": "Measurements"
 }

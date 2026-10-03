@@ -802,6 +802,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/dealers/nearby": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Nearby dealers of the request brand ("find a dealer")
+         * @description TEC-240. No authentication. Lists the active, serving (access window
+         *     open) dealers and distributors of the brand resolved from the request
+         *     domain that have coordinates, within `radius_km` of (`lat`, `lng`).
+         *     Distance is the haversine great-circle distance in km, computed in
+         *     SQL; results are nearest first, at most 50. Organizations without
+         *     coordinates, suspended / pending ones and other brands' organizations
+         *     are never returned. `whatsapp` is the organization phone when it is
+         *     E.164, otherwise null. Rate limited per client IP (60 per minute);
+         *     over the limit 429 with Retry-After.
+         */
+        get: operations["getPublicNearbyDealers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/warranties/{public_code}": {
         parameters: {
             query?: never;
@@ -2814,13 +2842,16 @@ export interface paths {
         get: operations["getCatalogCategory"];
         put?: never;
         post?: never;
-        /** Delete a product category without products (center only) */
+        /**
+         * Delete a product category without products (center only)
+         * @description 409 CONFLICT when products still use it, or (detail code `locked`) when the brand takes its categories from an integration connection.
+         */
         delete: operations["deleteCatalogCategory"];
         options?: never;
         head?: never;
         /**
          * Update a product category (center only)
-         * @description Omitted fields keep their value.
+         * @description Omitted fields keep their value. In a brand with an integration connection (Glorian pull, K2) `name`, `available_parts` and `active` come from the hub: changing them is 409 CONFLICT with a `locked` detail per field; `sort` stays editable.
          */
         patch: operations["updateCatalogCategory"];
         trace?: never;
@@ -2960,13 +2991,16 @@ export interface paths {
         get: operations["getCatalogProduct"];
         put?: never;
         post?: never;
-        /** Delete a product (center only; its prices are deleted too) */
+        /**
+         * Delete a product (center only; its prices are deleted too)
+         * @description A product with `locked_fields` comes from the integration sync and is removed on the hub: 409 CONFLICT (detail code `locked`).
+         */
         delete: operations["deleteCatalogProduct"];
         options?: never;
         head?: never;
         /**
          * Update a product (center only)
-         * @description Omitted fields keep their value; `warranty_duration_months` and `micron_thickness` sent as null are cleared.
+         * @description Omitted fields keep their value; `warranty_duration_months` and `micron_thickness` sent as null are cleared. Fields listed in `locked_fields` belong to the integration sync (Glorian pull): changing one is 409 CONFLICT with a `locked` detail per field; sending the current value is allowed.
          */
         patch: operations["updateCatalogProduct"];
         trace?: never;
@@ -5870,13 +5904,25 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Upload a paint thickness measurement (contract draft, K28)
-         * @description **Draft contract — answers 501 until F3.** The schema is finalized in
-         *     F3 (measurement module); fields may still change there, while `vin`,
-         *     `raw` and the version header stay mandatory. Idempotent by the
-         *     `Idempotency-Key` header or `client_measurement_id`. Accepted uploads
-         *     will answer `202 {uuid, status: accepted}`. Permission:
-         *     `measurements.write` (managed scope) once the module exists.
+         * Upload a paint thickness measurement (minimal storage, K28)
+         * @description Minimal F2 storage (TEC-233): the upload is kept as a raw record in
+         *     the active organization (`measurement_results`; the whole request
+         *     body is stored unchanged) and answers `202 {uuid, status}`. F3-02
+         *     (TEC-113) adds mandatory VIN, the device registry, before/after
+         *     pairing, the difference table and the PDF on the same record.
+         *
+         *     Only `raw` (an object) is required. With a `vin` the status is
+         *     `accepted`; without one it is `vin_pending` ("tamamlanacak", filled in
+         *     later). `service_uuid` attaches the measurement to a service of the
+         *     active organization (its vehicle too); another organization's service
+         *     answers 404. Idempotent per organization by the `Idempotency-Key`
+         *     header or `client_measurement_id`: a repeat answers the first result
+         *     (same uuid and status) and writes nothing.
+         *
+         *     Permission `measurements.write` (managed scope). Bearer with
+         *     `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or
+         *     unsupported `X-Mobile-Api-Version` answers 426. Invalid fields answer
+         *     400 `VALIDATION_ERROR`.
          */
         post: operations["postMobileMeasurement"];
         delete?: never;
@@ -9607,6 +9653,9 @@ export interface components {
             /** @enum {string} */
             paper_size: "A4" | "A3" | "Letter" | "Legal";
             logo_url?: string | null;
+            /** @description TEC-240 map position (WGS84); null together with longitude when unset. */
+            latitude?: number | null;
+            longitude?: number | null;
         };
         PatchTenantSettingsRequest: {
             company_name?: string;
@@ -9621,6 +9670,33 @@ export interface components {
             footer_text?: string;
             /** @enum {string} */
             paper_size?: "A4" | "A3" | "Letter" | "Legal";
+            /**
+             * @description TEC-240. Sent together with longitude; both null clears the map
+             *     position. One without the other or an out of range value is
+             *     400 VALIDATION_ERROR.
+             */
+            latitude?: number | null;
+            longitude?: number | null;
+        };
+        NearbyDealer: {
+            slug: string;
+            name: string;
+            city: string;
+            district: string;
+            latitude: number;
+            longitude: number;
+            /** @description Haversine distance in km (2 decimals) */
+            distance_km: number;
+            /** @description E.164 phone */
+            whatsapp: string | null;
+        };
+        EnvelopeNearbyDealers: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["NearbyDealer"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeTenantSettings: {
             /** @enum {boolean} */
@@ -11815,12 +11891,13 @@ export interface components {
         MobileMeasurementRequest: {
             /** @description Idempotency key in the body (alternative to the Idempotency-Key header) */
             client_measurement_id?: string;
-            vin: string;
+            /** @description 11-17 letters or digits (upper-cased); empty or absent makes the upload vin_pending */
+            vin?: string;
             plate?: string;
             /** Format: uuid */
             service_uuid?: string;
             /** Format: date-time */
-            measured_at: string;
+            measured_at?: string;
             /** @description NexPTG body type */
             body_type?: string;
             /**
@@ -11828,12 +11905,12 @@ export interface components {
              * @enum {string}
              */
             unit: "um";
-            device: {
+            device?: {
                 serial: string;
                 model?: string;
                 firmware?: string;
             };
-            parts: {
+            parts?: {
                 /** @description Body part key, e.g. hood, roof, front_left_door */
                 part: string;
                 /** @description Measuring spot on the part */
@@ -11848,8 +11925,11 @@ export interface components {
         MobileMeasurementAccepted: {
             /** Format: uuid */
             uuid: string;
-            /** @enum {string} */
-            status: "accepted";
+            /**
+             * @description vin_pending when the upload has no VIN ("tamamlanacak")
+             * @enum {string}
+             */
+            status: "accepted" | "vin_pending";
         };
         QRRealtime: {
             enabled: boolean;
@@ -15166,6 +15246,44 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopePublicBrand"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getPublicNearbyDealers: {
+        parameters: {
+            query: {
+                lat: number;
+                lng: number;
+                /** @description Search radius in km (default 100). */
+                radius_km?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dealers, nearest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeNearbyDealers"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Rate limited per client IP */
+            429: {
+                headers: {
+                    /** @description Seconds until the window resets */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
                 };
             };
             500: components["responses"]["InternalError"];
@@ -19116,6 +19234,7 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     updateCatalogProduct: {
@@ -24224,7 +24343,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Accepted (F3) */
+            /** @description Accepted (also the answer to a repeated key) */
             202: {
                 headers: {
                     [name: string]: unknown;
@@ -24233,17 +24352,11 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeMobileMeasurementAccepted"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             426: components["responses"]["MobileApiVersionUnsupported"];
-            /** @description 501 NOT_IMPLEMENTED until F3 */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
         };
     };
     mobileListWarehouses: {

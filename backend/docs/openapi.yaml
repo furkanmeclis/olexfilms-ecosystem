@@ -1426,6 +1426,59 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /v1/public/dealers/nearby:
+    get:
+      tags: [Public]
+      operationId: getPublicNearbyDealers
+      summary: Nearby dealers of the request brand ("find a dealer")
+      description: |
+        TEC-240. No authentication. Lists the active, serving (access window
+        open) dealers and distributors of the brand resolved from the request
+        domain that have coordinates, within `radius_km` of (`lat`, `lng`).
+        Distance is the haversine great-circle distance in km, computed in
+        SQL; results are nearest first, at most 50. Organizations without
+        coordinates, suspended / pending ones and other brands' organizations
+        are never returned. `whatsapp` is the organization phone when it is
+        E.164, otherwise null. Rate limited per client IP (60 per minute);
+        over the limit 429 with Retry-After.
+      security: []
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema: { type: number, minimum: -90, maximum: 90 }
+        - name: lng
+          in: query
+          required: true
+          schema: { type: number, minimum: -180, maximum: 180 }
+        - name: radius_km
+          in: query
+          required: false
+          description: Search radius in km (default 100).
+          schema: { type: number, exclusiveMinimum: 0, maximum: 1000, default: 100 }
+      responses:
+        "200":
+          description: Dealers, nearest first
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNearbyDealers"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          description: Rate limited per client IP
+          headers:
+            Retry-After:
+              description: Seconds until the window resets
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /v1/public/warranties/{public_code}:
     get:
       tags: [Public]
@@ -5091,7 +5144,11 @@ paths:
       tags: [Catalog]
       operationId: updateCatalogCategory
       summary: Update a product category (center only)
-      description: Omitted fields keep their value.
+      description: >-
+        Omitted fields keep their value. In a brand with an integration
+        connection (Glorian pull, K2) `name`, `available_parts` and `active`
+        come from the hub: changing them is 409 CONFLICT with a `locked`
+        detail per field; `sort` stays editable.
       security:
         - bearerAuth: []
       requestBody:
@@ -5123,6 +5180,9 @@ paths:
       tags: [Catalog]
       operationId: deleteCatalogCategory
       summary: Delete a product category without products (center only)
+      description: >-
+        409 CONFLICT when products still use it, or (detail code `locked`)
+        when the brand takes its categories from an integration connection.
       security:
         - bearerAuth: []
       responses:
@@ -5420,7 +5480,10 @@ paths:
       summary: Update a product (center only)
       description: >-
         Omitted fields keep their value; `warranty_duration_months` and
-        `micron_thickness` sent as null are cleared.
+        `micron_thickness` sent as null are cleared. Fields listed in
+        `locked_fields` belong to the integration sync (Glorian pull):
+        changing one is 409 CONFLICT with a `locked` detail per field;
+        sending the current value is allowed.
       security:
         - bearerAuth: []
       requestBody:
@@ -5452,6 +5515,9 @@ paths:
       tags: [Catalog]
       operationId: deleteCatalogProduct
       summary: Delete a product (center only; its prices are deleted too)
+      description: >-
+        A product with `locked_fields` comes from the integration sync and is
+        removed on the hub: 409 CONFLICT (detail code `locked`).
       security:
         - bearerAuth: []
       responses:
@@ -5463,6 +5529,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
 
   /v1/catalog/products/{uuid}/images:
     parameters:
@@ -11010,14 +11078,26 @@ paths:
     post:
       tags: [Mobile]
       operationId: postMobileMeasurement
-      summary: Upload a paint thickness measurement (contract draft, K28)
+      summary: Upload a paint thickness measurement (minimal storage, K28)
       description: |
-        **Draft contract — answers 501 until F3.** The schema is finalized in
-        F3 (measurement module); fields may still change there, while `vin`,
-        `raw` and the version header stay mandatory. Idempotent by the
-        `Idempotency-Key` header or `client_measurement_id`. Accepted uploads
-        will answer `202 {uuid, status: accepted}`. Permission:
-        `measurements.write` (managed scope) once the module exists.
+        Minimal F2 storage (TEC-233): the upload is kept as a raw record in
+        the active organization (`measurement_results`; the whole request
+        body is stored unchanged) and answers `202 {uuid, status}`. F3-02
+        (TEC-113) adds mandatory VIN, the device registry, before/after
+        pairing, the difference table and the PDF on the same record.
+
+        Only `raw` (an object) is required. With a `vin` the status is
+        `accepted`; without one it is `vin_pending` ("tamamlanacak", filled in
+        later). `service_uuid` attaches the measurement to a service of the
+        active organization (its vehicle too); another organization's service
+        answers 404. Idempotent per organization by the `Idempotency-Key`
+        header or `client_measurement_id`: a repeat answers the first result
+        (same uuid and status) and writes nothing.
+
+        Permission `measurements.write` (managed scope). Bearer with
+        `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or
+        unsupported `X-Mobile-Api-Version` answers 426. Invalid fields answer
+        400 `VALIDATION_ERROR`.
       security:
         - bearerAuth: []
       parameters:
@@ -11035,21 +11115,21 @@ paths:
               $ref: "#/components/schemas/MobileMeasurementRequest"
       responses:
         "202":
-          description: Accepted (F3)
+          description: Accepted (also the answer to a repeated key)
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeMobileMeasurementAccepted"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "426":
           $ref: "#/components/responses/MobileApiVersionUnsupported"
-        "501":
-          description: 501 NOT_IMPLEMENTED until F3
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
 
   # --- TEC-235: mobile warehouse mirrors (tag Mobile) -------------------
   /v1/mobile/warehouse/warehouses:
@@ -17724,6 +17804,10 @@ components:
         footer_text: { type: string }
         paper_size: { type: string, enum: [A4, A3, Letter, Legal] }
         logo_url: { type: [string, "null"] }
+        latitude:
+          type: [number, "null"]
+          description: TEC-240 map position (WGS84); null together with longitude when unset.
+        longitude: { type: [number, "null"] }
 
     PatchTenantSettingsRequest:
       type: object
@@ -17739,6 +17823,42 @@ components:
         website: { type: string }
         footer_text: { type: string }
         paper_size: { type: string, enum: [A4, A3, Letter, Legal] }
+        latitude:
+          type: [number, "null"]
+          minimum: -90
+          maximum: 90
+          description: |
+            TEC-240. Sent together with longitude; both null clears the map
+            position. One without the other or an out of range value is
+            400 VALIDATION_ERROR.
+        longitude: { type: [number, "null"], minimum: -180, maximum: 180 }
+
+    NearbyDealer:
+      type: object
+      required: [slug, name, city, district, latitude, longitude, distance_km, whatsapp]
+      properties:
+        slug: { type: string }
+        name: { type: string }
+        city: { type: string }
+        district: { type: string }
+        latitude: { type: number }
+        longitude: { type: number }
+        distance_km: { type: number, description: Haversine distance in km (2 decimals) }
+        whatsapp: { type: [string, "null"], description: E.164 phone }
+
+    EnvelopeNearbyDealers:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/NearbyDealer" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeTenantSettings:
       type: object
@@ -20620,17 +20740,20 @@ components:
           description: Accepted for compatibility with the previous mobile API (not stored)
         app_version: { type: string, maxLength: 32 }
 
-    # K28 draft: finalized in F3 (measurement module). Fields can still
-    # change there; vin, raw and the version header stay mandatory.
+    # K28 / TEC-233: minimal F2 storage; F3-02 (TEC-113) makes vin
+    # mandatory and reads the parts.
     MobileMeasurementRequest:
       type: object
-      required: [vin, device, measured_at, parts, raw]
+      required: [raw]
       properties:
         client_measurement_id:
           type: string
           maxLength: 128
           description: Idempotency key in the body (alternative to the Idempotency-Key header)
-        vin: { type: string, minLength: 11, maxLength: 17 }
+        vin:
+          type: string
+          maxLength: 17
+          description: 11-17 letters or digits (upper-cased); empty or absent makes the upload vin_pending
         plate: { type: string }
         service_uuid: { type: string, format: uuid }
         measured_at: { type: string, format: date-time }
@@ -20640,7 +20763,7 @@ components:
           type: object
           required: [serial]
           properties:
-            serial: { type: string }
+            serial: { type: string, maxLength: 64 }
             model: { type: string }
             firmware: { type: string }
         parts:
@@ -20664,7 +20787,10 @@ components:
       required: [uuid, status]
       properties:
         uuid: { type: string, format: uuid }
-        status: { type: string, enum: [accepted] }
+        status:
+          type: string
+          enum: [accepted, vin_pending]
+          description: vin_pending when the upload has no VIN ("tamamlanacak")
 
     QRRealtime:
       type: object

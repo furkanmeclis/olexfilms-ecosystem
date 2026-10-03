@@ -174,5 +174,7 @@
   "groups.tasks": "Εργασίες",
   "labels.integrations.glorian.view": "Προβολή ενσωμάτωσης Glorian",
   "labels.integrations.glorian.manage": "Διαχείριση ενσωμάτωσης Glorian",
-  "groups.integrations": "Ενσωματώσεις"
+  "groups.integrations": "Ενσωματώσεις",
+  "labels.measurements.write": "Μεταφόρτωση μετρήσεων",
+  "groups.measurements": "Μετρήσεις"
 }

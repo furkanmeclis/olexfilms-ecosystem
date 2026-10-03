@@ -685,6 +685,35 @@ type LogPurgeRule struct {
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
+type MeasurementDevice struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Serial         string             `json:"serial"`
+	Label          pgtype.Text        `json:"label"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type MeasurementResult struct {
+	ID                  int64              `json:"id"`
+	Uuid                uuid.UUID          `json:"uuid"`
+	OrganizationID      int64              `json:"organization_id"`
+	BrandID             int64              `json:"brand_id"`
+	ServiceID           pgtype.Int8        `json:"service_id"`
+	VehicleID           pgtype.Int8        `json:"vehicle_id"`
+	Vin                 pgtype.Text        `json:"vin"`
+	Status              string             `json:"status"`
+	Raw                 []byte             `json:"raw"`
+	ClientMeasurementID pgtype.Text        `json:"client_measurement_id"`
+	IdempotencyKey      pgtype.Text        `json:"idempotency_key"`
+	DeviceSerial        pgtype.Text        `json:"device_serial"`
+	Source              string             `json:"source"`
+	CreatedBy           pgtype.Int8        `json:"created_by"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+}
+
 type Message struct {
 	ID             int64              `json:"id"`
 	Uuid           uuid.UUID          `json:"uuid"`
@@ -1028,6 +1057,8 @@ type Organization struct {
 	DistrictID         pgtype.Int8        `json:"district_id"`
 	PhoneRaw           pgtype.Text        `json:"phone_raw"`
 	GoogleBusinessUrl  pgtype.Text        `json:"google_business_url"`
+	Latitude           pgtype.Numeric     `json:"latitude"`
+	Longitude          pgtype.Numeric     `json:"longitude"`
 }
 
 type OrganizationMember struct {
