@@ -181,5 +181,13 @@
   "labels.contracts.read": "Ver contratos",
   "labels.contracts.write": "Editar contratos",
   "labels.contracts.void": "Anular contratos",
-  "groups.contracts": "Contratos"
+  "groups.contracts": "Contratos",
+  "labels.service_catalog.manage": "Gestionar el catálogo de servicios",
+  "labels.service_catalog.read": "Ver el catálogo de servicios",
+  "groups.service_catalog": "Catálogo de servicios",
+  "labels.service_subscriptions.assign": "Asignar suscripciones de servicio",
+  "labels.service_subscriptions.read": "Ver suscripciones de servicio",
+  "labels.service_subscriptions.cancel_request": "Solicitar la cancelación de la suscripción",
+  "labels.service_subscriptions.cancel_approve": "Aprobar la cancelación de la suscripción",
+  "groups.service_subscriptions": "Suscripciones de servicio"
 }

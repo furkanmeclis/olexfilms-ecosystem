@@ -181,5 +181,13 @@
   "labels.contracts.read": "Read contracts",
   "labels.contracts.write": "Write contracts",
   "labels.contracts.void": "Void contracts",
-  "groups.contracts": "Contracts"
+  "groups.contracts": "Contracts",
+  "labels.service_catalog.manage": "Manage service catalog",
+  "labels.service_catalog.read": "Read service catalog",
+  "groups.service_catalog": "Service catalog",
+  "labels.service_subscriptions.assign": "Assign service subscriptions",
+  "labels.service_subscriptions.read": "Read service subscriptions",
+  "labels.service_subscriptions.cancel_request": "Request subscription cancellation",
+  "labels.service_subscriptions.cancel_approve": "Approve subscription cancellation",
+  "groups.service_subscriptions": "Service subscriptions"
 }

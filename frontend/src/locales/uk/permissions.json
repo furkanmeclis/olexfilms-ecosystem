@@ -181,5 +181,13 @@
   "labels.contracts.read": "Перегляд договорів",
   "labels.contracts.write": "Редагування договорів",
   "labels.contracts.void": "Анулювання договорів",
-  "groups.contracts": "Договори"
+  "groups.contracts": "Договори",
+  "labels.service_catalog.manage": "Керувати каталогом послуг",
+  "labels.service_catalog.read": "Переглядати каталог послуг",
+  "groups.service_catalog": "Каталог послуг",
+  "labels.service_subscriptions.assign": "Призначати підписки на послуги",
+  "labels.service_subscriptions.read": "Переглядати підписки на послуги",
+  "labels.service_subscriptions.cancel_request": "Запитувати скасування підписки",
+  "labels.service_subscriptions.cancel_approve": "Схвалювати скасування підписки",
+  "groups.service_subscriptions": "Підписки на послуги"
 }

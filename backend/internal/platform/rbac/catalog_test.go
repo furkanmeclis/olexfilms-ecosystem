@@ -410,3 +410,34 @@ func TestContractGrants(t *testing.T) {
 		}
 	}
 }
+
+// TEC-305: catalog management and cancellation approval are center-only;
+// distributors assign to their subtree; dealers only read and request
+// cancellation.
+func TestServiceCatalogGrants(t *testing.T) {
+	for _, r := range Roles {
+		if r.Slug == RoleSuperAdmin || r.OrgType == OrgTypeCenter {
+			continue
+		}
+		for _, slug := range []string{PermServiceCatalogManage, PermServiceSubscriptionsCancelApprove} {
+			if _, ok := r.Grants[slug]; ok {
+				t.Fatalf("%s must not hold %s", r.Slug, slug)
+			}
+		}
+	}
+	dist, _ := RoleBySlug(RoleDistributorOwner)
+	if dist.Grants[PermServiceSubscriptionsAssign] != ScopeSubtree {
+		t.Fatalf("distributor_owner assign = %q", dist.Grants[PermServiceSubscriptionsAssign])
+	}
+	dealer, _ := RoleBySlug(RoleDealerOwner)
+	if _, ok := dealer.Grants[PermServiceSubscriptionsAssign]; ok {
+		t.Fatal("dealer_owner must not assign service subscriptions")
+	}
+	if dealer.Grants[PermServiceSubscriptionsCancelRequest] != ScopeManaged {
+		t.Fatalf("dealer_owner cancel_request = %q", dealer.Grants[PermServiceSubscriptionsCancelRequest])
+	}
+	staff, _ := RoleBySlug(RoleCenterStaff)
+	if staff.Grants[PermServiceCatalogManage] != ScopeBrand || staff.Grants[PermServiceSubscriptionsCancelApprove] != ScopeBrand {
+		t.Fatalf("center_staff service grants = %v", staff.Grants)
+	}
+}
