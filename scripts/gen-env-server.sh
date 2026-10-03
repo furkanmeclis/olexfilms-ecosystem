@@ -286,7 +286,7 @@ if [ "$ROTATE_ENC" = 1 ]; then
   echo "  ! --rotate-encryption-key: data encrypted with the old APP_ENCRYPTION_KEY is unreadable now"
 fi
 [ -n "$(grep -E '^SMTP_HOST=.' "$OUT" || true)" ] || echo "  ! SMTP_HOST empty: e-mail notifications will not be sent"
-echo "  migrator DSNs (MIGRATOR_*_DSN) stay empty unless set by hand."
+echo "  migrator legacy DSNs (LEGACY_*_DSN) stay empty unless set by hand."
 echo
 echo "Traefik / Dokploy domains (only these two services are public):"
 echo "  $APP_DOMAIN  → service frontend,   port 3000  ($APP_URL)"

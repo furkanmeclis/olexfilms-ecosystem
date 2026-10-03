@@ -134,3 +134,25 @@ func LoadLegacyFixture(t testing.TB, pool *pgxpool.Pool) {
 		t.Fatalf("legacyfixture: commit: %v", err)
 	}
 }
+
+// LoadAndHold loads the fixture like LoadLegacyFixture, then holds a shared
+// advisory lock on the load key until the test ends, so a reload started by
+// another test package (DROP SCHEMA ... CASCADE) waits instead of pulling the
+// tables away from a test that is still reading them (TEC-252).
+func LoadAndHold(t testing.TB, pool *pgxpool.Pool) {
+	t.Helper()
+	LoadLegacyFixture(t, pool)
+	ctx := context.Background()
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		t.Fatalf("legacyfixture: acquire: %v", err)
+	}
+	if _, err := conn.Exec(ctx, "SELECT pg_advisory_lock_shared($1)", advisoryLockKey); err != nil {
+		conn.Release()
+		t.Fatalf("legacyfixture: shared lock: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = conn.Exec(context.Background(), "SELECT pg_advisory_unlock_shared($1)", advisoryLockKey)
+		conn.Release()
+	})
+}
