@@ -301,7 +301,7 @@ func (s WarrantiesStep) Run(ctx context.Context, src Sources, dst *Target, m *Ma
 	}
 
 	r := &warrantyRun{step: s, q: dst.Q, m: m, c: c, now: time.Now(),
-		svc: &serviceRun{step: ServicesStep{System: s.System}, dst: dst, q: dst.Q, m: m, c: c,
+		svc: &serviceRun{step: ServicesStep(s), dst: dst, q: dst.Q, m: m, c: c,
 			orgs: map[int64]*db.MigratorOrganizationByUUIDRow{}, users: map[int64]int64{}}}
 
 	groups, undated := groupLegacyWarranties(list)
