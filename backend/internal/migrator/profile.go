@@ -57,6 +57,10 @@ func olexSteps() []Step {
 		// ownership.
 		WarehousesStep{},
 		UnitsStep{},
+
+		// TEC-258: legacy stock movements -> ledger opening, projection
+		// rebuild.
+		LedgerStep{},
 	}
 }
 
