@@ -9,7 +9,7 @@ Kaynaklar: Linear projesi "Olexfilms Tek App" (P-TEC-4), `AGENTS.md`, `docs/desi
 | Faz | Durum |
 |---|---|
 | F0 Altyapı | Bitti (%100). |
-| F1 Çekirdek iş | Kapı doğrulaması **geçti** (main `0aac6c0`, CI yeşil). Kod işleri bitti. Açık tek iş: TEC-226 (K7 kur kararı). |
+| F1 Çekirdek iş | Kapı doğrulaması **geçti** (main `0aac6c0`, CI yeşil). Tüm işler bitti; TEC-226 (K7) kur **değeri** dondurulacak şekilde kapatıldı (#122). |
 | F2 Migrasyon ve geçiş | Başladı. 51 alt işe bölündü (TEC-233..283). 8'i bitti, kalanlar Backlog. |
 | F3–F5 | Başlanmadı. |
 
@@ -48,7 +48,9 @@ Bağımlılıklar Linear'da "blocked by" ilişkisiyle işaretli.
 
 ## 4. Kullanıcı kararı bekleyenler
 
-- **TEC-226 (K7):** Kurun değeri mi dondurulsun, yalnız kur günü mü? Testler şu an kurun sipariş onayında dondurulduğunu doğruluyor.
+(TEC-226/K7 kapandı: onayda taraf para birimi kurları `rate_snapshot.pairs` içinde dondurulur, poster onları kullanır.)
+
+
 - **TEC-230:** Tamamlanmış hizmet iptal edilebilsin mi? Karar gelene kadar muhafazakâr varsayılan uygulandı: yalnız tüketim düzeltme ucu var (merkez, 24 saat, garantili kalem reddedilir, muhasebeye dokunmaz). "Evet" olursa iptal akışı ayrı iş olarak açılacak.
 - **dealer_staff `stock.read`:** Bu role stok okuma yetkisi verilsin mi?
 
