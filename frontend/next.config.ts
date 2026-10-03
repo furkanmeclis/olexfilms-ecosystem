@@ -37,6 +37,16 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  /**
+   * TEC-249: the old hub served short links at `/_/{token}`; migrated tokens
+   * keep their value (TEC-263), so links already sent by SMS / WhatsApp go
+   * to the new resolver route `/s/{token}`.
+   */
+  async redirects() {
+    return [
+      { source: "/_/:token", destination: "/s/:token", permanent: false },
+    ];
+  },
 };
 
 /**

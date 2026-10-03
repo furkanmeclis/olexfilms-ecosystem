@@ -46,5 +46,13 @@
   "day.pick": "Tag wählen",
   "choose_file": "Datei auswählen",
   "image_formats": "PNG, JPG, WEBP oder SVG",
-  "open": "Öffnen"
+  "open": "Öffnen",
+  "short_link.page_title": "Kurzlink",
+  "short_link.expired_title": "Dieser Link ist abgelaufen",
+  "short_link.expired_body": "Der geöffnete Link ist nicht mehr gültig. Bitten Sie den Absender um einen neuen.",
+  "short_link.not_found_title": "Link nicht gefunden",
+  "short_link.not_found_body": "Dieser Link existiert nicht. Prüfen Sie, ob er vollständig kopiert wurde.",
+  "short_link.error_title": "Der Link konnte nicht geöffnet werden",
+  "short_link.error_body": "Etwas ist schiefgelaufen. Bitte versuchen Sie es gleich noch einmal.",
+  "short_link.home": "Zur Startseite"
 }
