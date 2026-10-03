@@ -31,22 +31,23 @@ func stubHandlers() Handlers {
 		}
 	}
 	return Handlers{
-		Login: stub("login"), Me: stub("me"),
+		Login: stub("login"), Me: stub("me"), SwitchOrganization: stub("switch"),
 		ListServices: stub("services_list"), GetService: stub("service_detail"),
 		CreateMeasurement: stub("measurement"),
 		PutPushToken:      stub("push_token"), DeletePushToken: stub("push_token_delete"),
 	}
 }
 
+var testVars = map[string]string{
+	"email": "legacy@example.com", "password": "x", "access_token": "t", "service_id": "42",
+	"expo_push_token": "ExponentPushToken[x]",
+}
+
 func fixtures(t *testing.T) []Fixture {
 	t.Helper()
-	vars := map[string]string{
-		"email": "legacy@example.com", "password": "x", "organization_slug": "org", "device_id": "dev",
-		"access_token": "t", "service_uuid": uuid.NewString(), "idempotency_key": "k", "expo_push_token": "ExponentPushToken[x]",
-	}
 	var out []Fixture
 	for _, r := range Routes {
-		f, err := LoadFixture(FixtureDir, r.Name, vars)
+		f, err := LoadFixture(FixtureDir, r.Name, testVars)
 		if err != nil {
 			t.Fatalf("fixture %s: %v", r.Name, err)
 		}
@@ -66,35 +67,58 @@ func newMux(t *testing.T, enabled bool) (*http.ServeMux, *jwt.Manager) {
 	return mux, tokens
 }
 
-func call(mux *http.ServeMux, f Fixture, bearer string) (*httptest.ResponseRecorder, string) {
-	var body *strings.Reader
+func fixtureRequest(f Fixture, bearer string) *http.Request {
+	body := ""
 	if len(f.Request.Body) > 0 && string(f.Request.Body) != "null" {
-		body = strings.NewReader(string(f.Request.Body))
-	} else {
-		body = strings.NewReader("")
+		body = string(f.Request.Body)
 	}
-	req := httptest.NewRequest(f.Method, f.Path, body)
+	req := httptest.NewRequest(f.Method, f.Path, strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+	for k, v := range f.Request.Headers {
+		if k != "Authorization" {
+			req.Header.Set(k, v)
+		}
+	}
 	if bearer != "" {
 		req.Header.Set("Authorization", "Bearer "+bearer)
 	}
-	rec := httptest.NewRecorder()
-	mux.ServeHTTP(rec, req)
-	var env struct {
-		Error *struct {
-			Code string `json:"code"`
-		} `json:"error"`
-	}
-	_ = json.Unmarshal(rec.Body.Bytes(), &env)
-	if env.Error == nil {
-		return rec, ""
-	}
-	return rec, env.Error.Code
+	return req
 }
 
-// TEC-234: every alias has a contract fixture, every fixture names a mounted
-// alias under the separate prefix and the route it adapts, and no fixture is
-// left without a route.
+// legacyErr is the old error envelope; it must not carry the new "error".
+type legacyErr struct {
+	Success *bool               `json:"success"`
+	Message *string             `json:"message"`
+	Errors  map[string][]string `json:"errors"`
+	Code    string              `json:"code"`
+	New     json.RawMessage     `json:"error"`
+}
+
+func decodeErr(t *testing.T, rec *httptest.ResponseRecorder) legacyErr {
+	t.Helper()
+	var e legacyErr
+	if err := json.Unmarshal(rec.Body.Bytes(), &e); err != nil {
+		t.Fatalf("error body is not JSON: %s", rec.Body.String())
+	}
+	if e.Success == nil || *e.Success || e.Message == nil || len(e.New) > 0 {
+		t.Fatalf("not the old error envelope: %s", rec.Body.String())
+	}
+	return e
+}
+
+func call(mux http.Handler, f Fixture, bearer string) (*httptest.ResponseRecorder, string) {
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, fixtureRequest(f, bearer))
+	var env struct {
+		Code string `json:"code"`
+	}
+	_ = json.Unmarshal(rec.Body.Bytes(), &env)
+	return rec, env.Code
+}
+
+// TEC-284: every alias has a contract fixture derived from the old hub,
+// every fixture names a mounted alias at the old path under Prefix and the
+// route it adapts, and no fixture is left without a route.
 func TestFixturesMatchRoutes(t *testing.T) {
 	files, err := filepath.Glob(filepath.Join(FixtureDir, "*.json"))
 	if err != nil {
@@ -103,16 +127,24 @@ func TestFixturesMatchRoutes(t *testing.T) {
 	if len(files) != len(Routes) {
 		t.Fatalf("%d fixtures for %d routes", len(files), len(Routes))
 	}
+	oldPaths := map[string]string{
+		"login": "/auth/login", "me": "/auth/me", "services_list": "/services", "service_detail": "/services/{service}",
+		"measurement": "/nexptg-reports", "push_token": "/push-token", "push_token_delete": "/push-token",
+	}
 	for i, f := range fixtures(t) {
 		r := Routes[i]
 		if f.Name != r.Name || f.Method != r.Method || f.Adapts != r.Target {
 			t.Fatalf("fixture %s = %s %s (%s), route %s %s (%s)", r.Name, f.Method, f.Path, f.Adapts, r.Method, r.Path, r.Target)
 		}
-		if !strings.HasPrefix(f.Path, Prefix+"/") || !strings.HasPrefix(r.Path, Prefix+"/") {
-			t.Fatalf("%s: path %s outside %s", r.Name, f.Path, Prefix)
+		if r.Path != Prefix+oldPaths[r.Name] {
+			t.Fatalf("%s: path %s, want the old path %s under %s", r.Name, r.Path, oldPaths[r.Name], Prefix)
 		}
-		if f.Response.Status == 0 || len(f.Response.DataKeys) == 0 || f.Source == "" {
-			t.Fatalf("%s: response status, data_keys and source are required", r.Name)
+		if !strings.HasPrefix(f.Path, Prefix+"/") {
+			t.Fatalf("%s: fixture path %s outside %s", r.Name, f.Path, Prefix)
+		}
+		if f.Response.Status == 0 || (len(f.Response.DataKeys) == 0 && !f.Response.DataNull) ||
+			len(f.Response.Message) == 0 || !strings.HasPrefix(f.Source, "olexfilms ") {
+			t.Fatalf("%s: status, message, data_keys (or data_null) and an olexfilms source are required", r.Name)
 		}
 	}
 	raw, err := os.ReadFile(filepath.Join(FixtureDir, "login.json"))
@@ -137,7 +169,8 @@ func TestFlagOffIsNotFound(t *testing.T) {
 // Flag on: login is public and reaches the adapted handler without the
 // X-Mobile-Api-Version header the old app does not send; every other alias
 // needs a Bearer (401) of the mobile realm (a panel token is 403
-// REALM_FORBIDDEN) before it reaches its handler.
+// REALM_FORBIDDEN) before it reaches its handler. Every refusal is in the
+// old error envelope.
 func TestFlagOnGates(t *testing.T) {
 	mux, tokens := newMux(t, true)
 	oid := uuid.New()
@@ -161,12 +194,16 @@ func TestFlagOnGates(t *testing.T) {
 			}
 			continue
 		}
-		if rec, _ := call(mux, f, ""); rec.Code != http.StatusUnauthorized {
-			t.Fatalf("%s without bearer = %d, want 401", f.Name, rec.Code)
+		rec, code := call(mux, f, "")
+		if rec.Code != http.StatusUnauthorized || code != "UNAUTHENTICATED" {
+			t.Fatalf("%s without bearer = %d %s, want 401", f.Name, rec.Code, code)
 		}
-		if rec, code := call(mux, f, panel); rec.Code != http.StatusForbidden || code != "REALM_FORBIDDEN" {
+		decodeErr(t, rec)
+		rec, code = call(mux, f, panel)
+		if rec.Code != http.StatusForbidden || code != "REALM_FORBIDDEN" {
 			t.Fatalf("%s with a panel token = %d %s, want 403 REALM_FORBIDDEN", f.Name, rec.Code, code)
 		}
+		decodeErr(t, rec)
 		// The mobile realm passes the realm check; the stub loader then
 		// refuses the identity (401), not the realm.
 		if rec, code := call(mux, f, mobile); rec.Code != http.StatusUnauthorized || code == "REALM_FORBIDDEN" {

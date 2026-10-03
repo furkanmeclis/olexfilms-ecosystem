@@ -19,7 +19,8 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
     key: "Permissions-Policy",
-    value: "camera=(self), microphone=(self), geolocation=(), payment=()",
+    // geolocation=(self): the dealer finder asks for the position (TEC-242).
+    value: "camera=(self), microphone=(self), geolocation=(self), payment=()",
   },
   ...(process.env.NODE_ENV === "production"
     ? [
