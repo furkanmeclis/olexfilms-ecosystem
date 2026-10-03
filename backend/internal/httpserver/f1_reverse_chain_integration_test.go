@@ -9,7 +9,6 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting/posting"
-	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -44,8 +43,8 @@ type t219Dispute struct {
 //     center voids its warranties (POST /v1/warranties/{uuid}/void);
 //   - the consumption is undone with the ledger's return movement
 //     (used in the service -> available at the dealer, 25 m back on each
-//     roll). No HTTP route writes it yet, so the test posts it through
-//     ledger.Post, the same way the other stock tests seed movements;
+//     roll) through the consumption correction route (TEC-230, center
+//     only, the warranties are void);
 //   - the received orders cannot be cancelled (received is final): the
 //     rolls go back up by return requests (TEC-223), dealer -> distributor
 //     and distributor -> center; each receipt books the reversal of the
@@ -64,10 +63,7 @@ func TestIntegrationF1ReverseChain(t *testing.T) {
 	c := runF1Chain(t)
 	it := c.it
 	ctx := context.Background()
-	chainMoves := "entry,order_out,received,order_out,received,consumption"
-	atOrg := func(o db.Organization) ledger.Owner {
-		return ledger.Owner{Type: ledger.OwnerOrganization, ID: o.ID, OrgID: o.ID}
-	}
+	chainMoves := "entry,placement,order_out,received,order_out,received,consumption"
 	stocks := func(step string, center, dist, dealer int32) {
 		t.Helper()
 		for _, s := range []struct {
@@ -198,28 +194,25 @@ func TestIntegrationF1ReverseChain(t *testing.T) {
 
 	// 3. The consumption is undone: each roll comes back from the service
 	// into the dealer's stock with its 25 m (ledger return movement).
-	chain := it.stockChain()
+	itemOf := map[string]string{}
+	for _, i := range svcItemsOf(it, c.svcUUID, c.staffTok) {
+		itemOf[i.Barcode] = i.UUID
+	}
 	for _, u := range c.rolls {
-		tx, err := it.pool.Begin(ctx)
-		if err != nil {
-			t.Fatal(err)
+		items, _ := it.correct(c.staffTok, c.svcUUID, itemOf[u.Barcode],
+			map[string]any{"reason": "TEC-219 consumption undone"}, http.StatusOK)
+		corrected := false
+		for _, i := range items {
+			corrected = corrected || (i.Barcode == u.Barcode && i.Correction != nil && i.Correction.ReplacementBarcode == nil)
 		}
-		from, to := ledger.Owner{Type: ledger.OwnerService, ID: c.svcID, OrgID: c.dealer.ID}, atOrg(c.dealer)
-		if _, err := chain.l.Post(ctx, tx, ledger.Movement{
-			Type: ledger.TypeReturn, UnitID: u.ID, From: &from, To: &to, Centimeters: 2500,
-			Source: "test", RefType: "t219", RefID: c.svcID, Reason: "TEC-219 consumption undone",
-		}); err != nil {
-			_ = tx.Rollback(ctx)
-			t.Fatalf("return %s: %v", u.Barcode, err)
-		}
-		if err := tx.Commit(ctx); err != nil {
-			t.Fatal(err)
+		if !corrected {
+			t.Fatalf("correction of %s = %+v", u.Barcode, items)
 		}
 	}
 	chainMoves += ",return"
 	c.owned("consumption undone", "available", "organization", c.dealer.ID, c.dealer.ID, chainMoves)
 	meters("consumption undone", "25")
-	stocks("consumption undone", 0, 0, 2)
+	stocks("consumption undone", c.centerStockBefore-2, 0, 2)
 
 	// 4. A received order cannot be cancelled; the dealer returns both
 	// rolls to the distributor (TEC-223): approve, ship, receive. The
@@ -249,7 +242,7 @@ func TestIntegrationF1ReverseChain(t *testing.T) {
 	move(c.distTok, r1.UUID, "received")
 	chainMoves += ",transfer_in"
 	c.owned("R1 received", "available", "organization", c.dist.ID, c.dist.ID, chainMoves)
-	stocks("R1 received", 0, 2, 0)
+	stocks("R1 received", c.centerStockBefore-2, 2, 0)
 
 	// 5. The distributor returns both rolls to the center. The center
 	// warehouse role holds transfers.approve (TEC-228) and decides and
@@ -269,8 +262,8 @@ func TestIntegrationF1ReverseChain(t *testing.T) {
 	move(whTok, r2.UUID, "received")
 	chainMoves += ",transfer_in"
 	c.owned("R2 received", "available", "organization", c.center.ID, c.center.ID, chainMoves)
-	if c.centerStockBefore != 2 {
-		t.Fatalf("center stock before the chain = %d, want 2", c.centerStockBefore)
+	if c.centerStockBefore != 100 {
+		t.Fatalf("center stock before the chain = %d, want 100 (generated)", c.centerStockBefore)
 	}
 	stocks("R2 received", c.centerStockBefore, 0, 0)
 	meters("R2 received", "25")

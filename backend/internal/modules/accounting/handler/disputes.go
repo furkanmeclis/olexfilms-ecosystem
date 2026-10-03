@@ -17,6 +17,7 @@ const (
 	CodeDisputeAlreadyOpen    = "DISPUTE_ALREADY_OPEN"
 	CodeDisputeNotOpen        = "DISPUTE_NOT_OPEN"
 	CodeDisputeNotResolvable  = "DISPUTE_NOT_RESOLVABLE"
+	CodeDisputeSaleReturned   = "DISPUTE_SALE_RETURNED"
 	disputeNotFoundMessage    = "Dispute not found"
 	entryNotDisputableMessage = "Only an open entry the parent organization posted to this cari can be disputed"
 )
@@ -34,6 +35,9 @@ func writeDisputeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Conflict(w, r, CodeDisputeNotOpen, "The dispute is already resolved or rejected")
 	case errors.Is(err, acc.ErrDisputeNotResolvable):
 		response.Conflict(w, r, CodeDisputeNotResolvable, "The disputed entry is no longer open; reject or reverse the dispute")
+	case errors.Is(err, acc.ErrDisputeSaleReturned):
+		response.Error(w, r, http.StatusUnprocessableEntity, CodeDisputeSaleReturned,
+			"A return of this sale was already received; revise or reject the dispute instead of reversing it")
 	default:
 		writeError(w, r, err)
 	}

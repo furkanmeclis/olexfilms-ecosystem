@@ -2,8 +2,10 @@
 
 import { Building2, MapPin, Map as MapIcon, UserRound } from "lucide-react";
 import { useMemo } from "react";
+import { useWatch } from "react-hook-form";
 
 import {
+  AppCheckbox,
   AppForm,
   AppInput,
   AppSelect,
@@ -73,6 +75,7 @@ export function OrganizationCreateForm({
       defaultValues={{
         name: "",
         type: "dealer",
+        register_as_warehouse: false,
         country_id: "",
         province_id: "",
         district_id: "",
@@ -109,6 +112,7 @@ export function OrganizationCreateForm({
               },
             ]}
           />
+          <WarehousePresetField />
           <AppInput
             name="phone"
             label={t("organizations.fields.phone")}
@@ -174,5 +178,22 @@ export function OrganizationCreateForm({
         </FormActions>
       </FormLayout>
     </AppForm>
+  );
+}
+
+/** K4 / TEC-207: the "register as warehouse" preset, distributors only. */
+function WarehousePresetField() {
+  const { t } = useLocale();
+  const type = useWatch({ name: "type" });
+  if (type !== "distributor") {
+    return null;
+  }
+  return (
+    <AppCheckbox
+      name="register_as_warehouse"
+      label={t("organizations.fields.register_as_warehouse")}
+      description={t("organizations.fields.register_as_warehouse_hint")}
+      className="sm:col-span-2"
+    />
   );
 }

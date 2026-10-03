@@ -116,6 +116,8 @@
   "columns.type": "类型",
   "columns.parent": "上级",
   "fields.type": "类型",
+  "fields.register_as_warehouse": "设为仓库",
+  "fields.register_as_warehouse_hint": "保存后为该经销商开设一个仓库（代码 MAIN）；房间和库位稍后添加。",
   "fields.city_hint": "留空时将根据省份自动填写。",
   "fields.district_hint": "留空时将根据区县自动填写。",
   "form.section_address": "地址",

@@ -224,6 +224,7 @@ const item = (over: Partial<ServiceItem> = {}): ServiceItem => ({
   applied_parts: ["body_kaput"],
   notes: null,
   created_at: "2026-10-01T00:00:00Z",
+  correction: null,
   ...over,
 });
 

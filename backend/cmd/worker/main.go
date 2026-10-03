@@ -31,6 +31,7 @@ import (
 	stockrebuild "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/rebuild"
 	stockusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/usecase"
 	tasksusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/tasks/usecase"
+	warehouseusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warehouse/usecase"
 	warrantymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty"
 	warrantyusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty/usecase"
 	whatsappmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp"
@@ -146,6 +147,8 @@ func main() {
 	warrantyCert := warrantymodule.NewCertificate(queries, store, cfg.Auth.FrontendURL, log)
 	// TEC-196: the service PDF only reads (no outbox).
 	servicePDF := servicesusecase.NewPDF(servicesusecase.New(pool, queries, nil), warrantyCert, store, log)
+	// TEC-207: end-of-day reports (cron on worker-core, PDF on worker-docs).
+	eodSvc := warehouseusecase.NewEOD(pool, queries)
 	ioReg := ioengine.NewRegistry(
 		catalogusecase.NewIOAdapter(catalogSvc, queries),
 		ioadapters.NewUsers(queries),
@@ -168,6 +171,8 @@ func main() {
 		warrantyusecase.NewPortalCertificateAdapter(warrantyCert),
 		// TEC-196: service PDF (read only).
 		servicesusecase.NewPDFAdapter(servicePDF),
+		// TEC-207: end-of-day report PDF (read only).
+		warehouseusecase.NewEODPDFAdapter(warehouseusecase.NewEODPDF(eodSvc, store, log)),
 	)
 	exportSvc := exportusecase.New(queries, store, ioReg, nil, notifSvc, activityRec, log)
 	pdfClient := pdfrender.NewWithOptions(cfg.Gotenberg.URL, pdfrender.Options{MaxConnsPerHost: cfg.Queue.Concurrency})
@@ -227,6 +232,8 @@ func main() {
 		WithInventoryRebuild(stockrebuild.New(pool, queries).ScanTask(log)).
 		// TEC-221: hourly center task due date reminders.
 		WithTasksDueScan(tasksusecase.NewCron(pool, queries, outbox.NewStore(pool, queries)).DueScanTask).
+		// TEC-207: hourly end-of-day warehouse reports (previous local day).
+		WithWarehouseEOD(eodSvc.DailyTask(log)).
 		WithSearch(
 			searchIndexer.ProcessUpsert,
 			searchIndexer.ProcessDelete,

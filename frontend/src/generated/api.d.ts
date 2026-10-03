@@ -4274,6 +4274,107 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/warehouse/eod-reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List end-of-day reports
+         * @description TEC-207. Needs `warehouse.read`; center and distributor only. Stored reports of the active organization, newest day first (the system report before the warehouse reports of a day). The hourly cron writes the previous local day of every center / distributor with a warehouse (kind auto); a manual run rewrites a day (kind manual).
+         */
+        get: operations["listEodReports"];
+        put?: never;
+        /**
+         * Build (or rebuild) an end-of-day report now
+         * @description TEC-207. Needs `warehouse.write`. Summarizes the ledger movements of one calendar day of the active organization in its time zone (stock entries, placements, transfers, order shipments / receipts, service consumption, returns, adjustments, disposals) by group, movement type and product, and stores it (kind manual, replacing an existing report of the same scope and day). Without warehouse_uuid it is the system report (every warehouse plus organization-level movements). date defaults to today (the day so far); a future day is 400.
+         */
+        post: operations["generateEodReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/eod-reports/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * An end-of-day report
+         * @description Needs `warehouse.read`. 404 EOD_REPORT_NOT_FOUND outside the active organization.
+         */
+        get: operations["getEodReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/eod-reports/{uuid}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue the PDF of an end-of-day report
+         * @description TEC-207. Needs `warehouse.read`. The stored report is rendered on the organization's letterhead by an export job on worker-docs (Gotenberg, RTL for ar) in the requested language. Poll and download through /v1/warehouse/eod-report-pdfs/{uuid}.
+         */
+        post: operations["requestEodReportPdf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/eod-report-pdfs/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * An end-of-day report PDF job of the active organization
+         * @description download_url points at /v1/warehouse/eod-report-pdfs/{uuid}/download once completed.
+         */
+        get: operations["getEodReportPdfJob"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/eod-report-pdfs/{uuid}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download a completed end-of-day report PDF */
+        get: operations["downloadEodReportPdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/product-images/{key}": {
         parameters: {
             query?: never;
@@ -6185,7 +6286,7 @@ export interface paths {
         put?: never;
         /**
          * Resolve a dispute addressed to the active organization
-         * @description Needs accounting.resolve; only the parent the disputed entry came from resolves (other disputes read as 404). reversal reverses every open row of the source on both ledgers; revision reverses them and reposts corrected_amount (in the entry's orig_currency, at the frozen rate) as revision + 1 in the same transaction; reject needs a note and posts nothing. A final dispute answers 409 DISPUTE_NOT_OPEN. Writes accounting.dispute_resolved or accounting.dispute_rejected.
+         * @description Needs accounting.resolve; only the parent the disputed entry came from resolves (other disputes read as 404). reversal reverses every open row of the source on both ledgers; revision reverses them and reposts corrected_amount (in the entry's orig_currency, at the frozen rate) as revision + 1 in the same transaction; reject needs a note and posts nothing. A final dispute answers 409 DISPUTE_NOT_OPEN. A reversal of an order sale that already has a received and booked return (TEC-223) answers 422 DISPUTE_SALE_RETURNED and writes nothing (the return already reversed it; revise or reject instead). Writes accounting.dispute_resolved or accounting.dispute_rejected.
          */
         post: operations["resolveAccountingDispute"];
         delete?: never;
@@ -6589,6 +6690,30 @@ export interface paths {
         post?: never;
         /** Delete a service image */
         delete: operations["deleteServiceImage"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/services/{uuid}/items/{item}/consumption-correction": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                item: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Correct the consumption of an item of a completed service
+         * @description TEC-230 (conservative default; a completed service still cannot be cancelled). The unit consumed by mistake goes back from the service into the service organization's stock with a ledger return movement (a roll with the meters the consumption took, fixed pieces credited back); with replacement_barcode the correct unit of the same product is consumed instead (same kind and amount, held by the service organization, not in an open service). Idempotency keys service:service_item_correction:{item id}:{return or consumption}:{barcode}. Center only (services.cancel on the service, else 403), within 24 hours of the completion (422 SERVICE_CORRECTION_WINDOW_CLOSED), once per item (409 SERVICE_ITEM_ALREADY_CORRECTED), whole consumptions only (a partial cut answers 422 SERVICE_CONSUMPTION_NOT_REVERSIBLE). An item with an active or expired warranty answers 422 SERVICE_ITEM_WARRANTY_ACTIVE (void the warranty first); the replacement gets no warranty. A service that is not completed answers 409 SERVICE_NOT_EDITABLE; a replacement that is not held answers 409 SERVICE_UNIT_NOT_AVAILABLE, one in an open service 409 SERVICE_UNIT_IN_USE. Accounting is not touched. Writes a service.updated outbox event (change consumption_corrected) and the stock.* events of the movements.
+         */
+        post: operations["correctServiceConsumption"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -7568,7 +7693,7 @@ export interface components {
              * @description Defaults to the brand center.
              */
             parent_uuid?: string | null;
-            /** @description Distributor only; stored in settings, the warehouse is created in F1. */
+            /** @description Distributor only; stored in settings. Opens the distributor's warehouse (code MAIN, the organization's name and address) in the same transaction (TEC-207, K4). */
             register_as_warehouse?: boolean;
             currency?: string;
             /** @description Normalized to a Locale code (tr-TR -> tr, zh_CN -> zh-CN); unknown codes -> 422. */
@@ -11750,6 +11875,22 @@ export interface components {
             notes: string | null;
             /** Format: date-time */
             created_at: string;
+            /** @description Consumption correction of the item (TEC-230); null when not corrected */
+            correction: components["schemas"]["ServiceItemCorrection"] | null;
+        };
+        ServiceItemCorrection: {
+            /** Format: uuid */
+            uuid: string;
+            reason: string;
+            /** @description Unit consumed instead of the returned one */
+            replacement_barcode: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        ServiceConsumptionCorrectionInput: {
+            reason: string;
+            /** @description Barcode of the correct unit of the same product to consume instead */
+            replacement_barcode?: string | null;
         };
         ServiceStockUnit: {
             /** Format: uuid */
@@ -12272,6 +12413,8 @@ export interface components {
             received: boolean;
             /** @description The transfer_cancel_restore movement is written */
             restored: boolean;
+            /** @description Warning (TEC-229, K24): the return line was received without an accounting row because a dispute already reversed the sale of its order (the sale is not reversed twice); its line_total is not booked. */
+            accounting_excluded: boolean;
         };
         StockTransfer: {
             /** Format: uuid */
@@ -12618,6 +12761,103 @@ export interface components {
             success: true;
             data: {
                 items: components["schemas"]["LabelTemplate"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EodReportGenerateInput: {
+            /**
+             * Format: date
+             * @description Calendar day in the organization's time zone; defaults to today.
+             */
+            date?: string;
+            /**
+             * Format: uuid
+             * @description Omit or null for the system report.
+             */
+            warehouse_uuid?: string | null;
+        };
+        EodTotals: {
+            /** Format: int64 */
+            movement_count: number;
+            /** Format: int64 */
+            unit_count: number;
+            /**
+             * Format: int64
+             * @description Counted quantity in (serial units on-hand delta, fixed barcode quantity).
+             */
+            quantity_in: number;
+            /** Format: int64 */
+            quantity_out: number;
+            /** @example 12.50 */
+            meters_in: string;
+            /** @example 1.25 */
+            meters_out: string;
+        };
+        EodGroupTotal: components["schemas"]["EodTotals"] & {
+            /** @enum {string} */
+            group: "entry" | "placement" | "transfer" | "order" | "consumption" | "return" | "adjustment" | "disposal";
+        };
+        EodTypeTotal: components["schemas"]["EodTotals"] & {
+            /** @description stock_movements.type */
+            type: string;
+            group: string;
+        };
+        EodProductLine: components["schemas"]["EodTotals"] & {
+            type: string;
+            group: string;
+            /** Format: uuid */
+            product_uuid: string;
+            sku: string;
+            product_name: string;
+        };
+        EodSummary: {
+            totals: components["schemas"]["EodTotals"];
+            groups: components["schemas"]["EodGroupTotal"][];
+            types: components["schemas"]["EodTypeTotal"][];
+            products: components["schemas"]["EodProductLine"][];
+        };
+        EodReport: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: date */
+            report_date: string;
+            timezone: string;
+            /** Format: date-time */
+            period_start: string;
+            /** Format: date-time */
+            period_end: string;
+            /** @enum {string} */
+            kind: "auto" | "manual";
+            /** @description null for the system report. */
+            warehouse: null | {
+                /** Format: uuid */
+                uuid: string;
+                code: string;
+                name: string;
+            };
+            summary: components["schemas"]["EodSummary"];
+            /** Format: date-time */
+            generated_at: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        EnvelopeEodReport: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["EodReport"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeEodReportPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["EodReport"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -20312,6 +20552,182 @@ export interface operations {
             409: components["responses"]["Conflict"];
         };
     };
+    listEodReports: {
+        parameters: {
+            query?: {
+                warehouse_uuid?: string;
+                /** @description system: only system reports; warehouse: only warehouse reports. */
+                scope?: "system" | "warehouse";
+                date_from?: string;
+                date_to?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Report page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeEodReportPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    generateEodReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["EodReportGenerateInput"];
+            };
+        };
+        responses: {
+            /** @description Stored report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeEodReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getEodReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeEodReport"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    requestEodReportPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ServicePdfInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Exports are not configured */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getEodReportPdfJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Export job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    downloadEodReportPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     getPublicProductImage: {
         parameters: {
             query?: never;
@@ -23816,6 +24232,15 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            /** @description DISPUTE_SALE_RETURNED, the order sale already has a booked return (TEC-229) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     getAccountingCariStatement: {
@@ -24472,6 +24897,40 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    correctServiceConsumption: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                item: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceConsumptionCorrectionInput"];
+            };
+        };
+        responses: {
+            /** @description Service with the corrected item (items[].correction) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeService"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     getTopVehicleModels: {

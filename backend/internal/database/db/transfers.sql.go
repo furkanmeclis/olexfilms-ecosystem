@@ -254,7 +254,7 @@ func (q *Queries) GetTransferRequestByUUID(ctx context.Context, arg GetTransferR
 }
 
 const getUnitLastOrderPrice = `-- name: GetUnitLastOrderPrice :one
-SELECT oi.unit_price
+SELECT oi.id AS order_item_id, oi.unit_price
 FROM order_item_units oiu
 JOIN order_items oi ON oi.id = oiu.order_item_id
 JOIN orders o ON o.id = oi.order_id
@@ -274,18 +274,23 @@ type GetUnitLastOrderPriceParams struct {
 	Currency    string `json:"currency"`
 }
 
+type GetUnitLastOrderPriceRow struct {
+	OrderItemID int64          `json:"order_item_id"`
+	UnitPrice   pgtype.Numeric `json:"unit_price"`
+}
+
 // TEC-223: the price a unit was sold at to buyer by seller (its latest
 // order line with the unit assigned, the order not cancelled), in currency.
-func (q *Queries) GetUnitLastOrderPrice(ctx context.Context, arg GetUnitLastOrderPriceParams) (pgtype.Numeric, error) {
+func (q *Queries) GetUnitLastOrderPrice(ctx context.Context, arg GetUnitLastOrderPriceParams) (GetUnitLastOrderPriceRow, error) {
 	row := q.db.QueryRow(ctx, getUnitLastOrderPrice,
 		arg.UnitID,
 		arg.SellerOrgID,
 		arg.BuyerOrgID,
 		arg.Currency,
 	)
-	var unit_price pgtype.Numeric
-	err := row.Scan(&unit_price)
-	return unit_price, err
+	var i GetUnitLastOrderPriceRow
+	err := row.Scan(&i.OrderItemID, &i.UnitPrice)
+	return i, err
 }
 
 const insertTransferRequest = `-- name: InsertTransferRequest :one
@@ -375,7 +380,7 @@ VALUES (
     $1, $2, $3, $4,
     $5, $6, $7
 )
-RETURNING id, uuid, request_id, organization_id, brand_id, unit_id, product_id, quantity, meters, unit_price, line_total, out_movement_id, in_movement_id, restore_movement_id, created_at, updated_at
+RETURNING id, uuid, request_id, organization_id, brand_id, unit_id, product_id, quantity, meters, unit_price, line_total, out_movement_id, in_movement_id, restore_movement_id, created_at, updated_at, order_item_id, accounting_excluded
 `
 
 type InsertTransferRequestItemParams struct {
@@ -416,8 +421,53 @@ func (q *Queries) InsertTransferRequestItem(ctx context.Context, arg InsertTrans
 		&i.RestoreMovementID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OrderItemID,
+		&i.AccountingExcluded,
 	)
 	return i, err
+}
+
+const listTransferItemsOfReversedSales = `-- name: ListTransferItemsOfReversedSales :many
+SELECT i.id
+FROM stock_transfer_request_items i
+JOIN order_items oi ON oi.id = i.order_item_id
+JOIN orders o ON o.id = oi.order_id
+WHERE i.request_id = $1
+  AND EXISTS (
+      SELECT 1 FROM accounting_disputes d
+      WHERE d.source_type = $2::text
+        AND d.source_uuid = o.uuid
+        AND d.status = 'resolved_reversal'
+  )
+ORDER BY i.id
+`
+
+type ListTransferItemsOfReversedSalesParams struct {
+	RequestID  int64  `json:"request_id"`
+	SourceType string `json:"source_type"`
+}
+
+// TEC-229: return lines of a request whose order sale was already reversed
+// by a dispute (accounting source source_type + orders.uuid, status
+// resolved_reversal); they are received without an accounting row.
+func (q *Queries) ListTransferItemsOfReversedSales(ctx context.Context, arg ListTransferItemsOfReversedSalesParams) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listTransferItemsOfReversedSales, arg.RequestID, arg.SourceType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int64{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listTransferNotifyUserIDs = `-- name: ListTransferNotifyUserIDs :many
@@ -460,7 +510,7 @@ func (q *Queries) ListTransferNotifyUserIDs(ctx context.Context, arg ListTransfe
 }
 
 const listTransferRequestItems = `-- name: ListTransferRequestItems :many
-SELECT i.id, i.uuid, i.request_id, i.organization_id, i.brand_id, i.unit_id, i.product_id, i.quantity, i.meters, i.unit_price, i.line_total, i.out_movement_id, i.in_movement_id, i.restore_movement_id, i.created_at, i.updated_at, u.uuid AS unit_uuid, u.barcode, u.unit_kind,
+SELECT i.id, i.uuid, i.request_id, i.organization_id, i.brand_id, i.unit_id, i.product_id, i.quantity, i.meters, i.unit_price, i.line_total, i.out_movement_id, i.in_movement_id, i.restore_movement_id, i.created_at, i.updated_at, i.order_item_id, i.accounting_excluded, u.uuid AS unit_uuid, u.barcode, u.unit_kind,
        p.uuid AS product_uuid, p.sku AS product_sku, p.name AS product_name, p.unit_type AS product_unit_type
 FROM stock_transfer_request_items i
 JOIN units u ON u.id = i.unit_id
@@ -470,29 +520,31 @@ ORDER BY i.id
 `
 
 type ListTransferRequestItemsRow struct {
-	ID                int64              `json:"id"`
-	Uuid              uuid.UUID          `json:"uuid"`
-	RequestID         int64              `json:"request_id"`
-	OrganizationID    int64              `json:"organization_id"`
-	BrandID           int64              `json:"brand_id"`
-	UnitID            int64              `json:"unit_id"`
-	ProductID         int64              `json:"product_id"`
-	Quantity          pgtype.Int4        `json:"quantity"`
-	Meters            pgtype.Numeric     `json:"meters"`
-	UnitPrice         pgtype.Numeric     `json:"unit_price"`
-	LineTotal         pgtype.Numeric     `json:"line_total"`
-	OutMovementID     pgtype.Int8        `json:"out_movement_id"`
-	InMovementID      pgtype.Int8        `json:"in_movement_id"`
-	RestoreMovementID pgtype.Int8        `json:"restore_movement_id"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
-	UnitUuid          uuid.UUID          `json:"unit_uuid"`
-	Barcode           string             `json:"barcode"`
-	UnitKind          string             `json:"unit_kind"`
-	ProductUuid       uuid.UUID          `json:"product_uuid"`
-	ProductSku        string             `json:"product_sku"`
-	ProductName       string             `json:"product_name"`
-	ProductUnitType   string             `json:"product_unit_type"`
+	ID                 int64              `json:"id"`
+	Uuid               uuid.UUID          `json:"uuid"`
+	RequestID          int64              `json:"request_id"`
+	OrganizationID     int64              `json:"organization_id"`
+	BrandID            int64              `json:"brand_id"`
+	UnitID             int64              `json:"unit_id"`
+	ProductID          int64              `json:"product_id"`
+	Quantity           pgtype.Int4        `json:"quantity"`
+	Meters             pgtype.Numeric     `json:"meters"`
+	UnitPrice          pgtype.Numeric     `json:"unit_price"`
+	LineTotal          pgtype.Numeric     `json:"line_total"`
+	OutMovementID      pgtype.Int8        `json:"out_movement_id"`
+	InMovementID       pgtype.Int8        `json:"in_movement_id"`
+	RestoreMovementID  pgtype.Int8        `json:"restore_movement_id"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	OrderItemID        pgtype.Int8        `json:"order_item_id"`
+	AccountingExcluded bool               `json:"accounting_excluded"`
+	UnitUuid           uuid.UUID          `json:"unit_uuid"`
+	Barcode            string             `json:"barcode"`
+	UnitKind           string             `json:"unit_kind"`
+	ProductUuid        uuid.UUID          `json:"product_uuid"`
+	ProductSku         string             `json:"product_sku"`
+	ProductName        string             `json:"product_name"`
+	ProductUnitType    string             `json:"product_unit_type"`
 }
 
 func (q *Queries) ListTransferRequestItems(ctx context.Context, requestID int64) ([]ListTransferRequestItemsRow, error) {
@@ -521,6 +573,8 @@ func (q *Queries) ListTransferRequestItems(ctx context.Context, requestID int64)
 			&i.RestoreMovementID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.OrderItemID,
+			&i.AccountingExcluded,
 			&i.UnitUuid,
 			&i.Barcode,
 			&i.UnitKind,
@@ -709,6 +763,42 @@ func (q *Queries) ListTransferSiblings(ctx context.Context, arg ListTransferSibl
 	return items, nil
 }
 
+const lockOrdersOfTransferRequest = `-- name: LockOrdersOfTransferRequest :many
+SELECT o.id
+FROM orders o
+WHERE o.id IN (
+    SELECT oi.order_id
+    FROM stock_transfer_request_items i
+    JOIN order_items oi ON oi.id = i.order_item_id
+    WHERE i.request_id = $1
+)
+ORDER BY o.id
+FOR SHARE
+`
+
+// TEC-229: locks (FOR SHARE) the orders the return lines of a request were
+// sold on, so a dispute reversal of the same order (LockOrderForDisputeReversal,
+// FOR UPDATE) and the receipt of the return are serialized.
+func (q *Queries) LockOrdersOfTransferRequest(ctx context.Context, requestID int64) ([]int64, error) {
+	rows, err := q.db.Query(ctx, lockOrdersOfTransferRequest, requestID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int64{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const lockTransferRequestByUUID = `-- name: LockTransferRequestByUUID :one
 SELECT id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind FROM stock_transfer_requests
 WHERE uuid = $1 AND brand_id = $2
@@ -848,18 +938,26 @@ func (q *Queries) SetTransferItemOutMovement(ctx context.Context, arg SetTransfe
 
 const setTransferItemPrice = `-- name: SetTransferItemPrice :exec
 UPDATE stock_transfer_request_items
-SET unit_price = $1, line_total = $2
-WHERE id = $3
+SET unit_price = $1, line_total = $2,
+    order_item_id = $3
+WHERE id = $4
 `
 
 type SetTransferItemPriceParams struct {
-	UnitPrice pgtype.Numeric `json:"unit_price"`
-	LineTotal pgtype.Numeric `json:"line_total"`
-	ID        int64          `json:"id"`
+	UnitPrice   pgtype.Numeric `json:"unit_price"`
+	LineTotal   pgtype.Numeric `json:"line_total"`
+	OrderItemID pgtype.Int8    `json:"order_item_id"`
+	ID          int64          `json:"id"`
 }
 
+// order_item_id (TEC-229): the parent's order line a return line reverses.
 func (q *Queries) SetTransferItemPrice(ctx context.Context, arg SetTransferItemPriceParams) error {
-	_, err := q.db.Exec(ctx, setTransferItemPrice, arg.UnitPrice, arg.LineTotal, arg.ID)
+	_, err := q.db.Exec(ctx, setTransferItemPrice,
+		arg.UnitPrice,
+		arg.LineTotal,
+		arg.OrderItemID,
+		arg.ID,
+	)
 	return err
 }
 
@@ -875,6 +973,22 @@ type SetTransferItemRestoreMovementParams struct {
 
 func (q *Queries) SetTransferItemRestoreMovement(ctx context.Context, arg SetTransferItemRestoreMovementParams) error {
 	_, err := q.db.Exec(ctx, setTransferItemRestoreMovement, arg.MovementID, arg.ID)
+	return err
+}
+
+const setTransferItemsAccountingExcluded = `-- name: SetTransferItemsAccountingExcluded :exec
+UPDATE stock_transfer_request_items
+SET accounting_excluded = true
+WHERE request_id = $1 AND id = ANY ($2::bigint[])
+`
+
+type SetTransferItemsAccountingExcludedParams struct {
+	RequestID int64   `json:"request_id"`
+	Ids       []int64 `json:"ids"`
+}
+
+func (q *Queries) SetTransferItemsAccountingExcluded(ctx context.Context, arg SetTransferItemsAccountingExcludedParams) error {
+	_, err := q.db.Exec(ctx, setTransferItemsAccountingExcluded, arg.RequestID, arg.Ids)
 	return err
 }
 

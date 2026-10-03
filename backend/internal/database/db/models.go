@@ -408,6 +408,24 @@ type DocumentTemplate struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
+type EodReport struct {
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	WarehouseID       pgtype.Int8        `json:"warehouse_id"`
+	ReportDate        pgtype.Date        `json:"report_date"`
+	Timezone          string             `json:"timezone"`
+	PeriodStart       pgtype.Timestamptz `json:"period_start"`
+	PeriodEnd         pgtype.Timestamptz `json:"period_end"`
+	Kind              string             `json:"kind"`
+	Summary           []byte             `json:"summary"`
+	GeneratedByUserID pgtype.Int8        `json:"generated_by_user_id"`
+	GeneratedAt       pgtype.Timestamptz `json:"generated_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
 type ExchangeRate struct {
 	ID              int64              `json:"id"`
 	RateDate        pgtype.Date        `json:"rate_date"`
@@ -1222,6 +1240,25 @@ type ServiceItem struct {
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
+type ServiceItemCorrection struct {
+	ID                    int64              `json:"id"`
+	Uuid                  uuid.UUID          `json:"uuid"`
+	OrganizationID        int64              `json:"organization_id"`
+	BrandID               int64              `json:"brand_id"`
+	ServiceID             int64              `json:"service_id"`
+	ServiceItemID         int64              `json:"service_item_id"`
+	ProductID             int64              `json:"product_id"`
+	UnitID                int64              `json:"unit_id"`
+	ItemKind              string             `json:"item_kind"`
+	ReturnMovementID      int64              `json:"return_movement_id"`
+	ReplacementUnitID     pgtype.Int8        `json:"replacement_unit_id"`
+	ReplacementMovementID pgtype.Int8        `json:"replacement_movement_id"`
+	Reason                string             `json:"reason"`
+	CreatedByUserID       pgtype.Int8        `json:"created_by_user_id"`
+	ActorOrgID            pgtype.Int8        `json:"actor_org_id"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+}
+
 type ServiceStatusLog struct {
 	ID             int64              `json:"id"`
 	ServiceID      int64              `json:"service_id"`
@@ -1501,22 +1538,24 @@ type StockTransferRequest struct {
 }
 
 type StockTransferRequestItem struct {
-	ID                int64              `json:"id"`
-	Uuid              uuid.UUID          `json:"uuid"`
-	RequestID         int64              `json:"request_id"`
-	OrganizationID    int64              `json:"organization_id"`
-	BrandID           int64              `json:"brand_id"`
-	UnitID            int64              `json:"unit_id"`
-	ProductID         int64              `json:"product_id"`
-	Quantity          pgtype.Int4        `json:"quantity"`
-	Meters            pgtype.Numeric     `json:"meters"`
-	UnitPrice         pgtype.Numeric     `json:"unit_price"`
-	LineTotal         pgtype.Numeric     `json:"line_total"`
-	OutMovementID     pgtype.Int8        `json:"out_movement_id"`
-	InMovementID      pgtype.Int8        `json:"in_movement_id"`
-	RestoreMovementID pgtype.Int8        `json:"restore_movement_id"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	ID                 int64              `json:"id"`
+	Uuid               uuid.UUID          `json:"uuid"`
+	RequestID          int64              `json:"request_id"`
+	OrganizationID     int64              `json:"organization_id"`
+	BrandID            int64              `json:"brand_id"`
+	UnitID             int64              `json:"unit_id"`
+	ProductID          int64              `json:"product_id"`
+	Quantity           pgtype.Int4        `json:"quantity"`
+	Meters             pgtype.Numeric     `json:"meters"`
+	UnitPrice          pgtype.Numeric     `json:"unit_price"`
+	LineTotal          pgtype.Numeric     `json:"line_total"`
+	OutMovementID      pgtype.Int8        `json:"out_movement_id"`
+	InMovementID       pgtype.Int8        `json:"in_movement_id"`
+	RestoreMovementID  pgtype.Int8        `json:"restore_movement_id"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	OrderItemID        pgtype.Int8        `json:"order_item_id"`
+	AccountingExcluded bool               `json:"accounting_excluded"`
 }
 
 type StorageActivity struct {

@@ -8021,6 +8021,201 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /v1/warehouse/eod-reports:
+    get:
+      tags: [Warehouse]
+      operationId: listEodReports
+      summary: List end-of-day reports
+      description: >-
+        TEC-207. Needs `warehouse.read`; center and distributor only. Stored
+        reports of the active organization, newest day first (the system
+        report before the warehouse reports of a day). The hourly cron writes
+        the previous local day of every center / distributor with a
+        warehouse (kind auto); a manual run rewrites a day (kind manual).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: warehouse_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - name: scope
+          in: query
+          description: "system: only system reports; warehouse: only warehouse reports."
+          schema: { type: string, enum: [system, warehouse] }
+        - name: date_from
+          in: query
+          schema: { type: string, format: date }
+        - name: date_to
+          in: query
+          schema: { type: string, format: date }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Report page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeEodReportPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Warehouse]
+      operationId: generateEodReport
+      summary: Build (or rebuild) an end-of-day report now
+      description: >-
+        TEC-207. Needs `warehouse.write`. Summarizes the ledger movements of
+        one calendar day of the active organization in its time zone (stock
+        entries, placements, transfers, order shipments / receipts, service
+        consumption, returns, adjustments, disposals) by group, movement type
+        and product, and stores it (kind manual, replacing an existing report
+        of the same scope and day). Without warehouse_uuid it is the system
+        report (every warehouse plus organization-level movements). date
+        defaults to today (the day so far); a future day is 400.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EodReportGenerateInput"
+      responses:
+        "200":
+          description: Stored report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeEodReport"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/warehouse/eod-reports/{uuid}:
+    get:
+      tags: [Warehouse]
+      operationId: getEodReport
+      summary: An end-of-day report
+      description: Needs `warehouse.read`. 404 EOD_REPORT_NOT_FOUND outside the active organization.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeEodReport"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/warehouse/eod-reports/{uuid}/pdf:
+    post:
+      tags: [Warehouse]
+      operationId: requestEodReportPdf
+      summary: Queue the PDF of an end-of-day report
+      description: >-
+        TEC-207. Needs `warehouse.read`. The stored report is rendered on the
+        organization's letterhead by an export job on worker-docs (Gotenberg,
+        RTL for ar) in the requested language. Poll and download through
+        /v1/warehouse/eod-report-pdfs/{uuid}.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServicePdfInput"
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          description: Exports are not configured
+
+  /v1/warehouse/eod-report-pdfs/{uuid}:
+    get:
+      tags: [Warehouse]
+      operationId: getEodReportPdfJob
+      summary: An end-of-day report PDF job of the active organization
+      description: download_url points at /v1/warehouse/eod-report-pdfs/{uuid}/download once completed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Export job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/warehouse/eod-report-pdfs/{uuid}/download:
+    get:
+      tags: [Warehouse]
+      operationId: downloadEodReportPdf
+      summary: Download a completed end-of-day report PDF
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: PDF bytes
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/public/product-images/{key}:
     get:
       tags: [Catalog]
@@ -11728,6 +11923,9 @@ paths:
         reposts corrected_amount (in the entry's orig_currency, at the
         frozen rate) as revision + 1 in the same transaction; reject needs a
         note and posts nothing. A final dispute answers 409 DISPUTE_NOT_OPEN.
+        A reversal of an order sale that already has a received and booked
+        return (TEC-223) answers 422 DISPUTE_SALE_RETURNED and writes
+        nothing (the return already reversed it; revise or reject instead).
         Writes accounting.dispute_resolved or accounting.dispute_rejected.
       security:
         - bearerAuth: []
@@ -11756,6 +11954,12 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "422":
+          description: DISPUTE_SALE_RETURNED, the order sale already has a booked return (TEC-229)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /v1/accounting/cari/{uuid}/statement:
     get:
@@ -12538,6 +12742,65 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /v1/services/{uuid}/items/{item}/consumption-correction:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+      - name: item
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Services]
+      operationId: correctServiceConsumption
+      summary: Correct the consumption of an item of a completed service
+      description: >-
+        TEC-230 (conservative default; a completed service still cannot be
+        cancelled). The unit consumed by mistake goes back from the service
+        into the service organization's stock with a ledger return movement
+        (a roll with the meters the consumption took, fixed pieces credited
+        back); with replacement_barcode the correct unit of the same
+        product is consumed instead (same kind and amount, held by the
+        service organization, not in an open service). Idempotency keys
+        service:service_item_correction:{item id}:{return or consumption}:{barcode}.
+        Center only (services.cancel on the service, else 403), within 24
+        hours of the completion (422 SERVICE_CORRECTION_WINDOW_CLOSED), once
+        per item (409 SERVICE_ITEM_ALREADY_CORRECTED), whole consumptions
+        only (a partial cut answers 422 SERVICE_CONSUMPTION_NOT_REVERSIBLE).
+        An item with an active or expired warranty answers 422
+        SERVICE_ITEM_WARRANTY_ACTIVE (void the warranty first); the
+        replacement gets no warranty. A service that is not completed
+        answers 409 SERVICE_NOT_EDITABLE; a replacement that is not held
+        answers 409 SERVICE_UNIT_NOT_AVAILABLE, one in an open service 409
+        SERVICE_UNIT_IN_USE. Accounting is not touched. Writes a
+        service.updated outbox event (change consumption_corrected) and the
+        stock.* events of the movements.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceConsumptionCorrectionInput"
+      responses:
+        "200":
+          description: Service with the corrected item (items[].correction)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeService"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
   /v1/stats/top-vehicle-models:
     get:
       tags: [Services]
@@ -14483,7 +14746,10 @@ components:
           description: Defaults to the brand center.
         register_as_warehouse:
           type: boolean
-          description: Distributor only; stored in settings, the warehouse is created in F1.
+          description: >-
+            Distributor only; stored in settings. Opens the distributor's
+            warehouse (code MAIN, the organization's name and address) in the
+            same transaction (TEC-207, K4).
         currency:
           type: string
         locale:
@@ -20003,7 +20269,7 @@ components:
 
     ServiceItem:
       type: object
-      required: [uuid, product, barcode, unit_kind, kind, quantity, meters, applied_parts, notes, created_at]
+      required: [uuid, product, barcode, unit_kind, kind, quantity, meters, applied_parts, notes, created_at, correction]
       properties:
         uuid: { type: string, format: uuid }
         product:
@@ -20024,6 +20290,32 @@ components:
           items: { type: string }
         notes: { type: [string, "null"] }
         created_at: { type: string, format: date-time }
+        correction:
+          description: Consumption correction of the item (TEC-230); null when not corrected
+          oneOf:
+            - $ref: "#/components/schemas/ServiceItemCorrection"
+            - type: "null"
+
+    ServiceItemCorrection:
+      type: object
+      required: [uuid, reason, replacement_barcode, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        reason: { type: string }
+        replacement_barcode:
+          type: [string, "null"]
+          description: Unit consumed instead of the returned one
+        created_at: { type: string, format: date-time }
+
+    ServiceConsumptionCorrectionInput:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 1000 }
+        replacement_barcode:
+          type: [string, "null"]
+          maxLength: 64
+          description: Barcode of the correct unit of the same product to consume instead
 
     ServiceStockUnit:
       type: object
@@ -20673,7 +20965,7 @@ components:
 
     StockTransferItem:
       type: object
-      required: [uuid, unit_uuid, barcode, unit_kind, product, quantity, meters, unit_price, line_total, shipped, received, restored]
+      required: [uuid, unit_uuid, barcode, unit_kind, product, quantity, meters, unit_price, line_total, shipped, received, restored, accounting_excluded]
       properties:
         uuid: { type: string, format: uuid }
         unit_uuid: { type: string, format: uuid }
@@ -20687,6 +20979,13 @@ components:
         shipped: { type: boolean, description: The transfer_out movement is written }
         received: { type: boolean, description: The transfer_in movement is written }
         restored: { type: boolean, description: The transfer_cancel_restore movement is written }
+        accounting_excluded:
+          type: boolean
+          description: >-
+            Warning (TEC-229, K24): the return line was received without an
+            accounting row because a dispute already reversed the sale of
+            its order (the sale is not reversed twice); its line_total is
+            not booked.
 
     StockTransfer:
       type: object
@@ -21104,4 +21403,127 @@ components:
             items:
               type: array
               items: { $ref: "#/components/schemas/LabelTemplate" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EodReportGenerateInput:
+      type: object
+      additionalProperties: false
+      properties:
+        date:
+          type: string
+          format: date
+          description: Calendar day in the organization's time zone; defaults to today.
+        warehouse_uuid:
+          type: [string, "null"]
+          format: uuid
+          description: Omit or null for the system report.
+
+    EodTotals:
+      type: object
+      required: [movement_count, unit_count, quantity_in, quantity_out, meters_in, meters_out]
+      properties:
+        movement_count: { type: integer, format: int64 }
+        unit_count: { type: integer, format: int64 }
+        quantity_in:
+          type: integer
+          format: int64
+          description: Counted quantity in (serial units on-hand delta, fixed barcode quantity).
+        quantity_out: { type: integer, format: int64 }
+        meters_in: { type: string, example: "12.50" }
+        meters_out: { type: string, example: "1.25" }
+
+    EodGroupTotal:
+      allOf:
+        - $ref: "#/components/schemas/EodTotals"
+        - type: object
+          required: [group]
+          properties:
+            group:
+              type: string
+              enum: [entry, placement, transfer, order, consumption, return, adjustment, disposal]
+
+    EodTypeTotal:
+      allOf:
+        - $ref: "#/components/schemas/EodTotals"
+        - type: object
+          required: [type, group]
+          properties:
+            type: { type: string, description: stock_movements.type }
+            group: { type: string }
+
+    EodProductLine:
+      allOf:
+        - $ref: "#/components/schemas/EodTotals"
+        - type: object
+          required: [type, group, product_uuid, sku, product_name]
+          properties:
+            type: { type: string }
+            group: { type: string }
+            product_uuid: { type: string, format: uuid }
+            sku: { type: string }
+            product_name: { type: string }
+
+    EodSummary:
+      type: object
+      required: [totals, groups, types, products]
+      properties:
+        totals: { $ref: "#/components/schemas/EodTotals" }
+        groups:
+          type: array
+          items: { $ref: "#/components/schemas/EodGroupTotal" }
+        types:
+          type: array
+          items: { $ref: "#/components/schemas/EodTypeTotal" }
+        products:
+          type: array
+          items: { $ref: "#/components/schemas/EodProductLine" }
+
+    EodReport:
+      type: object
+      required: [uuid, report_date, timezone, period_start, period_end, kind, warehouse, summary, generated_at, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        report_date: { type: string, format: date }
+        timezone: { type: string }
+        period_start: { type: string, format: date-time }
+        period_end: { type: string, format: date-time }
+        kind: { type: string, enum: [auto, manual] }
+        warehouse:
+          description: null for the system report.
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [uuid, code, name]
+              properties:
+                uuid: { type: string, format: uuid }
+                code: { type: string }
+                name: { type: string }
+        summary: { $ref: "#/components/schemas/EodSummary" }
+        generated_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    EnvelopeEodReport:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/EodReport" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeEodReportPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/EodReport" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
