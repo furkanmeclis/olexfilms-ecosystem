@@ -251,22 +251,22 @@ func TestIntegrationF1ReverseChain(t *testing.T) {
 	c.owned("R1 received", "available", "organization", c.dist.ID, c.dist.ID, chainMoves)
 	stocks("R1 received", 0, 2, 0)
 
-	// 5. The distributor returns both rolls to the center. No center role
-	// holds transfers.approve, so a super admin member of the center
-	// decides the return.
-	admin, apw := it.user("t219-admin", rbac.RoleSuperAdmin)
-	it.member(c.center, admin, "staff", rbac.RoleCenterStaff)
-	adminTok := it.loginOrg(admin, apw, c.center)
+	// 5. The distributor returns both rolls to the center. The center
+	// warehouse role holds transfers.approve (TEC-228) and decides and
+	// receives the return; no super admin is needed.
+	wh, wpw := it.user("t219-center-wh")
+	it.member(c.center, wh, "staff", rbac.RoleCenterWarehouse)
+	whTok := it.loginOrg(wh, wpw, c.center)
 	r2, _ := it.transferCall("POST", "/v1/stock-transfers", c.distTok,
 		map[string]any{"kind": "return", "items": items}, http.StatusCreated)
 	if r2.Status != "requested" || r2.Receiver.UUID != c.center.Uuid.String() {
 		t.Fatalf("distributor return = %+v", r2)
 	}
-	move(adminTok, r2.UUID, "approved")
+	move(whTok, r2.UUID, "approved")
 	move(c.distTok, r2.UUID, "shipped")
 	chainMoves += ",transfer_out"
 	c.owned("R2 shipped", "in_transit", "organization", c.center.ID, c.center.ID, chainMoves)
-	move(adminTok, r2.UUID, "received")
+	move(whTok, r2.UUID, "received")
 	chainMoves += ",transfer_in"
 	c.owned("R2 received", "available", "organization", c.center.ID, c.center.ID, chainMoves)
 	if c.centerStockBefore != 2 {
