@@ -226,6 +226,11 @@ const (
 	PermMeasurementsRead         = "measurements.read"
 	PermMeasurementsLink         = "measurements.link"
 	PermMeasurementDevicesManage = "measurement_devices.manage"
+	// TEC-329 (000086): announcements and the document library (F3-05).
+	PermAnnouncementsRead  = "announcements.read"
+	PermAnnouncementsWrite = "announcements.write"
+	PermLibraryRead        = "library.read"
+	PermLibraryManage      = "library.manage"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

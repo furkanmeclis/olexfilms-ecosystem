@@ -12,6 +12,7 @@ import (
 )
 
 type Querier interface {
+	AddAnnouncementAudience(ctx context.Context, arg AddAnnouncementAudienceParams) (AnnouncementAudience, error)
 	// Signed deltas; the CHECK rejects negative stock.
 	AddBinProductStock(ctx context.Context, arg AddBinProductStockParams) (BinProductStock, error)
 	// The CHECK rejects a negative result.
@@ -102,6 +103,8 @@ type Querier interface {
 	CountAllBulkJobs(ctx context.Context) (int64, error)
 	CountAllExportJobs(ctx context.Context) (int64, error)
 	CountAllImportJobs(ctx context.Context) (int64, error)
+	CountAnnouncementReads(ctx context.Context, announcementID int64) (int64, error)
+	CountAnnouncementsByOrganizations(ctx context.Context, arg CountAnnouncementsByOrganizationsParams) (int64, error)
 	CountAppLogs(ctx context.Context, arg CountAppLogsParams) (int64, error)
 	CountAppLogsByLevel(ctx context.Context) ([]CountAppLogsByLevelRow, error)
 	CountBarcodeBatches(ctx context.Context, organizationID int64) (int64, error)
@@ -184,6 +187,9 @@ type Querier interface {
 	CountWarehouseTransfers(ctx context.Context, arg CountWarehouseTransfersParams) (int64, error)
 	CountWarrantiesInScope(ctx context.Context, arg CountWarrantiesInScopeParams) (int64, error)
 	CountWarrantyRows(ctx context.Context, arg CountWarrantyRowsParams) (int64, error)
+	// TEC-329 (F3-05a): announcements, their translations, audiences and read
+	// receipts (migration 000086).
+	CreateAnnouncement(ctx context.Context, arg CreateAnnouncementParams) (Announcement, error)
 	CreateBarcodeBatch(ctx context.Context, arg CreateBarcodeBatchParams) (BarcodeBatch, error)
 	CreateBatchUnit(ctx context.Context, arg CreateBatchUnitParams) (Unit, error)
 	CreateBulkJob(ctx context.Context, arg CreateBulkJobParams) (BulkJob, error)
@@ -223,6 +229,11 @@ type Querier interface {
 	// crypto.SecretBox ciphertext; callers never pass a plain key here.
 	CreateIntegrationConnection(ctx context.Context, arg CreateIntegrationConnectionParams) (IntegrationConnection, error)
 	CreateLabelTemplate(ctx context.Context, arg CreateLabelTemplateParams) (LabelTemplate, error)
+	// TEC-329 (F3-05a): document library folders, items and append-only file
+	// versions (migration 000086).
+	CreateLibraryFolder(ctx context.Context, arg CreateLibraryFolderParams) (LibraryFolder, error)
+	CreateLibraryItem(ctx context.Context, arg CreateLibraryItemParams) (LibraryItem, error)
+	CreateLibraryItemVersion(ctx context.Context, arg CreateLibraryItemVersionParams) (LibraryItemVersion, error)
 	CreateLogPurgeRule(ctx context.Context, arg CreateLogPurgeRuleParams) (LogPurgeRule, error)
 	CreateMigrationRun(ctx context.Context, arg CreateMigrationRunParams) (MigrationRun, error)
 	CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error)
@@ -355,6 +366,9 @@ type Querier interface {
 	DeleteAllOrganizationProductStocks(ctx context.Context) (int64, error)
 	// Rebuild only (TEC-94d): the projection is regenerated from the ledger.
 	DeleteAllUnitCurrentStates(ctx context.Context) (int64, error)
+	DeleteAnnouncement(ctx context.Context, arg DeleteAnnouncementParams) (int64, error)
+	DeleteAnnouncementAudiences(ctx context.Context, announcementID int64) error
+	DeleteAnnouncementLocale(ctx context.Context, arg DeleteAnnouncementLocaleParams) (int64, error)
 	DeleteAppLogByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	DeleteAppLogsByUUIDs(ctx context.Context, uuids []uuid.UUID) (int64, error)
 	DeleteAppLogsMatching(ctx context.Context, arg DeleteAppLogsMatchingParams) (int64, error)
@@ -480,6 +494,8 @@ type Querier interface {
 	GetActivePhoneOTP(ctx context.Context, arg GetActivePhoneOTPParams) (OtpCode, error)
 	// Public image route: the active product (any brand) that lists the key.
 	GetActiveProductUUIDByImageKey(ctx context.Context, key string) (uuid.UUID, error)
+	GetAnnouncementByID(ctx context.Context, id int64) (Announcement, error)
+	GetAnnouncementByUUID(ctx context.Context, argUuid uuid.UUID) (Announcement, error)
 	GetAppLogByUUID(ctx context.Context, argUuid uuid.UUID) (AppLog, error)
 	GetAppSettings(ctx context.Context) (AppSetting, error)
 	GetAuthSettings(ctx context.Context) (GetAuthSettingsRow, error)
@@ -587,6 +603,9 @@ type Querier interface {
 	// Portal legal texts and consents (TEC-90).
 	GetLatestLegalText(ctx context.Context, arg GetLatestLegalTextParams) (LegalText, error)
 	GetLatestPhoneOTP(ctx context.Context, arg GetLatestPhoneOTPParams) (OtpCode, error)
+	GetLibraryFolderByUUID(ctx context.Context, argUuid uuid.UUID) (LibraryFolder, error)
+	GetLibraryItemByUUID(ctx context.Context, argUuid uuid.UUID) (LibraryItem, error)
+	GetLibraryItemVersionByUUID(ctx context.Context, argUuid uuid.UUID) (LibraryItemVersion, error)
 	// Stored locale/timezone preferences for i18n.Resolve: the user, the active
 	// organization (when given) and the center of its brand, or of the request
 	// brand when there is no active organization.
@@ -946,6 +965,12 @@ type Querier interface {
 	ListAllPermissionSlugs(ctx context.Context) ([]string, error)
 	ListAllPermissions(ctx context.Context) ([]Permission, error)
 	ListAllRoles(ctx context.Context) ([]Role, error)
+	ListAnnouncementAudiences(ctx context.Context, announcementID int64) ([]AnnouncementAudience, error)
+	ListAnnouncementLocales(ctx context.Context, announcementID int64) ([]AnnouncementLocale, error)
+	ListAnnouncementReads(ctx context.Context, arg ListAnnouncementReadsParams) ([]AnnouncementRead, error)
+	// Author view: announcements written by the given organizations (the
+	// caller's resolved write scope), newest first.
+	ListAnnouncementsByOrganizations(ctx context.Context, arg ListAnnouncementsByOrganizationsParams) ([]Announcement, error)
 	ListAppLogSources(ctx context.Context) ([]string, error)
 	ListAppLogs(ctx context.Context, arg ListAppLogsParams) ([]AppLog, error)
 	ListBarcodeBatches(ctx context.Context, arg ListBarcodeBatchesParams) ([]BarcodeBatch, error)
@@ -1099,6 +1124,8 @@ type Querier interface {
 	ListLabelTemplates(ctx context.Context, arg ListLabelTemplatesParams) ([]LabelTemplate, error)
 	ListLatestKVKKNotices(ctx context.Context) ([]KvkkNotice, error)
 	ListLatestLegalTexts(ctx context.Context, kind string) ([]LegalText, error)
+	// The newest version of each language of an item.
+	ListLatestLibraryItemVersions(ctx context.Context, itemID int64) ([]LibraryItemVersion, error)
 	// TEC-263: read-only access to the old hub's message archive
 	// (legacy_messages). No UI; the table is append-only and only the K19
 	// anonymization may mask a row.
@@ -1106,6 +1133,14 @@ type Querier interface {
 	// sent_at, id; pass NULL cursors for the first page).
 	ListLegacyMessagesByUser(ctx context.Context, arg ListLegacyMessagesByUserParams) ([]ListLegacyMessagesByUserRow, error)
 	ListLegalTextVersions(ctx context.Context, arg ListLegalTextVersionsParams) ([]LegalText, error)
+	ListLibraryFolders(ctx context.Context, organizationID int64) ([]LibraryFolder, error)
+	ListLibraryItemVersions(ctx context.Context, itemID int64) ([]LibraryItemVersion, error)
+	// Reader view in a brand. access_levels are the levels the viewer
+	// organization may see (center: all four; distributor: all_network and
+	// distributors; dealer: all_network and dealers); an item with a role_slug
+	// is shown only to viewers holding that role. folder_id NULL lists every
+	// folder; tag filters on one tag.
+	ListLibraryItems(ctx context.Context, arg ListLibraryItemsParams) ([]LibraryItem, error)
 	// A location and everything below it.
 	ListLocationSubtreeIDs(ctx context.Context, arg ListLocationSubtreeIDsParams) ([]int64, error)
 	ListLocationsByUUIDs(ctx context.Context, arg ListLocationsByUUIDsParams) ([]WarehouseLocation, error)
@@ -1389,6 +1424,13 @@ type Querier interface {
 	ListVehiclesForIndex(ctx context.Context) ([]ListVehiclesForIndexRow, error)
 	// Vehicles of customers linked to the organizations in scope.
 	ListVehiclesInScope(ctx context.Context, arg ListVehiclesInScopeParams) ([]ListVehiclesInScopeRow, error)
+	// Reader feed: published, inside its window, in the viewer's brand and
+	// matching at least one audience row. viewer_org_lineage is the viewer
+	// organization followed by its ancestors (subtree targets match any of
+	// them); viewer_role_slugs are the viewer's role slugs in that
+	// organization. locale picks the translation, falling back to the default
+	// text.
+	ListVisibleAnnouncements(ctx context.Context, arg ListVisibleAnnouncementsParams) ([]ListVisibleAnnouncementsRow, error)
 	ListWarehouseLocations(ctx context.Context, arg ListWarehouseLocationsParams) ([]WarehouseLocation, error)
 	ListWarehouseLocationsByIDs(ctx context.Context, ids []int64) ([]WarehouseLocation, error)
 	// ---------------------------------------------------------------------------
@@ -1527,6 +1569,8 @@ type Querier interface {
 	LockWarehouseTransferByUUID(ctx context.Context, arg LockWarehouseTransferByUUIDParams) (WarehouseTransfer, error)
 	LockWarranty(ctx context.Context, arg LockWarrantyParams) (Warranty, error)
 	MarkAllNotificationsReadForUser(ctx context.Context, userID pgtype.Int8) (int64, error)
+	// Idempotent: a second read keeps the first read_at.
+	MarkAnnouncementRead(ctx context.Context, arg MarkAnnouncementReadParams) (AnnouncementRead, error)
 	MarkBarcodeBatchPrinted(ctx context.Context, id int64) (BarcodeBatch, error)
 	MarkBulkJobCompleted(ctx context.Context, arg MarkBulkJobCompletedParams) (BulkJob, error)
 	MarkBulkJobFailed(ctx context.Context, arg MarkBulkJobFailedParams) (BulkJob, error)
@@ -1830,6 +1874,7 @@ type Querier interface {
 	// unless that transaction rolls back.
 	NextContractNo(ctx context.Context, organizationID int64) (int64, error)
 	NextDocumentTemplateVersion(ctx context.Context, arg NextDocumentTemplateVersionParams) (int32, error)
+	NextLibraryItemVersionNo(ctx context.Context, arg NextLibraryItemVersionNoParams) (int32, error)
 	PingDB(ctx context.Context) (int32, error)
 	PublishDocumentTemplate(ctx context.Context, id int64) (DocumentTemplate, error)
 	PurgeNotificationDeliveriesBefore(ctx context.Context, arg PurgeNotificationDeliveriesBeforeParams) (int64, error)
@@ -1874,6 +1919,8 @@ type Querier interface {
 	// reversed_by_uuid is set when the row has been reversed (void).
 	SearchFinanceEntries(ctx context.Context, arg SearchFinanceEntriesParams) ([]SearchFinanceEntriesRow, error)
 	ServiceNoExists(ctx context.Context, serviceNo string) (bool, error)
+	// publish_at is stamped with NOW() when a row is published without one.
+	SetAnnouncementStatus(ctx context.Context, arg SetAnnouncementStatusParams) (Announcement, error)
 	SetAppSettingsLogo(ctx context.Context, logoObjectKey pgtype.Text) (AppSetting, error)
 	SetBarcodeCounter(ctx context.Context, arg SetBarcodeCounterParams) error
 	SetCarBrandHero(ctx context.Context, arg SetCarBrandHeroParams) (CarBrand, error)
@@ -1955,6 +2002,9 @@ type Querier interface {
 	ShipTransferRequest(ctx context.Context, arg ShipTransferRequestParams) (StockTransferRequest, error)
 	ShipWarehouseTransfer(ctx context.Context, arg ShipWarehouseTransferParams) (WarehouseTransfer, error)
 	SlugExists(ctx context.Context, slug string) (bool, error)
+	// Only an empty folder (no live subfolder or item) is removed.
+	SoftDeleteLibraryFolder(ctx context.Context, arg SoftDeleteLibraryFolderParams) (int64, error)
+	SoftDeleteLibraryItem(ctx context.Context, arg SoftDeleteLibraryItemParams) (int64, error)
 	SoftDeleteVehicle(ctx context.Context, id int64) (int64, error)
 	StartIntegrationSyncRun(ctx context.Context, arg StartIntegrationSyncRunParams) (IntegrationSyncRun, error)
 	StartStockCount(ctx context.Context, arg StartStockCountParams) (StockCount, error)
@@ -1990,6 +2040,8 @@ type Querier interface {
 	TopServicedCarBrands(ctx context.Context, arg TopServicedCarBrandsParams) ([]TopServicedCarBrandsRow, error)
 	TopServicedCarModels(ctx context.Context, arg TopServicedCarModelsParams) ([]TopServicedCarModelsRow, error)
 	UnlinkServiceMeasurement(ctx context.Context, arg UnlinkServiceMeasurementParams) (int64, error)
+	// Content and flags of an announcement written by the organization.
+	UpdateAnnouncement(ctx context.Context, arg UpdateAnnouncementParams) (Announcement, error)
 	UpdateAppSettings(ctx context.Context, arg UpdateAppSettingsParams) (AppSetting, error)
 	UpdateAuthSettings(ctx context.Context, arg UpdateAuthSettingsParams) (AuthSetting, error)
 	// Full replacement of the editable fields (read-modify-write in the use case).
@@ -2007,6 +2059,8 @@ type Querier interface {
 	UpdateImportJobPreview(ctx context.Context, arg UpdateImportJobPreviewParams) (ImportJob, error)
 	UpdateIntegrationConnection(ctx context.Context, arg UpdateIntegrationConnectionParams) (IntegrationConnection, error)
 	UpdateLabelTemplate(ctx context.Context, arg UpdateLabelTemplateParams) (LabelTemplate, error)
+	UpdateLibraryFolder(ctx context.Context, arg UpdateLibraryFolderParams) (LibraryFolder, error)
+	UpdateLibraryItem(ctx context.Context, arg UpdateLibraryItemParams) (LibraryItem, error)
 	UpdateLogPurgeRule(ctx context.Context, arg UpdateLogPurgeRuleParams) (LogPurgeRule, error)
 	UpdateMessageStatusByExternalIDs(ctx context.Context, arg UpdateMessageStatusByExternalIDsParams) (int64, error)
 	UpdateMigrationMapChecksum(ctx context.Context, arg UpdateMigrationMapChecksumParams) error
@@ -2073,6 +2127,7 @@ type Querier interface {
 	UpdateWebAuthnCredentialCounter(ctx context.Context, arg UpdateWebAuthnCredentialCounterParams) error
 	UpdateWebAuthnCredentialName(ctx context.Context, arg UpdateWebAuthnCredentialNameParams) (WebauthnCredential, error)
 	UpdateWhatsAppStatus(ctx context.Context, arg UpdateWhatsAppStatusParams) (WhatsappSetting, error)
+	UpsertAnnouncementLocale(ctx context.Context, arg UpsertAnnouncementLocaleParams) (AnnouncementLocale, error)
 	UpsertBinProductStockForRepair(ctx context.Context, arg UpsertBinProductStockForRepairParams) error
 	UpsertConnectionLocationMap(ctx context.Context, arg UpsertConnectionLocationMapParams) (ConnectionLocationMap, error)
 	// ---------------------------------------------------------------------------

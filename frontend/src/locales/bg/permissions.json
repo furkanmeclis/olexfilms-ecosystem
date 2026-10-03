@@ -192,5 +192,11 @@
   "groups.service_subscriptions": "Абонаменти за услуги",
   "labels.measurements.read": "Преглед на измерванията",
   "labels.measurements.link": "Свързване на измервания",
-  "labels.measurement_devices.manage": "Управление на измервателни уреди"
+  "labels.measurement_devices.manage": "Управление на измервателни уреди",
+  "labels.announcements.read": "Четене на съобщения",
+  "labels.announcements.write": "Писане на съобщения",
+  "labels.library.read": "Преглед на библиотеката с документи",
+  "labels.library.manage": "Управление на библиотеката с документи",
+  "groups.announcements": "Съобщения",
+  "groups.library": "Библиотека с документи"
 }

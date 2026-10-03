@@ -192,5 +192,11 @@
   "groups.service_subscriptions": "Подписки на услуги",
   "labels.measurements.read": "Просмотр замеров",
   "labels.measurements.link": "Привязка замеров",
-  "labels.measurement_devices.manage": "Управление измерительными приборами"
+  "labels.measurement_devices.manage": "Управление измерительными приборами",
+  "labels.announcements.read": "Читать объявления",
+  "labels.announcements.write": "Писать объявления",
+  "labels.library.read": "Просматривать библиотеку документов",
+  "labels.library.manage": "Управлять библиотекой документов",
+  "groups.announcements": "Объявления",
+  "groups.library": "Библиотека документов"
 }

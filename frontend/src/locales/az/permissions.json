@@ -192,5 +192,11 @@
   "groups.service_subscriptions": "Xidmət abunəlikləri",
   "labels.measurements.read": "Ölçmələrə baxmaq",
   "labels.measurements.link": "Ölçmələri xidmətə bağlamaq",
-  "labels.measurement_devices.manage": "Ölçmə cihazlarını idarə etmək"
+  "labels.measurement_devices.manage": "Ölçmə cihazlarını idarə etmək",
+  "labels.announcements.read": "Elanları oxu",
+  "labels.announcements.write": "Elan yaz",
+  "labels.library.read": "Sənəd kitabxanasını oxu",
+  "labels.library.manage": "Sənəd kitabxanasını idarə et",
+  "groups.announcements": "Elanlar",
+  "groups.library": "Sənəd kitabxanası"
 }

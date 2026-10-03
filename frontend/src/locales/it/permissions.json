@@ -192,5 +192,11 @@
   "groups.service_subscriptions": "Abbonamenti ai servizi",
   "labels.measurements.read": "Visualizza misurazioni",
   "labels.measurements.link": "Collega misurazioni",
-  "labels.measurement_devices.manage": "Gestisci dispositivi di misura"
+  "labels.measurement_devices.manage": "Gestisci dispositivi di misura",
+  "labels.announcements.read": "Leggere gli annunci",
+  "labels.announcements.write": "Scrivere annunci",
+  "labels.library.read": "Consultare la libreria documenti",
+  "labels.library.manage": "Gestire la libreria documenti",
+  "groups.announcements": "Annunci",
+  "groups.library": "Libreria documenti"
 }

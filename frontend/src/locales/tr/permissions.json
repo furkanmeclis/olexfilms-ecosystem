@@ -192,5 +192,11 @@
   "groups.service_subscriptions": "Hizmet abonelikleri",
   "labels.measurements.read": "Ölçümleri görüntüle",
   "labels.measurements.link": "Ölçümleri hizmete bağla",
-  "labels.measurement_devices.manage": "Ölçüm cihazlarını yönet"
+  "labels.measurement_devices.manage": "Ölçüm cihazlarını yönet",
+  "labels.announcements.read": "Duyuruları oku",
+  "labels.announcements.write": "Duyuru yaz",
+  "labels.library.read": "Doküman kütüphanesini oku",
+  "labels.library.manage": "Doküman kütüphanesini yönet",
+  "groups.announcements": "Duyurular",
+  "groups.library": "Doküman kütüphanesi"
 }

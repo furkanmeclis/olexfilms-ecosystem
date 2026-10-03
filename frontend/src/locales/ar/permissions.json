@@ -192,5 +192,11 @@
   "groups.service_subscriptions": "اشتراكات الخدمات",
   "labels.measurements.read": "عرض القياسات",
   "labels.measurements.link": "ربط القياسات",
-  "labels.measurement_devices.manage": "إدارة أجهزة القياس"
+  "labels.measurement_devices.manage": "إدارة أجهزة القياس",
+  "labels.announcements.read": "قراءة الإعلانات",
+  "labels.announcements.write": "كتابة الإعلانات",
+  "labels.library.read": "تصفح مكتبة المستندات",
+  "labels.library.manage": "إدارة مكتبة المستندات",
+  "groups.announcements": "الإعلانات",
+  "groups.library": "مكتبة المستندات"
 }

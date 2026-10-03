@@ -192,5 +192,11 @@
   "groups.service_subscriptions": "Συνδρομές υπηρεσιών",
   "labels.measurements.read": "Προβολή μετρήσεων",
   "labels.measurements.link": "Σύνδεση μετρήσεων",
-  "labels.measurement_devices.manage": "Διαχείριση συσκευών μέτρησης"
+  "labels.measurement_devices.manage": "Διαχείριση συσκευών μέτρησης",
+  "labels.announcements.read": "Ανάγνωση ανακοινώσεων",
+  "labels.announcements.write": "Σύνταξη ανακοινώσεων",
+  "labels.library.read": "Ανάγνωση βιβλιοθήκης εγγράφων",
+  "labels.library.manage": "Διαχείριση βιβλιοθήκης εγγράφων",
+  "groups.announcements": "Ανακοινώσεις",
+  "groups.library": "Βιβλιοθήκη εγγράφων"
 }

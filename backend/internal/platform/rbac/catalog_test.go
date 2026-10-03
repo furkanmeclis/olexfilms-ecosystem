@@ -441,3 +441,41 @@ func TestServiceCatalogGrants(t *testing.T) {
 		t.Fatalf("center_staff service grants = %v", staff.Grants)
 	}
 }
+
+// TEC-329: every network role reads announcements and the library in its
+// organization; the center writes both for its brand, the distributor
+// owner writes announcements for its subtree only; dealers and portal
+// roles write nothing.
+func TestAnnouncementLibraryGrants(t *testing.T) {
+	for _, r := range Roles {
+		g := RoleGrants(r)
+		switch r.OrgType {
+		case OrgTypeCenter, OrgTypeDistributor, OrgTypeDealer:
+			if g[PermAnnouncementsRead] != ScopeManaged || g[PermLibraryRead] != ScopeManaged {
+				t.Fatalf("%s announcements.read = %q, library.read = %q", r.Slug, g[PermAnnouncementsRead], g[PermLibraryRead])
+			}
+		case OrgTypeCustomer, OrgTypeFleet:
+			if _, ok := g[PermAnnouncementsRead]; ok {
+				t.Fatalf("%s must not read announcements", r.Slug)
+			}
+		}
+		if r.OrgType == OrgTypeDealer || r.OrgType == OrgTypeCustomer || r.OrgType == OrgTypeFleet {
+			if _, ok := g[PermAnnouncementsWrite]; ok {
+				t.Fatalf("%s must not write announcements", r.Slug)
+			}
+		}
+		if r.OrgType != OrgTypeCenter && r.Slug != RoleSuperAdmin {
+			if _, ok := g[PermLibraryManage]; ok {
+				t.Fatalf("%s must not manage the library", r.Slug)
+			}
+		}
+	}
+	staff, _ := RoleBySlug(RoleCenterStaff)
+	if staff.Grants[PermAnnouncementsWrite] != ScopeBrand || staff.Grants[PermLibraryManage] != ScopeBrand {
+		t.Fatalf("center_staff = %v", staff.Grants)
+	}
+	owner, _ := RoleBySlug(RoleDistributorOwner)
+	if owner.Grants[PermAnnouncementsWrite] != ScopeSubtree {
+		t.Fatalf("distributor_owner announcements.write = %q", owner.Grants[PermAnnouncementsWrite])
+	}
+}

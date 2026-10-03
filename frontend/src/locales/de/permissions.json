@@ -192,5 +192,11 @@
   "groups.service_subscriptions": "Dienstleistungsabos",
   "labels.measurements.read": "Messungen anzeigen",
   "labels.measurements.link": "Messungen verknüpfen",
-  "labels.measurement_devices.manage": "Messgeräte verwalten"
+  "labels.measurement_devices.manage": "Messgeräte verwalten",
+  "labels.announcements.read": "Ankündigungen lesen",
+  "labels.announcements.write": "Ankündigungen schreiben",
+  "labels.library.read": "Dokumentenbibliothek lesen",
+  "labels.library.manage": "Dokumentenbibliothek verwalten",
+  "groups.announcements": "Ankündigungen",
+  "groups.library": "Dokumentenbibliothek"
 }

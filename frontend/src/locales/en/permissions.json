@@ -192,5 +192,11 @@
   "groups.service_subscriptions": "Service subscriptions",
   "labels.measurements.read": "Read measurements",
   "labels.measurements.link": "Link measurements",
-  "labels.measurement_devices.manage": "Manage measuring devices"
+  "labels.measurement_devices.manage": "Manage measuring devices",
+  "labels.announcements.read": "Read announcements",
+  "labels.announcements.write": "Write announcements",
+  "labels.library.read": "Read the document library",
+  "labels.library.manage": "Manage the document library",
+  "groups.announcements": "Announcements",
+  "groups.library": "Document library"
 }

@@ -192,5 +192,11 @@
   "groups.service_subscriptions": "Підписки на послуги",
   "labels.measurements.read": "Перегляд вимірювань",
   "labels.measurements.link": "Прив'язка вимірювань",
-  "labels.measurement_devices.manage": "Керування вимірювальними приладами"
+  "labels.measurement_devices.manage": "Керування вимірювальними приладами",
+  "labels.announcements.read": "Читати оголошення",
+  "labels.announcements.write": "Писати оголошення",
+  "labels.library.read": "Переглядати бібліотеку документів",
+  "labels.library.manage": "Керувати бібліотекою документів",
+  "groups.announcements": "Оголошення",
+  "groups.library": "Бібліотека документів"
 }
