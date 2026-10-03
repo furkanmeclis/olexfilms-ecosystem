@@ -105,6 +105,8 @@ export const Permission = {
   PlatformModulesWrite: "platform.modules.write",
 
   WhatsAppManage: "whatsapp.manage",
+  IntegrationsGlorianView: "integrations.glorian.view",
+  IntegrationsGlorianManage: "integrations.glorian.manage",
 
   NotificationTemplatesManage: "notifications.templates.manage",
   NotificationDeliveriesRead: "notification_deliveries.read",
@@ -290,6 +292,10 @@ export const permissions = {
     },
     whatsapp: {
       manage: Permission.WhatsAppManage,
+    },
+    glorian: {
+      view: Permission.IntegrationsGlorianView,
+      manage: Permission.IntegrationsGlorianManage,
     },
   },
   legalTexts: {

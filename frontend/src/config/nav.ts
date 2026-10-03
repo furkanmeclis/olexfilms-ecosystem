@@ -235,6 +235,13 @@ export const platformNav = defineNav({
           permission: permissions.integrations.whatsapp.manage,
         },
         {
+          id: "glorian-integration",
+          titleKey: "layout.nav_glorian_integration",
+          href: routes.platform.integrations.glorian,
+          icon: Warehouse,
+          permission: permissions.integrations.glorian.view,
+        },
+        {
           id: "legal-texts",
           titleKey: "layout.nav_legal_texts",
           href: routes.platform.legalTexts,

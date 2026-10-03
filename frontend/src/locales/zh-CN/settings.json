@@ -113,5 +113,6 @@
   "coordinates.marker": "已选位置",
   "coordinates.errors.latitude": "纬度必须是 -90 到 90 之间的数字。",
   "coordinates.errors.longitude": "经度必须是 -180 到 180 之间的数字。",
-  "coordinates.errors.pair": "请同时填写纬度和经度，或两者都留空。"
+  "coordinates.errors.pair": "请同时填写纬度和经度，或两者都留空。",
+  "system.hub.glorian": "Glorian 中心连接、同步运行和差异报告。"
 }
