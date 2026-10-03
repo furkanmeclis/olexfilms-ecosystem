@@ -354,13 +354,6 @@ func (h *MobileHandler) QRComplete(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, out)
 }
 
-// CreateMeasurement is POST /v1/mobile/measurements: contract only (K28);
-// the schema is finalized in F3, until then the route answers 501.
-func (h *MobileHandler) CreateMeasurement(w http.ResponseWriter, r *http.Request) {
-	response.Error(w, r, http.StatusNotImplemented, response.CodeNotImplemented,
-		"Measurement upload is not available yet (F3)")
-}
-
 func writeRetryAfter(w http.ResponseWriter, r *http.Request, ok bool, retry time.Duration) bool {
 	if ok {
 		return false

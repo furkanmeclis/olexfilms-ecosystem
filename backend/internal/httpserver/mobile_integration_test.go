@@ -232,11 +232,6 @@ func TestIntegrationMobileAuth(t *testing.T) {
 		t.Fatalf("older device session = %d", code)
 	}
 
-	// Measurement contract: 501 until F3.
-	if code, env, _ := it.doMobile("POST", "/v1/mobile/measurements", second.AccessToken, "1", map[string]any{"vin": "X"}); code != http.StatusNotImplemented {
-		t.Fatalf("measurements = %d %s", code, errCode(env))
-	}
-
 	// Logout-all ends web and mobile sessions.
 	if code, env, _ := it.doMobile("POST", "/v1/mobile/auth/logout-all", second.AccessToken, "1", nil); code != http.StatusOK {
 		t.Fatalf("logout-all = %d %s", code, errCode(env))
