@@ -86,6 +86,32 @@ type Options struct {
 	// Steps limits the run to these step names (profile order kept).
 	Steps  []string
 	DryRun bool
+	// Overlap is subtracted from the watermark in delta mode; zero means
+	// DefaultDeltaOverlap, a negative value none.
+	Overlap time.Duration
+}
+
+// DefaultDeltaOverlap is the safety overlap a delta run reads before a
+// step's last watermark (TEC-264): rows the legacy side wrote while the
+// previous run was reading, or stamped with a clock slightly behind, are read
+// again. The steps are idempotent (migration_map + checksum), so re-reading
+// an unchanged row writes nothing.
+const DefaultDeltaOverlap = 10 * time.Minute
+
+// DeltaSince is the lower bound a delta step reads from: the last watermark
+// minus the overlap (zero: DefaultDeltaOverlap, negative: none). A zero
+// watermark (the step never ran) stays zero, which means a full read.
+func DeltaSince(watermark time.Time, overlap time.Duration) time.Time {
+	if watermark.IsZero() {
+		return time.Time{}
+	}
+	switch {
+	case overlap == 0:
+		overlap = DefaultDeltaOverlap
+	case overlap < 0:
+		overlap = 0
+	}
+	return watermark.Add(-overlap)
 }
 
 // OpenFunc opens a legacy source by name.
@@ -245,14 +271,15 @@ func (r *Runner) runStep(ctx context.Context, q *db.Queries, run db.MigrationRun
 	}
 	sr.RunID = row.ID
 
-	var since time.Time
+	var prev, since time.Time
 	if opts.Mode == ModeDelta {
 		wm, err := q.LastMigrationWatermark(ctx, db.LastMigrationWatermarkParams{
 			Profile: profile, Step: pgtype.Text{String: name, Valid: true},
 		})
 		switch {
 		case err == nil && wm.Valid:
-			since = wm.Time
+			prev = wm.Time
+			since = DeltaSince(prev, opts.Overlap)
 		case err != nil && !errors.Is(err, pgx.ErrNoRows):
 			return r.failStep(ctx, q, sr, fmt.Errorf("migrator: read watermark %s: %w", name, err))
 		}
@@ -262,6 +289,11 @@ func (r *Runner) runStep(ctx context.Context, q *db.Queries, run db.MigrationRun
 	if err != nil {
 		sr.Counts = res.Counts
 		return r.failStep(ctx, q, sr, fmt.Errorf("migrator: step %s: %w", name, err))
+	}
+	// The watermark never moves back: a delta run that saw nothing newer
+	// (only the overlap, or no row at all) keeps the previous one.
+	if res.Watermark.Before(prev) {
+		res.Watermark = prev
 	}
 	sr.Status, sr.Counts, sr.Watermark = StatusSucceeded, res.Counts, res.Watermark
 	if _, err := finish(ctx, q, row.ID, StatusSucceeded, res.Counts, res.Watermark, nil); err != nil {
