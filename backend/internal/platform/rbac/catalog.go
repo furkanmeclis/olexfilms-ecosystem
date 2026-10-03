@@ -387,6 +387,26 @@ var Permissions = []PermissionDef{
 		Slug: PermMeasurementsWrite, Name: "Upload measurements", Module: "measurements", Scopes: scopesOrg,
 		Description: "Upload paint thickness measurements from the mobile app into the active organization (K28).",
 	},
+
+	// TEC-285: contracts (F3-01). Appended last; migration 000083 seeds
+	// them. Templates and void are center-only, so their scopes start at
+	// brand; read and write follow services.read / services.write.
+	{
+		Slug: PermContractsTemplatesManage, Name: "Manage contract templates", Module: "contracts", Scopes: scopesSupplier,
+		Description: "Create and edit contract templates, their locale texts and the default template per kind (center only).",
+	},
+	{
+		Slug: PermContractsRead, Name: "Read contracts", Module: "contracts", Scopes: scopesRecords,
+		Description: "Vehicle intake and service sale contracts with their signers, signatures and media.",
+	},
+	{
+		Slug: PermContractsWrite, Name: "Write contracts", Module: "contracts", Scopes: scopesRecordsInt,
+		Description: "Create contracts for services, attach media, collect OTP and signatures and execute them.",
+	},
+	{
+		Slug: PermContractsVoid, Name: "Void contracts", Module: "contracts", Scopes: scopesSupplier,
+		Description: "Void a contract, also an executed one, with a reason (center only).",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -477,6 +497,11 @@ var Roles = []RoleDef{
 			PermTransfersApprove: ScopeBrand,
 			// TEC-233 (000076).
 			PermMeasurementsWrite: ScopeManaged,
+			// TEC-285 (000083).
+			PermContractsTemplatesManage: ScopeBrand,
+			PermContractsRead:            ScopeBrand,
+			PermContractsWrite:           ScopeBrand,
+			PermContractsVoid:            ScopeBrand,
 		}),
 	},
 	{
@@ -596,6 +621,9 @@ var Roles = []RoleDef{
 			PermTransfersRequest: ScopeManaged,
 			// TEC-233 (000076).
 			PermMeasurementsWrite: ScopeManaged,
+			// TEC-285 (000083).
+			PermContractsRead:  ScopeSubtree,
+			PermContractsWrite: ScopeSubtree,
 		}),
 	},
 	{
@@ -615,6 +643,8 @@ var Roles = []RoleDef{
 			PermWarrantiesRead:     ScopeSubtree,
 			PermVehiclesTransfer:   ScopeSubtree,
 			PermMeasurementsWrite:  ScopeManaged, // TEC-233 (000076)
+			PermContractsRead:      ScopeSubtree, // TEC-285 (000083)
+			PermContractsWrite:     ScopeSubtree,
 		}),
 	},
 	{
@@ -689,6 +719,9 @@ var Roles = []RoleDef{
 			PermVehiclesTransfer: ScopeManaged,
 			// TEC-233 (000076).
 			PermMeasurementsWrite: ScopeManaged,
+			// TEC-285 (000083).
+			PermContractsRead:  ScopeManaged,
+			PermContractsWrite: ScopeManaged,
 		}),
 	},
 	{
@@ -709,6 +742,8 @@ var Roles = []RoleDef{
 			PermWarrantiesRead:     ScopeManaged,
 			PermVehiclesTransfer:   ScopeOwn,
 			PermMeasurementsWrite:  ScopeManaged, // TEC-233 (000076)
+			PermContractsRead:      ScopeManaged, // TEC-285 (000083)
+			PermContractsWrite:     ScopeOwn,
 		}),
 	},
 	{

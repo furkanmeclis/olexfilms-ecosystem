@@ -176,5 +176,10 @@
   "labels.integrations.glorian.manage": "Glorian entegrasyonunu yönet",
   "groups.integrations": "Entegrasyonlar",
   "labels.measurements.write": "Ölçüm yükle",
-  "groups.measurements": "Ölçümler"
+  "groups.measurements": "Ölçümler",
+  "labels.contracts.templates.manage": "Sözleşme şablonlarını yönet",
+  "labels.contracts.read": "Sözleşmeleri görüntüle",
+  "labels.contracts.write": "Sözleşme düzenle",
+  "labels.contracts.void": "Sözleşmeleri iptal et",
+  "groups.contracts": "Sözleşmeler"
 }
