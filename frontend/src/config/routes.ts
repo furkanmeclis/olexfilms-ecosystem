@@ -200,6 +200,10 @@ export const routes = {
       root: "/platform/vehicle-catalog",
       brand: (uuid: string) => `/platform/vehicle-catalog/${uuid}`,
     },
+    /** TEC-222: system settings hub (TEC-215 key/value store + topic links). */
+    systemSettings: {
+      root: "/platform/system-settings",
+    },
     profile: {
       root: "/platform/profile",
       password: "/platform/profile/password",
