@@ -1853,6 +1853,8 @@ type User struct {
 	PhoneE164        pgtype.Text        `json:"phone_e164"`
 	PhoneVerifiedAt  pgtype.Timestamptz `json:"phone_verified_at"`
 	MergedIntoUserID pgtype.Int8        `json:"merged_into_user_id"`
+	LegacyUnverified bool               `json:"legacy_unverified"`
+	LegacyPhoneRaw   pgtype.Text        `json:"legacy_phone_raw"`
 }
 
 type UserRole struct {

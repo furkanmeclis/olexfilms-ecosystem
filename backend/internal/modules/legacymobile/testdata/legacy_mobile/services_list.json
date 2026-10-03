@@ -1,0 +1,15 @@
+{
+  "name": "services_list",
+  "method": "GET",
+  "path": "/v1/mobile/legacy/services",
+  "adapts": "GET /v1/services",
+  "source": "New services contract (docs/openapi.yaml, TEC-179). Scope: services.read of the active organization. Old shape to be confirmed (TEC-234 comment).",
+  "request": {
+    "headers": {"Authorization": "Bearer {{access_token}}"},
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "data_keys": ["items", "total", "limit", "offset"]
+  }
+}

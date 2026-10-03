@@ -13,7 +13,8 @@
 //	                        (user:pass@tcp(host:3306)/dbname); a postgres://
 //	                        DSN reads the legacy_hub fixture schema instead
 //	LEGACY_WH_DSN           legacy warehouse, same format (legacy_wh schema)
-//	LEGACY_HUB_STORAGE_DIR  legacy hub storage directory (media copy steps)
+//	LEGACY_HUB_STORAGE_DIR  legacy hub storage directory (media copy steps:
+//	                        brand logos go to the STORAGE_* object store)
 //
 // The legacy DSNs are only needed when a run has steps.
 package main
@@ -25,6 +26,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -39,6 +41,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/migrator"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/migrator/source"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 )
 
 const usage = `usage:
@@ -103,10 +106,17 @@ func cmdRun(ctx context.Context, args []string, out io.Writer) error {
 	}
 	defer closePool()
 
+	files, store, err := openMedia(ctx)
+	if err != nil {
+		return err
+	}
+
 	r := &migrator.Runner{
-		Pool: pool,
-		Open: openLegacy,
-		Log:  slog.New(slog.NewJSONHandler(os.Stderr, nil)),
+		Pool:        pool,
+		Open:        openLegacy,
+		Log:         slog.New(slog.NewJSONHandler(os.Stderr, nil)),
+		Storage:     store,
+		LegacyFiles: files,
 	}
 	var only []string
 	if *steps != "" {
@@ -204,6 +214,33 @@ func openLegacy(ctx context.Context, name string) (source.LegacySource, error) {
 		return source.OpenPostgres(ctx, name, dsn, source.FixtureSchemas[name])
 	}
 	return source.OpenMariaDB(ctx, name, dsn)
+}
+
+// openMedia returns the legacy hub storage directory and the object store
+// the media steps copy into (TEC-256). Both stay nil when
+// LEGACY_HUB_STORAGE_DIR is unset; the steps then report the media they
+// could not copy.
+func openMedia(ctx context.Context) (fs.FS, storage.Driver, error) {
+	dir := strings.TrimSpace(os.Getenv("LEGACY_HUB_STORAGE_DIR"))
+	if dir == "" {
+		return nil, nil, nil
+	}
+	st, err := os.Stat(dir)
+	if err != nil {
+		return nil, nil, fmt.Errorf("LEGACY_HUB_STORAGE_DIR: %w", err)
+	}
+	if !st.IsDir() {
+		return nil, nil, fmt.Errorf("LEGACY_HUB_STORAGE_DIR %q is not a directory", dir)
+	}
+	cfg, err := config.Load()
+	if err != nil {
+		return nil, nil, fmt.Errorf("config: %w", err)
+	}
+	store, err := storage.NewFromConfig(ctx, cfg.Storage)
+	if err != nil {
+		return nil, nil, fmt.Errorf("storage: %w", err)
+	}
+	return os.DirFS(dir), store, nil
 }
 
 func envOr(key, def string) string {

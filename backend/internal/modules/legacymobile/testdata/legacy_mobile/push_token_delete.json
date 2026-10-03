@@ -1,0 +1,15 @@
+{
+  "name": "push_token_delete",
+  "method": "DELETE",
+  "path": "/v1/mobile/legacy/push-token",
+  "adapts": "DELETE /v1/mobile/push-token",
+  "source": "New mobile contract (docs/openapi.yaml, TEC-91).",
+  "request": {
+    "headers": {"Authorization": "Bearer {{access_token}}"},
+    "body": {"expo_push_token": "{{expo_push_token}}"}
+  },
+  "response": {
+    "status": 200,
+    "data_keys": ["status"]
+  }
+}

@@ -1,6 +1,7 @@
 package handler
 
 // TEC-190 (F1-06f): vehicle transfer endpoints (vehicles.transfer).
+// TEC-243 (F2-03d): the same flow from the customer portal.
 
 import (
 	"context"
@@ -12,7 +13,10 @@ import (
 	cu "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/customers/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
+	"github.com/google/uuid"
 )
 
 // Transfer error codes.
@@ -77,11 +81,35 @@ func actorKey(r *http.Request) string {
 
 // ListVehicleTransfers (GET /v1/vehicles/{uuid}/transfers).
 func (h *Handler) ListVehicleTransfers(w http.ResponseWriter, r *http.Request) {
+	h.listTransfers(w, r, caller(r))
+}
+
+// StartVehicleTransfer (POST /v1/vehicles/{uuid}/transfers): opens a
+// transfer and sends one code to the current and one to the new owner.
+func (h *Handler) StartVehicleTransfer(w http.ResponseWriter, r *http.Request) {
+	h.startTransfer(w, r, caller(r), h.svc.StartTransfer)
+}
+
+// VerifyVehicleTransfer (POST /v1/vehicle-transfers/{uuid}/verify): checks
+// the codes; when both sides are verified the transfer completes.
+func (h *Handler) VerifyVehicleTransfer(w http.ResponseWriter, r *http.Request) {
+	h.verifyTransfer(w, r, caller(r))
+}
+
+// CancelVehicleTransfer (POST /v1/vehicle-transfers/{uuid}/cancel).
+func (h *Handler) CancelVehicleTransfer(w http.ResponseWriter, r *http.Request) {
+	h.cancelTransfer(w, r, caller(r))
+}
+
+type startTransferFunc func(ctx context.Context, c cu.Caller, vehicleID uuid.UUID, in cu.StartTransferInput,
+	meta activity.Meta) (cu.VehicleTransferView, error)
+
+func (h *Handler) listTransfers(w http.ResponseWriter, r *http.Request, c cu.Caller) {
 	id, ok := pathUUID(w, r, "uuid")
 	if !ok {
 		return
 	}
-	items, err := h.svc.ListVehicleTransfers(r.Context(), caller(r), id)
+	items, err := h.svc.ListVehicleTransfers(r.Context(), c, id)
 	if err != nil {
 		writeTransferError(w, r, err)
 		return
@@ -89,9 +117,7 @@ func (h *Handler) ListVehicleTransfers(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, map[string]any{"items": items})
 }
 
-// StartVehicleTransfer (POST /v1/vehicles/{uuid}/transfers): opens a
-// transfer and sends one code to the current and one to the new owner.
-func (h *Handler) StartVehicleTransfer(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) startTransfer(w http.ResponseWriter, r *http.Request, c cu.Caller, start startTransferFunc) {
 	id, ok := pathUUID(w, r, "uuid")
 	if !ok {
 		return
@@ -103,7 +129,7 @@ func (h *Handler) StartVehicleTransfer(w http.ResponseWriter, r *http.Request) {
 	if !h.allow(w, r, transferStartAction, actorKey(r), transferStartLimit, transferStartWindow) {
 		return
 	}
-	out, err := h.svc.StartTransfer(r.Context(), caller(r), id, in, activity.MetaFromRequest(r))
+	out, err := start(r.Context(), c, id, in, activity.MetaFromRequest(r))
 	if err != nil {
 		writeTransferError(w, r, err)
 		return
@@ -111,9 +137,7 @@ func (h *Handler) StartVehicleTransfer(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusCreated, out)
 }
 
-// VerifyVehicleTransfer (POST /v1/vehicle-transfers/{uuid}/verify): checks
-// the codes; when both sides are verified the transfer completes.
-func (h *Handler) VerifyVehicleTransfer(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) verifyTransfer(w http.ResponseWriter, r *http.Request, c cu.Caller) {
 	id, ok := pathUUID(w, r, "uuid")
 	if !ok {
 		return
@@ -125,7 +149,7 @@ func (h *Handler) VerifyVehicleTransfer(w http.ResponseWriter, r *http.Request) 
 	if !h.allow(w, r, transferVerifyAction, id.String()+"|"+actorKey(r), transferVerifyLimit, transferVerifyWindow) {
 		return
 	}
-	out, err := h.svc.VerifyTransfer(r.Context(), caller(r), id, in, activity.MetaFromRequest(r))
+	out, err := h.svc.VerifyTransfer(r.Context(), c, id, in, activity.MetaFromRequest(r))
 	if err != nil {
 		writeTransferError(w, r, err)
 		return
@@ -133,18 +157,49 @@ func (h *Handler) VerifyVehicleTransfer(w http.ResponseWriter, r *http.Request) 
 	response.JSON(w, r, http.StatusOK, out)
 }
 
-// CancelVehicleTransfer (POST /v1/vehicle-transfers/{uuid}/cancel).
-func (h *Handler) CancelVehicleTransfer(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) cancelTransfer(w http.ResponseWriter, r *http.Request, c cu.Caller) {
 	id, ok := pathUUID(w, r, "uuid")
 	if !ok {
 		return
 	}
-	out, err := h.svc.CancelTransfer(r.Context(), caller(r), id, activity.MetaFromRequest(r))
+	out, err := h.svc.CancelTransfer(r.Context(), c, id, activity.MetaFromRequest(r))
 	if err != nil {
 		writeTransferError(w, r, err)
 		return
 	}
 	response.JSON(w, r, http.StatusOK, out)
+}
+
+// --- Portal (TEC-243): the owner's own vehicles and transfers -------------
+
+// portalCaller is the portal session: the domain brand and the signed-in
+// user; the use case limits it to the user's own vehicles.
+func portalCaller(r *http.Request) cu.Caller {
+	var brandID int64
+	if b, ok := brandctx.From(r.Context()); ok {
+		brandID = b.ID
+	}
+	return cu.PortalCaller(brandID, authctx.MustPrincipal(r.Context()).UserInternal, i18n.FromContext(r.Context()).Locale)
+}
+
+// PortalListVehicleTransfers (GET /v1/portal/vehicles/{uuid}/transfers).
+func (h *Handler) PortalListVehicleTransfers(w http.ResponseWriter, r *http.Request) {
+	h.listTransfers(w, r, portalCaller(r))
+}
+
+// PortalStartVehicleTransfer (POST /v1/portal/vehicles/{uuid}/transfers).
+func (h *Handler) PortalStartVehicleTransfer(w http.ResponseWriter, r *http.Request) {
+	h.startTransfer(w, r, portalCaller(r), h.svc.PortalStartTransfer)
+}
+
+// PortalVerifyVehicleTransfer (POST /v1/portal/vehicle-transfers/{uuid}/verify).
+func (h *Handler) PortalVerifyVehicleTransfer(w http.ResponseWriter, r *http.Request) {
+	h.verifyTransfer(w, r, portalCaller(r))
+}
+
+// PortalCancelVehicleTransfer (POST /v1/portal/vehicle-transfers/{uuid}/cancel).
+func (h *Handler) PortalCancelVehicleTransfer(w http.ResponseWriter, r *http.Request) {
+	h.cancelTransfer(w, r, portalCaller(r))
 }
 
 func writeTransferError(w http.ResponseWriter, r *http.Request, err error) {

@@ -21,7 +21,7 @@ SET merged_into_user_id = $1,
     email               = $4::text,
     email_verified_at   = CASE WHEN $4::text IS DISTINCT FROM email THEN NULL ELSE email_verified_at END
 WHERE id = $5 AND merged_into_user_id IS NULL
-RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, timezone, phone_e164, phone_verified_at, merged_into_user_id
+RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, timezone, phone_e164, phone_verified_at, merged_into_user_id, legacy_unverified, legacy_phone_raw
 `
 
 type CloseMergedUserParams struct {
@@ -63,6 +63,8 @@ func (q *Queries) CloseMergedUser(ctx context.Context, arg CloseMergedUserParams
 		&i.PhoneE164,
 		&i.PhoneVerifiedAt,
 		&i.MergedIntoUserID,
+		&i.LegacyUnverified,
+		&i.LegacyPhoneRaw,
 	)
 	return i, err
 }
@@ -179,7 +181,7 @@ func (q *Queries) FillCustomerProfileFromSource(ctx context.Context, arg FillCus
 
 const lockUsersForMerge = `-- name: LockUsersForMerge :many
 
-SELECT id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, timezone, phone_e164, phone_verified_at, merged_into_user_id FROM users
+SELECT id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, timezone, phone_e164, phone_verified_at, merged_into_user_id, legacy_unverified, legacy_phone_raw FROM users
 WHERE id = ANY ($1::bigint[]) AND deleted_at IS NULL
 ORDER BY id
 FOR UPDATE
@@ -218,6 +220,8 @@ func (q *Queries) LockUsersForMerge(ctx context.Context, ids []int64) ([]User, e
 			&i.PhoneE164,
 			&i.PhoneVerifiedAt,
 			&i.MergedIntoUserID,
+			&i.LegacyUnverified,
+			&i.LegacyPhoneRaw,
 		); err != nil {
 			return nil, err
 		}

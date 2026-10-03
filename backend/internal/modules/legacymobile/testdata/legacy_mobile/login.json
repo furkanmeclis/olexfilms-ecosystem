@@ -1,0 +1,20 @@
+{
+  "name": "login",
+  "method": "POST",
+  "path": "/v1/mobile/legacy/auth/login",
+  "adapts": "POST /v1/mobile/auth/login",
+  "source": "New mobile contract (docs/openapi.yaml, TEC-91). The old hub docs/mobile-api.md was not reachable; old field names to be confirmed (TEC-234 comment).",
+  "request": {
+    "headers": {},
+    "body": {
+      "email": "{{email}}",
+      "password": "{{password}}",
+      "organization_slug": "{{organization_slug}}",
+      "device": {"id": "{{device_id}}", "name": "Legacy Phone", "platform": "android", "app_version": "1.9.0"}
+    }
+  },
+  "response": {
+    "status": 200,
+    "data_keys": ["access_token", "refresh_token", "token_type", "expires_in", "refresh_expires_at", "me"]
+  }
+}

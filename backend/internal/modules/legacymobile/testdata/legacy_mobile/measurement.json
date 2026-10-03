@@ -1,0 +1,22 @@
+{
+  "name": "measurement",
+  "method": "POST",
+  "path": "/v1/mobile/legacy/measurements",
+  "adapts": "POST /v1/mobile/measurements",
+  "source": "New measurement contract (docs/openapi.yaml, TEC-233, K28). Old NexPTG upload shape to be confirmed (TEC-234 comment).",
+  "request": {
+    "headers": {"Authorization": "Bearer {{access_token}}", "Idempotency-Key": "{{idempotency_key}}"},
+    "body": {
+      "client_measurement_id": "{{idempotency_key}}",
+      "service_uuid": "{{service_uuid}}",
+      "vin": "WVWZZZ1JZXW000001",
+      "measured_at": "2026-10-01T09:30:00Z",
+      "device": {"serial": "NX-LEGACY-1"},
+      "raw": {"device": "NexPTG", "parts": [{"part": "hood", "values": [98, 102, 101]}]}
+    }
+  },
+  "response": {
+    "status": 202,
+    "data_keys": ["uuid", "status"]
+  }
+}
