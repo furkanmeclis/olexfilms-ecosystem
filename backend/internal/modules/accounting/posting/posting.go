@@ -399,8 +399,9 @@ type conversion struct {
 }
 
 // conversion returns the rate from the original currency to the ledger
-// currency: identity, the caller's frozen snapshot when its pair matches,
-// otherwise ResolveRate on the frozen day.
+// currency: identity, the caller's frozen snapshot (or one of its frozen
+// Pairs) when the pair matches, otherwise ResolveRate on the frozen day.
+// Orders approved before TEC-226 have no Pairs and keep the day lookup.
 func (p *Poster) conversion(ctx context.Context, from, to string, e Entry) (conversion, error) {
 	day := e.RateDate
 	if day.IsZero() {
@@ -410,8 +411,10 @@ func (p *Poster) conversion(ctx context.Context, from, to string, e Entry) (conv
 	if from == to {
 		return conversion{rate: big.NewRat(1, 1), day: day}, nil
 	}
-	snap := e.Rate
-	if snap == nil || snap.Base != from || snap.Quote != to {
+	var snap *fxrates.Snapshot
+	if frozen, ok := e.Rate.Find(from, to); ok {
+		snap = &frozen
+	} else {
 		if p.rates == nil {
 			return conversion{}, fmt.Errorf("posting: no rate resolver for %s/%s", from, to)
 		}

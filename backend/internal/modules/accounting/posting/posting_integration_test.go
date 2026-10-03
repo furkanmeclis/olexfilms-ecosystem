@@ -241,6 +241,22 @@ func TestHierarchicalSale_EURToUAH(t *testing.T) {
 	}
 }
 
+// TEC-226 (K7): when the order froze the buyer's pair at approval, the
+// buyer's book uses that value, not the day's rate in exchange_rates (which
+// a same-day manual override could have changed).
+func TestHierarchicalSale_FrozenPairWinsOverDayRate(t *testing.T) {
+	e := newEnv(t)
+	s := e.sale(newSource())
+	s.RateSnapshot.Pairs = []fxrates.Snapshot{
+		{Base: "EUR", Quote: "UAH", Rate: "50", RateDate: "2001-03-05", Source: "manual"},
+	}
+	b := e.postSale(t, s).Buyer.Entry
+	if posting.FormatRate(b.Rate) != "50.00000000" || b.RateDate.Time.Format(time.DateOnly) != "2001-03-05" {
+		t.Fatalf("buyer rate %s on %s, want the frozen 50 on 2001-03-05",
+			posting.FormatRate(b.Rate), b.RateDate.Time.Format(time.DateOnly))
+	}
+}
+
 func TestHierarchicalSale_SecondCallWritesNothing(t *testing.T) {
 	e := newEnv(t)
 	src := newSource()

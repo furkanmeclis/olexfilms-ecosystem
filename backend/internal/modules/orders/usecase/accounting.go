@@ -7,9 +7,9 @@ package usecase
 // (posting.PostHierarchicalSaleTx, K9), inside the received transaction.
 // The rows are keyed by the order (source "order"/orders.uuid), so a retry
 // or a repeated receipt writes nothing. The rate is the one frozen at
-// approval (orders.rate_snapshot, order currency -> TRY); when its pair does
-// not match an organization's currency the poster resolves the rate of the
-// same day (fxrates.ResolveRate).
+// approval (orders.rate_snapshot: order currency -> TRY plus, since TEC-226,
+// the order currency -> each party's ledger currency in Pairs). Only orders
+// approved before TEC-226 fall back to resolving the same day's rate.
 //
 // The reversal (VoidOrder) is ready for the return flow: a received order
 // cannot be cancelled (TEC-168), so nothing calls it yet.

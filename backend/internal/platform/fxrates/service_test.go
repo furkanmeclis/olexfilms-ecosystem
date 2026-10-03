@@ -228,3 +228,23 @@ func TestFetchLatestStoresAndReports(t *testing.T) {
 		t.Fatalf("rows = %d", len(store.rows))
 	}
 }
+
+// TEC-226: Find matches the snapshot itself or one of its frozen pairs.
+func TestSnapshotFind(t *testing.T) {
+	t.Parallel()
+	s := &Snapshot{Base: "EUR", Quote: "TRY", Rate: "35", RateDate: "2026-10-03", Source: "tcmb",
+		Pairs: []Snapshot{{Base: "EUR", Quote: "UAH", Rate: "45", RateDate: "2026-10-03", Source: "tcmb"}}}
+	if got, ok := s.Find("EUR", "TRY"); !ok || got.Rate != "35" || got.Pairs != nil {
+		t.Fatalf("top-level: %+v %v", got, ok)
+	}
+	if got, ok := s.Find("EUR", "UAH"); !ok || got.Rate != "45" {
+		t.Fatalf("pair: %+v %v", got, ok)
+	}
+	if _, ok := s.Find("USD", "TRY"); ok {
+		t.Fatal("unexpected match")
+	}
+	var nilSnap *Snapshot
+	if _, ok := nilSnap.Find("EUR", "TRY"); ok {
+		t.Fatal("nil snapshot matched")
+	}
+}

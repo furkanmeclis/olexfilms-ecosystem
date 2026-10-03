@@ -597,6 +597,28 @@ func (s *Service) approve(ctx context.Context, q *db.Queries, c Caller, o db.Ord
 	if err != nil {
 		return o, nil, fmt.Errorf("orders: rate: %w", err)
 	}
+	// K7 (TEC-226): freeze the rate value, not only the day. Next to the
+	// order currency -> TRY rate, the rates to each party's ledger currency
+	// are resolved now and kept in the snapshot, so a later same-day manual
+	// override cannot change what the books get on receipt.
+	seller, err := q.GetOrganizationByID(ctx, o.SellerOrgID)
+	if err != nil {
+		return o, nil, fmt.Errorf("orders: seller: %w", err)
+	}
+	for _, cur := range []string{seller.Currency, buyer.Currency} {
+		if _, ok := snap.Find(o.Currency, cur); ok || cur == "" || cur == o.Currency {
+			continue
+		}
+		pair, err := s.rates.ResolveRate(ctx, s.now(), o.Currency, cur)
+		if errors.Is(err, fxrates.ErrRateNotFound) {
+			return o, nil, ErrRateNotFound
+		}
+		if err != nil {
+			return o, nil, fmt.Errorf("orders: rate %s/%s: %w", o.Currency, cur, err)
+		}
+		pair.Pairs = nil
+		snap.Pairs = append(snap.Pairs, pair)
+	}
 	raw, err := json.Marshal(snap)
 	if err != nil {
 		return o, nil, fmt.Errorf("orders: snapshot: %w", err)

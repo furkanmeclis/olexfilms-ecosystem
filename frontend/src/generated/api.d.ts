@@ -12861,6 +12861,16 @@ export interface components {
             source: string;
             /** @description Pivot currency of a cross rate */
             via?: string;
+            /** @description Extra rates frozen at the same moment, from the order currency to each party's ledger currency (K7, TEC-226). Missing on orders approved before TEC-226. */
+            pairs?: {
+                base: string;
+                quote: string;
+                rate: string;
+                /** Format: date */
+                rate_date: string;
+                source: string;
+                via?: string;
+            }[];
         };
         Order: {
             /** Format: uuid */
