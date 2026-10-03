@@ -61,6 +61,9 @@ func olexSteps() []Step {
 		// TEC-258: legacy stock movements -> ledger opening, projection
 		// rebuild.
 		LedgerStep{},
+
+		// TEC-259: services, items, images and status logs.
+		ServicesStep{},
 	}
 }
 
