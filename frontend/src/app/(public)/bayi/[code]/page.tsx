@@ -4,6 +4,7 @@ import { cache } from "react";
 
 import { i18nConfig, localeDir, normalizeLocale } from "@/config/i18n";
 import { routes } from "@/config/routes";
+import { site } from "@/config/site";
 import { DealerShowcaseView } from "@/features/dealers/components/dealer-showcase-view";
 import {
   dealerLocality,
@@ -95,7 +96,9 @@ export async function generateMetadata({
       description,
       locale,
       url: routes.public.dealer(dealer.code),
-      images: logo ? [{ url: logo, alt: dealer.name }] : undefined,
+      images: logo
+        ? [{ url: logo, alt: dealer.name }]
+        : [{ ...site.ogImage, alt: dealer.name }],
     },
     twitter: { card: "summary", title: dealer.name, description },
   };
