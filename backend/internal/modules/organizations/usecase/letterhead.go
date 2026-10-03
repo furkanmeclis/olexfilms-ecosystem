@@ -31,6 +31,9 @@ type TenantSettings struct {
 	FooterText   string  `json:"footer_text"`
 	PaperSize    string  `json:"paper_size"`
 	LogoURL      *string `json:"logo_url,omitempty"`
+	// TEC-240: map position (both null when unset).
+	Latitude  *float64 `json:"latitude"`
+	Longitude *float64 `json:"longitude"`
 }
 
 // LetterheadPatch is a partial update of organization export branding.
@@ -46,6 +49,9 @@ type LetterheadPatch struct {
 	Website      *string `json:"website"`
 	FooterText   *string `json:"footer_text"`
 	PaperSize    *string `json:"paper_size"`
+	// TEC-240: both together, or both null to clear.
+	Latitude  OptionalCoordinate `json:"latitude"`
+	Longitude OptionalCoordinate `json:"longitude"`
 }
 
 func mapTenantSettings(row db.Organization) TenantSettings {
@@ -70,6 +76,8 @@ func mapTenantSettings(row db.Organization) TenantSettings {
 		FooterText:   row.FooterText,
 		PaperSize:    paper,
 		LogoURL:      logoURL(row.Uuid, row.LogoObjectKey),
+		Latitude:     numericFloat(row.Latitude),
+		Longitude:    numericFloat(row.Longitude),
 	}
 }
 
@@ -87,6 +95,10 @@ func (s *Service) GetTenantSettings(ctx context.Context, orgID int64) (TenantSet
 
 // PatchTenantSettings updates organization letterhead fields.
 func (s *Service) PatchTenantSettings(ctx context.Context, orgID int64, in LetterheadPatch) (TenantSettings, error) {
+	setCoords, lat, lng, err := coordinatePatch(in.Latitude, in.Longitude)
+	if err != nil {
+		return TenantSettings{}, err
+	}
 	if in.PrimaryColor != nil {
 		color := strings.TrimSpace(*in.PrimaryColor)
 		if !hexColor.MatchString(color) {
@@ -124,7 +136,7 @@ func (s *Service) PatchTenantSettings(ctx context.Context, orgID int64, in Lette
 	}
 	// TEC-210: name / city / phone feed the organizations index.
 	row, err := s.updateWithEvent(ctx, func(q *db.Queries) (db.Organization, error) {
-		return q.UpdateOrganizationLetterhead(ctx, db.UpdateOrganizationLetterheadParams{
+		row, err := q.UpdateOrganizationLetterhead(ctx, db.UpdateOrganizationLetterheadParams{
 			ID:           orgID,
 			Name:         textNarg(in.CompanyName),
 			City:         textNarg(in.City),
@@ -137,6 +149,12 @@ func (s *Service) PatchTenantSettings(ctx context.Context, orgID int64, in Lette
 			FooterText:   textNarg(in.FooterText),
 			PaperSize:    textNarg(in.PaperSize),
 			PrimaryColor: textNarg(in.PrimaryColor),
+		})
+		if err != nil || !setCoords {
+			return row, err
+		}
+		return q.UpdateOrganizationCoordinates(ctx, db.UpdateOrganizationCoordinatesParams{
+			ID: orgID, Latitude: lat, Longitude: lng,
 		})
 	})
 	if err != nil {

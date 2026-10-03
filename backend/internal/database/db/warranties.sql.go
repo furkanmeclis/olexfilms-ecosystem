@@ -1686,7 +1686,7 @@ const setOrganizationGoogleBusinessURL = `-- name: SetOrganizationGoogleBusiness
 UPDATE organizations
 SET google_business_url = $1
 WHERE id = $2
-RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url
+RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude
 `
 
 type SetOrganizationGoogleBusinessURLParams struct {
@@ -1736,6 +1736,8 @@ func (q *Queries) SetOrganizationGoogleBusinessURL(ctx context.Context, arg SetO
 		&i.DistrictID,
 		&i.PhoneRaw,
 		&i.GoogleBusinessUrl,
+		&i.Latitude,
+		&i.Longitude,
 	)
 	return i, err
 }

@@ -684,7 +684,7 @@ func (q *Queries) ListTransferRequestsForOrg(ctx context.Context, arg ListTransf
 }
 
 const listTransferSiblings = `-- name: ListTransferSiblings :many
-SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url FROM organizations
+SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude FROM organizations
 WHERE brand_id = $1
   AND parent_id = $2
   AND type = $3
@@ -752,6 +752,8 @@ func (q *Queries) ListTransferSiblings(ctx context.Context, arg ListTransferSibl
 			&i.DistrictID,
 			&i.PhoneRaw,
 			&i.GoogleBusinessUrl,
+			&i.Latitude,
+			&i.Longitude,
 		); err != nil {
 			return nil, err
 		}
