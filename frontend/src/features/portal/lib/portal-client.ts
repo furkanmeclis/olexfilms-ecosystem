@@ -182,6 +182,26 @@ export type PortalWarrantyPage = {
   offset: number;
 };
 
+/** TEC-238 / TEC-239 portal projections (no measurement data, no prices). */
+export type PortalVehicle = components["schemas"]["PortalVehicle"];
+export type PortalVehicleDetail = components["schemas"]["PortalVehicleDetail"];
+export type PortalActiveWarranty =
+  components["schemas"]["PortalActiveWarranty"];
+export type PortalServiceListItem =
+  components["schemas"]["PortalServiceListItem"];
+export type PortalService = components["schemas"]["PortalService"];
+export type PortalServiceProduct =
+  components["schemas"]["PortalServiceProduct"];
+export type PortalServiceWarranty =
+  components["schemas"]["PortalServiceWarranty"];
+
+export type PortalPage<T> = {
+  items: T[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
 export const portalApi = {
   requestOTP(phone: string, country: string, locale: string) {
     return portalRequest<OTPRequestResult>("auth/otp/request", {
@@ -224,6 +244,23 @@ export const portalApi = {
   getWarranty(uuid: string) {
     return portalRequest<PortalWarranty>(
       `portal/warranties/${encodeURIComponent(uuid)}`,
+    );
+  },
+  /** Vehicles the signed-in user owns (TEC-238). */
+  listVehicles(limit: number, offset: number) {
+    return portalRequest<PortalPage<PortalVehicle>>(
+      `portal/vehicles?limit=${limit}&offset=${offset}`,
+    );
+  },
+  getVehicle(uuid: string) {
+    return portalRequest<PortalVehicleDetail>(
+      `portal/vehicles/${encodeURIComponent(uuid)}`,
+    );
+  },
+  /** One service of the signed-in user with parts and dealer (TEC-239). */
+  getService(uuid: string) {
+    return portalRequest<PortalService>(
+      `portal/services/${encodeURIComponent(uuid)}`,
     );
   },
   forgotPassword(email: string) {

@@ -137,6 +137,10 @@ export const routes = {
     warranties: "/portal/warranties",
     /** TEC-242 dealer finder; linked from the landing page (TEC-247). */
     dealers: "/portal/dealers",
+    /** TEC-241: the user's vehicles, a vehicle and a service. */
+    vehicles: "/portal/vehicles",
+    vehicle: (uuid: string) => `/portal/vehicles/${encodeURIComponent(uuid)}`,
+    service: (uuid: string) => `/portal/services/${encodeURIComponent(uuid)}`,
   },
   guest: {
     login: "/platform/login",
