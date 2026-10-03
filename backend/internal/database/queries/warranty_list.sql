@@ -44,6 +44,7 @@ WHERE w.brand_id = sqlc.arg(brand_id)::bigint
        OR (sqlc.narg(q_plate)::text IS NOT NULL AND sqlc.narg(q_plate)::text <> '' AND (
               upper(translate(COALESCE(s.plate, ''), ' -._·', '')) LIKE '%' || sqlc.narg(q_plate)::text || '%'
               OR COALESCE(v.plate_normalized, '') LIKE '%' || sqlc.narg(q_plate)::text || '%')))
+  AND (sqlc.narg(uuids)::uuid[] IS NULL OR w.uuid = ANY (sqlc.narg(uuids)::uuid[]))
 ORDER BY CASE WHEN w.status = 'active' THEN w.end_at END ASC NULLS LAST, w.end_at DESC, w.id DESC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
 

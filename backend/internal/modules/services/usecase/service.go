@@ -30,6 +30,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -162,9 +163,10 @@ func visible(c Caller, s db.Service) bool {
 
 // Service implements the service use cases.
 type Service struct {
-	pool TxBeginner
-	q    *db.Queries
-	out  outbox.Enqueuer
+	pool   TxBeginner
+	q      *db.Queries
+	out    outbox.Enqueuer
+	finder searchengine.ListFinder // TEC-209: services index search (nil: SQL only)
 }
 
 // New creates the service.

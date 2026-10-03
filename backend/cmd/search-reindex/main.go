@@ -11,6 +11,8 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/logging"
 	catalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/catalog/usecase"
 	customersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/customers/usecase"
+	servicesusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/usecase"
+	warrantyusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
 	searchadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine/adapters"
 )
@@ -49,6 +51,10 @@ func main() {
 		searchadapters.NewRoles(queries),
 		catalogusecase.NewSearchAdapter(queries),
 		customersusecase.NewSearchAdapter(queries), // TEC-164
+		// TEC-209: services, warranties, vehicles (plate / VIN).
+		servicesusecase.NewSearchAdapter(queries),
+		warrantyusecase.NewSearchAdapter(queries),
+		customersusecase.NewVehicleSearchAdapter(queries),
 	)
 	indexer := searchengine.NewIndexer(client, reg, nil, log)
 	if err := indexer.ProcessReindex(ctx, ""); err != nil {

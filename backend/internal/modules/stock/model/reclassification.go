@@ -50,6 +50,9 @@ type SplitUnit struct {
 	Barcode         string    `json:"barcode"`
 	Status          string    `json:"status"`
 	RemainingMeters string    `json:"remaining_meters"`
+	// LabelURL is the label print endpoint of the unit (TEC-202; set for
+	// the new unit of a split).
+	LabelURL string `json:"label_url,omitempty"`
 }
 
 // Split is a roll split (TEC-184): meters cut off a roll as a new unit with

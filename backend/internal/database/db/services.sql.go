@@ -1190,23 +1190,24 @@ WHERE brand_id = $1
   AND ($6::text IS NULL OR status = $6::text)
   AND ($7::timestamptz IS NULL OR created_at >= $7::timestamptz)
   AND ($8::timestamptz IS NULL OR created_at < $8::timestamptz)
+  AND ($9::uuid[] IS NULL OR uuid = ANY ($9::uuid[]))
   AND (
-    $9::text IS NULL
-    OR service_no ILIKE '%' || $9 || '%'
-    OR plate ILIKE '%' || $9 || '%'
-    OR vin ILIKE '%' || $9 || '%'
+    $10::text IS NULL
+    OR service_no ILIKE '%' || $10 || '%'
+    OR plate ILIKE '%' || $10 || '%'
+    OR vin ILIKE '%' || $10 || '%'
     OR EXISTS (
       SELECT 1 FROM users cu
       WHERE cu.id = services.customer_user_id
         AND cu.status <> 'anonymized'
         AND (
-          (cu.name || ' ' || cu.surname) ILIKE '%' || $9 || '%'
-          OR cu.phone_e164 LIKE '%' || $9 || '%'
+          (cu.name || ' ' || cu.surname) ILIKE '%' || $10 || '%'
+          OR cu.phone_e164 LIKE '%' || $10 || '%'
         )
     )
   )
 ORDER BY created_at DESC, id DESC
-LIMIT $11 OFFSET $10
+LIMIT $12 OFFSET $11
 `
 
 type ListServicesInScopeParams struct {
@@ -1218,6 +1219,7 @@ type ListServicesInScopeParams struct {
 	Status          pgtype.Text        `json:"status"`
 	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
 	CreatedTo       pgtype.Timestamptz `json:"created_to"`
+	Uuids           []uuid.UUID        `json:"uuids"`
 	Q               pgtype.Text        `json:"q"`
 	RowOffset       int32              `json:"row_offset"`
 	RowLimit        int32              `json:"row_limit"`
@@ -1237,6 +1239,7 @@ func (q *Queries) ListServicesInScope(ctx context.Context, arg ListServicesInSco
 		arg.Status,
 		arg.CreatedFrom,
 		arg.CreatedTo,
+		arg.Uuids,
 		arg.Q,
 		arg.RowOffset,
 		arg.RowLimit,

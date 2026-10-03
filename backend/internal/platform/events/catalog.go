@@ -326,6 +326,15 @@ const (
 	NotificationsCancelled = "notifications.cancelled"
 )
 
+// Vehicle record events (TEC-209): written in the transaction that creates,
+// edits or soft-deletes a vehicle; the search sync refreshes the vehicles
+// index document from them.
+const (
+	VehicleCreated = "vehicle.created"
+	VehicleUpdated = "vehicle.updated"
+	VehicleDeleted = "vehicle.deleted"
+)
+
 // ValidateEventName checks the naming standard without requiring catalog membership.
 func ValidateEventName(name string) error {
 	name = strings.TrimSpace(name)
@@ -581,5 +590,8 @@ func catalogConstants() []string {
 		TasksAssigned,
 		TasksStatusChanged,
 		TasksCommentAdded,
+		VehicleCreated,
+		VehicleUpdated,
+		VehicleDeleted,
 	}
 }

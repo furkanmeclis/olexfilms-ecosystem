@@ -105,3 +105,38 @@ func RegisterPlatformRoutes(
 		http.HandlerFunc(h.Check), authn, middleware.RequireSuperAdmin,
 	))
 }
+
+// RegisterLabelRoutes mounts the TEC-202 barcode batches (center only,
+// stock.write), the label templates (stock.read / stock.write) and the label
+// print endpoints. Location labels sit under /v1/warehouse and need
+// warehouse.read with the warehouse module on.
+func RegisterLabelRoutes(
+	mux *http.ServeMux,
+	h *stockhandler.Labels,
+	checker middleware.FeatureChecker,
+	tokens *jwt.Manager,
+	loader middleware.IdentityLoader,
+	q *db.Queries,
+) {
+	authn := middleware.Authenticate(tokens, loader)
+	org := middleware.RequireOrganization(tokens, q)
+	scoped := func(fn http.HandlerFunc, module, slug string) http.Handler {
+		return middleware.Chain(fn, authn, org, middleware.RequireFeature(checker, module), middleware.RequireScope(q, slug))
+	}
+	read := func(fn http.HandlerFunc) http.Handler { return scoped(fn, features.ModuleStock, rbac.PermStockRead) }
+	write := func(fn http.HandlerFunc) http.Handler { return scoped(fn, features.ModuleStock, rbac.PermStockWrite) }
+
+	mux.Handle("GET /v1/stock/barcodes", read(h.ListBatches))
+	mux.Handle("POST /v1/stock/barcodes", write(h.CreateBatch))
+	mux.Handle("GET /v1/stock/barcodes/{uuid}", read(h.GetBatch))
+	mux.Handle("GET /v1/stock/barcodes/{uuid}/labels.pdf", read(h.PrintBatch))
+
+	mux.Handle("GET /v1/stock/label-templates", read(h.ListTemplates))
+	mux.Handle("POST /v1/stock/label-templates", write(h.CreateTemplate))
+	mux.Handle("GET /v1/stock/label-templates/{uuid}", read(h.GetTemplate))
+	mux.Handle("PUT /v1/stock/label-templates/{uuid}", write(h.UpdateTemplate))
+	mux.Handle("DELETE /v1/stock/label-templates/{uuid}", write(h.DeleteTemplate))
+
+	mux.Handle("GET /v1/stock/labels/units.pdf", read(h.PrintUnits))
+	mux.Handle("GET /v1/warehouse/labels/locations.pdf", scoped(h.PrintLocations, features.ModuleWarehouse, rbac.PermWarehouseRead))
+}

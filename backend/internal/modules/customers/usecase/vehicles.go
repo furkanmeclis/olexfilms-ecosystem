@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/geo"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -23,6 +24,9 @@ const (
 )
 
 const maxPlateLen = 20
+
+// maxVehicleQueryLen bounds the vehicles list q (TEC-209).
+const maxVehicleQueryLen = 100
 
 // CatalogRef is a car brand or model of the vehicle catalog.
 type CatalogRef struct {
@@ -74,8 +78,11 @@ type VehicleFilter struct {
 	CustomerUUID *uuid.UUID
 	Plate        string
 	VIN          string
-	Limit        int32
-	Offset       int32
+	// Q (TEC-209) searches plate / VIN: the vehicles index when it is up,
+	// otherwise a prefix of the normalized plate or the VIN.
+	Q      string
+	Limit  int32
+	Offset int32
 }
 
 // ListVehicles lists the vehicles of customers in scope.
@@ -102,19 +109,40 @@ func (s *Service) ListVehicles(ctx context.Context, c Caller, f VehicleFilter) (
 			return nil, 0, err
 		}
 	}
-	rows, err := s.q.ListScopedVehicles(ctx, db.ListScopedVehiclesParams{
-		BrandID: c.Org.BrandID, UserID: userID, OrgIds: c.orgIDs(),
-		PlateNormalized: text(plate), Vin: text(vin), LimitCount: f.Limit, OffsetCount: f.Offset,
-	})
-	if err != nil {
-		return nil, 0, fmt.Errorf("customers: list vehicles: %w", err)
+	rawQ := strings.TrimSpace(f.Q)
+	if utf8.RuneCountInString(rawQ) > maxVehicleQueryLen {
+		return nil, 0, invalid("q", "must be at most 100 characters")
 	}
-	total, err := s.q.CountScopedVehicles(ctx, db.CountScopedVehiclesParams{
+	// SQL fallback: the compact form is a prefix of the normalized plate or
+	// of the VIN (both upper case, no separators); LIKE wildcards dropped.
+	qNorm := strings.NewReplacer("%", "", `\`, "").Replace(geo.NormalizePlate(rawQ))
+	p := db.ListScopedVehiclesParams{
 		BrandID: c.Org.BrandID, UserID: userID, OrgIds: c.orgIDs(),
-		PlateNormalized: text(plate), Vin: text(vin),
-	})
-	if err != nil {
-		return nil, 0, fmt.Errorf("customers: count vehicles: %w", err)
+		PlateNormalized: text(plate), Vin: text(vin), Q: text(qNorm), LimitCount: f.Limit, OffsetCount: f.Offset,
+	}
+	var (
+		rows    []db.ListScopedVehiclesRow
+		total   int64
+		indexed bool
+	)
+	// TEC-209: a q search goes to the vehicles index when it is up; the
+	// exact plate / VIN filters stay on SQL.
+	if p.Q.Valid && !p.PlateNormalized.Valid && !p.Vin.Valid && s.indexEnabled() {
+		rows, total, indexed = s.searchVehiclesIndexed(ctx, c, p, rawQ)
+	}
+	if !indexed {
+		var err error
+		rows, err = s.q.ListScopedVehicles(ctx, p)
+		if err != nil {
+			return nil, 0, fmt.Errorf("customers: list vehicles: %w", err)
+		}
+		total, err = s.q.CountScopedVehicles(ctx, db.CountScopedVehiclesParams{
+			BrandID: c.Org.BrandID, UserID: userID, OrgIds: c.orgIDs(),
+			PlateNormalized: text(plate), Vin: text(vin), Q: p.Q,
+		})
+		if err != nil {
+			return nil, 0, fmt.Errorf("customers: count vehicles: %w", err)
+		}
 	}
 	out := make([]VehicleView, 0, len(rows))
 	for _, r := range rows {
@@ -162,7 +190,7 @@ func (s *Service) CreateVehicle(ctx context.Context, c Caller, in CreateVehicleI
 		return VehicleView{}, err
 	}
 	var row db.Vehicle
-	err = s.inTx(ctx, func(q *db.Queries) error {
+	err = s.inTxRaw(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		user, err := s.scopedUser(ctx, q, c, in.CustomerUUID)
 		if err != nil {
 			return err
@@ -176,7 +204,10 @@ func (s *Service) CreateVehicle(ctx context.Context, c Caller, in CreateVehicleI
 			Plate: text(plate.plate), PlateNormalized: text(plate.normalized), PlateCountry: text(plate.country),
 			Vin: text(vin),
 		})
-		return err
+		if err != nil {
+			return err
+		}
+		return s.vehicleEvent(ctx, tx, c, events.VehicleCreated, row)
 	})
 	if err != nil {
 		return VehicleView{}, err
@@ -190,7 +221,7 @@ func (s *Service) UpdateVehicle(ctx context.Context, c Caller, id uuid.UUID, in 
 		return VehicleView{}, invalid("plate", "is required")
 	}
 	var row db.Vehicle
-	err := s.inTx(ctx, func(q *db.Queries) error {
+	err := s.inTxRaw(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		cur, err := s.scopedVehicle(ctx, q, c, id, true)
 		if err != nil {
 			return err
@@ -252,7 +283,10 @@ func (s *Service) UpdateVehicle(ctx context.Context, c Caller, id uuid.UUID, in 
 			return err
 		}
 		row, err = q.UpdateVehicle(ctx, p)
-		return err
+		if err != nil {
+			return err
+		}
+		return s.vehicleEvent(ctx, tx, c, events.VehicleUpdated, row)
 	})
 	if err != nil {
 		return VehicleView{}, err
@@ -262,7 +296,7 @@ func (s *Service) UpdateVehicle(ctx context.Context, c Caller, id uuid.UUID, in 
 
 // DeleteVehicle soft-deletes a vehicle whose customer is in scope.
 func (s *Service) DeleteVehicle(ctx context.Context, c Caller, id uuid.UUID) error {
-	return s.inTx(ctx, func(q *db.Queries) error {
+	return s.inTxRaw(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		cur, err := s.scopedVehicle(ctx, q, c, id, true)
 		if err != nil {
 			return err
@@ -281,8 +315,27 @@ func (s *Service) DeleteVehicle(ctx context.Context, c Caller, id uuid.UUID) err
 		if n == 0 {
 			return ErrVehicleNotFound
 		}
-		return nil
+		return s.vehicleEvent(ctx, tx, c, events.VehicleDeleted, cur)
 	})
+}
+
+// vehicleEvent writes a vehicle record event to the outbox (TEC-209: the
+// search sync refreshes the vehicles document). No personal data in the
+// payload. A service without an outbox (exports, tests) writes none.
+func (s *Service) vehicleEvent(ctx context.Context, tx pgx.Tx, c Caller, name string, v db.Vehicle) error {
+	if s.out == nil {
+		return nil
+	}
+	id, u := v.ID, v.Uuid
+	ev := events.New(name).WithTenant(c.Org.InternalID).WithEntity("vehicle", &id, &u).
+		WithPayload(map[string]any{"vehicle_uuid": v.Uuid.String(), "brand_id": v.BrandID, "user_id": v.UserID})
+	if c.UserID != 0 {
+		ev = ev.WithActor(c.UserID)
+	}
+	if err := s.out.Enqueue(ctx, tx, ev); err != nil {
+		return fmt.Errorf("customers: outbox: %w", err)
+	}
+	return nil
 }
 
 // scopedVehicle loads a vehicle of the domain brand whose customer is in

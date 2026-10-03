@@ -31,6 +31,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -170,6 +171,7 @@ type Reader struct {
 	out           outbox.Enqueuer
 	verifyBaseURL string
 	now           func() time.Time
+	finder        searchengine.ListFinder // TEC-209: warranties index search (nil: SQL only)
 }
 
 // NewReader builds the reader; verifyBaseURL is the public origin of the
@@ -321,13 +323,25 @@ func (r *Reader) list(ctx context.Context, sp scopeParams, f ListFilter, view fu
 	if !ok {
 		return []WarrantyListView{}, 0, nil
 	}
-	rows, err := r.q.ListWarrantyRows(ctx, p)
-	if err != nil {
-		return nil, 0, fmt.Errorf("warranty: list: %w", err)
+	var (
+		rows    []db.ListWarrantyRowsRow
+		total   int64
+		indexed bool
+	)
+	// TEC-209: a text search goes to the warranties index when it is up; the
+	// days-left bounds move with the clock, so they stay on SQL.
+	if p.Q.Valid && !p.EndsAfter.Valid && !p.EndsBefore.Valid && r.indexEnabled() {
+		rows, total, indexed = r.searchIndexed(ctx, p, strings.TrimSpace(f.Q))
 	}
-	total, err := r.q.CountWarrantyRows(ctx, countArgs(p))
-	if err != nil {
-		return nil, 0, fmt.Errorf("warranty: count: %w", err)
+	if !indexed {
+		rows, err = r.q.ListWarrantyRows(ctx, p)
+		if err != nil {
+			return nil, 0, fmt.Errorf("warranty: list: %w", err)
+		}
+		total, err = r.q.CountWarrantyRows(ctx, countArgs(p))
+		if err != nil {
+			return nil, 0, fmt.Errorf("warranty: count: %w", err)
+		}
 	}
 	out := make([]WarrantyListView, 0, len(rows))
 	for _, row := range rows {

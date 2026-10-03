@@ -80,6 +80,7 @@ import (
 	rateshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/rates/handler"
 	searchmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search"
 	searchhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/handler"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/indexsync"
 	searchusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/usecase"
 	servicesmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services"
 	serviceshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/handler"
@@ -153,6 +154,9 @@ type Deps struct {
 	Realtime realtime.Publisher
 	Worker   *queue.Worker
 	Events   events.Bus
+	// SearchFinder replaces the Meilisearch client in the module lists
+	// (TEC-209 tests: an in-memory index). Nil: the configured client.
+	SearchFinder searchengine.ListFinder
 }
 
 // Server is the HTTP composition root for infrastructure routes.
@@ -244,9 +248,21 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		searchadapters.NewRoles(deps.Queries),
 		catalogusecase.NewSearchAdapter(deps.Queries),
 		customersusecase.NewSearchAdapter(deps.Queries), // TEC-164
+		// TEC-209: services, warranties, vehicles (plate / VIN).
+		servicesusecase.NewSearchAdapter(deps.Queries),
+		warrantyusecase.NewSearchAdapter(deps.Queries),
+		customersusecase.NewVehicleSearchAdapter(deps.Queries),
 	)
 	searchClient := searchengine.NewClient(cfg.Search, log)
 	searchIndexer := searchengine.NewIndexer(searchClient, searchReg, deps.Queue, log)
+	// TEC-209: module lists answer q from the index when it is up.
+	var listFinder searchengine.ListFinder
+	if searchClient != nil {
+		listFinder = searchClient
+	}
+	if deps.SearchFinder != nil {
+		listFinder = deps.SearchFinder
+	}
 	s.searchClient = searchClient
 	s.searchIndexer = searchIndexer
 	uc.SetSearchIndexer(searchIndexer)
@@ -357,8 +373,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	}
 	customersSvc.SetSearchIndexer(searchIndexer)
 	// TEC-164: q searches the customers index; customer.created links /portal.
-	if searchClient != nil {
-		customersSvc.SetFinder(searchClient)
+	if listFinder != nil {
+		customersSvc.SetFinder(listFinder)
 	}
 	customersSvc.SetPortalURL(cfg.Auth.FrontendURL)
 	customersSvc.SetOutbox(outbox.NewStore(deps.DB, deps.Queries)) // TEC-193: customer.merged
@@ -389,10 +405,15 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		WithReceiptHook(ordersusecase.NewAccountingBridge(accountingPoster))
 	ordersmodule.RegisterRoutes(mux, ordershandler.New(ordersSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-197: stock transfer requests between siblings (K13).
-	transfersSvc := transfersusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries))
+	// TEC-200: a received transfer books A alacak / B borç.
+	transfersSvc := transfersusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)).
+		WithAccounting(accountingPoster)
 	transfersmodule.RegisterRoutes(mux, transfershandler.New(transfersSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-179: services (draft, items from stock, stock-free transitions, images).
 	servicesSvc := servicesusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries))
+	if listFinder != nil {
+		servicesSvc.SetFinder(listFinder) // TEC-209
+	}
 	servicesmodule.RegisterRoutes(mux, serviceshandler.New(servicesSvc, deps.Storage), tokens, loader, deps.Queries, featureSvc)
 	pdfClient := pdfrender.NewWithOptions(cfg.Gotenberg.URL, pdfrender.Options{MaxConnsPerHost: cfg.Queue.Concurrency})
 	realtime.RegisterRoutes(mux, realtime.NewHandler(rtIssuer, uc), tokens, loader)
@@ -408,12 +429,14 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		reviewQueue = deps.Queue
 	}
 	servicereview.RegisterEventHandlers(eventBus, reviewQueue, cfg.Services.ReviewRequestDelay, log)
+	// TEC-209: service / warranty / vehicle outbox events refresh the indexes.
+	indexsync.Register(eventBus, deps.Queries, searchIndexer, log)
 	// TEC-189: public warranty lookup behind /garanti/{public_code}.
 	warrantymodule.RegisterPublicRoutes(mux, deps.Queries, ratelimit.New(deps.Redis, cfg.App.Env),
 		cfg.Warranty.PublicRateLimit, cfg.Warranty.PublicRateWindow)
 	// TEC-191: panel / portal warranty list and detail, center void.
 	warrantymodule.RegisterListRoutes(mux, deps.DB, deps.Queries, cfg.Auth.FrontendURL,
-		tokens, loader, featureSvc, stepUpSvc)
+		tokens, loader, featureSvc, stepUpSvc, listFinder)
 
 	// TEC-145: product catalog (brand scoped, center writes).
 	catalogSvc := catalogusecase.New(deps.Queries, searchIndexer)
@@ -507,6 +530,11 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		featureSvc, tokens, loader, deps.Queries, stepUpSvc)
 	// TEC-184: roll split (meters cut off a roll as a new unit).
 	stockmodule.RegisterSplitRoutes(mux, stockhandler.NewSplit(stockusecase.NewSplits(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries))),
+		featureSvc, tokens, loader, deps.Queries)
+	// TEC-202: barcode batches (center), label templates and label PDFs.
+	stockmodule.RegisterLabelRoutes(mux, stockhandler.NewLabels(
+		stockusecase.NewBarcodes(deps.DB, deps.Queries), stockusecase.NewLabelTemplates(deps.Queries),
+		stockusecase.NewLabels(deps.Queries, pdfClient)),
 		featureSvc, tokens, loader, deps.Queries)
 	// TEC-158: stock import upload (preview/confirm/undo on /v1/tenant/imports).
 	stockmodule.RegisterImportRoutes(mux, stockhandler.NewImport(importSvc), featureSvc, tokens, loader, deps.Queries)
