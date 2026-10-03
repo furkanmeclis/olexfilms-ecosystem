@@ -261,6 +261,9 @@ type Querier interface {
 	// cancelled.
 	CreateServiceItem(ctx context.Context, arg CreateServiceItemParams) (ServiceItem, error)
 	CreateServiceItemCorrection(ctx context.Context, arg CreateServiceItemCorrectionParams) (ServiceItemCorrection, error)
+	// TEC-249 (F2-04d): short URLs behind /s/{token}.
+	// ON CONFLICT on the token returns no row: the caller draws a new token.
+	CreateShortURL(ctx context.Context, arg CreateShortURLParams) (CreateShortURLRow, error)
 	// TEC-206: stock counts (000068). Every query is bound to one organization;
 	// the warehouse side is brand-independent (K20).
 	CreateStockCount(ctx context.Context, arg CreateStockCountParams) (StockCount, error)
@@ -639,6 +642,9 @@ type Querier interface {
 	// Display references of one service (organization, customer, vehicle and
 	// the car brand / model snapshot) for the API view (TEC-179).
 	GetServiceRefs(ctx context.Context, id int64) (GetServiceRefsRow, error)
+	// Tells an expired token of the brand apart from an unknown one.
+	GetShortURLExpiry(ctx context.Context, arg GetShortURLExpiryParams) (pgtype.Timestamptz, error)
+	GetShortURLStats(ctx context.Context, token string) (GetShortURLStatsRow, error)
 	GetStepupSettings(ctx context.Context) (StepupSetting, error)
 	GetStockCountByUUID(ctx context.Context, arg GetStockCountByUUIDParams) (StockCount, error)
 	GetStockCountScanByUUID(ctx context.Context, arg GetStockCountScanByUUIDParams) (StockCountScan, error)
@@ -715,6 +721,8 @@ type Querier interface {
 	GetWebAuthnCredentialByUUID(ctx context.Context, arg GetWebAuthnCredentialByUUIDParams) (WebauthnCredential, error)
 	// WhatsApp gateway, KVKK notices, conversations and messages (TEC-92).
 	GetWhatsAppSettings(ctx context.Context) (WhatsappSetting, error)
+	// Resolves a live token of the brand and counts the hit in one statement.
+	HitShortURL(ctx context.Context, arg HitShortURLParams) (HitShortURLRow, error)
 	// TEC-258: ledger.Import appends a recorded (historical) movement as is: its
 	// uuid and time come from the import (migration_map, the legacy timestamp).
 	// Idempotent like InsertStockMovement (no row on a repeated key).

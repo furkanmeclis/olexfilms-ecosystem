@@ -1619,6 +1619,63 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /v1/public/short-urls/{token}:
+    get:
+      tags: [Public]
+      operationId: getPublicShortUrl
+      summary: Resolve a short URL (frontend /s/{token})
+      description: |
+        TEC-249. No authentication. Resolves a short URL token inside the
+        brand of the request domain (K3) and counts the hit (`hit_count`,
+        `last_hit_at`). The target is always an internal path of the brand
+        frontend under `/portal`, `/garanti` or `/bayi` (never another
+        origin); the frontend route `/s/{token}` answers 302 to it. Tokens are
+        case-sensitive base62: new tokens are 10 characters, the old hub's
+        migrated tokens 8 (TEC-263). Malformed (outside
+        `^[A-Za-z0-9]{4,16}$`), unknown and other-brand tokens share the same
+        404 body; an expired token is 410 SHORT_URL_EXPIRED. Rate limited per
+        client IP (SHORT_URL_PUBLIC_RATE_LIMIT per
+        SHORT_URL_PUBLIC_RATE_WINDOW); over the limit 429 with Retry-After.
+        Responses carry `Cache-Control: no-store` and `X-Robots-Tag: noindex`.
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 4
+            maxLength: 16
+            pattern: "^[A-Za-z0-9]{4,16}$"
+      responses:
+        "200":
+          description: Target of the short URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePublicShortUrl"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "410":
+          description: The short URL has expired (SHORT_URL_EXPIRED)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Rate limited per client IP
+          headers:
+            Retry-After:
+              description: Seconds until the window resets
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /v1/services/{uuid}/pdf:
     post:
       tags: [Services]
@@ -17318,6 +17375,27 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/PublicWarranty" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    PublicShortUrl:
+      type: object
+      required: [token, target_path, expires_at]
+      properties:
+        token: { type: string, example: "aZ3kP9qXbT" }
+        target_path:
+          type: string
+          description: Internal path (with optional query / fragment) under /portal, /garanti or /bayi.
+          example: "/garanti/AbCdEfGhIjKlMnOpQrSt_-"
+        expires_at:
+          type: [string, "null"]
+          format: date-time
+
+    EnvelopePublicShortUrl:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PublicShortUrl" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeTokens:
