@@ -64,6 +64,8 @@
   "system.groups.warehouse_hint": "Поведение склада и запасов.",
   "system.groups.scanning": "Сканирование",
   "system.groups.scanning_hint": "Настройки сканирования штрихкодов и QR.",
+  "system.groups.mobile": "Мобильное приложение",
+  "system.groups.mobile_hint": "Минимальная версия приложения и ссылки на магазины; старые версии должны обновиться.",
   "system.keys.forecast_min_days": "Минимальный период прогноза (дни)",
   "system.keys.forecast_min_days_hint": "Минимальная история движений, прежде чем прогноз что-либо предложит.",
   "system.keys.contract_grace_days": "Льготный период договора (дни)",

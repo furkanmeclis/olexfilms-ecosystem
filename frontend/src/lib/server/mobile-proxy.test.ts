@@ -64,6 +64,7 @@ describe("mobile Bearer passthrough (TEC-91)", () => {
           Authorization: "Bearer mobile-access",
           "Content-Type": "application/json",
           "X-Mobile-Api-Version": "1",
+          "X-App-Version": "2.4.0",
           "Idempotency-Key": "k1",
           "X-Real-IP": "203.0.113.9",
           Origin: "https://evil.example",
@@ -77,6 +78,7 @@ describe("mobile Bearer passthrough (TEC-91)", () => {
     expect(call.path).toBe("mobile/auth/refresh");
     expect(call.headers.get("authorization")).toBe("Bearer mobile-access");
     expect(call.headers.get("x-mobile-api-version")).toBe("1");
+    expect(call.headers.get("x-app-version")).toBe("2.4.0");
     expect(call.headers.get("idempotency-key")).toBe("k1");
     expect(call.headers.get("x-forwarded-for")).toBe("203.0.113.9");
     expect(call.headers.get("origin")).toBeNull();

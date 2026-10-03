@@ -64,6 +64,8 @@
   "system.groups.warehouse_hint": "Comportamiento del almacén y del stock.",
   "system.groups.scanning": "Escaneo",
   "system.groups.scanning_hint": "Ajustes de escaneo de códigos de barras y QR.",
+  "system.groups.mobile": "Aplicación móvil",
+  "system.groups.mobile_hint": "Versión mínima de la aplicación y enlaces a las tiendas; las versiones anteriores deben actualizarse.",
   "system.keys.forecast_min_days": "Periodo mínimo de previsión (días)",
   "system.keys.forecast_min_days_hint": "Historial mínimo de movimientos antes de que la previsión proponga algo.",
   "system.keys.contract_grace_days": "Periodo de gracia del contrato (días)",

@@ -543,6 +543,7 @@ var trCatalog = map[string]string{
 	"warehouse.eod.type.reclassification":          "Yeniden sınıflandırma",
 	"warehouse.eod.type.void":                      "İptal (imha)",
 	"warehouse.eod.type.external_outbound":         "Harici çıkış",
+	"mobile.update_required":                       "Uygulamanın bu sürümü artık desteklenmiyor. Devam etmek için uygulamayı güncelleyin.",
 }
 
 var enCatalog = map[string]string{
@@ -1055,4 +1056,5 @@ var enCatalog = map[string]string{
 	"warehouse.eod.type.reclassification":          "Reclassification",
 	"warehouse.eod.type.void":                      "Void",
 	"warehouse.eod.type.external_outbound":         "External outbound",
+	"mobile.update_required":                       "This app version is no longer supported. Update the app to continue.",
 }

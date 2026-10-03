@@ -542,4 +542,5 @@ var deCatalog = map[string]string{
 	"warehouse.eod.type.reclassification":          "Umklassifizierung",
 	"warehouse.eod.type.void":                      "Ungültig",
 	"warehouse.eod.type.external_outbound":         "Externer Ausgang",
+	"mobile.update_required":                       "Diese App-Version wird nicht mehr unterstützt. Aktualisieren Sie die App, um fortzufahren.",
 }

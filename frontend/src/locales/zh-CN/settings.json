@@ -64,6 +64,8 @@
   "system.groups.warehouse_hint": "仓库与库存行为。",
   "system.groups.scanning": "扫描",
   "system.groups.scanning_hint": "条码与二维码扫描设置。",
+  "system.groups.mobile": "移动应用",
+  "system.groups.mobile_hint": "最低应用版本和应用商店链接；较旧版本需要更新。",
   "system.keys.forecast_min_days": "最短预测周期（天）",
   "system.keys.forecast_min_days_hint": "库存预测给出建议前所需的最短出入库历史。",
   "system.keys.contract_grace_days": "合同宽限期（天）",
