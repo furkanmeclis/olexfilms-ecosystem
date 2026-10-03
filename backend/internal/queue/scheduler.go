@@ -55,6 +55,8 @@ func Schedules() []Periodic {
 		{Cron: warehouseEODCron, Type: TaskWarehouseEODReports, Queue: QueueMaintenance, Opts: warehouseEODOpts(), New: NewWarehouseEODTask},
 		// TEC-268: Glorian catalog and dealer pull every 15 minutes.
 		{Cron: glorianPullCron, Type: TaskGlorianPullCatalog, Queue: QueueMaintenance, Opts: glorianPullOpts(), New: NewGlorianPullCatalogTask},
+		// TEC-270: Glorian barcode push safety net (every active connection).
+		{Cron: glorianPushCron, Type: TaskGlorianPushBarcodes, Queue: QueueMaintenance, Opts: glorianPushCronOpts(), New: NewGlorianPushAllTask},
 	}
 }
 

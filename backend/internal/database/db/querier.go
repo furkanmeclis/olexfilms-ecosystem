@@ -504,8 +504,15 @@ type Querier interface {
 	GetFinanceEntryReversal(ctx context.Context, entryID pgtype.Int8) (FinanceEntry, error)
 	GetFixedHoldingQuantity(ctx context.Context, arg GetFixedHoldingQuantityParams) (int32, error)
 	GetGitHubAppSettings(ctx context.Context) (GithubAppSetting, error)
+	// A movement with its unit's barcode and the product's sync link, for the
+	// outbound PATCH of one barcode.
+	GetGlorianPushMovement(ctx context.Context, id int64) (GetGlorianPushMovementRow, error)
 	GetImportJobByID(ctx context.Context, id int64) (ImportJob, error)
 	GetImportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ImportJob, error)
+	// TEC-270 (F2-02e): Glorian barcode push. Units of products synced from a
+	// connection (products.connection_id + external_id) are pushed to the hub:
+	// entries and placements into a center bin in bulk, exits by barcode.
+	GetIntegrationConnectionByID(ctx context.Context, id int64) (IntegrationConnection, error)
 	GetIntegrationConnectionByKey(ctx context.Context, arg GetIntegrationConnectionByKeyParams) (IntegrationConnection, error)
 	GetIntegrationConnectionByUUID(ctx context.Context, arg GetIntegrationConnectionByUUIDParams) (IntegrationConnection, error)
 	// The connection of the product's brand with the given key.
@@ -594,6 +601,9 @@ type Querier interface {
 	// projection rows are already narrowed by scope.
 	GetProductIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	GetProductPrice(ctx context.Context, arg GetProductPriceParams) (ProductPrice, error)
+	// The sync link of a product: its brand and, for a synced product, the
+	// connection and remote product id.
+	GetProductPushLink(ctx context.Context, id int64) (GetProductPushLinkRow, error)
 	GetProvinceByID(ctx context.Context, id int64) (Province, error)
 	// Public warranty lookup (TEC-189): only the fields the public page shows.
 	// No users join: the holder's personal data is never read, so an anonymized
@@ -801,6 +811,10 @@ type Querier interface {
 	InsertWhatsAppConnectionEvent(ctx context.Context, arg InsertWhatsAppConnectionEventParams) (WhatsappConnectionEvent, error)
 	InvalidateActiveOTPs(ctx context.Context, arg InvalidateActiveOTPsParams) error
 	InvalidateActivePhoneOTPs(ctx context.Context, arg InvalidateActivePhoneOTPsParams) error
+	// The watermark of the latest successful run of a kind that set one. The
+	// barcode PATCH runs share the push_barcodes kind without a watermark, so
+	// LastSucceededIntegrationSyncRun would lose the bulk push cursor.
+	LastIntegrationSyncRunWatermark(ctx context.Context, arg LastIntegrationSyncRunWatermarkParams) (pgtype.Timestamptz, error)
 	// Watermark of the last successful, non-dry-run execution of a step.
 	LastMigrationWatermark(ctx context.Context, arg LastMigrationWatermarkParams) (pgtype.Timestamptz, error)
 	// The scanning user's current location context (location_first).
@@ -923,6 +937,10 @@ type Querier interface {
 	// the organization owner itself), per barcode, for the listed products.
 	ListFixedBarcodeQuantitiesByHolder(ctx context.Context, arg ListFixedBarcodeQuantitiesByHolderParams) ([]ListFixedBarcodeQuantitiesByHolderRow, error)
 	ListFixedBarcodeQuantitiesByLocation(ctx context.Context, arg ListFixedBarcodeQuantitiesByLocationParams) ([]ListFixedBarcodeQuantitiesByLocationRow, error)
+	// Serial units entered or placed into a warehouse bin after the keyset
+	// (created_at, id), for the products synced from the connection. A unit
+	// placed twice comes twice; the caller deduplicates by barcode.
+	ListGlorianPushUnits(ctx context.Context, arg ListGlorianPushUnitsParams) ([]ListGlorianPushUnitsRow, error)
 	// Grants of global roles (user_roles / JWT roles claim).
 	ListGrantsByRoleSlugs(ctx context.Context, roleSlugs []string) ([]ListGrantsByRoleSlugsRow, error)
 	ListImportChangesForJob(ctx context.Context, jobID int64) ([]ImportChange, error)
@@ -1375,6 +1393,8 @@ type Querier interface {
 	MarkQRLoginChallengeScanned(ctx context.Context, code string) (QrLoginChallenge, error)
 	MarkStockEntryUndone(ctx context.Context, id int64) (StockEntry, error)
 	MarkStockImportRowUndone(ctx context.Context, arg MarkStockImportRowUndoneParams) (StockImportRow, error)
+	// A verified phone also claims a migrated "unverified" customer (K26,
+	// TEC-255): the legacy marker and the unresolved legacy phone are cleared.
 	MarkUserPhoneVerified(ctx context.Context, id int64) error
 	// Stamped in the notification transaction; a second run is a no-op.
 	MarkWarrantyNotified30(ctx context.Context, arg MarkWarrantyNotified30Params) (int64, error)
@@ -1395,9 +1415,15 @@ type Querier interface {
 	// The live distributor owning the country-level territory of a brand.
 	MigratorCountryDistributor(ctx context.Context, arg MigratorCountryDistributorParams) (int64, error)
 	MigratorDistributorBySlug(ctx context.Context, arg MigratorDistributorBySlugParams) (int64, error)
+	MigratorEnsureCustomerProfile(ctx context.Context, arg MigratorEnsureCustomerProfileParams) (int64, error)
 	// Adds the membership or returns the existing one; an owner grant upgrades
 	// a staff membership, never the other way round.
 	MigratorEnsureMember(ctx context.Context, arg MigratorEnsureMemberParams) (MigratorEnsureMemberRow, error)
+	// Fill-only, like MigratorFillCustomerUser.
+	MigratorFillCustomerProfile(ctx context.Context, arg MigratorFillCustomerProfileParams) (int64, error)
+	// A merged or changed legacy customer only fills what the account lacks;
+	// values set in the new app (or by an earlier source) are kept.
+	MigratorFillCustomerUser(ctx context.Context, arg MigratorFillCustomerUserParams) (int64, error)
 	// An existing brand with the legacy external id, else with the same name
 	// (case insensitive, like uq_car_brands_name).
 	MigratorFindCarBrand(ctx context.Context, arg MigratorFindCarBrandParams) (MigratorFindCarBrandRow, error)
@@ -1414,9 +1440,18 @@ type Querier interface {
 	MigratorInsertCarBrand(ctx context.Context, arg MigratorInsertCarBrandParams) (int64, error)
 	MigratorInsertCarModel(ctx context.Context, arg MigratorInsertCarModelParams) (int64, error)
 	MigratorInsertCategory(ctx context.Context, arg MigratorInsertCategoryParams) (int64, error)
+	// TEC-255: migrator step 2 (hub customers -> users, customer_profiles,
+	// customer_organizations). Written only by cmd/migrator inside a step
+	// transaction.
+	// A legacy customer becomes a users row (K11). legacy_unverified marks a
+	// customer without a resolved phone (K26, K29, migration 000078).
+	MigratorInsertCustomerUser(ctx context.Context, arg MigratorInsertCustomerUserParams) (int64, error)
 	MigratorInsertOrganization(ctx context.Context, arg MigratorInsertOrganizationParams) (int64, error)
 	MigratorInsertProduct(ctx context.Context, arg MigratorInsertProductParams) (int64, error)
 	MigratorInsertUser(ctx context.Context, arg MigratorInsertUserParams) (int64, error)
+	// One row per serving organization (K11: the customer is global, a dealer
+	// sees it through this link).
+	MigratorLinkCustomerOrganization(ctx context.Context, arg MigratorLinkCustomerOrganizationParams) (int64, error)
 	MigratorMatchDistrict(ctx context.Context, arg MigratorMatchDistrictParams) (int64, error)
 	// TEC-254: migrator step 1 (center, TR distributor, dealers, users, roles).
 	// Written only by cmd/migrator inside a step transaction.

@@ -114,6 +114,7 @@ import (
 	vehiclecataloghandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/vehiclecatalog/handler"
 	vehiclecatalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/vehiclecatalog/usecase"
 	warehousemodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warehouse"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warehouse/glorian"
 	warehousehandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warehouse/handler"
 	warehouseusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warehouse/usecase"
 	warrantymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty"
@@ -463,6 +464,12 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		reviewQueue = deps.Queue
 	}
 	servicereview.RegisterEventHandlers(eventBus, reviewQueue, cfg.Services.ReviewRequestDelay, log)
+	// TEC-270: glorian stock entries/placements and exits schedule the push.
+	var glorianQueue glorian.Enqueuer
+	if deps.Queue != nil {
+		glorianQueue = deps.Queue
+	}
+	glorian.RegisterEventHandlers(eventBus, deps.Queries, glorianQueue, log)
 	// TEC-209: service / warranty / vehicle outbox events refresh the indexes.
 	indexsync.Register(eventBus, deps.Queries, searchIndexer, log)
 	// TEC-189: public warranty lookup behind /garanti/{public_code}.
