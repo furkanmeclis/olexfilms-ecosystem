@@ -1,0 +1,5 @@
+[
+  {"id": "99", "barcode": "GLR-0001", "product_id": "10", "dealer_id": null, "status": "available", "location": "center", "updated_at": "2026-09-01T12:00:00+00:00"},
+  {"id": "100", "barcode": "GLR-0002", "product_id": "10", "dealer_id": null, "status": "reserved", "location": "center", "updated_at": "2026-09-02T12:00:00+00:00"},
+  {"id": "101", "barcode": "GLR-0003", "product_id": "11", "dealer_id": "1", "status": "used", "location": "dealer", "updated_at": "2026-09-03T12:00:00+00:00"}
+]
