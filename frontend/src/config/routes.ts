@@ -6,6 +6,8 @@ export const routes = {
       slug: (slug: string) => `/share/${slug}`,
       signed: (token: string) => `/share/s/${token}`,
     },
+    /** TEC-247: landing warranty lookup target (TEC-189 public page). */
+    warranty: (no: string) => `/garanti/${encodeURIComponent(no)}`,
   },
   tenant: {
     home: (slug: string) => `/t/${slug}`,
@@ -133,6 +135,8 @@ export const routes = {
     forgotPassword: "/portal/forgot-password",
     /** TEC-191: the user's warranties. */
     warranties: "/portal/warranties",
+    /** TEC-242 dealer finder; linked from the landing page (TEC-247). */
+    dealers: "/portal/dealers",
   },
   guest: {
     login: "/platform/login",
