@@ -176,5 +176,8 @@
   "labels.integrations.glorian.manage": "Gestisci l'integrazione Glorian",
   "groups.integrations": "Integrazioni",
   "labels.measurements.write": "Caricare misurazioni",
-  "groups.measurements": "Misurazioni"
+  "groups.measurements": "Misurazioni",
+  "labels.measurements.read": "Visualizza misurazioni",
+  "labels.measurements.link": "Collega misurazioni",
+  "labels.measurement_devices.manage": "Gestisci dispositivi di misura"
 }

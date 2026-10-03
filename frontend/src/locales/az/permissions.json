@@ -176,5 +176,8 @@
   "labels.integrations.glorian.manage": "Glorian inteqrasiyasını idarə et",
   "groups.integrations": "İnteqrasiyalar",
   "labels.measurements.write": "Ölçmələri yüklə",
-  "groups.measurements": "Ölçmələr"
+  "groups.measurements": "Ölçmələr",
+  "labels.measurements.read": "Ölçmələrə baxmaq",
+  "labels.measurements.link": "Ölçmələri xidmətə bağlamaq",
+  "labels.measurement_devices.manage": "Ölçmə cihazlarını idarə etmək"
 }

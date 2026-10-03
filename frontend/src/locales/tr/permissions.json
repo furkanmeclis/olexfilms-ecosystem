@@ -176,5 +176,8 @@
   "labels.integrations.glorian.manage": "Glorian entegrasyonunu yönet",
   "groups.integrations": "Entegrasyonlar",
   "labels.measurements.write": "Ölçüm yükle",
-  "groups.measurements": "Ölçümler"
+  "groups.measurements": "Ölçümler",
+  "labels.measurements.read": "Ölçümleri görüntüle",
+  "labels.measurements.link": "Ölçümleri hizmete bağla",
+  "labels.measurement_devices.manage": "Ölçüm cihazlarını yönet"
 }

@@ -176,5 +176,8 @@
   "labels.integrations.glorian.manage": "إدارة تكامل Glorian",
   "groups.integrations": "التكاملات",
   "labels.measurements.write": "رفع القياسات",
-  "groups.measurements": "القياسات"
+  "groups.measurements": "القياسات",
+  "labels.measurements.read": "عرض القياسات",
+  "labels.measurements.link": "ربط القياسات",
+  "labels.measurement_devices.manage": "إدارة أجهزة القياس"
 }

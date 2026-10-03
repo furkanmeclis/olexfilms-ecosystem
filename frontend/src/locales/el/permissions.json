@@ -176,5 +176,8 @@
   "labels.integrations.glorian.manage": "Διαχείριση ενσωμάτωσης Glorian",
   "groups.integrations": "Ενσωματώσεις",
   "labels.measurements.write": "Μεταφόρτωση μετρήσεων",
-  "groups.measurements": "Μετρήσεις"
+  "groups.measurements": "Μετρήσεις",
+  "labels.measurements.read": "Προβολή μετρήσεων",
+  "labels.measurements.link": "Σύνδεση μετρήσεων",
+  "labels.measurement_devices.manage": "Διαχείριση συσκευών μέτρησης"
 }

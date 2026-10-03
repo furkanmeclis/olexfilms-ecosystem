@@ -176,5 +176,8 @@
   "labels.integrations.glorian.manage": "Управление интеграцией Glorian",
   "groups.integrations": "Интеграции",
   "labels.measurements.write": "Загрузка измерений",
-  "groups.measurements": "Измерения"
+  "groups.measurements": "Измерения",
+  "labels.measurements.read": "Просмотр замеров",
+  "labels.measurements.link": "Привязка замеров",
+  "labels.measurement_devices.manage": "Управление измерительными приборами"
 }

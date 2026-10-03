@@ -176,5 +176,8 @@
   "labels.integrations.glorian.manage": "Gérer l'intégration Glorian",
   "groups.integrations": "Intégrations",
   "labels.measurements.write": "Téléverser des mesures",
-  "groups.measurements": "Mesures"
+  "groups.measurements": "Mesures",
+  "labels.measurements.read": "Consulter les mesures",
+  "labels.measurements.link": "Associer les mesures",
+  "labels.measurement_devices.manage": "Gérer les appareils de mesure"
 }

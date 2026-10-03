@@ -387,6 +387,21 @@ var Permissions = []PermissionDef{
 		Slug: PermMeasurementsWrite, Name: "Upload measurements", Module: "measurements", Scopes: scopesOrg,
 		Description: "Upload paint thickness measurements from the mobile app into the active organization (K28).",
 	},
+
+	// TEC-293: measurement read side, service links and device registry
+	// (K28). Appended last; migration 000085 seeds them.
+	{
+		Slug: PermMeasurementsRead, Name: "Read measurements", Module: "measurements", Scopes: []Scope{ScopeManaged, ScopeSubtree},
+		Description: "Read paint thickness measurements, their readings, tires and service links (K28).",
+	},
+	{
+		Slug: PermMeasurementsLink, Name: "Link measurements", Module: "measurements", Scopes: scopesOrg,
+		Description: "Link a measurement to a service as its before or after measurement and confirm the link (K28).",
+	},
+	{
+		Slug: PermMeasurementDevicesManage, Name: "Manage measuring devices", Module: "measurements", Scopes: scopesOrg,
+		Description: "Register, edit and deactivate the measuring devices of the active organization (K28).",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -477,6 +492,10 @@ var Roles = []RoleDef{
 			PermTransfersApprove: ScopeBrand,
 			// TEC-233 (000076).
 			PermMeasurementsWrite: ScopeManaged,
+			// TEC-293 (000085).
+			PermMeasurementsRead:         ScopeSubtree,
+			PermMeasurementsLink:         ScopeManaged,
+			PermMeasurementDevicesManage: ScopeManaged,
 		}),
 	},
 	{
@@ -596,6 +615,10 @@ var Roles = []RoleDef{
 			PermTransfersRequest: ScopeManaged,
 			// TEC-233 (000076).
 			PermMeasurementsWrite: ScopeManaged,
+			// TEC-293 (000085).
+			PermMeasurementsRead:         ScopeSubtree,
+			PermMeasurementsLink:         ScopeManaged,
+			PermMeasurementDevicesManage: ScopeManaged,
 		}),
 	},
 	{
@@ -615,6 +638,8 @@ var Roles = []RoleDef{
 			PermWarrantiesRead:     ScopeSubtree,
 			PermVehiclesTransfer:   ScopeSubtree,
 			PermMeasurementsWrite:  ScopeManaged, // TEC-233 (000076)
+			PermMeasurementsRead:   ScopeSubtree, // TEC-293 (000085)
+			PermMeasurementsLink:   ScopeManaged, // TEC-293 (000085)
 		}),
 	},
 	{
@@ -689,6 +714,10 @@ var Roles = []RoleDef{
 			PermVehiclesTransfer: ScopeManaged,
 			// TEC-233 (000076).
 			PermMeasurementsWrite: ScopeManaged,
+			// TEC-293 (000085).
+			PermMeasurementsRead:         ScopeManaged,
+			PermMeasurementsLink:         ScopeManaged,
+			PermMeasurementDevicesManage: ScopeManaged,
 		}),
 	},
 	{
@@ -709,6 +738,8 @@ var Roles = []RoleDef{
 			PermWarrantiesRead:     ScopeManaged,
 			PermVehiclesTransfer:   ScopeOwn,
 			PermMeasurementsWrite:  ScopeManaged, // TEC-233 (000076)
+			PermMeasurementsRead:   ScopeManaged, // TEC-293 (000085)
+			PermMeasurementsLink:   ScopeManaged, // TEC-293 (000085)
 		}),
 	},
 	{

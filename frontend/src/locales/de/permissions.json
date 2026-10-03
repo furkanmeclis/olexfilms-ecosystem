@@ -176,5 +176,8 @@
   "labels.integrations.glorian.manage": "Glorian-Integration verwalten",
   "groups.integrations": "Integrationen",
   "labels.measurements.write": "Messungen hochladen",
-  "groups.measurements": "Messungen"
+  "groups.measurements": "Messungen",
+  "labels.measurements.read": "Messungen anzeigen",
+  "labels.measurements.link": "Messungen verknüpfen",
+  "labels.measurement_devices.manage": "Messgeräte verwalten"
 }

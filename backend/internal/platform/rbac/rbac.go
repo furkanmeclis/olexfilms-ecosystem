@@ -202,6 +202,12 @@ const (
 	// TEC-233 (000076): minimal measurement upload from the mobile app
 	// (K28); F3-02 (TEC-113) adds the read side.
 	PermMeasurementsWrite = "measurements.write"
+
+	// TEC-293 (000085): measurement read side, before/after service links
+	// and the measuring device registry (K28).
+	PermMeasurementsRead         = "measurements.read"
+	PermMeasurementsLink         = "measurements.link"
+	PermMeasurementDevicesManage = "measurement_devices.manage"
 )
 
 // IsSystemRole reports whether slug is a protected system role.
