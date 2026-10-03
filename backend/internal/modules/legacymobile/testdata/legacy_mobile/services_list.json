@@ -1,15 +1,25 @@
 {
   "name": "services_list",
   "method": "GET",
-  "path": "/v1/mobile/legacy/services",
+  "path": "/v1/mobile/legacy/services?per_page=20&page=1",
   "adapts": "GET /v1/services",
-  "source": "New services contract (docs/openapi.yaml, TEC-179). Scope: services.read of the active organization. Old shape to be confirmed (TEC-234 comment).",
+  "source": "olexfilms routes/api.php GET /api/v1/mobile/services; app/Http/Requests/Api/Services/IndexServiceRequest.php (search, status, customer_id, dealer_id, per_page 1..100 default 20, sort, direction); app/Http/Controllers/Api/V1/ServiceController.php index (MobileServiceResource::collection(paginate)->response()->getData(true): data, links, meta; withCount items, images); app/Http/Resources/Api/MobileServiceResource.php.",
   "request": {
-    "headers": {"Authorization": "Bearer {{access_token}}"},
+    "headers": {"Accept": "application/json", "Accept-Language": "tr", "Authorization": "Bearer {{access_token}}"},
     "body": null
   },
   "response": {
     "status": 200,
-    "data_keys": ["items", "total", "limit", "offset"]
+    "message": null,
+    "data_keys": ["data", "links", "meta"],
+    "nested_keys": {
+      "data.0": ["id", "service_no", "dealer_id", "customer_id", "user_id", "car_brand_id", "car_model_id", "year", "vin", "plate", "plate_country", "km", "package", "applied_parts", "notes", "status", "status_label", "completed_at", "review_request_sms_sent_at", "can_send_review_request", "dealer", "customer", "car_brand", "car_model", "items_count", "images_count", "created_at", "updated_at"],
+      "data.0.dealer": ["id", "name"],
+      "data.0.customer": ["id", "name", "phone", "email"],
+      "data.0.car_brand": ["id", "name"],
+      "data.0.car_model": ["id", "name"],
+      "links": ["first", "last", "prev", "next"],
+      "meta": ["current_page", "from", "last_page", "links", "path", "per_page", "to", "total"]
+    }
   }
 }
