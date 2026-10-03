@@ -72,6 +72,10 @@ func olexSteps() []Step {
 
 		// TEC-259: services, items, images and status logs.
 		ServicesStep{},
+
+		// TEC-260: warranties (duplicates merged, legacy numbers kept as
+		// public codes / aliases) and completed vehicle transfers.
+		WarrantiesStep{},
 	}
 }
 

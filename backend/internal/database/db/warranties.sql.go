@@ -512,12 +512,17 @@ JOIN services s ON s.id = w.service_id
 JOIN car_brands cb ON cb.id = s.car_brand_id
 JOIN car_models cm ON cm.id = s.car_model_id
 JOIN vehicles v ON v.id = w.vehicle_id
-WHERE w.public_code = $1 AND w.brand_id = $2
+WHERE w.brand_id = $1::bigint
+  AND (w.public_code = $2::text
+       OR w.id = (SELECT a.warranty_id FROM warranty_public_code_aliases a
+                  WHERE a.code = $2::text AND a.brand_id = $1::bigint))
+ORDER BY (w.public_code = $2::text) DESC
+LIMIT 1
 `
 
 type GetPublicWarrantyByCodeParams struct {
-	PublicCode string `json:"public_code"`
 	BrandID    int64  `json:"brand_id"`
+	PublicCode string `json:"public_code"`
 }
 
 type GetPublicWarrantyByCodeRow struct {
@@ -546,9 +551,11 @@ type GetPublicWarrantyByCodeRow struct {
 // Public warranty lookup (TEC-189): only the fields the public page shows.
 // No users join: the holder's personal data is never read, so an anonymized
 // customer's warranty answers the same way (K19). Vehicle fields come from
-// the service snapshot first, then the vehicle.
+// the service snapshot first, then the vehicle. TEC-260: an old hub number
+// merged into another warranty resolves through warranty_public_code_aliases
+// to the kept warranty; the row carries that warranty's own public_code.
 func (q *Queries) GetPublicWarrantyByCode(ctx context.Context, arg GetPublicWarrantyByCodeParams) (GetPublicWarrantyByCodeRow, error) {
-	row := q.db.QueryRow(ctx, getPublicWarrantyByCode, arg.PublicCode, arg.BrandID)
+	row := q.db.QueryRow(ctx, getPublicWarrantyByCode, arg.BrandID, arg.PublicCode)
 	var i GetPublicWarrantyByCodeRow
 	err := row.Scan(
 		&i.PublicCode,
