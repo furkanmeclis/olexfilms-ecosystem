@@ -153,3 +153,20 @@ SELECT (
   + (SELECT COALESCE(SUM(h.quantity_on_hand), 0) FROM fixed_barcode_holdings h JOIN units u ON u.id = h.unit_id
      WHERE h.owner_location_id = sqlc.arg(location_id)::bigint AND u.product_id = sqlc.arg(product_id)::bigint)
 )::bigint AS pieces;
+
+-- name: MigratorUnitHasLedgerMovements :one
+-- TEC-258: a movement this application wrote (not an imported legacy one).
+SELECT EXISTS (
+    SELECT 1 FROM stock_movements
+    WHERE unit_id = sqlc.arg(unit_id)::bigint AND idempotency_key NOT LIKE 'legacy:%'
+);
+
+-- name: MigratorUnitsWithoutMovements :many
+-- TEC-258: units of the brand whose ownership was written without a movement
+-- (TEC-257): they need an opening movement before the projection rebuild.
+SELECT u.id FROM units u
+WHERE u.brand_id = sqlc.arg(brand_id)
+  AND (EXISTS (SELECT 1 FROM unit_current_state s WHERE s.unit_id = u.id)
+       OR EXISTS (SELECT 1 FROM fixed_barcode_holdings h WHERE h.unit_id = u.id))
+  AND NOT EXISTS (SELECT 1 FROM stock_movements m WHERE m.unit_id = u.id)
+ORDER BY u.id;

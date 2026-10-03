@@ -861,6 +861,106 @@ func (q *Queries) GetWarehouseLocationByUUID(ctx context.Context, argUuid uuid.U
 	return i, err
 }
 
+const importStockMovement = `-- name: ImportStockMovement :one
+INSERT INTO stock_movements (
+    uuid, organization_id, brand_id, unit_id, product_id, type,
+    quantity_delta, meters_delta,
+    from_owner_type, from_owner_id, to_owner_type, to_owner_id,
+    from_status, to_status, reference_type, reference_id,
+    actor_user_id, reason, metadata, idempotency_key, created_at
+)
+VALUES (
+    COALESCE($1::uuid, gen_random_uuid()), $2, $3,
+    $4, $5, $6,
+    $7, $8,
+    $9, $10, $11, $12,
+    $13, $14, $15, $16,
+    $17, $18, $19, $20,
+    COALESCE($21::timestamptz, NOW())
+)
+ON CONFLICT (idempotency_key) DO NOTHING
+RETURNING id, uuid, organization_id, brand_id, unit_id, product_id, type, quantity_delta, meters_delta, from_owner_type, from_owner_id, to_owner_type, to_owner_id, from_status, to_status, reference_type, reference_id, actor_user_id, reason, metadata, idempotency_key, created_at
+`
+
+type ImportStockMovementParams struct {
+	Uuid           pgtype.UUID        `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	UnitID         int64              `json:"unit_id"`
+	ProductID      int64              `json:"product_id"`
+	Type           string             `json:"type"`
+	QuantityDelta  int32              `json:"quantity_delta"`
+	MetersDelta    pgtype.Numeric     `json:"meters_delta"`
+	FromOwnerType  pgtype.Text        `json:"from_owner_type"`
+	FromOwnerID    pgtype.Int8        `json:"from_owner_id"`
+	ToOwnerType    pgtype.Text        `json:"to_owner_type"`
+	ToOwnerID      pgtype.Int8        `json:"to_owner_id"`
+	FromStatus     pgtype.Text        `json:"from_status"`
+	ToStatus       pgtype.Text        `json:"to_status"`
+	ReferenceType  pgtype.Text        `json:"reference_type"`
+	ReferenceID    pgtype.Int8        `json:"reference_id"`
+	ActorUserID    pgtype.Int8        `json:"actor_user_id"`
+	Reason         pgtype.Text        `json:"reason"`
+	Metadata       []byte             `json:"metadata"`
+	IdempotencyKey string             `json:"idempotency_key"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
+// TEC-258: ledger.Import appends a recorded (historical) movement as is: its
+// uuid and time come from the import (migration_map, the legacy timestamp).
+// Idempotent like InsertStockMovement (no row on a repeated key).
+func (q *Queries) ImportStockMovement(ctx context.Context, arg ImportStockMovementParams) (StockMovement, error) {
+	row := q.db.QueryRow(ctx, importStockMovement,
+		arg.Uuid,
+		arg.OrganizationID,
+		arg.BrandID,
+		arg.UnitID,
+		arg.ProductID,
+		arg.Type,
+		arg.QuantityDelta,
+		arg.MetersDelta,
+		arg.FromOwnerType,
+		arg.FromOwnerID,
+		arg.ToOwnerType,
+		arg.ToOwnerID,
+		arg.FromStatus,
+		arg.ToStatus,
+		arg.ReferenceType,
+		arg.ReferenceID,
+		arg.ActorUserID,
+		arg.Reason,
+		arg.Metadata,
+		arg.IdempotencyKey,
+		arg.CreatedAt,
+	)
+	var i StockMovement
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.UnitID,
+		&i.ProductID,
+		&i.Type,
+		&i.QuantityDelta,
+		&i.MetersDelta,
+		&i.FromOwnerType,
+		&i.FromOwnerID,
+		&i.ToOwnerType,
+		&i.ToOwnerID,
+		&i.FromStatus,
+		&i.ToStatus,
+		&i.ReferenceType,
+		&i.ReferenceID,
+		&i.ActorUserID,
+		&i.Reason,
+		&i.Metadata,
+		&i.IdempotencyKey,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const insertStockImportRow = `-- name: InsertStockImportRow :one
 INSERT INTO stock_import_rows (
     batch_id, row_number, barcode, product_sku, product_id, quantity, meters,
