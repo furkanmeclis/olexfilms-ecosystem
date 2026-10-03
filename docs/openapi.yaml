@@ -1426,6 +1426,59 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /v1/public/dealers/nearby:
+    get:
+      tags: [Public]
+      operationId: getPublicNearbyDealers
+      summary: Nearby dealers of the request brand ("find a dealer")
+      description: |
+        TEC-240. No authentication. Lists the active, serving (access window
+        open) dealers and distributors of the brand resolved from the request
+        domain that have coordinates, within `radius_km` of (`lat`, `lng`).
+        Distance is the haversine great-circle distance in km, computed in
+        SQL; results are nearest first, at most 50. Organizations without
+        coordinates, suspended / pending ones and other brands' organizations
+        are never returned. `whatsapp` is the organization phone when it is
+        E.164, otherwise null. Rate limited per client IP (60 per minute);
+        over the limit 429 with Retry-After.
+      security: []
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema: { type: number, minimum: -90, maximum: 90 }
+        - name: lng
+          in: query
+          required: true
+          schema: { type: number, minimum: -180, maximum: 180 }
+        - name: radius_km
+          in: query
+          required: false
+          description: Search radius in km (default 100).
+          schema: { type: number, exclusiveMinimum: 0, maximum: 1000, default: 100 }
+      responses:
+        "200":
+          description: Dealers, nearest first
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNearbyDealers"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          description: Rate limited per client IP
+          headers:
+            Retry-After:
+              description: Seconds until the window resets
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /v1/public/warranties/{public_code}:
     get:
       tags: [Public]
@@ -17567,6 +17620,10 @@ components:
         footer_text: { type: string }
         paper_size: { type: string, enum: [A4, A3, Letter, Legal] }
         logo_url: { type: [string, "null"] }
+        latitude:
+          type: [number, "null"]
+          description: TEC-240 map position (WGS84); null together with longitude when unset.
+        longitude: { type: [number, "null"] }
 
     PatchTenantSettingsRequest:
       type: object
@@ -17582,6 +17639,42 @@ components:
         website: { type: string }
         footer_text: { type: string }
         paper_size: { type: string, enum: [A4, A3, Letter, Legal] }
+        latitude:
+          type: [number, "null"]
+          minimum: -90
+          maximum: 90
+          description: |
+            TEC-240. Sent together with longitude; both null clears the map
+            position. One without the other or an out of range value is
+            400 VALIDATION_ERROR.
+        longitude: { type: [number, "null"], minimum: -180, maximum: 180 }
+
+    NearbyDealer:
+      type: object
+      required: [slug, name, city, district, latitude, longitude, distance_km, whatsapp]
+      properties:
+        slug: { type: string }
+        name: { type: string }
+        city: { type: string }
+        district: { type: string }
+        latitude: { type: number }
+        longitude: { type: number }
+        distance_km: { type: number, description: Haversine distance in km (2 decimals) }
+        whatsapp: { type: [string, "null"], description: E.164 phone }
+
+    EnvelopeNearbyDealers:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/NearbyDealer" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeTenantSettings:
       type: object

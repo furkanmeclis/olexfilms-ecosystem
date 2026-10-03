@@ -1028,6 +1028,8 @@ type Organization struct {
 	DistrictID         pgtype.Int8        `json:"district_id"`
 	PhoneRaw           pgtype.Text        `json:"phone_raw"`
 	GoogleBusinessUrl  pgtype.Text        `json:"google_business_url"`
+	Latitude           pgtype.Numeric     `json:"latitude"`
+	Longitude          pgtype.Numeric     `json:"longitude"`
 }
 
 type OrganizationMember struct {
