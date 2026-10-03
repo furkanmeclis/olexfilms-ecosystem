@@ -176,5 +176,10 @@
   "labels.integrations.glorian.manage": "إدارة تكامل Glorian",
   "groups.integrations": "التكاملات",
   "labels.measurements.write": "رفع القياسات",
-  "groups.measurements": "القياسات"
+  "groups.measurements": "القياسات",
+  "labels.contracts.templates.manage": "إدارة قوالب العقود",
+  "labels.contracts.read": "عرض العقود",
+  "labels.contracts.write": "تعديل العقود",
+  "labels.contracts.void": "إلغاء العقود",
+  "groups.contracts": "العقود"
 }

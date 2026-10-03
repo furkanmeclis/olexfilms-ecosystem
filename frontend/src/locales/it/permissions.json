@@ -176,5 +176,10 @@
   "labels.integrations.glorian.manage": "Gestisci l'integrazione Glorian",
   "groups.integrations": "Integrazioni",
   "labels.measurements.write": "Caricare misurazioni",
-  "groups.measurements": "Misurazioni"
+  "groups.measurements": "Misurazioni",
+  "labels.contracts.templates.manage": "Gestire i modelli di contratto",
+  "labels.contracts.read": "Visualizzare i contratti",
+  "labels.contracts.write": "Modificare i contratti",
+  "labels.contracts.void": "Annullare i contratti",
+  "groups.contracts": "Contratti"
 }

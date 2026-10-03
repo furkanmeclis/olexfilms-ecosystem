@@ -176,5 +176,10 @@
   "labels.integrations.glorian.manage": "Glorian inteqrasiyasını idarə et",
   "groups.integrations": "İnteqrasiyalar",
   "labels.measurements.write": "Ölçmələri yüklə",
-  "groups.measurements": "Ölçmələr"
+  "groups.measurements": "Ölçmələr",
+  "labels.contracts.templates.manage": "Müqavilə şablonlarını idarə et",
+  "labels.contracts.read": "Müqavilələrə bax",
+  "labels.contracts.write": "Müqavilələri redaktə et",
+  "labels.contracts.void": "Müqavilələri ləğv et",
+  "groups.contracts": "Müqavilələr"
 }
