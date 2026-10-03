@@ -1247,6 +1247,69 @@ type StepupSetting struct {
 	UpdatedAt                 pgtype.Timestamptz `json:"updated_at"`
 }
 
+type StockCount struct {
+	ID                    int64              `json:"id"`
+	Uuid                  uuid.UUID          `json:"uuid"`
+	OrganizationID        int64              `json:"organization_id"`
+	BrandID               int64              `json:"brand_id"`
+	WarehouseID           int64              `json:"warehouse_id"`
+	Method                string             `json:"method"`
+	Visibility            string             `json:"visibility"`
+	ScopeType             string             `json:"scope_type"`
+	ScopeRoomID           pgtype.Int8        `json:"scope_room_id"`
+	ScopeLocationID       pgtype.Int8        `json:"scope_location_id"`
+	ScopeProductID        pgtype.Int8        `json:"scope_product_id"`
+	Status                string             `json:"status"`
+	Note                  pgtype.Text        `json:"note"`
+	CreatedByUserID       pgtype.Int8        `json:"created_by_user_id"`
+	StartApprovedByUserID pgtype.Int8        `json:"start_approved_by_user_id"`
+	StartApprovedAt       pgtype.Timestamptz `json:"start_approved_at"`
+	StartedByUserID       pgtype.Int8        `json:"started_by_user_id"`
+	StartedAt             pgtype.Timestamptz `json:"started_at"`
+	CompletedByUserID     pgtype.Int8        `json:"completed_by_user_id"`
+	CompletedAt           pgtype.Timestamptz `json:"completed_at"`
+	ApprovedByUserID      pgtype.Int8        `json:"approved_by_user_id"`
+	ApprovedAt            pgtype.Timestamptz `json:"approved_at"`
+	CancelledAt           pgtype.Timestamptz `json:"cancelled_at"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+}
+
+type StockCountLine struct {
+	ID                 int64              `json:"id"`
+	Uuid               uuid.UUID          `json:"uuid"`
+	CountID            int64              `json:"count_id"`
+	LineKind           string             `json:"line_kind"`
+	UnitID             pgtype.Int8        `json:"unit_id"`
+	ProductID          int64              `json:"product_id"`
+	ExpectedLocationID pgtype.Int8        `json:"expected_location_id"`
+	CountedLocationID  pgtype.Int8        `json:"counted_location_id"`
+	ExpectedQuantity   int32              `json:"expected_quantity"`
+	CountedQuantity    int32              `json:"counted_quantity"`
+	ExpectedMeters     pgtype.Numeric     `json:"expected_meters"`
+	CountedMeters      pgtype.Numeric     `json:"counted_meters"`
+	Result             string             `json:"result"`
+	Resolution         pgtype.Text        `json:"resolution"`
+	Note               pgtype.Text        `json:"note"`
+	ResolvedAt         pgtype.Timestamptz `json:"resolved_at"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+}
+
+type StockCountScan struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	CountID         int64              `json:"count_id"`
+	Kind            string             `json:"kind"`
+	RawCode         string             `json:"raw_code"`
+	UnitID          pgtype.Int8        `json:"unit_id"`
+	ProductID       pgtype.Int8        `json:"product_id"`
+	LocationID      pgtype.Int8        `json:"location_id"`
+	Quantity        int32              `json:"quantity"`
+	Meters          pgtype.Numeric     `json:"meters"`
+	ScannedByUserID pgtype.Int8        `json:"scanned_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+}
+
 type StockImportBatch struct {
 	ID              int64              `json:"id"`
 	Uuid            uuid.UUID          `json:"uuid"`
