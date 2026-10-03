@@ -97,6 +97,7 @@ import (
 	settingsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/settings"
 	settingshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/settings/handler"
 	settingsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/settings/usecase"
+	shorturlsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/shorturls"
 	stockmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock"
 	stockhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/handler"
 	stockrebuild "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/rebuild"
@@ -445,7 +446,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	servicesmodule.RegisterRoutes(mux, servicesH, tokens, loader, deps.Queries, featureSvc)
 	// TEC-234: old hub mobile app aliases, /v1/mobile/legacy/* (MOBILE_LEGACY_ALIASES; F5'te kaldırılır).
 	legacymobile.RegisterRoutes(mux, cfg.Mobile.LegacyAliases, legacymobile.Handlers{
-		Login: mobileH.Login, Me: mobileH.Me,
+		Login: mobileH.Login, Me: mobileH.Me, SwitchOrganization: mobileH.SwitchOrganization,
 		ListServices: servicesH.List, GetService: servicesH.Get,
 		CreateMeasurement: measurementsH.Create,
 		PutPushToken:      mobileH.PutPushToken, DeletePushToken: mobileH.DeletePushToken,
@@ -476,6 +477,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	warrantymodule.RegisterPublicRoutes(mux, deps.Queries, ratelimit.New(deps.Redis, cfg.App.Env),
 		cfg.Warranty.PublicRateLimit, cfg.Warranty.PublicRateWindow,
 		pdfClient, cfg.Auth.FrontendURL, cfg.Warranty.PublicPDFRateLimit)
+	// TEC-249: public short URL resolver behind the frontend /s/{token}.
+	shorturlsmodule.RegisterPublicRoutes(mux, shorturlsmodule.New(deps.Queries), ratelimit.New(deps.Redis, cfg.App.Env),
+		cfg.ShortURLs.PublicRateLimit, cfg.ShortURLs.PublicRateWindow)
 	// TEC-191: panel / portal warranty list and detail, center void.
 	warrantyReader := warrantymodule.RegisterListRoutes(mux, deps.DB, deps.Queries, cfg.Auth.FrontendURL,
 		tokens, loader, featureSvc, stepUpSvc, listFinder)

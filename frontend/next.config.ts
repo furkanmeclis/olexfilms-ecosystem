@@ -19,7 +19,8 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
     key: "Permissions-Policy",
-    value: "camera=(self), microphone=(self), geolocation=(), payment=()",
+    // geolocation=(self): the dealer finder asks for the position (TEC-242).
+    value: "camera=(self), microphone=(self), geolocation=(self), payment=()",
   },
   ...(process.env.NODE_ENV === "production"
     ? [
@@ -35,6 +36,16 @@ const nextConfig: NextConfig = {
   output: "standalone",
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
+  },
+  /**
+   * TEC-249: the old hub served short links at `/_/{token}`; migrated tokens
+   * keep their value (TEC-263), so links already sent by SMS / WhatsApp go
+   * to the new resolver route `/s/{token}`.
+   */
+  async redirects() {
+    return [
+      { source: "/_/:token", destination: "/s/:token", permanent: false },
+    ];
   },
 };
 

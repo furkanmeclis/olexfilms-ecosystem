@@ -91,9 +91,19 @@ type Options struct {
 // OpenFunc opens a legacy source by name.
 type OpenFunc func(ctx context.Context, name string) (source.LegacySource, error)
 
+// DB is the new database a run writes to: a *pgxpool.Pool, or a
+// transaction (each step then runs in a savepoint; tests roll the whole run
+// back, which the append-only stock ledger needs, TEC-258).
+type DB interface {
+	db.DBTX
+	Begin(ctx context.Context) (pgx.Tx, error)
+}
+
+var _ DB = (*pgxpool.Pool)(nil)
+
 // Runner executes profile runs against the new database.
 type Runner struct {
-	Pool *pgxpool.Pool
+	Pool DB
 	// Open opens a legacy source; called only when a run has steps.
 	Open OpenFunc
 	// Profiles defaults to Profiles().

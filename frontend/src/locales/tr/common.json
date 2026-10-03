@@ -46,5 +46,13 @@
   "day.pick": "Gün seçin",
   "choose_file": "Dosya seç",
   "image_formats": "PNG, JPG, WEBP veya SVG",
-  "open": "Aç"
+  "open": "Aç",
+  "short_link.page_title": "Kısa bağlantı",
+  "short_link.expired_title": "Bu bağlantının süresi doldu",
+  "short_link.expired_body": "Açtığınız bağlantı artık geçerli değil. Gönderenden yeni bir bağlantı isteyin.",
+  "short_link.not_found_title": "Bağlantı bulunamadı",
+  "short_link.not_found_body": "Bu bağlantı mevcut değil. Tamamen kopyalandığından emin olun.",
+  "short_link.error_title": "Bağlantı açılamadı",
+  "short_link.error_body": "Bir sorun oluştu. Lütfen biraz sonra tekrar deneyin.",
+  "short_link.home": "Ana sayfaya git"
 }

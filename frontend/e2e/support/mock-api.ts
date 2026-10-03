@@ -371,6 +371,20 @@ export class MockApi {
       );
     }
 
+    // Dashboard calls on every tenant home. Unmocked they 404 and a
+    // "Record not found" toast can cover the header menus (flaky clicks).
+    if (method === "GET" && path === "/v1/stats/top-vehicle-models") {
+      return ok({
+        period: url.searchParams.get("period") ?? "30d",
+        group: url.searchParams.get("group") ?? "model",
+        since: null,
+        items: [],
+      });
+    }
+    if (method === "GET" && path === "/v1/search/specs") {
+      return ok({ items: [], enabled: false });
+    }
+
     this.unknown.push(`${method} ${path}`);
     return route.fulfill({
       status: 404,

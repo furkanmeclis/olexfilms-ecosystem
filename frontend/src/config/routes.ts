@@ -8,6 +8,8 @@ export const routes = {
     },
     /** TEC-247: landing warranty lookup target (TEC-189 public page). */
     warranty: (no: string) => `/garanti/${encodeURIComponent(no)}`,
+    /** TEC-250: public dealer showcase. */
+    dealer: (code: string) => `/bayi/${encodeURIComponent(code)}`,
   },
   tenant: {
     home: (slug: string) => `/t/${slug}`,
@@ -141,6 +143,9 @@ export const routes = {
     vehicles: "/portal/vehicles",
     vehicle: (uuid: string) => `/portal/vehicles/${encodeURIComponent(uuid)}`,
     service: (uuid: string) => `/portal/services/${encodeURIComponent(uuid)}`,
+    /** TEC-245: signed contracts and notification preferences. */
+    contracts: "/portal/contracts",
+    preferences: "/portal/preferences",
   },
   guest: {
     login: "/platform/login",

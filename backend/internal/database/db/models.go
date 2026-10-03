@@ -1402,6 +1402,21 @@ type ServiceStatusLog struct {
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
+type ShortUrl struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  pgtype.Int8        `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	Token           string             `json:"token"`
+	TargetPath      string             `json:"target_path"`
+	LegacyTargetUrl pgtype.Text        `json:"legacy_target_url"`
+	ExpiresAt       pgtype.Timestamptz `json:"expires_at"`
+	CreatedBy       pgtype.Int8        `json:"created_by"`
+	HitCount        int64              `json:"hit_count"`
+	LastHitAt       pgtype.Timestamptz `json:"last_hit_at"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+}
+
 type StepupSetting struct {
 	ID                        int16              `json:"id"`
 	TtlHours                  int32              `json:"ttl_hours"`

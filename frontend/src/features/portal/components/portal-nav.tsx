@@ -1,6 +1,13 @@
 "use client";
 
-import { Car, House, ShieldCheck } from "lucide-react";
+import {
+  BellRing,
+  Car,
+  FileSignature,
+  House,
+  ShieldCheck,
+  Store,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -16,6 +23,17 @@ const ITEMS = [
     key: "portal.nav.warranties",
     icon: ShieldCheck,
   },
+  { href: routes.portal.dealers, key: "portal.nav.dealers", icon: Store },
+  {
+    href: routes.portal.contracts,
+    key: "portal.nav.contracts",
+    icon: FileSignature,
+  },
+  {
+    href: routes.portal.preferences,
+    key: "portal.nav.preferences",
+    icon: BellRing,
+  },
 ] as const;
 
 /** Whether a nav item is the current section (home matches only itself). */
@@ -30,7 +48,10 @@ export function isPortalNavActive(href: string, pathname: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-/** Portal top navigation (TEC-241): home, my vehicles, my warranties. */
+/**
+ * Portal top navigation (TEC-241): home, my vehicles, my warranties; TEC-245
+ * adds my contracts and notification preferences.
+ */
 export function PortalNav() {
   const { t } = useLocale();
   const pathname = usePathname() ?? "";
