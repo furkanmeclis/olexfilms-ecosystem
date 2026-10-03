@@ -46,5 +46,13 @@
   "day.pick": "Gün seçin",
   "choose_file": "Fayl seçin",
   "image_formats": "PNG, JPG, WEBP və ya SVG",
-  "open": "Aç"
+  "open": "Aç",
+  "short_link.page_title": "Qısa keçid",
+  "short_link.expired_title": "Bu keçidin müddəti bitib",
+  "short_link.expired_body": "Açdığınız keçid artıq etibarlı deyil. Göndərəndən yenisini istəyin.",
+  "short_link.not_found_title": "Keçid tapılmadı",
+  "short_link.not_found_body": "Belə keçid mövcud deyil. Tam kopyalandığını yoxlayın.",
+  "short_link.error_title": "Keçidi açmaq mümkün olmadı",
+  "short_link.error_body": "Nəsə səhv getdi. Bir azdan yenidən cəhd edin.",
+  "short_link.home": "Ana səhifəyə keç"
 }
