@@ -45,6 +45,9 @@ func TestRunEmptyStepsCreatesRun(t *testing.T) {
 		Open: func(context.Context, string) (source.LegacySource, error) {
 			return nil, errors.New("no source may be opened without steps")
 		},
+		Profiles: map[string]Profile{
+			"olex": {Name: "olex", Enabled: true, Sources: []string{SourceHub, SourceWH}},
+		},
 	}
 	rep, err := r.Run(ctx, Options{Profile: "olex", Mode: ModeFull})
 	if err != nil {

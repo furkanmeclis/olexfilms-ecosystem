@@ -1,6 +1,6 @@
 "use client";
 
-import { ShieldCheck } from "lucide-react";
+import { Car, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -60,7 +60,13 @@ export function PortalHome() {
           </CardTitle>
           <CardDescription>{t("portal.home.empty")}</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-wrap gap-2">
+          <Button asChild data-testid="portal-vehicles-link">
+            <Link href={routes.portal.vehicles}>
+              <Car className="size-4" />
+              {t("portal.nav.vehicles")}
+            </Link>
+          </Button>
           <Button
             asChild
             variant="secondary"

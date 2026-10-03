@@ -379,6 +379,14 @@ var Permissions = []PermissionDef{
 		Sensitive:   true,
 		Description: "Edit the Glorian hub connection and API key, location map; start syncs and retry outbound orders.",
 	},
+
+	// TEC-233: minimal measurement upload (K28). Appended last; migration
+	// 000076 seeds it. Measurements are written into the active
+	// organization only, so the single scope is managed.
+	{
+		Slug: PermMeasurementsWrite, Name: "Upload measurements", Module: "measurements", Scopes: scopesOrg,
+		Description: "Upload paint thickness measurements from the mobile app into the active organization (K28).",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -467,6 +475,8 @@ var Roles = []RoleDef{
 			PermTasksWrite: ScopeBrand,
 			// TEC-228 (000070): decides returns sent to the center.
 			PermTransfersApprove: ScopeBrand,
+			// TEC-233 (000076).
+			PermMeasurementsWrite: ScopeManaged,
 		}),
 	},
 	{
@@ -584,6 +594,8 @@ var Roles = []RoleDef{
 			PermVehiclesTransfer: ScopeSubtree,
 			// TEC-197 (000055): transfers to sibling distributors.
 			PermTransfersRequest: ScopeManaged,
+			// TEC-233 (000076).
+			PermMeasurementsWrite: ScopeManaged,
 		}),
 	},
 	{
@@ -602,6 +614,7 @@ var Roles = []RoleDef{
 			PermServicesComplete:   ScopeSubtree,
 			PermWarrantiesRead:     ScopeSubtree,
 			PermVehiclesTransfer:   ScopeSubtree,
+			PermMeasurementsWrite:  ScopeManaged, // TEC-233 (000076)
 		}),
 	},
 	{
@@ -674,6 +687,8 @@ var Roles = []RoleDef{
 			// TEC-185 (000051).
 			PermWarrantiesRead:   ScopeManaged,
 			PermVehiclesTransfer: ScopeManaged,
+			// TEC-233 (000076).
+			PermMeasurementsWrite: ScopeManaged,
 		}),
 	},
 	{
@@ -693,6 +708,7 @@ var Roles = []RoleDef{
 			PermServicesComplete:   ScopeOwn,
 			PermWarrantiesRead:     ScopeManaged,
 			PermVehiclesTransfer:   ScopeOwn,
+			PermMeasurementsWrite:  ScopeManaged, // TEC-233 (000076)
 		}),
 	},
 	{

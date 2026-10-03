@@ -5898,13 +5898,25 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Upload a paint thickness measurement (contract draft, K28)
-         * @description **Draft contract — answers 501 until F3.** The schema is finalized in
-         *     F3 (measurement module); fields may still change there, while `vin`,
-         *     `raw` and the version header stay mandatory. Idempotent by the
-         *     `Idempotency-Key` header or `client_measurement_id`. Accepted uploads
-         *     will answer `202 {uuid, status: accepted}`. Permission:
-         *     `measurements.write` (managed scope) once the module exists.
+         * Upload a paint thickness measurement (minimal storage, K28)
+         * @description Minimal F2 storage (TEC-233): the upload is kept as a raw record in
+         *     the active organization (`measurement_results`; the whole request
+         *     body is stored unchanged) and answers `202 {uuid, status}`. F3-02
+         *     (TEC-113) adds mandatory VIN, the device registry, before/after
+         *     pairing, the difference table and the PDF on the same record.
+         *
+         *     Only `raw` (an object) is required. With a `vin` the status is
+         *     `accepted`; without one it is `vin_pending` ("tamamlanacak", filled in
+         *     later). `service_uuid` attaches the measurement to a service of the
+         *     active organization (its vehicle too); another organization's service
+         *     answers 404. Idempotent per organization by the `Idempotency-Key`
+         *     header or `client_measurement_id`: a repeat answers the first result
+         *     (same uuid and status) and writes nothing.
+         *
+         *     Permission `measurements.write` (managed scope). Bearer with
+         *     `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or
+         *     unsupported `X-Mobile-Api-Version` answers 426. Invalid fields answer
+         *     400 `VALIDATION_ERROR`.
          */
         post: operations["postMobileMeasurement"];
         delete?: never;
@@ -11809,12 +11821,13 @@ export interface components {
         MobileMeasurementRequest: {
             /** @description Idempotency key in the body (alternative to the Idempotency-Key header) */
             client_measurement_id?: string;
-            vin: string;
+            /** @description 11-17 letters or digits (upper-cased); empty or absent makes the upload vin_pending */
+            vin?: string;
             plate?: string;
             /** Format: uuid */
             service_uuid?: string;
             /** Format: date-time */
-            measured_at: string;
+            measured_at?: string;
             /** @description NexPTG body type */
             body_type?: string;
             /**
@@ -11822,12 +11835,12 @@ export interface components {
              * @enum {string}
              */
             unit: "um";
-            device: {
+            device?: {
                 serial: string;
                 model?: string;
                 firmware?: string;
             };
-            parts: {
+            parts?: {
                 /** @description Body part key, e.g. hood, roof, front_left_door */
                 part: string;
                 /** @description Measuring spot on the part */
@@ -11842,8 +11855,11 @@ export interface components {
         MobileMeasurementAccepted: {
             /** Format: uuid */
             uuid: string;
-            /** @enum {string} */
-            status: "accepted";
+            /**
+             * @description vin_pending when the upload has no VIN ("tamamlanacak")
+             * @enum {string}
+             */
+            status: "accepted" | "vin_pending";
         };
         QRRealtime: {
             enabled: boolean;
@@ -24256,7 +24272,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Accepted (F3) */
+            /** @description Accepted (also the answer to a repeated key) */
             202: {
                 headers: {
                     [name: string]: unknown;
@@ -24265,17 +24281,11 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeMobileMeasurementAccepted"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             426: components["responses"]["MobileApiVersionUnsupported"];
-            /** @description 501 NOT_IMPLEMENTED until F3 */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
         };
     };
     mobileListWarehouses: {

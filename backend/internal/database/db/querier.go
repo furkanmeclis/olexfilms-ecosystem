@@ -409,6 +409,8 @@ type Querier interface {
 	// Both have a profile: the target keeps its values and only fills its empty
 	// fields from the source (an identity number moves with its mask).
 	FillCustomerProfileFromSource(ctx context.Context, arg FillCustomerProfileFromSourceParams) (int64, error)
+	// The first upload of a repeated idempotency key or client_measurement_id.
+	FindMeasurementResultByKeys(ctx context.Context, arg FindMeasurementResultByKeysParams) (MeasurementResult, error)
 	// Another draft entry (or, for serial units, a confirmed one whose line
 	// was not undone) already holding the unit.
 	FindOpenStockEntryForUnit(ctx context.Context, arg FindOpenStockEntryForUnitParams) (FindOpenStockEntryForUnitRow, error)
@@ -609,6 +611,9 @@ type Querier interface {
 	GetServiceByNo(ctx context.Context, serviceNo string) (Service, error)
 	GetServiceByUUID(ctx context.Context, arg GetServiceByUUIDParams) (Service, error)
 	GetServiceForIndex(ctx context.Context, argUuid uuid.UUID) (GetServiceForIndexRow, error)
+	// The service a measurement is attached to, bounded by the active
+	// organization (a service of another organization is not found).
+	GetServiceForMeasurement(ctx context.Context, arg GetServiceForMeasurementParams) (GetServiceForMeasurementRow, error)
 	GetServiceImage(ctx context.Context, arg GetServiceImageParams) (ServiceImage, error)
 	GetServiceItem(ctx context.Context, arg GetServiceItemParams) (ServiceItem, error)
 	GetServiceItemByUUID(ctx context.Context, arg GetServiceItemByUUIDParams) (ServiceItem, error)
@@ -730,6 +735,9 @@ type Querier interface {
 	InsertIntegrationExternalParty(ctx context.Context, arg InsertIntegrationExternalPartyParams) (IntegrationExternalParty, error)
 	InsertKVKKNotice(ctx context.Context, arg InsertKVKKNoticeParams) (KvkkNotice, error)
 	InsertLegalText(ctx context.Context, arg InsertLegalTextParams) (LegalText, error)
+	// InsertMeasurementResult skips the insert when the idempotency key or the
+	// client_measurement_id was already used in the organization (no row then).
+	InsertMeasurementResult(ctx context.Context, arg InsertMeasurementResultParams) (MeasurementResult, error)
 	InsertMessage(ctx context.Context, arg InsertMessageParams) (Message, error)
 	// ON CONFLICT DO NOTHING: a concurrent insert of the same key returns no row
 	// and the caller reads the existing one.
@@ -1367,6 +1375,34 @@ type Querier interface {
 	// Organization links the target already has: the target row keeps the
 	// earliest dates of both rows.
 	MergeConflictingCustomerOrganizations(ctx context.Context, arg MergeConflictingCustomerOrganizationsParams) (int64, error)
+	MigratorAssignMemberRole(ctx context.Context, arg MigratorAssignMemberRoleParams) (int64, error)
+	MigratorAssignUserRole(ctx context.Context, arg MigratorAssignUserRoleParams) (int64, error)
+	// Whether another live user already holds the e-mail or the phone.
+	MigratorContactTaken(ctx context.Context, arg MigratorContactTakenParams) (MigratorContactTakenRow, error)
+	// The live distributor owning the country-level territory of a brand.
+	MigratorCountryDistributor(ctx context.Context, arg MigratorCountryDistributorParams) (int64, error)
+	MigratorDistributorBySlug(ctx context.Context, arg MigratorDistributorBySlugParams) (int64, error)
+	// Adds the membership or returns the existing one; an owner grant upgrades
+	// a staff membership, never the other way round.
+	MigratorEnsureMember(ctx context.Context, arg MigratorEnsureMemberParams) (MigratorEnsureMemberRow, error)
+	// An existing account with the e-mail (preferred) or the phone.
+	MigratorFindUserByContact(ctx context.Context, arg MigratorFindUserByContactParams) (MigratorFindUserByContactRow, error)
+	MigratorInsertOrganization(ctx context.Context, arg MigratorInsertOrganizationParams) (int64, error)
+	MigratorInsertUser(ctx context.Context, arg MigratorInsertUserParams) (int64, error)
+	MigratorMatchDistrict(ctx context.Context, arg MigratorMatchDistrictParams) (int64, error)
+	// TEC-254: migrator step 1 (center, TR distributor, dealers, users, roles).
+	// Written only by cmd/migrator inside a step transaction.
+	// Province by name, matched like the 000035 backfill: Turkish capitals
+	// folded, case insensitive.
+	MigratorMatchProvince(ctx context.Context, arg MigratorMatchProvinceParams) (int64, error)
+	MigratorOrganizationIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
+	MigratorRoleOrgTypes(ctx context.Context, slugs []string) ([]MigratorRoleOrgTypesRow, error)
+	// Legacy-sourced fields only; slug and parent stay as the new app has them.
+	MigratorUpdateOrganization(ctx context.Context, arg MigratorUpdateOrganizationParams) error
+	// The password is replaced only while the account still holds a migrated
+	// hash (bcrypt or the reset marker); a password set in the new app wins.
+	MigratorUpdateUser(ctx context.Context, arg MigratorUpdateUserParams) error
+	MigratorUserByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorUserByUUIDRow, error)
 	// Consents the target has not decided yet; a decision the target already
 	// made for the same legal text wins and the source's stays as a record.
 	MoveConsentsToUser(ctx context.Context, arg MoveConsentsToUserParams) (int64, error)

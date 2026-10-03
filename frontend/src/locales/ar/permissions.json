@@ -174,5 +174,7 @@
   "groups.tasks": "المهام",
   "labels.integrations.glorian.view": "عرض تكامل Glorian",
   "labels.integrations.glorian.manage": "إدارة تكامل Glorian",
-  "groups.integrations": "التكاملات"
+  "groups.integrations": "التكاملات",
+  "labels.measurements.write": "رفع القياسات",
+  "groups.measurements": "القياسات"
 }
