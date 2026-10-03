@@ -132,7 +132,8 @@ func OlexReportTables() []ReportTable {
 			SkipPrefixes: []string{"hub_skipped_"}},
 		{Source: SourceHub, Table: "stock_movements", TargetTable: "stock_movements", Step: "ledger"},
 		{Source: SourceHub, Table: "orders", TargetTable: "orders", Step: "orders",
-			MergeReason: "external_reference", MergeWith: []ReportTableRef{wh("orders")}},
+			MergeReason: "external_reference", MergeWith: []ReportTableRef{wh("orders")},
+			SkipPrefixes: []string{"order_skipped_"}},
 		{Source: SourceHub, Table: "order_items", TargetTable: "order_items", Step: "orders",
 			MergeReason: "external_reference", MergeWith: []ReportTableRef{wh("order_items")},
 			SkipPrefixes: []string{"lines_skipped_"}},
@@ -161,7 +162,7 @@ func OlexReportTables() []ReportTable {
 		{Source: SourceHub, Table: "service_nexptg_report", TargetTable: "measurement_results", Step: "measurements",
 			MergeReason: "service_link_in_raw", Folded: true},
 		{Source: SourceHub, Table: "short_urls", TargetTable: "short_urls", Step: "short_urls",
-			SkipPrefixes: []string{ShortTargetUnmapped + ":", ShortTargetInvalid + ":", "token_conflict:"}},
+			SkipPrefixes: []string{ShortTargetUnmapped + ":", ShortTargetInvalid + ":", "token_conflict:", "invalid_token:"}},
 		{Source: SourceHub, Table: "sms_logs", TargetTable: "legacy_messages", Step: "legacy_messages"},
 		{Source: SourceHub, Table: "notifications", TargetTable: "legacy_messages", Step: "legacy_messages"},
 
@@ -176,7 +177,8 @@ func OlexReportTables() []ReportTable {
 			OutOfScope: []ReportRule{
 				{Reason: "glorian", Query: `SELECT CAST(p.id AS CHAR(36)) FROM products p
 JOIN brands b ON b.id = p.brand_id WHERE LOWER(b.name) LIKE '%glorian%'`},
-			}},
+			},
+			SkipPrefixes: []string{"wh_product_skipped_"}},
 		{Source: SourceWH, Table: "product_barcodes", TargetTable: "units", Step: "units", IDExpr: whCast,
 			MergeReason: "barcode_match", MergeWith: []ReportTableRef{hub("stock_items")},
 			OutOfScope: []ReportRule{
@@ -190,7 +192,8 @@ JOIN brands b ON b.id = p.brand_id WHERE LOWER(b.name) LIKE '%glorian%'`},
 			MergeReason: "external_reference", MergeWith: []ReportTableRef{hub("orders")},
 			OutOfScope: []ReportRule{
 				{Reason: "deleted", Query: `SELECT CAST(id AS CHAR(36)) FROM orders WHERE deleted_at IS NOT NULL`},
-			}},
+			},
+			SkipPrefixes: []string{"order_skipped_"}},
 		{Source: SourceWH, Table: "order_items", TargetTable: "order_items", Step: "orders", IDExpr: whCast,
 			MergeReason: "external_reference", MergeWith: []ReportTableRef{hub("order_items")},
 			OutOfScope: []ReportRule{

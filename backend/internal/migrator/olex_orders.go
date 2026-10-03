@@ -219,6 +219,29 @@ func (o *orderCandidate) label() string {
 	return "wh:" + o.WH.ID
 }
 
+// skipOrder reports a skipped candidate: the total, then each legacy order
+// and (lines true) order line it carries by id, as the validation report
+// (report.go) matches skipped rows by id.
+func skipOrder(c counts, l *legacyOrders, cand *orderCandidate, reason string, lines bool) {
+	c.inc("order_skipped_" + reason)
+	if h := cand.Hub; h != nil {
+		c.inc("order_skipped_" + reason + ":hub:" + strconv.FormatInt(h.ID, 10))
+		if lines {
+			for _, it := range l.hubItems[h.ID] {
+				c.inc("lines_skipped_order_" + reason + ":hub:" + strconv.FormatInt(it.ID, 10))
+			}
+		}
+	}
+	if w := cand.WH; w != nil {
+		c.inc("order_skipped_" + reason + ":wh:" + w.ID)
+		if lines {
+			for _, it := range l.whItems[w.ID] {
+				c.inc("lines_skipped_order_" + reason + ":wh:" + it.ID)
+			}
+		}
+	}
+}
+
 // orderLine is one product line of a candidate, merged from both sides.
 type orderLine struct {
 	ProductID int64
@@ -531,6 +554,7 @@ func (s OrdersStep) importOrder(ctx context.Context, u *orderCtx, l *legacyOrder
 	state, reason, ok := resolveOrderState(cand)
 	if !ok {
 		c.inc("skipped_status:" + reason)
+		skipOrder(c, l, cand, "status", true)
 		return nil
 	}
 
@@ -548,6 +572,7 @@ func (s OrdersStep) importOrder(ctx context.Context, u *orderCtx, l *legacyOrder
 	}
 	if dealerID == 0 {
 		c.inc("skipped_buyer_unmapped:" + label)
+		skipOrder(c, l, cand, "buyer_unmapped", true)
 		return nil
 	}
 	buyerUUID, ok, err := u.m.Lookup(ctx, s.system(), "dealers", strconv.FormatInt(dealerID, 10))
@@ -556,11 +581,13 @@ func (s OrdersStep) importOrder(ctx context.Context, u *orderCtx, l *legacyOrder
 	}
 	if !ok {
 		c.inc("skipped_buyer_unmapped:" + label)
+		skipOrder(c, l, cand, "buyer_unmapped", true)
 		return nil
 	}
 	buyer, err := u.q.MigratorOrderBuyer(ctx, buyerUUID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		c.inc("skipped_parties:" + label)
+		skipOrder(c, l, cand, "parties", true)
 		return nil
 	}
 	if err != nil {
@@ -568,6 +595,7 @@ func (s OrdersStep) importOrder(ctx context.Context, u *orderCtx, l *legacyOrder
 	}
 	if buyer.BrandID != u.brandID || buyer.Type != "dealer" || buyer.ParentType != "distributor" {
 		c.inc("skipped_parties:" + label)
+		skipOrder(c, l, cand, "parties", true)
 		return nil
 	}
 
@@ -577,6 +605,8 @@ func (s OrdersStep) importOrder(ctx context.Context, u *orderCtx, l *legacyOrder
 	}
 	if len(lines) == 0 {
 		c.inc("skipped_no_lines:" + label)
+		// Each line was skipped (and reported) on its own.
+		skipOrder(c, l, cand, "no_lines", false)
 		return nil
 	}
 
@@ -956,6 +986,7 @@ func (s OrdersStep) orderLines(ctx context.Context, u *orderCtx, l *legacyOrders
 				continue
 			case "":
 				c.inc("lines_brand_unknown:" + strings.TrimSpace(it.Brand))
+				c.inc("lines_skipped_brand_unknown:wh:" + it.ID)
 				continue
 			}
 			if it.Quantity <= 0 {

@@ -125,7 +125,7 @@ func TestOlexEndToEndFullRerunDelta(t *testing.T) {
 		t.Fatalf("e2e steps %v, olex steps %v", names, olexNames)
 	}
 
-	report := func() *Report {
+	report := func(strict ...bool) *Report {
 		t.Helper()
 		srcs := Sources{}
 		for _, name := range []string{SourceHub, SourceWH} {
@@ -137,6 +137,7 @@ func TestOlexEndToEndFullRerunDelta(t *testing.T) {
 		}
 		rep, err := BuildReport(ctx, srcs, tx, ReportOptions{
 			Profile: profile, Systems: map[string]string{SourceHub: hubSys, SourceWH: whSys},
+			Strict: len(strict) > 0 && strict[0],
 		})
 		if err != nil {
 			t.Fatalf("report: %v", err)
@@ -324,6 +325,79 @@ func TestOlexEndToEndFullRerunDelta(t *testing.T) {
 		if name != "migration_runs" {
 			t.Errorf("idle delta inserted %d rows into %s", n, name)
 		}
+	}
+
+	// 3b. F2-FIX-2: skips the services step reports by id. A service with
+	// an unknown status (skipped) and its item, image and status log, and an
+	// image of the migrated service 5 whose file is missing: the report
+	// counts them as skipped and stays clean; strict makes them mismatches.
+	exec(`INSERT INTO ` + hubSchema + `.services (id, service_no, dealer_id, customer_id, user_id, car_brand_id, car_model_id,
+		year, vin, plate, plate_country, km, package, applied_parts, notes, status, completed_at, review_request_sms_sent_at,
+		created_at, updated_at)
+		SELECT 6, 'SYN-S-0006', dealer_id, customer_id, user_id, car_brand_id, car_model_id, year, 'SYNVIN00000000006',
+		       '34 SYN 006', plate_country, km, package, applied_parts, NULL, 'lost', NULL, NULL,
+		       LOCALTIMESTAMP(0), LOCALTIMESTAMP(0)
+		FROM ` + hubSchema + `.services WHERE id = 1`)
+	exec(`INSERT INTO ` + hubSchema + `.service_items (id, service_id, stock_item_id, usage_type, notes, created_at, updated_at)
+		VALUES (10, 6, 3, 'full', NULL, LOCALTIMESTAMP(0), LOCALTIMESTAMP(0))`)
+	exec(`INSERT INTO ` + hubSchema + `.service_images (id, service_id, image_path, title, "order", created_at, updated_at)
+		VALUES (10, 6, 'services/syn-s-0006/1.jpg', NULL, 0, LOCALTIMESTAMP(0), LOCALTIMESTAMP(0)),
+		       (11, 5, 'services/syn-s-0005/missing.jpg', NULL, 0, LOCALTIMESTAMP(0), LOCALTIMESTAMP(0))`)
+	exec(`INSERT INTO ` + hubSchema + `.service_status_logs (id, service_id, from_dealer_id, to_dealer_id, user_id, notes,
+		created_at, updated_at) VALUES (10, 6, NULL, 1, 3, NULL, LOCALTIMESTAMP(0), LOCALTIMESTAMP(0))`)
+	e.run(profile, Options{Mode: ModeDelta})
+	rep = report()
+	if err := rep.Err(); err != nil {
+		t.Fatalf("report with service skips: %v: %+v", err, rep.Mismatches)
+	}
+	wantSkips := map[string]string{
+		"services:6":             "service_skipped_status",
+		"service_items:10":       "item_skipped_service_unmapped",
+		"service_images:10":      "image_skipped_service_unmapped",
+		"service_images:11":      "image_skipped_missing",
+		"service_status_logs:10": "log_skipped_service_unmapped",
+	}
+	for _, c := range []struct {
+		table         string
+		source, skipd int64
+	}{
+		{"services", 5, 1}, {"service_items", 4, 1}, {"service_images", 5, 2}, {"service_status_logs", 4, 1},
+	} {
+		tr := tableOf(rep, SourceHub, c.table)
+		if tr.SourceRows != c.source || tr.Skipped != c.skipd || tr.Mismatches != 0 ||
+			tr.Migrated+tr.Skipped != tr.SourceRows {
+			t.Errorf("%s with service skips = %+v, want source %d skipped %d", c.table, tr, c.source, c.skipd)
+		}
+	}
+	got := map[string]string{}
+	for _, d := range rep.Expected {
+		if _, ok := wantSkips[d.Table+":"+d.ID]; ok && d.Source == SourceHub && d.Class == ClassSkipped {
+			got[d.Table+":"+d.ID] = d.Reason
+		}
+	}
+	if len(got) != len(wantSkips) {
+		t.Errorf("skipped = %v, want %v", got, wantSkips)
+	}
+	for k, want := range wantSkips {
+		if got[k] != want {
+			t.Errorf("%s skipped as %q, want %q", k, got[k], want)
+		}
+	}
+	strict := report(true)
+	if err := strict.Err(); !errors.Is(err, ErrReportMismatch) {
+		t.Fatalf("strict report = %v, want ErrReportMismatch", err)
+	}
+	strictSkips := 0
+	for _, d := range strict.Mismatches {
+		if d.Class != ClassSkipped {
+			t.Errorf("strict mismatch %+v, want only skipped rows", d)
+		}
+		if _, ok := wantSkips[d.Table+":"+d.ID]; ok && d.Source == SourceHub {
+			strictSkips++
+		}
+	}
+	if strictSkips != len(wantSkips) {
+		t.Errorf("strict report has %d of the %d service skips: %+v", strictSkips, len(wantSkips), strict.Mismatches)
 	}
 
 	// 4. A deleted target row fails the report.
