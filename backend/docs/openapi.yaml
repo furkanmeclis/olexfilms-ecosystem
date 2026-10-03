@@ -6859,6 +6859,409 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  # TEC-206: stock counts (4 methods, blind/guided, difference resolution).
+  /v1/warehouse/stock-counts:
+    get:
+      tags: [Warehouse]
+      operationId: listStockCounts
+      summary: Stock counts of the active organization
+      description: >-
+        Needs `warehouse.read` with the warehouse module on (center or
+        distributor, 403 for dealers, K12). Newest first; no expected values.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: "#/components/schemas/StockCountStatus" }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Page of counts
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockCountPage" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Warehouse]
+      operationId: createStockCount
+      summary: Open a draft stock count
+      description: >-
+        Needs `warehouse.write`. The count covers one warehouse of the active
+        organization and a scope inside it: `warehouse` (default), `room`
+        (`room_uuid`), `location` (`location_uuid`, the location and its
+        subtree) or `product` (`product_uuid`, a product of the active brand
+        inside the warehouse). Methods: `location_first` (a location is
+        required for every unit scan), `unit_first` (the location is optional
+        for serial units), `product_qty` (SKUs of serial products and fixed
+        barcodes with a quantity per location), `initial_placement` (the
+        organization's unlocated units are placed into the scope's locations;
+        needs `approve-start`; no product scope). `blind` never returns
+        expected values while counting, `guided` does.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockCountInput" }
+      responses:
+        "201":
+          description: Draft count
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockCount" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/warehouse/stock-counts/{uuid}:
+    get:
+      tags: [Warehouse]
+      operationId: getStockCount
+      summary: Stock count detail
+      description: >-
+        Needs `warehouse.read`. Carries `progress`; `expected` (per location)
+        only for a guided count while it is draft or in progress (a blind count
+        never has it); `summary` once completed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Count
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockCount" }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/warehouse/stock-counts/{uuid}/approve-start:
+    post:
+      tags: [Warehouse]
+      operationId: approveStockCountStart
+      summary: Approve the start of a draft count
+      description: >-
+        Needs `warehouse.write`. Required before `start` for
+        `initial_placement`; idempotent. 409 COUNT_INVALID_STATUS unless draft.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Count
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockCount" }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/stock-counts/{uuid}/start:
+    post:
+      tags: [Warehouse]
+      operationId: startStockCount
+      summary: Start scanning
+      description: >-
+        Needs `warehouse.write`. draft -> in_progress. 409
+        COUNT_START_APPROVAL_REQUIRED for an unapproved initial_placement, 409
+        COUNT_INVALID_STATUS unless draft.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Count
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockCount" }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/stock-counts/{uuid}/scans:
+    get:
+      tags: [Warehouse]
+      operationId: listStockCountScans
+      summary: Recorded scans of a count
+      description: Needs `warehouse.read`. No expected values.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Scans, oldest first
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockCountScanList" }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Warehouse]
+      operationId: scanStockCount
+      summary: Record one scan
+      description: >-
+        Needs `warehouse.write`; the count must be in progress (409
+        COUNT_INVALID_STATUS). The code is resolved by the TEC-203 resolver
+        (units follow the caller's `stock.read` reach; 404 SCAN_NO_MATCH). A
+        location scan sets the scanning user's location context; a unit or
+        SKU scan is counted at `location_uuid`, else at that context. 422
+        COUNT_LOCATION_OUT_OF_SCOPE for a location outside the scope (nothing
+        is recorded), 422 COUNT_LOCATION_REQUIRED when the method needs a
+        location, 422 COUNT_PRODUCT_OUT_OF_SCOPE for another product of a
+        product-scoped count, 422 COUNT_SCAN_KIND_NOT_ALLOWED (serial units in
+        product_qty, SKUs outside product_qty, SKUs of fixed-barcode products),
+        409 COUNT_UNIT_ALREADY_SCANNED for a serial unit counted twice.
+        `quantity` counts fixed barcodes and SKUs; `meters` is the measured
+        length of a roll. `expected` is present for guided counts only.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockCountScanInput" }
+      responses:
+        "201":
+          description: Recorded scan
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockCountScanResult" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: COUNT_NOT_FOUND, SCAN_NO_MATCH or SCAN_LOCATION_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          description: >-
+            COUNT_LOCATION_OUT_OF_SCOPE, COUNT_LOCATION_REQUIRED,
+            COUNT_PRODUCT_OUT_OF_SCOPE or COUNT_SCAN_KIND_NOT_ALLOWED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/warehouse/stock-counts/{uuid}/scans/{scan_uuid}:
+    delete:
+      tags: [Warehouse]
+      operationId: deleteStockCountScan
+      summary: Remove a scan of an in-progress count
+      description: Needs `warehouse.write`. 409 COUNT_INVALID_STATUS unless in progress.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - name: scan_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Removed
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/stock-counts/{uuid}/complete:
+    post:
+      tags: [Warehouse]
+      operationId: completeStockCount
+      summary: Complete scanning and compute the differences
+      description: >-
+        Needs `warehouse.write`. in_progress -> pending_review. Builds the
+        lines against the ledger (matched, missing, wrong_location, unlocated,
+        unexpected, qty_variance, meter_variance). No stock is changed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Count with its summary
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockCount" }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/stock-counts/{uuid}/report:
+    get:
+      tags: [Warehouse]
+      operationId: getStockCountReport
+      summary: Count report (lines with expected and counted values)
+      description: >-
+        Needs `warehouse.read`. Completed counts only (409
+        COUNT_INVALID_STATUS before completion).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Report
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockCountReport" }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/stock-counts/{uuid}/export:
+    get:
+      tags: [Warehouse]
+      operationId: exportStockCount
+      summary: Count report as CSV
+      description: Needs `warehouse.read`. Completed counts only (409 COUNT_INVALID_STATUS).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: CSV, one row per line
+          content:
+            text/csv:
+              schema: { type: string }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/stock-counts/{uuid}/approve:
+    post:
+      tags: [Warehouse]
+      operationId: approveStockCount
+      summary: Approve a completed count and apply the resolutions
+      description: >-
+        Needs `warehouse.write` and `stock.adjust` (403 COUNT_ADJUST_FORBIDDEN).
+        Every line that is not matched needs a resolution from its
+        `allowed_resolutions` (400 VALIDATION_ERROR otherwise). In one
+        transaction, through the stock ledger with the idempotency keys
+        `stock_count:stock_count_line:<line>:<type>:<barcode>`: void_missing
+        -> void; relocate -> placement to the counted location (and a
+        count_adjustment of measured roll meters); increase_unlocated ->
+        count_adjustment to the counted fixed quantity or roll meters; ignore
+        -> nothing. 409 COUNT_STALE (nothing applied) when the stock changed
+        since completion; 409 COUNT_INVALID_STATUS unless pending_review (a
+        second approval writes nothing).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockCountApproveInput" }
+      responses:
+        "200":
+          description: Approved count with its lines
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockCountReport" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/stock-counts/{uuid}/cancel:
+    post:
+      tags: [Warehouse]
+      operationId: cancelStockCount
+      summary: Cancel a count
+      description: >-
+        Needs `warehouse.write`. draft, in_progress or pending_review ->
+        cancelled; no stock is changed. 409 COUNT_INVALID_STATUS otherwise.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Count
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockCount" }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   # TEC-203: universal scan resolver.
   /v1/warehouse/scan:
     post:
@@ -16883,6 +17286,297 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/WarehouseGenerateResult" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    StockCountStatus:
+      type: string
+      enum: [draft, in_progress, pending_review, approved, cancelled]
+
+    StockCountInput:
+      type: object
+      required: [warehouse_uuid, method, visibility]
+      additionalProperties: false
+      properties:
+        warehouse_uuid: { type: string, format: uuid }
+        method: { type: string, enum: [location_first, unit_first, product_qty, initial_placement] }
+        visibility: { type: string, enum: [blind, guided] }
+        scope_type: { type: string, enum: [warehouse, room, location, product], default: warehouse }
+        room_uuid: { type: [string, "null"], format: uuid, description: "scope_type=room" }
+        location_uuid: { type: [string, "null"], format: uuid, description: "scope_type=location (the location and its subtree)" }
+        product_uuid: { type: [string, "null"], format: uuid, description: "scope_type=product (a product of the active brand)" }
+        note: { type: [string, "null"], maxLength: 500 }
+
+    StockCountRef:
+      type: object
+      required: [uuid, code, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+
+    StockCountLocation:
+      type: object
+      required: [uuid, full_code, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        full_code: { type: string }
+        name: { type: string }
+
+    StockCountProduct:
+      type: object
+      required: [uuid, sku, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        sku: { type: string }
+        name: { type: string }
+
+    StockCountUnit:
+      type: object
+      required: [uuid, barcode, unit_kind]
+      properties:
+        uuid: { type: string, format: uuid }
+        barcode: { type: string }
+        unit_kind: { type: string, enum: [serial, fixed] }
+
+    StockCount:
+      type: object
+      required: [uuid, status, method, visibility, scope_type, warehouse, scope_room, scope_location, scope_product, note,
+        start_approval_required, start_approved_at, started_at, completed_at, approved_at, cancelled_at, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        status: { $ref: "#/components/schemas/StockCountStatus" }
+        method: { type: string, enum: [location_first, unit_first, product_qty, initial_placement] }
+        visibility: { type: string, enum: [blind, guided] }
+        scope_type: { type: string, enum: [warehouse, room, location, product] }
+        warehouse: { $ref: "#/components/schemas/StockCountRef" }
+        scope_room:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockCountRef"
+        scope_location:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockCountLocation"
+        scope_product:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockCountProduct"
+        note: { type: [string, "null"] }
+        start_approval_required: { type: boolean, description: "initial_placement starts after approve-start." }
+        start_approved_at: { type: [string, "null"], format: date-time }
+        started_at: { type: [string, "null"], format: date-time }
+        completed_at: { type: [string, "null"], format: date-time }
+        approved_at: { type: [string, "null"], format: date-time }
+        cancelled_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        progress:
+          description: Detail responses only.
+          type: object
+          required: [scans, serial_units, fixed_quantity, product_quantity]
+          properties:
+            scans: { type: integer }
+            serial_units: { type: integer }
+            fixed_quantity: { type: integer, format: int64 }
+            product_quantity: { type: integer, format: int64 }
+        expected:
+          description: Guided counts while draft or in progress only; never present for a blind count.
+          type: object
+          required: [serial_units, fixed_quantity, locations]
+          properties:
+            serial_units: { type: integer }
+            fixed_quantity: { type: integer, format: int64 }
+            locations:
+              type: array
+              items:
+                type: object
+                required: [location, serial_units, fixed_quantity]
+                properties:
+                  location:
+                    description: Null for stock held by the organization without a location.
+                    oneOf:
+                      - type: "null"
+                      - $ref: "#/components/schemas/StockCountLocation"
+                  serial_units: { type: integer }
+                  fixed_quantity: { type: integer, format: int64 }
+        summary:
+          description: Completed counts only.
+          type: object
+          required: [lines, by_result, unresolved]
+          properties:
+            lines: { type: integer }
+            by_result:
+              type: object
+              additionalProperties: { type: integer }
+            unresolved: { type: integer }
+
+    StockCountScanInput:
+      type: object
+      required: [code]
+      additionalProperties: false
+      properties:
+        code: { type: string, maxLength: 200, description: "Location QR, unit barcode / QR, SKU or short code (TEC-203)." }
+        location_uuid: { type: [string, "null"], format: uuid, description: "Counted location; default: the user's last location scan." }
+        quantity: { type: [integer, "null"], minimum: 1, maximum: 100000, description: "Fixed barcodes and SKUs (default 1); serial units are 1." }
+        meters: { type: [string, "null"], example: "8.50", description: "Measured roll length (roll units only)." }
+
+    StockCountScan:
+      type: object
+      required: [uuid, kind, raw_code, unit, product, location, quantity, meters, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        kind: { type: string, enum: [location, serial, fixed, product] }
+        raw_code: { type: string }
+        unit:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockCountUnit"
+        product:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockCountProduct"
+        location:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockCountLocation"
+        quantity: { type: integer }
+        meters: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+
+    StockCountScanResult:
+      type: object
+      required: [scan, location_context]
+      properties:
+        scan: { $ref: "#/components/schemas/StockCountScan" }
+        location_context:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockCountLocation"
+        expected:
+          description: Guided counts only; omitted for blind counts.
+          type: object
+          required: [in_scope, location, quantity, meters]
+          properties:
+            in_scope: { type: boolean }
+            location:
+              oneOf:
+                - type: "null"
+                - $ref: "#/components/schemas/StockCountLocation"
+            quantity: { type: integer, format: int64 }
+            meters: { type: [string, "null"] }
+
+    StockCountLine:
+      type: object
+      required: [uuid, line_kind, unit, product, expected_location, counted_location, expected_quantity, counted_quantity,
+        expected_meters, counted_meters, result, resolution, allowed_resolutions, note, resolved_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        line_kind: { type: string, enum: [serial, fixed, product] }
+        unit:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockCountUnit"
+        product: { $ref: "#/components/schemas/StockCountProduct" }
+        expected_location:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockCountLocation"
+        counted_location:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockCountLocation"
+        expected_quantity: { type: integer }
+        counted_quantity: { type: integer }
+        expected_meters: { type: [string, "null"] }
+        counted_meters: { type: [string, "null"] }
+        result: { type: string, enum: [matched, missing, wrong_location, unlocated, unexpected, qty_variance, meter_variance] }
+        resolution:
+          type: [string, "null"]
+          enum: [ignore, relocate, void_missing, increase_unlocated, null]
+        allowed_resolutions:
+          type: array
+          items: { type: string, enum: [ignore, relocate, void_missing, increase_unlocated] }
+        note: { type: [string, "null"] }
+        resolved_at: { type: [string, "null"], format: date-time }
+
+    StockCountReport:
+      type: object
+      required: [count, lines]
+      properties:
+        count: { $ref: "#/components/schemas/StockCount" }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/StockCountLine" }
+
+    StockCountApproveInput:
+      type: object
+      required: [resolutions]
+      additionalProperties: false
+      properties:
+        resolutions:
+          type: array
+          items:
+            type: object
+            required: [line_uuid, resolution]
+            additionalProperties: false
+            properties:
+              line_uuid: { type: string, format: uuid }
+              resolution: { type: string, enum: [ignore, relocate, void_missing, increase_unlocated] }
+              note: { type: [string, "null"], maxLength: 500 }
+
+    EnvelopeStockCount:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/StockCount" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeStockCountPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/StockCount" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeStockCountScanResult:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/StockCountScanResult" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeStockCountScanList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/StockCountScan" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeStockCountReport:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/StockCountReport" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     WarehouseScanInput:

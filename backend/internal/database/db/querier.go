@@ -32,12 +32,15 @@ type Querier interface {
 	AppendProductImage(ctx context.Context, arg AppendProductImageParams) (Product, error)
 	// Seller approval: freezes the rate (decision 2).
 	ApproveOrder(ctx context.Context, arg ApproveOrderParams) (Order, error)
+	ApproveStockCount(ctx context.Context, arg ApproveStockCountParams) (StockCount, error)
+	ApproveStockCountStart(ctx context.Context, arg ApproveStockCountStartParams) (StockCount, error)
 	// Approval freezes A's purchase price (K13).
 	ApproveStockTransferRequest(ctx context.Context, arg ApproveStockTransferRequestParams) (StockTransferRequest, error)
 	AssignMemberRoleBySlug(ctx context.Context, arg AssignMemberRoleBySlugParams) error
 	AssignUserRoleBySlug(ctx context.Context, arg AssignUserRoleBySlugParams) error
 	AttachNotificationDelivery(ctx context.Context, arg AttachNotificationDeliveryParams) error
 	CancelService(ctx context.Context, arg CancelServiceParams) (Service, error)
+	CancelStockCount(ctx context.Context, id int64) (StockCount, error)
 	CancelStockEntry(ctx context.Context, id int64) (StockEntry, error)
 	CancelStockTransferRequest(ctx context.Context, id int64) (StockTransferRequest, error)
 	CancelTransferRequest(ctx context.Context, arg CancelTransferRequestParams) (StockTransferRequest, error)
@@ -71,6 +74,7 @@ type Querier interface {
 	// takes the identifiers over (unique indexes are checked per statement).
 	CloseMergedUser(ctx context.Context, arg CloseMergedUserParams) (User, error)
 	CompleteService(ctx context.Context, arg CompleteServiceParams) (Service, error)
+	CompleteStockCount(ctx context.Context, arg CompleteStockCountParams) (StockCount, error)
 	CompleteStockTransferRequest(ctx context.Context, id int64) (StockTransferRequest, error)
 	CompleteVehicleTransfer(ctx context.Context, arg CompleteVehicleTransferParams) (VehicleTransfer, error)
 	ConfirmStockEntry(ctx context.Context, arg ConfirmStockEntryParams) (StockEntry, error)
@@ -132,6 +136,7 @@ type Querier interface {
 	CountSearchFinanceEntries(ctx context.Context, arg CountSearchFinanceEntriesParams) (int64, error)
 	CountServicesInScope(ctx context.Context, arg CountServicesInScopeParams) (int64, error)
 	CountServicesOfUser(ctx context.Context, customerUserID int64) (int64, error)
+	CountStockCounts(ctx context.Context, arg CountStockCountsParams) (int64, error)
 	CountStockEntries(ctx context.Context, arg CountStockEntriesParams) (int64, error)
 	CountStockEntryLines(ctx context.Context, entryID int64) (int64, error)
 	CountStockMovementsByUnit(ctx context.Context, unitID int64) (int64, error)
@@ -230,6 +235,9 @@ type Querier interface {
 	// Service items. Locked by trigger once the service is completed or
 	// cancelled.
 	CreateServiceItem(ctx context.Context, arg CreateServiceItemParams) (ServiceItem, error)
+	// TEC-206: stock counts (000068). Every query is bound to one organization;
+	// the warehouse side is brand-independent (K20).
+	CreateStockCount(ctx context.Context, arg CreateStockCountParams) (StockCount, error)
 	// TEC-204: stock entry documents (draft -> lines -> place -> confirm) and
 	// the entry written by an applied stock import (TEC-158).
 	CreateStockEntry(ctx context.Context, arg CreateStockEntryParams) (StockEntry, error)
@@ -333,6 +341,7 @@ type Querier interface {
 	DeleteServiceItem(ctx context.Context, arg DeleteServiceItemParams) (int64, error)
 	DeleteServiceItemsByService(ctx context.Context, serviceID int64) (int64, error)
 	DeleteStaleQRLoginChallenges(ctx context.Context) (int64, error)
+	DeleteStockCountScan(ctx context.Context, arg DeleteStockCountScanParams) (int64, error)
 	DeleteStockEntryLine(ctx context.Context, arg DeleteStockEntryLineParams) (int64, error)
 	DeleteStockImportRows(ctx context.Context, batchID int64) (int64, error)
 	DeleteStorageShare(ctx context.Context, argUuid uuid.UUID) error
@@ -453,6 +462,7 @@ type Querier interface {
 	GetFinanceEntryInOrgByUUID(ctx context.Context, arg GetFinanceEntryInOrgByUUIDParams) (FinanceEntry, error)
 	// GetFinanceEntryReversal returns the reversal row of an entry, if any.
 	GetFinanceEntryReversal(ctx context.Context, entryID pgtype.Int8) (FinanceEntry, error)
+	GetFixedHoldingQuantity(ctx context.Context, arg GetFixedHoldingQuantityParams) (int32, error)
 	GetGitHubAppSettings(ctx context.Context) (GithubAppSetting, error)
 	GetImportJobByID(ctx context.Context, id int64) (ImportJob, error)
 	GetImportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ImportJob, error)
@@ -555,6 +565,8 @@ type Querier interface {
 	// the car brand / model snapshot) for the API view (TEC-179).
 	GetServiceRefs(ctx context.Context, id int64) (GetServiceRefsRow, error)
 	GetStepupSettings(ctx context.Context) (StepupSetting, error)
+	GetStockCountByUUID(ctx context.Context, arg GetStockCountByUUIDParams) (StockCount, error)
+	GetStockCountScanByUUID(ctx context.Context, arg GetStockCountScanByUUIDParams) (StockCountScan, error)
 	GetStockEntryByImportBatch(ctx context.Context, importBatchID pgtype.Int8) (StockEntry, error)
 	GetStockEntryByUUID(ctx context.Context, arg GetStockEntryByUUIDParams) (StockEntry, error)
 	GetStockImportBatch(ctx context.Context, arg GetStockImportBatchParams) (StockImportBatch, error)
@@ -679,6 +691,12 @@ type Querier interface {
 	// ---------------------------------------------------------------------------
 	// Status log (append-only).
 	InsertServiceStatusLog(ctx context.Context, arg InsertServiceStatusLogParams) (ServiceStatusLog, error)
+	// ---------------------------------------------------------------------------
+	// Lines.
+	InsertStockCountLine(ctx context.Context, arg InsertStockCountLineParams) (StockCountLine, error)
+	// ---------------------------------------------------------------------------
+	// Scans.
+	InsertStockCountScan(ctx context.Context, arg InsertStockCountScanParams) (StockCountScan, error)
 	InsertStockEntryLine(ctx context.Context, arg InsertStockEntryLineParams) (StockEntryLine, error)
 	InsertStockImportRow(ctx context.Context, arg InsertStockImportRowParams) (StockImportRow, error)
 	// ---------------------------------------------------------------------------
@@ -707,6 +725,8 @@ type Querier interface {
 	InsertWhatsAppConnectionEvent(ctx context.Context, arg InsertWhatsAppConnectionEventParams) (WhatsappConnectionEvent, error)
 	InvalidateActiveOTPs(ctx context.Context, arg InvalidateActiveOTPsParams) error
 	InvalidateActivePhoneOTPs(ctx context.Context, arg InvalidateActivePhoneOTPsParams) error
+	// The scanning user's current location context (location_first).
+	LastStockCountLocationScan(ctx context.Context, arg LastStockCountLocationScanParams) (pgtype.Int8, error)
 	LatestExchangeRateDate(ctx context.Context, onDate pgtype.Date) (pgtype.Date, error)
 	// Idempotent link: a second call keeps the row and fills first_service_at
 	// only when it was empty.
@@ -755,6 +775,16 @@ type Querier interface {
 	ListCariStatementLines(ctx context.Context, arg ListCariStatementLinesParams) ([]ListCariStatementLinesRow, error)
 	// TEC-221: assignee picker of the task form (members of the center).
 	ListCenterMembers(ctx context.Context, organizationID int64) ([]ListCenterMembersRow, error)
+	// Fixed barcode holdings at the given locations of the organization.
+	ListCountExpectedFixed(ctx context.Context, arg ListCountExpectedFixedParams) ([]ListCountExpectedFixedRow, error)
+	// ---------------------------------------------------------------------------
+	// Expected sets (computed at completion and for guided counts).
+	// Serial units on hand at the given locations of the organization.
+	ListCountExpectedSerial(ctx context.Context, arg ListCountExpectedSerialParams) ([]ListCountExpectedSerialRow, error)
+	// Fixed barcode holdings of the organization itself (no location).
+	ListCountExpectedUnlocatedFixed(ctx context.Context, organizationID int64) ([]ListCountExpectedUnlocatedFixedRow, error)
+	// Serial units on hand held by the organization itself (no location).
+	ListCountExpectedUnlocatedSerial(ctx context.Context, organizationID int64) ([]ListCountExpectedUnlocatedSerialRow, error)
 	// TEC-84: countries > provinces > districts, territories, plate formats.
 	ListCountries(ctx context.Context, activeOnly bool) ([]ListCountriesRow, error)
 	// TEC-84: currencies and daily exchange rates. Rates travel as text so no
@@ -818,6 +848,8 @@ type Querier interface {
 	ListLatestKVKKNotices(ctx context.Context) ([]KvkkNotice, error)
 	ListLatestLegalTexts(ctx context.Context, kind string) ([]LegalText, error)
 	ListLegalTextVersions(ctx context.Context, arg ListLegalTextVersionsParams) ([]LegalText, error)
+	// A location and everything below it.
+	ListLocationSubtreeIDs(ctx context.Context, arg ListLocationSubtreeIDsParams) ([]int64, error)
 	ListLocationsByUUIDs(ctx context.Context, arg ListLocationsByUUIDsParams) ([]WarehouseLocation, error)
 	ListLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
 	// Grants of the user's roles in one organization (active org context).
@@ -974,6 +1006,11 @@ type Querier interface {
 	// anonymized customers are not searchable by name).
 	ListServicesInScope(ctx context.Context, arg ListServicesInScopeParams) ([]Service, error)
 	ListSharedKeys(ctx context.Context, keys []string) ([]string, error)
+	ListStockCountLines(ctx context.Context, countID int64) ([]StockCountLine, error)
+	ListStockCountProducts(ctx context.Context, ids []int64) ([]ListStockCountProductsRow, error)
+	ListStockCountScans(ctx context.Context, countID int64) ([]StockCountScan, error)
+	ListStockCountUnits(ctx context.Context, ids []int64) ([]ListStockCountUnitsRow, error)
+	ListStockCounts(ctx context.Context, arg ListStockCountsParams) ([]StockCount, error)
 	ListStockEntries(ctx context.Context, arg ListStockEntriesParams) ([]StockEntry, error)
 	ListStockEntryLines(ctx context.Context, entryID int64) ([]StockEntryLine, error)
 	ListStockImportBatches(ctx context.Context, organizationID int64) ([]StockImportBatch, error)
@@ -1050,6 +1087,10 @@ type Querier interface {
 	ListVehiclesInScope(ctx context.Context, arg ListVehiclesInScopeParams) ([]ListVehiclesInScopeRow, error)
 	ListWarehouseLocations(ctx context.Context, arg ListWarehouseLocationsParams) ([]WarehouseLocation, error)
 	ListWarehouseLocationsByIDs(ctx context.Context, ids []int64) ([]WarehouseLocation, error)
+	// ---------------------------------------------------------------------------
+	// Scope.
+	// Typed locations of a warehouse, optionally one room.
+	ListWarehouseScopeLocationIDs(ctx context.Context, arg ListWarehouseScopeLocationIDsParams) ([]int64, error)
 	// TEC-201: warehouse and location tree (000059). Every query is bound to
 	// one organization; the warehouse side is brand-independent (K20).
 	// ---------------------------------------------------------------------------
@@ -1128,6 +1169,7 @@ type Querier interface {
 	// Completion locks the lines in id order (deadlock-free with concurrent
 	// completions sharing a unit).
 	LockServiceItems(ctx context.Context, serviceID int64) ([]ServiceItem, error)
+	LockStockCountByUUID(ctx context.Context, arg LockStockCountByUUIDParams) (StockCount, error)
 	LockStockEntryByUUID(ctx context.Context, arg LockStockEntryByUUIDParams) (StockEntry, error)
 	LockStockImportBatch(ctx context.Context, id int64) (StockImportBatch, error)
 	// TEC-158: safe bulk stock import (staging, dry run, batch, undo). The
@@ -1241,6 +1283,7 @@ type Querier interface {
 	// Success: phone gets the E.164 form and phone_raw is cleared. A phone
 	// written by the API in the meantime is kept (only phone_raw is cleared).
 	ResolveOrganizationRawPhone(ctx context.Context, arg ResolveOrganizationRawPhoneParams) (int64, error)
+	ResolveStockCountLine(ctx context.Context, arg ResolveStockCountLineParams) (StockCountLine, error)
 	// The most specific territory covering an address (district > province >
 	// country) whose distributor is live.
 	ResolveTerritory(ctx context.Context, arg ResolveTerritoryParams) (ResolveTerritoryRow, error)
@@ -1325,6 +1368,8 @@ type Querier interface {
 	ShipTransferRequest(ctx context.Context, arg ShipTransferRequestParams) (StockTransferRequest, error)
 	SlugExists(ctx context.Context, slug string) (bool, error)
 	SoftDeleteVehicle(ctx context.Context, id int64) (int64, error)
+	StartStockCount(ctx context.Context, arg StartStockCountParams) (StockCount, error)
+	StockCountSerialScanExists(ctx context.Context, arg StockCountSerialScanExistsParams) (bool, error)
 	// Fixed barcodes: total quantity actively reserved by the seller
 	// organization, checked against what that organization holds by the use
 	// case (sum <= on hand, under the unit row lock).
