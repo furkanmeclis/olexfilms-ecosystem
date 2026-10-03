@@ -193,5 +193,22 @@
   "dealer_page.error_title": "Страницата на дилъра не може да бъде показана в момента",
   "dealer_page.error_body": "Моля, опитайте отново по-късно.",
   "dealer_page.og_description": "{{name}}: оторизиран дилър в {{locality}}. Адрес, карта и връзка чрез WhatsApp.",
-  "dealer_page.og_description_short": "{{name}}: оторизиран дилър. Адрес, карта и връзка чрез WhatsApp."
+  "dealer_page.og_description_short": "{{name}}: оторизиран дилър. Адрес, карта и връзка чрез WhatsApp.",
+  "review.title": "Оценете услугата",
+  "review.description": "Оценете нашата платформа и качеството на използваните продукти; мнението ви е важно за нас.",
+  "review.platform_rating": "Качество на платформата",
+  "review.product_rating": "Качество на продуктите",
+  "review.comment": "Вашият коментар (по желание)",
+  "review.comment_hint": "До {{max}} знака.",
+  "review.submit": "Изпрати",
+  "review.submitting": "Изпращане…",
+  "review.thanks": "Благодарим за вашата оценка.",
+  "review.your_review": "Вашата оценка",
+  "review.rating_required": "Моля, изберете и двете оценки.",
+  "review.star": "{{value}} / 5",
+  "review.google": "Оценете в Google",
+  "review.google_hint": "Ако сте доволни, можете да оцените дилъра и в Google.",
+  "review.not_completed": "Можете да оцените услугата, след като бъде завършена.",
+  "review.failed": "Оценката не беше изпратена. Опитайте отново.",
+  "review.already": "Тази услуга вече е оценена."
 }

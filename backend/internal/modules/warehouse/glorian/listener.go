@@ -16,7 +16,7 @@ import (
 
 // TEC-270: the stock.* outbox listener of the barcode push. It only
 // enqueues: an entry or placement of a synced product schedules the
-// connection's debounced bulk push, an exit, transfer or shipment schedules
+// connection's debounced bulk push, an exit (external_outbound) schedules
 // the PATCH of that movement. Products without a sync link (Olex, or a
 // local product of the glorian brand) enqueue nothing.
 
@@ -43,6 +43,7 @@ func NewListener(q PushQuerier, queue Enqueuer, log *slog.Logger) *Listener {
 }
 
 // RegisterEventHandlers subscribes the push listener to the stock.* events
+// and the order outbound listener to the orders.* events
 // it acts on. Every process that drains the outbox registers it; task ids
 // keep a redelivered event from enqueuing twice.
 func RegisterEventHandlers(bus events.Bus, q PushQuerier, queue Enqueuer, log *slog.Logger) {
@@ -50,6 +51,8 @@ func RegisterEventHandlers(bus events.Bus, q PushQuerier, queue Enqueuer, log *s
 		return
 	}
 	NewListener(q, queue, log).Register(bus)
+	// TEC-271: orders.* transitions schedule the order outbound.
+	NewOrderListener(q, queue, log).Register(bus)
 }
 
 // WithClock replaces the clock that picks the debounce window (tests).

@@ -57,6 +57,12 @@ search-reindex:
 inventory-rebuild:
 	@$(load_env) go run ./cmd/inventory-rebuild $(ARGS)
 
+# TEC-272: read-only Glorian drift report (exit 3 on drift).
+# ARGS="--connection=glorian --limit=20 --json".
+.PHONY: inventory-reconcile
+inventory-reconcile:
+	@$(load_env) go run ./cmd/inventory-reconcile $(ARGS)
+
 # Reconcile permissions and system role packages with the Go catalog.
 roles-sync:
 	@$(load_env) go run ./cmd/roles-sync $(ARGS)

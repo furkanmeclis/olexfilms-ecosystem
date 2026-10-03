@@ -62,6 +62,9 @@ func olexSteps() []Step {
 		// rebuild.
 		LedgerStep{},
 
+		// TEC-261: hub + warehouse orders, merged by external_reference.
+		OrdersStep{},
+
 		// TEC-259: services, items, images and status logs.
 		ServicesStep{},
 	}

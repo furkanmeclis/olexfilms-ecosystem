@@ -193,5 +193,22 @@
   "dealer_page.error_title": "La página del distribuidor no se puede mostrar ahora",
   "dealer_page.error_body": "Inténtelo de nuevo más tarde.",
   "dealer_page.og_description": "{{name}}: distribuidor autorizado en {{locality}}. Dirección, mapa y contacto por WhatsApp.",
-  "dealer_page.og_description_short": "{{name}}: distribuidor autorizado. Dirección, mapa y contacto por WhatsApp."
+  "dealer_page.og_description_short": "{{name}}: distribuidor autorizado. Dirección, mapa y contacto por WhatsApp.",
+  "review.title": "Valorar el servicio",
+  "review.description": "Valore nuestra plataforma y la calidad de los productos utilizados; su opinión nos importa.",
+  "review.platform_rating": "Calidad de la plataforma",
+  "review.product_rating": "Calidad de los productos",
+  "review.comment": "Su comentario (opcional)",
+  "review.comment_hint": "Máximo {{max}} caracteres.",
+  "review.submit": "Enviar",
+  "review.submitting": "Enviando…",
+  "review.thanks": "Gracias por su valoración.",
+  "review.your_review": "Su valoración",
+  "review.rating_required": "Elija ambas puntuaciones.",
+  "review.star": "{{value}} / 5",
+  "review.google": "Valorar en Google",
+  "review.google_hint": "Si quedó satisfecho, también puede valorar al distribuidor en Google.",
+  "review.not_completed": "Podrá valorar el servicio cuando esté completado.",
+  "review.failed": "No se pudo enviar la valoración. Inténtelo de nuevo.",
+  "review.already": "Este servicio ya ha sido valorado."
 }

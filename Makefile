@@ -184,6 +184,11 @@ search-reindex:
 inventory-rebuild:
 	@$(load_env) $(MAKE) -C backend inventory-rebuild ARGS="$(ARGS)"
 
+# TEC-272: read-only Glorian drift report (exit 3 on drift).
+.PHONY: inventory-reconcile
+inventory-reconcile:
+	@$(load_env) $(MAKE) -C backend inventory-reconcile ARGS="$(ARGS)"
+
 # K29 (TEC-159): organization phones to E.164. ARGS=--dry-run to preview.
 normalize-org-phones:
 	@$(load_env) $(MAKE) -C backend normalize-org-phones ARGS="$(ARGS)"

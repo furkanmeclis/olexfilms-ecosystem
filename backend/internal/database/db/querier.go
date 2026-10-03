@@ -261,6 +261,9 @@ type Querier interface {
 	// cancelled.
 	CreateServiceItem(ctx context.Context, arg CreateServiceItemParams) (ServiceItem, error)
 	CreateServiceItemCorrection(ctx context.Context, arg CreateServiceItemCorrectionParams) (ServiceItemCorrection, error)
+	// ON CONFLICT DO NOTHING: a second review of the same service returns no
+	// row (pgx.ErrNoRows), which the use case answers with 409.
+	CreateServiceReview(ctx context.Context, arg CreateServiceReviewParams) (ServiceReview, error)
 	// TEC-249 (F2-04d): short URLs behind /s/{token}.
 	// ON CONFLICT on the token returns no row: the caller draws a new token.
 	CreateShortURL(ctx context.Context, arg CreateShortURLParams) (CreateShortURLRow, error)
@@ -508,9 +511,17 @@ type Querier interface {
 	GetFinanceEntryReversal(ctx context.Context, entryID pgtype.Int8) (FinanceEntry, error)
 	GetFixedHoldingQuantity(ctx context.Context, arg GetFixedHoldingQuantityParams) (int32, error)
 	GetGitHubAppSettings(ctx context.Context) (GithubAppSetting, error)
+	// TEC-271 (F2-02f): Glorian order outbound. An order of the glorian brand
+	// whose lines hold products synced from a connection is sent to that
+	// connection's hub as one order per connection (order_outbounds).
+	GetGlorianOutboundOrder(ctx context.Context, id int64) (Order, error)
 	// A movement with its unit's barcode and the product's sync link, for the
 	// outbound PATCH of one barcode.
 	GetGlorianPushMovement(ctx context.Context, id int64) (GetGlorianPushMovementRow, error)
+	// A serial unit of the brand outside the synced set (e.g. its product is
+	// not linked yet), so a remote item with its barcode is paired instead of
+	// being reported as remote only.
+	GetGlorianReconcileUnitByBarcode(ctx context.Context, arg GetGlorianReconcileUnitByBarcodeParams) (GetGlorianReconcileUnitByBarcodeRow, error)
 	GetImportJobByID(ctx context.Context, id int64) (ImportJob, error)
 	GetImportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ImportJob, error)
 	// TEC-270 (F2-02e): Glorian barcode push. Units of products synced from a
@@ -562,6 +573,7 @@ type Querier interface {
 	GetOrderItemByUUID(ctx context.Context, arg GetOrderItemByUUIDParams) (OrderItem, error)
 	GetOrderItemUnit(ctx context.Context, arg GetOrderItemUnitParams) (OrderItemUnit, error)
 	GetOrderOutbound(ctx context.Context, arg GetOrderOutboundParams) (OrderOutbound, error)
+	GetOrderOutboundByID(ctx context.Context, id int64) (OrderOutbound, error)
 	GetOrgModuleFlag(ctx context.Context, arg GetOrgModuleFlagParams) (ModuleFlag, error)
 	GetOrganizationByID(ctx context.Context, id int64) (Organization, error)
 	GetOrganizationBySlug(ctx context.Context, slug string) (Organization, error)
@@ -646,6 +658,8 @@ type Querier interface {
 	// Display references of one service (organization, customer, vehicle and
 	// the car brand / model snapshot) for the API view (TEC-179).
 	GetServiceRefs(ctx context.Context, id int64) (GetServiceRefsRow, error)
+	// TEC-244 (F2-03h): the portal service review form (one per service).
+	GetServiceReviewByService(ctx context.Context, serviceID int64) (ServiceReview, error)
 	// Tells an expired token of the brand apart from an unknown one.
 	GetShortURLExpiry(ctx context.Context, arg GetShortURLExpiryParams) (pgtype.Timestamptz, error)
 	GetShortURLStats(ctx context.Context, token string) (GetShortURLStatsRow, error)
@@ -954,12 +968,28 @@ type Querier interface {
 	// the organization owner itself), per barcode, for the listed products.
 	ListFixedBarcodeQuantitiesByHolder(ctx context.Context, arg ListFixedBarcodeQuantitiesByHolderParams) ([]ListFixedBarcodeQuantitiesByHolderRow, error)
 	ListFixedBarcodeQuantitiesByLocation(ctx context.Context, arg ListFixedBarcodeQuantitiesByLocationParams) ([]ListFixedBarcodeQuantitiesByLocationRow, error)
+	// Serial units assigned to the order's lines whose product is synced from
+	// a connection, in line order. Olex and local products have no connection
+	// and never appear.
+	ListGlorianOrderUnits(ctx context.Context, orderID int64) ([]ListGlorianOrderUnitsRow, error)
+	// Active dealers of the connection with the buyer's phone: the order's
+	// customer link (exactly one match links, none or several hold).
+	ListGlorianPartiesByPhone(ctx context.Context, arg ListGlorianPartiesByPhoneParams) ([]IntegrationExternalParty, error)
 	// Serial units entered or placed into a warehouse bin after the keyset
 	// (created_at, id), for the products synced from the connection. A unit
 	// placed twice comes twice; the caller deduplicates by barcode.
 	ListGlorianPushUnits(ctx context.Context, arg ListGlorianPushUnitsParams) ([]ListGlorianPushUnitsRow, error)
+	// TEC-272 (F2-02g): Glorian reconcile (read only). The local side of the
+	// drift report: serial units of the connection's brand that belong to the
+	// sync (their product is synced from the connection, or the unit already
+	// mirrors a remote stock item of it), with the product's remote id and the
+	// unit's current owner from the ledger projection.
+	ListGlorianReconcileUnits(ctx context.Context, arg ListGlorianReconcileUnitsParams) ([]ListGlorianReconcileUnitsRow, error)
 	// Grants of global roles (user_roles / JWT roles claim).
 	ListGrantsByRoleSlugs(ctx context.Context, roleSlugs []string) ([]ListGrantsByRoleSlugsRow, error)
+	// Held outbounds of a connection (0: every connection) after the keyset
+	// id, oldest first.
+	ListHeldOrderOutbounds(ctx context.Context, arg ListHeldOrderOutboundsParams) ([]OrderOutbound, error)
 	ListImportChangesForJob(ctx context.Context, jobID int64) ([]ImportChange, error)
 	ListImportJobsForActor(ctx context.Context, arg ListImportJobsForActorParams) ([]ImportJob, error)
 	// TEC-211: the organization list carries who uploaded each job.
@@ -1008,6 +1038,7 @@ type Querier interface {
 	ListOrderItemUnitsByItem(ctx context.Context, orderItemID int64) ([]OrderItemUnit, error)
 	ListOrderItemUnitsByOrder(ctx context.Context, orderID int64) ([]ListOrderItemUnitsByOrderRow, error)
 	ListOrderItems(ctx context.Context, orderID int64) ([]OrderItem, error)
+	ListOrderOutboundsByOrder(ctx context.Context, orderID int64) ([]OrderOutbound, error)
 	ListOrderOutboundsByState(ctx context.Context, arg ListOrderOutboundsByStateParams) ([]OrderOutbound, error)
 	ListOrderStatusHistory(ctx context.Context, orderID int64) ([]OrderStatusHistory, error)
 	// Orders an organization sells or buys: their documents carry the
@@ -1095,6 +1126,10 @@ type Querier interface {
 	// Search indexer only (full reindex across brands).
 	ListProductsForIndex(ctx context.Context) ([]Product, error)
 	ListProvincesByCountry(ctx context.Context, countryID int64) ([]ListProvincesByCountryRow, error)
+	// TEC-251: codes (slugs) of the brand's active, serving dealers and
+	// distributors for the public sitemap. Same filters as
+	// GetPublicDealerBySlug; code and last change only.
+	ListPublicDealerCodes(ctx context.Context, arg ListPublicDealerCodesParams) ([]ListPublicDealerCodesRow, error)
 	ListPushSubscriptionsByUser(ctx context.Context, userID int64) ([]PushSubscription, error)
 	// TEC-156 (F1-02d): projection rebuild, drift scan and repair.
 	// Movements are read only (append-only ledger); the repair writes the
@@ -1426,6 +1461,7 @@ type Querier interface {
 	MergeConflictingCustomerOrganizations(ctx context.Context, arg MergeConflictingCustomerOrganizationsParams) (int64, error)
 	MigratorAssignMemberRole(ctx context.Context, arg MigratorAssignMemberRoleParams) (int64, error)
 	MigratorAssignUserRole(ctx context.Context, arg MigratorAssignUserRoleParams) (int64, error)
+	MigratorBrandCurrency(ctx context.Context, id int64) (string, error)
 	// TEC-256: migrator steps 3-4 (vehicle catalog, product catalog and the
 	// warehouse product match). Written only by cmd/migrator inside a step
 	// transaction.
@@ -1465,6 +1501,8 @@ type Querier interface {
 	// A typed location of the organization with the full code (rooms, aisles,
 	// shelves and bins are unique by full_code).
 	MigratorFindLocation(ctx context.Context, arg MigratorFindLocationParams) (uuid.UUID, error)
+	MigratorFindOrderByExternalReference(ctx context.Context, arg MigratorFindOrderByExternalReferenceParams) (uuid.UUID, error)
+	MigratorFindOrderItem(ctx context.Context, arg MigratorFindOrderItemParams) (uuid.UUID, error)
 	MigratorFindProductBySKU(ctx context.Context, arg MigratorFindProductBySKUParams) (uuid.UUID, error)
 	// Products of the brand with the name (case insensitive); the warehouse
 	// match uses it only when exactly one row comes back.
@@ -1494,6 +1532,11 @@ type Querier interface {
 	MigratorInsertFixedHolding(ctx context.Context, arg MigratorInsertFixedHoldingParams) error
 	// warehouse_id and full_code are derived by trg_warehouse_locations_derive.
 	MigratorInsertLocation(ctx context.Context, arg MigratorInsertLocationParams) (MigratorInsertLocationRow, error)
+	MigratorInsertOrder(ctx context.Context, arg MigratorInsertOrderParams) (int64, error)
+	// Legacy orders carry no prices: the line is frozen at 0, so a later receipt
+	// books no sale for it either (K9, no double count).
+	MigratorInsertOrderItem(ctx context.Context, arg MigratorInsertOrderItemParams) (int64, error)
+	MigratorInsertOrderItemUnit(ctx context.Context, arg MigratorInsertOrderItemUnitParams) (int64, error)
 	MigratorInsertOrganization(ctx context.Context, arg MigratorInsertOrganizationParams) (int64, error)
 	MigratorInsertProduct(ctx context.Context, arg MigratorInsertProductParams) (int64, error)
 	MigratorInsertRoom(ctx context.Context, arg MigratorInsertRoomParams) (int64, error)
@@ -1516,6 +1559,15 @@ type Querier interface {
 	// Province by name, matched like the 000035 backfill: Turkish capitals
 	// folded, case insensitive.
 	MigratorMatchProvince(ctx context.Context, arg MigratorMatchProvinceParams) (int64, error)
+	// TEC-261: migrator step 9 (orders). Written only by cmd/migrator inside a
+	// step transaction. Legacy orders are history: no status history row, no
+	// outbox event and no accounting entry is written for them (K9).
+	// A buyer organization with its parent, the order's seller (K6).
+	MigratorOrderBuyer(ctx context.Context, argUuid uuid.UUID) (MigratorOrderBuyerRow, error)
+	// touched: the application already moved the order (a status history row),
+	// so the migrator no longer rewrites it.
+	MigratorOrderByUUID(ctx context.Context, arg MigratorOrderByUUIDParams) (MigratorOrderByUUIDRow, error)
+	MigratorOrderItemByUUID(ctx context.Context, arg MigratorOrderItemByUUIDParams) (MigratorOrderItemByUUIDRow, error)
 	// TEC-259: migrator step 7a (services, items, images, status logs). Written
 	// only by cmd/migrator inside a step transaction. Nothing here writes the
 	// outbox: the import starts no warranty and sends no notification.
@@ -1552,6 +1604,10 @@ type Querier interface {
 	MigratorUpdateCarModel(ctx context.Context, arg MigratorUpdateCarModelParams) error
 	MigratorUpdateCategory(ctx context.Context, arg MigratorUpdateCategoryParams) error
 	MigratorUpdateLocation(ctx context.Context, arg MigratorUpdateLocationParams) error
+	// A legacy change of an order the application has not moved yet. Parties,
+	// currency and totals stay as inserted.
+	MigratorUpdateOrder(ctx context.Context, arg MigratorUpdateOrderParams) (int64, error)
+	MigratorUpdateOrderItemQuantity(ctx context.Context, arg MigratorUpdateOrderItemQuantityParams) error
 	// Legacy-sourced fields only; slug and parent stay as the new app has them.
 	MigratorUpdateOrganization(ctx context.Context, arg MigratorUpdateOrganizationParams) error
 	// Legacy-sourced fields only; images, unit type and the sync columns stay.
@@ -1572,6 +1628,7 @@ type Querier interface {
 	// movement is the ledger's and is left alone (0 rows).
 	MigratorUpsertUnitState(ctx context.Context, arg MigratorUpsertUnitStateParams) (int64, error)
 	MigratorUserByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorUserByUUIDRow, error)
+	MigratorUserIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	MigratorVehicleByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorVehicleByUUIDRow, error)
 	MigratorWarehouseIDByUUID(ctx context.Context, arg MigratorWarehouseIDByUUIDParams) (int64, error)
 	// Consents the target has not decided yet; a decision the target already

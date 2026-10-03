@@ -163,6 +163,53 @@ func (q *Queries) ListNearbyDealers(ctx context.Context, arg ListNearbyDealersPa
 	return items, nil
 }
 
+const listPublicDealerCodes = `-- name: ListPublicDealerCodes :many
+SELECT o.slug,
+       o.updated_at
+FROM organizations o
+WHERE o.brand_id = $1
+  AND o.deleted_at IS NULL
+  AND o.status = 'active'
+  AND o.type IN ('dealer', 'distributor')
+  AND o.access_starts_at <= NOW()
+  AND (o.access_ends_at IS NULL OR o.access_ends_at > NOW())
+ORDER BY o.slug
+LIMIT $2::int
+`
+
+type ListPublicDealerCodesParams struct {
+	BrandID  int64 `json:"brand_id"`
+	RowLimit int32 `json:"row_limit"`
+}
+
+type ListPublicDealerCodesRow struct {
+	Slug      string             `json:"slug"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+// TEC-251: codes (slugs) of the brand's active, serving dealers and
+// distributors for the public sitemap. Same filters as
+// GetPublicDealerBySlug; code and last change only.
+func (q *Queries) ListPublicDealerCodes(ctx context.Context, arg ListPublicDealerCodesParams) ([]ListPublicDealerCodesRow, error) {
+	rows, err := q.db.Query(ctx, listPublicDealerCodes, arg.BrandID, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPublicDealerCodesRow{}
+	for rows.Next() {
+		var i ListPublicDealerCodesRow
+		if err := rows.Scan(&i.Slug, &i.UpdatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateOrganizationCoordinates = `-- name: UpdateOrganizationCoordinates :one
 
 UPDATE organizations
