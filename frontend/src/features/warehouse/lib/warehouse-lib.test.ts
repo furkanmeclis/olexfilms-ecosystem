@@ -178,17 +178,21 @@ describe("stock entry helpers (TEC-204)", () => {
   });
 });
 
-describe("section registry (slice 1 + TEC-232 slots)", () => {
+describe("section registry (slice 1 + slice 2)", () => {
   const can = (granted: string[]) => (p: string) => granted.includes(p);
 
-  it("keeps a slot for every slice-2 screen", () => {
+  it("links every slice-2 screen (TEC-232)", () => {
     const planned = WAREHOUSE_SECTIONS.filter((s) => s.slice === "TEC-232");
     expect(planned.map((s) => s.id)).toEqual([
       "transfers",
       "counts",
       "end_of_day",
     ]);
-    expect(planned.every((s) => s.href === null)).toBe(true);
+    expect(planned.map((s) => s.href?.("acme"))).toEqual([
+      "/t/acme/warehouse/transfers",
+      "/t/acme/warehouse/counts",
+      "/t/acme/warehouse/end-of-day",
+    ]);
     expect(
       WAREHOUSE_SECTIONS.filter((s) => s.slice === "TEC-231").every(
         (s) => s.href,

@@ -16,8 +16,8 @@ export type WarehouseOrgType = "center" | "distributor";
 
 /**
  * One screen of the warehouse feature. The hub page and the tests read
- * this registry; slice 2 (TEC-232) fills in `href` for transfers, counts
- * and end of day and adds their routes, pages and nav items.
+ * this registry; slice 2 (TEC-232) added transfers, counts and end of
+ * day.
  */
 export type WarehouseSection = {
   id: string;
@@ -69,12 +69,12 @@ export const WAREHOUSE_SECTIONS: WarehouseSection[] = [
     orgTypes: ["center"],
     slice: "TEC-231",
   },
-  // --- TEC-232 (slice 2): set href when the screens land. ---
+  // --- TEC-232 (slice 2) ---
   {
     id: "transfers",
     key: "warehouse.sections.transfers",
     icon: ArrowLeftRight,
-    href: null,
+    href: routes.tenant.warehouse.transfers,
     permissions: [Permission.WarehouseRead],
     orgTypes: ["center", "distributor"],
     slice: "TEC-232",
@@ -83,7 +83,7 @@ export const WAREHOUSE_SECTIONS: WarehouseSection[] = [
     id: "counts",
     key: "warehouse.sections.counts",
     icon: ClipboardCheck,
-    href: null,
+    href: routes.tenant.warehouse.counts,
     permissions: [Permission.WarehouseRead],
     orgTypes: ["center", "distributor"],
     slice: "TEC-232",
@@ -92,7 +92,7 @@ export const WAREHOUSE_SECTIONS: WarehouseSection[] = [
     id: "end_of_day",
     key: "warehouse.sections.end_of_day",
     icon: Sunset,
-    href: null,
+    href: routes.tenant.warehouse.endOfDay,
     permissions: [Permission.WarehouseRead],
     orgTypes: ["center", "distributor"],
     slice: "TEC-232",
