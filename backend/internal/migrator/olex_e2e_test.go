@@ -259,8 +259,10 @@ func TestOlexEndToEndFullRerunDelta(t *testing.T) {
 		       '34 SYN 005', plate_country, km, package, applied_parts, NULL, 'processing', NULL, NULL,
 		       LOCALTIMESTAMP(0), LOCALTIMESTAMP(0)
 		FROM ` + hubSchema + `.services WHERE id = 1`)
-	exec(`UPDATE ` + hubSchema + `.customers SET name = 'Sentetik Kurumsal A.Ş. Yeni Unvan', updated_at = LOCALTIMESTAMP(0)
-		WHERE id = 7`)
+	// A changed customer only fills what the account lacks (values set in
+	// the new app win, TEC-255): customer 3 gets the e-mail it never had.
+	const newEmail = "musteri3-tec264@example.test"
+	exec(`UPDATE `+hubSchema+`.customers SET email = $1, updated_at = LOCALTIMESTAMP(0) WHERE id = 3`, newEmail)
 
 	before = stats()
 	delta := e.run(profile, Options{Mode: ModeDelta})
@@ -299,13 +301,13 @@ func TestOlexEndToEndFullRerunDelta(t *testing.T) {
 	if wm := watermark("services"); !wm.Valid || !wm.Time.After(servicesWM.Time) {
 		t.Errorf("services watermark %v did not move past %v", wm, servicesWM)
 	}
-	var name string
-	if err := tx.QueryRow(ctx, `SELECT u.name FROM users u JOIN migration_map m ON m.target_uuid = u.uuid
-		WHERE m.source_system = $1 AND m.source_table = 'customers' AND m.source_id = '7'`, hubSys).Scan(&name); err != nil {
+	var email pgtype.Text
+	if err := tx.QueryRow(ctx, `SELECT u.email FROM users u JOIN migration_map m ON m.target_uuid = u.uuid
+		WHERE m.source_system = $1 AND m.source_table = 'customers' AND m.source_id = '3'`, hubSys).Scan(&email); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(name, "Yeni Unvan") {
-		t.Errorf("customer 7 name = %q, want the updated one", name)
+	if email.String != newEmail {
+		t.Errorf("customer 3 e-mail = %q, want %q", email.String, newEmail)
 	}
 	rep = report()
 	if err := rep.Err(); err != nil {
