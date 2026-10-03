@@ -137,5 +137,22 @@
   "transfer.error.code_format": "Codes bestehen aus 6 Ziffern.",
   "transfer.error.rate": "Zu viele Versuche. Versuchen Sie es später erneut.",
   "transfer.error.not_found": "Fahrzeug oder Übertragung nicht gefunden.",
-  "transfer.error.generic": "Die Anfrage ist fehlgeschlagen. Bitte erneut versuchen."
+  "transfer.error.generic": "Die Anfrage ist fehlgeschlagen. Bitte erneut versuchen.",
+  "review.title": "Service bewerten",
+  "review.description": "Bewerten Sie unsere Plattform und die Qualität der verwendeten Produkte; Ihre Meinung ist uns wichtig.",
+  "review.platform_rating": "Plattformqualität",
+  "review.product_rating": "Produktqualität",
+  "review.comment": "Ihr Kommentar (optional)",
+  "review.comment_hint": "Höchstens {{max}} Zeichen.",
+  "review.submit": "Senden",
+  "review.submitting": "Wird gesendet…",
+  "review.thanks": "Vielen Dank für Ihre Bewertung.",
+  "review.your_review": "Ihre Bewertung",
+  "review.rating_required": "Bitte wählen Sie beide Bewertungen.",
+  "review.star": "{{value}} / 5",
+  "review.google": "Auf Google bewerten",
+  "review.google_hint": "Wenn Sie zufrieden sind, können Sie den Händler auch auf Google bewerten.",
+  "review.not_completed": "Sie können den Service bewerten, sobald er abgeschlossen ist.",
+  "review.failed": "Die Bewertung konnte nicht gesendet werden. Versuchen Sie es erneut.",
+  "review.already": "Dieser Service wurde bereits bewertet."
 }

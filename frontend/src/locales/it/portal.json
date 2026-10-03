@@ -137,5 +137,22 @@
   "transfer.error.code_format": "I codici sono di 6 cifre.",
   "transfer.error.rate": "Troppi tentativi. Riprova più tardi.",
   "transfer.error.not_found": "Veicolo o trasferimento non trovato.",
-  "transfer.error.generic": "Richiesta non riuscita. Riprova."
+  "transfer.error.generic": "Richiesta non riuscita. Riprova.",
+  "review.title": "Valuta l'intervento",
+  "review.description": "Valuta la nostra piattaforma e la qualità dei prodotti utilizzati; la tua opinione è importante.",
+  "review.platform_rating": "Qualità della piattaforma",
+  "review.product_rating": "Qualità dei prodotti",
+  "review.comment": "Il tuo commento (facoltativo)",
+  "review.comment_hint": "Massimo {{max}} caratteri.",
+  "review.submit": "Invia",
+  "review.submitting": "Invio in corso…",
+  "review.thanks": "Grazie per la tua valutazione.",
+  "review.your_review": "La tua valutazione",
+  "review.rating_required": "Scegli entrambi i punteggi.",
+  "review.star": "{{value}} / 5",
+  "review.google": "Recensisci su Google",
+  "review.google_hint": "Se sei soddisfatto, puoi recensire il rivenditore anche su Google.",
+  "review.not_completed": "Potrai valutare l'intervento una volta completato.",
+  "review.failed": "Impossibile inviare la valutazione. Riprova.",
+  "review.already": "Questo intervento è già stato valutato."
 }

@@ -137,5 +137,22 @@
   "transfer.error.code_format": "Кодовете са от 6 цифри.",
   "transfer.error.rate": "Твърде много опити. Опитайте по-късно.",
   "transfer.error.not_found": "Автомобилът или прехвърлянето не е намерено.",
-  "transfer.error.generic": "Заявката е неуспешна. Опитайте отново."
+  "transfer.error.generic": "Заявката е неуспешна. Опитайте отново.",
+  "review.title": "Оценете услугата",
+  "review.description": "Оценете нашата платформа и качеството на използваните продукти; мнението ви е важно за нас.",
+  "review.platform_rating": "Качество на платформата",
+  "review.product_rating": "Качество на продуктите",
+  "review.comment": "Вашият коментар (по желание)",
+  "review.comment_hint": "До {{max}} знака.",
+  "review.submit": "Изпрати",
+  "review.submitting": "Изпращане…",
+  "review.thanks": "Благодарим за вашата оценка.",
+  "review.your_review": "Вашата оценка",
+  "review.rating_required": "Моля, изберете и двете оценки.",
+  "review.star": "{{value}} / 5",
+  "review.google": "Оценете в Google",
+  "review.google_hint": "Ако сте доволни, можете да оцените дилъра и в Google.",
+  "review.not_completed": "Можете да оцените услугата, след като бъде завършена.",
+  "review.failed": "Оценката не беше изпратена. Опитайте отново.",
+  "review.already": "Тази услуга вече е оценена."
 }

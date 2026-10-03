@@ -137,5 +137,22 @@
   "transfer.error.code_format": "Οι κωδικοί έχουν 6 ψηφία.",
   "transfer.error.rate": "Πάρα πολλές προσπάθειες. Δοκιμάστε αργότερα.",
   "transfer.error.not_found": "Το όχημα ή η μεταβίβαση δεν βρέθηκε.",
-  "transfer.error.generic": "Το αίτημα απέτυχε. Δοκιμάστε ξανά."
+  "transfer.error.generic": "Το αίτημα απέτυχε. Δοκιμάστε ξανά.",
+  "review.title": "Αξιολογήστε την υπηρεσία",
+  "review.description": "Αξιολογήστε την πλατφόρμα μας και την ποιότητα των προϊόντων· η γνώμη σας μετράει.",
+  "review.platform_rating": "Ποιότητα πλατφόρμας",
+  "review.product_rating": "Ποιότητα προϊόντων",
+  "review.comment": "Το σχόλιό σας (προαιρετικό)",
+  "review.comment_hint": "Έως {{max}} χαρακτήρες.",
+  "review.submit": "Αποστολή",
+  "review.submitting": "Αποστολή…",
+  "review.thanks": "Ευχαριστούμε για την αξιολόγησή σας.",
+  "review.your_review": "Η αξιολόγησή σας",
+  "review.rating_required": "Επιλέξτε και τις δύο βαθμολογίες.",
+  "review.star": "{{value}} / 5",
+  "review.google": "Αξιολόγηση στο Google",
+  "review.google_hint": "Αν μείνατε ικανοποιημένοι, μπορείτε να αξιολογήσετε τον αντιπρόσωπο και στο Google.",
+  "review.not_completed": "Μπορείτε να αξιολογήσετε την υπηρεσία μόλις ολοκληρωθεί.",
+  "review.failed": "Η αξιολόγηση δεν στάλθηκε. Δοκιμάστε ξανά.",
+  "review.already": "Αυτή η υπηρεσία έχει ήδη αξιολογηθεί."
 }

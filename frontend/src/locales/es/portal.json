@@ -137,5 +137,22 @@
   "transfer.error.code_format": "Los códigos tienen 6 dígitos.",
   "transfer.error.rate": "Demasiados intentos. Inténtalo más tarde.",
   "transfer.error.not_found": "No se encontró el vehículo o la transferencia.",
-  "transfer.error.generic": "La solicitud falló. Inténtalo de nuevo."
+  "transfer.error.generic": "La solicitud falló. Inténtalo de nuevo.",
+  "review.title": "Valorar el servicio",
+  "review.description": "Valore nuestra plataforma y la calidad de los productos utilizados; su opinión nos importa.",
+  "review.platform_rating": "Calidad de la plataforma",
+  "review.product_rating": "Calidad de los productos",
+  "review.comment": "Su comentario (opcional)",
+  "review.comment_hint": "Máximo {{max}} caracteres.",
+  "review.submit": "Enviar",
+  "review.submitting": "Enviando…",
+  "review.thanks": "Gracias por su valoración.",
+  "review.your_review": "Su valoración",
+  "review.rating_required": "Elija ambas puntuaciones.",
+  "review.star": "{{value}} / 5",
+  "review.google": "Valorar en Google",
+  "review.google_hint": "Si quedó satisfecho, también puede valorar al distribuidor en Google.",
+  "review.not_completed": "Podrá valorar el servicio cuando esté completado.",
+  "review.failed": "No se pudo enviar la valoración. Inténtelo de nuevo.",
+  "review.already": "Este servicio ya ha sido valorado."
 }

@@ -137,5 +137,22 @@
   "transfer.error.code_format": "Les codes comportent 6 chiffres.",
   "transfer.error.rate": "Trop de tentatives. Réessayez plus tard.",
   "transfer.error.not_found": "Véhicule ou cession introuvable.",
-  "transfer.error.generic": "La requête a échoué. Réessayez."
+  "transfer.error.generic": "La requête a échoué. Réessayez.",
+  "review.title": "Évaluer la prestation",
+  "review.description": "Évaluez notre plateforme et la qualité des produits utilisés ; votre avis compte pour nous.",
+  "review.platform_rating": "Qualité de la plateforme",
+  "review.product_rating": "Qualité des produits",
+  "review.comment": "Votre commentaire (facultatif)",
+  "review.comment_hint": "{{max}} caractères maximum.",
+  "review.submit": "Envoyer",
+  "review.submitting": "Envoi…",
+  "review.thanks": "Merci pour votre évaluation.",
+  "review.your_review": "Votre évaluation",
+  "review.rating_required": "Veuillez choisir les deux notes.",
+  "review.star": "{{value}} / 5",
+  "review.google": "Évaluer sur Google",
+  "review.google_hint": "Si vous êtes satisfait, vous pouvez aussi évaluer le revendeur sur Google.",
+  "review.not_completed": "Vous pourrez évaluer la prestation une fois terminée.",
+  "review.failed": "L'évaluation n'a pas pu être envoyée. Réessayez.",
+  "review.already": "Cette prestation a déjà été évaluée."
 }

@@ -137,5 +137,22 @@
   "transfer.error.code_format": "Codes are 6 digits.",
   "transfer.error.rate": "Too many attempts. Try again later.",
   "transfer.error.not_found": "The vehicle or the transfer was not found.",
-  "transfer.error.generic": "The request failed. Try again."
+  "transfer.error.generic": "The request failed. Try again.",
+  "review.title": "Rate this service",
+  "review.description": "Rate our platform and the quality of the products used; your feedback matters to us.",
+  "review.platform_rating": "Platform quality",
+  "review.product_rating": "Product quality",
+  "review.comment": "Your comment (optional)",
+  "review.comment_hint": "Up to {{max}} characters.",
+  "review.submit": "Submit",
+  "review.submitting": "Submitting…",
+  "review.thanks": "Thank you for your review.",
+  "review.your_review": "Your review",
+  "review.rating_required": "Please choose both ratings.",
+  "review.star": "{{value}} out of 5",
+  "review.google": "Review on Google",
+  "review.google_hint": "If you are happy, you can also review the dealer on Google.",
+  "review.not_completed": "You can rate the service once it is completed.",
+  "review.failed": "The review could not be sent. Try again.",
+  "review.already": "This service has already been reviewed."
 }

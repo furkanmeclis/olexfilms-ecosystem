@@ -137,5 +137,22 @@
   "transfer.error.code_format": "验证码为 6 位数字。",
   "transfer.error.rate": "尝试次数过多。请稍后重试。",
   "transfer.error.not_found": "未找到车辆或过户记录。",
-  "transfer.error.generic": "请求失败。请重试。"
+  "transfer.error.generic": "请求失败。请重试。",
+  "review.title": "评价服务",
+  "review.description": "请为我们的平台和所用产品的质量打分；您的意见对我们很重要。",
+  "review.platform_rating": "平台质量",
+  "review.product_rating": "产品质量",
+  "review.comment": "您的评论（可选）",
+  "review.comment_hint": "最多 {{max}} 个字符。",
+  "review.submit": "提交",
+  "review.submitting": "正在提交…",
+  "review.thanks": "感谢您的评价。",
+  "review.your_review": "您的评价",
+  "review.rating_required": "请选择两项评分。",
+  "review.star": "{{value}} / 5",
+  "review.google": "在 Google 上评价",
+  "review.google_hint": "如果您满意，也可以在 Google 上评价经销商。",
+  "review.not_completed": "服务完成后即可评价。",
+  "review.failed": "评价未能提交，请重试。",
+  "review.already": "该服务已被评价。"
 }

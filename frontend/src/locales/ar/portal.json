@@ -137,5 +137,22 @@
   "transfer.error.code_format": "تتكون الرموز من 6 أرقام.",
   "transfer.error.rate": "محاولات كثيرة. حاول لاحقًا.",
   "transfer.error.not_found": "لم يتم العثور على المركبة أو النقل.",
-  "transfer.error.generic": "فشل الطلب. حاول مرة أخرى."
+  "transfer.error.generic": "فشل الطلب. حاول مرة أخرى.",
+  "review.title": "قيّم الخدمة",
+  "review.description": "قيّم منصتنا وجودة المنتجات المستخدمة؛ رأيك يهمنا.",
+  "review.platform_rating": "جودة المنصة",
+  "review.product_rating": "جودة المنتجات",
+  "review.comment": "تعليقك (اختياري)",
+  "review.comment_hint": "{{max}} حرفًا كحد أقصى.",
+  "review.submit": "إرسال",
+  "review.submitting": "جارٍ الإرسال…",
+  "review.thanks": "شكرًا لتقييمك.",
+  "review.your_review": "تقييمك",
+  "review.rating_required": "يرجى اختيار التقييمين.",
+  "review.star": "{{value}} / 5",
+  "review.google": "قيّم على Google",
+  "review.google_hint": "إذا كنت راضيًا، يمكنك أيضًا تقييم الوكيل على Google.",
+  "review.not_completed": "يمكنك تقييم الخدمة بعد اكتمالها.",
+  "review.failed": "تعذّر إرسال التقييم. حاول مرة أخرى.",
+  "review.already": "تم تقييم هذه الخدمة بالفعل."
 }

@@ -137,5 +137,22 @@
   "transfer.error.code_format": "Коди складаються з 6 цифр.",
   "transfer.error.rate": "Забагато спроб. Спробуйте пізніше.",
   "transfer.error.not_found": "Автомобіль або передачу не знайдено.",
-  "transfer.error.generic": "Запит не виконано. Спробуйте ще раз."
+  "transfer.error.generic": "Запит не виконано. Спробуйте ще раз.",
+  "review.title": "Оцініть послугу",
+  "review.description": "Оцініть нашу платформу та якість використаних продуктів; ваша думка важлива для нас.",
+  "review.platform_rating": "Якість платформи",
+  "review.product_rating": "Якість продуктів",
+  "review.comment": "Ваш коментар (необов'язково)",
+  "review.comment_hint": "Не більше {{max}} символів.",
+  "review.submit": "Надіслати",
+  "review.submitting": "Надсилання…",
+  "review.thanks": "Дякуємо за вашу оцінку.",
+  "review.your_review": "Ваша оцінка",
+  "review.rating_required": "Оберіть обидві оцінки.",
+  "review.star": "{{value}} / 5",
+  "review.google": "Оцінити в Google",
+  "review.google_hint": "Якщо ви задоволені, можете також оцінити дилера в Google.",
+  "review.not_completed": "Ви зможете оцінити послугу після її завершення.",
+  "review.failed": "Не вдалося надіслати оцінку. Спробуйте ще раз.",
+  "review.already": "Цю послугу вже оцінено."
 }
