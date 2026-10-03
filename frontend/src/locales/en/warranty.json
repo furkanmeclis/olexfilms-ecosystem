@@ -20,6 +20,8 @@
   "public.error_title": "The warranty cannot be shown right now",
   "public.error_body": "Please try again later.",
   "public.language": "Language",
+  "public.download_pdf": "Download warranty certificate (PDF)",
+  "public.og_description": "{{brand}} warranty: {{product}} ({{status}})",
   "certificate.download": "Warranty PDF",
   "certificate.preparing": "Preparing the warranty certificate…",
   "certificate.ready": "Warranty certificate downloaded.",

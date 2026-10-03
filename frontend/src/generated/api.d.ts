@@ -816,13 +816,43 @@ export interface paths {
          *     data: no holder name, phone, e-mail or address; the plate is masked
          *     (e.g. `34 *** 12`) and only the last four VIN characters are shown.
          *     The warranty of an anonymized customer is still returned (K19).
-         *     Malformed codes (outside `^[A-Za-z0-9_-]{12,32}$`) are 404 without a
+         *     Malformed codes (outside `^[A-Za-z0-9_-]{4,32}$`) are 404 without a
          *     database lookup; malformed, unknown and other-brand codes share the same
-         *     404 body. Rate limited per client IP (WARRANTY_PUBLIC_RATE_LIMIT per
+         *     404 body. The path also accepts the old hub's shorter warranty numbers
+         *     (e.g. `DS7K2M9QX4`), which the migrator keeps as the public code
+         *     (TEC-248). Rate limited per client IP (WARRANTY_PUBLIC_RATE_LIMIT per
          *     WARRANTY_PUBLIC_RATE_WINDOW); over the limit 429 with Retry-After.
          *     Responses carry `Cache-Control: no-store` and `X-Robots-Tag: noindex`.
          */
         get: operations["getPublicWarranty"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/warranties/{public_code}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Anonymous warranty PDF of the public page
+         * @description TEC-248. No authentication. Renders (synchronously, Gotenberg) the
+         *     PDF of one active warranty from the public projection only: product,
+         *     period, vehicle brand / model / year, masked plate, last four VIN
+         *     characters, dealer name and city, and a QR code to
+         *     /garanti/{public_code}. No holder and no dealer contact. Malformed,
+         *     unknown, other-brand, expired and void codes share the lookup's 404.
+         *     Rate limited per client IP in its own bucket
+         *     (WARRANTY_PUBLIC_PDF_RATE_LIMIT per WARRANTY_PUBLIC_RATE_WINDOW);
+         *     over the limit 429 with Retry-After.
+         */
+        get: operations["getPublicWarrantyPdf"];
         put?: never;
         post?: never;
         delete?: never;
@@ -14466,6 +14496,55 @@ export interface operations {
                 };
             };
             500: components["responses"]["InternalError"];
+        };
+    };
+    getPublicWarrantyPdf: {
+        parameters: {
+            query?: {
+                /** @description Document language; else Accept-Language, else tr. */
+                lang?: string;
+                /** @description IANA time zone of the printed dates; invalid or missing is UTC. */
+                tz?: string;
+            };
+            header?: never;
+            path: {
+                public_code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The PDF (attachment) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description Rate limited per client IP */
+            429: {
+                headers: {
+                    /** @description Seconds until the window resets */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+            /** @description PDF rendering is not configured */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     requestServicePdf: {

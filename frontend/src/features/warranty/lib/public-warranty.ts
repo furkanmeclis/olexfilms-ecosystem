@@ -8,8 +8,35 @@ import type { components } from "@/generated/api";
 export type PublicWarranty = components["schemas"]["PublicWarranty"];
 export type PublicWarrantyStatus = PublicWarranty["status"];
 
-/** Same shape as the Go check (chk_warranties_public_code). */
-export const PUBLIC_CODE_RE = /^[A-Za-z0-9_-]{12,32}$/;
+/**
+ * Same shape as the Go path check: new codes are 22 base64url characters,
+ * the old hub's warranty numbers (e.g. `DS7K2M9QX4`) are shorter and kept
+ * by the migrator (TEC-248).
+ */
+export const PUBLIC_CODE_RE = /^[A-Za-z0-9_-]{4,32}$/;
+
+/** Outcome of a failed PDF download, shown on the page (`?pdf=`). */
+export type PdfNotice = "rate_limited" | "unavailable";
+
+export function parsePdfNotice(
+  value: string | string[] | undefined,
+): PdfNotice | null {
+  const v = Array.isArray(value) ? value[0] : value;
+  return v === "rate_limited" || v === "unavailable" ? v : null;
+}
+
+/**
+ * Same-origin download link of the anonymous PDF (TEC-248): the route
+ * handler forwards it to Go `GET /v1/public/warranties/{code}/pdf`.
+ */
+export function publicWarrantyPdfHref(
+  code: string,
+  locale: string,
+  timeZone: string,
+): string {
+  const q = new URLSearchParams({ lang: locale, tz: timeZone });
+  return `/garanti/${encodeURIComponent(code)}/pdf?${q.toString()}`;
+}
 
 export type PublicWarrantyResult =
   | { kind: "ok"; warranty: PublicWarranty }

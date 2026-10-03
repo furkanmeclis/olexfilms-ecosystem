@@ -20,6 +20,8 @@
   "public.error_title": "Гаранцията не може да бъде показана в момента",
   "public.error_body": "Моля, опитайте отново по-късно.",
   "public.language": "Език",
+  "public.download_pdf": "Изтегляне на гаранционния сертификат (PDF)",
+  "public.og_description": "Гаранция {{brand}}: {{product}} ({{status}})",
   "certificate.download": "Гаранция (PDF)",
   "certificate.preparing": "Гаранционната карта се подготвя…",
   "certificate.ready": "Гаранционната карта е изтеглена.",

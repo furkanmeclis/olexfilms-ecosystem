@@ -20,6 +20,8 @@
   "public.error_title": "Zəmanət hazırda göstərilə bilmir",
   "public.error_body": "Zəhmət olmasa, sonra yenidən cəhd edin.",
   "public.language": "Dil seçimi",
+  "public.download_pdf": "Zəmanət sertifikatını yüklə (PDF)",
+  "public.og_description": "{{brand}} zəmanəti: {{product}} ({{status}})",
   "certificate.download": "Zəmanət PDF",
   "certificate.preparing": "Zəmanət sertifikatı hazırlanır…",
   "certificate.ready": "Zəmanət sertifikatı yükləndi.",

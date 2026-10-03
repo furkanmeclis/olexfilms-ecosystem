@@ -20,6 +20,8 @@
   "public.error_title": "Garanti şu anda gösterilemiyor",
   "public.error_body": "Lütfen daha sonra tekrar deneyin.",
   "public.language": "Dil",
+  "public.download_pdf": "Garanti belgesini indir (PDF)",
+  "public.og_description": "{{brand}} garantisi: {{product}} ({{status}})",
   "certificate.download": "Garanti PDF'i",
   "certificate.preparing": "Garanti belgesi hazırlanıyor…",
   "certificate.ready": "Garanti belgesi indirildi.",

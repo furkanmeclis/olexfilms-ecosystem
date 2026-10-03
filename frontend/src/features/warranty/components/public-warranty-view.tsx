@@ -1,7 +1,14 @@
-import { CircleAlert, Clock3, SearchX, ShieldCheck } from "lucide-react";
+import {
+  CircleAlert,
+  Clock3,
+  FileDown,
+  SearchX,
+  ShieldCheck,
+} from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import {
   LOCALE_NAMES,
   SUPPORTED_LOCALES,
@@ -10,12 +17,19 @@ import {
 } from "@/config/i18n";
 import { VehicleBrandLogo } from "@/features/vehicle-catalog/components/vehicle-brand-logo";
 import {
+  publicWarrantyPdfHref,
   statusTone,
+  type PdfNotice,
   type PublicWarranty,
   type PublicWarrantyResult,
 } from "@/features/warranty/lib/public-warranty";
+import {
+  progressTone,
+  warrantyProgress,
+} from "@/features/warranty/lib/warranty-list";
 import { formatDate, formatNumber } from "@/lib/i18n/format";
 import { translate } from "@/lib/i18n/messages";
+import { cn } from "@/lib/utils";
 
 export type PublicWarrantyViewProps = {
   result: PublicWarrantyResult;
@@ -23,18 +37,26 @@ export type PublicWarrantyViewProps = {
   timeZone: string;
   /** Path of this page without query, for the language links. */
   path: string;
+  /** A failed PDF download sent back here (`?pdf=`, TEC-248). */
+  pdfNotice?: PdfNotice | null;
+  /** Clock of the progress bar (tests). */
+  now?: Date;
 };
 
 /**
  * Public warranty page body (TEC-189). Renders on the server: no session,
  * no client fetch. Mobile first, logical properties only (RTL for ar).
  * Four screens: the warranty, not found, rate limited (429) and error.
+ * TEC-248: vehicle brand logo, elapsed-period progress bar and the
+ * anonymous PDF download.
  */
 export function PublicWarrantyView({
   result,
   locale,
   timeZone,
   path,
+  pdfNotice = null,
+  now,
 }: PublicWarrantyViewProps) {
   const t = (key: string, params?: Record<string, string | number>) =>
     translate(locale, key, params);
@@ -48,6 +70,8 @@ export function PublicWarrantyView({
           locale={locale}
           timeZone={timeZone}
           t={t}
+          pdfNotice={pdfNotice}
+          now={now}
         />
       );
       break;
@@ -133,16 +157,68 @@ const STATUS_KEYS: Record<PublicWarranty["status"], string> = {
 
 type T = (key: string, params?: Record<string, string | number>) => string;
 
+const PROGRESS_TONE_CLASS = {
+  success: "bg-emerald-500",
+  warning: "bg-amber-500",
+  muted: "bg-muted-foreground/40",
+} as const;
+
+/**
+ * Elapsed share of start → end. Server rendered (no locale provider), so it
+ * is a plain bar rather than the panel's client WarrantyProgressBar. It
+ * grows along the inline axis, filling right-to-left in RTL.
+ */
+function PublicProgress({
+  warranty,
+  now,
+  t,
+}: {
+  warranty: PublicWarranty;
+  now?: Date;
+  t: T;
+}) {
+  const p = warrantyProgress(warranty.start_at, warranty.end_at, now);
+  const tone = progressTone(warranty.status, p);
+  return (
+    <div
+      data-slot="warranty-progress"
+      data-percent={p.percent}
+      className="flex flex-col gap-1"
+    >
+      <span className="text-muted-foreground text-xs tabular-nums">
+        {t("warranty.progress.elapsed", { percent: p.percent })}
+      </span>
+      <div
+        className="bg-muted h-2 w-full overflow-hidden rounded-full"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={p.percent}
+        aria-label={t("warranty.progress.aria")}
+      >
+        <div
+          className={cn("h-full rounded-full", PROGRESS_TONE_CLASS[tone])}
+          style={{ inlineSize: `${p.percent}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function WarrantyCard({
   warranty,
   locale,
   timeZone,
   t,
+  pdfNotice,
+  now,
 }: {
   warranty: PublicWarranty;
   locale: AppLocale;
   timeZone: string;
   t: T;
+  pdfNotice: PdfNotice | null;
+  now?: Date;
 }) {
   const ctx = { locale, timeZone };
   const v = warranty.vehicle;
@@ -184,6 +260,8 @@ function WarrantyCard({
           </span>
         </div>
       ) : null}
+
+      <PublicProgress warranty={warranty} now={now} t={t} />
 
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
         <Field label={t("warranty.public.start")}>
@@ -243,6 +321,33 @@ function WarrantyCard({
           ) : null}
         </span>
       </div>
+
+      {warranty.status === "active" ? (
+        <div className="flex flex-col gap-2 border-t pt-4">
+          <a
+            data-slot="pdf-download"
+            href={publicWarrantyPdfHref(warranty.public_code, locale, timeZone)}
+            rel="nofollow noreferrer"
+            className={cn(buttonVariants({ variant: "outline" }), "w-full")}
+          >
+            <FileDown className="size-4" aria-hidden />
+            {t("warranty.public.download_pdf")}
+          </a>
+          {pdfNotice ? (
+            <p
+              data-slot="pdf-notice"
+              role="alert"
+              className="text-destructive text-center text-xs"
+            >
+              {t(
+                pdfNotice === "rate_limited"
+                  ? "warranty.public.rate_limited_body"
+                  : "warranty.public.error_body",
+              )}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       <p className="text-muted-foreground text-xs">
         {t("warranty.public.privacy_note")}

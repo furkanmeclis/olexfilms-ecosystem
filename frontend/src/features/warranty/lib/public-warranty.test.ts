@@ -63,6 +63,15 @@ describe("fetchPublicWarranty", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
+  it("accepts an old hub warranty number (TEC-248)", async () => {
+    const fetcher = reply(200, {
+      data: { ...sampleWarranty, public_code: "DS7K2M9QX4" },
+    });
+    const out = await fetchPublicWarranty("DS7K2M9QX4", req, fetcher);
+    expect(out.kind).toBe("ok");
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
   it("maps 404, 429 and failures", async () => {
     expect(await fetchPublicWarranty(CODE, req, reply(404, {}))).toEqual({
       kind: "not_found",
