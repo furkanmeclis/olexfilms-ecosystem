@@ -163,6 +163,7 @@ type Querier interface {
 	CountRoles(ctx context.Context, q_ pgtype.Text) (int64, error)
 	CountScopedVehicles(ctx context.Context, arg CountScopedVehiclesParams) (int64, error)
 	CountSearchFinanceEntries(ctx context.Context, arg CountSearchFinanceEntriesParams) (int64, error)
+	CountServiceSubscriptionsByItem(ctx context.Context, arg CountServiceSubscriptionsByItemParams) (int64, error)
 	CountServicesInScope(ctx context.Context, arg CountServicesInScopeParams) (int64, error)
 	CountServicesOfUser(ctx context.Context, customerUserID int64) (int64, error)
 	CountStockCounts(ctx context.Context, arg CountStockCountsParams) (int64, error)
@@ -1311,6 +1312,7 @@ type Querier interface {
 	ListServiceItems(ctx context.Context, serviceID int64) ([]ServiceItem, error)
 	ListServiceMeasurements(ctx context.Context, arg ListServiceMeasurementsParams) ([]ServiceMeasurement, error)
 	ListServicePriceOverrides(ctx context.Context, arg ListServicePriceOverridesParams) ([]ServicePriceOverride, error)
+	ListServicePriceOverridesForItems(ctx context.Context, arg ListServicePriceOverridesForItemsParams) ([]ServicePriceOverride, error)
 	ListServiceStatusLogs(ctx context.Context, serviceID int64) ([]ServiceStatusLog, error)
 	// ---------------------------------------------------------------------------
 	// Stock picker (TEC-180): units the service organization can add as items.

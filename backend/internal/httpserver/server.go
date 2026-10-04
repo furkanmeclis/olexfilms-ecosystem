@@ -97,6 +97,9 @@ import (
 	searchhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/handler"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/indexsync"
 	searchusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/usecase"
+	servicecatalogmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/servicecatalog"
+	servicecataloghandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/servicecatalog/handler"
+	servicecatalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/servicecatalog/usecase"
 	servicesmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services"
 	serviceshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/handler"
 	servicereview "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/review"
@@ -427,6 +430,10 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	pricingSvc := pricingusecase.New(deps.Queries)
 	pricingmodule.RegisterRoutes(mux, pricinghandler.New(pricingSvc, activityRec),
 		tokens, loader, deps.Queries, stepUpSvc, featureSvc)
+	// TEC-306: service catalog, distributor overrides and effective service prices.
+	serviceCatalogSvc := servicecatalogusecase.New(deps.Queries)
+	servicecatalogmodule.RegisterRoutes(mux, servicecataloghandler.New(serviceCatalogSvc, activityRec),
+		tokens, loader, deps.Queries, featureSvc)
 	// TEC-172: accounting accounts, cari, manual entries and settlements.
 	accountingPoster := accountingposting.New(deps.Queries, outbox.NewStore(deps.DB, deps.Queries), ratesSvc)
 	accountingSvc := accountingusecase.New(deps.DB, deps.Queries, accountingPoster, featureSvc).

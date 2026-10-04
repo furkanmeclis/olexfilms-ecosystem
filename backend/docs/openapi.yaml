@@ -96,6 +96,11 @@ tags:
       Price list and effective price views (TEC-146, K8). The center writes the
       list price and distributor-specific prices, a distributor writes its
       price to dealers; every reader gets one view masked by pricing.* grants.
+  - name: ServiceCatalog
+    description: >-
+      Non-product service catalog (TEC-306): center-managed items, module
+      bundles, distributor-specific prices and effective visible prices for
+      distributors and dealers.
   - name: Accounting
     description: >-
       Accounting core (TEC-99/TEC-172): cash/bank accounts, cari balances,
@@ -12785,6 +12790,248 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/platform/service-catalog:
+    get:
+      tags: [ServiceCatalog]
+      operationId: listPlatformServiceCatalog
+      summary: Center lists service catalog items
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: category
+          in: query
+          schema: { $ref: "#/components/schemas/ServiceCatalogCategory" }
+        - name: active
+          in: query
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Service catalog items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeServiceCatalogList"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [ServiceCatalog]
+      operationId: createPlatformServiceCatalogItem
+      summary: Center creates a service catalog item
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ServiceCatalogItemInput" }
+      responses:
+        "201":
+          description: Created item
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeServiceCatalogItem" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/platform/service-catalog/{uuid}:
+    get:
+      tags: [ServiceCatalog]
+      operationId: getPlatformServiceCatalogItem
+      summary: Center reads one service catalog item
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Service catalog item
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeServiceCatalogItem" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [ServiceCatalog]
+      operationId: patchPlatformServiceCatalogItem
+      summary: Center updates or deactivates a service catalog item
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ServiceCatalogItemPatch" }
+      responses:
+        "200":
+          description: Updated item
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeServiceCatalogItem" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [ServiceCatalog]
+      operationId: deletePlatformServiceCatalogItem
+      summary: Center deactivates an item when it has no subscriptions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Deactivated item
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeServiceCatalogItem" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/platform/service-catalog/{uuid}/modules:
+    put:
+      tags: [ServiceCatalog]
+      operationId: putPlatformServiceCatalogModules
+      summary: Replace modules of a module_bundle item
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ServiceCatalogModulesInput" }
+      responses:
+        "200":
+          description: Updated item
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeServiceCatalogItem" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/platform/service-catalog/{uuid}/overrides/{org_uuid}:
+    get:
+      tags: [ServiceCatalog]
+      operationId: getPlatformServiceCatalogOverride
+      summary: Center reads one distributor service price override
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: org_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Override
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeServiceCatalogOverride" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [ServiceCatalog]
+      operationId: putPlatformServiceCatalogOverride
+      summary: Center writes one distributor service price override
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: org_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ServiceCatalogOverrideInput" }
+      responses:
+        "200":
+          description: Stored override
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeServiceCatalogOverride" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [ServiceCatalog]
+      operationId: deletePlatformServiceCatalogOverride
+      summary: Center removes one distributor service price override
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: org_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeDeleted" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/service-catalog:
+    get:
+      tags: [ServiceCatalog]
+      operationId: listServiceCatalog
+      summary: Effective service catalog for the active organization
+      description: >-
+        Needs service_catalog.read and the service_catalog feature. A
+        distributor sees its own override or the default price; a dealer sees
+        its parent distributor's override or the default price. Prices are
+        omitted when the caller lacks the relevant pricing.* read permission.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Visible service catalog
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeServiceCatalogList" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /v1/accounting/categories:
     get:
       tags: [Accounting]
@@ -22094,6 +22341,135 @@ components:
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    ServiceCatalogCategory:
+      type: string
+      enum: [advertising, training, setup, software, module_bundle, other]
+
+    ServiceCatalogRecurrence:
+      type: string
+      enum: [one_time, monthly, yearly]
+
+    ServiceCatalogPrice:
+      type: object
+      required: [amount, currency, source]
+      properties:
+        amount: { type: string, pattern: '^[0-9]+(\.[0-9]{1,2})?$' }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        source: { type: string, enum: [default, override] }
+
+    ServiceCatalogItem:
+      type: object
+      required: [uuid, name, description, category, currency, recurrence, is_active, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        category: { $ref: "#/components/schemas/ServiceCatalogCategory" }
+        default_price:
+          type: [string, "null"]
+          description: Present only when pricing visibility permits it.
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        recurrence: { $ref: "#/components/schemas/ServiceCatalogRecurrence" }
+        cancellation_fee:
+          type: [string, "null"]
+          description: Present only when pricing visibility permits it.
+        contract_template_id: { type: [integer, "null"], format: int64 }
+        is_active: { type: boolean }
+        modules:
+          type: array
+          items: { type: string }
+        effective_price:
+          oneOf:
+            - $ref: "#/components/schemas/ServiceCatalogPrice"
+            - type: "null"
+          description: Effective buyer price, omitted or null when pricing visibility is masked.
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    ServiceCatalogItemInput:
+      type: object
+      additionalProperties: false
+      required: [name, category, default_price, currency, recurrence]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, maxLength: 10000, default: "" }
+        category: { $ref: "#/components/schemas/ServiceCatalogCategory" }
+        default_price: { type: string, pattern: '^[0-9]+(\.[0-9]{1,2})?$' }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        recurrence: { $ref: "#/components/schemas/ServiceCatalogRecurrence" }
+        cancellation_fee: { type: string, pattern: '^[0-9]+(\.[0-9]{1,2})?$', default: "0" }
+        contract_template_id: { type: [integer, "null"], format: int64 }
+        is_active: { type: boolean, default: true }
+
+    ServiceCatalogItemPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, maxLength: 10000 }
+        category: { $ref: "#/components/schemas/ServiceCatalogCategory" }
+        default_price: { type: string, pattern: '^[0-9]+(\.[0-9]{1,2})?$' }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        recurrence: { $ref: "#/components/schemas/ServiceCatalogRecurrence" }
+        cancellation_fee: { type: string, pattern: '^[0-9]+(\.[0-9]{1,2})?$' }
+        contract_template_id: { type: [integer, "null"], format: int64 }
+        is_active: { type: boolean }
+
+    ServiceCatalogModulesInput:
+      type: object
+      additionalProperties: false
+      required: [modules]
+      properties:
+        modules:
+          type: array
+          items: { type: string, minLength: 1, maxLength: 64 }
+
+    ServiceCatalogOverrideInput:
+      type: object
+      additionalProperties: false
+      required: [price, currency]
+      properties:
+        price: { type: string, pattern: '^[0-9]+(\.[0-9]{1,2})?$' }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+
+    ServiceCatalogOverride:
+      type: object
+      required: [organization_uuid, price, currency]
+      properties:
+        organization_uuid: { type: string, format: uuid }
+        price: { type: string }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+
+    EnvelopeServiceCatalogItem:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ServiceCatalogItem" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeServiceCatalogList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/ServiceCatalogItem" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeServiceCatalogOverride:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ServiceCatalogOverride" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeDistributorPrice:
