@@ -6543,6 +6543,50 @@ export interface paths {
         patch: operations["completeMeasurementVIN"];
         trace?: never;
     };
+    "/v1/services/{uuid}/measurements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Before/after measurements of a service (TEC-296)
+         * @description The linked before/after measurements (`link_source` auto or manual; an auto link waits for confirmation with `confirmed=false`), the suggestions of the phases without a confirmed link and the other unlinked accepted measurements of the same VIN in the service's organization. Matching rule: before = the measurements in the 14 days before the service start; after = once the service is processing / ready / completed, the measurements from the start on, at most 7 days after completion. A phase is linked automatically only when it is empty and has exactly one candidate. Requires the measurements module and `measurements.link`; a service outside the caller's reach is 404.
+         */
+        get: operations["listServiceMeasurements"];
+        put?: never;
+        /**
+         * Confirm or manually select a before/after measurement (TEC-296)
+         * @description The measurement already linked to the phase is confirmed (`confirmed_by`, `confirmed_at`). An unlinked accepted measurement of the service's organization and VIN is linked manually (confirmed by the caller) into an empty phase or in place of an unconfirmed auto link. 409 `MEASUREMENT_PHASE_TAKEN` when the phase already has a confirmed link, 409 `MEASUREMENT_ALREADY_LINKED` when the measurement is linked elsewhere, 409 `SERVICE_NOT_EDITABLE` for a cancelled service; 422 `MEASUREMENT_NOT_EXPECTED` (has_measurement false), `MEASUREMENT_VIN_PENDING` or `MEASUREMENT_VIN_MISMATCH`. Replacing a link of a completed service is center only (403).
+         */
+        post: operations["linkServiceMeasurement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/services/{uuid}/measurements/{phase}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove the before/after measurement link of a service (TEC-296)
+         * @description Removes the link of the phase. After the service is completed only the center removes a link (403 otherwise); a cancelled service is 409 `SERVICE_NOT_EDITABLE`; a phase without link is 404. Requires the measurements module and `measurements.link`.
+         */
+        delete: operations["unlinkServiceMeasurement"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/mobile/measurements": {
         parameters: {
             query?: never;
@@ -7911,6 +7955,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/warranty-claims": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Warranty claims inside warranty_claims.read scope */
+        get: operations["listWarrantyClaims"];
+        put?: never;
+        /**
+         * Open a warranty claim
+         * @description Dealer or distributor opens a claim on behalf of the customer. The automatic coverage check is stored and never auto-rejects the claim. Portal/customer sessions cannot open claims.
+         */
+        post: operations["createWarrantyClaim"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warranty-claims/{uuid}/photos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add a warranty claim photo */
+        post: operations["addWarrantyClaimPhoto"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warranty-claims/{uuid}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move a warranty claim through review and decision
+         * @description Flow: open -> dealer_review -> center_review -> approved/rejected. Moving to dealer_review requires at least one photo (422 CLAIM_PHOTO_REQUIRED). Rejection requires a reason.
+         */
+        post: operations["transitionWarrantyClaim"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/warranty-claims": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Narrow warranty claim statuses for the portal user
+         * @description Descriptions and photos are intentionally omitted.
+         */
+        get: operations["listPortalWarrantyClaims"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/services": {
         parameters: {
             query?: never;
@@ -8445,6 +8567,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/leads/{uuid}/convert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Convert a lead into a draft service or organization (lead becomes won)
+         * @description customer creates a draft service; dealer_candidate creates a read-only dealer organization under a distributor; distributor_candidate creates a distributor organization (center super_admin only). The created records, the won status/won_ref and the converted event commit in one transaction. 409 LEAD_ALREADY_CONVERTED for a converted lead; 409 LEAD_USER_CONFLICT (error data existing_user, masked) when the candidate phone/e-mail already belongs to a user.
+         */
+        post: operations["convertLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/leads/{uuid}/notes": {
         parameters: {
             query?: never;
@@ -8613,6 +8755,174 @@ export interface paths {
         get: operations["requestQuotePdf"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/appointment-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get appointment capacity settings */
+        get: operations["getAppointmentSettings"];
+        /** Update appointment capacity settings */
+        put: operations["putAppointmentSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/appointment-closures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List appointment closure days */
+        get: operations["listAppointmentClosures"];
+        put?: never;
+        /**
+         * Create an appointment closure day
+         * @description A day can be closed once per organization; a second closure of the same day is 409 APPOINTMENT_CLOSURE_EXISTS.
+         */
+        post: operations["createAppointmentClosure"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/appointment-closures/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete an appointment closure day */
+        delete: operations["deleteAppointmentClosure"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/appointments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List appointments */
+        get: operations["listAppointments"];
+        put?: never;
+        /**
+         * Create an appointment
+         * @description Books into the active organization. The capacity check and the insert are serialized per organization. 422 APPOINTMENT_CAPACITY_FULL when the local day already holds daily_vehicle_capacity active bookings, 422 APPOINTMENT_DAY_CLOSED on a closure day. The customer must be a customer of the brand and the vehicle the customer's (400 otherwise).
+         */
+        post: operations["createAppointment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/appointments/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get appointment availability */
+        get: operations["getAppointmentAvailability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/appointments/occupancy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get network appointment occupancy */
+        get: operations["getAppointmentOccupancy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/appointments/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Reschedule an appointment
+         * @description Only scheduled or confirmed appointments of an organization the appointments.write grant covers can move (422 APPOINTMENT_INVALID_TRANSITION otherwise); capacity and closure days are checked as on create.
+         */
+        patch: operations["patchAppointment"];
+        trace?: never;
+    };
+    "/v1/appointments/{uuid}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change appointment status */
+        post: operations["setAppointmentStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/appointments/{uuid}/start-intake": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start vehicle intake from an appointment
+         * @description Opens a draft service through the services usecase, links it and marks the appointment arrived. A second call is 409 APPOINTMENT_INTAKE_ALREADY_STARTED; a cancelled or no-show appointment is 422 APPOINTMENT_INVALID_TRANSITION.
+         */
+        post: operations["startAppointmentIntake"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11482,6 +11792,8 @@ export interface components {
             updated_at: string;
         };
         ContractTemplate: {
+            /** Format: int64 */
+            id: number;
             /** Format: uuid */
             uuid: string;
             name: string;
@@ -13848,6 +14160,65 @@ export interface components {
             /** @description 17 letters or digits without I, O or Q (upper-cased) */
             vin: string;
         };
+        ServiceMeasurementLinkRequest: {
+            /** Format: uuid */
+            measurement_uuid: string;
+            /** @enum {string} */
+            phase: "before" | "after";
+        };
+        ServiceMeasurementBrief: {
+            /** Format: uuid */
+            uuid: string;
+            vin: string | null;
+            /** @enum {string} */
+            status: "accepted" | "vin_pending";
+            /** @enum {string} */
+            source: "mobile" | "legacy_import";
+            device_serial: string | null;
+            /** Format: date-time */
+            measured_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        ServiceMeasurementLink: {
+            /** @enum {string} */
+            phase: "before" | "after";
+            /** @enum {string} */
+            link_source: "auto" | "manual";
+            confirmed: boolean;
+            /** Format: date-time */
+            confirmed_at: string | null;
+            confirmed_by: null | {
+                /** Format: uuid */
+                uuid: string;
+                name: string;
+            };
+            /** Format: date-time */
+            linked_at: string;
+            measurement: components["schemas"]["ServiceMeasurementBrief"];
+        };
+        ServiceMeasurements: {
+            /** Format: uuid */
+            service_uuid: string;
+            vin: string | null;
+            has_measurement: boolean;
+            status: string;
+            links: components["schemas"]["ServiceMeasurementLink"][];
+            /** @description Window candidates of the phases without a confirmed link (before newest first, after oldest first). */
+            suggestions: {
+                /** @enum {string} */
+                phase: "before" | "after";
+                measurement: components["schemas"]["ServiceMeasurementBrief"];
+            }[];
+            /** @description The other unlinked accepted measurements of the same VIN in the service's organization. */
+            candidates: components["schemas"]["ServiceMeasurementBrief"][];
+        };
+        EnvelopeServiceMeasurements: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ServiceMeasurements"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
         MobileMeasurementRequest: {
             /** @description Idempotency key in the body (alternative to the Idempotency-Key header) */
             client_measurement_id?: string;
@@ -14996,6 +15367,79 @@ export interface components {
             };
             /** @description The caller may void it (warranties.void and an active or expired status). */
             can_void: boolean;
+            /** @description Portal warranty detail only; no descriptions or photos. */
+            claims?: components["schemas"]["PortalWarrantyClaimStatus"][];
+        };
+        /** @enum {string} */
+        WarrantyClaimStatus: "open" | "dealer_review" | "center_review" | "approved" | "rejected" | "reapplied" | "closed";
+        WarrantyClaimCoverageCheck: {
+            ok: boolean;
+            reasons: ("warranty_not_active" | "warranty_period_expired" | "product_has_no_warranty" | "part_not_covered")[];
+            /** Format: date-time */
+            checked_at: string;
+        };
+        WarrantyClaimPartInput: {
+            part_key: string;
+            /** Format: uuid */
+            service_item_uuid?: string | null;
+            note?: string;
+        };
+        WarrantyClaimCreateInput: {
+            /** Format: uuid */
+            warranty_uuid: string;
+            description: string;
+            parts: components["schemas"]["WarrantyClaimPartInput"][];
+        };
+        WarrantyClaimTransitionInput: {
+            status: components["schemas"]["WarrantyClaimStatus"];
+            rejection_reason?: string;
+        };
+        WarrantyClaimPart: {
+            /** Format: uuid */
+            uuid: string;
+            part_key: string;
+            note?: string;
+        };
+        WarrantyClaimPhoto: {
+            /** Format: uuid */
+            uuid: string;
+            mime_type: string;
+            /** Format: int64 */
+            size_bytes: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        WarrantyClaim: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: int64 */
+            claim_no: number;
+            /** Format: uuid */
+            warranty_uuid: string;
+            status: components["schemas"]["WarrantyClaimStatus"];
+            description?: string;
+            rejection_reason?: string | null;
+            coverage_check: components["schemas"]["WarrantyClaimCoverageCheck"];
+            ai_damage_type?: string | null;
+            ai_summary?: string | null;
+            ai_confidence?: string | null;
+            /** Format: date-time */
+            ai_triaged_at?: string | null;
+            parts?: components["schemas"]["WarrantyClaimPart"][];
+            photos?: components["schemas"]["WarrantyClaimPhoto"][];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        PortalWarrantyClaimStatus: {
+            /** Format: uuid */
+            uuid: string;
+            status: components["schemas"]["WarrantyClaimStatus"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
         };
         WarrantyVoidInput: {
             reason: string;
@@ -15015,6 +15459,38 @@ export interface components {
                 total: number;
                 limit: number;
                 offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWarrantyClaim: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WarrantyClaim"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWarrantyClaimPhoto: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WarrantyClaimPhoto"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWarrantyClaimPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["WarrantyClaim"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePortalWarrantyClaims: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["PortalWarrantyClaimStatus"][];
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -15501,6 +15977,33 @@ export interface components {
             /** Format: int64 */
             won_ref_id?: number | null;
         };
+        LeadConvertInput: {
+            /** @enum {string} */
+            kind: "customer" | "dealer_candidate" | "distributor_candidate";
+            /**
+             * Format: uuid
+             * @description Required when the center converts a dealer candidate.
+             */
+            distributor_uuid?: string | null;
+            /** @description Required for distributor_candidate; ISO 4217. */
+            currency?: string;
+            /** @description Distributor candidate only; opens the preset warehouse. */
+            register_as_warehouse?: boolean;
+        };
+        LeadExistingUser: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            surname: string;
+            email_masked?: string;
+            phone_masked?: string;
+        };
+        LeadConvertResult: {
+            lead: components["schemas"]["Lead"];
+            service_draft?: components["schemas"]["Service"];
+            organization?: components["schemas"]["Organization"];
+            existing_user?: components["schemas"]["LeadExistingUser"];
+        };
         LeadNoteInput: {
             body: string;
         };
@@ -15540,6 +16043,12 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["Lead"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeLeadConvertResult: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["LeadConvertResult"];
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeLeadPage: {
@@ -15659,6 +16168,153 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["Quote"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        AppointmentStatus: "scheduled" | "confirmed" | "arrived" | "no_show" | "cancelled";
+        /** @enum {string} */
+        AppointmentSource: "panel" | "portal" | "assistant" | "lead";
+        AppointmentSettingsInput: {
+            daily_vehicle_capacity: number;
+            default_estimated_minutes: number;
+            slot_interval_minutes: number;
+            working_hours: {
+                [key: string]: unknown;
+            };
+            portal_appointments_enabled: boolean;
+        };
+        AppointmentSettings: components["schemas"]["AppointmentSettingsInput"] & {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: int64 */
+            organization_id: number;
+        };
+        AppointmentClosureInput: {
+            /** Format: date */
+            closed_on: string;
+            reason?: string;
+        };
+        AppointmentClosure: components["schemas"]["AppointmentClosureInput"] & {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: int64 */
+            organization_id: number;
+        };
+        AppointmentInput: {
+            /** Format: int64 */
+            customer_user_id: number;
+            /** Format: int64 */
+            vehicle_id?: number | null;
+            /** Format: date-time */
+            starts_at: string;
+            estimated_minutes?: number | null;
+            source?: components["schemas"]["AppointmentSource"];
+            note?: string;
+        };
+        Appointment: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: int64 */
+            organization_id: number;
+            /** Format: int64 */
+            customer_user_id: number;
+            /** Format: int64 */
+            vehicle_id?: number | null;
+            /** Format: date-time */
+            starts_at: string;
+            /** Format: date-time */
+            ends_at: string;
+            estimated_minutes: number;
+            source: components["schemas"]["AppointmentSource"];
+            status: components["schemas"]["AppointmentStatus"];
+            cancel_reason?: string | null;
+            /** Format: int64 */
+            lead_id?: number | null;
+            /** Format: int64 */
+            service_id?: number | null;
+            note: string;
+            /** Format: int64 */
+            created_by_user_id?: number | null;
+            /** Format: date-time */
+            created_at?: string | null;
+            /** Format: date-time */
+            updated_at?: string | null;
+        };
+        AppointmentStatusInput: {
+            status: components["schemas"]["AppointmentStatus"];
+            cancel_reason?: string | null;
+        };
+        AppointmentSlot: {
+            /** Format: date-time */
+            start: string;
+            /** Format: date-time */
+            end: string;
+        };
+        AppointmentAvailabilityDay: {
+            /** Format: date */
+            date: string;
+            capacity: number;
+            /** Format: int64 */
+            occupied: number;
+            remaining_capacity: number;
+            closed: boolean;
+            slots: components["schemas"]["AppointmentSlot"][];
+        };
+        AppointmentOccupancy: {
+            /** Format: int64 */
+            organization_id: number;
+            /** Format: uuid */
+            organization_uuid: string;
+            organization_name: string;
+            capacity: number;
+            /** Format: int64 */
+            occupied: number;
+            remaining: number;
+        };
+        EnvelopeAppointmentSettings: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AppointmentSettings"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAppointmentClosure: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AppointmentClosure"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAppointmentClosureList: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AppointmentClosure"][];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAppointment: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Appointment"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAppointmentPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["Appointment"][];
+                /** Format: int64 */
+                total: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAppointmentAvailabilityList: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AppointmentAvailabilityDay"][];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAppointmentOccupancyList: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AppointmentOccupancy"][];
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
@@ -28192,6 +28848,89 @@ export interface operations {
             422: components["responses"]["UnprocessableEntity"];
         };
     };
+    listServiceMeasurements: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service measurements */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceMeasurements"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    linkServiceMeasurement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceMeasurementLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description Service measurements after the change */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceMeasurements"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    unlinkServiceMeasurement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                phase: "before" | "after";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Link removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
     postMobileMeasurement: {
         parameters: {
             query?: never;
@@ -30743,6 +31482,157 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    listWarrantyClaims: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["WarrantyClaimStatus"];
+                warranty_uuid?: string;
+                vehicle_uuid?: string;
+                created_from?: string;
+                created_to?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Warranty claims */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarrantyClaimPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createWarrantyClaim: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarrantyClaimCreateInput"];
+            };
+        };
+        responses: {
+            /** @description Created warranty claim */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarrantyClaim"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    addWarrantyClaimPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description JPEG, PNG or WebP, maximum 12 MB.
+                     */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Uploaded photo */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarrantyClaimPhoto"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    transitionWarrantyClaim: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarrantyClaimTransitionInput"];
+            };
+        };
+        responses: {
+            /** @description Updated warranty claim */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarrantyClaim"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    listPortalWarrantyClaims: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Portal warranty claim statuses */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePortalWarrantyClaims"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     listServices: {
         parameters: {
             query?: {
@@ -31686,6 +32576,37 @@ export interface operations {
             422: components["responses"]["UnprocessableEntity"];
         };
     };
+    convertLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadConvertInput"];
+            };
+        };
+        responses: {
+            /** @description Lead converted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLeadConvertResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
     addLeadNote: {
         parameters: {
             query?: never;
@@ -32014,6 +32935,331 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getAppointmentSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Appointment settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointmentSettings"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    putAppointmentSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppointmentSettingsInput"];
+            };
+        };
+        responses: {
+            /** @description Appointment settings updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointmentSettings"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listAppointmentClosures: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Appointment closures */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointmentClosureList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createAppointmentClosure: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppointmentClosureInput"];
+            };
+        };
+        responses: {
+            /** @description Appointment closure created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointmentClosure"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    deleteAppointmentClosure: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Appointment closure deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listAppointments: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                status?: components["schemas"]["AppointmentStatus"];
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Appointments */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointmentPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createAppointment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppointmentInput"];
+            };
+        };
+        responses: {
+            /** @description Appointment created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getAppointmentAvailability: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Appointment availability */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointmentAvailabilityList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getAppointmentOccupancy: {
+        parameters: {
+            query: {
+                date: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Appointment occupancy */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointmentOccupancyList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    patchAppointment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppointmentInput"];
+            };
+        };
+        responses: {
+            /** @description Appointment updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    setAppointmentStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppointmentStatusInput"];
+            };
+        };
+        responses: {
+            /** @description Appointment status changed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    startAppointmentIntake: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Draft service opened and linked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     listTasks: {

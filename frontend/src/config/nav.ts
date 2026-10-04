@@ -6,12 +6,13 @@ import {
   BookOpen,
   Building2,
   Car,
+  ClipboardList,
   Blocks,
   Boxes,
-  ClipboardList,
   Coins,
   Download,
   FileText,
+  Flame,
   FolderTree,
   HardDrive,
   KeyRound,
@@ -49,6 +50,7 @@ import { githubNavIcon } from "@/components/icons/github-icon";
 import { googleNavIcon } from "@/components/icons/google-icon";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import { leadsNavItem } from "@/features/leads/nav";
 import { defineNav } from "@/features/nav-engine";
 import { usersNavItem } from "@/features/users/nav";
 
@@ -174,6 +176,13 @@ export const platformNav = defineNav({
           href: routes.platform.vehicleCatalog.root,
           icon: Car,
           permission: permissions.vehicleCatalog.write,
+        },
+        {
+          id: "service-catalog",
+          titleKey: "layout.nav_service_catalog",
+          href: routes.platform.serviceCatalog.root,
+          icon: ClipboardList,
+          permission: permissions.serviceCatalog.manage,
         },
         {
           // TEC-222: system settings hub (platform.settings.read).
@@ -371,6 +380,24 @@ export function tenantNav(slug: string) {
             icon: FolderTree,
             permission: permissions.catalog.read,
             feature: "catalog",
+          },
+        ],
+      },
+      {
+        id: "service-catalog",
+        labelKey: "layout.nav_service_catalog",
+        icon: ClipboardList,
+        defaultOpen: true,
+        permission: permissions.serviceCatalog.read,
+        feature: "service_catalog",
+        items: [
+          {
+            id: "service-catalog",
+            titleKey: "layout.nav_service_catalog",
+            href: routes.tenant.catalog.services(slug),
+            icon: ClipboardList,
+            permission: permissions.serviceCatalog.read,
+            feature: "service_catalog",
           },
         ],
       },
@@ -586,6 +613,17 @@ export function tenantNav(slug: string) {
             orgTypes: ["distributor", "dealer"],
           },
         ],
+      },
+      {
+        // TEC-318: organization-scoped lead pipeline. The item has a live
+        // follow-up badge and stays behind the leads module flag.
+        id: "leads",
+        labelKey: "leads.nav",
+        icon: Flame,
+        defaultOpen: true,
+        permission: permissions.leads.read,
+        feature: "leads",
+        items: [leadsNavItem(slug)],
       },
       {
         // TEC-221: center tasks about distributors and dealers (center

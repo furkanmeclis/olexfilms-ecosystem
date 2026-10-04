@@ -276,6 +276,14 @@ const (
 	ServiceSubscriptionCancelRejected  = "service_subscription.cancel_rejected"
 )
 
+// Appointment domain events (TEC-323): written when a booking is created,
+// rescheduled or cancelled.
+const (
+	AppointmentCreated     = "appointment.created"
+	AppointmentRescheduled = "appointment.rescheduled"
+	AppointmentCancelled   = "appointment.cancelled"
+)
+
 // ServiceReviewRequested is written by the delayed service:review_request
 // task (TEC-192) in the transaction that stamps review_request_sent_at; the
 // notification module sends the WhatsApp review request from it.
@@ -286,11 +294,12 @@ const ServiceReviewRequested = "service.review_requested"
 // and expired by the daily cron, holder_changed by a completed vehicle
 // transfer, voided by the center.
 const (
-	WarrantyCreated       = "warranty.created"
-	WarrantyExpiringSoon  = "warranty.expiring_soon"
-	WarrantyExpired       = "warranty.expired"
-	WarrantyVoided        = "warranty.voided"
-	WarrantyHolderChanged = "warranty.holder_changed"
+	WarrantyCreated            = "warranty.created"
+	WarrantyExpiringSoon       = "warranty.expiring_soon"
+	WarrantyExpired            = "warranty.expired"
+	WarrantyVoided             = "warranty.voided"
+	WarrantyHolderChanged      = "warranty.holder_changed"
+	WarrantyClaimStatusChanged = "warranty_claim.status_changed"
 )
 
 // Vehicle ownership transfer events (TEC-98 decision 6): two codes, one
@@ -588,6 +597,9 @@ func catalogConstants() []string {
 		ServiceImageAdded,
 		ServiceImageRemoved,
 		ServiceNoteAdded,
+		AppointmentCreated,
+		AppointmentRescheduled,
+		AppointmentCancelled,
 		ServiceReviewRequested,
 		WarrantyCreated,
 		WarrantyExpiringSoon,
@@ -625,6 +637,7 @@ func catalogConstants() []string {
 		TasksOverdue,
 		OrganizationCreated,
 		OrganizationUpdated,
+		MeasurementMatchSuggested,
 	}
 }
 
@@ -635,3 +648,8 @@ const (
 	TasksDueSoon = "tasks.due_soon"
 	TasksOverdue = "tasks.overdue"
 )
+
+// MeasurementMatchSuggested (TEC-296): the before/after matching of a
+// service linked a measurement automatically (waiting for the dealer's
+// confirmation) or found candidates; written in the matching transaction.
+const MeasurementMatchSuggested = "measurement.match_suggested"

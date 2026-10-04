@@ -42,6 +42,7 @@ export const routes = {
       productEdit: (slug: string, uuid: string) =>
         `/t/${slug}/catalog/products/${uuid}/edit`,
       categories: (slug: string) => `/t/${slug}/catalog/categories`,
+      services: (slug: string) => `/t/${slug}/service-catalog`,
     },
     /** TEC-176 accounting; statement and disputes: TEC-195. */
     accounting: {
@@ -104,6 +105,12 @@ export const routes = {
       list: (slug: string) => `/t/${slug}/tasks`,
       create: (slug: string) => `/t/${slug}/tasks/new`,
       detail: (slug: string, uuid: string) => `/t/${slug}/tasks/${uuid}`,
+    },
+    /** TEC-318 lead pipeline: list, new, detail + timeline. */
+    leads: {
+      list: (slug: string) => `/t/${slug}/leads`,
+      create: (slug: string) => `/t/${slug}/leads/new`,
+      detail: (slug: string, uuid: string) => `/t/${slug}/leads/${uuid}`,
     },
     /**
      * TEC-231 full warehouse (center and distributor, K12): location tree,
@@ -244,6 +251,9 @@ export const routes = {
     vehicleCatalog: {
       root: "/platform/vehicle-catalog",
       brand: (uuid: string) => `/platform/vehicle-catalog/${uuid}`,
+    },
+    serviceCatalog: {
+      root: "/platform/service-catalog",
     },
     /** TEC-222: system settings hub (TEC-215 key/value store + topic links). */
     systemSettings: {

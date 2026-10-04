@@ -38,6 +38,7 @@ type Querier interface {
 	// Atomically appends one image while the product holds fewer than
 	// max_images; no row means the product is gone or already full.
 	AppendProductImage(ctx context.Context, arg AppendProductImageParams) (Product, error)
+	AppointmentClosureExists(ctx context.Context, arg AppointmentClosureExistsParams) (bool, error)
 	// Seller approval: freezes the rate (decision 2).
 	ApproveOrder(ctx context.Context, arg ApproveOrderParams) (Order, error)
 	ApproveStockCount(ctx context.Context, arg ApproveStockCountParams) (StockCount, error)
@@ -106,6 +107,8 @@ type Querier interface {
 	ConsumeQRLoginChallenge(ctx context.Context, code string) (QrLoginChallenge, error)
 	ConsumeStockReservation(ctx context.Context, id int64) (StockReservation, error)
 	CountAccountingDisputes(ctx context.Context, arg CountAccountingDisputesParams) (int64, error)
+	CountActiveAppointmentsByOrganization(ctx context.Context, arg CountActiveAppointmentsByOrganizationParams) ([]CountActiveAppointmentsByOrganizationRow, error)
+	CountActiveAppointmentsForOrganization(ctx context.Context, arg CountActiveAppointmentsForOrganizationParams) (int64, error)
 	CountActiveRefreshTokensForUser(ctx context.Context, userID int64) (int64, error)
 	CountActiveServiceModuleSubscriptions(ctx context.Context, arg CountActiveServiceModuleSubscriptionsParams) (int64, error)
 	CountActivityEvents(ctx context.Context, arg CountActivityEventsParams) (int64, error)
@@ -444,6 +447,7 @@ type Querier interface {
 	DeleteAppLogsByUUIDs(ctx context.Context, uuids []uuid.UUID) (int64, error)
 	DeleteAppLogsMatching(ctx context.Context, arg DeleteAppLogsMatchingParams) (int64, error)
 	DeleteAppointmentClosure(ctx context.Context, arg DeleteAppointmentClosureParams) (int64, error)
+	DeleteAppointmentClosureByUUID(ctx context.Context, arg DeleteAppointmentClosureByUUIDParams) (int64, error)
 	// Fails with a restrict/foreign key violation while models still use the brand.
 	DeleteCarBrand(ctx context.Context, id int64) (int64, error)
 	DeleteCarModel(ctx context.Context, id int64) (int64, error)
@@ -690,6 +694,8 @@ type Querier interface {
 	GetLatestLegalText(ctx context.Context, arg GetLatestLegalTextParams) (LegalText, error)
 	GetLatestPhoneOTP(ctx context.Context, arg GetLatestPhoneOTPParams) (OtpCode, error)
 	GetLeadByID(ctx context.Context, arg GetLeadByIDParams) (Lead, error)
+	// TEC-316: lead conversion serializes on the lead row.
+	GetLeadByIDForUpdate(ctx context.Context, arg GetLeadByIDForUpdateParams) (Lead, error)
 	GetLeadByUUID(ctx context.Context, arg GetLeadByUUIDParams) (Lead, error)
 	GetLeadForIndex(ctx context.Context, argUuid uuid.UUID) (Lead, error)
 	GetLibraryFolderByUUID(ctx context.Context, argUuid uuid.UUID) (LibraryFolder, error)
@@ -710,6 +716,7 @@ type Querier interface {
 	GetMeasurementDeviceBySerial(ctx context.Context, arg GetMeasurementDeviceBySerialParams) (MeasurementDevice, error)
 	GetMeasurementDeviceByUUID(ctx context.Context, arg GetMeasurementDeviceByUUIDParams) (MeasurementDevice, error)
 	GetMeasurementResultByUUID(ctx context.Context, arg GetMeasurementResultByUUIDParams) (MeasurementResult, error)
+	GetMeasurementResultForLink(ctx context.Context, arg GetMeasurementResultForLinkParams) (GetMeasurementResultForLinkRow, error)
 	GetMeasurementResultPanel(ctx context.Context, arg GetMeasurementResultPanelParams) (GetMeasurementResultPanelRow, error)
 	// TEC-252: migrator bookkeeping (000074). Written only by cmd/migrator.
 	GetMigrationMap(ctx context.Context, arg GetMigrationMapParams) (MigrationMap, error)
@@ -828,6 +835,12 @@ type Querier interface {
 	// The service a measurement is attached to, bounded by the active
 	// organization (a service of another organization is not found).
 	GetServiceForMeasurement(ctx context.Context, arg GetServiceForMeasurementParams) (GetServiceForMeasurementRow, error)
+	// TEC-296 (F3-02d): VIN based before/after matching, dealer confirmation
+	// and manual selection.
+	// The service a measurement is matched to; FOR UPDATE serializes the
+	// matching of one service (auto rule, confirmation, manual selection).
+	GetServiceForMeasurementMatch(ctx context.Context, id int64) (GetServiceForMeasurementMatchRow, error)
+	GetServiceForMeasurementMatchByUUID(ctx context.Context, arg GetServiceForMeasurementMatchByUUIDParams) (GetServiceForMeasurementMatchByUUIDRow, error)
 	GetServiceImage(ctx context.Context, arg GetServiceImageParams) (ServiceImage, error)
 	GetServiceItem(ctx context.Context, arg GetServiceItemParams) (ServiceItem, error)
 	GetServiceItemByUUID(ctx context.Context, arg GetServiceItemByUUIDParams) (ServiceItem, error)
@@ -917,6 +930,8 @@ type Querier interface {
 	GetWarrantyClaimByID(ctx context.Context, arg GetWarrantyClaimByIDParams) (WarrantyClaim, error)
 	GetWarrantyClaimByUUID(ctx context.Context, arg GetWarrantyClaimByUUIDParams) (WarrantyClaim, error)
 	GetWarrantyClaimByUUIDForUpdate(ctx context.Context, arg GetWarrantyClaimByUUIDForUpdateParams) (WarrantyClaim, error)
+	GetWarrantyClaimCoverageContext(ctx context.Context, arg GetWarrantyClaimCoverageContextParams) (GetWarrantyClaimCoverageContextRow, error)
+	GetWarrantyClaimOpenContext(ctx context.Context, arg GetWarrantyClaimOpenContextParams) (GetWarrantyClaimOpenContextRow, error)
 	GetWarrantyForIndex(ctx context.Context, argUuid uuid.UUID) (GetWarrantyForIndexRow, error)
 	// service.completed consumer (TEC-186): the service, its organization's
 	// time zone (end_at is the end of the last day there, decision 4) and its
@@ -1278,6 +1293,10 @@ type Querier interface {
 	ListLocationsByUUIDs(ctx context.Context, arg ListLocationsByUUIDsParams) ([]WarehouseLocation, error)
 	ListLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
 	ListMeasurementDevices(ctx context.Context, organizationID int64) ([]MeasurementDevice, error)
+	// Unlinked accepted measurements of the organization with the VIN; the
+	// matching rule (usecase.Match) decides the phase from measured_at (device
+	// time, falling back to the upload time).
+	ListMeasurementMatchCandidates(ctx context.Context, arg ListMeasurementMatchCandidatesParams) ([]ListMeasurementMatchCandidatesRow, error)
 	// org_ids NULL means the whole brand (brand/all scopes); an empty set
 	// (customer scope) matches nothing.
 	ListMeasurementResultsPanel(ctx context.Context, arg ListMeasurementResultsPanelParams) ([]ListMeasurementResultsPanelRow, error)
@@ -1461,6 +1480,9 @@ type Querier interface {
 	ListServiceImages(ctx context.Context, serviceID int64) ([]ServiceImage, error)
 	ListServiceItemCorrections(ctx context.Context, serviceID int64) ([]ListServiceItemCorrectionsRow, error)
 	ListServiceItems(ctx context.Context, serviceID int64) ([]ServiceItem, error)
+	// The before/after links of a service with the linked measurement and the
+	// confirming user.
+	ListServiceMeasurementLinks(ctx context.Context, arg ListServiceMeasurementLinksParams) ([]ListServiceMeasurementLinksRow, error)
 	ListServiceMeasurements(ctx context.Context, arg ListServiceMeasurementsParams) ([]ServiceMeasurement, error)
 	ListServicePriceOverrides(ctx context.Context, arg ListServicePriceOverridesParams) ([]ServicePriceOverride, error)
 	ListServicePriceOverridesForItems(ctx context.Context, arg ListServicePriceOverridesForItemsParams) ([]ServicePriceOverride, error)
@@ -1495,6 +1517,9 @@ type Querier interface {
 	// check. The customer columns feed the document only while the customer
 	// is not anonymized (K19): the adapter drops them otherwise.
 	ListServicesForIndex(ctx context.Context) ([]ListServicesForIndexRow, error)
+	// The services of the organization a newly accepted measurement may belong
+	// to (measurement expected, same VIN, not cancelled).
+	ListServicesForMeasurementMatch(ctx context.Context, arg ListServicesForMeasurementMatchParams) ([]int64, error)
 	// Scope list: org_ids NULL = whole brand (brand/all scope); created_by for
 	// scope own, customer_user_id for scope customer (portal). q matches the
 	// service number, plate, VIN and the customer's name or phone (TEC-179;
@@ -1632,7 +1657,9 @@ type Querier interface {
 	// holder_user_id narrows to the portal customer's own warranties (a
 	// transferred vehicle's warranties belong to the new holder).
 	ListWarrantyCertificateItems(ctx context.Context, arg ListWarrantyCertificateItemsParams) ([]ListWarrantyCertificateItemsRow, error)
+	ListWarrantyClaimCenterNotifyUsers(ctx context.Context, arg ListWarrantyClaimCenterNotifyUsersParams) ([]int64, error)
 	ListWarrantyClaimEvents(ctx context.Context, claimID int64) ([]WarrantyClaimEvent, error)
+	ListWarrantyClaimNotifyUsersByOrg(ctx context.Context, arg ListWarrantyClaimNotifyUsersByOrgParams) ([]int64, error)
 	ListWarrantyClaimParts(ctx context.Context, claimID int64) ([]WarrantyClaimPart, error)
 	ListWarrantyClaimPhotos(ctx context.Context, claimID int64) ([]WarrantyClaimPhoto, error)
 	ListWarrantyClaimsByWarranty(ctx context.Context, arg ListWarrantyClaimsByWarrantyParams) ([]WarrantyClaim, error)
@@ -1666,6 +1693,10 @@ type Querier interface {
 	LockAccountingDispute(ctx context.Context, arg LockAccountingDisputeParams) (AccountingDispute, error)
 	// Active reservations of a unit (at most one for a serial unit).
 	LockActiveReservationsByUnit(ctx context.Context, unitID int64) ([]StockReservation, error)
+	LockAppointmentByID(ctx context.Context, arg LockAppointmentByIDParams) (Appointment, error)
+	// TEC-323: serializes bookings of one organization; the capacity count and
+	// the insert run under this row lock so concurrent bookings cannot overfill.
+	LockAppointmentSettings(ctx context.Context, organizationID int64) (AppointmentSetting, error)
 	// ---------------------------------------------------------------------------
 	// Barcode counters and batches.
 	// Creates the counter on first use and locks it for the batch allocation.
@@ -2079,6 +2110,8 @@ type Querier interface {
 	// Optimistic replacement of the image list: no row when another request
 	// changed the list since it was read (expected).
 	ReplaceProductImages(ctx context.Context, arg ReplaceProductImagesParams) (Product, error)
+	// Replaces an unconfirmed link of the phase with a manually chosen one.
+	ReplaceServiceMeasurement(ctx context.Context, arg ReplaceServiceMeasurementParams) (int64, error)
 	ReplaceUserRoles(ctx context.Context, userID int64) error
 	ResolveAccountingDispute(ctx context.Context, arg ResolveAccountingDisputeParams) (AccountingDispute, error)
 	// Success: phone gets the E.164 form and phone_raw is cleared. A phone

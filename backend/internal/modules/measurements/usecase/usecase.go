@@ -86,7 +86,8 @@ type Store interface {
 
 // Service stores measurement uploads.
 type Service struct {
-	store Store
+	store   Store
+	matcher Matcher // TEC-296 (nil: no before/after matching)
 	// TEC-294: with a transaction source an upload is normalized in its
 	// insert transaction (normalize.go).
 	tx  TxBeginner
@@ -95,6 +96,25 @@ type Service struct {
 
 // New creates the use case.
 func New(store Store) *Service { return &Service{store: store} }
+
+// Matcher runs the before/after matching for the services of an
+// organization with the VIN (TEC-296, Linker.MatchVIN).
+type Matcher interface {
+	MatchVIN(ctx context.Context, organizationID int64, vin string) error
+}
+
+// SetMatcher wires the before/after matching run after an accepted upload.
+func (s *Service) SetMatcher(m Matcher) { s.matcher = m }
+
+// matchAccepted computes the before/after suggestions of an accepted
+// measurement (TEC-296). The upload is stored whatever the matching does;
+// the matcher logs its own failures.
+func (s *Service) matchAccepted(ctx context.Context, orgID int64, row db.MeasurementResult) {
+	if s.matcher == nil || row.Status != StatusAccepted || !row.Vin.Valid {
+		return
+	}
+	_ = s.matcher.MatchVIN(ctx, orgID, row.Vin.String)
+}
 
 // Caller is the uploading user in the active organization.
 type Caller struct {
@@ -300,6 +320,7 @@ func (s *Service) create(ctx context.Context, c Caller, in Input) (Result, error
 
 	row, err := s.store.InsertMeasurementResult(ctx, arg)
 	if err == nil {
+		s.matchAccepted(ctx, c.OrganizationID, row)
 		return Result{UUID: row.Uuid, Status: row.Status}, nil
 	}
 	if !errors.Is(err, pgx.ErrNoRows) || !hasKey {

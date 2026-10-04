@@ -232,6 +232,73 @@ SET measurement_check_required = sqlc.arg(measurement_check_required),
     measurement_checked_at = sqlc.narg(measurement_checked_at)
 WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id);
 
+-- TEC-296 (F3-02d): VIN based before/after matching, dealer confirmation
+-- and manual selection.
+
+-- The service a measurement is matched to; FOR UPDATE serializes the
+-- matching of one service (auto rule, confirmation, manual selection).
+-- name: GetServiceForMeasurementMatch :one
+SELECT id, uuid, organization_id, brand_id, vin, has_measurement, status, created_at, completed_at
+FROM services
+WHERE id = sqlc.arg(id)
+FOR UPDATE;
+
+-- name: GetServiceForMeasurementMatchByUUID :one
+SELECT id, uuid, organization_id, brand_id, vin, has_measurement, status, created_at, completed_at
+FROM services
+WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id);
+
+-- Unlinked accepted measurements of the organization with the VIN; the
+-- matching rule (usecase.Match) decides the phase from measured_at (device
+-- time, falling back to the upload time).
+-- name: ListMeasurementMatchCandidates :many
+SELECT mr.id, mr.uuid, mr.vin, mr.status, mr.source, mr.device_serial, mr.measured_at, mr.created_at
+FROM measurement_results mr
+WHERE mr.organization_id = sqlc.arg(organization_id)
+  AND mr.vin = sqlc.arg(vin)
+  AND mr.status = 'accepted'
+  AND NOT EXISTS (SELECT 1 FROM service_measurements sm WHERE sm.measurement_result_id = mr.id)
+ORDER BY COALESCE(mr.measured_at, mr.created_at), mr.id;
+
+-- The before/after links of a service with the linked measurement and the
+-- confirming user.
+-- name: ListServiceMeasurementLinks :many
+SELECT
+    sm.phase, sm.link_source, sm.confirmed_at, sm.created_at AS linked_at,
+    mr.id AS measurement_id, mr.uuid AS measurement_uuid, mr.vin, mr.status, mr.source,
+    mr.device_serial, mr.measured_at, mr.created_at AS measurement_created_at,
+    u.uuid AS confirmed_by_uuid, u.name AS confirmed_by_name, u.surname AS confirmed_by_surname
+FROM service_measurements sm
+JOIN measurement_results mr ON mr.id = sm.measurement_result_id
+LEFT JOIN users u ON u.id = sm.confirmed_by
+WHERE sm.service_id = sqlc.arg(service_id) AND sm.organization_id = sqlc.arg(organization_id)
+ORDER BY sm.phase DESC;
+
+-- The services of the organization a newly accepted measurement may belong
+-- to (measurement expected, same VIN, not cancelled).
+-- name: ListServicesForMeasurementMatch :many
+SELECT id FROM services
+WHERE organization_id = sqlc.arg(organization_id)
+  AND vin = sqlc.arg(vin)
+  AND has_measurement
+  AND status <> 'cancelled'
+ORDER BY created_at DESC, id DESC
+LIMIT 20;
+
+-- name: GetMeasurementResultForLink :one
+SELECT id, uuid, organization_id, vin, status FROM measurement_results
+WHERE uuid = sqlc.arg(uuid) AND organization_id = sqlc.arg(organization_id);
+
+-- Replaces an unconfirmed link of the phase with a manually chosen one.
+-- name: ReplaceServiceMeasurement :execrows
+UPDATE service_measurements
+SET measurement_result_id = sqlc.arg(measurement_result_id),
+    link_source = 'manual',
+    confirmed_by = sqlc.arg(confirmed_by),
+    confirmed_at = NOW()
+WHERE service_id = sqlc.arg(service_id) AND phase = sqlc.arg(phase)
+  AND organization_id = sqlc.arg(organization_id);
+
 -- TEC-294 (F3-02b): NexPTG normalization, device auto-registration, VIN
 -- completion and the reparse backfill.
 

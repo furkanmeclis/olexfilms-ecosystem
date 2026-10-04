@@ -23,6 +23,7 @@ type Variable struct {
 
 // Template is the platform view of a contract template.
 type Template struct {
+	ID                int64            `json:"id"`
 	UUID              uuid.UUID        `json:"uuid"`
 	Name              string           `json:"name"`
 	Kind              string           `json:"kind"`

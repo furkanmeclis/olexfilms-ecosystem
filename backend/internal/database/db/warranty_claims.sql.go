@@ -510,6 +510,130 @@ func (q *Queries) GetWarrantyClaimByUUIDForUpdate(ctx context.Context, arg GetWa
 	return i, err
 }
 
+const getWarrantyClaimCoverageContext = `-- name: GetWarrantyClaimCoverageContext :one
+SELECT w.id AS warranty_id, w.status AS warranty_status, w.start_at, w.end_at,
+       w.service_item_id AS warranty_service_item_id,
+       si.product_id AS service_item_product_id, si.applied_parts,
+       p.warranty_duration_months
+FROM warranties w
+JOIN service_items si ON si.id = w.service_item_id
+JOIN products p ON p.id = si.product_id
+WHERE w.id = $1 AND w.brand_id = $2
+`
+
+type GetWarrantyClaimCoverageContextParams struct {
+	WarrantyID int64 `json:"warranty_id"`
+	BrandID    int64 `json:"brand_id"`
+}
+
+type GetWarrantyClaimCoverageContextRow struct {
+	WarrantyID             int64              `json:"warranty_id"`
+	WarrantyStatus         string             `json:"warranty_status"`
+	StartAt                pgtype.Timestamptz `json:"start_at"`
+	EndAt                  pgtype.Timestamptz `json:"end_at"`
+	WarrantyServiceItemID  int64              `json:"warranty_service_item_id"`
+	ServiceItemProductID   int64              `json:"service_item_product_id"`
+	AppliedParts           []byte             `json:"applied_parts"`
+	WarrantyDurationMonths pgtype.Int4        `json:"warranty_duration_months"`
+}
+
+func (q *Queries) GetWarrantyClaimCoverageContext(ctx context.Context, arg GetWarrantyClaimCoverageContextParams) (GetWarrantyClaimCoverageContextRow, error) {
+	row := q.db.QueryRow(ctx, getWarrantyClaimCoverageContext, arg.WarrantyID, arg.BrandID)
+	var i GetWarrantyClaimCoverageContextRow
+	err := row.Scan(
+		&i.WarrantyID,
+		&i.WarrantyStatus,
+		&i.StartAt,
+		&i.EndAt,
+		&i.WarrantyServiceItemID,
+		&i.ServiceItemProductID,
+		&i.AppliedParts,
+		&i.WarrantyDurationMonths,
+	)
+	return i, err
+}
+
+const getWarrantyClaimOpenContext = `-- name: GetWarrantyClaimOpenContext :one
+SELECT c.id AS claim_id, c.uuid AS claim_uuid, c.organization_id, c.brand_id,
+       c.claim_no, c.warranty_id, c.service_id, c.vehicle_id,
+       c.customer_user_id, c.status, c.created_at,
+       w.uuid AS warranty_uuid, w.public_code, w.start_at, w.end_at,
+       w.status AS warranty_status, w.service_item_id,
+       s.service_no, s.plate,
+       p.name AS product_name,
+       o.name AS organization_name, o.parent_id AS organization_parent_id,
+       parent.type AS organization_parent_type
+FROM warranty_claims c
+JOIN warranties w ON w.id = c.warranty_id
+JOIN services s ON s.id = c.service_id
+JOIN products p ON p.id = w.product_id
+JOIN organizations o ON o.id = c.organization_id
+LEFT JOIN organizations parent ON parent.id = o.parent_id
+WHERE c.id = $1 AND c.brand_id = $2
+`
+
+type GetWarrantyClaimOpenContextParams struct {
+	ID      int64 `json:"id"`
+	BrandID int64 `json:"brand_id"`
+}
+
+type GetWarrantyClaimOpenContextRow struct {
+	ClaimID                int64              `json:"claim_id"`
+	ClaimUuid              uuid.UUID          `json:"claim_uuid"`
+	OrganizationID         int64              `json:"organization_id"`
+	BrandID                int64              `json:"brand_id"`
+	ClaimNo                int64              `json:"claim_no"`
+	WarrantyID             int64              `json:"warranty_id"`
+	ServiceID              int64              `json:"service_id"`
+	VehicleID              int64              `json:"vehicle_id"`
+	CustomerUserID         int64              `json:"customer_user_id"`
+	Status                 string             `json:"status"`
+	CreatedAt              pgtype.Timestamptz `json:"created_at"`
+	WarrantyUuid           uuid.UUID          `json:"warranty_uuid"`
+	PublicCode             string             `json:"public_code"`
+	StartAt                pgtype.Timestamptz `json:"start_at"`
+	EndAt                  pgtype.Timestamptz `json:"end_at"`
+	WarrantyStatus         string             `json:"warranty_status"`
+	ServiceItemID          int64              `json:"service_item_id"`
+	ServiceNo              string             `json:"service_no"`
+	Plate                  pgtype.Text        `json:"plate"`
+	ProductName            string             `json:"product_name"`
+	OrganizationName       string             `json:"organization_name"`
+	OrganizationParentID   pgtype.Int8        `json:"organization_parent_id"`
+	OrganizationParentType pgtype.Text        `json:"organization_parent_type"`
+}
+
+func (q *Queries) GetWarrantyClaimOpenContext(ctx context.Context, arg GetWarrantyClaimOpenContextParams) (GetWarrantyClaimOpenContextRow, error) {
+	row := q.db.QueryRow(ctx, getWarrantyClaimOpenContext, arg.ID, arg.BrandID)
+	var i GetWarrantyClaimOpenContextRow
+	err := row.Scan(
+		&i.ClaimID,
+		&i.ClaimUuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ClaimNo,
+		&i.WarrantyID,
+		&i.ServiceID,
+		&i.VehicleID,
+		&i.CustomerUserID,
+		&i.Status,
+		&i.CreatedAt,
+		&i.WarrantyUuid,
+		&i.PublicCode,
+		&i.StartAt,
+		&i.EndAt,
+		&i.WarrantyStatus,
+		&i.ServiceItemID,
+		&i.ServiceNo,
+		&i.Plate,
+		&i.ProductName,
+		&i.OrganizationName,
+		&i.OrganizationParentID,
+		&i.OrganizationParentType,
+	)
+	return i, err
+}
+
 const linkWarrantyClaimReapplyService = `-- name: LinkWarrantyClaimReapplyService :one
 UPDATE warranty_claims
 SET reapply_service_id = $1,
@@ -568,6 +692,45 @@ func (q *Queries) LinkWarrantyClaimReapplyService(ctx context.Context, arg LinkW
 	return i, err
 }
 
+const listWarrantyClaimCenterNotifyUsers = `-- name: ListWarrantyClaimCenterNotifyUsers :many
+SELECT DISTINCT om.user_id
+FROM organizations o
+JOIN organization_members om ON om.organization_id = o.id
+JOIN organization_member_roles mr ON mr.member_id = om.id
+JOIN roles r ON r.id = mr.role_id
+JOIN role_permissions rp ON rp.role_id = r.id
+JOIN permissions p ON p.id = rp.permission_id
+WHERE o.brand_id = $1
+  AND o.type = 'center'
+  AND p.slug = $2::text
+ORDER BY om.user_id
+`
+
+type ListWarrantyClaimCenterNotifyUsersParams struct {
+	BrandID        int64  `json:"brand_id"`
+	PermissionSlug string `json:"permission_slug"`
+}
+
+func (q *Queries) ListWarrantyClaimCenterNotifyUsers(ctx context.Context, arg ListWarrantyClaimCenterNotifyUsersParams) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listWarrantyClaimCenterNotifyUsers, arg.BrandID, arg.PermissionSlug)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int64{}
+	for rows.Next() {
+		var user_id int64
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listWarrantyClaimEvents = `-- name: ListWarrantyClaimEvents :many
 SELECT id, uuid, claim_id, organization_id, brand_id, event_type, from_status, to_status, note, payload, actor_user_id, created_at FROM warranty_claim_events
 WHERE claim_id = $1
@@ -600,6 +763,43 @@ func (q *Queries) ListWarrantyClaimEvents(ctx context.Context, claimID int64) ([
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWarrantyClaimNotifyUsersByOrg = `-- name: ListWarrantyClaimNotifyUsersByOrg :many
+SELECT DISTINCT om.user_id
+FROM organization_members om
+JOIN organization_member_roles mr ON mr.member_id = om.id
+JOIN roles r ON r.id = mr.role_id
+JOIN role_permissions rp ON rp.role_id = r.id
+JOIN permissions p ON p.id = rp.permission_id
+WHERE om.organization_id = ANY($1::bigint[])
+  AND p.slug = $2::text
+ORDER BY om.user_id
+`
+
+type ListWarrantyClaimNotifyUsersByOrgParams struct {
+	OrganizationIds []int64 `json:"organization_ids"`
+	PermissionSlug  string  `json:"permission_slug"`
+}
+
+func (q *Queries) ListWarrantyClaimNotifyUsersByOrg(ctx context.Context, arg ListWarrantyClaimNotifyUsersByOrgParams) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listWarrantyClaimNotifyUsersByOrg, arg.OrganizationIds, arg.PermissionSlug)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int64{}
+	for rows.Next() {
+		var user_id int64
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

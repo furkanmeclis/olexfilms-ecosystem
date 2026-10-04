@@ -26,6 +26,9 @@ import (
 	announcementsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements"
 	announcementshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/handler"
 	announcementsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/usecase"
+	appointmentsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/appointments"
+	appointmentshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/appointments/handler"
+	appointmentsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/appointments/usecase"
 	authmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth"
 	authhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/handler"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/identity"
@@ -141,6 +144,9 @@ import (
 	warrantymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty"
 	warrantyhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty/handler"
 	warrantyusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty/usecase"
+	warrantyclaimsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty_claims"
+	warrantyclaimshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty_claims/handler"
+	warrantyclaimsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty_claims/usecase"
 	whatsappmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp"
 	whatsapphandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/handler"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
@@ -420,6 +426,14 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	sysSvc := sysconfig.New(deps.Queries, sysCache)
 	s.sysconfig = sysSvc
 	measurementsmodule.RegisterPanelRoutes(mux, measurementsH, tokens, loader, deps.Queries, featureSvc)
+	// TEC-296: before/after matching of a service, confirmation and manual
+	// selection; an accepted upload computes the suggestions.
+	if deps.DB != nil {
+		measurementsLinker := measurementsmodule.NewLinker(deps.DB, deps.Queries, log)
+		measurementsUC.SetMatcher(measurementsLinker)
+		measurementsmodule.RegisterServiceLinkRoutes(mux, measurementshandler.NewLink(measurementsLinker),
+			tokens, loader, deps.Queries, featureSvc)
+	}
 	orgmodule.RegisterRoutes(mux, orgSvc, uc, deps.Storage, tokens, loader, deps.Queries, ratelimit.New(deps.Redis, cfg.App.Env), stepUpSvc, featureSvc)
 	featuremodule.RegisterRoutes(mux, featurehandler.New(featureSvc, deps.Queries, notifSvc, activityRec, log), featureSvc, tokens, loader, deps.Queries)
 	geomodule.RegisterRoutes(mux, geohandler.New(geoSvc, deps.Queries, activityRec), tokens, loader)
@@ -524,6 +538,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		glorianQueue = deps.Queue
 	}
 	glorian.RegisterEventHandlers(eventBus, deps.Queries, glorianQueue, log)
+	// TEC-296: service events compute the before/after measurement match.
+	measurementsmodule.RegisterEventHandlers(eventBus, deps.DB, deps.Queries, log)
 	// TEC-209: service / warranty / vehicle outbox events refresh the indexes.
 	indexsync.Register(eventBus, deps.Queries, searchIndexer, log)
 	// TEC-189: public warranty lookup behind /garanti/{public_code}.
@@ -536,6 +552,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-191: panel / portal warranty list and detail, center void.
 	warrantyReader := warrantymodule.RegisterListRoutes(mux, deps.DB, deps.Queries, cfg.Auth.FrontendURL,
 		tokens, loader, featureSvc, stepUpSvc, listFinder)
+	// TEC-335: warranty claims (open, photos, review/decision flow, portal status).
+	warrantyClaimsSvc := warrantyclaimsusecase.New(deps.DB, deps.Queries, deps.Storage, outbox.NewStore(deps.DB, deps.Queries))
+	warrantyclaimsmodule.RegisterRoutes(mux, warrantyclaimshandler.New(warrantyClaimsSvc), tokens, loader, deps.Queries, featureSvc)
 
 	// TEC-145: product catalog (brand scoped, center writes).
 	catalogSvc := catalogusecase.New(deps.Queries, searchIndexer)
@@ -685,6 +704,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		outbox.NewStore(deps.DB, deps.Queries))), tokens, loader, deps.Queries, featureSvc)
 	// TEC-313: leads and follow-up queue.
 	leadsSvc := leadsusecase.New(deps.DB, deps.Queries, tasksSvc)
+	leadsSvc.SetConverters(customersSvc, servicesSvc, orgSvc)
 	if listFinder != nil {
 		leadsSvc.SetFinder(listFinder)
 	}
@@ -695,6 +715,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		s.worker.WithQuoteExpire(leadsSvc.ExpireDueQuotesTask)
 	}
 	leadsmodule.RegisterRoutes(mux, leadshandler.New(leadsSvc).WithDocuments(docSvc), tokens, loader, deps.Queries, featureSvc)
+	// TEC-323: appointments, capacity, availability and intake start.
+	appointmentsSvc := appointmentsusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries), servicesSvc)
+	appointmentsmodule.RegisterRoutes(mux, appointmentshandler.New(appointmentsSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-149: vehicle catalog (global car brands/models, super_admin writes).
 	vehiclecatalogmodule.RegisterRoutes(mux, vehiclecataloghandler.New(
 		vehiclecatalogusecase.New(deps.Queries), deps.Storage, activityRec), tokens, loader)
