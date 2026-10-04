@@ -19,7 +19,7 @@ endef
 FRONTEND_PORT ?= 3000
 
 .PHONY: infra infra-down infra-logs infra-ps migrate-up backend-dev frontend-dev local-dev \
-	free-dev-ports prod-config prod-up prod-down prod-create-super-admin tools create-super-admin \
+	free-dev-ports prod-config prod-up prod-down prod-create-super-admin tools create-super-admin seed-demo \
 	gen-env-server backup restore dr-drill \
 	search-reindex inventory-rebuild normalize-org-phones dev-pii-key check-i18n check-i18n-translations openapi-sync openapi-lint api-generate
 
@@ -175,6 +175,9 @@ create-super-admin:
 		SA_PASSWORD="$(SA_PASSWORD)" \
 		SA_NAME="$(SA_NAME)" \
 		SA_SURNAME="$(SA_SURNAME)"
+
+seed-demo:
+	@$(load_env) cd backend && go run ./cmd/seed-demo
 
 search-reindex:
 	@$(load_env) $(MAKE) -C backend search-reindex
