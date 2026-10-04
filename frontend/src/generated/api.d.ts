@@ -7265,6 +7265,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/service-subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List visible service subscriptions */
+        get: operations["listServiceSubscriptions"];
+        put?: never;
+        /** Assign a non-product service subscription */
+        post: operations["assignServiceSubscription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/service-subscriptions/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a visible service subscription */
+        get: operations["getServiceSubscription"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/service-subscriptions/{uuid}/cancel-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request early cancellation for own subscription */
+        post: operations["requestServiceSubscriptionCancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/service-subscriptions/cancel-requests/{uuid}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve an early cancellation request */
+        post: operations["approveServiceSubscriptionCancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/service-subscriptions/cancel-requests/{uuid}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject an early cancellation request */
+        post: operations["rejectServiceSubscriptionCancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/accounting/categories": {
         parameters: {
             query?: never;
@@ -13975,6 +14061,84 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["ServiceCatalogOverride"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        ServiceSubscriptionStatus: "active" | "cancel_requested" | "cancelled" | "expired";
+        ServiceSubscriptionInput: {
+            /** Format: uuid */
+            item_uuid: string;
+            /** Format: uuid */
+            organization_uuid: string;
+            /** Format: date */
+            starts_on: string;
+            /** Format: date */
+            ends_on: string;
+            /** Format: int64 */
+            contract_id?: number | null;
+        };
+        ServiceSubscription: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            organization_uuid: string;
+            /** Format: uuid */
+            item_uuid: string;
+            /** Format: int64 */
+            assigned_by_org_id?: number;
+            /** Format: date */
+            starts_on: string;
+            /** Format: date */
+            ends_on: string;
+            recurrence: components["schemas"]["ServiceCatalogRecurrence"];
+            price: string;
+            currency: string;
+            rate_snapshot: {
+                [key: string]: unknown;
+            };
+            cancellation_fee: string;
+            status: components["schemas"]["ServiceSubscriptionStatus"];
+            /** Format: date-time */
+            created_at: string;
+        };
+        ServiceSubscriptionCancelInput: {
+            reason: string;
+        };
+        ServiceSubscriptionDecisionInput: {
+            note?: string | null;
+        };
+        ServiceSubscriptionCancelRequest: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            subscription_uuid: string;
+            reason: string;
+            /** @enum {string} */
+            status: "pending" | "approved" | "rejected";
+            cancellation_fee: string;
+            currency: string;
+            decision_note?: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        EnvelopeServiceSubscription: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ServiceSubscription"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeServiceSubscriptionList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ServiceSubscription"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeServiceSubscriptionCancelRequest: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ServiceSubscriptionCancelRequest"];
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeDistributorPrice: {
@@ -29280,6 +29444,175 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    listServiceSubscriptions: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["ServiceSubscriptionStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Subscriptions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceSubscriptionList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    assignServiceSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceSubscriptionInput"];
+            };
+        };
+        responses: {
+            /** @description Subscription assigned */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceSubscription"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getServiceSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Subscription */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceSubscription"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    requestServiceSubscriptionCancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceSubscriptionCancelInput"];
+            };
+        };
+        responses: {
+            /** @description Cancellation requested */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceSubscriptionCancelRequest"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    approveServiceSubscriptionCancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ServiceSubscriptionDecisionInput"];
+            };
+        };
+        responses: {
+            /** @description Cancellation approved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceSubscriptionCancelRequest"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    rejectServiceSubscriptionCancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ServiceSubscriptionDecisionInput"];
+            };
+        };
+        responses: {
+            /** @description Cancellation rejected */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceSubscriptionCancelRequest"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     listAccountingCategories: {
