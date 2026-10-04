@@ -42,6 +42,22 @@ func RegisterRoutes(
 	read := func(fn http.HandlerFunc) http.Handler {
 		return middleware.Chain(fn, authn, org, module, middleware.RequirePermission(rbac.PermServiceCatalogRead))
 	}
+	assign := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, authn, org, module,
+			middleware.RequireScope(q, rbac.PermServiceSubscriptionsAssign))
+	}
+	subRead := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, authn, org, module,
+			middleware.RequireScope(q, rbac.PermServiceSubscriptionsRead))
+	}
+	cancelReq := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, authn, org, module,
+			middleware.RequireScope(q, rbac.PermServiceSubscriptionsCancelRequest))
+	}
+	cancelApprove := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, authn, org, module,
+			middleware.RequireScope(q, rbac.PermServiceSubscriptionsCancelApprove))
+	}
 
 	mux.Handle("GET /v1/platform/service-catalog", manage(h.ListPlatform))
 	mux.Handle("POST /v1/platform/service-catalog", manage(h.Create))
@@ -54,4 +70,10 @@ func RegisterRoutes(
 	mux.Handle("DELETE /v1/platform/service-catalog/{uuid}/overrides/{org_uuid}", manage(h.DeleteOverride))
 
 	mux.Handle("GET /v1/service-catalog", read(h.ListVisible))
+	mux.Handle("POST /v1/service-subscriptions", assign(h.AssignSubscription))
+	mux.Handle("GET /v1/service-subscriptions", subRead(h.ListSubscriptions))
+	mux.Handle("GET /v1/service-subscriptions/{uuid}", subRead(h.GetSubscription))
+	mux.Handle("POST /v1/service-subscriptions/{uuid}/cancel-request", cancelReq(h.RequestCancel))
+	mux.Handle("POST /v1/service-subscriptions/cancel-requests/{uuid}/approve", cancelApprove(h.ApproveCancel))
+	mux.Handle("POST /v1/service-subscriptions/cancel-requests/{uuid}/reject", cancelApprove(h.RejectCancel))
 }

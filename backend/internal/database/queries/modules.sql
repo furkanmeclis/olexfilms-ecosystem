@@ -53,6 +53,25 @@ ON CONFLICT (scope, organization_id, module_key) WHERE organization_id IS NOT NU
     note = EXCLUDED.note
 RETURNING *;
 
+-- name: UpsertServiceModuleFlag :one
+INSERT INTO module_flags (scope, organization_id, module_key, enabled, source, set_by_user_id, service_id, note)
+VALUES ('org', sqlc.arg(organization_id), sqlc.arg(module_key), sqlc.arg(enabled), 'service',
+        sqlc.narg(set_by_user_id), sqlc.arg(service_id), sqlc.narg(note))
+ON CONFLICT (scope, organization_id, module_key) WHERE organization_id IS NOT NULL DO UPDATE SET
+    enabled = EXCLUDED.enabled,
+    source = EXCLUDED.source,
+    set_by_user_id = EXCLUDED.set_by_user_id,
+    service_id = EXCLUDED.service_id,
+    note = EXCLUDED.note
+RETURNING *;
+
+-- name: DeleteServiceModuleFlag :execrows
+DELETE FROM module_flags
+WHERE scope = 'org'
+  AND organization_id = sqlc.arg(organization_id)
+  AND module_key = sqlc.arg(module_key)
+  AND source = 'service';
+
 -- name: GetOrgModuleFlag :one
 SELECT * FROM module_flags
 WHERE scope = sqlc.arg(scope) AND organization_id = sqlc.arg(organization_id) AND module_key = sqlc.arg(module_key);

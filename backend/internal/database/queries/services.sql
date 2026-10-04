@@ -208,6 +208,12 @@ JOIN car_brands cb ON cb.id = s.car_brand_id
 JOIN car_models cm ON cm.id = s.car_model_id
 WHERE s.id = sqlc.arg(id);
 
+-- name: GetServiceContractSummary :one
+SELECT ci.uuid, ci.status, ci.contract_no
+FROM services s
+JOIN contract_instances ci ON ci.id = s.contract_id
+WHERE s.id = sqlc.arg(id);
+
 -- ---------------------------------------------------------------------------
 -- Service items. Locked by trigger once the service is completed or
 -- cancelled.

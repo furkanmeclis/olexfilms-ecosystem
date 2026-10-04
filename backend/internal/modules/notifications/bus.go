@@ -153,6 +153,10 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	for name, code := range TaskEventCodes {
 		on(name, taskDispatcher(code))
 	}
+	// TEC-307: service subscription assignment and cancellation lifecycle.
+	for name, code := range ServiceSubscriptionEventCodes {
+		on(name, serviceSubscriptionDispatcher(code))
+	}
 	bus.Subscribe(events.AnnouncementPublished, func(ctx context.Context, event events.Event) error {
 		err := announcementsusecase.EnqueuePublishedBatches(
 			ctx,

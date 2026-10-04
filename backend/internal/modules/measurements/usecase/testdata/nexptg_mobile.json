@@ -1,0 +1,260 @@
+{
+  "client_measurement_id": "fixture-mobile-56",
+  "device": {
+    "serial": "18416 Professional"
+  },
+  "raw": {
+    "id": 56,
+    "name": "Report",
+    "date": 1702629560,
+    "calibrationDate": 1701264763,
+    "deviceSerialNumber": "18416 Professional",
+    "model": "Passat",
+    "brand": "Volkswagen",
+    "typeOfBody": "SEDAN",
+    "capacity": "1968",
+    "power": "150",
+    "vin": "",
+    "fuelType": "Diesel",
+    "year": "2019",
+    "unitOfMeasure": "μm",
+    "extraFields": [],
+    "comment": "Anonimleştirilmiş örnek",
+    "data": [
+      {
+        "placeId": "left",
+        "data": [
+          {
+            "type": "LEFT_FRONT_FENDER",
+            "values": [
+              {
+                "value": "375",
+                "interpretation": 3,
+                "type": "Al",
+                "timestamp": 1702629403,
+                "position": 1
+              },
+              {
+                "value": "362",
+                "interpretation": 3,
+                "type": "Al",
+                "timestamp": 1702629406,
+                "position": 2
+              }
+            ]
+          },
+          {
+            "type": "LEFT_FRONT_DOOR",
+            "values": [
+              {
+                "value": "110",
+                "interpretation": 1,
+                "type": "Al",
+                "timestamp": 1702629409,
+                "position": 1
+              },
+              {
+                "value": "108",
+                "interpretation": 1,
+                "type": "Al",
+                "timestamp": 1702629412,
+                "position": 2
+              },
+              {
+                "value": "-",
+                "interpretation": -1,
+                "type": "Fe",
+                "timestamp": -1,
+                "position": 3
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "placeId": "right",
+        "data": [
+          {
+            "type": "RIGHT_FRONT_FENDER",
+            "values": [
+              {
+                "value": "106",
+                "interpretation": 1,
+                "type": "Fe",
+                "timestamp": 1702629418,
+                "position": 1
+              }
+            ]
+          },
+          {
+            "type": "RIGHT_REAR_DOOR",
+            "values": [
+              {
+                "value": "121",
+                "interpretation": 1,
+                "type": "Fe",
+                "timestamp": 1702629421,
+                "position": 1
+              },
+              {
+                "value": "118",
+                "interpretation": 1,
+                "type": "Fe",
+                "timestamp": 1702629424,
+                "position": 2
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "placeId": "top",
+        "data": [
+          {
+            "type": "HOOD",
+            "values": [
+              {
+                "value": "98",
+                "interpretation": 1,
+                "type": "Fe + Zn",
+                "timestamp": 1702629427,
+                "position": 1
+              },
+              {
+                "value": "101",
+                "interpretation": 1,
+                "type": "Fe + Zn",
+                "timestamp": 1702629430,
+                "position": 2
+              },
+              {
+                "value": "240",
+                "interpretation": 2,
+                "type": "Fe + Zn",
+                "timestamp": 1702629433,
+                "position": 3
+              }
+            ]
+          },
+          {
+            "type": "ROOF",
+            "values": [
+              {
+                "value": "104",
+                "interpretation": 1,
+                "type": "Fe",
+                "timestamp": 1702629436,
+                "position": 1
+              },
+              {
+                "value": "99",
+                "interpretation": 1,
+                "type": "Fe",
+                "timestamp": 1702629439,
+                "position": 2
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "placeId": "back",
+        "data": [
+          {
+            "type": "TRUNK",
+            "values": [
+              {
+                "value": "1210",
+                "interpretation": 5,
+                "type": "Fe",
+                "timestamp": 1702629442,
+                "position": 1
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "dataInside": [
+      {
+        "placeId": "top",
+        "data": [
+          {
+            "type": "ENGINE_COMPARTMENT",
+            "values": [
+              {
+                "value": "105",
+                "interpretation": 2,
+                "type": "Fe",
+                "timestamp": 1702629445,
+                "position": 1
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "placeId": "left",
+        "data": [
+          {
+            "type": "LEFT_PILLAR",
+            "values": [
+              {
+                "value": "96",
+                "interpretation": 1,
+                "type": "Fe",
+                "timestamp": 1702629448,
+                "position": 1
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "tires": [
+      {
+        "width": "225",
+        "profile": "45",
+        "diameter": "17",
+        "maker": "Michelin",
+        "season": "Summer",
+        "section": "Left front",
+        "value1": "6.5",
+        "value2": "6"
+      },
+      {
+        "width": "225",
+        "profile": "45",
+        "diameter": "17",
+        "maker": "Michelin",
+        "season": "Summer",
+        "section": "Right front",
+        "value1": "6",
+        "value2": "5.8"
+      },
+      {
+        "width": "225",
+        "profile": "45",
+        "diameter": "17",
+        "maker": "Michelin",
+        "season": "Summer",
+        "section": "Left rear",
+        "value1": "7",
+        "value2": "7.1"
+      },
+      {
+        "width": "225",
+        "profile": "45",
+        "diameter": "17",
+        "maker": "Michelin",
+        "season": "Summer",
+        "section": "Right rear",
+        "value1": "-",
+        "value2": ""
+      }
+    ],
+    "unknownVendorField": {
+      "x": 1
+    }
+  }
+}
