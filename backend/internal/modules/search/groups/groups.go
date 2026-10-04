@@ -11,6 +11,7 @@ import (
 	"errors"
 
 	customersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/customers/usecase"
+	leadsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/leads/usecase"
 	ordersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/orders/usecase"
 	orgusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
 	searchusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/usecase"
@@ -34,6 +35,7 @@ type Lists struct {
 	Orders        *ordersusecase.Service
 	Organizations *orgusecase.Service
 	Stock         *stockusecase.Service
+	Leads         *leadsusecase.Service
 }
 
 func uuidsOf[T any](rows []T, key func(T) uuid.UUID) []uuid.UUID {
@@ -129,6 +131,17 @@ func Build(l Lists) []searchusecase.Group {
 					return nil, nil
 				}
 				return uuidsOf(rows, func(r stockmodel.StockUnitRow) uuid.UUID { return r.UUID }), err
+			},
+		})
+	}
+	if l.Leads != nil {
+		ls := l.Leads
+		out = append(out, searchusecase.Group{
+			Spec: leadsusecase.SearchSpec, Permission: rbac.PermLeadsRead, Feature: features.ModuleLeads,
+			Search: func(ctx context.Context, c searchusecase.Caller, q string, limit int32) ([]uuid.UUID, error) {
+				rows, _, err := ls.List(ctx, leadsusecase.Caller{Principal: c.Principal, Org: c.Org, Filter: c.Filter},
+					leadsusecase.ListFilter{Q: q, Limit: limit})
+				return uuidsOf(rows, func(r leadsusecase.Lead) uuid.UUID { return r.UUID }), err
 			},
 		})
 	}

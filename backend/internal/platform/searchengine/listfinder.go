@@ -19,6 +19,7 @@ const (
 	SpecOrganizations = "organizations"
 	SpecOrders        = "orders"
 	SpecStockUnits    = "stock_units"
+	SpecLeads         = "leads"
 )
 
 // ListFinder runs a filtered index query for a module list endpoint

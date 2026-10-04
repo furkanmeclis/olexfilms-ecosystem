@@ -135,6 +135,10 @@ tags:
       Center tasks (TEC-214): follow-ups about a distributor or dealer of the
       brand, assigned to a center member, with priority, due date and
       comments. tasks.* are held by center roles only.
+  - name: Leads
+    description: >-
+      Lead pipeline (TEC-313): organization-scoped leads, status transitions,
+      follow-up queue, timeline notes and center task linkage.
   - name: Mobile
     description: |
       Mobile app API (TEC-91). `/v1/mobile/*` is reached through the BFF
@@ -15135,6 +15139,261 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /v1/leads:
+    get:
+      tags: [Leads]
+      operationId: listLeads
+      summary: List leads in the caller scope
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/LeadStatus" }
+        - name: target_type
+          in: query
+          schema: { $ref: "#/components/schemas/LeadTargetType" }
+        - name: follow_up
+          in: query
+          schema:
+            type: string
+            enum: [overdue, today]
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Leads
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeLeadPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Leads]
+      operationId: createLead
+      summary: Create a lead in the active organization
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LeadCreateInput" }
+      responses:
+        "201":
+          description: Lead created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeLead" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/leads/follow-up-count:
+    get:
+      tags: [Leads]
+      operationId: getLeadFollowUpCount
+      summary: Count overdue and today follow-ups
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Follow-up counts
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeLeadFollowUpCount" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/leads/{uuid}:
+    get:
+      tags: [Leads]
+      operationId: getLead
+      summary: Get one lead
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Lead
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeLead" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Leads]
+      operationId: patchLead
+      summary: Patch lead fields and append a timeline event
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LeadPatchInput" }
+      responses:
+        "200":
+          description: Lead updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeLead" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/leads/{uuid}/status:
+    post:
+      tags: [Leads]
+      operationId: setLeadStatus
+      summary: Move lead status through the pipeline
+      description: >-
+        Allowed transitions: new → contacted → quoted → won|lost, and
+        lost → contacted. Invalid transitions return 422 LEAD_INVALID_TRANSITION.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LeadStatusInput" }
+      responses:
+        "200":
+          description: Lead status changed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeLead" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /v1/leads/{uuid}/notes:
+    post:
+      tags: [Leads]
+      operationId: addLeadNote
+      summary: Add a lead timeline note
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LeadNoteInput" }
+      responses:
+        "201":
+          description: Note added
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeLeadEvent" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/leads/{uuid}/assign:
+    post:
+      tags: [Leads]
+      operationId: assignLead
+      summary: Assign or clear a lead assignee
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LeadAssignInput" }
+      responses:
+        "200":
+          description: Lead assigned
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeLead" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/leads/{uuid}/events:
+    get:
+      tags: [Leads]
+      operationId: listLeadEvents
+      summary: List lead timeline events
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Lead events
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeLeadEventList" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/leads/{uuid}/task:
+    post:
+      tags: [Leads]
+      operationId: createLeadTask
+      summary: Create a center task linked to a lead
+      description: The active organization must be the brand center.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LeadTaskInput" }
+      responses:
+        "201":
+          description: Task opened
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeTask" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /v1/tasks:
     get:
       tags: [Tasks]
@@ -24149,6 +24408,212 @@ components:
             items:
               type: array
               items: { $ref: "#/components/schemas/OrderOrgRef" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    LeadTargetType:
+      type: string
+      enum: [customer, dealer_candidate, distributor_candidate]
+
+    LeadSource:
+      type: string
+      enum: [incoming_call, outgoing_call, walk_in, whatsapp, social, referral, website, application_form, other]
+
+    LeadTemperature:
+      type: string
+      enum: [cold, warm, hot]
+
+    LeadStatus:
+      type: string
+      enum: [new, contacted, quoted, won, lost]
+
+    Lead:
+      type: object
+      required:
+        - uuid
+        - organization_uuid
+        - target_type
+        - source
+        - temperature
+        - status
+        - notes
+        - created_at
+        - updated_at
+      properties:
+        uuid: { type: string, format: uuid }
+        organization_uuid: { type: string, format: uuid }
+        target_type: { $ref: "#/components/schemas/LeadTargetType" }
+        customer_user_id: { type: integer, format: int64 }
+        vehicle_id: { type: integer, format: int64 }
+        candidate_company_name: { type: string }
+        candidate_contact_name: { type: string }
+        candidate_phone_e164: { type: string }
+        candidate_email: { type: string, format: email }
+        country_id: { type: integer, format: int64 }
+        province_id: { type: integer, format: int64 }
+        district_id: { type: integer, format: int64 }
+        source: { $ref: "#/components/schemas/LeadSource" }
+        temperature: { $ref: "#/components/schemas/LeadTemperature" }
+        status: { $ref: "#/components/schemas/LeadStatus" }
+        lost_reason: { type: string }
+        follow_up_date: { type: string, format: date-time }
+        assignee_user_id: { type: integer, format: int64 }
+        notes: { type: string }
+        won_ref_type: { type: string, enum: [service, appointment, organization] }
+        won_ref_id: { type: integer, format: int64 }
+        created_by_user_id: { type: integer, format: int64 }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    LeadCreateInput:
+      type: object
+      required: [target_type, source]
+      additionalProperties: false
+      properties:
+        target_type: { $ref: "#/components/schemas/LeadTargetType" }
+        customer_user_id: { type: [integer, "null"], format: int64 }
+        vehicle_id: { type: [integer, "null"], format: int64 }
+        candidate_company_name: { type: [string, "null"], maxLength: 200 }
+        candidate_contact_name: { type: [string, "null"], maxLength: 200 }
+        candidate_phone_e164: { type: [string, "null"], pattern: "^\\+[1-9][0-9]{7,14}$" }
+        candidate_email: { type: [string, "null"], format: email, maxLength: 255 }
+        country_id: { type: [integer, "null"], format: int64 }
+        province_id: { type: [integer, "null"], format: int64 }
+        district_id: { type: [integer, "null"], format: int64 }
+        source: { $ref: "#/components/schemas/LeadSource" }
+        temperature: { $ref: "#/components/schemas/LeadTemperature" }
+        follow_up_date: { type: [string, "null"], format: date-time }
+        assignee_user_id: { type: [integer, "null"], format: int64 }
+        notes: { type: string, maxLength: 20000 }
+
+    LeadPatchInput:
+      type: object
+      additionalProperties: false
+      properties:
+        target_type: { $ref: "#/components/schemas/LeadTargetType" }
+        customer_user_id: { type: [integer, "null"], format: int64 }
+        vehicle_id: { type: [integer, "null"], format: int64 }
+        candidate_company_name: { type: [string, "null"], maxLength: 200 }
+        candidate_contact_name: { type: [string, "null"], maxLength: 200 }
+        candidate_phone_e164: { type: [string, "null"], pattern: "^\\+[1-9][0-9]{7,14}$" }
+        candidate_email: { type: [string, "null"], format: email, maxLength: 255 }
+        country_id: { type: [integer, "null"], format: int64 }
+        province_id: { type: [integer, "null"], format: int64 }
+        district_id: { type: [integer, "null"], format: int64 }
+        source: { $ref: "#/components/schemas/LeadSource" }
+        temperature: { $ref: "#/components/schemas/LeadTemperature" }
+        follow_up_date: { type: [string, "null"], format: date-time }
+        assignee_user_id: { type: [integer, "null"], format: int64 }
+        notes: { type: string, maxLength: 20000 }
+
+    LeadStatusInput:
+      type: object
+      required: [status]
+      additionalProperties: false
+      properties:
+        status: { $ref: "#/components/schemas/LeadStatus" }
+        lost_reason: { type: [string, "null"] }
+        won_ref_type: { type: [string, "null"], enum: [service, appointment, organization, null] }
+        won_ref_id: { type: [integer, "null"], format: int64 }
+
+    LeadNoteInput:
+      type: object
+      required: [body]
+      additionalProperties: false
+      properties:
+        body: { type: string, minLength: 1 }
+
+    LeadAssignInput:
+      type: object
+      additionalProperties: false
+      properties:
+        assignee_user_id: { type: [integer, "null"], format: int64 }
+
+    LeadTaskInput:
+      type: object
+      required: [title]
+      additionalProperties: false
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, maxLength: 10000 }
+        assignee_user_uuid: { type: [string, "null"], format: uuid }
+        priority: { $ref: "#/components/schemas/TaskPriority" }
+        due_at: { type: [string, "null"], format: date-time }
+
+    LeadEvent:
+      type: object
+      required: [uuid, event_type, payload, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        event_type:
+          type: string
+          enum: [created, status_changed, note, call, message, quote_sent, assigned, follow_up_set, converted]
+        payload:
+          type: object
+          additionalProperties: true
+        actor_user_id: { type: integer, format: int64 }
+        created_at: { type: string, format: date-time }
+
+    LeadFollowUpCount:
+      type: object
+      required: [overdue, today]
+      properties:
+        overdue: { type: integer, format: int64 }
+        today: { type: integer, format: int64 }
+
+    EnvelopeLead:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Lead" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeLeadPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/Lead" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeLeadEvent:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/LeadEvent" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeLeadEventList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/LeadEvent" }
+            total: { type: integer, format: int64 }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeLeadFollowUpCount:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/LeadFollowUpCount" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     TaskStatus:

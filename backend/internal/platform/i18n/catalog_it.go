@@ -49,6 +49,7 @@ var itCatalog = map[string]string{
 	"common.status":                            "Stato",
 	"common.active":                            "Attivo",
 	"common.passive":                           "Inattivo",
+	"search.specs_leads":                       "Lead",
 	"customers.anonymized_name":                "Cliente anonimo",
 	"services.status.draft":                    "Bozza",
 	"services.status.pending":                  "In attesa",

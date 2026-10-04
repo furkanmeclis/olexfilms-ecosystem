@@ -65,6 +65,9 @@ import (
 	oauthprovidermodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/integrations/oauthprovider"
 	oauthproviderhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/integrations/oauthprovider/handler"
 	oauthproviderusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/integrations/oauthprovider/usecase"
+	leadsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/leads"
+	leadshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/leads/handler"
+	leadsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/leads/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/legacymobile"
 	legalmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/legal"
 	legalhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/legal/handler"
@@ -285,6 +288,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		orgusecase.NewSearchAdapter(deps.Queries),
 		ordersusecase.NewSearchAdapter(deps.Queries),
 		stockusecase.NewSearchAdapter(deps.Queries),
+		leadsusecase.NewSearchAdapter(deps.Queries),
 	)
 	searchClient := searchengine.NewClient(cfg.Search, log)
 	searchIndexer := searchengine.NewIndexer(searchClient, searchReg, deps.Queue, log)
@@ -633,8 +637,14 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		featureSvc, tokens, loader, deps.Queries)
 
 	// TEC-214: center tasks (center roles only; brand scoped).
-	tasksmodule.RegisterRoutes(mux, taskshandler.New(tasksusecase.New(deps.DB, deps.Queries,
-		outbox.NewStore(deps.DB, deps.Queries))), tokens, loader, deps.Queries)
+	tasksSvc := tasksusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries))
+	tasksmodule.RegisterRoutes(mux, taskshandler.New(tasksSvc), tokens, loader, deps.Queries)
+	// TEC-313: leads and follow-up queue.
+	leadsSvc := leadsusecase.New(deps.DB, deps.Queries, tasksSvc)
+	if listFinder != nil {
+		leadsSvc.SetFinder(listFinder)
+	}
+	leadsmodule.RegisterRoutes(mux, leadshandler.New(leadsSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-149: vehicle catalog (global car brands/models, super_admin writes).
 	vehiclecatalogmodule.RegisterRoutes(mux, vehiclecataloghandler.New(
 		vehiclecatalogusecase.New(deps.Queries), deps.Storage, activityRec), tokens, loader)
@@ -689,7 +699,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-213: Cmd+K global search through the module lists.
 	searchSvc.SetGroups(listFinder, deps.Queries, featureSvc, searchgroups.Build(searchgroups.Lists{
 		Customers: customersSvc, Services: servicesSvc, Warranties: warrantyReader,
-		Orders: ordersSvc, Organizations: orgSvc, Stock: stockSvc,
+		Orders: ordersSvc, Organizations: orgSvc, Stock: stockSvc, Leads: leadsSvc,
 	})...)
 	searchmodule.RegisterRoutes(mux, searchhandler.New(searchSvc), tokens, loader, deps.Queries)
 	librarymodule.RegisterRoutes(mux, libraryhandler.New(libraryusecase.New(deps.Queries, deps.Storage)), tokens, loader, deps.Queries, featureSvc)
