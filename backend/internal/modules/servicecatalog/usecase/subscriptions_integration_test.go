@@ -213,3 +213,72 @@ func isValidation(err error, field string) bool {
 	var ve *ValidationError
 	return errors.As(err, &ve) && ve.Field == field
 }
+
+func TestModuleBundleBlockedByParentRollsBack(t *testing.T) {
+	e := newSubEnv(t)
+	start, end := subDates()
+	item := e.item(t, CategoryModuleBundle, "50.00")
+	if err := e.q.AddServiceCatalogModule(e.ctx, db.AddServiceCatalogModuleParams{
+		ItemID: item.ID, ModuleKey: features.ModuleStockForecast,
+	}); err != nil {
+		t.Fatalf("bundle module: %v", err)
+	}
+	if _, err := e.features.SetByAdmin(e.ctx, 0, e.dist.ID, features.ModuleStockForecast, false); err != nil {
+		t.Fatalf("close parent: %v", err)
+	}
+	_, err := e.svc.Assign(e.ctx, e.caller(e.center, rbac.ScopeBrand, rbac.PermServiceSubscriptionsAssign), SubscriptionInput{
+		ItemUUID: item.Uuid, OrganizationUUID: e.dealer.Uuid, StartsOn: start, EndsOn: end,
+	})
+	if !errors.Is(err, ErrModuleBlockedByParent) {
+		t.Fatalf("assign under closed parent = %v, want ErrModuleBlockedByParent", err)
+	}
+	var subs, flags int
+	if err := e.pool.QueryRow(e.ctx, `SELECT count(*) FROM service_subscriptions WHERE organization_id = $1`, e.dealer.ID).Scan(&subs); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.pool.QueryRow(e.ctx, `SELECT count(*) FROM module_flags WHERE organization_id = $1 AND source = 'service'`, e.dealer.ID).Scan(&flags); err != nil {
+		t.Fatal(err)
+	}
+	if subs != 0 || flags != 0 {
+		t.Fatalf("after blocked assign: subscriptions=%d service flags=%d, want 0/0", subs, flags)
+	}
+}
+
+func TestDealerCannotAssignAndRejectRestoresActive(t *testing.T) {
+	e := newSubEnv(t)
+	start, end := subDates()
+	item := e.item(t, "software", "100.00")
+	if _, err := e.svc.Assign(e.ctx, e.caller(e.dealer, rbac.ScopeManaged, rbac.PermServiceSubscriptionsAssign), SubscriptionInput{
+		ItemUUID: item.Uuid, OrganizationUUID: e.dealer.Uuid, StartsOn: start, EndsOn: end,
+	}); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("dealer assign = %v, want ErrForbidden", err)
+	}
+	sub, err := e.svc.Assign(e.ctx, e.caller(e.center, rbac.ScopeBrand, rbac.PermServiceSubscriptionsAssign), SubscriptionInput{
+		ItemUUID: item.Uuid, OrganizationUUID: e.dealer.Uuid, StartsOn: start, EndsOn: end,
+	})
+	if err != nil {
+		t.Fatalf("assign: %v", err)
+	}
+	dealer := e.caller(e.dealer, rbac.ScopeManaged, rbac.PermServiceSubscriptionsCancelRequest)
+	center := e.caller(e.center, rbac.ScopeBrand, rbac.PermServiceSubscriptionsCancelApprove)
+	req, err := e.svc.RequestCancel(e.ctx, dealer, sub.UUID, CancelRequestInput{Reason: "maybe"})
+	if err != nil {
+		t.Fatalf("cancel request: %v", err)
+	}
+	if _, err := e.svc.RequestCancel(e.ctx, dealer, sub.UUID, CancelRequestInput{Reason: "again"}); !errors.Is(err, ErrInvalidStatus) {
+		t.Fatalf("second pending request = %v, want ErrInvalidStatus", err)
+	}
+	if _, err := e.svc.ApproveCancel(e.ctx, e.caller(e.dist, rbac.ScopeSubtree, rbac.PermServiceSubscriptionsCancelApprove), req.UUID, DecisionInput{}); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("distributor approve = %v, want ErrForbidden", err)
+	}
+	if d, err := e.svc.RejectCancel(e.ctx, center, req.UUID, DecisionInput{}); err != nil || d.Status != StatusRejected {
+		t.Fatalf("reject = %+v, %v", d, err)
+	}
+	got, err := e.svc.GetSubscription(e.ctx, e.caller(e.dealer, rbac.ScopeManaged, rbac.PermServiceSubscriptionsRead), sub.UUID)
+	if err != nil || got.Status != StatusActive {
+		t.Fatalf("after reject = %+v, %v; want active", got, err)
+	}
+	if _, err := e.svc.RequestCancel(e.ctx, dealer, sub.UUID, CancelRequestInput{Reason: "now really"}); err != nil {
+		t.Fatalf("request after reject: %v", err)
+	}
+}

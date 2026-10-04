@@ -50,8 +50,9 @@ type RateResolver interface {
 // FeatureService is the part of the feature flag service used by module
 // bundle subscriptions.
 type FeatureService interface {
-	SetByService(ctx context.Context, actorID, orgID, serviceID int64, key string) (features.State, error)
-	ClearByService(ctx context.Context, orgID int64, key string) error
+	SetByService(ctx context.Context, q *db.Queries, actorID, orgID, serviceID int64, key string) error
+	ClearByService(ctx context.Context, q *db.Queries, orgID int64, key string) error
+	InvalidateOrg(ctx context.Context, orgID int64)
 }
 
 // Outbox stores domain events in the current transaction.
@@ -169,13 +170,14 @@ func (s *Service) Assign(ctx context.Context, c Caller, in SubscriptionInput) (S
 		if err != nil {
 			return mapDBError(err)
 		}
-		if err := s.openModules(ctx, sub, item, c.Principal.UserInternal); err != nil {
+		if err := s.openModules(ctx, q, sub, item, c.Principal.UserInternal); err != nil {
 			return err
 		}
 		return s.emit(ctx, tx, events.ServiceSubscriptionAssigned, sub, item, c.Principal.UserInternal, nil)
 	}); err != nil {
 		return SubscriptionView{}, err
 	}
+	s.invalidateModules(ctx, sub, item)
 	return s.subscriptionView(ctx, sub)
 }
 
@@ -197,11 +199,14 @@ func (s *Service) ListSubscriptions(ctx context.Context, c Caller, status string
 
 func (s *Service) GetSubscription(ctx context.Context, c Caller, id uuid.UUID) (SubscriptionView, error) {
 	sub, err := s.q.GetServiceSubscriptionByUUID(ctx, db.GetServiceSubscriptionByUUIDParams{Uuid: id, BrandID: c.Org.BrandID})
-	if errors.Is(err, pgx.ErrNoRows) || !c.Filter.AllowsOrg(sub.OrganizationID, sub.BrandID) {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return SubscriptionView{}, ErrNotFound
 	}
 	if err != nil {
 		return SubscriptionView{}, err
+	}
+	if !c.Filter.AllowsOrg(sub.OrganizationID, sub.BrandID) {
+		return SubscriptionView{}, ErrNotFound
 	}
 	return s.subscriptionView(ctx, sub)
 }
@@ -212,11 +217,14 @@ func (s *Service) RequestCancel(ctx context.Context, c Caller, id uuid.UUID, in 
 		return CancelRequestView{}, err
 	}
 	sub, err := s.q.GetServiceSubscriptionByUUID(ctx, db.GetServiceSubscriptionByUUIDParams{Uuid: id, BrandID: c.Org.BrandID})
-	if errors.Is(err, pgx.ErrNoRows) || sub.OrganizationID != c.Org.InternalID {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return CancelRequestView{}, ErrNotFound
 	}
 	if err != nil {
 		return CancelRequestView{}, err
+	}
+	if sub.OrganizationID != c.Org.InternalID {
+		return CancelRequestView{}, ErrNotFound
 	}
 	var req db.ServiceSubscriptionCancelRequest
 	if err := s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
@@ -265,7 +273,10 @@ func (s *Service) decide(ctx context.Context, c Caller, id uuid.UUID, status, ev
 	if err != nil {
 		return CancelRequestView{}, err
 	}
-	var sub db.ServiceSubscription
+	var (
+		sub    db.ServiceSubscription
+		closed bool
+	)
 	if err := s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		req, err = q.DecideServiceSubscriptionCancelRequest(ctx, db.DecideServiceSubscriptionCancelRequestParams{
 			Status: status, DecidedByUserID: c.actor(), DecisionNote: nullableTextArg(in.Note),
@@ -285,7 +296,13 @@ func (s *Service) decide(ctx context.Context, c Caller, id uuid.UUID, status, ev
 		if err != nil {
 			return err
 		}
-		if status == StatusApproved {
+		switch {
+		case status == StatusApproved:
+			// The subscription may have expired while the request was
+			// pending; final states cannot change (409).
+			if sub.Status != StatusActive && sub.Status != StatusCancelRequested {
+				return ErrInvalidStatus
+			}
 			sub, err = q.SetServiceSubscriptionStatus(ctx, db.SetServiceSubscriptionStatusParams{
 				Status: StatusCancelled, ID: sub.ID, BrandID: sub.BrandID,
 			})
@@ -295,10 +312,23 @@ func (s *Service) decide(ctx context.Context, c Caller, id uuid.UUID, status, ev
 			if err := s.closeModules(ctx, q, sub, item); err != nil {
 				return err
 			}
+			closed = item.Category == CategoryModuleBundle
+		case sub.Status == StatusCancelRequested:
+			// A rejected request returns the subscription to active so it
+			// keeps running and can be cancelled again later.
+			sub, err = q.SetServiceSubscriptionStatus(ctx, db.SetServiceSubscriptionStatusParams{
+				Status: StatusActive, ID: sub.ID, BrandID: sub.BrandID,
+			})
+			if err != nil {
+				return err
+			}
 		}
 		return s.emit(ctx, tx, eventName, sub, item, c.Principal.UserInternal, map[string]any{"decision_note": valueOrEmpty(in.Note)})
 	}); err != nil {
 		return CancelRequestView{}, err
+	}
+	if closed && s.feature != nil {
+		s.feature.InvalidateOrg(ctx, sub.OrganizationID)
 	}
 	return s.cancelView(ctx, req, sub.Uuid), nil
 }
@@ -368,16 +398,18 @@ func (s *Service) rateSnapshot(ctx context.Context, on time.Time, base, quote st
 	return json.Marshal(snap)
 }
 
-func (s *Service) openModules(ctx context.Context, sub db.ServiceSubscription, item db.ServiceCatalogItem, actorID int64) error {
+// openModules writes the bundle's module flags in the subscription
+// transaction; a module closed upstream aborts the whole assignment.
+func (s *Service) openModules(ctx context.Context, q *db.Queries, sub db.ServiceSubscription, item db.ServiceCatalogItem, actorID int64) error {
 	if item.Category != CategoryModuleBundle || s.feature == nil {
 		return nil
 	}
-	modules, err := s.q.ListServiceCatalogModules(ctx, item.ID)
+	modules, err := q.ListServiceCatalogModules(ctx, item.ID)
 	if err != nil {
 		return err
 	}
 	for _, key := range modules {
-		if _, err := s.feature.SetByService(ctx, actorID, sub.OrganizationID, sub.ID, key); errors.Is(err, features.ErrUpstreamDisabled) {
+		if err := s.feature.SetByService(ctx, q, actorID, sub.OrganizationID, sub.ID, key); errors.Is(err, features.ErrUpstreamDisabled) {
 			return ErrModuleBlockedByParent
 		} else if err != nil {
 			return err
@@ -402,12 +434,21 @@ func (s *Service) closeModules(ctx context.Context, q *db.Queries, sub db.Servic
 			return err
 		}
 		if n == 0 {
-			if err := s.feature.ClearByService(ctx, sub.OrganizationID, key); err != nil {
+			if err := s.feature.ClearByService(ctx, q, sub.OrganizationID, key); err != nil {
 				return err
 			}
 		}
 	}
 	return nil
+}
+
+// invalidateModules drops the feature cache of the receiving organization
+// after a committed module bundle change.
+func (s *Service) invalidateModules(ctx context.Context, sub db.ServiceSubscription, item db.ServiceCatalogItem) {
+	if s.feature == nil || item.Category != CategoryModuleBundle {
+		return
+	}
+	s.feature.InvalidateOrg(ctx, sub.OrganizationID)
 }
 
 func (s *Service) emit(ctx context.Context, tx pgx.Tx, name string, sub db.ServiceSubscription, item db.ServiceCatalogItem, actorID int64, extra map[string]any) error {
