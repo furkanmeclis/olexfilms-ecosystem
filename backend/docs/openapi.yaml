@@ -4235,6 +4235,230 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/contract-templates/variables:
+    get:
+      tags: [Contract Templates]
+      operationId: listContractTemplateVariables
+      summary: List allowed contract template variables
+      description: Requires the active organization, intake_contracts feature, and contracts.templates.manage.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Allowed variables
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeContractTemplateVariables"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/contract-templates:
+    get:
+      tags: [Contract Templates]
+      operationId: listContractTemplates
+      summary: List contract templates for the active brand
+      description: Requires the active organization, intake_contracts feature, and contracts.templates.manage.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: kind
+          in: query
+          schema: { $ref: "#/components/schemas/ContractTemplateKind" }
+        - name: active
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        "200":
+          description: Contract templates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeContractTemplateList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Contract Templates]
+      operationId: createContractTemplate
+      summary: Create a contract template
+      description: If `is_default` is true, the previous default of the same kind is cleared in the same transaction.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractTemplateRequest"
+      responses:
+        "201":
+          description: Created template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeContractTemplate"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/contract-templates/{uuid}:
+    get:
+      tags: [Contract Templates]
+      operationId: getContractTemplate
+      summary: Get a contract template with locale versions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Contract template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeContractTemplate"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Contract Templates]
+      operationId: updateContractTemplate
+      summary: Patch contract template metadata
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractTemplateRequest"
+      responses:
+        "200":
+          description: Updated template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeContractTemplate"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Contract Templates]
+      operationId: deleteContractTemplate
+      summary: Delete an unused template or deactivate a used template
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Template was in use and is now inactive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeContractTemplate"
+        "204":
+          description: Template was unused and deleted
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/platform/contract-templates/{uuid}/locales/{locale}:
+    put:
+      tags: [Contract Templates]
+      operationId: putContractTemplateLocale
+      summary: Upsert one locale version
+      description: Stores Lexical JSON and sanitized HTML; every write increments the locale version. Unknown `{{variable}}` placeholders are rejected with 400 VALIDATION_ERROR.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: locale
+          in: path
+          required: true
+          schema: { type: string, example: tr }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractTemplateLocaleRequest"
+      responses:
+        "200":
+          description: Locale version
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeContractTemplateLocale"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/platform/contract-templates/{uuid}/default:
+    post:
+      tags: [Contract Templates]
+      operationId: setDefaultContractTemplate
+      summary: Make a template the single default for its kind
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Default template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeContractTemplate"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/tenant/documents/render:
     post:
       tags: [Documents]
@@ -18764,6 +18988,111 @@ components:
             total: { type: integer }
             limit: { type: integer }
             offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    ContractTemplateKind:
+      type: string
+      enum: [vehicle_intake, service_sale]
+
+    ContractTemplateVariable:
+      type: object
+      required: [key, group, label_tr, label_en]
+      properties:
+        key: { type: string, example: customer_name }
+        group: { type: string, example: customer }
+        label_tr: { type: string }
+        label_en: { type: string }
+
+    ContractTemplateLocale:
+      type: object
+      required: [uuid, locale, html, version, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        locale: { type: string, example: tr }
+        lexical_json: { type: [object, "null"], additionalProperties: true }
+        html: { type: string }
+        version: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    ContractTemplate:
+      type: object
+      required: [uuid, name, kind, is_default, otp_required, signature_required, is_active, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string, maxLength: 150 }
+        kind: { $ref: "#/components/schemas/ContractTemplateKind" }
+        is_default: { type: boolean }
+        otp_required: { type: boolean }
+        signature_required: { type: boolean }
+        is_active: { type: boolean }
+        locales:
+          type: array
+          items: { $ref: "#/components/schemas/ContractTemplateLocale" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    ContractTemplateRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, maxLength: 150 }
+        kind: { $ref: "#/components/schemas/ContractTemplateKind" }
+        is_default: { type: boolean }
+        otp_required: { type: boolean }
+        signature_required: { type: boolean }
+        is_active: { type: boolean }
+
+    ContractTemplateLocaleRequest:
+      type: object
+      additionalProperties: false
+      required: [html]
+      properties:
+        lexical_json: { type: [object, "null"], additionalProperties: true }
+        html: { type: string, description: "Lexical-rendered HTML with {{key}} placeholders" }
+
+    EnvelopeContractTemplate:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ContractTemplate" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeContractTemplateLocale:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ContractTemplateLocale" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeContractTemplateList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/ContractTemplate" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeContractTemplateVariables:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/ContractTemplateVariable" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     ModuleLevel:

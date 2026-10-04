@@ -2395,6 +2395,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/contract-templates/variables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List allowed contract template variables
+         * @description Requires the active organization, intake_contracts feature, and contracts.templates.manage.
+         */
+        get: operations["listContractTemplateVariables"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/contract-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List contract templates for the active brand
+         * @description Requires the active organization, intake_contracts feature, and contracts.templates.manage.
+         */
+        get: operations["listContractTemplates"];
+        put?: never;
+        /**
+         * Create a contract template
+         * @description If `is_default` is true, the previous default of the same kind is cleared in the same transaction.
+         */
+        post: operations["createContractTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/contract-templates/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a contract template with locale versions */
+        get: operations["getContractTemplate"];
+        put?: never;
+        post?: never;
+        /** Delete an unused template or deactivate a used template */
+        delete: operations["deleteContractTemplate"];
+        options?: never;
+        head?: never;
+        /** Patch contract template metadata */
+        patch: operations["updateContractTemplate"];
+        trace?: never;
+    };
+    "/v1/platform/contract-templates/{uuid}/locales/{locale}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Upsert one locale version
+         * @description Stores Lexical JSON and sanitized HTML; every write increments the locale version. Unknown `{{variable}}` placeholders are rejected with 400 VALIDATION_ERROR.
+         */
+        put: operations["putContractTemplateLocale"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/contract-templates/{uuid}/default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Make a template the single default for its kind */
+        post: operations["setDefaultContractTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/tenant/documents/render": {
         parameters: {
             query?: never;
@@ -10196,6 +10296,89 @@ export interface components {
                 total: number;
                 limit: number;
                 offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        ContractTemplateKind: "vehicle_intake" | "service_sale";
+        ContractTemplateVariable: {
+            /** @example customer_name */
+            key: string;
+            /** @example customer */
+            group: string;
+            label_tr: string;
+            label_en: string;
+        };
+        ContractTemplateLocale: {
+            /** Format: uuid */
+            uuid: string;
+            /** @example tr */
+            locale: string;
+            lexical_json?: {
+                [key: string]: unknown;
+            } | null;
+            html: string;
+            version: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        ContractTemplate: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            kind: components["schemas"]["ContractTemplateKind"];
+            is_default: boolean;
+            otp_required: boolean;
+            signature_required: boolean;
+            is_active: boolean;
+            locales?: components["schemas"]["ContractTemplateLocale"][];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        ContractTemplateRequest: {
+            name?: string;
+            kind?: components["schemas"]["ContractTemplateKind"];
+            is_default?: boolean;
+            otp_required?: boolean;
+            signature_required?: boolean;
+            is_active?: boolean;
+        };
+        ContractTemplateLocaleRequest: {
+            lexical_json?: {
+                [key: string]: unknown;
+            } | null;
+            /** @description Lexical-rendered HTML with {{key}} placeholders */
+            html: string;
+        };
+        EnvelopeContractTemplate: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ContractTemplate"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeContractTemplateLocale: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ContractTemplateLocale"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeContractTemplateList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ContractTemplate"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeContractTemplateVariables: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ContractTemplateVariable"][];
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -18438,6 +18621,224 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeDocumentTemplateList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listContractTemplateVariables: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Allowed variables */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContractTemplateVariables"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listContractTemplates: {
+        parameters: {
+            query?: {
+                kind?: components["schemas"]["ContractTemplateKind"];
+                active?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Contract templates */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContractTemplateList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createContractTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContractTemplateRequest"];
+            };
+        };
+        responses: {
+            /** @description Created template */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContractTemplate"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getContractTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Contract template */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContractTemplate"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteContractTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Template was in use and is now inactive */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContractTemplate"];
+                };
+            };
+            /** @description Template was unused and deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateContractTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContractTemplateRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated template */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContractTemplate"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    putContractTemplateLocale: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                locale: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContractTemplateLocaleRequest"];
+            };
+        };
+        responses: {
+            /** @description Locale version */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContractTemplateLocale"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    setDefaultContractTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default template */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContractTemplate"];
                 };
             };
             401: components["responses"]["Unauthenticated"];
