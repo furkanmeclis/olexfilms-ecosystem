@@ -84,6 +84,7 @@ export const leadsService = {
 
 export const leadKeys = {
   all: ["leads"] as const,
+  lists: ["leads", "list"] as const,
   list: (params: LeadListQuery) => ["leads", "list", params] as const,
   detail: (uuid: string) => ["leads", "detail", uuid] as const,
   events: (uuid: string) => ["leads", "events", uuid] as const,

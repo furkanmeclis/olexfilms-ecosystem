@@ -12,6 +12,9 @@ import (
 	"unicode/utf8"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	customeruc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/customers/usecase"
+	orguc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
+	serviceuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/usecase"
 	tasksuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/tasks/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
@@ -75,11 +78,14 @@ func (c Caller) actor() pgtype.Int8 {
 
 // Service is the lead use case.
 type Service struct {
-	pool    TxBeginner
-	q       *db.Queries
-	tasks   TaskCreator
-	finder  searchengine.ListFinder
-	nowFunc func() time.Time
+	pool          TxBeginner
+	q             *db.Queries
+	tasks         TaskCreator
+	customers     *customeruc.Service
+	services      *serviceuc.Service
+	organizations *orguc.Service
+	finder        searchengine.ListFinder
+	nowFunc       func() time.Time
 }
 
 // New creates the service.

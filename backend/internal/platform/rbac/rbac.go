@@ -249,6 +249,14 @@ const (
 	PermAnnouncementsWrite = "announcements.write"
 	PermLibraryRead        = "library.read"
 	PermLibraryManage      = "library.manage"
+	// TEC-341 (000093): full dealer accounting (F3-07). Dealer owner and
+	// dealer accounting only; dealer_staff holds none of them.
+	PermDealerPricingWrite = "dealer_pricing.write"
+	PermProductSalesWrite  = "product_sales.write"
+	PermSuppliersManage    = "suppliers.manage"
+	PermPurchasesWrite     = "purchases.write"
+	PermStaffManage        = "staff.manage"
+	PermStaffPaymentsWrite = "staff_payments.write"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

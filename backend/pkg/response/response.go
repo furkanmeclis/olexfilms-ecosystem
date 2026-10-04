@@ -34,6 +34,7 @@ const (
 	CodeFeatureDisabled           = "FEATURE_DISABLED"
 	CodeModuleCore                = "MODULE_CORE"
 	CodeModuleAdminOverride       = "MODULE_ADMIN_OVERRIDE"
+	CodeModuleBlockedByParent     = "MODULE_BLOCKED_BY_PARENT"
 	CodeMFARequired               = "MFA_REQUIRED"
 	CodeMFANotEnrolled            = "MFA_NOT_ENROLLED"
 	CodeRateLimited               = "RATE_LIMITED"

@@ -5,6 +5,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/middleware"
+	acc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
@@ -14,11 +15,16 @@ import (
 // because the module root package (accounting) holds the category catalog
 // the use cases import.
 //
-// Reads need accounting.read, writes accounting.write (dealer roles hold no
-// accounting.write, TEC-99 decision 7, so their writes answer 403); the
-// scope is resolved per request (RequireScope) and the use case limits the
-// book to the active organization and the organizations below it. Voiding
-// an entry and booking an opening balance also need a recent step-up.
+// Reads need accounting.read, writes accounting.write; the scope is
+// resolved per request (RequireScope) and the use case limits the book to
+// the active organization and the organizations below it. Voiding an entry
+// and booking an opening balance also need a recent step-up.
+//
+// TEC-342 (F3-07b): in a dealer organization every write also needs the
+// dealer_accounting module (403 FEATURE_DISABLED when it is off; reads and
+// disputes stay as in F1). dealer_owner / dealer_accounting hold
+// accounting.write since TEC-341; dealer_staff holds no accounting
+// permission. The center and distributors are not gated.
 func RegisterRoutes(
 	mux *http.ServeMux,
 	h *Handler,
@@ -31,14 +37,15 @@ func RegisterRoutes(
 	authn := middleware.Authenticate(tokens, loader)
 	org := middleware.RequireOrganization(tokens, q)
 	module := middleware.RequireFeature(checker, features.ModuleAccounting)
+	dealerModule := middleware.RequireFeatureForOrgType(checker, acc.OrgDealer, features.ModuleDealerAccounting)
 	read := func(fn http.HandlerFunc) http.Handler {
 		return middleware.Chain(fn, authn, org, module, middleware.RequireScope(q, rbac.PermAccountingRead))
 	}
 	write := func(fn http.HandlerFunc) http.Handler {
-		return middleware.Chain(fn, authn, org, module, middleware.RequireScope(q, rbac.PermAccountingWrite))
+		return middleware.Chain(fn, authn, org, module, dealerModule, middleware.RequireScope(q, rbac.PermAccountingWrite))
 	}
 	sensitive := func(fn http.HandlerFunc) http.Handler {
-		return middleware.Chain(fn, authn, org, module, middleware.RequireScope(q, rbac.PermAccountingWrite),
+		return middleware.Chain(fn, authn, org, module, dealerModule, middleware.RequireScope(q, rbac.PermAccountingWrite),
 			middleware.RequireStepUp(stepUp))
 	}
 
@@ -86,4 +93,7 @@ func RegisterRoutes(
 	// TEC-177: one-off opening balance of a cari (step-up); reversed through
 	// POST /v1/accounting/entries/{uuid}/void.
 	mux.Handle("POST /v1/accounting/opening-balances", sensitive(h.CreateOpeningBalance))
+
+	// TEC-342: open a customer cari (a customer the organization serves).
+	mux.Handle("POST /v1/accounting/cari", write(h.OpenCari))
 }

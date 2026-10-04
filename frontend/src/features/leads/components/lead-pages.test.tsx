@@ -212,6 +212,18 @@ describe("LeadFormPage", () => {
     expect(q("[data-testid=lead-customer_user_id]")).toBeNull();
     expect(q("[data-testid=lead-candidate_company_name]")).not.toBeNull();
   });
+
+  it("validates the customer phone before submitting", async () => {
+    state.grants = new Set([permissions.leads.write]);
+    await render(createElement(LeadFormPage, { slug: "olex" }));
+
+    await type("[data-testid=lead-customer_user_id]", "42");
+    await type("[data-testid=lead-candidate_phone_e164]", "0555 123 45 67");
+    await click("[data-testid=lead-submit]");
+
+    expect(api.create).not.toHaveBeenCalled();
+    expect(container.textContent).toContain("leads.form.errors.phone_invalid");
+  });
 });
 
 describe("LeadDetailPage", () => {

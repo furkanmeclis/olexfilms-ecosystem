@@ -188,6 +188,7 @@ function TaskCard({ uuid, show }: { uuid: string; show: boolean }) {
       setTitle("");
       setDue("");
       await qc.invalidateQueries({ queryKey: leadKeys.events(uuid) });
+      await qc.invalidateQueries({ queryKey: leadKeys.followUpCount });
       toast.success(t("leads.task.created"));
     },
     onError: () => toast.error(t("leads.task.error")),
@@ -253,9 +254,8 @@ function EditCard({ lead }: { lead: Lead }) {
     mutationFn: () => leadsService.patch(lead.uuid, patchBody(lead, values)),
     onSuccess: async (updated) => {
       qc.setQueryData(leadKeys.detail(lead.uuid), updated);
-      await qc.invalidateQueries({
-        queryKey: leadKeys.list({ limit: 20, offset: 0 }),
-      });
+      await qc.invalidateQueries({ queryKey: leadKeys.lists });
+      await qc.invalidateQueries({ queryKey: leadKeys.followUpCount });
       toast.success(t("leads.form.saved"));
     },
     onError: () => toast.error(t("leads.form.error")),
@@ -332,13 +332,18 @@ export function LeadDetailPage({ slug, uuid }: { slug: string; uuid: string }) {
       setLostOpen(false);
       setLostReason("");
       await qc.invalidateQueries({ queryKey: leadKeys.events(uuid) });
+      await qc.invalidateQueries({ queryKey: leadKeys.lists });
+      await qc.invalidateQueries({ queryKey: leadKeys.followUpCount });
     },
     onError: () => toast.error(t("leads.status.error")),
   });
   const assign = useMutation({
     mutationFn: (assignee_user_id: number | null) =>
       leadsService.assign(uuid, { assignee_user_id }),
-    onSuccess: (updated) => qc.setQueryData(leadKeys.detail(uuid), updated),
+    onSuccess: async (updated) => {
+      qc.setQueryData(leadKeys.detail(uuid), updated);
+      await qc.invalidateQueries({ queryKey: leadKeys.lists });
+    },
   });
 
   const lead = detail.data;

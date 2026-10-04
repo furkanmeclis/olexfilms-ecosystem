@@ -12,6 +12,27 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const completeMeasurementResultVIN = `-- name: CompleteMeasurementResultVIN :execrows
+UPDATE measurement_results
+SET vin = $1, status = 'accepted'
+WHERE id = $2 AND organization_id = $3 AND status = 'vin_pending'
+`
+
+type CompleteMeasurementResultVINParams struct {
+	Vin            pgtype.Text `json:"vin"`
+	ID             int64       `json:"id"`
+	OrganizationID int64       `json:"organization_id"`
+}
+
+// Completes the VIN of a vin_pending result (status accepted).
+func (q *Queries) CompleteMeasurementResultVIN(ctx context.Context, arg CompleteMeasurementResultVINParams) (int64, error) {
+	result, err := q.db.Exec(ctx, completeMeasurementResultVIN, arg.Vin, arg.ID, arg.OrganizationID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const confirmServiceMeasurement = `-- name: ConfirmServiceMeasurement :execrows
 UPDATE service_measurements
 SET confirmed_by = $1, confirmed_at = NOW()
@@ -411,6 +432,48 @@ func (q *Queries) GetServiceMeasurementByResult(ctx context.Context, arg GetServ
 		&i.ConfirmedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const insertMeasurementDeviceIfAbsent = `-- name: InsertMeasurementDeviceIfAbsent :one
+
+INSERT INTO measurement_devices (organization_id, brand_id, serial, model)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (organization_id, serial) DO NOTHING
+RETURNING id, uuid, organization_id, brand_id, serial, label, created_at, updated_at, model, is_active
+`
+
+type InsertMeasurementDeviceIfAbsentParams struct {
+	OrganizationID int64       `json:"organization_id"`
+	BrandID        int64       `json:"brand_id"`
+	Serial         string      `json:"serial"`
+	Model          pgtype.Text `json:"model"`
+}
+
+// TEC-294 (F3-02b): NexPTG normalization, device auto-registration, VIN
+// completion and the reparse backfill.
+// A device first seen in an upload is registered to the organization; a
+// concurrent upload of the same serial wins the insert (no row then).
+func (q *Queries) InsertMeasurementDeviceIfAbsent(ctx context.Context, arg InsertMeasurementDeviceIfAbsentParams) (MeasurementDevice, error) {
+	row := q.db.QueryRow(ctx, insertMeasurementDeviceIfAbsent,
+		arg.OrganizationID,
+		arg.BrandID,
+		arg.Serial,
+		arg.Model,
+	)
+	var i MeasurementDevice
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.Serial,
+		&i.Label,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Model,
+		&i.IsActive,
 	)
 	return i, err
 }
@@ -980,6 +1043,76 @@ func (q *Queries) ListServiceMeasurements(ctx context.Context, arg ListServiceMe
 		return nil, err
 	}
 	return items, nil
+}
+
+const listUnparsedMeasurementResultIDs = `-- name: ListUnparsedMeasurementResultIDs :many
+SELECT id FROM measurement_results
+WHERE parsed_at IS NULL AND id > $1
+ORDER BY id
+LIMIT $2
+`
+
+type ListUnparsedMeasurementResultIDsParams struct {
+	AfterID    int64 `json:"after_id"`
+	LimitCount int32 `json:"limit_count"`
+}
+
+// The next page of results still waiting for normalization (keyset by id).
+func (q *Queries) ListUnparsedMeasurementResultIDs(ctx context.Context, arg ListUnparsedMeasurementResultIDsParams) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listUnparsedMeasurementResultIDs, arg.AfterID, arg.LimitCount)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int64{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const lockUnparsedMeasurementResult = `-- name: LockUnparsedMeasurementResult :one
+SELECT id, uuid, organization_id, brand_id, service_id, vehicle_id, vin, status, raw, client_measurement_id, idempotency_key, device_serial, source, created_by, created_at, measured_at, device_id, customer_user_id, body_type, parsed_at, pdf_key FROM measurement_results
+WHERE id = $1 AND parsed_at IS NULL
+FOR UPDATE
+`
+
+// Locks one unparsed result for normalization; no row when another run
+// normalized it meanwhile.
+func (q *Queries) LockUnparsedMeasurementResult(ctx context.Context, id int64) (MeasurementResult, error) {
+	row := q.db.QueryRow(ctx, lockUnparsedMeasurementResult, id)
+	var i MeasurementResult
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ServiceID,
+		&i.VehicleID,
+		&i.Vin,
+		&i.Status,
+		&i.Raw,
+		&i.ClientMeasurementID,
+		&i.IdempotencyKey,
+		&i.DeviceSerial,
+		&i.Source,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.MeasuredAt,
+		&i.DeviceID,
+		&i.CustomerUserID,
+		&i.BodyType,
+		&i.ParsedAt,
+		&i.PdfKey,
+	)
+	return i, err
 }
 
 const markMeasurementResultParsed = `-- name: MarkMeasurementResultParsed :exec

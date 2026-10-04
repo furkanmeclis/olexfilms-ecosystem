@@ -142,10 +142,10 @@ export function validateLeadForm(values: LeadFormValues) {
     if (!values.candidate_contact_name.trim()) {
       errors.candidate_contact_name = "leads.form.errors.contact_required";
     }
-    const phone = values.candidate_phone_e164.trim();
-    if (phone && !/^\+[1-9]\d{6,14}$/.test(phone)) {
-      errors.candidate_phone_e164 = "leads.form.errors.phone_invalid";
-    }
+  }
+  const phone = values.candidate_phone_e164.trim();
+  if (phone && !/^\+[1-9]\d{6,14}$/.test(phone)) {
+    errors.candidate_phone_e164 = "leads.form.errors.phone_invalid";
   }
   if (
     values.candidate_email &&
