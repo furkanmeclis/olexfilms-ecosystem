@@ -30,6 +30,9 @@ func RegisterRoutes(
 	route := func(fn http.HandlerFunc) http.Handler {
 		return middleware.Chain(fn, authn, org, module, manage)
 	}
+	instance := func(fn http.HandlerFunc, slug string) http.Handler {
+		return middleware.Chain(fn, authn, org, module, middleware.RequireScope(q, slug))
+	}
 
 	mux.Handle("GET /v1/contract-templates/variables", route(h.Variables))
 	mux.Handle("GET /v1/platform/contract-templates", route(h.List))
@@ -39,4 +42,13 @@ func RegisterRoutes(
 	mux.Handle("DELETE /v1/platform/contract-templates/{uuid}", route(h.Delete))
 	mux.Handle("PUT /v1/platform/contract-templates/{uuid}/locales/{locale}", route(h.PutLocale))
 	mux.Handle("POST /v1/platform/contract-templates/{uuid}/default", route(h.SetDefault))
+
+	mux.Handle("POST /v1/services/{uuid}/contract", instance(h.CreateForService, rbac.PermContractsWrite))
+	mux.Handle("GET /v1/contracts/{uuid}", instance(h.GetContract, rbac.PermContractsRead))
+	mux.Handle("POST /v1/contracts/{uuid}/signers/customer/otp", instance(h.RequestCustomerOTP, rbac.PermContractsWrite))
+	mux.Handle("POST /v1/contracts/{uuid}/signers/customer/sign", instance(h.SignCustomer, rbac.PermContractsWrite))
+	mux.Handle("POST /v1/contracts/{uuid}/signers/staff/sign", instance(h.SignStaff, rbac.PermContractsWrite))
+	mux.Handle("POST /v1/contracts/{uuid}/media", instance(h.AddMedia, rbac.PermContractsWrite))
+	mux.Handle("DELETE /v1/contracts/{uuid}/media/{media}", instance(h.DeleteMedia, rbac.PermContractsWrite))
+	mux.Handle("POST /v1/contracts/{uuid}/void", instance(h.Void, rbac.PermContractsVoid))
 }

@@ -2,27 +2,59 @@
 package usecase
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"net/netip"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/repository"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/msgtemplate"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/otp"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
+	platstorage "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 var (
-	ErrNotFound       = errors.New("contract template not found")
-	ErrInvalidRequest = errors.New("invalid contract template request")
-	ErrInUse          = errors.New("contract template is in use")
+	ErrNotFound          = errors.New("contract not found")
+	ErrInvalidRequest    = errors.New("invalid contract request")
+	ErrInUse             = errors.New("contract template is in use")
+	ErrBusinessRule      = errors.New("contract business rule")
+	ErrAlreadySigned     = errors.New("contract signer already signed")
+	ErrWindowExpired     = errors.New("contract sign window expired")
+	ErrStorageRequired   = errors.New("contract storage is not configured")
+	ErrOTPRequired       = errors.New("contract otp service is not configured")
+	ErrOutboxRequired    = errors.New("contract outbox is not configured")
+	ErrInvalidOTP        = errors.New("contract otp is invalid")
+	ErrUnsupportedStatus = errors.New("contract service status does not allow signing")
+)
+
+const (
+	CodeContractSignWindowExpired = "CONTRACT_SIGN_WINDOW_EXPIRED"
+	CodeContractServiceStatus     = "CONTRACT_SERVICE_STATUS_INVALID"
+	CodeContractAlreadySigned     = "CONTRACT_ALREADY_SIGNED"
+
+	MaxSignatureBytes = 1 << 20
+	MaxMediaBytes     = 12 << 20
+	signWindow        = 30 * time.Minute
 )
 
 // UnknownVariablesError lists placeholders that are not allowed.
@@ -39,6 +71,7 @@ type Caller struct {
 	UserID         int64
 	OrganizationID int64
 	BrandID        int64
+	Filter         scopefilter.Filter
 }
 
 // Input creates or patches template metadata.
@@ -65,10 +98,70 @@ type ListFilter struct {
 }
 
 // Service is the contract template use case.
-type Service struct{ repo *repository.Store }
+type Service struct {
+	repo    *repository.Store
+	otp     OTPService
+	storage platstorage.Driver
+	out     outbox.Enqueuer
+	now     func() time.Time
+}
 
 // New creates a service.
-func New(repo *repository.Store) *Service { return &Service{repo: repo} }
+func New(repo *repository.Store, opts ...Option) *Service {
+	s := &Service{repo: repo, now: time.Now}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
+}
+
+// Option wires optional runtime dependencies for the signing flow.
+type Option func(*Service)
+
+func WithOTP(svc OTPService) Option { return func(s *Service) { s.otp = svc } }
+func WithStorage(store platstorage.Driver) Option {
+	return func(s *Service) { s.storage = store }
+}
+func WithOutbox(out outbox.Enqueuer) Option { return func(s *Service) { s.out = out } }
+func WithClock(now func() time.Time) Option {
+	return func(s *Service) {
+		if now != nil {
+			s.now = now
+		}
+	}
+}
+
+// OTPService is the phone OTP port used by contract signing.
+type OTPService interface {
+	Request(ctx context.Context, in otp.RequestInput) (otp.RequestResult, error)
+	Verify(ctx context.Context, in otp.VerifyInput) (otp.Verified, error)
+}
+
+type CreateFromServiceInput struct {
+	TemplateUUID uuid.UUID
+	Locale       string
+}
+
+type OTPInput struct {
+	IP        string
+	UserAgent string
+	Locale    string
+}
+
+type SignatureInput struct {
+	Code      string
+	PNGBase64 string
+	IP        string
+	UserAgent string
+}
+
+type MediaInput struct {
+	Body        io.Reader
+	Size        int64
+	Filename    string
+	Title       string
+	ContentType string
+}
 
 // Variables returns the fixed allow-list.
 func (s *Service) Variables() []model.Variable { return variables }
@@ -322,6 +415,261 @@ func (s *Service) PutLocale(ctx context.Context, c Caller, id uuid.UUID, in Loca
 	return localeView(row), nil
 }
 
+// CreateForService freezes a rendered contract snapshot for a draft/pending service.
+func (s *Service) CreateForService(ctx context.Context, c Caller, serviceUUID uuid.UUID, in CreateFromServiceInput) (model.Contract, error) {
+	f := c.Filter
+	row, err := s.repo.Queries().GetServiceForContractByUUID(ctx, db.GetServiceForContractByUUIDParams{
+		Uuid: serviceUUID, BrandID: brandArg(c, f), OrgIds: orgIDsArg(c, f),
+	})
+	if err != nil {
+		return model.Contract{}, notFound(err)
+	}
+	if f.UserOnly() && (!row.CreatedByUserID.Valid || row.CreatedByUserID.Int64 != f.UserID) {
+		return model.Contract{}, ErrNotFound
+	}
+	if row.Status != "draft" && row.Status != "pending" {
+		return model.Contract{}, fmt.Errorf("%w: service status %s", ErrUnsupportedStatus, row.Status)
+	}
+	tpl, err := s.resolveTemplateForInstance(ctx, c.BrandID, in.TemplateUUID)
+	if err != nil {
+		return model.Contract{}, err
+	}
+	loc, err := s.resolveLocale(ctx, tpl.ID, in.Locale)
+	if err != nil {
+		return model.Contract{}, err
+	}
+	rendered := pdfrender.Fill(pdfrender.SanitizeHTML(loc.Html), serviceValues(row), nil)
+	sum := sha256Hex([]byte(rendered))
+
+	tx, qtx, err := s.repo.Tx(ctx)
+	if err != nil {
+		return model.Contract{}, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	no, err := qtx.NextContractNo(ctx, row.OrganizationID)
+	if err != nil {
+		return model.Contract{}, err
+	}
+	inst, err := qtx.CreateContractInstance(ctx, db.CreateContractInstanceParams{
+		OrganizationID: row.OrganizationID, BrandID: row.BrandID, ContractNo: no,
+		SubjectType: "service", SubjectID: row.ID, TemplateID: tpl.ID, Kind: tpl.Kind,
+		Locale: loc.Locale, TemplateVersion: loc.Version, OtpRequired: tpl.OtpRequired,
+		SignatureRequired: tpl.SignatureRequired, Status: model.StatusPending,
+		RenderedHtml: pgText(rendered), ContentSha256: pgText(sum), CreatedByUserID: int8(c.UserID),
+	})
+	if err != nil {
+		return model.Contract{}, err
+	}
+	if _, err := qtx.UpsertContractSigner(ctx, db.UpsertContractSignerParams{
+		InstanceID: inst.ID, OrganizationID: inst.OrganizationID, BrandID: inst.BrandID,
+		Role: model.SignerCustomer, UserID: pgtype.Int8{Int64: row.CustomerUserID, Valid: true},
+		Name: signerNameString(row.CustomerName, row.CustomerSurname, "Customer"), PhoneE164: row.CustomerPhone,
+	}); err != nil {
+		return model.Contract{}, err
+	}
+	if _, err := qtx.UpsertContractSigner(ctx, db.UpsertContractSignerParams{
+		InstanceID: inst.ID, OrganizationID: inst.OrganizationID, BrandID: inst.BrandID,
+		Role: model.SignerStaff, UserID: row.CreatedByUserID,
+		Name: signerName(row.StaffName, row.StaffSurname, "Staff"),
+	}); err != nil {
+		return model.Contract{}, err
+	}
+	if aff, err := qtx.SetServiceContract(ctx, db.SetServiceContractParams{
+		ServiceID: row.ID, ContractID: pgtype.Int8{Int64: inst.ID, Valid: true},
+	}); err != nil {
+		return model.Contract{}, err
+	} else if aff == 0 {
+		return model.Contract{}, ErrNotFound
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return model.Contract{}, err
+	}
+	return s.viewContract(ctx, inst)
+}
+
+// GetContract returns one contract in the caller's read scope.
+func (s *Service) GetContract(ctx context.Context, c Caller, id uuid.UUID) (model.Contract, error) {
+	inst, err := s.scopedInstance(ctx, c, id)
+	if err != nil {
+		return model.Contract{}, err
+	}
+	return s.viewContract(ctx, inst)
+}
+
+// RequestCustomerOTP sends a contract_sign code to the customer signer.
+func (s *Service) RequestCustomerOTP(ctx context.Context, c Caller, id uuid.UUID, in OTPInput) (otp.RequestResult, error) {
+	if s.otp == nil {
+		return otp.RequestResult{}, ErrOTPRequired
+	}
+	inst, err := s.scopedInstance(ctx, c, id)
+	if err != nil {
+		return otp.RequestResult{}, err
+	}
+	if inst.Status == model.StatusExecuted || inst.Status == model.StatusVoided {
+		return otp.RequestResult{}, ErrAlreadySigned
+	}
+	if !inst.OtpRequired {
+		return otp.RequestResult{}, nil
+	}
+	signer, err := s.repo.Queries().GetContractSigner(ctx, db.GetContractSignerParams{InstanceID: inst.ID, Role: model.SignerCustomer})
+	if err != nil {
+		return otp.RequestResult{}, err
+	}
+	if signer.SignedAt.Valid {
+		return otp.RequestResult{}, ErrAlreadySigned
+	}
+	if !signer.PhoneE164.Valid {
+		return otp.RequestResult{}, fmt.Errorf("%w: customer phone is required", ErrInvalidRequest)
+	}
+	return s.otp.Request(ctx, otp.RequestInput{
+		Phone: signer.PhoneE164.String, Purpose: otp.PurposeContractSign, Locale: in.Locale,
+		IP: strings.TrimSpace(in.IP), UserAgent: trimUA(in.UserAgent),
+	})
+}
+
+// SignCustomer verifies OTP when required and stores customer signature evidence.
+func (s *Service) SignCustomer(ctx context.Context, c Caller, id uuid.UUID, in SignatureInput) (model.Contract, error) {
+	inst, err := s.scopedInstance(ctx, c, id)
+	if err != nil {
+		return model.Contract{}, err
+	}
+	signer, err := s.repo.Queries().GetContractSigner(ctx, db.GetContractSignerParams{InstanceID: inst.ID, Role: model.SignerCustomer})
+	if err != nil {
+		return model.Contract{}, err
+	}
+	if signer.SignedAt.Valid {
+		return model.Contract{}, ErrAlreadySigned
+	}
+	if inst.OtpRequired {
+		if s.otp == nil {
+			return model.Contract{}, ErrOTPRequired
+		}
+		if !signer.PhoneE164.Valid {
+			return model.Contract{}, fmt.Errorf("%w: customer phone is required", ErrInvalidRequest)
+		}
+		verified, err := s.otp.Verify(ctx, otp.VerifyInput{
+			Phone: signer.PhoneE164.String, Purpose: otp.PurposeContractSign, Code: in.Code, IP: strings.TrimSpace(in.IP),
+		})
+		if err != nil {
+			if errors.Is(err, otp.ErrInvalidCode) || errors.Is(err, otp.ErrTooManyAttempts) {
+				return model.Contract{}, ErrInvalidOTP
+			}
+			return model.Contract{}, err
+		}
+		code, err := s.repo.Queries().GetOTPByUUID(ctx, verified.ID)
+		if err != nil {
+			return model.Contract{}, err
+		}
+		if s.now().UTC().After(code.CreatedAt.Time.Add(signWindow)) {
+			return model.Contract{}, ErrWindowExpired
+		}
+		signer, err = s.repo.Queries().SetContractSignerOTPByUUID(ctx, db.SetContractSignerOTPByUUIDParams{
+			SignerID: signer.ID, OtpUuid: verified.ID,
+		})
+		if err != nil {
+			return model.Contract{}, err
+		}
+	}
+	return s.sign(ctx, c, inst, signer, in.PNGBase64, in.IP, in.UserAgent)
+}
+
+// SignStaff stores the authenticated staff user's signature evidence.
+func (s *Service) SignStaff(ctx context.Context, c Caller, id uuid.UUID, in SignatureInput) (model.Contract, error) {
+	inst, err := s.scopedInstance(ctx, c, id)
+	if err != nil {
+		return model.Contract{}, err
+	}
+	signer, err := s.repo.Queries().GetContractSigner(ctx, db.GetContractSignerParams{InstanceID: inst.ID, Role: model.SignerStaff})
+	if err != nil {
+		return model.Contract{}, err
+	}
+	if signer.SignedAt.Valid {
+		return model.Contract{}, ErrAlreadySigned
+	}
+	if c.UserID > 0 && signer.UserID.Valid && signer.UserID.Int64 != c.UserID {
+		return model.Contract{}, ErrNotFound
+	}
+	return s.sign(ctx, c, inst, signer, in.PNGBase64, in.IP, in.UserAgent)
+}
+
+// AddMedia attaches an image to an open contract.
+func (s *Service) AddMedia(ctx context.Context, c Caller, id uuid.UUID, in MediaInput) (model.Media, error) {
+	if s.storage == nil {
+		return model.Media{}, ErrStorageRequired
+	}
+	inst, err := s.scopedInstance(ctx, c, id)
+	if err != nil {
+		return model.Media{}, err
+	}
+	if inst.Status == model.StatusExecuted || inst.Status == model.StatusVoided {
+		return model.Media{}, ErrAlreadySigned
+	}
+	body, mime, sum, err := readSniffed(in.Body, in.Size, MaxMediaBytes, map[string]bool{
+		"image/jpeg": true, "image/png": true, "image/webp": true,
+	})
+	if err != nil {
+		return model.Media{}, err
+	}
+	key := fmt.Sprintf("contracts/%d/%s", inst.ID, uuid.NewString())
+	if err := s.storage.Upload(ctx, platstorage.File{
+		Body: bytes.NewReader(body), Size: int64(len(body)), ContentType: mime, Filename: in.Filename,
+	}, key); err != nil {
+		return model.Media{}, err
+	}
+	row, err := s.repo.Queries().InsertContractMedia(ctx, db.InsertContractMediaParams{
+		InstanceID: inst.ID, OrganizationID: inst.OrganizationID, BrandID: inst.BrandID,
+		StorageKey: key, MimeType: mime, SizeBytes: int64(len(body)), Sha256: sum,
+		Title: pgText(strings.TrimSpace(in.Title)), SortOrder: 0, UploadedByUserID: int8(c.UserID),
+	})
+	if err != nil {
+		return model.Media{}, err
+	}
+	return mediaView(row), nil
+}
+
+// DeleteMedia removes an image while the contract is still open.
+func (s *Service) DeleteMedia(ctx context.Context, c Caller, id, mediaID uuid.UUID) error {
+	inst, err := s.scopedInstance(ctx, c, id)
+	if err != nil {
+		return err
+	}
+	if inst.Status == model.StatusExecuted || inst.Status == model.StatusVoided {
+		return ErrAlreadySigned
+	}
+	row, err := s.repo.Queries().GetContractMediaByUUID(ctx, db.GetContractMediaByUUIDParams{Uuid: mediaID, InstanceID: inst.ID})
+	if err != nil {
+		return notFound(err)
+	}
+	if aff, err := s.repo.Queries().DeleteContractMedia(ctx, db.DeleteContractMediaParams{Uuid: mediaID, InstanceID: inst.ID}); err != nil {
+		return err
+	} else if aff == 0 {
+		return ErrNotFound
+	}
+	if s.storage != nil {
+		_ = s.storage.Delete(ctx, row.StorageKey)
+	}
+	return nil
+}
+
+// Void marks a contract voided with a required reason.
+func (s *Service) Void(ctx context.Context, c Caller, id uuid.UUID, reason string) (model.Contract, error) {
+	reason = strings.TrimSpace(reason)
+	if reason == "" {
+		return model.Contract{}, fmt.Errorf("%w: reason is required", ErrInvalidRequest)
+	}
+	inst, err := s.scopedInstance(ctx, c, id)
+	if err != nil {
+		return model.Contract{}, err
+	}
+	row, err := s.repo.Queries().VoidContractInstance(ctx, db.VoidContractInstanceParams{
+		ID: inst.ID, VoidReason: reason, VoidedByUserID: int8(c.UserID),
+	})
+	if err != nil {
+		return model.Contract{}, err
+	}
+	return s.viewContract(ctx, row)
+}
+
 // Render fills the selected locale (requested, then tr, then en) with escaped values.
 func (s *Service) Render(ctx context.Context, c Caller, in model.RenderInput) (model.Rendered, error) {
 	tpl, err := s.repo.Queries().GetContractTemplateByUUID(ctx, db.GetContractTemplateByUUIDParams{Uuid: in.TemplateUUID, BrandID: c.BrandID})
@@ -359,6 +707,374 @@ func (s *Service) resolveLocale(ctx context.Context, templateID int64, requested
 		}
 	}
 	return db.ContractTemplateLocale{}, ErrNotFound
+}
+
+func (s *Service) resolveTemplateForInstance(ctx context.Context, brandID int64, templateID uuid.UUID) (db.ContractTemplate, error) {
+	if templateID != uuid.Nil {
+		tpl, err := s.repo.Queries().GetContractTemplateByUUID(ctx, db.GetContractTemplateByUUIDParams{Uuid: templateID, BrandID: brandID})
+		if err != nil {
+			return db.ContractTemplate{}, notFound(err)
+		}
+		if !tpl.IsActive {
+			return db.ContractTemplate{}, fmt.Errorf("%w: template is inactive", ErrInvalidRequest)
+		}
+		return tpl, nil
+	}
+	tpl, err := s.repo.Queries().GetDefaultContractTemplate(ctx, db.GetDefaultContractTemplateParams{BrandID: brandID, Kind: model.KindVehicleIntake})
+	if err != nil {
+		return db.ContractTemplate{}, notFound(err)
+	}
+	if !tpl.IsActive {
+		return db.ContractTemplate{}, fmt.Errorf("%w: default template is inactive", ErrInvalidRequest)
+	}
+	return tpl, nil
+}
+
+func (s *Service) scopedInstance(ctx context.Context, c Caller, id uuid.UUID) (db.ContractInstance, error) {
+	f := c.Filter
+	row, err := s.repo.Queries().GetContractInstanceByUUIDScoped(ctx, db.GetContractInstanceByUUIDScopedParams{
+		Uuid: id, BrandID: brandArg(c, f), OrgIds: orgIDsArg(c, f),
+	})
+	if err != nil {
+		return db.ContractInstance{}, notFound(err)
+	}
+	if f.UserOnly() {
+		svc, err := s.repo.Queries().GetServiceForContractByID(ctx, row.SubjectID)
+		if err != nil {
+			return db.ContractInstance{}, err
+		}
+		if !svc.CreatedByUserID.Valid || svc.CreatedByUserID.Int64 != f.UserID {
+			return db.ContractInstance{}, ErrNotFound
+		}
+	}
+	return row, nil
+}
+
+func (s *Service) sign(ctx context.Context, c Caller, inst db.ContractInstance, signer db.ContractSigner, png64, ip, ua string) (model.Contract, error) {
+	var body []byte
+	var sum, key string
+	if strings.TrimSpace(png64) != "" {
+		if s.storage == nil {
+			return model.Contract{}, ErrStorageRequired
+		}
+		var err error
+		body, sum, err = decodePNGBase64(png64)
+		if err != nil {
+			return model.Contract{}, err
+		}
+		key = fmt.Sprintf("contracts/%d/signatures/%s.png", inst.ID, uuid.NewString())
+		if err := s.storage.Upload(ctx, platstorage.File{
+			Body: bytes.NewReader(body), Size: int64(len(body)), ContentType: "image/png", Filename: signer.Role + ".png",
+		}, key); err != nil {
+			return model.Contract{}, err
+		}
+	} else if inst.SignatureRequired {
+		return model.Contract{}, fmt.Errorf("%w: signature_png is required", ErrInvalidRequest)
+	}
+
+	tx, qtx, err := s.repo.Tx(ctx)
+	if err != nil {
+		return model.Contract{}, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	locked, err := qtx.GetContractInstanceForUpdate(ctx, inst.ID)
+	if err != nil {
+		return model.Contract{}, err
+	}
+	if locked.Status == model.StatusExecuted || locked.Status == model.StatusVoided {
+		return model.Contract{}, ErrAlreadySigned
+	}
+	current, err := qtx.GetContractSigner(ctx, db.GetContractSignerParams{InstanceID: locked.ID, Role: signer.Role})
+	if err != nil {
+		return model.Contract{}, err
+	}
+	if current.SignedAt.Valid {
+		return model.Contract{}, ErrAlreadySigned
+	}
+	if key != "" {
+		if _, err := qtx.InsertContractSignature(ctx, db.InsertContractSignatureParams{
+			SignerID: current.ID, InstanceID: locked.ID, OrganizationID: locked.OrganizationID, BrandID: locked.BrandID,
+			StorageKey: key, Sha256: sum, IpAddress: netipOrNil(ip), UserAgent: pgText(trimUA(ua)),
+		}); err != nil {
+			return model.Contract{}, err
+		}
+	}
+	if _, err := qtx.MarkContractSignerSigned(ctx, current.ID); err != nil {
+		return model.Contract{}, err
+	}
+	after, err := qtx.ListContractSigners(ctx, locked.ID)
+	if err != nil {
+		return model.Contract{}, err
+	}
+	allSigned := len(after) >= 2
+	for _, sg := range after {
+		allSigned = allSigned && sg.SignedAt.Valid
+	}
+	if allSigned {
+		locked, err = qtx.ExecuteContractInstance(ctx, db.ExecuteContractInstanceParams{
+			ID: locked.ID, RenderedHtml: locked.RenderedHtml.String, ContentSha256: locked.ContentSha256.String,
+		})
+		if err != nil {
+			return model.Contract{}, err
+		}
+		if s.out == nil {
+			return model.Contract{}, ErrOutboxRequired
+		}
+		id, uid := locked.ID, locked.Uuid
+		ev := events.New(events.ContractExecuted).WithTenant(locked.OrganizationID).
+			WithEntity("contract", &id, &uid).
+			WithPayload(map[string]any{
+				"contract_uuid":   locked.Uuid.String(),
+				"contract_no":     locked.ContractNo,
+				"subject_type":    locked.SubjectType,
+				"subject_id":      locked.SubjectID,
+				"organization_id": locked.OrganizationID,
+				"brand_id":        locked.BrandID,
+			})
+		if c.UserID > 0 {
+			ev = ev.WithActor(c.UserID)
+		}
+		if err := s.out.Enqueue(ctx, tx, ev); err != nil {
+			return model.Contract{}, err
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return model.Contract{}, err
+	}
+	return s.viewContract(ctx, locked)
+}
+
+func (s *Service) viewContract(ctx context.Context, row db.ContractInstance) (model.Contract, error) {
+	signers, err := s.repo.Queries().ListContractSigners(ctx, row.ID)
+	if err != nil {
+		return model.Contract{}, err
+	}
+	media, err := s.repo.Queries().ListContractMedia(ctx, row.ID)
+	if err != nil {
+		return model.Contract{}, err
+	}
+	v := model.Contract{
+		UUID: row.Uuid, ContractNo: row.ContractNo, SubjectType: row.SubjectType, SubjectID: row.SubjectID,
+		Kind: row.Kind, Locale: row.Locale, TemplateVersion: row.TemplateVersion,
+		OTPRequired: row.OtpRequired, SignatureRequired: row.SignatureRequired, Status: row.Status,
+		CreatedAt: row.CreatedAt.Time, UpdatedAt: row.UpdatedAt.Time,
+	}
+	if row.RenderedHtml.Valid {
+		v.RenderedHTML = row.RenderedHtml.String
+	}
+	if row.ContentSha256.Valid {
+		v.ContentSHA256 = row.ContentSha256.String
+	}
+	if row.ExecutedAt.Valid {
+		t := row.ExecutedAt.Time
+		v.ExecutedAt = &t
+	}
+	if row.VoidedAt.Valid {
+		t := row.VoidedAt.Time
+		v.VoidedAt = &t
+	}
+	if row.VoidReason.Valid {
+		v.VoidReason = row.VoidReason.String
+	}
+	v.Signers = make([]model.Signer, 0, len(signers))
+	for _, sg := range signers {
+		item := signerView(sg)
+		if sig, err := s.repo.Queries().GetLatestContractSignature(ctx, sg.ID); err == nil {
+			item.Signature = ptrSignature(signatureView(sig))
+		} else if !errors.Is(err, pgx.ErrNoRows) {
+			return model.Contract{}, err
+		}
+		v.Signers = append(v.Signers, item)
+	}
+	v.Media = make([]model.Media, 0, len(media))
+	for _, m := range media {
+		v.Media = append(v.Media, mediaView(m))
+	}
+	return v, nil
+}
+
+func brandArg(c Caller, f scopefilter.Filter) pgtype.Int8 {
+	if f.Scope == rbac.ScopeAll {
+		return pgtype.Int8{}
+	}
+	if f.BrandID != 0 {
+		return pgtype.Int8{Int64: f.BrandID, Valid: true}
+	}
+	if c.BrandID != 0 {
+		return pgtype.Int8{Int64: c.BrandID, Valid: true}
+	}
+	return pgtype.Int8{}
+}
+
+func orgIDsArg(c Caller, f scopefilter.Filter) []int64 {
+	if f.Scope != "" {
+		return f.OrgIDsArg()
+	}
+	if c.OrganizationID != 0 {
+		return []int64{c.OrganizationID}
+	}
+	return nil
+}
+
+func serviceValues(row db.GetServiceForContractByUUIDRow) map[string]string {
+	vehicle := strings.TrimSpace(strings.Join([]string{
+		row.CarBrandName.String, row.CarModelName.String, modelYearString(row.ModelYear),
+	}, " "))
+	return map[string]string{
+		"customer_name":  signerNameString(row.CustomerName, row.CustomerSurname, ""),
+		"customer_phone": row.CustomerPhone.String,
+		"customer_email": row.CustomerEmail.String,
+		"plate":          row.Plate.String,
+		"vin":            row.Vin.String,
+		"vehicle_label":  vehicle,
+		"service_no":     row.ServiceNo,
+		"package":        row.Package.String,
+		"org_name":       row.OrganizationName,
+		"org_phone":      row.OrganizationPhone,
+		"org_email":      row.OrganizationEmail,
+		"org_address":    row.OrganizationAddress,
+		"staff_name":     signerName(row.StaffName, row.StaffSurname, ""),
+		"today":          time.Now().Format("2006-01-02"),
+	}
+}
+
+func signerName(name, surname pgtype.Text, fallback string) string {
+	full := strings.TrimSpace(strings.TrimSpace(name.String) + " " + strings.TrimSpace(surname.String))
+	if full == "" {
+		return fallback
+	}
+	return full
+}
+
+func signerNameString(name, surname, fallback string) string {
+	full := strings.TrimSpace(strings.TrimSpace(name) + " " + strings.TrimSpace(surname))
+	if full == "" {
+		return fallback
+	}
+	return full
+}
+
+func modelYearString(y pgtype.Int2) string {
+	if !y.Valid {
+		return ""
+	}
+	return fmt.Sprint(y.Int16)
+}
+
+func netipOrNil(raw string) *netip.Addr {
+	addr, err := netip.ParseAddr(strings.TrimSpace(raw))
+	if err != nil {
+		return nil
+	}
+	return &addr
+}
+
+func decodePNGBase64(raw string) ([]byte, string, error) {
+	raw = strings.TrimSpace(raw)
+	if i := strings.Index(raw, ","); strings.HasPrefix(raw, "data:") && i >= 0 {
+		raw = raw[i+1:]
+	}
+	dec := base64.NewDecoder(base64.StdEncoding, strings.NewReader(raw))
+	body, err := io.ReadAll(io.LimitReader(dec, MaxSignatureBytes+1))
+	if err != nil {
+		return nil, "", fmt.Errorf("%w: signature_png must be base64", ErrInvalidRequest)
+	}
+	if len(body) == 0 || len(body) > MaxSignatureBytes {
+		return nil, "", fmt.Errorf("%w: signature_png exceeds 1 MB", ErrInvalidRequest)
+	}
+	if http.DetectContentType(body) != "image/png" {
+		return nil, "", fmt.Errorf("%w: signature_png must be PNG", ErrInvalidRequest)
+	}
+	return body, sha256Hex(body), nil
+}
+
+func readSniffed(r io.Reader, declared, max int64, allowed map[string]bool) ([]byte, string, string, error) {
+	if r == nil {
+		return nil, "", "", fmt.Errorf("%w: file is required", ErrInvalidRequest)
+	}
+	if declared > max {
+		return nil, "", "", fmt.Errorf("%w: file is too large", ErrInvalidRequest)
+	}
+	body, err := io.ReadAll(io.LimitReader(r, max+1))
+	if err != nil {
+		return nil, "", "", err
+	}
+	if len(body) == 0 || int64(len(body)) > max {
+		return nil, "", "", fmt.Errorf("%w: file is too large", ErrInvalidRequest)
+	}
+	mime := http.DetectContentType(body)
+	if !allowed[mime] {
+		return nil, "", "", fmt.Errorf("%w: unsupported file type", ErrInvalidRequest)
+	}
+	return body, mime, sha256Hex(body), nil
+}
+
+func sha256Hex(body []byte) string {
+	sum := sha256.Sum256(body)
+	return hex.EncodeToString(sum[:])
+}
+
+func pgText(s string) pgtype.Text {
+	if strings.TrimSpace(s) == "" {
+		return pgtype.Text{}
+	}
+	return pgtype.Text{String: strings.TrimSpace(s), Valid: true}
+}
+
+func trimUA(s string) string {
+	s = strings.TrimSpace(s)
+	if len(s) > 512 {
+		return s[:512]
+	}
+	return s
+}
+
+func ptrSignature(s model.Signature) *model.Signature { return &s }
+
+func signerView(row db.ContractSigner) model.Signer {
+	v := model.Signer{UUID: row.Uuid, Role: row.Role, Name: row.Name}
+	if row.UserID.Valid {
+		id := row.UserID.Int64
+		v.UserID = &id
+	}
+	if row.PhoneE164.Valid {
+		v.PhoneE164 = row.PhoneE164.String
+	}
+	if row.OtpVerifiedAt.Valid {
+		t := row.OtpVerifiedAt.Time
+		v.OTPVerifiedAt = &t
+	}
+	if row.SignedAt.Valid {
+		t := row.SignedAt.Time
+		v.SignedAt = &t
+	}
+	return v
+}
+
+func signatureView(row db.ContractSignature) model.Signature {
+	v := model.Signature{
+		UUID: row.Uuid, StorageKey: row.StorageKey, SHA256: row.Sha256,
+		CreatedAt: row.CreatedAt.Time,
+	}
+	if row.IpAddress != nil {
+		v.IPAddress = row.IpAddress.String()
+	}
+	if row.UserAgent.Valid {
+		v.UserAgent = row.UserAgent.String
+	}
+	return v
+}
+
+func mediaView(row db.ContractMedium) model.Media {
+	v := model.Media{
+		UUID: row.Uuid, StorageKey: row.StorageKey, MIMEType: row.MimeType,
+		SizeBytes: row.SizeBytes, SHA256: row.Sha256, SortOrder: row.SortOrder,
+		CreatedAt: row.CreatedAt.Time,
+	}
+	if row.Title.Valid {
+		v.Title = row.Title.String
+	}
+	return v
 }
 
 // PrepareHTML sanitizes template HTML and rejects unknown variables.

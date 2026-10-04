@@ -324,6 +324,7 @@ const CustomerCreated = "customer.created"
 // Contracts domain events.
 const (
 	ContractsInstanceSigned = "contracts.instance_signed"
+	ContractExecuted        = "contract.executed"
 )
 
 // Auth / tenant notification source events (existing Notification Center templates).
@@ -600,6 +601,7 @@ func catalogConstants() []string {
 		CustomerMerged,
 		CustomerCreated,
 		ContractsInstanceSigned,
+		ContractExecuted,
 		AuthWelcome,
 		AuthEmailVerification,
 		AuthPasswordReset,

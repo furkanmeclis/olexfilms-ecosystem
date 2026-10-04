@@ -117,6 +117,10 @@ tags:
       Vehicle services (TEC-97/TEC-179): draft by the serving organization,
       items from its stock, the legacy status flow and images. Completion
       with stock consumption arrives with TEC-180.
+  - name: Contracts
+    description: >-
+      Vehicle intake/service contracts: rendered template snapshots, customer
+      OTP + KVKK proof, canvas signatures, staff signature, media and voiding.
   - name: Warranties
     description: >-
       Warranties opened from completed services (TEC-98): panel and portal
@@ -4702,6 +4706,286 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeContractTemplate"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/services/{uuid}/contract:
+    post:
+      tags: [Contracts]
+      operationId: createServiceContract
+      summary: Create a contract instance from a service
+      description: Requires contracts.write. The service must be draft or pending; the default vehicle_intake template is used unless `template_uuid` is provided.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateServiceContractRequest"
+      responses:
+        "201":
+          description: Contract instance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeContract"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/contracts/{uuid}:
+    get:
+      tags: [Contracts]
+      operationId: getContract
+      summary: Get contract content, signers and media
+      description: Requires contracts.read in the active organization scope.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Contract instance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeContract"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/contracts/{uuid}/signers/customer/otp:
+    post:
+      tags: [Contracts]
+      operationId: requestContractCustomerOtp
+      summary: Send customer contract signing OTP
+      description: Requires contracts.write. The OTP purpose is `contract_sign` and the message carries the customer's KVKK notice.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "202":
+          description: OTP request accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeContractOTP"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/contracts/{uuid}/signers/customer/sign:
+    post:
+      tags: [Contracts]
+      operationId: signContractCustomer
+      summary: Sign the customer slot
+      description: Requires contracts.write. When OTP is required, `code` must match the customer's contract_sign OTP and the signing window is 30 minutes from OTP creation.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractSignRequest"
+      responses:
+        "200":
+          description: Updated contract
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeContract"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/contracts/{uuid}/signers/staff/sign:
+    post:
+      tags: [Contracts]
+      operationId: signContractStaff
+      summary: Sign the staff slot
+      description: Requires contracts.write. Uses the authenticated staff user; no OTP is required.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractStaffSignRequest"
+      responses:
+        "200":
+          description: Updated contract
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeContract"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/contracts/{uuid}/media:
+    post:
+      tags: [Contracts]
+      operationId: addContractMedia
+      summary: Attach contract media
+      description: Requires contracts.write. Multipart `file` or `media`; jpeg/png/webp only, max 12 MB.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                title:
+                  type: string
+      responses:
+        "201":
+          description: Attached media
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeContractMedia"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/contracts/{uuid}/media/{media}:
+    delete:
+      tags: [Contracts]
+      operationId: deleteContractMedia
+      summary: Delete contract media before execution
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: media
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Deleted
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/contracts/{uuid}/void:
+    post:
+      tags: [Contracts]
+      operationId: voidContract
+      summary: Void a contract with a required reason
+      description: Requires contracts.void. Executed contracts keep their frozen content.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoidContractRequest"
+      responses:
+        "200":
+          description: Voided contract
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeContract"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "403":
@@ -11783,6 +12067,166 @@ paths:
           $ref: "#/components/responses/QRLoginExpired"
         "426":
           $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/measurement-devices:
+    get:
+      tags: [Measurements]
+      operationId: listMeasurementDevices
+      summary: List NexPTG measurement devices
+      description: Requires the measurements module and `measurement_devices.manage` in the active organization. Inactive devices are included with `is_active=false`.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Devices
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMeasurementDeviceList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Measurements]
+      operationId: createMeasurementDevice
+      summary: Register a NexPTG measurement device
+      description: Requires the measurements module and `measurement_devices.manage`. `serial` is unique inside the active organization; duplicates answer 409 `MEASUREMENT_DEVICE_SERIAL_EXISTS`. Device type is fixed to NexPTG.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MeasurementDeviceRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMeasurementDevice"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/measurement-devices/{uuid}:
+    patch:
+      tags: [Measurements]
+      operationId: updateMeasurementDevice
+      summary: Update a NexPTG measurement device
+      description: Updates `label`, `model` and `is_active`; serial and type are immutable. Requires the measurements module and `measurement_devices.manage`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MeasurementDevicePatchRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMeasurementDevice"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/measurements:
+    get:
+      tags: [Measurements]
+      operationId: listMeasurements
+      summary: List paint measurement results
+      description: Requires the measurements module and `measurements.read`. Managed readers see the active organization; subtree readers see the active organization and descendants. Portal endpoints do not expose measurement data.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: vin
+          in: query
+          schema: { type: string, minLength: 11, maxLength: 17 }
+        - name: device_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - name: measured_from
+          in: query
+          schema: { type: string }
+          description: Date (`YYYY-MM-DD`) or RFC3339 date-time; compared to measured_at, falling back to created_at.
+        - name: measured_to
+          in: query
+          schema: { type: string }
+          description: Date (`YYYY-MM-DD`, exclusive next day) or RFC3339 date-time.
+        - name: status
+          in: query
+          schema: { type: string, enum: [accepted, vin_pending] }
+        - name: linked
+          in: query
+          schema: { type: boolean }
+          description: true for results linked to a service, false for unlinked results.
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Page of measurements
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMeasurementPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/measurements/{uuid}:
+    get:
+      tags: [Measurements]
+      operationId: getMeasurement
+      summary: Get a paint measurement result
+      description: Returns the measurement header, normalized readings, tires and the linked service when present. Records outside the reader's managed/subtree scope answer 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Measurement detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMeasurementDetail"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /v1/mobile/measurements:
     post:
@@ -20503,6 +20947,155 @@ components:
               items: { $ref: "#/components/schemas/ContractTemplateVariable" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
+    ContractStatus:
+      type: string
+      enum: [draft, pending, executed, voided]
+
+    ContractSignerRole:
+      type: string
+      enum: [customer, staff]
+
+    ContractSignature:
+      type: object
+      required: [uuid, storage_key, sha256, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        storage_key: { type: string }
+        sha256: { type: string, pattern: "^[0-9a-f]{64}$" }
+        ip_address: { type: [string, "null"] }
+        user_agent: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+
+    ContractSigner:
+      type: object
+      required: [uuid, role, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        role: { $ref: "#/components/schemas/ContractSignerRole" }
+        user_id: { type: [integer, "null"], format: int64 }
+        name: { type: string }
+        phone_e164: { type: [string, "null"] }
+        otp_verified_at: { type: [string, "null"], format: date-time }
+        signed_at: { type: [string, "null"], format: date-time }
+        signature:
+          oneOf:
+            - $ref: "#/components/schemas/ContractSignature"
+            - type: "null"
+
+    ContractMedia:
+      type: object
+      required: [uuid, storage_key, mime_type, size_bytes, sha256, sort_order, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        storage_key: { type: string }
+        mime_type: { type: string, enum: [image/jpeg, image/png, image/webp] }
+        size_bytes: { type: integer, format: int64, maximum: 12582912 }
+        sha256: { type: string, pattern: "^[0-9a-f]{64}$" }
+        title: { type: [string, "null"] }
+        sort_order: { type: integer }
+        created_at: { type: string, format: date-time }
+
+    Contract:
+      type: object
+      required:
+        - uuid
+        - contract_no
+        - subject_type
+        - subject_id
+        - kind
+        - locale
+        - template_version
+        - otp_required
+        - signature_required
+        - status
+        - signers
+        - media
+        - created_at
+        - updated_at
+      properties:
+        uuid: { type: string, format: uuid }
+        contract_no: { type: integer, format: int64 }
+        subject_type: { type: string, enum: [service, service_subscription] }
+        subject_id: { type: integer, format: int64 }
+        kind: { $ref: "#/components/schemas/ContractTemplateKind" }
+        locale: { type: string, example: tr }
+        template_version: { type: integer }
+        otp_required: { type: boolean }
+        signature_required: { type: boolean }
+        status: { $ref: "#/components/schemas/ContractStatus" }
+        rendered_html: { type: [string, "null"] }
+        content_sha256: { type: [string, "null"], pattern: "^[0-9a-f]{64}$" }
+        executed_at: { type: [string, "null"], format: date-time }
+        voided_at: { type: [string, "null"], format: date-time }
+        void_reason: { type: [string, "null"] }
+        signers:
+          type: array
+          items: { $ref: "#/components/schemas/ContractSigner" }
+        media:
+          type: array
+          items: { $ref: "#/components/schemas/ContractMedia" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    CreateServiceContractRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        template_uuid: { type: [string, "null"], format: uuid }
+        locale: { type: string, example: tr }
+
+    ContractSignRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        code: { type: string, description: "Customer contract_sign OTP code when OTP is required." }
+        signature_png: { type: string, format: byte, description: "Canvas PNG as base64 or data URL. Required when the template requires signatures." }
+
+    ContractStaffSignRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        signature_png: { type: string, format: byte }
+
+    VoidContractRequest:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1 }
+
+    ContractOTP:
+      type: object
+      required: [channel, expires_at, resend_at]
+      properties:
+        channel: { type: string, example: whatsapp }
+        expires_at: { type: string, format: date-time }
+        resend_at: { type: string, format: date-time }
+
+    EnvelopeContract:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Contract" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeContractMedia:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ContractMedia" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeContractOTP:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ContractOTP" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
     ModuleLevel:
       type: string
       enum: [core, standard, addon]
@@ -23230,6 +23823,162 @@ components:
           type: string
           description: Accepted for compatibility with the previous mobile API (not stored)
         app_version: { type: string, maxLength: 32 }
+
+    MeasurementDeviceRequest:
+      type: object
+      required: [serial]
+      additionalProperties: false
+      properties:
+        serial: { type: string, maxLength: 64 }
+        label: { type: [string, "null"], maxLength: 128 }
+        model: { type: [string, "null"], maxLength: 64 }
+        is_active: { type: boolean, default: true }
+
+    MeasurementDevicePatchRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        label: { type: [string, "null"], maxLength: 128 }
+        model: { type: [string, "null"], maxLength: 64 }
+        is_active: { type: boolean }
+
+    MeasurementDevice:
+      type: object
+      required: [uuid, serial, type, label, model, is_active, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        serial: { type: string }
+        type: { type: string, enum: [NexPTG] }
+        label: { type: [string, "null"] }
+        model: { type: [string, "null"] }
+        is_active: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    MeasurementOrganizationRef:
+      type: object
+      required: [uuid, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+
+    MeasurementServiceRef:
+      type: object
+      required: [uuid, service_no, phase, link_source, confirmed_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        service_no: { type: string }
+        phase: { type: string, enum: [before, after] }
+        link_source: { type: string, enum: [auto, manual] }
+        confirmed_at: { type: [string, "null"], format: date-time }
+
+    MeasurementSummary:
+      type: object
+      required: [uuid, organization, vin, status, source, device_serial, device, service, measured_at, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        organization: { $ref: "#/components/schemas/MeasurementOrganizationRef" }
+        vin: { type: [string, "null"] }
+        status: { type: string, enum: [accepted, vin_pending] }
+        source: { type: string, enum: [mobile, legacy_import] }
+        device_serial: { type: [string, "null"] }
+        device:
+          oneOf:
+            - $ref: "#/components/schemas/MeasurementDevice"
+            - type: "null"
+        service:
+          oneOf:
+            - $ref: "#/components/schemas/MeasurementServiceRef"
+            - type: "null"
+        measured_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+
+    MeasurementValue:
+      type: object
+      required: [place_id, part_type, is_inside, position, value_um, interpretation, substrate_type, measured_at]
+      properties:
+        place_id: { type: string }
+        part_type: { type: string }
+        is_inside: { type: boolean }
+        position: { type: [integer, "null"] }
+        value_um: { type: [string, "null"] }
+        interpretation: { type: [integer, "null"], minimum: -1, maximum: 5 }
+        substrate_type: { type: [string, "null"] }
+        measured_at: { type: [string, "null"], format: date-time }
+
+    MeasurementTire:
+      type: object
+      required: [section, width, profile, diameter, maker, season, tread_depth_1_mm, tread_depth_2_mm]
+      properties:
+        section: { type: [string, "null"] }
+        width: { type: [string, "null"] }
+        profile: { type: [string, "null"] }
+        diameter: { type: [string, "null"] }
+        maker: { type: [string, "null"] }
+        season: { type: [string, "null"] }
+        tread_depth_1_mm: { type: [string, "null"] }
+        tread_depth_2_mm: { type: [string, "null"] }
+
+    MeasurementDetail:
+      allOf:
+        - $ref: "#/components/schemas/MeasurementSummary"
+        - type: object
+          required: [body_type, pdf_key, raw, values, tires]
+          properties:
+            body_type: { type: [string, "null"] }
+            pdf_key: { type: [string, "null"] }
+            raw:
+              type: object
+              additionalProperties: true
+            values:
+              type: array
+              items: { $ref: "#/components/schemas/MeasurementValue" }
+            tires:
+              type: array
+              items: { $ref: "#/components/schemas/MeasurementTire" }
+
+    EnvelopeMeasurementDevice:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/MeasurementDevice" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeMeasurementDeviceList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/MeasurementDevice" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeMeasurementPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/MeasurementSummary" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeMeasurementDetail:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/MeasurementDetail" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     # K28 / TEC-233: minimal F2 storage; F3-02 (TEC-113) makes vin
     # mandatory and reads the parts.

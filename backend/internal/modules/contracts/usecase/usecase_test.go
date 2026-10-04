@@ -2,6 +2,9 @@ package usecase
 
 import (
 	"context"
+	"encoding/base64"
+	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -10,7 +13,13 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/repository"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/otp"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -150,4 +159,201 @@ func TestRenderFallsBackToTurkishAndEscapesValues(t *testing.T) {
 	if !strings.Contains(rendered.HTML, "&lt;Ada &amp; Co&gt;") {
 		t.Fatalf("value was not escaped: %s", rendered.HTML)
 	}
+}
+
+func TestSigningFlowExecutesOnce(t *testing.T) {
+	d := newTestDB(t)
+	f := d.signingFixture(t, d.caller.OrganizationID)
+
+	if _, err := f.svc.SignCustomer(d.ctx, f.caller, f.contract.UUID, SignatureInput{
+		Code: "000000", PNGBase64: pngBase64(),
+	}); !errors.Is(err, ErrInvalidOTP) {
+		t.Fatalf("wrong OTP err = %v, want ErrInvalidOTP", err)
+	}
+	got, err := f.svc.SignCustomer(d.ctx, f.caller, f.contract.UUID, SignatureInput{
+		Code: "123456", PNGBase64: pngBase64(), IP: "203.0.113.10", UserAgent: "go-test",
+	})
+	if err != nil {
+		t.Fatalf("customer sign: %v", err)
+	}
+	if got.Signers[0].SignedAt == nil && got.Signers[1].SignedAt == nil {
+		t.Fatal("customer signer was not marked signed")
+	}
+	got, err = f.svc.SignStaff(d.ctx, f.caller, f.contract.UUID, SignatureInput{PNGBase64: pngBase64()})
+	if err != nil {
+		t.Fatalf("staff sign: %v", err)
+	}
+	if got.Status != model.StatusExecuted || got.ExecutedAt == nil {
+		t.Fatalf("status = %s executed_at=%v, want executed", got.Status, got.ExecutedAt)
+	}
+	if rows := f.out.All(); len(rows) != 1 || rows[0].EventName != "contract.executed" {
+		t.Fatalf("outbox rows = %+v, want one contract.executed", rows)
+	}
+	if _, err := f.svc.SignStaff(d.ctx, f.caller, f.contract.UUID, SignatureInput{PNGBase64: pngBase64()}); !errors.Is(err, ErrAlreadySigned) {
+		t.Fatalf("second staff sign err = %v, want ErrAlreadySigned", err)
+	}
+	if rows := f.out.All(); len(rows) != 1 {
+		t.Fatalf("outbox rows after second sign = %d, want 1", len(rows))
+	}
+}
+
+func TestCustomerSignWindowExpires(t *testing.T) {
+	d := newTestDB(t)
+	f := d.signingFixture(t, d.caller.OrganizationID)
+	f.otp.createdAt = f.now.Add(-31 * time.Minute)
+	if _, err := f.svc.SignCustomer(d.ctx, f.caller, f.contract.UUID, SignatureInput{
+		Code: "123456", PNGBase64: pngBase64(),
+	}); !errors.Is(err, ErrWindowExpired) {
+		t.Fatalf("err = %v, want ErrWindowExpired", err)
+	}
+}
+
+func TestInvalidPNGAndOtherOrgService(t *testing.T) {
+	d := newTestDB(t)
+	f := d.signingFixture(t, d.caller.OrganizationID)
+	if _, err := f.svc.SignStaff(d.ctx, f.caller, f.contract.UUID, SignatureInput{
+		PNGBase64: base64.StdEncoding.EncodeToString([]byte("not a png")),
+	}); !errors.Is(err, ErrInvalidRequest) {
+		t.Fatalf("non-png err = %v, want ErrInvalidRequest", err)
+	}
+	otherOrg := d.createOrg(t)
+	other := d.createService(t, otherOrg.ID)
+	if _, err := f.svc.CreateForService(d.ctx, f.caller, other.Uuid, CreateFromServiceInput{}); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("other org service err = %v, want ErrNotFound", err)
+	}
+}
+
+type signingFixture struct {
+	svc      *Service
+	caller   Caller
+	contract model.Contract
+	otp      *fakeOTP
+	out      *outbox.Memory
+	now      time.Time
+}
+
+func (d *testDB) signingFixture(t *testing.T, orgID int64) signingFixture {
+	t.Helper()
+	now := time.Now().UTC().Truncate(time.Second)
+	fake := &fakeOTP{q: d.q, now: now, createdAt: now}
+	out := outbox.NewMemory()
+	svc := New(repository.New(d.pool, d.q), WithOTP(fake), WithStorage(storage.NewMemory()), WithOutbox(out), WithClock(func() time.Time { return now }))
+	tpl := d.create(t, model.KindVehicleIntake, true)
+	if _, err := svc.PutLocale(d.ctx, d.caller, tpl.UUID, LocaleInput{
+		Locale: "tr", HTML: `<p>{{service_no}} {{customer_name}} {{staff_name}}</p>`,
+	}); err != nil {
+		t.Fatalf("put locale: %v", err)
+	}
+	svcRow := d.createService(t, orgID)
+	caller := d.caller
+	caller.Filter = scopefilter.Filter{Scope: rbac.ScopeManaged, OrgIDs: []int64{orgID}, OrgID: orgID, UserID: d.caller.UserID}
+	contract, err := svc.CreateForService(d.ctx, caller, svcRow.Uuid, CreateFromServiceInput{})
+	if err != nil {
+		t.Fatalf("create contract: %v", err)
+	}
+	return signingFixture{svc: svc, caller: caller, contract: contract, otp: fake, out: out, now: now}
+}
+
+func (d *testDB) createService(t *testing.T, orgID int64) db.Service {
+	t.Helper()
+	customer := d.createUser(t, "customer")
+	staff := d.createUser(t, "staff")
+	carBrand, err := d.q.CreateCarBrand(d.ctx, db.CreateCarBrandParams{
+		ExternalID: pgText("tec287-" + uuid.NewString()), Name: "TEC287 Brand " + uuid.NewString(), ShowName: true, Active: true,
+	})
+	if err != nil {
+		t.Fatalf("car brand: %v", err)
+	}
+	carModel, err := d.q.CreateCarModel(d.ctx, db.CreateCarModelParams{
+		CarBrandID: carBrand.ID, Name: "TEC287 Model " + uuid.NewString(), Active: true,
+	})
+	if err != nil {
+		t.Fatalf("car model: %v", err)
+	}
+	vehicle, err := d.q.CreateVehicle(d.ctx, db.CreateVehicleParams{
+		UserID: customer.ID, OrganizationID: pgtype.Int8{Int64: orgID, Valid: true}, BrandID: d.caller.BrandID,
+		CarBrandID: pgtype.Int8{Int64: carBrand.ID, Valid: true}, CarModelID: pgtype.Int8{Int64: carModel.ID, Valid: true},
+		ModelYear: pgtype.Int2{Int16: 2024, Valid: true}, Plate: pgText("34 TST 287"), PlateNormalized: pgText("34TST287"),
+		PlateCountry: pgText("TR"), Vin: pgText("WVWZZZ1JZ3W386752"),
+	})
+	if err != nil {
+		t.Fatalf("vehicle: %v", err)
+	}
+	row, err := d.q.CreateService(d.ctx, db.CreateServiceParams{
+		ServiceNo:      "DS" + strings.ToUpper(strings.ReplaceAll(uuid.NewString()[:8], "-", "")),
+		OrganizationID: orgID, BrandID: d.caller.BrandID, CustomerUserID: customer.ID, VehicleID: vehicle.ID,
+		CarBrandID: carBrand.ID, CarModelID: carModel.ID, ModelYear: pgtype.Int2{Int16: 2024, Valid: true},
+		Plate: pgText("34 TST 287"), PlateCountry: pgText("TR"), Vin: pgText("WVWZZZ1JZ3W386752"),
+		Package: pgText("PPF"), HasMeasurement: false, Status: "draft", CreatedByUserID: pgtype.Int8{Int64: staff.ID, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("service: %v", err)
+	}
+	return row
+}
+
+func (d *testDB) createUser(t *testing.T, kind string) db.User {
+	t.Helper()
+	id := strings.ReplaceAll(uuid.NewString(), "-", "")
+	phoneSuffix := fmt.Sprintf("%09d", time.Now().UnixNano()%1_000_000_000)
+	row, err := d.q.CreateUser(d.ctx, db.CreateUserParams{
+		Email: pgText(kind + "." + id + "@example.test"), PasswordHash: "x",
+		Name: strings.ToUpper(kind[:1]) + kind[1:], Surname: "TEC287", Status: "active",
+		PhoneE164: pgText("+90555" + phoneSuffix), PhoneVerifiedAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("user: %v", err)
+	}
+	return row
+}
+
+func (d *testDB) createOrg(t *testing.T) db.Organization {
+	t.Helper()
+	row, err := d.q.CreateOrganization(d.ctx, db.CreateOrganizationParams{
+		Slug: "tec287-" + uuid.NewString(), Name: "TEC287 Other", Status: "active", PlanCode: pgText("test"),
+		AccessStartsAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+		Type:           "dealer", ParentID: pgtype.Int8{Int64: d.caller.OrganizationID, Valid: true},
+		BrandID: d.caller.BrandID, Currency: "TRY", Locale: "tr", Timezone: "Europe/Istanbul",
+		Settings: []byte(`{}`),
+	})
+	if err != nil {
+		t.Fatalf("org: %v", err)
+	}
+	return row
+}
+
+type fakeOTP struct {
+	q         *db.Queries
+	now       time.Time
+	createdAt time.Time
+}
+
+func (f *fakeOTP) Request(context.Context, otp.RequestInput) (otp.RequestResult, error) {
+	return otp.RequestResult{Channel: "fake", ExpiresAt: f.now.Add(5 * time.Minute), ResendAt: f.now.Add(time.Minute)}, nil
+}
+
+func (f *fakeOTP) Verify(ctx context.Context, in otp.VerifyInput) (otp.Verified, error) {
+	if strings.TrimSpace(in.Code) != "123456" {
+		return otp.Verified{}, otp.ErrInvalidCode
+	}
+	row, err := f.q.CreatePhoneOTP(ctx, db.CreatePhoneOTPParams{
+		Uuid: uuid.New(), PhoneE164: pgText(in.Phone), CodeHash: "fake", Type: otp.PurposeContractSign,
+		ExpiresAt: pgtype.Timestamptz{Time: f.createdAt.Add(5 * time.Minute), Valid: true}, MaxAttempts: 5,
+		KvkkLocale: pgText("tr"), KvkkVersion: pgtype.Int4{Int32: 1, Valid: true}, MessageSha256: pgText(strings.Repeat("a", 64)),
+		CreatedAt: pgtype.Timestamptz{Time: f.createdAt, Valid: true},
+	})
+	if err != nil {
+		return otp.Verified{}, err
+	}
+	if err := f.q.ConsumeOTPAt(ctx, db.ConsumeOTPAtParams{ID: row.ID, Now: pgtype.Timestamptz{Time: f.now, Valid: true}}); err != nil {
+		return otp.Verified{}, err
+	}
+	return otp.Verified{ID: row.Uuid, Phone: in.Phone}, nil
+}
+
+func pngBase64() string { return base64.StdEncoding.EncodeToString(testPNG()) }
+
+func testPNG() []byte {
+	raw, _ := base64.StdEncoding.DecodeString("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=")
+	return raw
 }

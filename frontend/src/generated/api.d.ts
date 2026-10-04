@@ -2645,6 +2645,163 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/services/{uuid}/contract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a contract instance from a service
+         * @description Requires contracts.write. The service must be draft or pending; the default vehicle_intake template is used unless `template_uuid` is provided.
+         */
+        post: operations["createServiceContract"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contracts/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get contract content, signers and media
+         * @description Requires contracts.read in the active organization scope.
+         */
+        get: operations["getContract"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contracts/{uuid}/signers/customer/otp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send customer contract signing OTP
+         * @description Requires contracts.write. The OTP purpose is `contract_sign` and the message carries the customer's KVKK notice.
+         */
+        post: operations["requestContractCustomerOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contracts/{uuid}/signers/customer/sign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign the customer slot
+         * @description Requires contracts.write. When OTP is required, `code` must match the customer's contract_sign OTP and the signing window is 30 minutes from OTP creation.
+         */
+        post: operations["signContractCustomer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contracts/{uuid}/signers/staff/sign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign the staff slot
+         * @description Requires contracts.write. Uses the authenticated staff user; no OTP is required.
+         */
+        post: operations["signContractStaff"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contracts/{uuid}/media": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Attach contract media
+         * @description Requires contracts.write. Multipart `file` or `media`; jpeg/png/webp only, max 12 MB.
+         */
+        post: operations["addContractMedia"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contracts/{uuid}/media/{media}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete contract media before execution */
+        delete: operations["deleteContractMedia"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contracts/{uuid}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Void a contract with a required reason
+         * @description Requires contracts.void. Executed contracts keep their frozen content.
+         */
+        post: operations["voidContract"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/tenant/documents/render": {
         parameters: {
             query?: never;
@@ -6249,6 +6406,90 @@ export interface paths {
         put?: never;
         /** Reject a QR web sign-in */
         post: operations["postMobileAuthQRReject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/measurement-devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List NexPTG measurement devices
+         * @description Requires the measurements module and `measurement_devices.manage` in the active organization. Inactive devices are included with `is_active=false`.
+         */
+        get: operations["listMeasurementDevices"];
+        put?: never;
+        /**
+         * Register a NexPTG measurement device
+         * @description Requires the measurements module and `measurement_devices.manage`. `serial` is unique inside the active organization; duplicates answer 409 `MEASUREMENT_DEVICE_SERIAL_EXISTS`. Device type is fixed to NexPTG.
+         */
+        post: operations["createMeasurementDevice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/measurement-devices/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update a NexPTG measurement device
+         * @description Updates `label`, `model` and `is_active`; serial and type are immutable. Requires the measurements module and `measurement_devices.manage`.
+         */
+        patch: operations["updateMeasurementDevice"];
+        trace?: never;
+    };
+    "/v1/measurements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List paint measurement results
+         * @description Requires the measurements module and `measurements.read`. Managed readers see the active organization; subtree readers see the active organization and descendants. Portal endpoints do not expose measurement data.
+         */
+        get: operations["listMeasurements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/measurements/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a paint measurement result
+         * @description Returns the measurement header, normalized readings, tires and the linked service when present. Records outside the reader's managed/subtree scope answer 404.
+         */
+        get: operations["getMeasurement"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -11195,6 +11436,126 @@ export interface components {
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
+        ContractStatus: "draft" | "pending" | "executed" | "voided";
+        /** @enum {string} */
+        ContractSignerRole: "customer" | "staff";
+        ContractSignature: {
+            /** Format: uuid */
+            uuid: string;
+            storage_key: string;
+            sha256: string;
+            ip_address?: string | null;
+            user_agent?: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        ContractSigner: {
+            /** Format: uuid */
+            uuid: string;
+            role: components["schemas"]["ContractSignerRole"];
+            /** Format: int64 */
+            user_id?: number | null;
+            name: string;
+            phone_e164?: string | null;
+            /** Format: date-time */
+            otp_verified_at?: string | null;
+            /** Format: date-time */
+            signed_at?: string | null;
+            signature?: components["schemas"]["ContractSignature"] | null;
+        };
+        ContractMedia: {
+            /** Format: uuid */
+            uuid: string;
+            storage_key: string;
+            /** @enum {string} */
+            mime_type: "image/jpeg" | "image/png" | "image/webp";
+            /** Format: int64 */
+            size_bytes: number;
+            sha256: string;
+            title?: string | null;
+            sort_order: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        Contract: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: int64 */
+            contract_no: number;
+            /** @enum {string} */
+            subject_type: "service" | "service_subscription";
+            /** Format: int64 */
+            subject_id: number;
+            kind: components["schemas"]["ContractTemplateKind"];
+            /** @example tr */
+            locale: string;
+            template_version: number;
+            otp_required: boolean;
+            signature_required: boolean;
+            status: components["schemas"]["ContractStatus"];
+            rendered_html?: string | null;
+            content_sha256?: string | null;
+            /** Format: date-time */
+            executed_at?: string | null;
+            /** Format: date-time */
+            voided_at?: string | null;
+            void_reason?: string | null;
+            signers: components["schemas"]["ContractSigner"][];
+            media: components["schemas"]["ContractMedia"][];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        CreateServiceContractRequest: {
+            /** Format: uuid */
+            template_uuid?: string | null;
+            /** @example tr */
+            locale?: string;
+        };
+        ContractSignRequest: {
+            /** @description Customer contract_sign OTP code when OTP is required. */
+            code?: string;
+            /**
+             * Format: byte
+             * @description Canvas PNG as base64 or data URL. Required when the template requires signatures.
+             */
+            signature_png?: string;
+        };
+        ContractStaffSignRequest: {
+            /** Format: byte */
+            signature_png?: string;
+        };
+        VoidContractRequest: {
+            reason: string;
+        };
+        ContractOTP: {
+            /** @example whatsapp */
+            channel: string;
+            /** Format: date-time */
+            expires_at: string;
+            /** Format: date-time */
+            resend_at: string;
+        };
+        EnvelopeContract: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Contract"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeContractMedia: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ContractMedia"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeContractOTP: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ContractOTP"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
         ModuleLevel: "core" | "standard" | "addon";
         ModuleActor: {
             /** Format: uuid */
@@ -13259,6 +13620,125 @@ export interface components {
             /** @description Accepted for compatibility with the previous mobile API (not stored) */
             device_name?: string;
             app_version?: string;
+        };
+        MeasurementDeviceRequest: {
+            serial: string;
+            label?: string | null;
+            model?: string | null;
+            /** @default true */
+            is_active: boolean;
+        };
+        MeasurementDevicePatchRequest: {
+            label?: string | null;
+            model?: string | null;
+            is_active?: boolean;
+        };
+        MeasurementDevice: {
+            /** Format: uuid */
+            uuid: string;
+            serial: string;
+            /** @enum {string} */
+            type: "NexPTG";
+            label: string | null;
+            model: string | null;
+            is_active: boolean;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        MeasurementOrganizationRef: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+        };
+        MeasurementServiceRef: {
+            /** Format: uuid */
+            uuid: string;
+            service_no: string;
+            /** @enum {string} */
+            phase: "before" | "after";
+            /** @enum {string} */
+            link_source: "auto" | "manual";
+            /** Format: date-time */
+            confirmed_at: string | null;
+        };
+        MeasurementSummary: {
+            /** Format: uuid */
+            uuid: string;
+            organization: components["schemas"]["MeasurementOrganizationRef"];
+            vin: string | null;
+            /** @enum {string} */
+            status: "accepted" | "vin_pending";
+            /** @enum {string} */
+            source: "mobile" | "legacy_import";
+            device_serial: string | null;
+            device: components["schemas"]["MeasurementDevice"] | null;
+            service: components["schemas"]["MeasurementServiceRef"] | null;
+            /** Format: date-time */
+            measured_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        MeasurementValue: {
+            place_id: string;
+            part_type: string;
+            is_inside: boolean;
+            position: number | null;
+            value_um: string | null;
+            interpretation: number | null;
+            substrate_type: string | null;
+            /** Format: date-time */
+            measured_at: string | null;
+        };
+        MeasurementTire: {
+            section: string | null;
+            width: string | null;
+            profile: string | null;
+            diameter: string | null;
+            maker: string | null;
+            season: string | null;
+            tread_depth_1_mm: string | null;
+            tread_depth_2_mm: string | null;
+        };
+        MeasurementDetail: components["schemas"]["MeasurementSummary"] & {
+            body_type: string | null;
+            pdf_key: string | null;
+            raw: {
+                [key: string]: unknown;
+            };
+            values: components["schemas"]["MeasurementValue"][];
+            tires: components["schemas"]["MeasurementTire"][];
+        };
+        EnvelopeMeasurementDevice: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["MeasurementDevice"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeMeasurementDeviceList: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["MeasurementDevice"][];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeMeasurementPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["MeasurementSummary"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeMeasurementDetail: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["MeasurementDetail"];
+            meta: components["schemas"]["ResponseMeta"];
         };
         MobileMeasurementRequest: {
             /** @description Idempotency key in the body (alternative to the Idempotency-Key header) */
@@ -20491,6 +20971,243 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    createServiceContract: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CreateServiceContractRequest"];
+            };
+        };
+        responses: {
+            /** @description Contract instance */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContract"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getContract: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Contract instance */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContract"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    requestContractCustomerOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OTP request accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContractOTP"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    signContractCustomer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContractSignRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated contract */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContract"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    signContractStaff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContractStaffSignRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated contract */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContract"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    addContractMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    title?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Attached media */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContractMedia"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    deleteContractMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                media: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    voidContract: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoidContractRequest"];
+            };
+        };
+        responses: {
+            /** @description Voided contract */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContract"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     requestDocumentRender: {
         parameters: {
             query?: never;
@@ -27124,6 +27841,146 @@ export interface operations {
             409: components["responses"]["Conflict"];
             410: components["responses"]["QRLoginExpired"];
             426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    listMeasurementDevices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Devices */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeMeasurementDeviceList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createMeasurementDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeasurementDeviceRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeMeasurementDevice"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    updateMeasurementDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeasurementDevicePatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeMeasurementDevice"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listMeasurements: {
+        parameters: {
+            query?: {
+                vin?: string;
+                device_uuid?: string;
+                /** @description Date (`YYYY-MM-DD`) or RFC3339 date-time; compared to measured_at, falling back to created_at. */
+                measured_from?: string;
+                /** @description Date (`YYYY-MM-DD`, exclusive next day) or RFC3339 date-time. */
+                measured_to?: string;
+                status?: "accepted" | "vin_pending";
+                /** @description true for results linked to a service, false for unlinked results. */
+                linked?: boolean;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of measurements */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeMeasurementPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getMeasurement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Measurement detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeMeasurementDetail"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     postMobileMeasurement: {
