@@ -77,6 +77,17 @@ SELECT * FROM service_price_overrides
 WHERE item_id = sqlc.arg(item_id) AND brand_id = sqlc.arg(brand_id)
 ORDER BY organization_id;
 
+-- name: ListServicePriceOverridesForItems :many
+SELECT * FROM service_price_overrides
+WHERE item_id = ANY(sqlc.arg(item_ids)::bigint[])
+  AND organization_id = sqlc.arg(organization_id)
+  AND brand_id = sqlc.arg(brand_id)
+ORDER BY item_id;
+
+-- name: CountServiceSubscriptionsByItem :one
+SELECT count(*) FROM service_subscriptions
+WHERE item_id = sqlc.arg(item_id) AND brand_id = sqlc.arg(brand_id);
+
 -- name: CreateServiceSubscription :one
 INSERT INTO service_subscriptions (
     organization_id, brand_id, seller_org_id, item_id, assigned_by_org_id, assigned_by_user_id,

@@ -28,6 +28,23 @@ func (q *Queries) AddServiceCatalogModule(ctx context.Context, arg AddServiceCat
 	return err
 }
 
+const countServiceSubscriptionsByItem = `-- name: CountServiceSubscriptionsByItem :one
+SELECT count(*) FROM service_subscriptions
+WHERE item_id = $1 AND brand_id = $2
+`
+
+type CountServiceSubscriptionsByItemParams struct {
+	ItemID  int64 `json:"item_id"`
+	BrandID int64 `json:"brand_id"`
+}
+
+func (q *Queries) CountServiceSubscriptionsByItem(ctx context.Context, arg CountServiceSubscriptionsByItemParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countServiceSubscriptionsByItem, arg.ItemID, arg.BrandID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createServiceCatalogItem = `-- name: CreateServiceCatalogItem :one
 
 INSERT INTO service_catalog_items (
@@ -648,6 +665,49 @@ type ListServicePriceOverridesParams struct {
 
 func (q *Queries) ListServicePriceOverrides(ctx context.Context, arg ListServicePriceOverridesParams) ([]ServicePriceOverride, error) {
 	rows, err := q.db.Query(ctx, listServicePriceOverrides, arg.ItemID, arg.BrandID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ServicePriceOverride{}
+	for rows.Next() {
+		var i ServicePriceOverride
+		if err := rows.Scan(
+			&i.ID,
+			&i.ItemID,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.Price,
+			&i.Currency,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listServicePriceOverridesForItems = `-- name: ListServicePriceOverridesForItems :many
+SELECT id, item_id, organization_id, brand_id, price, currency, created_at, updated_at FROM service_price_overrides
+WHERE item_id = ANY($1::bigint[])
+  AND organization_id = $2
+  AND brand_id = $3
+ORDER BY item_id
+`
+
+type ListServicePriceOverridesForItemsParams struct {
+	ItemIds        []int64 `json:"item_ids"`
+	OrganizationID int64   `json:"organization_id"`
+	BrandID        int64   `json:"brand_id"`
+}
+
+func (q *Queries) ListServicePriceOverridesForItems(ctx context.Context, arg ListServicePriceOverridesForItemsParams) ([]ServicePriceOverride, error) {
+	rows, err := q.db.Query(ctx, listServicePriceOverridesForItems, arg.ItemIds, arg.OrganizationID, arg.BrandID)
 	if err != nil {
 		return nil, err
 	}

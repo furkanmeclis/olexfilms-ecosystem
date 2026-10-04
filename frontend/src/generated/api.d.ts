@@ -6681,6 +6681,99 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/platform/service-catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Center lists service catalog items */
+        get: operations["listPlatformServiceCatalog"];
+        put?: never;
+        /** Center creates a service catalog item */
+        post: operations["createPlatformServiceCatalogItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/service-catalog/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Center reads one service catalog item */
+        get: operations["getPlatformServiceCatalogItem"];
+        put?: never;
+        post?: never;
+        /** Center deactivates an item when it has no subscriptions */
+        delete: operations["deletePlatformServiceCatalogItem"];
+        options?: never;
+        head?: never;
+        /** Center updates or deactivates a service catalog item */
+        patch: operations["patchPlatformServiceCatalogItem"];
+        trace?: never;
+    };
+    "/v1/platform/service-catalog/{uuid}/modules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace modules of a module_bundle item */
+        put: operations["putPlatformServiceCatalogModules"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/service-catalog/{uuid}/overrides/{org_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Center reads one distributor service price override */
+        get: operations["getPlatformServiceCatalogOverride"];
+        /** Center writes one distributor service price override */
+        put: operations["putPlatformServiceCatalogOverride"];
+        post?: never;
+        /** Center removes one distributor service price override */
+        delete: operations["deletePlatformServiceCatalogOverride"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/service-catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Effective service catalog for the active organization
+         * @description Needs service_catalog.read and the service_catalog feature. A distributor sees its own override or the default price; a dealer sees its parent distributor's override or the default price. Prices are omitted when the caller lacks the relevant pricing.* read permission.
+         */
+        get: operations["listServiceCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/accounting/categories": {
         parameters: {
             query?: never;
@@ -12460,6 +12553,99 @@ export interface components {
                 limit: number;
                 offset: number;
             };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        ServiceCatalogCategory: "advertising" | "training" | "setup" | "software" | "module_bundle" | "other";
+        /** @enum {string} */
+        ServiceCatalogRecurrence: "one_time" | "monthly" | "yearly";
+        ServiceCatalogPrice: {
+            amount: string;
+            currency: string;
+            /** @enum {string} */
+            source: "default" | "override";
+        };
+        ServiceCatalogItem: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            description: string;
+            category: components["schemas"]["ServiceCatalogCategory"];
+            /** @description Present only when pricing visibility permits it. */
+            default_price?: string | null;
+            currency: string;
+            recurrence: components["schemas"]["ServiceCatalogRecurrence"];
+            /** @description Present only when pricing visibility permits it. */
+            cancellation_fee?: string | null;
+            /** Format: int64 */
+            contract_template_id?: number | null;
+            is_active: boolean;
+            modules?: string[];
+            /** @description Effective buyer price, omitted or null when pricing visibility is masked. */
+            effective_price?: components["schemas"]["ServiceCatalogPrice"] | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        ServiceCatalogItemInput: {
+            name: string;
+            /** @default  */
+            description: string;
+            category: components["schemas"]["ServiceCatalogCategory"];
+            default_price: string;
+            currency: string;
+            recurrence: components["schemas"]["ServiceCatalogRecurrence"];
+            /** @default 0 */
+            cancellation_fee: string;
+            /** Format: int64 */
+            contract_template_id?: number | null;
+            /** @default true */
+            is_active: boolean;
+        };
+        ServiceCatalogItemPatch: {
+            name?: string;
+            description?: string;
+            category?: components["schemas"]["ServiceCatalogCategory"];
+            default_price?: string;
+            currency?: string;
+            recurrence?: components["schemas"]["ServiceCatalogRecurrence"];
+            cancellation_fee?: string;
+            /** Format: int64 */
+            contract_template_id?: number | null;
+            is_active?: boolean;
+        };
+        ServiceCatalogModulesInput: {
+            modules: string[];
+        };
+        ServiceCatalogOverrideInput: {
+            price: string;
+            currency: string;
+        };
+        ServiceCatalogOverride: {
+            /** Format: uuid */
+            organization_uuid: string;
+            price: string;
+            currency: string;
+        };
+        EnvelopeServiceCatalogItem: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ServiceCatalogItem"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeServiceCatalogList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ServiceCatalogItem"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeServiceCatalogOverride: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ServiceCatalogOverride"];
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeDistributorPrice: {
@@ -26214,6 +26400,274 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    listPlatformServiceCatalog: {
+        parameters: {
+            query?: {
+                category?: components["schemas"]["ServiceCatalogCategory"];
+                active?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service catalog items */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceCatalogList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createPlatformServiceCatalogItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceCatalogItemInput"];
+            };
+        };
+        responses: {
+            /** @description Created item */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceCatalogItem"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getPlatformServiceCatalogItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service catalog item */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceCatalogItem"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deletePlatformServiceCatalogItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deactivated item */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceCatalogItem"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    patchPlatformServiceCatalogItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceCatalogItemPatch"];
+            };
+        };
+        responses: {
+            /** @description Updated item */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceCatalogItem"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    putPlatformServiceCatalogModules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceCatalogModulesInput"];
+            };
+        };
+        responses: {
+            /** @description Updated item */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceCatalogItem"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getPlatformServiceCatalogOverride: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                org_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Override */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceCatalogOverride"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    putPlatformServiceCatalogOverride: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                org_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceCatalogOverrideInput"];
+            };
+        };
+        responses: {
+            /** @description Stored override */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceCatalogOverride"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deletePlatformServiceCatalogOverride: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                org_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDeleted"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listServiceCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Visible service catalog */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceCatalogList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     listAccountingCategories: {
