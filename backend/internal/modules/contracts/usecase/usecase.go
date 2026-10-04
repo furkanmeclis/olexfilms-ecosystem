@@ -1173,7 +1173,7 @@ func int8(id int64) pgtype.Int8 {
 
 func (s *Service) view(ctx context.Context, row db.ContractTemplate, withLocales bool) (model.Template, error) {
 	v := model.Template{
-		UUID: row.Uuid, Name: row.Name, Kind: row.Kind, IsDefault: row.IsDefault,
+		ID: row.ID, UUID: row.Uuid, Name: row.Name, Kind: row.Kind, IsDefault: row.IsDefault,
 		OTPRequired: row.OtpRequired, SignatureRequired: row.SignatureRequired,
 		IsActive: row.IsActive, CreatedAt: row.CreatedAt.Time, UpdatedAt: row.UpdatedAt.Time,
 	}

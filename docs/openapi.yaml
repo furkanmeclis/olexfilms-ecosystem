@@ -21630,8 +21630,9 @@ components:
 
     ContractTemplate:
       type: object
-      required: [uuid, name, kind, is_default, otp_required, signature_required, is_active, created_at, updated_at]
+      required: [id, uuid, name, kind, is_default, otp_required, signature_required, is_active, created_at, updated_at]
       properties:
+        id: { type: integer, format: int64 }
         uuid: { type: string, format: uuid }
         name: { type: string, maxLength: 150 }
         kind: { $ref: "#/components/schemas/ContractTemplateKind" }

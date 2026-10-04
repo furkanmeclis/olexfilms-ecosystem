@@ -11752,6 +11752,8 @@ export interface components {
             updated_at: string;
         };
         ContractTemplate: {
+            /** Format: int64 */
+            id: number;
             /** Format: uuid */
             uuid: string;
             name: string;
