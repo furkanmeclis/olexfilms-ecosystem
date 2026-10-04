@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
@@ -160,11 +161,12 @@ func TestIntegrationPortalContractPDFOwnership(t *testing.T) {
 	if _, err := it.q.SetContractInstancePDFKey(ctx, db.SetContractInstancePDFKeyParams{ID: executed.ID, PdfKey: key}); err != nil {
 		t.Fatalf("set pdf key: %v", err)
 	}
-	if _, err := it.q.CreateContractInstance(ctx, db.CreateContractInstanceParams{
+	pending, err := it.q.CreateContractInstance(ctx, db.CreateContractInstanceParams{
 		OrganizationID: dealer.ID, BrandID: dealer.BrandID, ContractNo: 288002,
 		SubjectType: "service", SubjectID: svc.ID, TemplateID: tpl.ID, Kind: "vehicle_intake", Locale: "tr",
 		TemplateVersion: 1, Status: "pending",
-	}); err != nil {
+	})
+	if err != nil {
 		t.Fatalf("pending contract: %v", err)
 	}
 
@@ -188,5 +190,17 @@ func TestIntegrationPortalContractPDFOwnership(t *testing.T) {
 	}
 	if rec := it.raw("GET", path, strangerTok, "", nil, nil); rec.Code != http.StatusNotFound {
 		t.Fatalf("stranger pdf = %d, want 404", rec.Code)
+	}
+	if rec := it.raw("GET", "/v1/portal/contracts/"+pending.Uuid.String()+"/pdf", ownerTok, "", nil, nil); rec.Code != http.StatusNotFound {
+		t.Fatalf("owner pending contract pdf = %d, want 404", rec.Code)
+	}
+	strangerPage := decodeData[portalCountPage](t, it.custDo("GET", "/v1/portal/contracts", strangerTok, nil, http.StatusOK))
+	if strangerPage.Total != 0 || len(strangerPage.Items) != 0 {
+		t.Fatalf("stranger portal contracts = %+v, want empty", strangerPage)
+	}
+	// The API process drains the outbox too: contract.executed must reach the
+	// PDF scheduler here as well as in cmd/worker.
+	if bus, ok := it.srv.events.(*events.MemoryBus); !ok || bus.HandlerCount(events.ContractExecuted) != 1 {
+		t.Fatalf("contract.executed handlers on the API bus: ok=%v", ok)
 	}
 }

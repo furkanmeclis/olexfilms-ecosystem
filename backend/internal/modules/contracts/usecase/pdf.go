@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"html"
 	"io"
@@ -15,8 +16,9 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/model"
 	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
-	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/msgtemplate"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/phone"
 	platstorage "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -31,46 +33,26 @@ type PortalCaller struct {
 	BrandID int64
 }
 
-// ProcessExecutedEvent renders and stores the immutable PDF for a
-// contract.executed event. It is idempotent: an instance with pdf_key set is
-// left untouched.
-func (s *Service) ProcessExecutedEvent(ctx context.Context, event events.Event) error {
-	if event.EntityID != nil {
-		return s.GenerateExecutedPDF(ctx, *event.EntityID)
-	}
-	if event.EntityUUID != nil {
-		row, err := s.repo.Queries().GetContractInstanceByUUID(ctx, *event.EntityUUID)
-		if err != nil {
-			if errorsIsNoRows(err) {
-				return nil
-			}
-			return err
-		}
-		return s.GenerateExecutedPDF(ctx, row.ID)
-	}
-	if raw, ok := event.Payload["contract_uuid"].(string); ok {
-		id, err := uuid.Parse(raw)
-		if err != nil {
-			return nil
-		}
-		row, err := s.repo.Queries().GetContractInstanceByUUID(ctx, id)
-		if err != nil {
-			if errorsIsNoRows(err) {
-				return nil
-			}
-			return err
-		}
-		return s.GenerateExecutedPDF(ctx, row.ID)
-	}
-	return nil
-}
-
-// GenerateExecutedPDF renders, uploads and records the executed contract PDF.
+// GenerateExecutedPDF renders, uploads and records the executed contract PDF
+// (worker-docs task contract:pdf). It is idempotent and safe under
+// concurrent delivery: the instance row is locked FOR UPDATE for the whole
+// render, so a second run waits and then sees pdf_key already set; pdf_key
+// is written in the same transaction.
 func (s *Service) GenerateExecutedPDF(ctx context.Context, instanceID int64) error {
-	q := s.repo.Queries()
-	row, err := q.GetContractInstanceByID(ctx, instanceID)
+	if s.storage == nil {
+		return ErrStorageRequired
+	}
+	if s.pdf == nil {
+		return pdfrender.ErrNotConfigured
+	}
+	tx, qtx, err := s.repo.Tx(ctx)
 	if err != nil {
-		if errorsIsNoRows(err) {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	row, err := qtx.GetContractInstanceForUpdate(ctx, instanceID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
 		return err
@@ -80,12 +62,6 @@ func (s *Service) GenerateExecutedPDF(ctx context.Context, instanceID int64) err
 	}
 	if row.PdfKey.Valid && strings.TrimSpace(row.PdfKey.String) != "" {
 		return nil
-	}
-	if s.storage == nil {
-		return ErrStorageRequired
-	}
-	if s.pdf == nil {
-		return pdfrender.ErrNotConfigured
 	}
 	pdf, objectKey, err := s.renderExecutedPDF(ctx, row)
 	if err != nil {
@@ -99,13 +75,13 @@ func (s *Service) GenerateExecutedPDF(ctx context.Context, instanceID int64) err
 	}, objectKey); err != nil {
 		return err
 	}
-	if _, err := q.SetContractInstancePDFKey(ctx, db.SetContractInstancePDFKeyParams{ID: row.ID, PdfKey: objectKey}); err != nil {
-		if errorsIsNoRows(err) {
+	if _, err := qtx.SetContractInstancePDFKey(ctx, db.SetContractInstancePDFKeyParams{ID: row.ID, PdfKey: objectKey}); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
 		return err
 	}
-	return nil
+	return tx.Commit(ctx)
 }
 
 func (s *Service) renderExecutedPDF(ctx context.Context, row db.ContractInstance) ([]byte, string, error) {
@@ -127,7 +103,7 @@ func (s *Service) renderExecutedPDF(ctx context.Context, row db.ContractInstance
 		return nil, "", err
 	}
 	spec, _ := docmodel.Spec(docmodel.KindContract)
-	body := pdfrender.Fill(pdfrender.SanitizeHTML(tpl.Html), vars, spec.RawHTMLKeys())
+	body := pdfrender.Fill(withEvidenceBlocks(pdfrender.SanitizeHTML(tpl.Html)), vars, spec.RawHTMLKeys())
 	title := fmt.Sprintf("Contract %d", row.ContractNo)
 	htmlDoc := pdfrender.Document{
 		Lang: tpl.Language, Title: title, Body: body, PrimaryColor: org.PrimaryColor, Fonts: pdfrender.FontsEmbedded,
@@ -137,6 +113,34 @@ func (s *Service) renderExecutedPDF(ctx context.Context, row db.ContractInstance
 		return nil, "", err
 	}
 	return data, platstorage.ContractExecutedPDFObjectKey(org.Uuid, row.Uuid), nil
+}
+
+// withEvidenceBlocks appends the signature, OTP proof, content hash and
+// media placeholders a template does not reference itself. The seeded
+// system contract template (000030) predates them, and the executed PDF must
+// always carry the signing evidence.
+func withEvidenceBlocks(tpl string) string {
+	used := map[string]bool{}
+	for _, k := range msgtemplate.Placeholders(tpl) {
+		used[k] = true
+	}
+	var b strings.Builder
+	if !used["signatures_html"] && !used["signature_image"] {
+		b.WriteString("{{signatures_html}}")
+	}
+	if !used["otp_proof_html"] {
+		b.WriteString("{{otp_proof_html}}")
+	}
+	if !used["content_sha256"] && !used["otp_proof_html"] {
+		b.WriteString(`<p class="doc-hash">SHA-256: {{content_sha256}}</p>`)
+	}
+	if !used["media_html"] {
+		b.WriteString("{{media_html}}")
+	}
+	if b.Len() == 0 {
+		return tpl
+	}
+	return tpl + `<section class="doc-evidence">` + b.String() + `</section>`
 }
 
 func (s *Service) contractDocumentTemplate(ctx context.Context, brandID int64, locale string) (db.DocumentTemplate, error) {
@@ -291,12 +295,12 @@ func otpProofHTML(rows []db.ListContractPDFSignersRow, contentSHA string) string
 	}, table)
 }
 
-func maskPhone(phone string) string {
-	phone = strings.TrimSpace(phone)
-	if len(phone) <= 6 {
-		return phone
+func maskPhone(e164 string) string {
+	e164 = strings.TrimSpace(e164)
+	if e164 == "" {
+		return ""
 	}
-	return phone[:len(phone)-4] + "****" + phone[len(phone)-2:]
+	return phone.Mask(e164)
 }
 
 func formatTime(ts pgtype.Timestamptz) string {
@@ -316,16 +320,12 @@ func kvkkVersion(locale pgtype.Text, version pgtype.Int4) string {
 	return "v" + strconv.FormatInt(int64(version.Int32), 10)
 }
 
-// DownloadPDF opens the ready executed PDF for a panel caller.
+// DownloadPDF opens the ready executed PDF for a panel caller, under the
+// same scope rules as GetContract (brand/all reach, own/assigned user check).
 func (s *Service) DownloadPDF(ctx context.Context, c Caller, id uuid.UUID) (io.ReadCloser, string, error) {
-	if c.BrandID <= 0 || len(c.Filter.OrgIDs) == 0 {
-		return nil, "", ErrNotFound
-	}
-	row, err := s.repo.Queries().GetContractInstanceByUUIDScoped(ctx, db.GetContractInstanceByUUIDScopedParams{
-		Uuid: id, BrandID: pgtype.Int8{Int64: c.BrandID, Valid: true}, OrgIds: c.Filter.OrgIDs,
-	})
+	row, err := s.scopedInstance(ctx, c, id)
 	if err != nil {
-		return nil, "", notFound(err)
+		return nil, "", err
 	}
 	return s.downloadPDF(ctx, row)
 }
@@ -392,5 +392,5 @@ func (l contractDocumentLoader) Load(ctx context.Context, viewer docmodel.Viewer
 }
 
 func errorsIsNoRows(err error) bool {
-	return err == pgx.ErrNoRows
+	return errors.Is(err, pgx.ErrNoRows)
 }
