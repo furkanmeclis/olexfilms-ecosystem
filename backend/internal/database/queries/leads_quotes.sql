@@ -292,3 +292,22 @@ SELECT * FROM quote_reminders
 WHERE sent_at IS NULL AND scheduled_at <= sqlc.arg(now)::timestamptz
 ORDER BY scheduled_at, id
 LIMIT sqlc.arg(page_limit);
+
+-- name: ExpireDueQuotes :many
+UPDATE quotes
+SET status = 'expired',
+    expired_at = COALESCE(expired_at, NOW())
+WHERE status IN ('draft', 'sent')
+  AND valid_until IS NOT NULL
+  AND valid_until < sqlc.arg(today)::date
+  AND deleted_at IS NULL
+RETURNING *;
+
+-- name: LockQuoteNumbering :exec
+-- Serializes quote number allocation per organization (transaction scoped).
+SELECT pg_advisory_xact_lock(hashtextextended('quotes:' || sqlc.arg(organization_id)::bigint::text, 314));
+
+-- name: LockQuoteByID :one
+SELECT * FROM quotes
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL
+FOR UPDATE;

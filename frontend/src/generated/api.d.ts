@@ -8399,6 +8399,109 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/leads/{uuid}/quotes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a draft quote for a lead */
+        post: operations["createLeadQuote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/quotes/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a quote */
+        get: operations["getQuote"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update mutable draft quote fields */
+        patch: operations["patchQuote"];
+        trace?: never;
+    };
+    "/v1/quotes/{uuid}/lines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace draft quote lines and recalculate totals */
+        put: operations["replaceQuoteLines"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/quotes/{uuid}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept a sent quote */
+        post: operations["acceptQuote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/quotes/{uuid}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject a sent quote */
+        post: operations["rejectQuote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/quotes/{uuid}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Request or fetch the quote PDF render */
+        get: operations["requestQuotePdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/tasks": {
         parameters: {
             query?: never;
@@ -11099,7 +11202,7 @@ export interface components {
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
-        DocumentKind: "service" | "measurement" | "contract" | "order_slip" | "invoice_view" | "warranty";
+        DocumentKind: "service" | "measurement" | "contract" | "order_slip" | "invoice_view" | "warranty" | "quote";
         DocumentVariable: {
             /** @example customer_name */
             key: string;
@@ -15263,6 +15366,91 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["LeadFollowUpCount"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        QuoteStatus: "draft" | "sent" | "accepted" | "rejected" | "expired";
+        /** @enum {string} */
+        QuoteLineType: "product" | "catalog_service";
+        QuoteLine: {
+            line_type: components["schemas"]["QuoteLineType"];
+            /** Format: uuid */
+            product_uuid?: string | null;
+            /** Format: uuid */
+            service_catalog_item_uuid?: string | null;
+            description: string;
+            /** @example 1 */
+            quantity: string;
+            /** @example 100.00 */
+            unit_price: string;
+            /** @example 10.00 */
+            discount_amount: string;
+            /** @example 90.00 */
+            line_total: string;
+            sort_order: number;
+        };
+        Quote: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            lead_uuid: string;
+            /** Format: int64 */
+            quote_no: number;
+            /** @example Q-000042 */
+            display_no: string;
+            currency: string;
+            /** @example 100.00 */
+            subtotal: string;
+            /** @example 10.00 */
+            discount_total: string;
+            /** @example 0.00 */
+            tax_total: string;
+            /** @example 90.00 */
+            grand_total: string;
+            /** Format: date-time */
+            valid_until?: string | null;
+            status: components["schemas"]["QuoteStatus"];
+            /** Format: int64 */
+            created_by_user_id?: number | null;
+            lines: components["schemas"]["QuoteLine"][];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        QuoteLineInput: {
+            line_type: components["schemas"]["QuoteLineType"];
+            /** Format: uuid */
+            product_uuid?: string | null;
+            /** Format: uuid */
+            service_catalog_item_uuid?: string | null;
+            description?: string | null;
+            /** @default 1 */
+            quantity: string;
+            /** @description Requires pricing.sale.write when provided. */
+            unit_price?: string | null;
+            /** @default 0.00 */
+            discount_amount: string | null;
+        };
+        QuoteInput: {
+            /** Format: date-time */
+            valid_until?: string | null;
+            lines?: components["schemas"]["QuoteLineInput"][];
+        };
+        QuotePatchInput: {
+            /** Format: date-time */
+            valid_until?: string | null;
+        };
+        QuoteLinesInput: {
+            lines: components["schemas"]["QuoteLineInput"][];
+        };
+        QuoteDecisionInput: {
+            reason?: string | null;
+        };
+        EnvelopeQuote: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Quote"];
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
@@ -31162,6 +31350,221 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createLeadQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteInput"];
+            };
+        };
+        responses: {
+            /** @description Quote created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQuote"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Quote */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQuote"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuotePatchInput"];
+            };
+        };
+        responses: {
+            /** @description Quote updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQuote"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    replaceQuoteLines: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteLinesInput"];
+            };
+        };
+        responses: {
+            /** @description Quote lines replaced */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQuote"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    acceptQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["QuoteDecisionInput"];
+            };
+        };
+        responses: {
+            /** @description Quote accepted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQuote"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    rejectQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["QuoteDecisionInput"];
+            };
+        };
+        responses: {
+            /** @description Quote rejected */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQuote"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    requestQuotePdf: {
+        parameters: {
+            query?: {
+                locale?: string;
+            };
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Quote PDF render is ready */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDocumentRender"];
+                };
+            };
+            /** @description Quote PDF render queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDocumentRender"];
+                };
+            };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
