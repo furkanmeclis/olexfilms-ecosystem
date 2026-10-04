@@ -144,24 +144,35 @@ type HolderRefView struct {
 
 // WarrantyListView is a warranty as the list and detail endpoints return it.
 type WarrantyListView struct {
-	UUID         uuid.UUID           `json:"uuid"`
-	PublicCode   string              `json:"public_code"`
-	Status       string              `json:"status"`
-	ItemKind     string              `json:"item_kind"`
-	StartAt      time.Time           `json:"start_at"`
-	EndAt        time.Time           `json:"end_at"`
-	ExpiredAt    *time.Time          `json:"expired_at"`
-	VoidedAt     *time.Time          `json:"voided_at"`
-	VoidReason   *string             `json:"void_reason"`
-	CreatedAt    time.Time           `json:"created_at"`
-	Product      ProductRefView      `json:"product"`
-	Service      ServiceRefView      `json:"service"`
-	Organization OrganizationRefView `json:"organization"`
-	Vehicle      VehicleRefView      `json:"vehicle"`
-	Holder       *HolderRefView      `json:"holder,omitempty"`
+	UUID         uuid.UUID               `json:"uuid"`
+	PublicCode   string                  `json:"public_code"`
+	Status       string                  `json:"status"`
+	ItemKind     string                  `json:"item_kind"`
+	StartAt      time.Time               `json:"start_at"`
+	EndAt        time.Time               `json:"end_at"`
+	ExpiredAt    *time.Time              `json:"expired_at"`
+	VoidedAt     *time.Time              `json:"voided_at"`
+	VoidReason   *string                 `json:"void_reason"`
+	CreatedAt    time.Time               `json:"created_at"`
+	Product      ProductRefView          `json:"product"`
+	Service      ServiceRefView          `json:"service"`
+	Organization OrganizationRefView     `json:"organization"`
+	Vehicle      VehicleRefView          `json:"vehicle"`
+	Holder       *HolderRefView          `json:"holder,omitempty"`
+	Claims       []PortalClaimStatusView `json:"claims,omitempty"`
 	// CanVoid: the caller holds warranties.void for this warranty and the
 	// status allows it (panel only).
 	CanVoid bool `json:"can_void"`
+}
+
+// PortalClaimStatusView is the intentionally narrow claim summary on the
+// portal warranty detail; descriptions and photos stay out of the portal
+// warranty projection.
+type PortalClaimStatusView struct {
+	UUID      uuid.UUID `json:"uuid"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // Reader serves the list, detail and void use cases.
@@ -458,7 +469,23 @@ func (r *Reader) PortalGet(ctx context.Context, brandID, userID int64, id uuid.U
 	if err != nil {
 		return WarrantyListView{}, err
 	}
-	return baseView(row), nil
+	v := baseView(row)
+	claims, err := r.q.ListWarrantyClaimsByWarranty(ctx, db.ListWarrantyClaimsByWarrantyParams{
+		WarrantyID: row.ID, BrandID: row.BrandID,
+	})
+	if err != nil {
+		return WarrantyListView{}, fmt.Errorf("warranty: portal claims: %w", err)
+	}
+	v.Claims = make([]PortalClaimStatusView, 0, len(claims))
+	for _, c := range claims {
+		if c.CustomerUserID != userID {
+			continue
+		}
+		v.Claims = append(v.Claims, PortalClaimStatusView{
+			UUID: c.Uuid, Status: c.Status, CreatedAt: c.CreatedAt.Time, UpdatedAt: c.UpdatedAt.Time,
+		})
+	}
+	return v, nil
 }
 
 // NormalizeVoidReason trims and checks the void reason.

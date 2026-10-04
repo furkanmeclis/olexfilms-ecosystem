@@ -294,11 +294,12 @@ const ServiceReviewRequested = "service.review_requested"
 // and expired by the daily cron, holder_changed by a completed vehicle
 // transfer, voided by the center.
 const (
-	WarrantyCreated       = "warranty.created"
-	WarrantyExpiringSoon  = "warranty.expiring_soon"
-	WarrantyExpired       = "warranty.expired"
-	WarrantyVoided        = "warranty.voided"
-	WarrantyHolderChanged = "warranty.holder_changed"
+	WarrantyCreated            = "warranty.created"
+	WarrantyExpiringSoon       = "warranty.expiring_soon"
+	WarrantyExpired            = "warranty.expired"
+	WarrantyVoided             = "warranty.voided"
+	WarrantyHolderChanged      = "warranty.holder_changed"
+	WarrantyClaimStatusChanged = "warranty_claim.status_changed"
 )
 
 // Vehicle ownership transfer events (TEC-98 decision 6): two codes, one
@@ -636,6 +637,7 @@ func catalogConstants() []string {
 		TasksOverdue,
 		OrganizationCreated,
 		OrganizationUpdated,
+		MeasurementMatchSuggested,
 	}
 }
 
@@ -646,3 +648,8 @@ const (
 	TasksDueSoon = "tasks.due_soon"
 	TasksOverdue = "tasks.overdue"
 )
+
+// MeasurementMatchSuggested (TEC-296): the before/after matching of a
+// service linked a measurement automatically (waiting for the dealer's
+// confirmation) or found candidates; written in the matching transaction.
+const MeasurementMatchSuggested = "measurement.match_suggested"

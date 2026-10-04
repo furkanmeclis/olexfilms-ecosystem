@@ -62,8 +62,9 @@ func (s *Service) Create(ctx context.Context, c Caller, in Input) (Result, error
 	if err != nil {
 		return Result{}, err
 	}
+	var row db.MeasurementResult
 	if !res.Replayed {
-		row, err := q.GetMeasurementResultByUUID(ctx, db.GetMeasurementResultByUUIDParams{
+		row, err = q.GetMeasurementResultByUUID(ctx, db.GetMeasurementResultByUUIDParams{
 			Uuid: res.UUID, OrganizationID: c.OrganizationID,
 		})
 		if err != nil {
@@ -75,6 +76,9 @@ func (s *Service) Create(ctx context.Context, c Caller, in Input) (Result, error
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return Result{}, err
+	}
+	if !res.Replayed {
+		s.matchAccepted(ctx, c.OrganizationID, row)
 	}
 	return res, nil
 }

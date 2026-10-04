@@ -109,6 +109,12 @@ export const routes = {
     announcements: {
       list: (slug: string) => `/t/${slug}/announcements`,
     },
+    /** TEC-318 lead pipeline: list, new, detail + timeline. */
+    leads: {
+      list: (slug: string) => `/t/${slug}/leads`,
+      create: (slug: string) => `/t/${slug}/leads/new`,
+      detail: (slug: string, uuid: string) => `/t/${slug}/leads/${uuid}`,
+    },
     /**
      * TEC-231 full warehouse (center and distributor, K12): location tree,
      * scan, stock entries, barcodes (center, K14). TEC-232 adds transfers,
