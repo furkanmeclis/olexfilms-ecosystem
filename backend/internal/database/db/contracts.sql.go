@@ -701,7 +701,7 @@ func (q *Queries) GetLatestContractSignature(ctx context.Context, signerID int64
 
 const getServiceForContractByID = `-- name: GetServiceForContractByID :one
 SELECT
-    s.id, s.uuid, s.service_no, s.organization_id, s.brand_id, s.customer_user_id, s.vehicle_id, s.car_brand_id, s.car_model_id, s.model_year, s.plate, s.plate_country, s.vin, s.km, s.package, s.notes, s.has_measurement, s.measurement_result_id, s.contract_id, s.status, s.created_by_user_id, s.updated_by_user_id, s.completed_by_user_id, s.cancelled_by_user_id, s.cancel_reason, s.completed_at, s.cancelled_at, s.review_request_sent_at, s.created_at, s.updated_at, s.measurement_check_required, s.measurement_checked_at,
+    s.id, s.uuid, s.service_no, s.organization_id, s.brand_id, s.customer_user_id, s.vehicle_id, s.car_brand_id, s.car_model_id, s.model_year, s.plate, s.plate_country, s.vin, s.km, s.package, s.notes, s.has_measurement, s.measurement_result_id, s.contract_id, s.status, s.created_by_user_id, s.updated_by_user_id, s.completed_by_user_id, s.cancelled_by_user_id, s.cancel_reason, s.completed_at, s.cancelled_at, s.review_request_sent_at, s.created_at, s.updated_at, s.measurement_check_required, s.measurement_checked_at, s.warranty_claim_id,
     cu.name AS customer_name,
     cu.surname AS customer_surname,
     cu.email AS customer_email,
@@ -756,6 +756,7 @@ type GetServiceForContractByIDRow struct {
 	UpdatedAt                pgtype.Timestamptz `json:"updated_at"`
 	MeasurementCheckRequired bool               `json:"measurement_check_required"`
 	MeasurementCheckedAt     pgtype.Timestamptz `json:"measurement_checked_at"`
+	WarrantyClaimID          pgtype.Int8        `json:"warranty_claim_id"`
 	CustomerName             string             `json:"customer_name"`
 	CustomerSurname          string             `json:"customer_surname"`
 	CustomerEmail            pgtype.Text        `json:"customer_email"`
@@ -806,6 +807,7 @@ func (q *Queries) GetServiceForContractByID(ctx context.Context, id int64) (GetS
 		&i.UpdatedAt,
 		&i.MeasurementCheckRequired,
 		&i.MeasurementCheckedAt,
+		&i.WarrantyClaimID,
 		&i.CustomerName,
 		&i.CustomerSurname,
 		&i.CustomerEmail,
@@ -824,7 +826,7 @@ func (q *Queries) GetServiceForContractByID(ctx context.Context, id int64) (GetS
 
 const getServiceForContractByUUID = `-- name: GetServiceForContractByUUID :one
 SELECT
-    s.id, s.uuid, s.service_no, s.organization_id, s.brand_id, s.customer_user_id, s.vehicle_id, s.car_brand_id, s.car_model_id, s.model_year, s.plate, s.plate_country, s.vin, s.km, s.package, s.notes, s.has_measurement, s.measurement_result_id, s.contract_id, s.status, s.created_by_user_id, s.updated_by_user_id, s.completed_by_user_id, s.cancelled_by_user_id, s.cancel_reason, s.completed_at, s.cancelled_at, s.review_request_sent_at, s.created_at, s.updated_at, s.measurement_check_required, s.measurement_checked_at,
+    s.id, s.uuid, s.service_no, s.organization_id, s.brand_id, s.customer_user_id, s.vehicle_id, s.car_brand_id, s.car_model_id, s.model_year, s.plate, s.plate_country, s.vin, s.km, s.package, s.notes, s.has_measurement, s.measurement_result_id, s.contract_id, s.status, s.created_by_user_id, s.updated_by_user_id, s.completed_by_user_id, s.cancelled_by_user_id, s.cancel_reason, s.completed_at, s.cancelled_at, s.review_request_sent_at, s.created_at, s.updated_at, s.measurement_check_required, s.measurement_checked_at, s.warranty_claim_id,
     cu.name AS customer_name,
     cu.surname AS customer_surname,
     cu.email AS customer_email,
@@ -893,6 +895,7 @@ type GetServiceForContractByUUIDRow struct {
 	UpdatedAt                pgtype.Timestamptz `json:"updated_at"`
 	MeasurementCheckRequired bool               `json:"measurement_check_required"`
 	MeasurementCheckedAt     pgtype.Timestamptz `json:"measurement_checked_at"`
+	WarrantyClaimID          pgtype.Int8        `json:"warranty_claim_id"`
 	CustomerName             string             `json:"customer_name"`
 	CustomerSurname          string             `json:"customer_surname"`
 	CustomerEmail            pgtype.Text        `json:"customer_email"`
@@ -943,6 +946,7 @@ func (q *Queries) GetServiceForContractByUUID(ctx context.Context, arg GetServic
 		&i.UpdatedAt,
 		&i.MeasurementCheckRequired,
 		&i.MeasurementCheckedAt,
+		&i.WarrantyClaimID,
 		&i.CustomerName,
 		&i.CustomerSurname,
 		&i.CustomerEmail,
