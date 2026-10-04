@@ -26,6 +26,7 @@ import (
 	custuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/customers/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
@@ -54,6 +55,9 @@ var (
 	ErrUnitNotAvailable = errors.New("services: unit is not available to the organization")
 	// ErrTooManyImages: the image limit of a service is reached.
 	ErrTooManyImages = errors.New("services: too many images")
+	// ErrContractRequired: this status move needs an executed intake
+	// contract when the admin setting and intake_contracts module are on.
+	ErrContractRequired = errors.New("services: contract required")
 	// ErrServiceNoExhausted: no free service number after several tries.
 	ErrServiceNoExhausted = errors.New("services: could not allocate a service number")
 )
@@ -92,6 +96,20 @@ const (
 // TxBeginner starts a transaction (*pgxpool.Pool).
 type TxBeginner interface {
 	Begin(ctx context.Context) (pgx.Tx, error)
+}
+
+// FeatureChecker reports whether a module is enabled for an organization.
+type FeatureChecker interface {
+	Enabled(ctx context.Context, organizationID int64, key string) (bool, error)
+}
+
+// SettingReader reads the boolean system settings services need.
+type SettingReader interface {
+	ContractsIntakeRequired(ctx context.Context) bool
+}
+
+type contractGetter interface {
+	GetContractInstanceByID(ctx context.Context, id int64) (db.ContractInstance, error)
 }
 
 // Caller is the request principal in its active organization; Filter is
@@ -163,16 +181,94 @@ func visible(c Caller, s db.Service) bool {
 
 // Service implements the service use cases.
 type Service struct {
-	pool   TxBeginner
-	q      *db.Queries
-	out    outbox.Enqueuer
-	poster CompletedCancelPoster
-	finder searchengine.ListFinder // TEC-209: services index search (nil: SQL only)
+	pool     TxBeginner
+	q        *db.Queries
+	out      outbox.Enqueuer
+	poster   CompletedCancelPoster
+	finder   searchengine.ListFinder // TEC-209: services index search (nil: SQL only)
+	settings SettingReader
+	features FeatureChecker
 }
 
 // New creates the service.
 func New(pool TxBeginner, q *db.Queries, out outbox.Enqueuer) *Service {
 	return &Service{pool: pool, q: q, out: out}
+}
+
+// WithContractRequirement wires the admin setting and feature resolver used
+// by the intake contract gate.
+func (s *Service) WithContractRequirement(settings SettingReader, features FeatureChecker) *Service {
+	s.settings = settings
+	s.features = features
+	return s
+}
+
+func (s *Service) contractRequired(ctx context.Context, orgID int64) (bool, error) {
+	return s.newContractGate().required(ctx, orgID)
+}
+
+// contractGate memoises the intake-contract requirement for one request:
+// the system setting is read at most once and the intake_contracts module
+// once per organization, so a service list does not repeat the cache
+// lookups per row.
+type contractGate struct {
+	s       *Service
+	setting *bool
+	orgs    map[int64]bool
+}
+
+func (s *Service) newContractGate() *contractGate {
+	return &contractGate{s: s, orgs: map[int64]bool{}}
+}
+
+func (g *contractGate) required(ctx context.Context, orgID int64) (bool, error) {
+	if g.s.settings == nil || g.s.features == nil {
+		return false, nil
+	}
+	if g.setting == nil {
+		on := g.s.settings.ContractsIntakeRequired(ctx)
+		g.setting = &on
+	}
+	if !*g.setting {
+		return false, nil
+	}
+	if on, ok := g.orgs[orgID]; ok {
+		return on, nil
+	}
+	on, err := g.s.features.Enabled(ctx, orgID, features.ModuleIntakeContracts)
+	if err != nil {
+		return false, fmt.Errorf("services: intake contracts feature: %w", err)
+	}
+	g.orgs[orgID] = on
+	return on, nil
+}
+
+func (s *Service) requireExecutedContract(ctx context.Context, q contractGetter, svc db.Service) error {
+	required, err := s.contractRequired(ctx, svc.OrganizationID)
+	if err != nil {
+		return err
+	}
+	if !required {
+		return nil
+	}
+	if !svc.ContractID.Valid {
+		return ErrContractRequired
+	}
+	contract, err := q.GetContractInstanceByID(ctx, svc.ContractID.Int64)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrContractRequired
+	}
+	if err != nil {
+		return fmt.Errorf("services: contract: %w", err)
+	}
+	if contract.Status != "executed" {
+		return ErrContractRequired
+	}
+	return nil
+}
+
+func needsExecutedContract(from, to string) bool {
+	return (from == StatusDraft || from == StatusPending) && (to == StatusProcessing || to == StatusCompleted)
 }
 
 func (s *Service) inTx(ctx context.Context, fn func(q *db.Queries, tx pgx.Tx) error) error {

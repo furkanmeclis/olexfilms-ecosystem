@@ -64,6 +64,7 @@ vi.mock(
 import {
   deleteOverrideRow,
   editableModules,
+  overrideRowFromLookup,
   ServiceCatalogPage,
   showsModulePicker,
 } from "@/features/service-catalog/components/service-catalog-page";
@@ -204,6 +205,19 @@ describe("service catalog overrides", () => {
       { org: { uuid: "org-2", name: "B" }, price: "95", currency: "EUR" },
     ];
     expect(deleteOverrideRow(rows, "org-1")).toEqual([rows[1]]);
+  });
+
+  it("maps an existing override lookup into the editable row", () => {
+    expect(
+      overrideRowFromLookup(
+        { uuid: "org-1", name: "Distribütör A" },
+        { organization_uuid: "org-1", price: "88.50", currency: "EUR" },
+      ),
+    ).toEqual({
+      org: { uuid: "org-1", name: "Distribütör A" },
+      price: "88.50",
+      currency: "EUR",
+    });
   });
 });
 

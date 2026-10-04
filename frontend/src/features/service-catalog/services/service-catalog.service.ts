@@ -12,9 +12,7 @@ export type ServiceCatalogOverride = Schemas["ServiceCatalogOverride"];
 export type ServiceCatalogOverrideInput =
   Schemas["ServiceCatalogOverrideInput"];
 export type PlatformModule = Schemas["PlatformModule"];
-export type ContractTemplate = Schemas["ContractTemplate"] & {
-  id?: number;
-};
+export type ContractTemplate = Schemas["ContractTemplate"];
 
 export type DistributorOption = { uuid: string; name: string };
 

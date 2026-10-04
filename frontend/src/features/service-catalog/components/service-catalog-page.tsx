@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
 import { Loading } from "@/components/common/loading";
@@ -45,6 +45,7 @@ import {
   type ServiceCatalogCategory,
   type ServiceCatalogItem,
   type ServiceCatalogItemInput,
+  type ServiceCatalogOverride,
   type ServiceCatalogRecurrence,
 } from "@/features/service-catalog/services/service-catalog.service";
 import { isApiError } from "@/lib/api";
@@ -136,6 +137,17 @@ export function upsertOverrideRow(rows: OverrideRow[], row: OverrideRow) {
 
 export function deleteOverrideRow(rows: OverrideRow[], orgUuid: string) {
   return rows.filter((x) => x.org.uuid !== orgUuid);
+}
+
+export function overrideRowFromLookup(
+  org: DistributorOption,
+  override: ServiceCatalogOverride,
+) {
+  return {
+    org,
+    price: override.price,
+    currency: override.currency,
+  };
 }
 
 export function showsModulePicker(category: ServiceCatalogCategory) {
@@ -651,10 +663,40 @@ function OverridesDialog({
   const selected = distributors.data?.find((d) => d.uuid === orgUuid);
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: serviceCatalogKeys.platform() });
-  const onError = (error: unknown) =>
+  const onError = useCallback((error: unknown) => {
     appToast.error(
       isApiError(error) ? error.message : t("catalog.toast.failed"),
     );
+  }, [t]);
+
+  useEffect(() => {
+    if (!item || !orgUuid || !selected) return;
+    let alive = true;
+    void serviceCatalogService
+      .getOverride(item.uuid, orgUuid)
+      .then((saved) => {
+        if (!alive) return;
+        setPrice(saved.price);
+        setCurrency(saved.currency);
+        setOverrides((list) =>
+          upsertOverrideRow(list, overrideRowFromLookup(selected, saved)),
+        );
+      })
+      .catch((error: unknown) => {
+        if (!alive) return;
+        if (isApiError(error) && error.isNotFound) {
+          setPrice("");
+          setCurrency(item.currency);
+          setOverrides((list) => deleteOverrideRow(list, orgUuid));
+          return;
+        }
+        onError(error);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [item, onError, orgUuid, selected]);
+
   const put = useMutation({
     mutationFn: async () => {
       if (!item || !selected) throw new Error("missing override target");
@@ -663,7 +705,7 @@ function OverridesDialog({
         selected.uuid,
         { price, currency: currency.toUpperCase() },
       );
-      return { org: selected, price: saved.price, currency: saved.currency };
+      return overrideRowFromLookup(selected, saved);
     },
     onSuccess: async (row) => {
       setOverrides((list) => upsertOverrideRow(list, row));
