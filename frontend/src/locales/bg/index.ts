@@ -4,6 +4,7 @@ import type { LocaleCatalog } from "@/lib/i18n/types";
 import access from "./access.json";
 import accounting from "./accounting.json";
 import activity from "./activity.json";
+import announcements from "./announcements.json";
 import auth from "./auth.json";
 import branding from "./branding.json";
 import bulk from "./bulk.json";
@@ -54,6 +55,7 @@ const catalog: LocaleCatalog = {
   access,
   accounting,
   activity,
+  announcements,
   auth,
   branding,
   bulk,

@@ -106,6 +106,10 @@ export const routes = {
       create: (slug: string) => `/t/${slug}/tasks/new`,
       detail: (slug: string, uuid: string) => `/t/${slug}/tasks/${uuid}`,
     },
+    /** TEC-332 announcements: feed, composer and read report. */
+    announcements: {
+      list: (slug: string) => `/t/${slug}/announcements`,
+    },
     /** TEC-318 lead pipeline: list, new, detail + timeline. */
     leads: {
       list: (slug: string) => `/t/${slug}/leads`,
