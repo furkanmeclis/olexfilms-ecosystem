@@ -5,29 +5,31 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
 )
 
 // Task type identifiers.
 const (
-	TaskPing                = "app:ping"
-	TaskNotificationDeliver = "app:notification:deliver"
-	TaskExportProcess       = "app:export:process"
-	TaskImportProcess       = "app:import:process"
-	TaskBulkProcess         = "app:bulk:process"
-	TaskLogPurgeSweep       = "app:logs:purge_sweep"
-	TaskSearchUpsert        = "app:search:upsert"
-	TaskSearchDelete        = "app:search:delete"
-	TaskSearchReindex       = "app:search:reindex"
-	TaskDocsRender          = "app:docs:render"
-	TaskRatesFetch          = "app:rates:fetch"
-	QueueNotifications      = "notifications"
-	QueueExports            = "exports"
-	QueueImports            = "imports"
-	QueueBulk               = "bulk"
-	QueueSearch             = "search"
-	QueueMaintenance        = "maintenance"
-	QueueDocs               = "docs"
+	TaskPing                 = "app:ping"
+	TaskNotificationDeliver  = "app:notification:deliver"
+	TaskAnnouncementDispatch = "app:announcement:dispatch"
+	TaskExportProcess        = "app:export:process"
+	TaskImportProcess        = "app:import:process"
+	TaskBulkProcess          = "app:bulk:process"
+	TaskLogPurgeSweep        = "app:logs:purge_sweep"
+	TaskSearchUpsert         = "app:search:upsert"
+	TaskSearchDelete         = "app:search:delete"
+	TaskSearchReindex        = "app:search:reindex"
+	TaskDocsRender           = "app:docs:render"
+	TaskRatesFetch           = "app:rates:fetch"
+	QueueNotifications       = "notifications"
+	QueueExports             = "exports"
+	QueueImports             = "imports"
+	QueueBulk                = "bulk"
+	QueueSearch              = "search"
+	QueueMaintenance         = "maintenance"
+	QueueDocs                = "docs"
 )
 
 // PingPayload is the body for the sample ping job.
@@ -39,6 +41,19 @@ type PingPayload struct {
 // NotificationDeliverPayload identifies a notification row to deliver.
 type NotificationDeliverPayload struct {
 	NotificationID int64 `json:"notification_id"`
+}
+
+// AnnouncementDispatchPayload carries one announcement fan-out batch.
+type AnnouncementDispatchPayload struct {
+	EventID          uuid.UUID `json:"event_id"`
+	AnnouncementID   int64     `json:"announcement_id"`
+	AnnouncementUUID uuid.UUID `json:"announcement_uuid"`
+	BrandID          int64     `json:"brand_id"`
+	OrganizationID   *int64    `json:"organization_id,omitempty"`
+	Title            string    `json:"title"`
+	Body             string    `json:"body"`
+	UserIDs          []int64   `json:"user_ids"`
+	Batch            int       `json:"batch"`
 }
 
 // NewPingTask builds a sample Asynq task used to verify the queue path.
@@ -79,6 +94,24 @@ func ParseNotificationDeliverPayload(data []byte) (NotificationDeliverPayload, e
 	var payload NotificationDeliverPayload
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return NotificationDeliverPayload{}, fmt.Errorf("queue: unmarshal notification deliver: %w", err)
+	}
+	return payload, nil
+}
+
+// NewAnnouncementDispatchTask builds an announcement notification fan-out task.
+func NewAnnouncementDispatchTask(payload AnnouncementDispatchPayload) (*asynq.Task, error) {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("queue: marshal announcement dispatch: %w", err)
+	}
+	return asynq.NewTask(TaskAnnouncementDispatch, body), nil
+}
+
+// ParseAnnouncementDispatchPayload decodes an announcement dispatch task payload.
+func ParseAnnouncementDispatchPayload(data []byte) (AnnouncementDispatchPayload, error) {
+	var payload AnnouncementDispatchPayload
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return AnnouncementDispatchPayload{}, fmt.Errorf("queue: unmarshal announcement dispatch: %w", err)
 	}
 	return payload, nil
 }

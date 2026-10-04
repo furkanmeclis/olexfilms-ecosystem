@@ -474,7 +474,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 
 	nh := notifhandler.New(notifSvc)
 	notifmodule.RegisterRoutes(mux, nh, tokens, loader)
-	notifmodule.RegisterEventHandlers(eventBus, notifSvc, log)
+	notifmodule.RegisterEventHandlers(eventBus, notifSvc, log,
+		notifmodule.WithAnnouncementFanout(deps.Queries, deps.Queue))
 	// TEC-186: service.completed opens one warranty per service item.
 	warrantymodule.RegisterEventHandlers(eventBus, deps.DB, deps.Queries, cfg.Auth.FrontendURL, log)
 	// TEC-192: service.completed schedules the delayed review request.
@@ -572,6 +573,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 			WithVehicleTransferExpire(customersSvc.ExpireTransfersTask).
 			WithServiceReviewRequest(servicereview.NewTaskSender(deps.DB, deps.Queries, log).Task).
 			WithNotificationPurge(notifSvc.PurgeExpired).
+			WithAnnouncementDispatch(func(ctx context.Context, payload queue.AnnouncementDispatchPayload) error {
+				return announcementsusecase.DispatchBatch(ctx, notifSvc, payload)
+			}).
 			WithWhatsAppPoll(waSvc.PollStatus).
 			WithTasksDueScan(tasksusecase.NewCron(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)).DueScanTask)
 		if searchIndexer != nil {

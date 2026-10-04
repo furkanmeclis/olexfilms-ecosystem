@@ -14,7 +14,9 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
 	"github.com/google/uuid"
+	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -39,6 +41,8 @@ const (
 const (
 	maxTitle = 200
 	maxBody  = 20000
+
+	notificationBatchSize = 500
 )
 
 var (
@@ -59,6 +63,22 @@ func invalid(field, msg string) error { return &ValidationError{Field: field, Me
 // TxBeginner opens transactions.
 type TxBeginner interface {
 	Begin(ctx context.Context) (pgx.Tx, error)
+}
+
+// TaskEnqueuer enqueues background tasks.
+type TaskEnqueuer interface {
+	Enqueue(task *asynq.Task, opts ...asynq.Option) (*asynq.TaskInfo, error)
+}
+
+// Dispatcher sends Notification Center messages.
+type Dispatcher interface {
+	Dispatch(ctx context.Context, in model.DispatchInput) (model.DispatchResult, error)
+}
+
+// TargetResolver resolves the current target audience for an announcement.
+type TargetResolver interface {
+	GetAnnouncementByID(ctx context.Context, id int64) (db.Announcement, error)
+	ListAnnouncementTargetUserIDs(ctx context.Context, announcementID int64) ([]int64, error)
 }
 
 // Caller is the authenticated user and active org.
@@ -409,20 +429,14 @@ func (s *Service) Publish(ctx context.Context, c Caller, id uuid.UUID) (Announce
 		return Announcement{}, err
 	}
 	if row.Notify && s.out != nil {
-		userIDs, err := q.ListAnnouncementTargetUserIDs(ctx, row.ID)
-		if err != nil {
-			return Announcement{}, err
-		}
 		ev := events.New(EventPublished).
 			WithTenant(c.Org.InternalID).
 			WithActor(c.UserID).
 			WithEntity("announcement", &row.ID, &row.Uuid).
 			WithPayload(map[string]any{
+				"announcement_id":   row.ID,
 				"announcement_uuid": row.Uuid.String(),
 				"brand_id":          row.BrandID,
-				"title":             row.Title,
-				"body":              row.Body,
-				"notify_user_ids":   userIDs,
 			})
 		if err := s.out.Enqueue(ctx, tx, ev); err != nil {
 			return Announcement{}, err
@@ -625,41 +639,105 @@ func (s *Service) Reads(ctx context.Context, c Caller, id uuid.UUID, limit, offs
 	return out, nil
 }
 
-// DispatchInput maps announcement.published outbox events to notification dispatches.
-func DispatchInput(ev events.Event) (model.DispatchInput, bool) {
-	raw, ok := ev.Payload["notify_user_ids"].([]any)
-	if !ok {
-		return model.DispatchInput{}, false
+// EnqueuePublishedBatches resolves targets for an announcement.published event
+// and enqueues one notification dispatch task per 500-user batch.
+func EnqueuePublishedBatches(
+	ctx context.Context,
+	q TargetResolver,
+	enq TaskEnqueuer,
+	dispatcher Dispatcher,
+	ev events.Event,
+) error {
+	if q == nil {
+		return errors.New("announcements: target resolver is nil")
 	}
-	ids := make([]int64, 0, len(raw))
-	for _, v := range raw {
-		switch n := v.(type) {
-		case int64:
-			ids = append(ids, n)
-		case float64:
-			ids = append(ids, int64(n))
+	announcementID, ok := announcementIDFromEvent(ev)
+	if !ok {
+		return errors.New("announcements: announcement id missing from event")
+	}
+	a, err := q.GetAnnouncementByID(ctx, announcementID)
+	if err != nil {
+		return err
+	}
+	userIDs, err := q.ListAnnouncementTargetUserIDs(ctx, a.ID)
+	if err != nil {
+		return err
+	}
+	var orgID *int64
+	if ev.TenantID != nil {
+		v := *ev.TenantID
+		orgID = &v
+	}
+	errs := make([]error, 0)
+	for batch, start := 0, 0; start < len(userIDs); batch, start = batch+1, start+notificationBatchSize {
+		end := start + notificationBatchSize
+		if end > len(userIDs) {
+			end = len(userIDs)
+		}
+		payload := queue.AnnouncementDispatchPayload{
+			EventID:          ev.EventID,
+			AnnouncementID:   a.ID,
+			AnnouncementUUID: a.Uuid,
+			BrandID:          a.BrandID,
+			OrganizationID:   orgID,
+			Title:            a.Title,
+			Body:             a.Body,
+			UserIDs:          append([]int64{}, userIDs[start:end]...),
+			Batch:            batch,
+		}
+		if enq == nil {
+			errs = append(errs, DispatchBatch(ctx, dispatcher, payload))
+			continue
+		}
+		task, err := queue.NewAnnouncementDispatchTask(payload)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		_, err = enq.Enqueue(
+			task,
+			asynq.Queue(queue.QueueNotifications),
+			asynq.TaskID(fmt.Sprintf("announcement:%s:%d", ev.EventID.String(), batch)),
+		)
+		if err != nil && !errors.Is(err, asynq.ErrTaskIDConflict) {
+			errs = append(errs, err)
 		}
 	}
-	if len(ids) == 0 {
-		return model.DispatchInput{}, false
+	return errors.Join(errs...)
+}
+
+// DispatchBatch sends one already-resolved announcement notification batch.
+func DispatchBatch(ctx context.Context, dispatcher Dispatcher, payload queue.AnnouncementDispatchPayload) error {
+	if dispatcher == nil {
+		return errors.New("announcements: dispatcher is nil")
 	}
-	var brand *int64
-	switch v := ev.Payload["brand_id"].(type) {
+	brandID := payload.BrandID
+	_, err := dispatcher.Dispatch(ctx, model.DispatchInput{
+		EventID:        payload.EventID,
+		EventCode:      "announcements.published",
+		OrganizationID: payload.OrganizationID,
+		BrandID:        &brandID,
+		UserIDs:        payload.UserIDs,
+		Channels:       []string{model.ChannelInapp, model.ChannelEmail, model.ChannelWebPush, model.ChannelExpoPush},
+		Vars:           map[string]string{"title": payload.Title, "body": payload.Body},
+		Payload:        map[string]any{"announcement_uuid": payload.AnnouncementUUID.String()},
+	})
+	return err
+}
+
+func announcementIDFromEvent(ev events.Event) (int64, bool) {
+	if ev.EntityID != nil && *ev.EntityID > 0 {
+		return *ev.EntityID, true
+	}
+	switch v := ev.Payload["announcement_id"].(type) {
 	case int64:
-		brand = &v
+		return v, v > 0
 	case float64:
 		n := int64(v)
-		brand = &n
+		return n, n > 0
+	case int:
+		return int64(v), v > 0
+	default:
+		return 0, false
 	}
-	return model.DispatchInput{
-		EventCode: "announcements.published",
-		UserIDs:   ids,
-		BrandID:   brand,
-		Channels:  []string{model.ChannelInapp, model.ChannelEmail, model.ChannelWebPush, model.ChannelExpoPush},
-		Vars: map[string]string{
-			"title": fmt.Sprint(ev.Payload["title"]),
-			"body":  fmt.Sprint(ev.Payload["body"]),
-		},
-		Payload: map[string]any{"announcement_uuid": ev.Payload["announcement_uuid"]},
-	}, true
 }

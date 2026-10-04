@@ -13,17 +13,39 @@ import (
 	"github.com/google/uuid"
 )
 
+type eventHandlerConfig struct {
+	announcementTargets announcementsusecase.TargetResolver
+	announcementQueue   announcementsusecase.TaskEnqueuer
+}
+
+// EventHandlerOption customizes notification event listeners.
+type EventHandlerOption func(*eventHandlerConfig)
+
+// WithAnnouncementFanout wires announcement target resolution and batch task enqueueing.
+func WithAnnouncementFanout(q announcementsusecase.TargetResolver, enq announcementsusecase.TaskEnqueuer) EventHandlerOption {
+	return func(cfg *eventHandlerConfig) {
+		cfg.announcementTargets = q
+		cfg.announcementQueue = enq
+	}
+}
+
 // RegisterEventHandlers attaches Notification Center listeners to the
 // platform bus. Each outbox event maps to a catalog event; the outbox event
 // id is the delivery idempotency key, so a redelivered event sends nothing
 // twice. Titles and bodies come from notification_templates (event x role x
 // channel x language); nothing is hard-coded here.
-func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.Logger) {
+func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.Logger, opts ...EventHandlerOption) {
 	if bus == nil {
 		return
 	}
 	if log == nil {
 		log = slog.Default()
+	}
+	var cfg eventHandlerConfig
+	for _, opt := range opts {
+		if opt != nil {
+			opt(&cfg)
+		}
 	}
 	bus.Subscribe("customers.*", func(_ context.Context, event events.Event) error {
 		log.Info(
@@ -131,7 +153,19 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	for name, code := range TaskEventCodes {
 		on(name, taskDispatcher(code))
 	}
-	on(events.AnnouncementPublished, announcementsusecase.DispatchInput)
+	bus.Subscribe(events.AnnouncementPublished, func(ctx context.Context, event events.Event) error {
+		err := announcementsusecase.EnqueuePublishedBatches(
+			ctx,
+			cfg.announcementTargets,
+			cfg.announcementQueue,
+			svc,
+			event,
+		)
+		if err != nil {
+			log.Error("announcement_notifications_enqueue_failed", "event_id", event.EventID, "error", err)
+		}
+		return nil
+	})
 	on(events.AIDraftCreated, func(event events.Event) (notifmodel.DispatchInput, bool) {
 		ids := userIDsFromAIEvent(event)
 		return notifmodel.DispatchInput{

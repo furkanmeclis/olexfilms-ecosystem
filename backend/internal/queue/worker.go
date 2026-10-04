@@ -13,6 +13,9 @@ import (
 // DeliverNotificationFunc delivers a queued notification by id.
 type DeliverNotificationFunc func(ctx context.Context, notificationID int64) error
 
+// AnnouncementDispatchFunc dispatches one announcement notification batch.
+type AnnouncementDispatchFunc func(ctx context.Context, payload AnnouncementDispatchPayload) error
+
 // ProcessExportFunc processes an export job by id.
 type ProcessExportFunc func(ctx context.Context, exportJobID int64) error
 
@@ -46,6 +49,7 @@ type Worker struct {
 	mux                  *asynq.ServeMux
 	log                  *slog.Logger
 	deliver              DeliverNotificationFunc
+	announcementDispatch AnnouncementDispatchFunc
 	processExport        ProcessExportFunc
 	processImport        ProcessImportFunc
 	processBulk          ProcessBulkFunc
@@ -130,6 +134,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	w := &Worker{server: server, mux: mux, log: log, deliver: deliver}
 	mux.HandleFunc(TaskPing, handlePing(log))
 	mux.HandleFunc(TaskNotificationDeliver, w.handleNotificationDeliver)
+	mux.HandleFunc(TaskAnnouncementDispatch, w.handleAnnouncementDispatch)
 	mux.HandleFunc(TaskExportProcess, w.handleExportProcess)
 	mux.HandleFunc(TaskImportProcess, w.handleImportProcess)
 	mux.HandleFunc(TaskBulkProcess, w.handleBulkProcess)
@@ -220,6 +225,12 @@ func (w *Worker) WithRatesFetch(fn FetchRatesFunc) *Worker {
 	return w
 }
 
+// WithAnnouncementDispatch registers announcement notification batch dispatch.
+func (w *Worker) WithAnnouncementDispatch(fn AnnouncementDispatchFunc) *Worker {
+	w.announcementDispatch = fn
+	return w
+}
+
 // Start blocks until the worker stops.
 func (w *Worker) Start() error {
 	if w == nil || w.server == nil {
@@ -249,6 +260,18 @@ func (w *Worker) handleNotificationDeliver(ctx context.Context, task *asynq.Task
 		return nil
 	}
 	return w.deliver(ctx, payload.NotificationID)
+}
+
+func (w *Worker) handleAnnouncementDispatch(ctx context.Context, task *asynq.Task) error {
+	payload, err := ParseAnnouncementDispatchPayload(task.Payload())
+	if err != nil {
+		return err
+	}
+	if w.announcementDispatch == nil {
+		w.log.Warn("announcement_dispatch_handler_missing", "announcement_id", payload.AnnouncementID)
+		return nil
+	}
+	return w.announcementDispatch(ctx, payload)
 }
 
 func (w *Worker) handleExportProcess(ctx context.Context, task *asynq.Task) error {

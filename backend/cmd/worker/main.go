@@ -13,6 +13,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/errtrack"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/logging"
 	accountingusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting/usecase"
+	announcementsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/usecase"
 	bulkusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/bulk/usecase"
 	catalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/catalog/usecase"
 	customersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/customers/usecase"
@@ -108,13 +109,14 @@ func main() {
 		log.Warn("notification_catalog_sync_failed", "error", err)
 	}
 
+	reviewQueue := queue.NewClient(cfg.Redis)
+	defer func() { _ = reviewQueue.Close() }()
 	eventBus := events.NewBus(log)
-	notifmodule.RegisterEventHandlers(eventBus, notifSvc, log)
+	notifmodule.RegisterEventHandlers(eventBus, notifSvc, log,
+		notifmodule.WithAnnouncementFanout(queries, reviewQueue))
 	// TEC-186: service.completed opens one warranty per service item.
 	warrantymodule.RegisterEventHandlers(eventBus, pool, queries, cfg.Auth.FrontendURL, log)
 	// TEC-192: service.completed schedules the delayed review request.
-	reviewQueue := queue.NewClient(cfg.Redis)
-	defer func() { _ = reviewQueue.Close() }()
 	servicereview.RegisterEventHandlers(eventBus, reviewQueue, cfg.Services.ReviewRequestDelay, log)
 	// TEC-270: glorian stock entries/placements and exits schedule the push.
 	glorian.RegisterEventHandlers(eventBus, queries, reviewQueue, log)
@@ -225,6 +227,9 @@ func main() {
 		WithBulk(bulkSvc.ProcessBulk).
 		WithLogPurge(logsSvc.ApplyDueRules).
 		WithNotificationPurge(notifSvc.PurgeExpired).
+		WithAnnouncementDispatch(func(ctx context.Context, payload queue.AnnouncementDispatchPayload) error {
+			return announcementsusecase.DispatchBatch(ctx, notifSvc, payload)
+		}).
 		WithDocsRender(docSvc.ProcessRender).
 		WithRatesFetch(ratesSvc.FetchTask).
 		WithWarrantyCron(warrantyCron.ExpireTask, warrantyCron.ExpiringScanTask).

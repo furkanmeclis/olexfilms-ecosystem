@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -9,9 +10,13 @@ import (
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	notifmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/model"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
 	"github.com/google/uuid"
+	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -24,10 +29,33 @@ type fixture struct {
 	svc                             *Service
 	out                             *outbox.Memory
 	brandID                         int64
+	seq                             int64
 	center, dist, otherDist         db.Organization
 	dealer, otherDealer             db.Organization
 	centerUser, dealerUser          db.User
 	accountingUser, otherDealerUser db.User
+}
+
+type fakeTaskEnqueuer struct {
+	payloads []queue.AnnouncementDispatchPayload
+}
+
+func (f *fakeTaskEnqueuer) Enqueue(task *asynq.Task, _ ...asynq.Option) (*asynq.TaskInfo, error) {
+	payload, err := queue.ParseAnnouncementDispatchPayload(task.Payload())
+	if err != nil {
+		return nil, err
+	}
+	f.payloads = append(f.payloads, payload)
+	return &asynq.TaskInfo{}, nil
+}
+
+type fakeDispatcher struct {
+	calls []notifmodel.DispatchInput
+}
+
+func (f *fakeDispatcher) Dispatch(_ context.Context, in notifmodel.DispatchInput) (notifmodel.DispatchResult, error) {
+	f.calls = append(f.calls, in)
+	return notifmodel.DispatchResult{}, nil
 }
 
 func testPool(t *testing.T) *pgxpool.Pool {
@@ -91,8 +119,9 @@ func (f *fixture) org(t *testing.T, name, typ string, parent int64) db.Organizat
 
 func (f *fixture) user(t *testing.T, name string) db.User {
 	t.Helper()
+	f.seq++
 	u, err := f.q.CreateUser(f.ctx, db.CreateUserParams{
-		Email:        pgtype.Text{String: fmt.Sprintf("t330-%s-%d@example.test", name, time.Now().UnixNano()), Valid: true},
+		Email:        pgtype.Text{String: fmt.Sprintf("t330-%s-%d-%d@example.test", name, time.Now().UnixNano(), f.seq), Valid: true},
 		PasswordHash: "x", Name: name, Surname: "User", Status: "active",
 	})
 	if err != nil {
@@ -170,6 +199,49 @@ func TestDistributorSubtreeAnnouncementVisibility(t *testing.T) {
 	}
 }
 
+func TestPublishedAnnouncementFanoutBatchesTargets(t *testing.T) {
+	f := newFixture(t)
+	centerCaller := f.caller(f.center, f.centerUser, "center_staff")
+	dealerUUID := f.dealer.Uuid
+	a := f.create(t, centerCaller, "Toplu", []AudienceInput{{TargetType: TargetSubtree, TargetOrganizationUUID: &dealerUUID}})
+	row, err := f.q.GetAnnouncementByUUID(f.ctx, a.UUID)
+	if err != nil {
+		t.Fatalf("announcement row: %v", err)
+	}
+	for range 1199 {
+		f.member(t, f.dealer, "dealer_staff")
+	}
+	enq := &fakeTaskEnqueuer{}
+	dispatcher := &fakeDispatcher{}
+	ev := events.New(EventPublished).
+		WithTenant(f.center.ID).
+		WithEntity("announcement", &row.ID, &row.Uuid).
+		WithPayload(map[string]any{
+			"announcement_id":   row.ID,
+			"announcement_uuid": row.Uuid.String(),
+			"brand_id":          row.BrandID,
+		})
+	if err := EnqueuePublishedBatches(f.ctx, f.q, enq, dispatcher, ev); err != nil {
+		t.Fatalf("enqueue batches: %v", err)
+	}
+	if len(dispatcher.calls) != 0 {
+		t.Fatalf("dispatcher calls = %d", len(dispatcher.calls))
+	}
+	if len(enq.payloads) != 3 {
+		t.Fatalf("batch count = %d", len(enq.payloads))
+	}
+	wantSizes := []int{500, 500, 201}
+	for i, want := range wantSizes {
+		got := len(enq.payloads[i].UserIDs)
+		if got != want {
+			t.Fatalf("batch %d size = %d, want %d", i, got, want)
+		}
+		if enq.payloads[i].Batch != i {
+			t.Fatalf("batch %d index = %d", i, enq.payloads[i].Batch)
+		}
+	}
+}
+
 func TestRoleTargetExpiryReadCountLocaleAndPublishConflict(t *testing.T) {
 	f := newFixture(t)
 	centerCaller := f.caller(f.center, f.centerUser, "center_staff")
@@ -181,6 +253,20 @@ func TestRoleTargetExpiryReadCountLocaleAndPublishConflict(t *testing.T) {
 	f.publish(t, centerCaller, a.UUID)
 	if len(f.out.All()) != 1 {
 		t.Fatalf("outbox events after publish = %d", len(f.out.All()))
+	}
+	var env struct {
+		Data map[string]any `json:"data"`
+	}
+	if err := json.Unmarshal(f.out.All()[0].Payload, &env); err != nil {
+		t.Fatalf("outbox payload: %v", err)
+	}
+	if _, ok := env.Data["announcement_id"]; !ok {
+		t.Fatal("outbox payload missing announcement_id")
+	}
+	for _, key := range []string{"notify_user_ids", "title", "body"} {
+		if _, ok := env.Data[key]; ok {
+			t.Fatalf("outbox payload includes %s", key)
+		}
 	}
 	if _, err := f.svc.Publish(f.ctx, centerCaller, a.UUID); !errors.Is(err, ErrConflict) {
 		t.Fatalf("second publish err = %v", err)
