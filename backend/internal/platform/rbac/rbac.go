@@ -192,6 +192,13 @@ const (
 	PermWarrantiesVoid   = "warranties.void"
 	PermVehiclesTransfer = "vehicles.transfer"
 
+	// TEC-334 (000092): warranty claims. Dealers and distributors open
+	// them, the distributor reviews the subtree, the center decides.
+	PermWarrantyClaimsRead   = "warranty_claims.read"
+	PermWarrantyClaimsWrite  = "warranty_claims.write"
+	PermWarrantyClaimsReview = "warranty_claims.review"
+	PermWarrantyClaimsDecide = "warranty_claims.decide"
+
 	// TEC-174 (000052): the parent resolves a dispute opened with
 	// accounting.dispute (reversal, revision or rejection, K24).
 	PermAccountingResolve = "accounting.resolve"
