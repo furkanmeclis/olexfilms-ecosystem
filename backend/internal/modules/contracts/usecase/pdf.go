@@ -63,7 +63,7 @@ func (s *Service) GenerateExecutedPDF(ctx context.Context, instanceID int64) err
 	if row.PdfKey.Valid && strings.TrimSpace(row.PdfKey.String) != "" {
 		return nil
 	}
-	pdf, objectKey, err := s.renderExecutedPDF(ctx, row)
+	pdf, objectKey, err := s.renderExecutedPDF(ctx, qtx, row)
 	if err != nil {
 		return err
 	}
@@ -84,13 +84,12 @@ func (s *Service) GenerateExecutedPDF(ctx context.Context, instanceID int64) err
 	return tx.Commit(ctx)
 }
 
-func (s *Service) renderExecutedPDF(ctx context.Context, row db.ContractInstance) ([]byte, string, error) {
-	q := s.repo.Queries()
+func (s *Service) renderExecutedPDF(ctx context.Context, q *db.Queries, row db.ContractInstance) ([]byte, string, error) {
 	org, err := q.GetOrganizationByID(ctx, row.OrganizationID)
 	if err != nil {
 		return nil, "", err
 	}
-	vars, err := s.contractDocumentVars(ctx, row, org)
+	vars, err := s.contractDocumentVars(ctx, q, row, org)
 	if err != nil {
 		return nil, "", err
 	}
@@ -98,7 +97,7 @@ func (s *Service) renderExecutedPDF(ctx context.Context, row db.ContractInstance
 	if locale == "" {
 		locale = docmodel.FallbackLanguage
 	}
-	tpl, err := s.contractDocumentTemplate(ctx, row.BrandID, locale)
+	tpl, err := s.contractDocumentTemplate(ctx, q, row.BrandID, locale)
 	if err != nil {
 		return nil, "", err
 	}
@@ -143,8 +142,7 @@ func withEvidenceBlocks(tpl string) string {
 	return tpl + `<section class="doc-evidence">` + b.String() + `</section>`
 }
 
-func (s *Service) contractDocumentTemplate(ctx context.Context, brandID int64, locale string) (db.DocumentTemplate, error) {
-	q := s.repo.Queries()
+func (s *Service) contractDocumentTemplate(ctx context.Context, q *db.Queries, brandID int64, locale string) (db.DocumentTemplate, error) {
 	brand := pgtype.Int8{Int64: brandID, Valid: brandID > 0}
 	for _, c := range []struct {
 		brand pgtype.Int8
@@ -163,12 +161,12 @@ func (s *Service) contractDocumentTemplate(ctx context.Context, brandID int64, l
 	return db.DocumentTemplate{}, ErrNotFound
 }
 
-func (s *Service) contractDocumentVars(ctx context.Context, row db.ContractInstance, org db.Organization) (map[string]string, error) {
-	signers, err := s.repo.Queries().ListContractPDFSigners(ctx, row.ID)
+func (s *Service) contractDocumentVars(ctx context.Context, q *db.Queries, row db.ContractInstance, org db.Organization) (map[string]string, error) {
+	signers, err := q.ListContractPDFSigners(ctx, row.ID)
 	if err != nil {
 		return nil, err
 	}
-	media, err := s.repo.Queries().ListContractMedia(ctx, row.ID)
+	media, err := q.ListContractMedia(ctx, row.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -366,18 +364,19 @@ func (l contractDocumentLoader) Load(ctx context.Context, viewer docmodel.Viewer
 	if err != nil {
 		return docmodel.Source{}, docmodel.ErrSourceNotFound
 	}
-	row, err := l.s.repo.Queries().GetContractInstanceByUUID(ctx, id)
+	q := l.s.repo.Queries()
+	row, err := q.GetContractInstanceByUUID(ctx, id)
 	if err != nil {
 		return docmodel.Source{}, docmodel.ErrSourceNotFound
 	}
 	if !viewer.System && (row.OrganizationID != viewer.OrganizationID || (viewer.BrandID > 0 && row.BrandID != viewer.BrandID)) {
 		return docmodel.Source{}, docmodel.ErrSourceNotFound
 	}
-	org, err := l.s.repo.Queries().GetOrganizationByID(ctx, row.OrganizationID)
+	org, err := q.GetOrganizationByID(ctx, row.OrganizationID)
 	if err != nil {
 		return docmodel.Source{}, err
 	}
-	vars, err := l.s.contractDocumentVars(ctx, row, org)
+	vars, err := l.s.contractDocumentVars(ctx, q, row, org)
 	if err != nil {
 		return docmodel.Source{}, err
 	}

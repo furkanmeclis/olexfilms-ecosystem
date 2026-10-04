@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"strings"
 	"sync"
@@ -26,6 +27,8 @@ func TestExecutedContractPDFConcurrentDeliveryRendersOnce(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx, cancel := context.WithTimeout(d.ctx, 15*time.Second)
+	defer cancel()
 
 	const workers = 4
 	var wg sync.WaitGroup
@@ -34,7 +37,7 @@ func TestExecutedContractPDFConcurrentDeliveryRendersOnce(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			errs <- f.svc.GenerateExecutedPDF(d.ctx, row.ID)
+			errs <- f.svc.GenerateExecutedPDF(ctx, row.ID)
 		}()
 	}
 	wg.Wait()
