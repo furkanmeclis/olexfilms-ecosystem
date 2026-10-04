@@ -15023,6 +15023,150 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  /v1/warranty-claims:
+    get:
+      tags: [Warranties]
+      operationId: listWarrantyClaims
+      summary: Warranty claims inside warranty_claims.read scope
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/WarrantyClaimStatus" }
+        - name: warranty_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - name: vehicle_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - name: created_from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: created_to
+          in: query
+          schema: { type: string, format: date-time }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Warranty claims
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeWarrantyClaimPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Warranties]
+      operationId: createWarrantyClaim
+      summary: Open a warranty claim
+      description: >-
+        Dealer or distributor opens a claim on behalf of the customer. The
+        automatic coverage check is stored and never auto-rejects the claim.
+        Portal/customer sessions cannot open claims.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarrantyClaimCreateInput" }
+      responses:
+        "201":
+          description: Created warranty claim
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeWarrantyClaim" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/warranty-claims/{uuid}/photos:
+    post:
+      tags: [Warranties]
+      operationId: addWarrantyClaimPhoto
+      summary: Add a warranty claim photo
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: JPEG, PNG or WebP, maximum 12 MB.
+      responses:
+        "201":
+          description: Uploaded photo
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeWarrantyClaimPhoto" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/warranty-claims/{uuid}/status:
+    post:
+      tags: [Warranties]
+      operationId: transitionWarrantyClaim
+      summary: Move a warranty claim through review and decision
+      description: >-
+        Flow: open -> dealer_review -> center_review -> approved/rejected.
+        Moving to dealer_review requires at least one photo (422
+        CLAIM_PHOTO_REQUIRED). Rejection requires a reason.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarrantyClaimTransitionInput" }
+      responses:
+        "200":
+          description: Updated warranty claim
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeWarrantyClaim" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /v1/portal/warranty-claims:
+    get:
+      tags: [Warranties]
+      operationId: listPortalWarrantyClaims
+      summary: Narrow warranty claim statuses for the portal user
+      description: Descriptions and photos are intentionally omitted.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Portal warranty claim statuses
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePortalWarrantyClaims" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /v1/services:
     get:
       tags: [Services]
@@ -25955,6 +26099,104 @@ components:
         can_void:
           type: boolean
           description: The caller may void it (warranties.void and an active or expired status).
+        claims:
+          type: array
+          description: Portal warranty detail only; no descriptions or photos.
+          items: { $ref: "#/components/schemas/PortalWarrantyClaimStatus" }
+
+    WarrantyClaimStatus:
+      type: string
+      enum: [open, dealer_review, center_review, approved, rejected, reapplied, closed]
+
+    WarrantyClaimCoverageCheck:
+      type: object
+      required: [ok, reasons, checked_at]
+      properties:
+        ok: { type: boolean }
+        reasons:
+          type: array
+          items:
+            type: string
+            enum: [warranty_not_active, warranty_period_expired, product_has_no_warranty, part_not_covered]
+        checked_at: { type: string, format: date-time }
+
+    WarrantyClaimPartInput:
+      type: object
+      required: [part_key]
+      properties:
+        part_key: { type: string, pattern: "^[a-z0-9_]{1,64}$" }
+        service_item_uuid: { type: [string, "null"], format: uuid }
+        note: { type: string, maxLength: 2000 }
+
+    WarrantyClaimCreateInput:
+      type: object
+      additionalProperties: false
+      required: [warranty_uuid, description, parts]
+      properties:
+        warranty_uuid: { type: string, format: uuid }
+        description: { type: string, minLength: 1, maxLength: 20000 }
+        parts:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/WarrantyClaimPartInput" }
+
+    WarrantyClaimTransitionInput:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: { $ref: "#/components/schemas/WarrantyClaimStatus" }
+        rejection_reason: { type: string, maxLength: 5000 }
+
+    WarrantyClaimPart:
+      type: object
+      required: [uuid, part_key]
+      properties:
+        uuid: { type: string, format: uuid }
+        part_key: { type: string }
+        note: { type: string }
+
+    WarrantyClaimPhoto:
+      type: object
+      required: [uuid, mime_type, size_bytes, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        mime_type: { type: string }
+        size_bytes: { type: integer, format: int64 }
+        created_at: { type: string, format: date-time }
+
+    WarrantyClaim:
+      type: object
+      required: [uuid, claim_no, warranty_uuid, status, coverage_check, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        claim_no: { type: integer, format: int64 }
+        warranty_uuid: { type: string, format: uuid }
+        status: { $ref: "#/components/schemas/WarrantyClaimStatus" }
+        description: { type: string }
+        rejection_reason: { type: [string, "null"] }
+        coverage_check: { $ref: "#/components/schemas/WarrantyClaimCoverageCheck" }
+        ai_damage_type: { type: [string, "null"] }
+        ai_summary: { type: [string, "null"] }
+        ai_confidence: { type: [string, "null"] }
+        ai_triaged_at: { type: [string, "null"], format: date-time }
+        parts:
+          type: array
+          items: { $ref: "#/components/schemas/WarrantyClaimPart" }
+        photos:
+          type: array
+          items: { $ref: "#/components/schemas/WarrantyClaimPhoto" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    PortalWarrantyClaimStatus:
+      type: object
+      required: [uuid, status, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        status: { $ref: "#/components/schemas/WarrantyClaimStatus" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
 
     WarrantyVoidInput:
       type: object
@@ -25985,6 +26227,53 @@ components:
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeWarrantyClaim:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/WarrantyClaim" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeWarrantyClaimPhoto:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/WarrantyClaimPhoto" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeWarrantyClaimPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/WarrantyClaim" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePortalWarrantyClaims:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/PortalWarrantyClaimStatus" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeServicePage:
