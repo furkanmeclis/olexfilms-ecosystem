@@ -1282,6 +1282,52 @@ func (q *Queries) ListQuotesByOrganizations(ctx context.Context, arg ListQuotesB
 	return items, nil
 }
 
+const lockQuoteByID = `-- name: LockQuoteByID :one
+SELECT id, uuid, organization_id, brand_id, lead_id, quote_no, currency, subtotal, discount_total, tax_total, grand_total, valid_until, status, public_token, created_by_user_id, sent_at, accepted_at, rejected_at, expired_at, created_at, updated_at, deleted_at FROM quotes
+WHERE id = $1 AND deleted_at IS NULL
+FOR UPDATE
+`
+
+func (q *Queries) LockQuoteByID(ctx context.Context, id int64) (Quote, error) {
+	row := q.db.QueryRow(ctx, lockQuoteByID, id)
+	var i Quote
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.LeadID,
+		&i.QuoteNo,
+		&i.Currency,
+		&i.Subtotal,
+		&i.DiscountTotal,
+		&i.TaxTotal,
+		&i.GrandTotal,
+		&i.ValidUntil,
+		&i.Status,
+		&i.PublicToken,
+		&i.CreatedByUserID,
+		&i.SentAt,
+		&i.AcceptedAt,
+		&i.RejectedAt,
+		&i.ExpiredAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const lockQuoteNumbering = `-- name: LockQuoteNumbering :exec
+SELECT pg_advisory_xact_lock(hashtextextended('quotes:' || $1::bigint::text, 314))
+`
+
+// Serializes quote number allocation per organization (transaction scoped).
+func (q *Queries) LockQuoteNumbering(ctx context.Context, organizationID int64) error {
+	_, err := q.db.Exec(ctx, lockQuoteNumbering, organizationID)
+	return err
+}
+
 const markQuoteReminderSent = `-- name: MarkQuoteReminderSent :one
 UPDATE quote_reminders
 SET sent_at = NOW()

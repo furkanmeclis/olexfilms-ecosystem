@@ -296,3 +296,12 @@ WHERE status IN ('draft', 'sent')
   AND valid_until < sqlc.arg(today)::date
   AND deleted_at IS NULL
 RETURNING *;
+
+-- name: LockQuoteNumbering :exec
+-- Serializes quote number allocation per organization (transaction scoped).
+SELECT pg_advisory_xact_lock(hashtextextended('quotes:' || sqlc.arg(organization_id)::bigint::text, 314));
+
+-- name: LockQuoteByID :one
+SELECT * FROM quotes
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL
+FOR UPDATE;

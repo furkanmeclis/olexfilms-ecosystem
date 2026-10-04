@@ -1593,6 +1593,9 @@ type Querier interface {
 	// FOR UPDATE) and the receipt of the return are serialized.
 	LockOrdersOfTransferRequest(ctx context.Context, requestID int64) ([]int64, error)
 	LockOrganizationProductStock(ctx context.Context, arg LockOrganizationProductStockParams) (OrganizationProductStock, error)
+	LockQuoteByID(ctx context.Context, id int64) (Quote, error)
+	// Serializes quote number allocation per organization (transaction scoped).
+	LockQuoteNumbering(ctx context.Context, organizationID int64) error
 	LockService(ctx context.Context, arg LockServiceParams) (Service, error)
 	LockServiceByUUID(ctx context.Context, arg LockServiceByUUIDParams) (Service, error)
 	// ---------------------------------------------------------------------------

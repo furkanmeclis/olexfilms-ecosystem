@@ -223,14 +223,16 @@ func (h *Handler) QuotePDF(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if _, err := h.svc.GetQuote(r.Context(), caller(r), id); err != nil {
+	orgID, brandID, err := h.svc.QuoteOwner(r.Context(), caller(r), id)
+	if err != nil {
 		writeError(w, r, err)
 		return
 	}
 	p := authctx.MustPrincipal(r.Context())
-	scope := orgctx.MustScope(r.Context())
+	// Render in the quote owner's scope: a managed organization's quote the
+	// caller may read must not 404 in the documents module.
 	v, ready, err := h.docs.RequestRender(r.Context(), docmodel.Viewer{
-		UserID: p.UserInternal, OrganizationID: scope.InternalID, BrandID: scope.BrandID,
+		UserID: p.UserInternal, OrganizationID: orgID, BrandID: brandID,
 	}, docusecase.RenderInput{Kind: docmodel.KindQuote, SourceID: id.String(), Locale: r.URL.Query().Get("locale")})
 	if err != nil {
 		writeError(w, r, err)

@@ -425,3 +425,167 @@ func TestHelpersValidateWithoutDatabase(t *testing.T) {
 	}
 	_ = uuid.Nil
 }
+
+func (f *fixture) markSent(id uuid.UUID) {
+	f.t.Helper()
+	row, err := f.q.GetQuoteByUUID(f.ctx, db.GetQuoteByUUIDParams{Uuid: id, BrandID: f.brand})
+	if err != nil {
+		f.t.Fatalf("quote row: %v", err)
+	}
+	if _, err := f.q.SetQuoteStatus(f.ctx, db.SetQuoteStatusParams{ID: row.ID, OrganizationID: row.OrganizationID, Status: QuoteStatusSent}); err != nil {
+		f.t.Fatalf("sent: %v", err)
+	}
+}
+
+func (f *fixture) eventKinds(c Caller, lead uuid.UUID) []string {
+	f.t.Helper()
+	evs, err := f.svc.Events(f.ctx, c, lead)
+	if err != nil {
+		f.t.Fatalf("Events: %v", err)
+	}
+	var out []string
+	for _, e := range evs {
+		if k, ok := e.Payload["kind"].(string); ok {
+			out = append(out, k)
+		}
+	}
+	return out
+}
+
+func hasKind(kinds []string, want string) bool {
+	for _, k := range kinds {
+		if k == want {
+			return true
+		}
+	}
+	return false
+}
+
+func TestQuoteUnitPriceOverrideRequiresSaleWrite(t *testing.T) {
+	f := newFixture(t)
+	dist := f.orgTyped("quote-override", "distributor", f.center.ID)
+	c := f.quoteCaller(dist, rbac.ScopeManaged)
+	delete(c.Principal.PermissionScopes, rbac.PermPricingSaleWrite)
+	lead := f.lead(dist, StatusNew, nil)
+	item := f.catalogItem("Override check", "40.00")
+
+	_, err := f.svc.CreateQuote(f.ctx, c, lead.Uuid, QuoteInput{Lines: []QuoteLineInput{
+		{LineType: QuoteLineCatalogService, ServiceCatalogItemUUID: &item.Uuid, Quantity: "1", UnitPrice: strPtr("35.00")},
+	}})
+	if !errors.Is(err, ErrQuoteForbidden) {
+		t.Fatalf("override without pricing.sale.write err = %v, want ErrQuoteForbidden", err)
+	}
+	// Sending the default price back is not an override.
+	q, err := f.svc.CreateQuote(f.ctx, c, lead.Uuid, QuoteInput{Lines: []QuoteLineInput{
+		{LineType: QuoteLineCatalogService, ServiceCatalogItemUUID: &item.Uuid, Quantity: "1", UnitPrice: strPtr("40")},
+	}})
+	if err != nil || q.Lines[0].UnitPrice != "40.00" {
+		t.Fatalf("default echo: q=%+v err=%v", q, err)
+	}
+	withPerm := f.quoteCaller(dist, rbac.ScopeManaged)
+	q, err = f.svc.CreateQuote(f.ctx, withPerm, lead.Uuid, QuoteInput{Lines: []QuoteLineInput{
+		{LineType: QuoteLineCatalogService, ServiceCatalogItemUUID: &item.Uuid, Quantity: "1", UnitPrice: strPtr("35.00")},
+	}})
+	if err != nil || q.Lines[0].UnitPrice != "35.00" || q.GrandTotal != "35.00" {
+		t.Fatalf("override with permission: q=%+v err=%v", q, err)
+	}
+}
+
+func TestQuoteTotalsRoundPerLine(t *testing.T) {
+	f := newFixture(t)
+	dist := f.orgTyped("quote-round", "distributor", f.center.ID)
+	c := f.quoteCaller(dist, rbac.ScopeManaged)
+	lead := f.lead(dist, StatusNew, nil)
+	item := f.catalogItem("Rounding", "0.33")
+	line := QuoteLineInput{LineType: QuoteLineCatalogService, ServiceCatalogItemUUID: &item.Uuid, Quantity: "0.5"}
+	q, err := f.svc.CreateQuote(f.ctx, c, lead.Uuid, QuoteInput{Lines: []QuoteLineInput{line, line}})
+	if err != nil {
+		t.Fatalf("CreateQuote: %v", err)
+	}
+	// 0.33 x 0.5 = 0.165 -> 0.17 per line; totals agree with the lines.
+	if q.Lines[0].LineTotal != "0.17" || q.Subtotal != "0.34" || q.GrandTotal != "0.34" {
+		t.Fatalf("rounding: %+v", q)
+	}
+}
+
+func TestQuoteDraftOnlyEditAndDecisions(t *testing.T) {
+	f := newFixture(t)
+	dist := f.orgTyped("quote-decide", "distributor", f.center.ID)
+	c := f.quoteCaller(dist, rbac.ScopeManaged)
+	lead := f.lead(dist, StatusNew, nil)
+	item := f.catalogItem("Decide", "10.00")
+	q, err := f.svc.CreateQuote(f.ctx, c, lead.Uuid, QuoteInput{Lines: []QuoteLineInput{
+		{LineType: QuoteLineCatalogService, ServiceCatalogItemUUID: &item.Uuid, Quantity: "1"},
+	}})
+	if err != nil {
+		t.Fatalf("CreateQuote: %v", err)
+	}
+	if _, err := f.svc.DecideQuote(f.ctx, c, q.UUID, QuoteStatusAccepted, QuoteDecisionInput{}); !errors.Is(err, ErrQuoteConflict) {
+		t.Fatalf("accept draft err = %v, want ErrQuoteConflict", err)
+	}
+	f.markSent(q.UUID)
+	valid := time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC)
+	if _, err := f.svc.PatchQuote(f.ctx, c, q.UUID, QuotePatchInput{ValidUntil: Field[time.Time]{Set: true, Value: &valid}}); !errors.Is(err, ErrQuoteConflict) {
+		t.Fatalf("patch sent err = %v, want ErrQuoteConflict", err)
+	}
+	got, err := f.svc.DecideQuote(f.ctx, c, q.UUID, QuoteStatusRejected, QuoteDecisionInput{Reason: strPtr("too expensive")})
+	if err != nil || got.Status != QuoteStatusRejected {
+		t.Fatalf("reject: %+v %v", got, err)
+	}
+	if _, err := f.svc.DecideQuote(f.ctx, c, q.UUID, QuoteStatusAccepted, QuoteDecisionInput{}); !errors.Is(err, ErrQuoteConflict) {
+		t.Fatalf("accept after reject err = %v, want ErrQuoteConflict", err)
+	}
+	kinds := f.eventKinds(c, lead.Uuid)
+	if !hasKind(kinds, "quote_created") || !hasKind(kinds, "quote_rejected") {
+		t.Fatalf("lead events = %v", kinds)
+	}
+}
+
+func TestQuoteExpireSkipsDecidedAndRecordsEvent(t *testing.T) {
+	f := newFixture(t)
+	dist := f.orgTyped("quote-expire2", "distributor", f.center.ID)
+	c := f.quoteCaller(dist, rbac.ScopeManaged)
+	lead := f.lead(dist, StatusNew, nil)
+	item := f.catalogItem("Expire2", "10.00")
+	past := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+	mk := func() Quote {
+		q, err := f.svc.CreateQuote(f.ctx, c, lead.Uuid, QuoteInput{ValidUntil: &past, Lines: []QuoteLineInput{
+			{LineType: QuoteLineCatalogService, ServiceCatalogItemUUID: &item.Uuid, Quantity: "1"},
+		}})
+		if err != nil {
+			t.Fatalf("CreateQuote: %v", err)
+		}
+		return q
+	}
+	sent, accepted := mk(), mk()
+	f.markSent(sent.UUID)
+	f.markSent(accepted.UUID)
+	if _, err := f.svc.DecideQuote(f.ctx, c, accepted.UUID, QuoteStatusAccepted, QuoteDecisionInput{}); err != nil {
+		t.Fatalf("accept: %v", err)
+	}
+	if err := f.svc.ExpireDueQuotesTask(f.ctx); err != nil {
+		t.Fatalf("ExpireDueQuotesTask: %v", err)
+	}
+	if got, _ := f.svc.GetQuote(f.ctx, c, sent.UUID); got.Status != QuoteStatusExpired {
+		t.Fatalf("sent quote status = %s, want expired", got.Status)
+	}
+	if got, _ := f.svc.GetQuote(f.ctx, c, accepted.UUID); got.Status != QuoteStatusAccepted {
+		t.Fatalf("accepted quote status = %s, want accepted", got.Status)
+	}
+	if !hasKind(f.eventKinds(c, lead.Uuid), "quote_expired") {
+		t.Fatal("quote_expired lead event missing")
+	}
+}
+
+func TestQuoteCenterCatalogDefaultPrice(t *testing.T) {
+	f := newFixture(t)
+	c := f.quoteCaller(f.center, rbac.ScopeBrand)
+	lead := f.lead(f.center, StatusNew, nil)
+	item := f.catalogItem("Center default", "120.00")
+	q, err := f.svc.CreateQuote(f.ctx, c, lead.Uuid, QuoteInput{Lines: []QuoteLineInput{
+		{LineType: QuoteLineCatalogService, ServiceCatalogItemUUID: &item.Uuid, Quantity: "1"},
+	}})
+	if err != nil || q.Lines[0].UnitPrice != "120.00" {
+		t.Fatalf("center quote: %+v %v", q, err)
+	}
+}

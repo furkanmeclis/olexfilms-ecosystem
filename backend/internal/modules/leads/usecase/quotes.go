@@ -168,6 +168,12 @@ func qtyText(n pgtype.Numeric) string {
 	return strings.TrimRight(strings.TrimRight(r.FloatString(3), "0"), ".")
 }
 
+// round2 rounds to 2 decimals (half away from zero, as FloatString does).
+func round2(r *big.Rat) *big.Rat {
+	out, _ := new(big.Rat).SetString(r.FloatString(2))
+	return out
+}
+
 func parseQuantity(raw string) (string, *big.Rat, error) {
 	q := strings.TrimSpace(raw)
 	if q == "" {
@@ -288,12 +294,16 @@ func (s *Service) CreateQuote(ctx context.Context, c Caller, leadID uuid.UUID, i
 	if err != nil {
 		return Quote{}, fmt.Errorf("quotes: organization: %w", err)
 	}
-	no, err := s.q.NextQuoteNo(ctx, lead.OrganizationID)
-	if err != nil {
-		return Quote{}, fmt.Errorf("quotes: next no: %w", err)
-	}
 	var row db.Quote
 	err = s.inTx(ctx, func(q *db.Queries) error {
+		// quote_no is MAX+1 per organization: serialize concurrent creates.
+		if err := q.LockQuoteNumbering(ctx, lead.OrganizationID); err != nil {
+			return fmt.Errorf("quotes: lock numbering: %w", err)
+		}
+		no, err := q.NextQuoteNo(ctx, lead.OrganizationID)
+		if err != nil {
+			return fmt.Errorf("quotes: next no: %w", err)
+		}
 		zero, _ := numericValue("0.00")
 		row, err = q.CreateQuote(ctx, db.CreateQuoteParams{
 			OrganizationID: lead.OrganizationID, BrandID: lead.BrandID, LeadID: lead.ID, QuoteNo: int64(no),
@@ -362,7 +372,19 @@ func (s *Service) ReplaceQuoteLines(ctx context.Context, c Caller, id uuid.UUID,
 	}
 	var row db.Quote
 	err = s.inTx(ctx, func(q *db.Queries) error {
-		row, err = s.replaceQuoteLines(ctx, q, c, cur, org, lines)
+		// Row lock: concurrent replaces would otherwise both delete only the
+		// committed lines and leave the union of their inserts.
+		locked, err := q.LockQuoteByID(ctx, cur.ID)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrQuoteNotFound
+		}
+		if err != nil {
+			return fmt.Errorf("quotes: lock: %w", err)
+		}
+		if locked.Status != QuoteStatusDraft {
+			return ErrQuoteConflict
+		}
+		row, err = s.replaceQuoteLines(ctx, q, c, locked, org, lines)
 		return err
 	})
 	if err != nil {
@@ -426,12 +448,15 @@ func (s *Service) buildLine(ctx context.Context, c Caller, quote db.Quote, org d
 	if err != nil {
 		return db.CreateQuoteLineParams{}, nil, nil, err
 	}
-	if in.UnitPrice != nil && !canOverridePrice(c) {
-		return db.CreateQuoteLineParams{}, nil, nil, ErrQuoteForbidden
-	}
 	unitS, unit, err := parseMoney("unit_price", in.UnitPrice, defaultPrice)
 	if err != nil {
 		return db.CreateQuoteLineParams{}, nil, nil, err
+	}
+	// Echoing the default price back is not an override.
+	if in.UnitPrice != nil && !canOverridePrice(c) {
+		if def, derr := rat(defaultPrice); derr != nil || round2(def).Cmp(unit) != 0 {
+			return db.CreateQuoteLineParams{}, nil, nil, ErrQuoteForbidden
+		}
 	}
 	discS, discount, err := parseMoney("discount_amount", in.DiscountAmount, "0.00")
 	if err != nil {
@@ -443,7 +468,8 @@ func (s *Service) buildLine(ctx context.Context, c Caller, quote db.Quote, org d
 	if desc == "" || utf8.RuneCountInString(desc) > 500 {
 		return db.CreateQuoteLineParams{}, nil, nil, invalid("description", "is required and must be at most 500 characters")
 	}
-	gross := new(big.Rat).Mul(unit, qty)
+	// Gross is rounded per line so subtotal - discount == sum(line totals).
+	gross := round2(new(big.Rat).Mul(unit, qty))
 	if discount.Cmp(gross) > 0 {
 		return db.CreateQuoteLineParams{}, nil, nil, invalid("discount_amount", "cannot exceed the line gross amount")
 	}
@@ -494,8 +520,14 @@ func (s *Service) defaultLine(ctx context.Context, c Caller, org db.Organization
 			return "", "", pgtype.Int8{}, pgtype.Int8{}, invalid("product_uuid", "has no price in organization currency")
 		}
 		p, err := s.q.GetProductByUUID(ctx, db.GetProductByUUIDParams{Uuid: *in.ProductUUID, BrandID: c.Org.BrandID})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", "", pgtype.Int8{}, pgtype.Int8{}, ErrQuoteNotFound
+		}
 		if err != nil {
 			return "", "", pgtype.Int8{}, pgtype.Int8{}, err
+		}
+		if !p.Active {
+			return "", "", pgtype.Int8{}, pgtype.Int8{}, invalid("product_uuid", "is not active")
 		}
 		return price, view.Name, pgtype.Int8{Int64: p.ID, Valid: true}, pgtype.Int8{}, nil
 	case QuoteLineCatalogService:
@@ -509,9 +541,22 @@ func (s *Service) defaultLine(ctx context.Context, c Caller, org db.Organization
 		if err != nil {
 			return "", "", pgtype.Int8{}, pgtype.Int8{}, err
 		}
-		price, err := s.serviceCatalog().ResolvePrice(ctx, item, org)
-		if err != nil {
-			return "", "", pgtype.Int8{}, pgtype.Int8{}, err
+		if !item.IsActive {
+			return "", "", pgtype.Int8{}, pgtype.Int8{}, invalid("service_catalog_item_uuid", "is not active")
+		}
+		var price servicecataloguc.Price
+		if org.Type == pricinguc.OrgCenter {
+			// ResolvePrice only knows distributor/dealer buyers; the center
+			// quotes its own catalog default.
+			price = servicecataloguc.Price{Amount: moneyText(item.DefaultPrice), Currency: item.Currency, Source: "default"}
+		} else {
+			price, err = s.serviceCatalog().ResolvePrice(ctx, item, org)
+			if errors.Is(err, servicecataloguc.ErrInvalidBuyerOrg) {
+				return "", "", pgtype.Int8{}, pgtype.Int8{}, invalid("service_catalog_item_uuid", "has no price for this organization")
+			}
+			if err != nil {
+				return "", "", pgtype.Int8{}, pgtype.Int8{}, err
+			}
 		}
 		if price.Currency != org.Currency {
 			return "", "", pgtype.Int8{}, pgtype.Int8{}, invalid("service_catalog_item_uuid", "has no price in organization currency")
@@ -542,6 +587,17 @@ func (s *Service) DecideQuote(ctx context.Context, c Caller, id uuid.UUID, statu
 	}
 	var row db.Quote
 	err = s.inTx(ctx, func(q *db.Queries) error {
+		// Row lock + re-check: accept/reject/expiry must not overwrite each other.
+		locked, err := q.LockQuoteByID(ctx, cur.ID)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrQuoteNotFound
+		}
+		if err != nil {
+			return fmt.Errorf("quotes: lock: %w", err)
+		}
+		if locked.Status != QuoteStatusSent {
+			return ErrQuoteConflict
+		}
 		row, err = q.SetQuoteStatus(ctx, db.SetQuoteStatusParams{ID: cur.ID, OrganizationID: cur.OrganizationID, Status: status})
 		if err != nil {
 			return fmt.Errorf("quotes: decide: %w", err)
@@ -564,20 +620,34 @@ func (s *Service) DecideQuote(ctx context.Context, c Caller, id uuid.UUID, statu
 
 func (s *Service) ExpireDueQuotesTask(ctx context.Context) error {
 	today := s.nowFunc().UTC()
-	rows, err := s.q.ExpireDueQuotes(ctx, pgtype.Date{Time: today, Valid: true})
-	if err != nil {
-		return fmt.Errorf("quotes: expire due: %w", err)
-	}
-	for _, q := range rows {
-		lead, err := s.q.GetLeadByID(ctx, db.GetLeadByIDParams{ID: q.LeadID, BrandID: q.BrandID})
+	// One transaction: a failed lead event rolls the status back, so the
+	// retried task expires (and records) the same quotes again.
+	return s.inTx(ctx, func(q *db.Queries) error {
+		rows, err := q.ExpireDueQuotes(ctx, pgtype.Date{Time: today, Valid: true})
 		if err != nil {
-			return err
+			return fmt.Errorf("quotes: expire due: %w", err)
 		}
-		if _, err := s.add(ctx, lead, EventMessage, map[string]any{"kind": "quote_expired", "quote_uuid": q.Uuid.String(), "quote_no": q.QuoteNo}, pgtype.Int8{}); err != nil {
-			return err
+		for _, qt := range rows {
+			lead, err := q.GetLeadByID(ctx, db.GetLeadByIDParams{ID: qt.LeadID, BrandID: qt.BrandID})
+			if err != nil {
+				return fmt.Errorf("quotes: expire lead: %w", err)
+			}
+			if err := addEvent(ctx, q, lead, EventMessage, map[string]any{"kind": "quote_expired", "quote_uuid": qt.Uuid.String(), "quote_no": qt.QuoteNo}, pgtype.Int8{}); err != nil {
+				return fmt.Errorf("quotes: expire event: %w", err)
+			}
 		}
+		return nil
+	})
+}
+
+// QuoteOwner returns the organization and brand that own a quote visible to
+// the caller (PDF renders run in the owner's scope, also for managed orgs).
+func (s *Service) QuoteOwner(ctx context.Context, c Caller, id uuid.UUID) (int64, int64, error) {
+	row, err := s.quoteRow(ctx, c, id)
+	if err != nil {
+		return 0, 0, err
 	}
-	return nil
+	return row.OrganizationID, row.BrandID, nil
 }
 
 func (s *Service) SourceType() string { return "quote" }
