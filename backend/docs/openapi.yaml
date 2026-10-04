@@ -14136,6 +14136,49 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Accounting]
+      operationId: openAccountingCustomerCari
+      summary: Open the cari of a customer the organization serves (TEC-342)
+      description: >-
+        Opens (or returns) the active organization's cari with a customer
+        (counterparty_type user) in the organization's currency. The customer
+        must be served by the organization (customer_organizations); anything
+        else answers 404. Organization caris open with their first entry and
+        are not opened here. Needs accounting.write; in a dealer organization
+        also the dealer_accounting module (403 FEATURE_DISABLED when off).
+        The cari then takes manual income/charge entries, collections and
+        payments by cari_uuid; its statement is GET
+        /v1/accounting/cari/{uuid}/statement. No instalments (K18).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CariOpenInput"
+      responses:
+        "200":
+          description: The cari already existed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCariAccount"
+        "201":
+          description: Opened cari
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCariAccount"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /v1/accounting/cari/{uuid}:
     get:
@@ -14222,6 +14265,9 @@ paths:
         organization (the parent or a direct child of the same brand; opened
         when missing). System categories (sale, purchase) are refused. A
         repeated idempotency_key answers 200 with the earlier entry.
+        TEC-342: cari_uuid may name a customer cari (POST
+        /v1/accounting/cari); in a dealer organization every accounting
+        write needs the dealer_accounting module (403 FEATURE_DISABLED).
       security:
         - bearerAuth: []
       requestBody:
@@ -24747,6 +24793,20 @@ components:
         entry_count: { type: integer, format: int64 }
         last_entry_at: { type: [string, "null"], format: date-time }
         created_at: { type: string, format: date-time }
+
+    CariOpenInput:
+      type: object
+      additionalProperties: false
+      required: [counterparty_type, counterparty_uuid]
+      properties:
+        counterparty_type:
+          type: string
+          enum: [user]
+          description: Only customer caris are opened by hand (TEC-342).
+        counterparty_uuid:
+          type: string
+          format: uuid
+          description: The customer's user UUID.
 
     AccountingRef:
       type: object
