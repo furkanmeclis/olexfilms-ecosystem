@@ -15074,7 +15074,11 @@ paths:
         cancelled are final (409 SERVICE_INVALID_TRANSITION). A request for
         the current status is a no-op (completing a completed service
         consumes nothing and emits nothing). Every move writes a status log
-        and a service.* outbox event.
+        and a service.* outbox event. When contracts.intake_required and
+        the intake_contracts module are both enabled for the service
+        organization, draft/pending -> processing and direct completion from
+        draft require the linked contract to be executed; otherwise the
+        transition answers 422 CONTRACT_REQUIRED.
       security:
         - bearerAuth: []
       requestBody:
@@ -25050,6 +25054,14 @@ components:
         expired_at: { type: [string, "null"], format: date-time }
         voided_at: { type: [string, "null"], format: date-time }
 
+    ServiceContractSummary:
+      type: object
+      required: [uuid, status, contract_no]
+      properties:
+        uuid: { type: string, format: uuid }
+        status: { $ref: "#/components/schemas/ContractStatus" }
+        contract_no: { type: integer, format: int64 }
+
     Service:
       type: object
       required:
@@ -25070,6 +25082,8 @@ components:
         - package
         - notes
         - has_measurement
+        - contract
+        - contract_required
         - cancel_reason
         - completed_at
         - cancelled_at
@@ -25096,6 +25110,12 @@ components:
         package: { type: [string, "null"] }
         notes: { type: [string, "null"] }
         has_measurement: { type: boolean }
+        contract:
+          description: Linked intake contract summary, if any
+          oneOf:
+            - $ref: "#/components/schemas/ServiceContractSummary"
+            - type: "null"
+        contract_required: { type: boolean }
         cancel_reason: { type: [string, "null"] }
         completed_at: { type: [string, "null"], format: date-time }
         cancelled_at: { type: [string, "null"], format: date-time }

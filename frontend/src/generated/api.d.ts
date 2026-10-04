@@ -7906,7 +7906,7 @@ export interface paths {
         put?: never;
         /**
          * Move a service to another status
-         * @description Legacy state machine (TEC-179): draft -> pending -> processing -> ready (services.write); center shortcuts draft -> processing and pending -> ready; draft | pending | processing | ready -> cancelled (services.cancel, center only; a dealer gets 403). draft | processing | ready -> completed (services.complete, TEC-180) consumes the stock of every item in the same transaction (consumption for a whole unit, partial_consumption for a cut; idempotency key service:service_item:<id>), links each item to its stock movement and writes one service.completed outbox event. A service without items answers 400; a unit that is no longer held or a cut longer than the rest of the roll answers 409 SERVICE_UNIT_NOT_AVAILABLE and nothing is written. Completed and cancelled are final (409 SERVICE_INVALID_TRANSITION). A request for the current status is a no-op (completing a completed service consumes nothing and emits nothing). Every move writes a status log and a service.* outbox event.
+         * @description Legacy state machine (TEC-179): draft -> pending -> processing -> ready (services.write); center shortcuts draft -> processing and pending -> ready; draft | pending | processing | ready -> cancelled (services.cancel, center only; a dealer gets 403). draft | processing | ready -> completed (services.complete, TEC-180) consumes the stock of every item in the same transaction (consumption for a whole unit, partial_consumption for a cut; idempotency key service:service_item:<id>), links each item to its stock movement and writes one service.completed outbox event. A service without items answers 400; a unit that is no longer held or a cut longer than the rest of the roll answers 409 SERVICE_UNIT_NOT_AVAILABLE and nothing is written. Completed and cancelled are final (409 SERVICE_INVALID_TRANSITION). A request for the current status is a no-op (completing a completed service consumes nothing and emits nothing). Every move writes a status log and a service.* outbox event. When contracts.intake_required and the intake_contracts module are both enabled for the service organization, draft/pending -> processing and direct completion from draft require the linked contract to be executed; otherwise the transition answers 422 CONTRACT_REQUIRED.
          */
         post: operations["transitionService"];
         delete?: never;
@@ -14574,6 +14574,13 @@ export interface components {
             /** Format: date-time */
             voided_at: string | null;
         };
+        ServiceContractSummary: {
+            /** Format: uuid */
+            uuid: string;
+            status: components["schemas"]["ContractStatus"];
+            /** Format: int64 */
+            contract_no: number;
+        };
         Service: {
             /** Format: uuid */
             uuid: string;
@@ -14595,6 +14602,9 @@ export interface components {
             package: string | null;
             notes: string | null;
             has_measurement: boolean;
+            /** @description Linked intake contract summary, if any */
+            contract: components["schemas"]["ServiceContractSummary"] | null;
+            contract_required: boolean;
             cancel_reason: string | null;
             /** Format: date-time */
             completed_at: string | null;

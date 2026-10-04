@@ -28,6 +28,12 @@ altında yansıtılması gerekir. Önerilen yol: aynı handler'ları
 `/v1/mobile/warehouse/...` yoluna da bağlamak (izin, modül kapısı ve org
 kapsamı aynı kalır). Yeni iş kuralı gerekmez.
 
+Mobil legacy hizmet uçları (`/v1/mobile/legacy/services*`) paneldeki hizmet
+usecase'ini kullanır. `contracts.intake_required` ayarı ve `intake_contracts`
+modülü açıksa, sözleşmesi olmayan veya sözleşmesi `executed` olmayan hizmetin
+`draft`/`pending` -> `processing` ya da doğrudan `completed` geçişi 422
+`CONTRACT_REQUIRED` döner.
+
 ## 2. Eşleşme tablosu
 
 Sütunlar:
