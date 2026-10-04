@@ -502,6 +502,24 @@ var Permissions = []PermissionDef{
 		Slug: PermServicesCancelCompleted, Name: "Cancel completed services", Module: "services", Scopes: scopesRecordsInt,
 		Description: "Cancel a completed service with warranty void, stock return and accounting reversal.",
 	},
+
+	// TEC-322: appointments and capacity (F3-04). Appended last; migration
+	// 000090 seeds them.
+	{
+		Slug: PermAppointmentsRead, Name: "Read appointments", Module: "appointments",
+		Scopes:      []Scope{ScopeManaged, ScopeSubtree, ScopeAll},
+		Description: "Read appointment calendars and capacity of managed organizations.",
+	},
+	{
+		Slug: PermAppointmentsWrite, Name: "Write appointments", Module: "appointments",
+		Scopes:      []Scope{ScopeManaged, ScopeAll},
+		Description: "Create, update and cancel appointments of the managed organization.",
+	},
+	{
+		Slug: PermAppointmentSettingsManage, Name: "Manage appointment settings", Module: "appointments",
+		Scopes:      []Scope{ScopeManaged, ScopeAll},
+		Description: "Manage appointment capacity, working hours, closures and portal booking settings.",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -515,6 +533,10 @@ var BrandIndependentGrants = map[string]map[string]bool{
 	},
 	RoleCenterSocial: {
 		PermLeadsRead: true, PermLeadsWrite: true,
+		PermAppointmentsRead: true,
+	},
+	RoleCenterStaff: {
+		PermAppointmentsRead: true,
 	},
 }
 
@@ -622,6 +644,10 @@ var Roles = []RoleDef{
 			PermQuotesRead:      ScopeManaged,
 			PermQuotesWrite:     ScopeManaged,
 			PermLeadsConvertOrg: ScopeBrand,
+			// TEC-322 (000090).
+			PermAppointmentsRead:          ScopeAll,
+			PermAppointmentsWrite:         ScopeManaged,
+			PermAppointmentSettingsManage: ScopeManaged,
 		}),
 	},
 	{
@@ -711,6 +737,9 @@ var Roles = []RoleDef{
 			PermQuotesRead:      ScopeManaged,
 			PermQuotesWrite:     ScopeManaged,
 			PermLeadsConvertOrg: ScopeBrand,
+			// TEC-322 (000090).
+			PermAppointmentsRead:  ScopeAll,
+			PermAppointmentsWrite: ScopeManaged,
 		}),
 	},
 	{
@@ -785,6 +814,10 @@ var Roles = []RoleDef{
 			PermQuotesRead:      ScopeManaged,
 			PermQuotesWrite:     ScopeManaged,
 			PermLeadsConvertOrg: ScopeSubtree,
+			// TEC-322 (000090).
+			PermAppointmentsRead:          ScopeSubtree,
+			PermAppointmentsWrite:         ScopeManaged,
+			PermAppointmentSettingsManage: ScopeManaged,
 		}),
 	},
 	{
@@ -816,6 +849,9 @@ var Roles = []RoleDef{
 			PermLeadsWrite:  ScopeManaged,
 			PermQuotesRead:  ScopeManaged,
 			PermQuotesWrite: ScopeManaged,
+			// TEC-322 (000090).
+			PermAppointmentsRead:  ScopeSubtree,
+			PermAppointmentsWrite: ScopeManaged,
 		}),
 	},
 	{
@@ -917,6 +953,10 @@ var Roles = []RoleDef{
 			PermLeadsWrite:  ScopeManaged,
 			PermQuotesRead:  ScopeManaged,
 			PermQuotesWrite: ScopeManaged,
+			// TEC-322 (000090).
+			PermAppointmentsRead:          ScopeManaged,
+			PermAppointmentsWrite:         ScopeManaged,
+			PermAppointmentSettingsManage: ScopeManaged,
 		}),
 	},
 	{
@@ -949,6 +989,9 @@ var Roles = []RoleDef{
 			PermLeadsWrite:  ScopeManaged,
 			PermQuotesRead:  ScopeManaged,
 			PermQuotesWrite: ScopeManaged,
+			// TEC-322 (000090).
+			PermAppointmentsRead:  ScopeManaged,
+			PermAppointmentsWrite: ScopeManaged,
 		}),
 	},
 	{
