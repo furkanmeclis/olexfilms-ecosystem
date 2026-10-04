@@ -5,6 +5,7 @@ import { Megaphone, Pin } from "lucide-react";
 import Link from "next/link";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import {
   ANNOUNCEMENT_DASHBOARD_LIMIT,
@@ -15,11 +16,16 @@ import {
   announcementsService,
   type LocaleCode,
 } from "@/features/announcements/services/announcements.service";
+import { useFeature } from "@/features/modules/hooks/use-features";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
+import { usePermission } from "@/providers/permission-provider";
 
 export function RecentAnnouncementsWidget({ slug }: { slug: string }) {
   const { t, locale, format } = useLocale();
+  const { can } = usePermission();
+  const feature = useFeature(slug, "announcements");
+  const visible = can(Permission.AnnouncementsRead) && feature.enabled;
   const query = {
     locale: locale as LocaleCode,
     limit: ANNOUNCEMENT_DASHBOARD_LIMIT,
@@ -28,11 +34,14 @@ export function RecentAnnouncementsWidget({ slug }: { slug: string }) {
   const list = useQuery({
     queryKey: announcementKeys.list(query),
     queryFn: () => announcementsService.list(query),
+    enabled: visible,
   });
   const items = sortedAnnouncements(list.data?.items ?? []).slice(
     0,
     ANNOUNCEMENT_DASHBOARD_LIMIT,
   );
+
+  if (!visible) return null;
 
   return (
     <Card>
