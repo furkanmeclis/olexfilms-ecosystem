@@ -12,6 +12,7 @@ import {
   Coins,
   Download,
   FileText,
+  Flame,
   FolderTree,
   HardDrive,
   KeyRound,
@@ -49,6 +50,7 @@ import { githubNavIcon } from "@/components/icons/github-icon";
 import { googleNavIcon } from "@/components/icons/google-icon";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import { leadsNavItem } from "@/features/leads/nav";
 import { defineNav } from "@/features/nav-engine";
 import { usersNavItem } from "@/features/users/nav";
 
@@ -586,6 +588,17 @@ export function tenantNav(slug: string) {
             orgTypes: ["distributor", "dealer"],
           },
         ],
+      },
+      {
+        // TEC-318: organization-scoped lead pipeline. The item has a live
+        // follow-up badge and stays behind the leads module flag.
+        id: "leads",
+        labelKey: "leads.nav",
+        icon: Flame,
+        defaultOpen: true,
+        permission: permissions.leads.read,
+        feature: "leads",
+        items: [leadsNavItem(slug)],
       },
       {
         // TEC-221: center tasks about distributors and dealers (center

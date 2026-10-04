@@ -24,6 +24,7 @@ import imports from "./imports.json";
 import integrations from "./integrations.json";
 import landing from "./landing.json";
 import layout from "./layout.json";
+import leads from "./leads.json";
 import logs from "./logs.json";
 import modules from "./modules.json";
 import notifications from "./notifications.json";
@@ -73,6 +74,7 @@ const catalog: LocaleCatalog = {
   integrations,
   landing,
   layout,
+  leads,
   logs,
   modules,
   notifications,
