@@ -75,11 +75,14 @@ func (c Caller) actor() pgtype.Int8 {
 
 // Service is the lead use case.
 type Service struct {
-	pool    TxBeginner
-	q       *db.Queries
-	tasks   TaskCreator
-	finder  searchengine.ListFinder
-	nowFunc func() time.Time
+	pool          TxBeginner
+	q             *db.Queries
+	tasks         TaskCreator
+	customers     CustomerConverter
+	services      ServiceDrafter
+	organizations OrganizationRegistrar
+	finder        searchengine.ListFinder
+	nowFunc       func() time.Time
 }
 
 // New creates the service.

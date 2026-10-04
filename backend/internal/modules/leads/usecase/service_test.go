@@ -9,8 +9,13 @@ import (
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	customeruc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/customers/usecase"
+	orguc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
+	serviceuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/google/uuid"
@@ -20,17 +25,19 @@ import (
 )
 
 type fixture struct {
-	t      *testing.T
-	ctx    context.Context
-	pool   *pgxpool.Pool
-	tx     pgx.Tx
-	q      *db.Queries
-	svc    *Service
-	brand  int64
-	center db.Organization
-	dealer db.Organization
-	other  db.Organization
-	user   db.User
+	t         *testing.T
+	ctx       context.Context
+	pool      *pgxpool.Pool
+	tx        pgx.Tx
+	q         *db.Queries
+	svc       *Service
+	brand     int64
+	brandUUID uuid.UUID
+	center    db.Organization
+	dist      db.Organization
+	dealer    db.Organization
+	other     db.Organization
+	user      db.User
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -52,9 +59,10 @@ func newFixture(t *testing.T) *fixture {
 	t.Cleanup(func() { _ = tx.Rollback(ctx) })
 	q := db.New(tx)
 	f := &fixture{t: t, ctx: ctx, pool: pool, tx: tx, q: q}
-	if err := tx.QueryRow(ctx, `SELECT id FROM brands WHERE slug = 'olex'`).Scan(&f.brand); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT id, uuid FROM brands WHERE slug = 'olex'`).Scan(&f.brand, &f.brandUUID); err != nil {
 		t.Fatalf("brand: %v", err)
 	}
+	f.ctx = brandctx.WithBrand(f.ctx, brandctx.Brand{ID: f.brand, UUID: f.brandUUID, Slug: "olex", Name: "Olex", Status: "active"})
 	if err := tx.QueryRow(ctx, `SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code,
 		access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text,
 		paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key,
@@ -69,20 +77,22 @@ func newFixture(t *testing.T) *fixture {
 		&f.center.DistrictID, &f.center.PhoneRaw, &f.center.GoogleBusinessUrl, &f.center.Latitude, &f.center.Longitude); err != nil {
 		t.Fatalf("center: %v", err)
 	}
-	f.dealer = f.org("dealer-a")
-	f.other = f.org("dealer-b")
+	f.dist = f.org("dist-a", "distributor", f.center)
+	f.dealer = f.org("dealer-a", "dealer", f.dist)
+	f.other = f.org("dealer-b", "dealer", f.center)
 	f.user = f.userRow("lead-user")
 	f.svc = New(tx, q, nil)
+	f.svc.SetConverters(customeruc.New(tx, q, nil, nil), serviceuc.New(tx, q, outbox.NewMemory()), &orgRegistrarFake{f: f})
 	f.svc.SetClock(func() time.Time { return time.Date(2026, 10, 4, 12, 0, 0, 0, time.UTC) })
 	return f
 }
 
-func (f *fixture) org(slug string) db.Organization {
+func (f *fixture) org(slug, typ string, parent db.Organization) db.Organization {
 	f.t.Helper()
 	slug = fmt.Sprintf("tec313-%s-%d", slug, time.Now().UnixNano())
 	o, err := f.q.CreateOrganization(f.ctx, db.CreateOrganizationParams{
-		Slug: slug, Name: slug, Status: "active", Type: "dealer",
-		ParentID: pgtype.Int8{Int64: f.center.ID, Valid: true}, BrandID: f.brand,
+		Slug: slug, Name: slug, Status: "active", Type: typ,
+		ParentID: pgtype.Int8{Int64: parent.ID, Valid: true}, BrandID: f.brand,
 		Currency: "TRY", Locale: "tr", Timezone: "UTC", Settings: []byte(`{}`),
 		AccessStartsAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
 	})
@@ -109,11 +119,51 @@ func (f *fixture) caller(org db.Organization, scope rbac.Scope) Caller {
 	if scope != rbac.ScopeAll && scope != rbac.ScopeBrand {
 		orgIDs = []int64{org.ID}
 	}
+	perms := map[string]rbac.Scope{rbac.PermLeadsRead: scope, rbac.PermLeadsWrite: scope}
+	if org.Type != "dealer" {
+		perms[rbac.PermLeadsConvertOrg] = scope
+	}
 	return Caller{
-		Principal: authctx.Principal{UserInternal: f.user.ID, PermissionScopes: map[string]rbac.Scope{rbac.PermLeadsRead: scope, rbac.PermLeadsWrite: scope}},
+		Principal: authctx.Principal{UserInternal: f.user.ID, PermissionScopes: perms, IsSuperAdmin: org.Type == "center"},
 		Org:       orgctx.Scope{InternalID: org.ID, UUID: org.Uuid, OrgType: org.Type, BrandID: org.BrandID},
 		Filter:    scopefilter.Filter{Permission: rbac.PermLeadsRead, Scope: scope, UserID: f.user.ID, OrgID: org.ID, OrgIDs: orgIDs, BrandID: org.BrandID},
 	}
+}
+
+type orgRegistrarFake struct{ f *fixture }
+
+func (r *orgRegistrarFake) RegisterOrganization(ctx context.Context, in orguc.RegisterInput, ownerUserID int64) (orguc.RegisterResult, error) {
+	parent, err := r.f.q.GetOrganizationByUUID(ctx, *in.ParentUUID)
+	if err != nil {
+		return orguc.RegisterResult{}, err
+	}
+	status := in.InitialStatus
+	if status == "" {
+		status = "active"
+	}
+	slug := fmt.Sprintf("tec316-%d", time.Now().UnixNano())
+	org, err := r.f.q.CreateOrganization(ctx, db.CreateOrganizationParams{
+		Slug: slug, Name: in.OrganizationName, Status: status, Type: in.Type,
+		ParentID: pgtype.Int8{Int64: parent.ID, Valid: true}, BrandID: parent.BrandID,
+		Currency: in.Currency, Locale: parent.Locale, Timezone: parent.Timezone,
+		Phone: in.Phone, Settings: []byte(`{}`),
+		AccessStartsAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+	})
+	if err != nil {
+		return orguc.RegisterResult{}, err
+	}
+	if _, err := r.f.q.CreateOrganizationMember(ctx, db.CreateOrganizationMemberParams{
+		OrganizationID: org.ID, UserID: ownerUserID, Role: "owner",
+	}); err != nil {
+		return orguc.RegisterResult{}, err
+	}
+	return orguc.RegisterResult{Organization: orguc.Organization{
+		UUID: org.Uuid, Slug: org.Slug, Name: org.Name, Status: org.Status, Type: org.Type,
+		Currency: org.Currency, Locale: org.Locale, Timezone: org.Timezone,
+		Brand:     orguc.BrandRef{Slug: "olex"},
+		Parent:    &orguc.ParentRef{UUID: parent.Uuid, Slug: parent.Slug, Name: parent.Name},
+		CreatedAt: org.CreatedAt.Time, UpdatedAt: org.UpdatedAt.Time,
+	}}, nil
 }
 
 func (f *fixture) lead(org db.Organization, status string, follow *time.Time) db.Lead {
@@ -210,6 +260,94 @@ func TestNonCenterCannotCreateLeadTask(t *testing.T) {
 	}
 }
 
+func TestConvertDealerCandidateCreatesReadOnlyDealerUnderDistributor(t *testing.T) {
+	f := newFixture(t)
+	c := f.caller(f.dist, rbac.ScopeSubtree)
+	phone := fmt.Sprintf("+90555%07d", time.Now().UnixNano()%10000000)
+	lead, err := f.svc.Create(f.ctx, c, CreateInput{
+		TargetType: "dealer_candidate", Source: "website", Temperature: "hot",
+		CandidateCompanyName: strp("Lead Bayi"), CandidateContactName: strp("Ayse Owner"),
+		CandidatePhoneE164: &phone,
+	})
+	if err != nil {
+		t.Fatalf("create lead: %v", err)
+	}
+	out, err := f.svc.Convert(f.ctx, c, lead.UUID, ConvertInput{Kind: ConvertKindDealerCandidate})
+	if err != nil {
+		t.Fatalf("convert: %v", err)
+	}
+	if out.Organization == nil || out.Organization.Type != "dealer" || out.Organization.Status != "read_only" {
+		t.Fatalf("organization = %+v, want read_only dealer", out.Organization)
+	}
+	if out.Organization.Parent == nil || out.Organization.Parent.UUID != f.dist.Uuid {
+		t.Fatalf("parent = %+v, want distributor %s", out.Organization.Parent, f.dist.Uuid)
+	}
+	got, err := f.svc.Get(f.ctx, c, lead.UUID)
+	if err != nil {
+		t.Fatalf("get converted: %v", err)
+	}
+	if got.Status != StatusWon || got.WonRefType == nil || *got.WonRefType != WonRefOrganization || got.WonRefID == nil {
+		t.Fatalf("lead won ref = %+v", got)
+	}
+}
+
+func TestConvertDistributorCandidateDealerForbidden(t *testing.T) {
+	f := newFixture(t)
+	c := f.caller(f.dealer, rbac.ScopeManaged)
+	phone := fmt.Sprintf("+90556%07d", time.Now().UnixNano()%10000000)
+	lead, err := f.svc.Create(f.ctx, c, CreateInput{
+		TargetType: "distributor_candidate", Source: "website",
+		CandidateCompanyName: strp("Lead Dist"), CandidateContactName: strp("Deniz Owner"),
+		CandidatePhoneE164: &phone,
+	})
+	if err != nil {
+		t.Fatalf("create lead: %v", err)
+	}
+	if _, err := f.svc.Convert(f.ctx, c, lead.UUID, ConvertInput{Kind: ConvertKindDistributorCandidate, Currency: "EUR"}); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("convert err = %v, want forbidden", err)
+	}
+}
+
+func TestConvertCustomerUsesExistingPhoneAndCreatesDraft(t *testing.T) {
+	f := newFixture(t)
+	c := f.caller(f.dealer, rbac.ScopeManaged)
+	existing := f.userWithPhone("lead-customer", "+905551234567")
+	vehicle := f.vehicle(existing, f.dealer)
+	lead, err := f.svc.Create(f.ctx, c, CreateInput{
+		TargetType: "customer", Source: "walk_in", Temperature: "warm",
+		CandidateContactName: strp("Different Name"), CandidatePhoneE164: strp("+905551234567"),
+		VehicleID: &vehicle.ID,
+	})
+	if err != nil {
+		t.Fatalf("create lead: %v", err)
+	}
+	out, err := f.svc.Convert(f.ctx, c, lead.UUID, ConvertInput{Kind: ConvertKindCustomer})
+	if err != nil {
+		t.Fatalf("convert: %v", err)
+	}
+	if out.ServiceDraft == nil || out.ServiceDraft.Status != serviceuc.StatusDraft {
+		t.Fatalf("draft = %+v", out.ServiceDraft)
+	}
+	users, err := f.tx.Query(f.ctx, `SELECT id FROM users WHERE phone_e164 = $1 AND deleted_at IS NULL`, "+905551234567")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer users.Close()
+	count := 0
+	for users.Next() {
+		count++
+	}
+	if count != 1 {
+		t.Fatalf("users with phone = %d, want 1", count)
+	}
+	if out.Lead.Status != StatusWon || out.Lead.WonRefType == nil || *out.Lead.WonRefType != WonRefService {
+		t.Fatalf("lead = %+v", out.Lead)
+	}
+	if _, err := f.svc.Convert(f.ctx, c, lead.UUID, ConvertInput{Kind: ConvertKindCustomer}); !errors.Is(err, ErrAlreadyConverted) {
+		t.Fatalf("second convert err = %v, want already converted", err)
+	}
+}
+
 func TestHelpersValidateWithoutDatabase(t *testing.T) {
 	if allowedTransition(StatusNew, StatusWon) {
 		t.Fatal("new -> won accepted")
@@ -225,3 +363,47 @@ func TestHelpersValidateWithoutDatabase(t *testing.T) {
 	}
 	_ = uuid.Nil
 }
+
+func (f *fixture) userWithPhone(prefix, ph string) db.User {
+	f.t.Helper()
+	u, err := f.q.CreateUser(f.ctx, db.CreateUserParams{
+		Email:        pgtype.Text{String: fmt.Sprintf("%s-%d@example.test", prefix, time.Now().UnixNano()), Valid: true},
+		PasswordHash: "x", Name: prefix, Surname: "User", Status: "active",
+		PhoneE164: pgtype.Text{String: ph, Valid: true},
+	})
+	if err != nil {
+		f.t.Fatalf("user with phone: %v", err)
+	}
+	return u
+}
+
+func (f *fixture) vehicle(u db.User, org db.Organization) db.Vehicle {
+	f.t.Helper()
+	brand, err := f.q.CreateCarBrand(f.ctx, db.CreateCarBrandParams{
+		ExternalID: pgtype.Text{String: fmt.Sprintf("tec316-brand-%d", time.Now().UnixNano()), Valid: true},
+		Name:       fmt.Sprintf("TEC316 Brand %d", time.Now().UnixNano()),
+		ShowName:   true, Active: true,
+	})
+	if err != nil {
+		f.t.Fatalf("car brand: %v", err)
+	}
+	model, err := f.q.CreateCarModel(f.ctx, db.CreateCarModelParams{
+		CarBrandID: brand.ID, ExternalID: pgtype.Text{String: fmt.Sprintf("tec316-model-%d", time.Now().UnixNano()), Valid: true},
+		Name: "Model", Active: true,
+	})
+	if err != nil {
+		f.t.Fatalf("car model: %v", err)
+	}
+	v, err := f.q.CreateVehicle(f.ctx, db.CreateVehicleParams{
+		UserID: u.ID, OrganizationID: pgtype.Int8{Int64: org.ID, Valid: true}, BrandID: org.BrandID,
+		CarBrandID: pgtype.Int8{Int64: brand.ID, Valid: true}, CarModelID: pgtype.Int8{Int64: model.ID, Valid: true},
+		Plate: pgtype.Text{String: "34 TEC 316", Valid: true}, PlateNormalized: pgtype.Text{String: "34TEC316", Valid: true},
+		PlateCountry: pgtype.Text{String: "TR", Valid: true},
+	})
+	if err != nil {
+		f.t.Fatalf("vehicle: %v", err)
+	}
+	return v
+}
+
+func strp(v string) *string { return &v }

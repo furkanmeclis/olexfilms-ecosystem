@@ -37,6 +37,7 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/leads/{uuid}", route(h.Get))
 	mux.Handle("PATCH /v1/leads/{uuid}", route(h.Patch, write))
 	mux.Handle("POST /v1/leads/{uuid}/status", route(h.SetStatus, write))
+	mux.Handle("POST /v1/leads/{uuid}/convert", route(h.Convert, write))
 	mux.Handle("POST /v1/leads/{uuid}/notes", route(h.AddNote, write))
 	mux.Handle("POST /v1/leads/{uuid}/assign", route(h.Assign, write))
 	mux.Handle("GET /v1/leads/{uuid}/events", route(h.Events))

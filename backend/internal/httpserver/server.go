@@ -656,6 +656,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		outbox.NewStore(deps.DB, deps.Queries))), tokens, loader, deps.Queries, featureSvc)
 	// TEC-313: leads and follow-up queue.
 	leadsSvc := leadsusecase.New(deps.DB, deps.Queries, tasksSvc)
+	leadsSvc.SetConverters(customersSvc, servicesSvc, orgSvc)
 	if listFinder != nil {
 		leadsSvc.SetFinder(listFinder)
 	}

@@ -8224,6 +8224,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/leads/{uuid}/convert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Convert a won lead into a draft service or organization
+         * @description customer creates a draft service; dealer_candidate creates a read-only dealer organization under a distributor; distributor_candidate creates a distributor organization (center super_admin only).
+         */
+        post: operations["convertLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/leads/{uuid}/notes": {
         parameters: {
             query?: never;
@@ -14934,6 +14954,33 @@ export interface components {
             /** Format: int64 */
             won_ref_id?: number | null;
         };
+        LeadConvertInput: {
+            /** @enum {string} */
+            kind: "customer" | "dealer_candidate" | "distributor_candidate";
+            /**
+             * Format: uuid
+             * @description Required when the center converts a dealer candidate.
+             */
+            distributor_uuid?: string | null;
+            /** @description Required for distributor_candidate; ISO 4217. */
+            currency?: string;
+            /** @description Distributor candidate only; opens the preset warehouse. */
+            register_as_warehouse?: boolean;
+        };
+        LeadExistingUser: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            surname: string;
+            email_masked?: string;
+            phone_masked?: string;
+        };
+        LeadConvertResult: {
+            lead: components["schemas"]["Lead"];
+            service_draft?: components["schemas"]["Service"];
+            organization?: components["schemas"]["Organization"];
+            existing_user?: components["schemas"]["LeadExistingUser"];
+        };
         LeadNoteInput: {
             body: string;
         };
@@ -14973,6 +15020,12 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["Lead"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeLeadConvertResult: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["LeadConvertResult"];
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeLeadPage: {
@@ -30623,6 +30676,37 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    convertLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadConvertInput"];
+            };
+        };
+        responses: {
+            /** @description Lead converted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLeadConvertResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     addLeadNote: {
