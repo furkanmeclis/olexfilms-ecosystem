@@ -428,6 +428,34 @@ func (q *Queries) GetServiceCatalogItem(ctx context.Context, arg GetServiceCatal
 	return i, err
 }
 
+const getServiceCatalogItemByID = `-- name: GetServiceCatalogItemByID :one
+SELECT id, uuid, organization_id, brand_id, name, description, category, default_price, currency, recurrence, cancellation_fee, contract_template_id, is_active, created_at, updated_at FROM service_catalog_items
+WHERE id = $1
+`
+
+func (q *Queries) GetServiceCatalogItemByID(ctx context.Context, id int64) (ServiceCatalogItem, error) {
+	row := q.db.QueryRow(ctx, getServiceCatalogItemByID, id)
+	var i ServiceCatalogItem
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.Name,
+		&i.Description,
+		&i.Category,
+		&i.DefaultPrice,
+		&i.Currency,
+		&i.Recurrence,
+		&i.CancellationFee,
+		&i.ContractTemplateID,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getServiceCatalogItemByUUID = `-- name: GetServiceCatalogItemByUUID :one
 SELECT id, uuid, organization_id, brand_id, name, description, category, default_price, currency, recurrence, cancellation_fee, contract_template_id, is_active, created_at, updated_at FROM service_catalog_items
 WHERE uuid = $1 AND brand_id = $2

@@ -39,6 +39,49 @@ func (q *Queries) ConfirmServiceMeasurement(ctx context.Context, arg ConfirmServ
 	return result.RowsAffected(), nil
 }
 
+const createMeasurementDevice = `-- name: CreateMeasurementDevice :one
+INSERT INTO measurement_devices (organization_id, brand_id, serial, label, model, is_active)
+VALUES (
+    $1, $2, $3, $4,
+    $5, $6
+)
+RETURNING id, uuid, organization_id, brand_id, serial, label, created_at, updated_at, model, is_active
+`
+
+type CreateMeasurementDeviceParams struct {
+	OrganizationID int64       `json:"organization_id"`
+	BrandID        int64       `json:"brand_id"`
+	Serial         string      `json:"serial"`
+	Label          pgtype.Text `json:"label"`
+	Model          pgtype.Text `json:"model"`
+	IsActive       bool        `json:"is_active"`
+}
+
+func (q *Queries) CreateMeasurementDevice(ctx context.Context, arg CreateMeasurementDeviceParams) (MeasurementDevice, error) {
+	row := q.db.QueryRow(ctx, createMeasurementDevice,
+		arg.OrganizationID,
+		arg.BrandID,
+		arg.Serial,
+		arg.Label,
+		arg.Model,
+		arg.IsActive,
+	)
+	var i MeasurementDevice
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.Serial,
+		&i.Label,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Model,
+		&i.IsActive,
+	)
+	return i, err
+}
+
 const deleteMeasurementTires = `-- name: DeleteMeasurementTires :exec
 DELETE FROM measurement_tires
 WHERE result_id = $1 AND organization_id = $2
@@ -142,6 +185,34 @@ func (q *Queries) GetMeasurementDeviceBySerial(ctx context.Context, arg GetMeasu
 	return i, err
 }
 
+const getMeasurementDeviceByUUID = `-- name: GetMeasurementDeviceByUUID :one
+SELECT id, uuid, organization_id, brand_id, serial, label, created_at, updated_at, model, is_active FROM measurement_devices
+WHERE uuid = $1 AND organization_id = $2
+`
+
+type GetMeasurementDeviceByUUIDParams struct {
+	Uuid           uuid.UUID `json:"uuid"`
+	OrganizationID int64     `json:"organization_id"`
+}
+
+func (q *Queries) GetMeasurementDeviceByUUID(ctx context.Context, arg GetMeasurementDeviceByUUIDParams) (MeasurementDevice, error) {
+	row := q.db.QueryRow(ctx, getMeasurementDeviceByUUID, arg.Uuid, arg.OrganizationID)
+	var i MeasurementDevice
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.Serial,
+		&i.Label,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Model,
+		&i.IsActive,
+	)
+	return i, err
+}
+
 const getMeasurementResultByUUID = `-- name: GetMeasurementResultByUUID :one
 SELECT id, uuid, organization_id, brand_id, service_id, vehicle_id, vin, status, raw, client_measurement_id, idempotency_key, device_serial, source, created_by, created_at, measured_at, device_id, customer_user_id, body_type, parsed_at, pdf_key FROM measurement_results
 WHERE uuid = $1 AND organization_id = $2
@@ -177,6 +248,114 @@ func (q *Queries) GetMeasurementResultByUUID(ctx context.Context, arg GetMeasure
 		&i.BodyType,
 		&i.ParsedAt,
 		&i.PdfKey,
+	)
+	return i, err
+}
+
+const getMeasurementResultPanel = `-- name: GetMeasurementResultPanel :one
+SELECT
+    mr.id, mr.uuid, mr.organization_id, mr.brand_id, mr.service_id, mr.vehicle_id, mr.vin, mr.status, mr.raw, mr.client_measurement_id, mr.idempotency_key, mr.device_serial, mr.source, mr.created_by, mr.created_at, mr.measured_at, mr.device_id, mr.customer_user_id, mr.body_type, mr.parsed_at, mr.pdf_key,
+    md.uuid AS device_uuid,
+    md.serial AS registry_device_serial,
+    md.label AS device_label,
+    md.model AS device_model,
+    md.is_active AS device_is_active,
+    sm.phase AS service_phase,
+    sm.link_source AS service_link_source,
+    sm.confirmed_at AS service_confirmed_at,
+    s.uuid AS service_uuid,
+    s.service_no AS service_no,
+    o.uuid AS organization_uuid,
+    o.name AS organization_name
+FROM measurement_results mr
+LEFT JOIN measurement_devices md ON md.id = mr.device_id
+LEFT JOIN service_measurements sm ON sm.measurement_result_id = mr.id
+LEFT JOIN services s ON s.id = sm.service_id
+LEFT JOIN organizations o ON o.id = mr.organization_id
+WHERE mr.uuid = $1
+  AND mr.brand_id = $2
+  AND ($3::bigint[] IS NULL OR mr.organization_id = ANY($3::bigint[]))
+`
+
+type GetMeasurementResultPanelParams struct {
+	Uuid    uuid.UUID `json:"uuid"`
+	BrandID int64     `json:"brand_id"`
+	OrgIds  []int64   `json:"org_ids"`
+}
+
+type GetMeasurementResultPanelRow struct {
+	ID                   int64              `json:"id"`
+	Uuid                 uuid.UUID          `json:"uuid"`
+	OrganizationID       int64              `json:"organization_id"`
+	BrandID              int64              `json:"brand_id"`
+	ServiceID            pgtype.Int8        `json:"service_id"`
+	VehicleID            pgtype.Int8        `json:"vehicle_id"`
+	Vin                  pgtype.Text        `json:"vin"`
+	Status               string             `json:"status"`
+	Raw                  []byte             `json:"raw"`
+	ClientMeasurementID  pgtype.Text        `json:"client_measurement_id"`
+	IdempotencyKey       pgtype.Text        `json:"idempotency_key"`
+	DeviceSerial         pgtype.Text        `json:"device_serial"`
+	Source               string             `json:"source"`
+	CreatedBy            pgtype.Int8        `json:"created_by"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	MeasuredAt           pgtype.Timestamptz `json:"measured_at"`
+	DeviceID             pgtype.Int8        `json:"device_id"`
+	CustomerUserID       pgtype.Int8        `json:"customer_user_id"`
+	BodyType             pgtype.Text        `json:"body_type"`
+	ParsedAt             pgtype.Timestamptz `json:"parsed_at"`
+	PdfKey               pgtype.Text        `json:"pdf_key"`
+	DeviceUuid           pgtype.UUID        `json:"device_uuid"`
+	RegistryDeviceSerial pgtype.Text        `json:"registry_device_serial"`
+	DeviceLabel          pgtype.Text        `json:"device_label"`
+	DeviceModel          pgtype.Text        `json:"device_model"`
+	DeviceIsActive       pgtype.Bool        `json:"device_is_active"`
+	ServicePhase         pgtype.Text        `json:"service_phase"`
+	ServiceLinkSource    pgtype.Text        `json:"service_link_source"`
+	ServiceConfirmedAt   pgtype.Timestamptz `json:"service_confirmed_at"`
+	ServiceUuid          pgtype.UUID        `json:"service_uuid"`
+	ServiceNo            pgtype.Text        `json:"service_no"`
+	OrganizationUuid     pgtype.UUID        `json:"organization_uuid"`
+	OrganizationName     pgtype.Text        `json:"organization_name"`
+}
+
+func (q *Queries) GetMeasurementResultPanel(ctx context.Context, arg GetMeasurementResultPanelParams) (GetMeasurementResultPanelRow, error) {
+	row := q.db.QueryRow(ctx, getMeasurementResultPanel, arg.Uuid, arg.BrandID, arg.OrgIds)
+	var i GetMeasurementResultPanelRow
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ServiceID,
+		&i.VehicleID,
+		&i.Vin,
+		&i.Status,
+		&i.Raw,
+		&i.ClientMeasurementID,
+		&i.IdempotencyKey,
+		&i.DeviceSerial,
+		&i.Source,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.MeasuredAt,
+		&i.DeviceID,
+		&i.CustomerUserID,
+		&i.BodyType,
+		&i.ParsedAt,
+		&i.PdfKey,
+		&i.DeviceUuid,
+		&i.RegistryDeviceSerial,
+		&i.DeviceLabel,
+		&i.DeviceModel,
+		&i.DeviceIsActive,
+		&i.ServicePhase,
+		&i.ServiceLinkSource,
+		&i.ServiceConfirmedAt,
+		&i.ServiceUuid,
+		&i.ServiceNo,
+		&i.OrganizationUuid,
+		&i.OrganizationName,
 	)
 	return i, err
 }
@@ -519,6 +698,157 @@ func (q *Queries) ListMeasurementDevices(ctx context.Context, organizationID int
 	return items, nil
 }
 
+const listMeasurementResultsPanel = `-- name: ListMeasurementResultsPanel :many
+SELECT
+    mr.id, mr.uuid, mr.organization_id, mr.brand_id, mr.service_id, mr.vehicle_id, mr.vin, mr.status, mr.raw, mr.client_measurement_id, mr.idempotency_key, mr.device_serial, mr.source, mr.created_by, mr.created_at, mr.measured_at, mr.device_id, mr.customer_user_id, mr.body_type, mr.parsed_at, mr.pdf_key,
+    md.uuid AS device_uuid,
+    md.serial AS registry_device_serial,
+    md.label AS device_label,
+    md.model AS device_model,
+    md.is_active AS device_is_active,
+    sm.phase AS service_phase,
+    sm.link_source AS service_link_source,
+    sm.confirmed_at AS service_confirmed_at,
+    s.uuid AS service_uuid,
+    s.service_no AS service_no,
+    o.uuid AS organization_uuid,
+    o.name AS organization_name,
+    count(*) OVER() AS total_count
+FROM measurement_results mr
+LEFT JOIN measurement_devices md ON md.id = mr.device_id
+LEFT JOIN service_measurements sm ON sm.measurement_result_id = mr.id
+LEFT JOIN services s ON s.id = sm.service_id
+LEFT JOIN organizations o ON o.id = mr.organization_id
+WHERE mr.brand_id = $1
+  AND ($2::bigint[] IS NULL OR mr.organization_id = ANY($2::bigint[]))
+  AND ($3::varchar IS NULL OR mr.vin = $3::varchar)
+  AND ($4::uuid IS NULL OR md.uuid = $4::uuid)
+  AND ($5::varchar IS NULL OR mr.status = $5::varchar)
+  AND ($6::boolean IS NULL OR (sm.id IS NOT NULL) = $6::boolean)
+  AND ($7::timestamptz IS NULL OR COALESCE(mr.measured_at, mr.created_at) >= $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR COALESCE(mr.measured_at, mr.created_at) < $8::timestamptz)
+ORDER BY COALESCE(mr.measured_at, mr.created_at) DESC, mr.id DESC
+LIMIT $10 OFFSET $9
+`
+
+type ListMeasurementResultsPanelParams struct {
+	BrandID      int64              `json:"brand_id"`
+	OrgIds       []int64            `json:"org_ids"`
+	Vin          pgtype.Text        `json:"vin"`
+	DeviceUuid   pgtype.UUID        `json:"device_uuid"`
+	Status       pgtype.Text        `json:"status"`
+	Linked       pgtype.Bool        `json:"linked"`
+	MeasuredFrom pgtype.Timestamptz `json:"measured_from"`
+	MeasuredTo   pgtype.Timestamptz `json:"measured_to"`
+	OffsetCount  int32              `json:"offset_count"`
+	LimitCount   int32              `json:"limit_count"`
+}
+
+type ListMeasurementResultsPanelRow struct {
+	ID                   int64              `json:"id"`
+	Uuid                 uuid.UUID          `json:"uuid"`
+	OrganizationID       int64              `json:"organization_id"`
+	BrandID              int64              `json:"brand_id"`
+	ServiceID            pgtype.Int8        `json:"service_id"`
+	VehicleID            pgtype.Int8        `json:"vehicle_id"`
+	Vin                  pgtype.Text        `json:"vin"`
+	Status               string             `json:"status"`
+	Raw                  []byte             `json:"raw"`
+	ClientMeasurementID  pgtype.Text        `json:"client_measurement_id"`
+	IdempotencyKey       pgtype.Text        `json:"idempotency_key"`
+	DeviceSerial         pgtype.Text        `json:"device_serial"`
+	Source               string             `json:"source"`
+	CreatedBy            pgtype.Int8        `json:"created_by"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	MeasuredAt           pgtype.Timestamptz `json:"measured_at"`
+	DeviceID             pgtype.Int8        `json:"device_id"`
+	CustomerUserID       pgtype.Int8        `json:"customer_user_id"`
+	BodyType             pgtype.Text        `json:"body_type"`
+	ParsedAt             pgtype.Timestamptz `json:"parsed_at"`
+	PdfKey               pgtype.Text        `json:"pdf_key"`
+	DeviceUuid           pgtype.UUID        `json:"device_uuid"`
+	RegistryDeviceSerial pgtype.Text        `json:"registry_device_serial"`
+	DeviceLabel          pgtype.Text        `json:"device_label"`
+	DeviceModel          pgtype.Text        `json:"device_model"`
+	DeviceIsActive       pgtype.Bool        `json:"device_is_active"`
+	ServicePhase         pgtype.Text        `json:"service_phase"`
+	ServiceLinkSource    pgtype.Text        `json:"service_link_source"`
+	ServiceConfirmedAt   pgtype.Timestamptz `json:"service_confirmed_at"`
+	ServiceUuid          pgtype.UUID        `json:"service_uuid"`
+	ServiceNo            pgtype.Text        `json:"service_no"`
+	OrganizationUuid     pgtype.UUID        `json:"organization_uuid"`
+	OrganizationName     pgtype.Text        `json:"organization_name"`
+	TotalCount           int64              `json:"total_count"`
+}
+
+// org_ids NULL means the whole brand (brand/all scopes); an empty set
+// (customer scope) matches nothing.
+func (q *Queries) ListMeasurementResultsPanel(ctx context.Context, arg ListMeasurementResultsPanelParams) ([]ListMeasurementResultsPanelRow, error) {
+	rows, err := q.db.Query(ctx, listMeasurementResultsPanel,
+		arg.BrandID,
+		arg.OrgIds,
+		arg.Vin,
+		arg.DeviceUuid,
+		arg.Status,
+		arg.Linked,
+		arg.MeasuredFrom,
+		arg.MeasuredTo,
+		arg.OffsetCount,
+		arg.LimitCount,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListMeasurementResultsPanelRow{}
+	for rows.Next() {
+		var i ListMeasurementResultsPanelRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.ServiceID,
+			&i.VehicleID,
+			&i.Vin,
+			&i.Status,
+			&i.Raw,
+			&i.ClientMeasurementID,
+			&i.IdempotencyKey,
+			&i.DeviceSerial,
+			&i.Source,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.MeasuredAt,
+			&i.DeviceID,
+			&i.CustomerUserID,
+			&i.BodyType,
+			&i.ParsedAt,
+			&i.PdfKey,
+			&i.DeviceUuid,
+			&i.RegistryDeviceSerial,
+			&i.DeviceLabel,
+			&i.DeviceModel,
+			&i.DeviceIsActive,
+			&i.ServicePhase,
+			&i.ServiceLinkSource,
+			&i.ServiceConfirmedAt,
+			&i.ServiceUuid,
+			&i.ServiceNo,
+			&i.OrganizationUuid,
+			&i.OrganizationName,
+			&i.TotalCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listMeasurementTires = `-- name: ListMeasurementTires :many
 SELECT id, organization_id, brand_id, result_id, section, width, profile, diameter, maker, season, tread_depth_1_mm, tread_depth_2_mm, created_at FROM measurement_tires
 WHERE result_id = $1 AND organization_id = $2
@@ -760,6 +1090,47 @@ func (q *Queries) UnlinkServiceMeasurement(ctx context.Context, arg UnlinkServic
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const updateMeasurementDevice = `-- name: UpdateMeasurementDevice :one
+UPDATE measurement_devices
+SET label = $1,
+    model = $2,
+    is_active = $3
+WHERE uuid = $4 AND organization_id = $5
+RETURNING id, uuid, organization_id, brand_id, serial, label, created_at, updated_at, model, is_active
+`
+
+type UpdateMeasurementDeviceParams struct {
+	Label          pgtype.Text `json:"label"`
+	Model          pgtype.Text `json:"model"`
+	IsActive       bool        `json:"is_active"`
+	Uuid           uuid.UUID   `json:"uuid"`
+	OrganizationID int64       `json:"organization_id"`
+}
+
+func (q *Queries) UpdateMeasurementDevice(ctx context.Context, arg UpdateMeasurementDeviceParams) (MeasurementDevice, error) {
+	row := q.db.QueryRow(ctx, updateMeasurementDevice,
+		arg.Label,
+		arg.Model,
+		arg.IsActive,
+		arg.Uuid,
+		arg.OrganizationID,
+	)
+	var i MeasurementDevice
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.Serial,
+		&i.Label,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Model,
+		&i.IsActive,
+	)
+	return i, err
 }
 
 const upsertMeasurementDevice = `-- name: UpsertMeasurementDevice :one

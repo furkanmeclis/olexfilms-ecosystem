@@ -6,21 +6,90 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // fakeStore keeps rows in memory and enforces the two partial unique
 // indexes of 000076 like ON CONFLICT DO NOTHING does.
 type fakeStore struct {
 	rows     []db.MeasurementResult
+	devices  []db.MeasurementDevice
 	services map[uuid.UUID]db.GetServiceForMeasurementRow
 	svcOrg   map[uuid.UUID]int64
 	// skipFind makes the pre-insert lookup miss, as a concurrent upload
 	// that inserts between the lookup and the insert would.
 	skipFind int
+}
+
+func (f *fakeStore) ListMeasurementDevices(_ context.Context, organizationID int64) ([]db.MeasurementDevice, error) {
+	var out []db.MeasurementDevice
+	for _, d := range f.devices {
+		if d.OrganizationID == organizationID {
+			out = append(out, d)
+		}
+	}
+	return out, nil
+}
+
+func (f *fakeStore) GetMeasurementDeviceByUUID(_ context.Context, a db.GetMeasurementDeviceByUUIDParams) (db.MeasurementDevice, error) {
+	for _, d := range f.devices {
+		if d.Uuid == a.Uuid && d.OrganizationID == a.OrganizationID {
+			return d, nil
+		}
+	}
+	return db.MeasurementDevice{}, pgx.ErrNoRows
+}
+
+func (f *fakeStore) CreateMeasurementDevice(_ context.Context, a db.CreateMeasurementDeviceParams) (db.MeasurementDevice, error) {
+	for _, d := range f.devices {
+		if d.OrganizationID == a.OrganizationID && d.Serial == a.Serial {
+			return db.MeasurementDevice{}, &pgconn.PgError{Code: "23505", ConstraintName: "uq_measurement_devices_org_serial"}
+		}
+	}
+	now := pgtype.Timestamptz{Time: time.Now(), Valid: true}
+	row := db.MeasurementDevice{
+		ID: int64(len(f.devices) + 1), Uuid: uuid.New(), OrganizationID: a.OrganizationID, BrandID: a.BrandID,
+		Serial: a.Serial, Label: a.Label, Model: a.Model, IsActive: a.IsActive, CreatedAt: now, UpdatedAt: now,
+	}
+	f.devices = append(f.devices, row)
+	return row, nil
+}
+
+func (f *fakeStore) UpdateMeasurementDevice(_ context.Context, a db.UpdateMeasurementDeviceParams) (db.MeasurementDevice, error) {
+	for i, d := range f.devices {
+		if d.Uuid == a.Uuid && d.OrganizationID == a.OrganizationID {
+			f.devices[i].Label = a.Label
+			f.devices[i].Model = a.Model
+			f.devices[i].IsActive = a.IsActive
+			return f.devices[i], nil
+		}
+	}
+	return db.MeasurementDevice{}, pgx.ErrNoRows
+}
+
+func (f *fakeStore) ListMeasurementResultsPanel(_ context.Context, _ db.ListMeasurementResultsPanelParams) ([]db.ListMeasurementResultsPanelRow, error) {
+	return nil, nil
+}
+
+func (f *fakeStore) GetMeasurementResultPanel(_ context.Context, _ db.GetMeasurementResultPanelParams) (db.GetMeasurementResultPanelRow, error) {
+	return db.GetMeasurementResultPanelRow{}, pgx.ErrNoRows
+}
+
+func (f *fakeStore) ListMeasurementValues(_ context.Context, _ db.ListMeasurementValuesParams) ([]db.MeasurementValue, error) {
+	return nil, nil
+}
+
+func (f *fakeStore) ListMeasurementTires(_ context.Context, _ db.ListMeasurementTiresParams) ([]db.MeasurementTire, error) {
+	return nil, nil
 }
 
 func (f *fakeStore) InsertMeasurementResult(_ context.Context, a db.InsertMeasurementResultParams) (db.MeasurementResult, error) {
@@ -69,6 +138,10 @@ func (f *fakeStore) GetServiceForMeasurement(_ context.Context, a db.GetServiceF
 }
 
 var caller = Caller{UserID: 3, OrganizationID: 10, BrandID: 1}
+var panelCaller = PanelCaller{
+	Org:    orgctx.Scope{InternalID: 10, BrandID: 1},
+	Filter: scopefilter.Filter{Scope: rbac.ScopeManaged, OrgIDs: []int64{10}},
+}
 
 func body(t *testing.T, m map[string]any) []byte {
 	t.Helper()
@@ -207,5 +280,40 @@ func TestCreateValidation(t *testing.T) {
 	// A raw that is not an object.
 	if _, err := s.Create(context.Background(), caller, Input{Body: []byte(`{"raw":[1]}`)}); err == nil {
 		t.Fatal("raw array accepted")
+	}
+}
+
+func TestDeviceSerialIsUniquePerOrganization(t *testing.T) {
+	st := &fakeStore{}
+	s := New(st)
+	_, err := s.CreateDevice(context.Background(), panelCaller, DeviceInput{Serial: "NX-1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = s.CreateDevice(context.Background(), panelCaller, DeviceInput{Serial: "NX-1"})
+	if !errors.Is(err, ErrSerialExists) {
+		t.Fatalf("duplicate serial = %v", err)
+	}
+	other := panelCaller
+	other.Org.InternalID = 11
+	if _, err := s.CreateDevice(context.Background(), other, DeviceInput{Serial: "NX-1"}); err != nil {
+		t.Fatalf("same serial in another org: %v", err)
+	}
+}
+
+func TestInactiveDeviceIsListed(t *testing.T) {
+	st := &fakeStore{}
+	s := New(st)
+	inactive := false
+	created, err := s.CreateDevice(context.Background(), panelCaller, DeviceInput{Serial: "NX-2", IsActive: &inactive})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.ListDevices(context.Background(), panelCaller)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].UUID != created.UUID || got[0].IsActive {
+		t.Fatalf("devices = %+v", got)
 	}
 }

@@ -20,7 +20,7 @@ SET status = 'cancelled',
     updated_by_user_id = $1,
     cancel_reason = $2
 WHERE id = $3 AND status = 'completed'
-RETURNING id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at
+RETURNING id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at, warranty_claim_id, income_entry_id, income_amount
 `
 
 type CancelCompletedServiceParams struct {
@@ -65,6 +65,9 @@ func (q *Queries) CancelCompletedService(ctx context.Context, arg CancelComplete
 		&i.UpdatedAt,
 		&i.MeasurementCheckRequired,
 		&i.MeasurementCheckedAt,
+		&i.WarrantyClaimID,
+		&i.IncomeEntryID,
+		&i.IncomeAmount,
 	)
 	return i, err
 }
@@ -77,7 +80,7 @@ SET status = 'cancelled',
     updated_by_user_id = $1,
     cancel_reason = $2
 WHERE id = $3 AND status NOT IN ('completed', 'cancelled')
-RETURNING id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at
+RETURNING id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at, warranty_claim_id, income_entry_id, income_amount
 `
 
 type CancelServiceParams struct {
@@ -122,6 +125,9 @@ func (q *Queries) CancelService(ctx context.Context, arg CancelServiceParams) (S
 		&i.UpdatedAt,
 		&i.MeasurementCheckRequired,
 		&i.MeasurementCheckedAt,
+		&i.WarrantyClaimID,
+		&i.IncomeEntryID,
+		&i.IncomeAmount,
 	)
 	return i, err
 }
@@ -133,7 +139,7 @@ SET status = 'completed',
     completed_by_user_id = $1,
     updated_by_user_id = $1
 WHERE id = $2 AND status NOT IN ('completed', 'cancelled')
-RETURNING id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at
+RETURNING id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at, warranty_claim_id, income_entry_id, income_amount
 `
 
 type CompleteServiceParams struct {
@@ -177,6 +183,9 @@ func (q *Queries) CompleteService(ctx context.Context, arg CompleteServiceParams
 		&i.UpdatedAt,
 		&i.MeasurementCheckRequired,
 		&i.MeasurementCheckedAt,
+		&i.WarrantyClaimID,
+		&i.IncomeEntryID,
+		&i.IncomeAmount,
 	)
 	return i, err
 }
@@ -255,7 +264,7 @@ VALUES (
     $16, $17,
     $18, $19, $19
 )
-RETURNING id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at
+RETURNING id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at, warranty_claim_id, income_entry_id, income_amount
 `
 
 type CreateServiceParams struct {
@@ -342,6 +351,9 @@ func (q *Queries) CreateService(ctx context.Context, arg CreateServiceParams) (S
 		&i.UpdatedAt,
 		&i.MeasurementCheckRequired,
 		&i.MeasurementCheckedAt,
+		&i.WarrantyClaimID,
+		&i.IncomeEntryID,
+		&i.IncomeAmount,
 	)
 	return i, err
 }
@@ -587,7 +599,7 @@ func (q *Queries) DeleteServiceItemsByService(ctx context.Context, serviceID int
 }
 
 const getService = `-- name: GetService :one
-SELECT id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at FROM services
+SELECT id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at, warranty_claim_id, income_entry_id, income_amount FROM services
 WHERE id = $1 AND brand_id = $2
 `
 
@@ -632,12 +644,15 @@ func (q *Queries) GetService(ctx context.Context, arg GetServiceParams) (Service
 		&i.UpdatedAt,
 		&i.MeasurementCheckRequired,
 		&i.MeasurementCheckedAt,
+		&i.WarrantyClaimID,
+		&i.IncomeEntryID,
+		&i.IncomeAmount,
 	)
 	return i, err
 }
 
 const getServiceByNo = `-- name: GetServiceByNo :one
-SELECT id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at FROM services
+SELECT id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at, warranty_claim_id, income_entry_id, income_amount FROM services
 WHERE service_no = $1
 `
 
@@ -678,12 +693,15 @@ func (q *Queries) GetServiceByNo(ctx context.Context, serviceNo string) (Service
 		&i.UpdatedAt,
 		&i.MeasurementCheckRequired,
 		&i.MeasurementCheckedAt,
+		&i.WarrantyClaimID,
+		&i.IncomeEntryID,
+		&i.IncomeAmount,
 	)
 	return i, err
 }
 
 const getServiceByUUID = `-- name: GetServiceByUUID :one
-SELECT id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at FROM services
+SELECT id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at, warranty_claim_id, income_entry_id, income_amount FROM services
 WHERE uuid = $1 AND brand_id = $2
 `
 
@@ -728,6 +746,9 @@ func (q *Queries) GetServiceByUUID(ctx context.Context, arg GetServiceByUUIDPara
 		&i.UpdatedAt,
 		&i.MeasurementCheckRequired,
 		&i.MeasurementCheckedAt,
+		&i.WarrantyClaimID,
+		&i.IncomeEntryID,
+		&i.IncomeAmount,
 	)
 	return i, err
 }
@@ -1304,7 +1325,7 @@ func (q *Queries) ListServiceStockUnits(ctx context.Context, arg ListServiceStoc
 }
 
 const listServicesByCustomer = `-- name: ListServicesByCustomer :many
-SELECT id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at FROM services
+SELECT id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at, warranty_claim_id, income_entry_id, income_amount FROM services
 WHERE customer_user_id = $1
   AND ($2::bigint IS NULL OR brand_id = $2)
   AND ($3::bigint[] IS NULL OR organization_id = ANY ($3::bigint[]))
@@ -1370,6 +1391,9 @@ func (q *Queries) ListServicesByCustomer(ctx context.Context, arg ListServicesBy
 			&i.UpdatedAt,
 			&i.MeasurementCheckRequired,
 			&i.MeasurementCheckedAt,
+			&i.WarrantyClaimID,
+			&i.IncomeEntryID,
+			&i.IncomeAmount,
 		); err != nil {
 			return nil, err
 		}
@@ -1382,7 +1406,7 @@ func (q *Queries) ListServicesByCustomer(ctx context.Context, arg ListServicesBy
 }
 
 const listServicesInScope = `-- name: ListServicesInScope :many
-SELECT id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at FROM services
+SELECT id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at, warranty_claim_id, income_entry_id, income_amount FROM services
 WHERE brand_id = $1
   AND ($2::bigint[] IS NULL OR organization_id = ANY ($2::bigint[]))
   AND ($3::bigint IS NULL OR created_by_user_id = $3)
@@ -1485,6 +1509,9 @@ func (q *Queries) ListServicesInScope(ctx context.Context, arg ListServicesInSco
 			&i.UpdatedAt,
 			&i.MeasurementCheckRequired,
 			&i.MeasurementCheckedAt,
+			&i.WarrantyClaimID,
+			&i.IncomeEntryID,
+			&i.IncomeAmount,
 		); err != nil {
 			return nil, err
 		}
@@ -1497,7 +1524,7 @@ func (q *Queries) ListServicesInScope(ctx context.Context, arg ListServicesInSco
 }
 
 const lockService = `-- name: LockService :one
-SELECT id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at FROM services
+SELECT id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at, warranty_claim_id, income_entry_id, income_amount FROM services
 WHERE id = $1 AND brand_id = $2
 FOR UPDATE
 `
@@ -1543,12 +1570,15 @@ func (q *Queries) LockService(ctx context.Context, arg LockServiceParams) (Servi
 		&i.UpdatedAt,
 		&i.MeasurementCheckRequired,
 		&i.MeasurementCheckedAt,
+		&i.WarrantyClaimID,
+		&i.IncomeEntryID,
+		&i.IncomeAmount,
 	)
 	return i, err
 }
 
 const lockServiceByUUID = `-- name: LockServiceByUUID :one
-SELECT id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at FROM services
+SELECT id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at, warranty_claim_id, income_entry_id, income_amount FROM services
 WHERE uuid = $1 AND brand_id = $2
 FOR UPDATE
 `
@@ -1594,6 +1624,9 @@ func (q *Queries) LockServiceByUUID(ctx context.Context, arg LockServiceByUUIDPa
 		&i.UpdatedAt,
 		&i.MeasurementCheckRequired,
 		&i.MeasurementCheckedAt,
+		&i.WarrantyClaimID,
+		&i.IncomeEntryID,
+		&i.IncomeAmount,
 	)
 	return i, err
 }
@@ -1733,7 +1766,7 @@ const setServiceReviewRequestSent = `-- name: SetServiceReviewRequestSent :one
 UPDATE services
 SET review_request_sent_at = COALESCE(review_request_sent_at, NOW())
 WHERE id = $1
-RETURNING id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at
+RETURNING id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at, warranty_claim_id, income_entry_id, income_amount
 `
 
 func (q *Queries) SetServiceReviewRequestSent(ctx context.Context, id int64) (Service, error) {
@@ -1772,6 +1805,9 @@ func (q *Queries) SetServiceReviewRequestSent(ctx context.Context, id int64) (Se
 		&i.UpdatedAt,
 		&i.MeasurementCheckRequired,
 		&i.MeasurementCheckedAt,
+		&i.WarrantyClaimID,
+		&i.IncomeEntryID,
+		&i.IncomeAmount,
 	)
 	return i, err
 }
@@ -1794,7 +1830,7 @@ SET customer_user_id      = $1,
     contract_id           = $14,
     updated_by_user_id    = $15
 WHERE id = $16 AND brand_id = $17
-RETURNING id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at
+RETURNING id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at, warranty_claim_id, income_entry_id, income_amount
 `
 
 type UpdateServiceParams struct {
@@ -1873,6 +1909,9 @@ func (q *Queries) UpdateService(ctx context.Context, arg UpdateServiceParams) (S
 		&i.UpdatedAt,
 		&i.MeasurementCheckRequired,
 		&i.MeasurementCheckedAt,
+		&i.WarrantyClaimID,
+		&i.IncomeEntryID,
+		&i.IncomeAmount,
 	)
 	return i, err
 }
@@ -1972,7 +2011,7 @@ SET status = $1::text,
     updated_by_user_id = $2
 WHERE id = $3
   AND $1::text NOT IN ('completed', 'cancelled')
-RETURNING id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at
+RETURNING id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at, warranty_claim_id, income_entry_id, income_amount
 `
 
 type UpdateServiceStatusParams struct {
@@ -2019,6 +2058,9 @@ func (q *Queries) UpdateServiceStatus(ctx context.Context, arg UpdateServiceStat
 		&i.UpdatedAt,
 		&i.MeasurementCheckRequired,
 		&i.MeasurementCheckedAt,
+		&i.WarrantyClaimID,
+		&i.IncomeEntryID,
+		&i.IncomeAmount,
 	)
 	return i, err
 }

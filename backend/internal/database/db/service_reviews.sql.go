@@ -22,7 +22,7 @@ INSERT INTO service_reviews (
     $7::varchar
 )
 ON CONFLICT (service_id) DO NOTHING
-RETURNING id, uuid, organization_id, brand_id, service_id, customer_user_id, platform_rating, product_rating, comment, created_at
+RETURNING id, uuid, organization_id, brand_id, service_id, customer_user_id, platform_rating, product_rating, comment, created_at, is_anonymous, source, processed_at
 `
 
 type CreateServiceReviewParams struct {
@@ -59,13 +59,16 @@ func (q *Queries) CreateServiceReview(ctx context.Context, arg CreateServiceRevi
 		&i.ProductRating,
 		&i.Comment,
 		&i.CreatedAt,
+		&i.IsAnonymous,
+		&i.Source,
+		&i.ProcessedAt,
 	)
 	return i, err
 }
 
 const getServiceReviewByService = `-- name: GetServiceReviewByService :one
 
-SELECT id, uuid, organization_id, brand_id, service_id, customer_user_id, platform_rating, product_rating, comment, created_at FROM service_reviews
+SELECT id, uuid, organization_id, brand_id, service_id, customer_user_id, platform_rating, product_rating, comment, created_at, is_anonymous, source, processed_at FROM service_reviews
 WHERE service_id = $1::bigint
 `
 
@@ -84,6 +87,9 @@ func (q *Queries) GetServiceReviewByService(ctx context.Context, serviceID int64
 		&i.ProductRating,
 		&i.Comment,
 		&i.CreatedAt,
+		&i.IsAnonymous,
+		&i.Source,
+		&i.ProcessedAt,
 	)
 	return i, err
 }

@@ -186,11 +186,22 @@ const (
 	PermServicesCancel          = "services.cancel"
 	PermServicesCancelCompleted = "services.cancel_completed"
 
+	// TEC-350 (000091): extra review questions and review reading.
+	PermReviewsQuestionsManage = "reviews.questions.manage"
+	PermReviewsRead            = "reviews.read"
+
 	// TEC-185 (000051): warranties (void is center-only) and vehicle
 	// ownership transfer with two codes (TEC-98 decision 6).
 	PermWarrantiesRead   = "warranties.read"
 	PermWarrantiesVoid   = "warranties.void"
 	PermVehiclesTransfer = "vehicles.transfer"
+
+	// TEC-334 (000092): warranty claims. Dealers and distributors open
+	// them, the distributor reviews the subtree, the center decides.
+	PermWarrantyClaimsRead   = "warranty_claims.read"
+	PermWarrantyClaimsWrite  = "warranty_claims.write"
+	PermWarrantyClaimsReview = "warranty_claims.review"
+	PermWarrantyClaimsDecide = "warranty_claims.decide"
 
 	// TEC-174 (000052): the parent resolves a dispute opened with
 	// accounting.dispute (reversal, revision or rejection, K24).
@@ -238,6 +249,14 @@ const (
 	PermAnnouncementsWrite = "announcements.write"
 	PermLibraryRead        = "library.read"
 	PermLibraryManage      = "library.manage"
+	// TEC-341 (000093): full dealer accounting (F3-07). Dealer owner and
+	// dealer accounting only; dealer_staff holds none of them.
+	PermDealerPricingWrite = "dealer_pricing.write"
+	PermProductSalesWrite  = "product_sales.write"
+	PermSuppliersManage    = "suppliers.manage"
+	PermPurchasesWrite     = "purchases.write"
+	PermStaffManage        = "staff.manage"
+	PermStaffPaymentsWrite = "staff_payments.write"
 )
 
 // IsSystemRole reports whether slug is a protected system role.
