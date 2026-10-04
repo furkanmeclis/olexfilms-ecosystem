@@ -2155,6 +2155,144 @@ paths:
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
+  /v1/service-reviews:
+    get:
+      tags: [Services]
+      operationId: listServiceReviews
+      summary: List service reviews inside reviews.read scope
+      description: Dealer sees its own scope with anonymous customer fields hidden; center sees customer identity.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Service reviews
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeServiceReviewList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/review-questions:
+    get:
+      tags: [Reviews]
+      operationId: listReviewQuestions
+      summary: List admin review questions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: active
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        "200":
+          description: Review questions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeReviewQuestionList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Reviews]
+      operationId: createReviewQuestion
+      summary: Create an admin review question
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReviewQuestionInput" }
+      responses:
+        "201":
+          description: Created question
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeReviewQuestion" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/review-questions/{uuid}:
+    patch:
+      tags: [Reviews]
+      operationId: updateReviewQuestion
+      summary: Patch an admin review question
+      description: question_type and target cannot change after answers exist.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReviewQuestionInput" }
+      responses:
+        "200":
+          description: Updated question
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeReviewQuestion" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/platform/review-questions/{uuid}/locales/{locale}:
+    put:
+      tags: [Reviews]
+      operationId: putReviewQuestionLocale
+      summary: Upsert one review question locale
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - name: locale
+          in: path
+          required: true
+          schema: { type: string, example: tr }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReviewQuestionLocaleInput" }
+      responses:
+        "200":
+          description: Locale
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeReviewQuestionLocale" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/me/organizations:
     get:
       tags: [Auth]
@@ -28041,7 +28179,7 @@ components:
 
     PortalServiceReviewInput:
       type: object
-      description: TEC-244 portal service review form.
+      description: TEC-244/TEC-351 portal service review form. Legacy bodies with only the two ratings are accepted.
       required: [platform_rating, product_rating]
       properties:
         platform_rating: { type: integer, minimum: 1, maximum: 5 }
@@ -28050,21 +28188,31 @@ components:
           type: [string, "null"]
           maxLength: 2000
           description: Optional; trimmed, empty means none.
+        is_anonymous: { type: boolean, default: false }
+        source: { type: string, enum: [portal, whatsapp_link], default: portal }
+        answers:
+          type: array
+          items: { $ref: "#/components/schemas/ReviewAnswerInput" }
 
     PortalServiceReviewItem:
       type: object
-      required: [uuid, platform_rating, product_rating, comment, created_at]
+      required: [uuid, platform_rating, product_rating, comment, is_anonymous, source, answers, created_at]
       properties:
         uuid: { type: string, format: uuid }
         platform_rating: { type: integer, minimum: 1, maximum: 5 }
         product_rating: { type: integer, minimum: 1, maximum: 5 }
         comment: { type: [string, "null"] }
+        is_anonymous: { type: boolean }
+        source: { type: string, enum: [portal, whatsapp_link] }
+        answers:
+          type: array
+          items: { $ref: "#/components/schemas/ReviewAnswer" }
         created_at: { type: string, format: date-time }
 
     PortalServiceReview:
       type: object
       description: TEC-244 review state of a portal service.
-      required: [review, can_review, google_business_url]
+      required: [review, can_review, google_business_url, questions, products]
       properties:
         review:
           oneOf:
@@ -28076,6 +28224,12 @@ components:
         google_business_url:
           type: [string, "null"]
           description: The dealer's Google review link; null when unset.
+        questions:
+          type: array
+          items: { $ref: "#/components/schemas/ReviewFormQuestion" }
+        products:
+          type: array
+          items: { $ref: "#/components/schemas/ReviewProduct" }
 
     EnvelopePortalServiceReview:
       type: object
@@ -28083,6 +28237,163 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/PortalServiceReview" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    ReviewQuestionType:
+      type: string
+      enum: [rating_1_5, text]
+
+    ReviewQuestionTarget:
+      type: string
+      enum: [platform, dealer, product]
+
+    ReviewQuestionInput:
+      type: object
+      properties:
+        question_key: { type: string, maxLength: 64 }
+        question_type: { $ref: "#/components/schemas/ReviewQuestionType" }
+        target: { $ref: "#/components/schemas/ReviewQuestionTarget" }
+        is_required: { type: boolean }
+        is_active: { type: boolean }
+        sort_order: { type: integer, format: int32 }
+
+    ReviewQuestionLocaleInput:
+      type: object
+      required: [text]
+      properties:
+        text: { type: string, maxLength: 500 }
+
+    ReviewQuestionLocale:
+      type: object
+      required: [locale, text, updated_at]
+      properties:
+        locale: { type: string }
+        text: { type: string }
+        updated_at: { type: string, format: date-time }
+
+    ReviewQuestion:
+      type: object
+      required: [uuid, question_key, question_type, target, is_required, is_active, sort_order, locales, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        question_key: { type: string }
+        question_type: { $ref: "#/components/schemas/ReviewQuestionType" }
+        target: { $ref: "#/components/schemas/ReviewQuestionTarget" }
+        is_required: { type: boolean }
+        is_active: { type: boolean }
+        sort_order: { type: integer, format: int32 }
+        locales:
+          type: array
+          items: { $ref: "#/components/schemas/ReviewQuestionLocale" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    ReviewFormQuestion:
+      type: object
+      required: [uuid, question_key, question_type, target, is_required, sort_order, text]
+      properties:
+        uuid: { type: string, format: uuid }
+        question_key: { type: string }
+        question_type: { $ref: "#/components/schemas/ReviewQuestionType" }
+        target: { $ref: "#/components/schemas/ReviewQuestionTarget" }
+        is_required: { type: boolean }
+        sort_order: { type: integer, format: int32 }
+        text: { type: string }
+
+    ReviewProduct:
+      type: object
+      required: [uuid, sku, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        sku: { type: string }
+        name: { type: string }
+
+    ReviewAnswerInput:
+      type: object
+      required: [question_uuid]
+      properties:
+        question_uuid: { type: string, format: uuid }
+        product_uuid: { type: [string, "null"], format: uuid }
+        rating: { type: [integer, "null"], minimum: 1, maximum: 5 }
+        text: { type: [string, "null"] }
+
+    ReviewAnswer:
+      allOf:
+        - $ref: "#/components/schemas/ReviewAnswerInput"
+
+    ReviewCustomer:
+      type: object
+      required: [uuid, name, phone]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        phone: { type: [string, "null"] }
+
+    ServiceReview:
+      type: object
+      required: [uuid, service_uuid, service_no, plate, platform_rating, product_rating, comment, is_anonymous, source, customer, answers, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        service_uuid: { type: string, format: uuid }
+        service_no: { type: string }
+        plate: { type: [string, "null"] }
+        platform_rating: { type: integer, minimum: 1, maximum: 5 }
+        product_rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: [string, "null"] }
+        is_anonymous: { type: boolean }
+        source: { type: string, enum: [portal, whatsapp_link] }
+        customer:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/ReviewCustomer"
+        answers:
+          type: array
+          items: { $ref: "#/components/schemas/ReviewAnswer" }
+        created_at: { type: string, format: date-time }
+
+    EnvelopeReviewQuestion:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ReviewQuestion" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeReviewQuestionLocale:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ReviewQuestionLocale" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeReviewQuestionList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/ReviewQuestion" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeServiceReviewList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/ServiceReview" }
+            total: { type: integer, format: int64 }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     PortalNamedRef:

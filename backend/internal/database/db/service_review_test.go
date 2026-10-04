@@ -1,14 +1,17 @@
 package db_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/review"
+	shorturls "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/shorturls/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -80,9 +83,15 @@ func (f *serviceFixture) reviewState(t *testing.T, svc db.Service) (sentAt bool,
 	return sent.Valid, f.outboxCount(t, events.ServiceReviewRequested, svc.ID, -1)
 }
 
+type failingOutbox struct{}
+
+func (failingOutbox) Enqueue(context.Context, pgx.Tx, events.Event) error {
+	return fmt.Errorf("boom")
+}
+
 func TestServiceReviewRequest(t *testing.T) {
 	f := newServiceFixture(t)
-	sender := review.NewSender(f.tx, f.q, outbox.NewStore(nil, f.q), nil)
+	sender := review.NewSender(f.tx, f.q, outbox.NewStore(nil, f.q), nil, nil)
 	url := "https://g.page/r/t192-dealer/review"
 
 	send := func(t *testing.T, svc db.Service, want bool) {
@@ -100,9 +109,20 @@ func TestServiceReviewRequest(t *testing.T) {
 		f.setReviewURL(t, nil)
 		u, v := f.reviewCustomer(t, true)
 		svc := f.reviewService(t, u, v, true)
-		send(t, svc, false)
-		if sent, n := f.reviewState(t, svc); sent || n != 0 {
+		send(t, svc, true)
+		if sent, n := f.reviewState(t, svc); !sent || n != 1 {
 			t.Fatalf("no url: sent=%v events=%d", sent, n)
+		}
+		var reviewURL, formURL string
+		err := f.tx.QueryRow(f.ctx, `SELECT payload->'data'->>'review_url',
+				payload->'data'->>'form_url'
+			FROM outbox_events WHERE event_name = $1 AND (payload->>'entity_id')::bigint = $2`,
+			events.ServiceReviewRequested, svc.ID).Scan(&reviewURL, &formURL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if reviewURL != "" || formURL != "/portal/services/"+svc.Uuid.String()+"/review?source=whatsapp_link" {
+			t.Fatalf("payload review_url=%q form_url=%q", reviewURL, formURL)
 		}
 	})
 
@@ -116,17 +136,18 @@ func TestServiceReviewRequest(t *testing.T) {
 			t.Fatalf("first run: sent=%v events=%d", sent, n)
 		}
 		var customer, brand int64
-		var reviewURL, org string
+		var reviewURL, formURL, org string
 		err := f.tx.QueryRow(f.ctx, `SELECT (payload->'data'->>'customer_user_id')::bigint,
 				(payload->'data'->>'brand_id')::bigint, payload->'data'->>'review_url',
-				payload->'data'->>'organization_name'
+				payload->'data'->>'form_url', payload->'data'->>'organization_name'
 			FROM outbox_events WHERE event_name = $1 AND (payload->>'entity_id')::bigint = $2`,
-			events.ServiceReviewRequested, svc.ID).Scan(&customer, &brand, &reviewURL, &org)
+			events.ServiceReviewRequested, svc.ID).Scan(&customer, &brand, &reviewURL, &formURL, &org)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if customer != u.ID || brand != svc.BrandID || reviewURL != url || org != f.dealer.Name {
-			t.Fatalf("payload customer=%d brand=%d url=%q org=%q", customer, brand, reviewURL, org)
+		if customer != u.ID || brand != svc.BrandID || reviewURL != url ||
+			formURL != "/portal/services/"+svc.Uuid.String()+"/review?source=whatsapp_link" || org != f.dealer.Name {
+			t.Fatalf("payload customer=%d brand=%d url=%q form=%q org=%q", customer, brand, reviewURL, formURL, org)
 		}
 		// The task runs again (retry, duplicate): no second message.
 		send(t, svc, false)
@@ -164,4 +185,32 @@ func TestServiceReviewRequest(t *testing.T) {
 			t.Fatalf("draft: sent=%v events=%d", sent, n)
 		}
 	})
+}
+
+func TestServiceReviewRequestRollsBackShortURLWithOutbox(t *testing.T) {
+	f := newServiceFixture(t)
+	sender := review.NewSender(
+		f.tx,
+		f.q,
+		failingOutbox{},
+		shorturls.NewLinker(shorturls.New(f.q), "https://olexfilms.app"),
+		nil,
+	)
+	u, v := f.reviewCustomer(t, true)
+	svc := f.reviewService(t, u, v, true)
+
+	if sent, err := sender.Send(f.ctx, svc.ID); err == nil || sent {
+		t.Fatalf("send = %v, %v; want outbox error", sent, err)
+	}
+	var urls int
+	target := "/portal/services/" + svc.Uuid.String() + "/review?source=whatsapp_link"
+	if err := f.tx.QueryRow(f.ctx, `SELECT COUNT(*) FROM short_urls WHERE target_path = $1`, target).Scan(&urls); err != nil {
+		t.Fatal(err)
+	}
+	if urls != 0 {
+		t.Fatalf("short URL rows after rollback = %d, want 0", urls)
+	}
+	if sent, n := f.reviewState(t, svc); sent || n != 0 {
+		t.Fatalf("review request state after rollback: sent=%v events=%d", sent, n)
+	}
 }

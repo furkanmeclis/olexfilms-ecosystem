@@ -287,6 +287,21 @@ func (l *Linker) Link(ctx context.Context, in CreateInput) (string, error) {
 	return l.URL(out.Token), nil
 }
 
+// LinkWithStore shortens an internal target through a caller-provided store.
+// Use this when the short URL must participate in the caller's transaction.
+func (l *Linker) LinkWithStore(ctx context.Context, store Store, in CreateInput) (string, error) {
+	svc := New(store)
+	if l.svc != nil {
+		svc.now = l.svc.now
+		svc.token = l.svc.token
+	}
+	out, err := svc.Create(ctx, in)
+	if err != nil {
+		return "", err
+	}
+	return l.URL(out.Token), nil
+}
+
 // URL is the absolute short link of a token.
 func (l *Linker) URL(token string) string { return l.baseURL + "/s/" + token }
 

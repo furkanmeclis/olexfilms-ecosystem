@@ -261,7 +261,7 @@ func main() {
 		// TEC-190: expire pending vehicle transfers (5 min).
 		WithVehicleTransferExpire(transferExpirer.ExpireTransfersTask).
 		// TEC-192: delayed Google review request of a completed service.
-		WithServiceReviewRequest(servicereview.NewTaskSender(pool, queries, log).Task).
+		WithServiceReviewRequest(servicereview.NewTaskSender(pool, queries, cfg.Auth.FrontendURL, log).Task).
 		// TEC-156: nightly projection drift scan; report only, no repair.
 		WithInventoryRebuild(stockrebuild.New(pool, queries).ScanTask(log)).
 		// TEC-221: hourly center task due date reminders.

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	shorturlsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/shorturls"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -21,6 +22,6 @@ func RegisterEventHandlers(bus events.Bus, q Enqueuer, delay time.Duration, log 
 }
 
 // NewTaskSender wires the service:review_request handler.
-func NewTaskSender(pool *pgxpool.Pool, q *db.Queries, log *slog.Logger) *Sender {
-	return NewSender(pool, q, outbox.NewStore(pool, q), log)
+func NewTaskSender(pool *pgxpool.Pool, q *db.Queries, frontendURL string, log *slog.Logger) *Sender {
+	return NewSender(pool, q, outbox.NewStore(pool, q), shorturlsmodule.NewLinker(q, frontendURL), log)
 }
