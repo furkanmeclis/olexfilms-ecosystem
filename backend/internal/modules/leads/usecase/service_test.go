@@ -5,14 +5,20 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/documentstest"
+	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
+	docusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -78,11 +84,15 @@ func newFixture(t *testing.T) *fixture {
 }
 
 func (f *fixture) org(slug string) db.Organization {
+	return f.orgTyped(slug, "dealer", f.center.ID)
+}
+
+func (f *fixture) orgTyped(slug, typ string, parentID int64) db.Organization {
 	f.t.Helper()
 	slug = fmt.Sprintf("tec313-%s-%d", slug, time.Now().UnixNano())
 	o, err := f.q.CreateOrganization(f.ctx, db.CreateOrganizationParams{
-		Slug: slug, Name: slug, Status: "active", Type: "dealer",
-		ParentID: pgtype.Int8{Int64: f.center.ID, Valid: true}, BrandID: f.brand,
+		Slug: slug, Name: slug, Status: "active", Type: typ,
+		ParentID: pgtype.Int8{Int64: parentID, Valid: parentID != 0}, BrandID: f.brand,
 		Currency: "TRY", Locale: "tr", Timezone: "UTC", Settings: []byte(`{}`),
 		AccessStartsAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
 	})
@@ -109,11 +119,72 @@ func (f *fixture) caller(org db.Organization, scope rbac.Scope) Caller {
 	if scope != rbac.ScopeAll && scope != rbac.ScopeBrand {
 		orgIDs = []int64{org.ID}
 	}
+	perms := map[string]rbac.Scope{
+		rbac.PermLeadsRead:        scope,
+		rbac.PermLeadsWrite:       scope,
+		rbac.PermQuotesRead:       scope,
+		rbac.PermQuotesWrite:      scope,
+		rbac.PermPricingSaleWrite: scope,
+	}
 	return Caller{
-		Principal: authctx.Principal{UserInternal: f.user.ID, PermissionScopes: map[string]rbac.Scope{rbac.PermLeadsRead: scope, rbac.PermLeadsWrite: scope}},
+		Principal: authctx.Principal{UserInternal: f.user.ID, PermissionScopes: perms},
 		Org:       orgctx.Scope{InternalID: org.ID, UUID: org.Uuid, OrgType: org.Type, BrandID: org.BrandID},
 		Filter:    scopefilter.Filter{Permission: rbac.PermLeadsRead, Scope: scope, UserID: f.user.ID, OrgID: org.ID, OrgIDs: orgIDs, BrandID: org.BrandID},
 	}
+}
+
+func (f *fixture) quoteCaller(org db.Organization, scope rbac.Scope) Caller {
+	c := f.caller(org, scope)
+	c.Filter.Permission = rbac.PermQuotesRead
+	return c
+}
+
+func num(s string) pgtype.Numeric {
+	var n pgtype.Numeric
+	if err := n.Scan(s); err != nil {
+		panic(err)
+	}
+	return n
+}
+
+func strPtr(s string) *string { return &s }
+
+func (f *fixture) pricedProduct(sku, sale string) db.Product {
+	f.t.Helper()
+	cat, err := f.q.CreateProductCategory(f.ctx, db.CreateProductCategoryParams{
+		OrganizationID: f.center.ID, BrandID: f.brand, Name: sku + " cat", AvailableParts: []byte(`[]`), Active: true,
+	})
+	if err != nil {
+		f.t.Fatalf("category: %v", err)
+	}
+	p, err := f.q.CreateProduct(f.ctx, db.CreateProductParams{
+		OrganizationID: f.center.ID, BrandID: f.brand, CategoryID: cat.ID, Sku: sku, Name: sku + " product",
+		DescriptionMd: "", Images: []byte(`[]`), UnitType: "piece", Active: true, LockedFields: []string{},
+	})
+	if err != nil {
+		f.t.Fatalf("product: %v", err)
+	}
+	if _, err := f.q.UpsertProductPrice(f.ctx, db.UpsertProductPriceParams{
+		ProductID: p.ID, BrandID: f.brand, Currency: "TRY",
+		SaleToDistributorPrice: pgtype.Text{String: sale, Valid: true},
+		RecommendedSalePrice:   pgtype.Text{String: sale, Valid: true},
+	}); err != nil {
+		f.t.Fatalf("product price: %v", err)
+	}
+	return p
+}
+
+func (f *fixture) catalogItem(name, price string) db.ServiceCatalogItem {
+	f.t.Helper()
+	item, err := f.q.CreateServiceCatalogItem(f.ctx, db.CreateServiceCatalogItemParams{
+		OrganizationID: f.center.ID, BrandID: f.brand, Name: name, Description: "desc",
+		Category: "other", DefaultPrice: num(price), Currency: "TRY", Recurrence: "one_time",
+		CancellationFee: num("0.00"), IsActive: true,
+	})
+	if err != nil {
+		f.t.Fatalf("service item: %v", err)
+	}
+	return item
 }
 
 func (f *fixture) lead(org db.Organization, status string, follow *time.Time) db.Lead {
@@ -207,6 +278,135 @@ func TestNonCenterCannotCreateLeadTask(t *testing.T) {
 	lead := f.lead(f.dealer, StatusNew, nil)
 	if _, err := f.svc.CreateTask(f.ctx, c, lead.Uuid, TaskInput{Title: "Call"}); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("CreateTask err = %v, want ErrForbidden", err)
+	}
+}
+
+func TestQuoteTotalsProductAndCatalogLines(t *testing.T) {
+	f := newFixture(t)
+	dist := f.orgTyped("quote-dist", "distributor", f.center.ID)
+	c := f.quoteCaller(dist, rbac.ScopeManaged)
+	lead := f.lead(dist, StatusNew, nil)
+	product := f.pricedProduct("TEC314P", "100.00")
+	item := f.catalogItem("Ceramic care", "50.00")
+
+	q, err := f.svc.CreateQuote(f.ctx, c, lead.Uuid, QuoteInput{Lines: []QuoteLineInput{
+		{LineType: QuoteLineProduct, ProductUUID: &product.Uuid, Quantity: "2", DiscountAmount: strPtr("10.00")},
+		{LineType: QuoteLineCatalogService, ServiceCatalogItemUUID: &item.Uuid, Quantity: "1.5", DiscountAmount: strPtr("5.00")},
+	}})
+	if err != nil {
+		t.Fatalf("CreateQuote: %v", err)
+	}
+	if q.Subtotal != "275.00" || q.DiscountTotal != "15.00" || q.TaxTotal != "0.00" || q.GrandTotal != "260.00" {
+		t.Fatalf("totals = %+v", q)
+	}
+	if len(q.Lines) != 2 || q.Lines[0].LineTotal != "190.00" || q.Lines[1].LineTotal != "70.00" {
+		t.Fatalf("lines = %+v", q.Lines)
+	}
+}
+
+func TestQuoteLinesLockedAfterSent(t *testing.T) {
+	f := newFixture(t)
+	dist := f.orgTyped("quote-sent", "distributor", f.center.ID)
+	c := f.quoteCaller(dist, rbac.ScopeManaged)
+	lead := f.lead(dist, StatusNew, nil)
+	item := f.catalogItem("Detailing", "100.00")
+	q, err := f.svc.CreateQuote(f.ctx, c, lead.Uuid, QuoteInput{Lines: []QuoteLineInput{
+		{LineType: QuoteLineCatalogService, ServiceCatalogItemUUID: &item.Uuid, Quantity: "1"},
+	}})
+	if err != nil {
+		t.Fatalf("CreateQuote: %v", err)
+	}
+	row, err := f.q.GetQuoteByUUID(f.ctx, db.GetQuoteByUUIDParams{Uuid: q.UUID, BrandID: f.brand})
+	if err != nil {
+		t.Fatalf("quote row: %v", err)
+	}
+	if _, err := f.q.SetQuoteStatus(f.ctx, db.SetQuoteStatusParams{ID: row.ID, OrganizationID: row.OrganizationID, Status: QuoteStatusSent}); err != nil {
+		t.Fatalf("sent: %v", err)
+	}
+	_, err = f.svc.ReplaceQuoteLines(f.ctx, c, q.UUID, []QuoteLineInput{{LineType: QuoteLineCatalogService, ServiceCatalogItemUUID: &item.Uuid, Quantity: "2"}})
+	if !errors.Is(err, ErrQuoteConflict) {
+		t.Fatalf("ReplaceQuoteLines err = %v, want ErrQuoteConflict", err)
+	}
+}
+
+func TestQuoteCatalogOverrideDefaultsForDistributor(t *testing.T) {
+	f := newFixture(t)
+	dist := f.orgTyped("quote-nl-dist", "distributor", f.center.ID)
+	c := f.quoteCaller(dist, rbac.ScopeManaged)
+	lead := f.lead(dist, StatusNew, nil)
+	item := f.catalogItem("NL module", "100.00")
+	if _, err := f.q.UpsertServicePriceOverride(f.ctx, db.UpsertServicePriceOverrideParams{
+		ItemID: item.ID, OrganizationID: dist.ID, BrandID: f.brand, Price: num("77.00"), Currency: "TRY",
+	}); err != nil {
+		t.Fatalf("override: %v", err)
+	}
+	q, err := f.svc.CreateQuote(f.ctx, c, lead.Uuid, QuoteInput{Lines: []QuoteLineInput{
+		{LineType: QuoteLineCatalogService, ServiceCatalogItemUUID: &item.Uuid, Quantity: "1"},
+	}})
+	if err != nil {
+		t.Fatalf("CreateQuote: %v", err)
+	}
+	if got := q.Lines[0].UnitPrice; got != "77.00" {
+		t.Fatalf("unit price = %s, want override 77.00", got)
+	}
+}
+
+func TestQuoteExpireTask(t *testing.T) {
+	f := newFixture(t)
+	dist := f.orgTyped("quote-expire", "distributor", f.center.ID)
+	c := f.quoteCaller(dist, rbac.ScopeManaged)
+	lead := f.lead(dist, StatusNew, nil)
+	item := f.catalogItem("Expiring", "10.00")
+	past := time.Date(2026, 10, 3, 0, 0, 0, 0, time.UTC)
+	q, err := f.svc.CreateQuote(f.ctx, c, lead.Uuid, QuoteInput{ValidUntil: &past, Lines: []QuoteLineInput{
+		{LineType: QuoteLineCatalogService, ServiceCatalogItemUUID: &item.Uuid, Quantity: "1"},
+	}})
+	if err != nil {
+		t.Fatalf("CreateQuote: %v", err)
+	}
+	if err := f.svc.ExpireDueQuotesTask(f.ctx); err != nil {
+		t.Fatalf("ExpireDueQuotesTask: %v", err)
+	}
+	got, err := f.svc.GetQuote(f.ctx, c, q.UUID)
+	if err != nil {
+		t.Fatalf("GetQuote: %v", err)
+	}
+	if got.Status != QuoteStatusExpired {
+		t.Fatalf("status = %s, want expired", got.Status)
+	}
+}
+
+func TestQuotePDFRenderHTMLContainsNumberLinesAndTotal(t *testing.T) {
+	f := newFixture(t)
+	dist := f.orgTyped("quote-pdf", "distributor", f.center.ID)
+	c := f.quoteCaller(dist, rbac.ScopeManaged)
+	lead := f.lead(dist, StatusNew, nil)
+	item := f.catalogItem("PDF coating package", "120.00")
+	q, err := f.svc.CreateQuote(f.ctx, c, lead.Uuid, QuoteInput{Lines: []QuoteLineInput{
+		{LineType: QuoteLineCatalogService, ServiceCatalogItemUUID: &item.Uuid, Quantity: "2", DiscountAmount: strPtr("15.00")},
+	}})
+	if err != nil {
+		t.Fatalf("CreateQuote: %v", err)
+	}
+	gotb := documentstest.NewGotenberg(t, 0)
+	docs := docusecase.New(nil, f.q, storage.NewMemory(), pdfrender.New(gotb.URL), nil, pdfrender.FontsEmbedded, nil)
+	if err := docs.RegisterLoader(docmodel.KindQuote, f.svc); err != nil {
+		t.Fatalf("RegisterLoader: %v", err)
+	}
+	v, ready, err := docs.RequestRender(f.ctx, docmodel.Viewer{
+		UserID: f.user.ID, OrganizationID: dist.ID, BrandID: f.brand,
+	}, docusecase.RenderInput{Kind: docmodel.KindQuote, SourceID: q.UUID.String(), Locale: "tr"})
+	if err != nil {
+		t.Fatalf("RequestRender: %v", err)
+	}
+	if !ready || v.Status != docusecase.RenderReady {
+		t.Fatalf("render = ready %v view %+v", ready, v)
+	}
+	html := gotb.LastHTML()
+	for _, want := range []string{q.DisplayNo, "PDF coating package", "225.00 TRY"} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("quote pdf html missing %q in %s", want, html)
+		}
 	}
 }
 

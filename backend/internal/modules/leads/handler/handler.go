@@ -2,12 +2,15 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
 	"time"
 
+	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
+	docusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/leads/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
@@ -18,10 +21,24 @@ import (
 )
 
 // Handler serves lead endpoints.
-type Handler struct{ svc *usecase.Service }
+type Handler struct {
+	svc  *usecase.Service
+	docs DocumentRenderer
+}
+
+// DocumentRenderer renders business documents.
+type DocumentRenderer interface {
+	RequestRender(ctx context.Context, viewer docmodel.Viewer, in docusecase.RenderInput) (docmodel.RenderView, bool, error)
+}
 
 // New creates the handler.
 func New(svc *usecase.Service) *Handler { return &Handler{svc: svc} }
+
+// WithDocuments enables quote PDF rendering.
+func (h *Handler) WithDocuments(docs DocumentRenderer) *Handler {
+	h.docs = docs
+	return h
+}
 
 func caller(r *http.Request) usecase.Caller {
 	f, _ := scopefilter.From(r.Context())
@@ -35,13 +52,195 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.ValidationError(w, r, []response.Detail{{Field: ve.Field, Message: ve.Message, Code: ve.Code}})
 	case errors.Is(err, usecase.ErrInvalidTransition):
 		response.Error(w, r, http.StatusUnprocessableEntity, usecase.CodeInvalidTransition, "Lead status transition is not allowed")
+	case errors.Is(err, usecase.ErrQuoteConflict):
+		response.Error(w, r, http.StatusConflict, "QUOTE_CONFLICT", "Quote state does not allow this action")
+	case errors.Is(err, usecase.ErrQuoteForbidden):
+		response.Forbidden(w, r, "This quote price override requires pricing.sale.write")
 	case errors.Is(err, usecase.ErrForbidden):
 		response.Forbidden(w, r, "This lead action is center-only")
+	case errors.Is(err, usecase.ErrQuoteNotFound):
+		response.NotFound(w, r, "Quote not found")
 	case errors.Is(err, usecase.ErrNotFound):
 		response.NotFound(w, r, "Lead not found")
 	default:
 		response.InternalErr(w, r, err, "lead request failed")
 	}
+}
+
+type quoteLineBody struct {
+	LineType               string     `json:"line_type"`
+	ProductUUID            *uuid.UUID `json:"product_uuid"`
+	ServiceCatalogItemUUID *uuid.UUID `json:"service_catalog_item_uuid"`
+	Description            *string    `json:"description"`
+	Quantity               string     `json:"quantity"`
+	UnitPrice              *string    `json:"unit_price"`
+	DiscountAmount         *string    `json:"discount_amount"`
+}
+
+func (b quoteLineBody) input() usecase.QuoteLineInput {
+	return usecase.QuoteLineInput{
+		LineType: b.LineType, ProductUUID: b.ProductUUID, ServiceCatalogItemUUID: b.ServiceCatalogItemUUID,
+		Description: b.Description, Quantity: b.Quantity, UnitPrice: b.UnitPrice, DiscountAmount: b.DiscountAmount,
+	}
+}
+
+func quoteLineInputs(in []quoteLineBody) []usecase.QuoteLineInput {
+	out := make([]usecase.QuoteLineInput, 0, len(in))
+	for _, l := range in {
+		out = append(out, l.input())
+	}
+	return out
+}
+
+type quoteBody struct {
+	ValidUntil *time.Time      `json:"valid_until"`
+	Lines      []quoteLineBody `json:"lines"`
+}
+
+// CreateQuote (POST /v1/leads/{uuid}/quotes).
+func (h *Handler) CreateQuote(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+	var body quoteBody
+	if !decode(w, r, &body) {
+		return
+	}
+	q, err := h.svc.CreateQuote(r.Context(), caller(r), id, usecase.QuoteInput{ValidUntil: body.ValidUntil, Lines: quoteLineInputs(body.Lines)})
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusCreated, q)
+}
+
+func quoteUUID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
+	id, err := uuid.Parse(r.PathValue("uuid"))
+	if err != nil {
+		response.NotFound(w, r, "Quote not found")
+		return uuid.Nil, false
+	}
+	return id, true
+}
+
+// GetQuote (GET /v1/quotes/{uuid}).
+func (h *Handler) GetQuote(w http.ResponseWriter, r *http.Request) {
+	id, ok := quoteUUID(w, r)
+	if !ok {
+		return
+	}
+	q, err := h.svc.GetQuote(r.Context(), caller(r), id)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, q)
+}
+
+type quotePatchBody struct {
+	ValidUntil field[time.Time] `json:"valid_until"`
+}
+
+// PatchQuote (PATCH /v1/quotes/{uuid}).
+func (h *Handler) PatchQuote(w http.ResponseWriter, r *http.Request) {
+	id, ok := quoteUUID(w, r)
+	if !ok {
+		return
+	}
+	var body quotePatchBody
+	if !decode(w, r, &body) {
+		return
+	}
+	q, err := h.svc.PatchQuote(r.Context(), caller(r), id, usecase.QuotePatchInput{ValidUntil: toField(body.ValidUntil)})
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, q)
+}
+
+type quoteLinesBody struct {
+	Lines []quoteLineBody `json:"lines"`
+}
+
+// ReplaceQuoteLines (PUT /v1/quotes/{uuid}/lines).
+func (h *Handler) ReplaceQuoteLines(w http.ResponseWriter, r *http.Request) {
+	id, ok := quoteUUID(w, r)
+	if !ok {
+		return
+	}
+	var body quoteLinesBody
+	if !decode(w, r, &body) {
+		return
+	}
+	q, err := h.svc.ReplaceQuoteLines(r.Context(), caller(r), id, quoteLineInputs(body.Lines))
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, q)
+}
+
+type quoteDecisionBody struct {
+	Reason *string `json:"reason"`
+}
+
+func (h *Handler) decideQuote(w http.ResponseWriter, r *http.Request, status string) {
+	id, ok := quoteUUID(w, r)
+	if !ok {
+		return
+	}
+	var body quoteDecisionBody
+	if r.Body != nil && r.ContentLength != 0 && !decode(w, r, &body) {
+		return
+	}
+	q, err := h.svc.DecideQuote(r.Context(), caller(r), id, status, usecase.QuoteDecisionInput{Reason: body.Reason})
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, q)
+}
+
+// AcceptQuote (POST /v1/quotes/{uuid}/accept).
+func (h *Handler) AcceptQuote(w http.ResponseWriter, r *http.Request) {
+	h.decideQuote(w, r, usecase.QuoteStatusAccepted)
+}
+
+// RejectQuote (POST /v1/quotes/{uuid}/reject).
+func (h *Handler) RejectQuote(w http.ResponseWriter, r *http.Request) {
+	h.decideQuote(w, r, usecase.QuoteStatusRejected)
+}
+
+// QuotePDF (GET /v1/quotes/{uuid}/pdf).
+func (h *Handler) QuotePDF(w http.ResponseWriter, r *http.Request) {
+	if h.docs == nil {
+		response.ServiceUnavailable(w, r, response.CodeInternalError, "documents are not configured")
+		return
+	}
+	id, ok := quoteUUID(w, r)
+	if !ok {
+		return
+	}
+	if _, err := h.svc.GetQuote(r.Context(), caller(r), id); err != nil {
+		writeError(w, r, err)
+		return
+	}
+	p := authctx.MustPrincipal(r.Context())
+	scope := orgctx.MustScope(r.Context())
+	v, ready, err := h.docs.RequestRender(r.Context(), docmodel.Viewer{
+		UserID: p.UserInternal, OrganizationID: scope.InternalID, BrandID: scope.BrandID,
+	}, docusecase.RenderInput{Kind: docmodel.KindQuote, SourceID: id.String(), Locale: r.URL.Query().Get("locale")})
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	status := http.StatusAccepted
+	if ready {
+		status = http.StatusOK
+	}
+	response.JSON(w, r, status, v)
 }
 
 func decode(w http.ResponseWriter, r *http.Request, dst any) bool {
