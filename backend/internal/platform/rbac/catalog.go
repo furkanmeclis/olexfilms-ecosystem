@@ -520,6 +520,17 @@ var Permissions = []PermissionDef{
 		Scopes:      []Scope{ScopeManaged, ScopeAll},
 		Description: "Manage appointment capacity, working hours, closures and portal booking settings.",
 	},
+
+	// TEC-350: extra review questions (F3-09). Appended last; migration
+	// 000091 seeds them.
+	{
+		Slug: PermReviewsQuestionsManage, Name: "Manage review questions", Module: "reviews", Scopes: scopesSupplier,
+		Description: "Define the extra review questions and their translations (center only).",
+	},
+	{
+		Slug: PermReviewsRead, Name: "Read service reviews", Module: "reviews", Scopes: scopesTree,
+		Description: "Read service reviews and their answers (dealer: own, distributor: subtree, center: brand).",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -648,6 +659,9 @@ var Roles = []RoleDef{
 			PermAppointmentsRead:          ScopeAll,
 			PermAppointmentsWrite:         ScopeManaged,
 			PermAppointmentSettingsManage: ScopeManaged,
+			// TEC-350 (000091).
+			PermReviewsQuestionsManage: ScopeBrand,
+			PermReviewsRead:            ScopeBrand,
 		}),
 	},
 	{
@@ -740,6 +754,8 @@ var Roles = []RoleDef{
 			// TEC-322 (000090).
 			PermAppointmentsRead:  ScopeAll,
 			PermAppointmentsWrite: ScopeManaged,
+			// TEC-350 (000091).
+			PermReviewsRead: ScopeBrand,
 		}),
 	},
 	{
@@ -818,6 +834,8 @@ var Roles = []RoleDef{
 			PermAppointmentsRead:          ScopeSubtree,
 			PermAppointmentsWrite:         ScopeManaged,
 			PermAppointmentSettingsManage: ScopeManaged,
+			// TEC-350 (000091).
+			PermReviewsRead: ScopeSubtree,
 		}),
 	},
 	{
@@ -852,6 +870,8 @@ var Roles = []RoleDef{
 			// TEC-322 (000090).
 			PermAppointmentsRead:  ScopeSubtree,
 			PermAppointmentsWrite: ScopeManaged,
+			// TEC-350 (000091).
+			PermReviewsRead: ScopeSubtree,
 		}),
 	},
 	{
@@ -957,6 +977,8 @@ var Roles = []RoleDef{
 			PermAppointmentsRead:          ScopeManaged,
 			PermAppointmentsWrite:         ScopeManaged,
 			PermAppointmentSettingsManage: ScopeManaged,
+			// TEC-350 (000091).
+			PermReviewsRead: ScopeManaged,
 		}),
 	},
 	{
@@ -992,6 +1014,8 @@ var Roles = []RoleDef{
 			// TEC-322 (000090).
 			PermAppointmentsRead:  ScopeManaged,
 			PermAppointmentsWrite: ScopeManaged,
+			// TEC-350 (000091).
+			PermReviewsRead: ScopeManaged,
 		}),
 	},
 	{
