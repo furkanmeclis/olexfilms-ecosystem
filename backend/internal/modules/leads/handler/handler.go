@@ -47,9 +47,14 @@ func caller(r *http.Request) usecase.Caller {
 
 func writeError(w http.ResponseWriter, r *http.Request, err error) {
 	var ve *usecase.ValidationError
+	var conflict *usecase.UserConflictError
 	switch {
 	case errors.As(err, &ve):
 		response.ValidationError(w, r, []response.Detail{{Field: ve.Field, Message: ve.Message, Code: ve.Code}})
+	case errors.As(err, &conflict):
+		response.ErrorWithData(w, r, http.StatusConflict, usecase.CodeLeadUserConflict, "Candidate contact already belongs to an existing user", nil, map[string]any{"existing_user": conflict.User})
+	case errors.Is(err, usecase.ErrAlreadyConverted):
+		response.Conflict(w, r, usecase.CodeLeadAlreadyConverted, "Lead is already converted")
 	case errors.Is(err, usecase.ErrInvalidTransition):
 		response.Error(w, r, http.StatusUnprocessableEntity, usecase.CodeInvalidTransition, "Lead status transition is not allowed")
 	case errors.Is(err, usecase.ErrQuoteConflict):
@@ -416,6 +421,34 @@ type statusBody struct {
 	LostReason *string `json:"lost_reason"`
 	WonRefType *string `json:"won_ref_type"`
 	WonRefID   *int64  `json:"won_ref_id"`
+}
+
+type convertBody struct {
+	Kind                string     `json:"kind"`
+	DistributorUUID     *uuid.UUID `json:"distributor_uuid"`
+	Currency            string     `json:"currency"`
+	RegisterAsWarehouse bool       `json:"register_as_warehouse"`
+}
+
+// Convert (POST /v1/leads/{uuid}/convert).
+func (h *Handler) Convert(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+	var body convertBody
+	if !decode(w, r, &body) {
+		return
+	}
+	out, err := h.svc.Convert(r.Context(), caller(r), id, usecase.ConvertInput{
+		Kind: body.Kind, DistributorUUID: body.DistributorUUID, Currency: body.Currency,
+		RegisterAsWarehouse: body.RegisterAsWarehouse,
+	})
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
 }
 
 // SetStatus (POST /v1/leads/{uuid}/status).

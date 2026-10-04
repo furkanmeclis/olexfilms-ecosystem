@@ -196,6 +196,11 @@ inventory-reconcile:
 normalize-org-phones:
 	@$(load_env) $(MAKE) -C backend normalize-org-phones ARGS="$(ARGS)"
 
+# TEC-294: NexPTG parser backfill (measurement:reparse), idempotent.
+.PHONY: measurement-reparse
+measurement-reparse:
+	@$(load_env) $(MAKE) -C backend measurement-reparse ARGS="$(ARGS)"
+
 # Local dev: writes a random CUSTOMER_PII_KEY into .env when it is empty
 # (TEC-159). Production keys come from scripts/gen-env-server.sh.
 dev-pii-key:

@@ -156,6 +156,10 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	// TEC-317: a public dealer application tells the receiving
 	// organization's lead readers (notify_user_ids).
 	on(events.LeadsApplicationReceived, leadApplicationDispatch)
+	// TEC-307: service subscription assignment and cancellation lifecycle.
+	for name, code := range ServiceSubscriptionEventCodes {
+		on(name, serviceSubscriptionDispatcher(code))
+	}
 	bus.Subscribe(events.AnnouncementPublished, func(ctx context.Context, event events.Event) error {
 		err := announcementsusecase.EnqueuePublishedBatches(
 			ctx,

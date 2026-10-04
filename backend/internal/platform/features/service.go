@@ -363,6 +363,63 @@ func (s *Service) ClearByAdmin(ctx context.Context, orgID int64, key string) (St
 	return s.stateOf(ctx, orgID, key)
 }
 
+// SetByService sets an organization's value from a paid service subscription
+// (source=service). Unlike admin overrides it obeys the parent/system chain.
+// q is the caller's transaction so the flag commits or rolls back together
+// with the subscription; the caller invalidates the cache (InvalidateOrg)
+// after commit.
+func (s *Service) SetByService(ctx context.Context, q *db.Queries, actorID, orgID, serviceID int64, key string) error {
+	if _, err := switchable(key); err != nil {
+		return err
+	}
+	if q == nil {
+		q = s.q
+	}
+	st, _, err := s.resolve(ctx, q, orgID)
+	if err != nil {
+		return err
+	}
+	cur, ok := Lookup(st, key)
+	if !ok {
+		return ErrUnknownModule
+	}
+	if !cur.UpstreamEnabled {
+		return ErrUpstreamDisabled
+	}
+	_, err = q.UpsertServiceModuleFlag(ctx, db.UpsertServiceModuleFlagParams{
+		OrganizationID: pgtype.Int8{Int64: orgID, Valid: true},
+		ModuleKey:      key,
+		Enabled:        true,
+		SetByUserID:    actorArg(actorID),
+		ServiceID:      pgtype.Int8{Int64: serviceID, Valid: true},
+		Note:           pgtype.Text{String: "service_subscription", Valid: true},
+	})
+	return err
+}
+
+// ClearByService removes a service-owned flag inside the caller's
+// transaction; callers decide whether another active subscription still
+// keeps the module open and invalidate the cache after commit.
+func (s *Service) ClearByService(ctx context.Context, q *db.Queries, orgID int64, key string) error {
+	if _, err := switchable(key); err != nil {
+		return err
+	}
+	if q == nil {
+		q = s.q
+	}
+	_, err := q.DeleteServiceModuleFlag(ctx, db.DeleteServiceModuleFlagParams{
+		OrganizationID: pgtype.Int8{Int64: orgID, Valid: true},
+		ModuleKey:      key,
+	})
+	return err
+}
+
+// InvalidateOrg drops the cached snapshots of orgID and its subtree. Callers
+// that change flags inside their own transaction call it after commit.
+func (s *Service) InvalidateOrg(ctx context.Context, orgID int64) {
+	s.invalidateTree(ctx, orgID)
+}
+
 // OrgStates resolves an organization without the cache (platform detail).
 func (s *Service) OrgStates(ctx context.Context, orgID int64) ([]State, error) {
 	st, _, err := s.resolve(ctx, s.q, orgID)

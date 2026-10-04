@@ -28,6 +28,29 @@ func (q *Queries) AddServiceCatalogModule(ctx context.Context, arg AddServiceCat
 	return err
 }
 
+const countActiveServiceModuleSubscriptions = `-- name: CountActiveServiceModuleSubscriptions :one
+SELECT count(*)
+FROM service_subscriptions s
+JOIN service_catalog_modules m ON m.item_id = s.item_id
+WHERE s.organization_id = $1
+  AND s.brand_id = $2
+  AND m.module_key = $3
+  AND s.status IN ('active', 'cancel_requested')
+`
+
+type CountActiveServiceModuleSubscriptionsParams struct {
+	OrganizationID int64  `json:"organization_id"`
+	BrandID        int64  `json:"brand_id"`
+	ModuleKey      string `json:"module_key"`
+}
+
+func (q *Queries) CountActiveServiceModuleSubscriptions(ctx context.Context, arg CountActiveServiceModuleSubscriptionsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countActiveServiceModuleSubscriptions, arg.OrganizationID, arg.BrandID, arg.ModuleKey)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countServiceSubscriptionsByItem = `-- name: CountServiceSubscriptionsByItem :one
 SELECT count(*) FROM service_subscriptions
 WHERE item_id = $1 AND brand_id = $2
@@ -245,7 +268,7 @@ func (q *Queries) CreateServiceSubscriptionCancelRequest(ctx context.Context, ar
 
 const decideServiceSubscriptionCancelRequest = `-- name: DecideServiceSubscriptionCancelRequest :one
 UPDATE service_subscription_cancel_requests
-SET status = $1,
+SET status = $1::text,
     decided_by_user_id = $2,
     decided_at = NOW(),
     decision_note = $3
@@ -847,6 +870,60 @@ func (q *Queries) ListServiceSubscriptionPeriods(ctx context.Context, subscripti
 	return items, nil
 }
 
+const listServiceSubscriptionsByBrand = `-- name: ListServiceSubscriptionsByBrand :many
+SELECT id, uuid, organization_id, brand_id, seller_org_id, item_id, assigned_by_org_id, assigned_by_user_id, starts_on, ends_on, recurrence, price, currency, rate_snapshot, cancellation_fee, status, contract_id, cancelled_at, expired_at, created_at, updated_at FROM service_subscriptions
+WHERE brand_id = $1
+  AND ($2::text IS NULL OR status = $2::text)
+ORDER BY created_at DESC, id DESC
+`
+
+type ListServiceSubscriptionsByBrandParams struct {
+	BrandID int64       `json:"brand_id"`
+	Status  pgtype.Text `json:"status"`
+}
+
+func (q *Queries) ListServiceSubscriptionsByBrand(ctx context.Context, arg ListServiceSubscriptionsByBrandParams) ([]ServiceSubscription, error) {
+	rows, err := q.db.Query(ctx, listServiceSubscriptionsByBrand, arg.BrandID, arg.Status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ServiceSubscription{}
+	for rows.Next() {
+		var i ServiceSubscription
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.SellerOrgID,
+			&i.ItemID,
+			&i.AssignedByOrgID,
+			&i.AssignedByUserID,
+			&i.StartsOn,
+			&i.EndsOn,
+			&i.Recurrence,
+			&i.Price,
+			&i.Currency,
+			&i.RateSnapshot,
+			&i.CancellationFee,
+			&i.Status,
+			&i.ContractID,
+			&i.CancelledAt,
+			&i.ExpiredAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listServiceSubscriptionsByOrgs = `-- name: ListServiceSubscriptionsByOrgs :many
 SELECT id, uuid, organization_id, brand_id, seller_org_id, item_id, assigned_by_org_id, assigned_by_user_id, starts_on, ends_on, recurrence, price, currency, rate_snapshot, cancellation_fee, status, contract_id, cancelled_at, expired_at, created_at, updated_at FROM service_subscriptions
 WHERE brand_id = $1
@@ -966,9 +1043,50 @@ func (q *Queries) MarkServiceSubscriptionPeriodPosted(ctx context.Context, id in
 	return i, err
 }
 
+const setServiceSubscriptionCancelRequested = `-- name: SetServiceSubscriptionCancelRequested :one
+UPDATE service_subscriptions
+SET status = 'cancel_requested'
+WHERE id = $1 AND brand_id = $2 AND status = 'active'
+RETURNING id, uuid, organization_id, brand_id, seller_org_id, item_id, assigned_by_org_id, assigned_by_user_id, starts_on, ends_on, recurrence, price, currency, rate_snapshot, cancellation_fee, status, contract_id, cancelled_at, expired_at, created_at, updated_at
+`
+
+type SetServiceSubscriptionCancelRequestedParams struct {
+	ID      int64 `json:"id"`
+	BrandID int64 `json:"brand_id"`
+}
+
+func (q *Queries) SetServiceSubscriptionCancelRequested(ctx context.Context, arg SetServiceSubscriptionCancelRequestedParams) (ServiceSubscription, error) {
+	row := q.db.QueryRow(ctx, setServiceSubscriptionCancelRequested, arg.ID, arg.BrandID)
+	var i ServiceSubscription
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.SellerOrgID,
+		&i.ItemID,
+		&i.AssignedByOrgID,
+		&i.AssignedByUserID,
+		&i.StartsOn,
+		&i.EndsOn,
+		&i.Recurrence,
+		&i.Price,
+		&i.Currency,
+		&i.RateSnapshot,
+		&i.CancellationFee,
+		&i.Status,
+		&i.ContractID,
+		&i.CancelledAt,
+		&i.ExpiredAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const setServiceSubscriptionStatus = `-- name: SetServiceSubscriptionStatus :one
 UPDATE service_subscriptions
-SET status = $1,
+SET status = $1::text,
     cancelled_at = CASE WHEN $1::text = 'cancelled' THEN NOW() ELSE cancelled_at END,
     expired_at = CASE WHEN $1::text = 'expired' THEN NOW() ELSE expired_at END
 WHERE id = $2 AND brand_id = $3

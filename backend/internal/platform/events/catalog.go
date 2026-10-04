@@ -265,6 +265,25 @@ const (
 	ServiceNoteAdded    = "service.note_added"
 )
 
+// Service subscription events (TEC-307): assignment, early cancellation
+// request and final center decision. Notifications consume all three; the
+// cancellation approval also lets downstream accounting/search consumers see
+// a single durable service_subscription.cancelled event.
+const (
+	ServiceSubscriptionAssigned        = "service_subscription.assigned"
+	ServiceSubscriptionCancelRequested = "service_subscription.cancel_requested"
+	ServiceSubscriptionCancelled       = "service_subscription.cancelled"
+	ServiceSubscriptionCancelRejected  = "service_subscription.cancel_rejected"
+)
+
+// Appointment domain events (TEC-323): written when a booking is created,
+// rescheduled or cancelled.
+const (
+	AppointmentCreated     = "appointment.created"
+	AppointmentRescheduled = "appointment.rescheduled"
+	AppointmentCancelled   = "appointment.cancelled"
+)
+
 // ServiceReviewRequested is written by the delayed service:review_request
 // task (TEC-192) in the transaction that stamps review_request_sent_at; the
 // notification module sends the WhatsApp review request from it.
@@ -577,6 +596,9 @@ func catalogConstants() []string {
 		ServiceImageAdded,
 		ServiceImageRemoved,
 		ServiceNoteAdded,
+		AppointmentCreated,
+		AppointmentRescheduled,
+		AppointmentCancelled,
 		ServiceReviewRequested,
 		WarrantyCreated,
 		WarrantyExpiringSoon,

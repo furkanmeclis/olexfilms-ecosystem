@@ -121,9 +121,24 @@ WHERE brand_id = sqlc.arg(brand_id)
   AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
 ORDER BY created_at DESC, id DESC;
 
+-- name: ListServiceSubscriptionsByBrand :many
+SELECT * FROM service_subscriptions
+WHERE brand_id = sqlc.arg(brand_id)
+  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
+ORDER BY created_at DESC, id DESC;
+
+-- name: CountActiveServiceModuleSubscriptions :one
+SELECT count(*)
+FROM service_subscriptions s
+JOIN service_catalog_modules m ON m.item_id = s.item_id
+WHERE s.organization_id = sqlc.arg(organization_id)
+  AND s.brand_id = sqlc.arg(brand_id)
+  AND m.module_key = sqlc.arg(module_key)
+  AND s.status IN ('active', 'cancel_requested');
+
 -- name: SetServiceSubscriptionStatus :one
 UPDATE service_subscriptions
-SET status = sqlc.arg(status),
+SET status = sqlc.arg(status)::text,
     cancelled_at = CASE WHEN sqlc.arg(status)::text = 'cancelled' THEN NOW() ELSE cancelled_at END,
     expired_at = CASE WHEN sqlc.arg(status)::text = 'expired' THEN NOW() ELSE expired_at END
 WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id)
@@ -133,6 +148,12 @@ RETURNING *;
 UPDATE service_subscriptions
 SET status = 'expired', expired_at = NOW()
 WHERE status IN ('active', 'cancel_requested') AND ends_on < sqlc.arg(today)::date
+RETURNING *;
+
+-- name: SetServiceSubscriptionCancelRequested :one
+UPDATE service_subscriptions
+SET status = 'cancel_requested'
+WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id) AND status = 'active'
 RETURNING *;
 
 -- name: InsertServiceSubscriptionPeriod :one
@@ -178,7 +199,7 @@ ORDER BY created_at DESC, id DESC;
 
 -- name: DecideServiceSubscriptionCancelRequest :one
 UPDATE service_subscription_cancel_requests
-SET status = sqlc.arg(status),
+SET status = sqlc.arg(status)::text,
     decided_by_user_id = sqlc.narg(decided_by_user_id),
     decided_at = NOW(),
     decision_note = sqlc.narg(decision_note)
