@@ -1499,7 +1499,7 @@ UPDATE services
 SET income_entry_id = $1,
     income_amount = $2
 WHERE id = $3 AND organization_id = $4
-RETURNING id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at, income_entry_id, income_amount
+RETURNING id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at, warranty_claim_id, income_entry_id, income_amount
 `
 
 type SetServiceIncomeEntryParams struct {
@@ -1552,6 +1552,7 @@ func (q *Queries) SetServiceIncomeEntry(ctx context.Context, arg SetServiceIncom
 		&i.UpdatedAt,
 		&i.MeasurementCheckRequired,
 		&i.MeasurementCheckedAt,
+		&i.WarrantyClaimID,
 		&i.IncomeEntryID,
 		&i.IncomeAmount,
 	)
