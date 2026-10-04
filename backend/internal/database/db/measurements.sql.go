@@ -274,7 +274,7 @@ LEFT JOIN services s ON s.id = sm.service_id
 LEFT JOIN organizations o ON o.id = mr.organization_id
 WHERE mr.uuid = $1
   AND mr.brand_id = $2
-  AND (cardinality($3::bigint[]) = 0 OR mr.organization_id = ANY($3::bigint[]))
+  AND ($3::bigint[] IS NULL OR mr.organization_id = ANY($3::bigint[]))
 `
 
 type GetMeasurementResultPanelParams struct {
@@ -720,7 +720,7 @@ LEFT JOIN service_measurements sm ON sm.measurement_result_id = mr.id
 LEFT JOIN services s ON s.id = sm.service_id
 LEFT JOIN organizations o ON o.id = mr.organization_id
 WHERE mr.brand_id = $1
-  AND (cardinality($2::bigint[]) = 0 OR mr.organization_id = ANY($2::bigint[]))
+  AND ($2::bigint[] IS NULL OR mr.organization_id = ANY($2::bigint[]))
   AND ($3::varchar IS NULL OR mr.vin = $3::varchar)
   AND ($4::uuid IS NULL OR md.uuid = $4::uuid)
   AND ($5::varchar IS NULL OR mr.status = $5::varchar)
@@ -781,6 +781,8 @@ type ListMeasurementResultsPanelRow struct {
 	TotalCount           int64              `json:"total_count"`
 }
 
+// org_ids NULL means the whole brand (brand/all scopes); an empty set
+// (customer scope) matches nothing.
 func (q *Queries) ListMeasurementResultsPanel(ctx context.Context, arg ListMeasurementResultsPanelParams) ([]ListMeasurementResultsPanelRow, error) {
 	rows, err := q.db.Query(ctx, listMeasurementResultsPanel,
 		arg.BrandID,

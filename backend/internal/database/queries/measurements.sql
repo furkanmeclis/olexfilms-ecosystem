@@ -90,6 +90,8 @@ SELECT * FROM measurement_results
 WHERE uuid = sqlc.arg(uuid) AND organization_id = sqlc.arg(organization_id);
 
 -- name: ListMeasurementResultsPanel :many
+-- org_ids NULL means the whole brand (brand/all scopes); an empty set
+-- (customer scope) matches nothing.
 SELECT
     mr.*,
     md.uuid AS device_uuid,
@@ -111,7 +113,7 @@ LEFT JOIN service_measurements sm ON sm.measurement_result_id = mr.id
 LEFT JOIN services s ON s.id = sm.service_id
 LEFT JOIN organizations o ON o.id = mr.organization_id
 WHERE mr.brand_id = sqlc.arg(brand_id)
-  AND (cardinality(sqlc.arg(org_ids)::bigint[]) = 0 OR mr.organization_id = ANY(sqlc.arg(org_ids)::bigint[]))
+  AND (sqlc.narg(org_ids)::bigint[] IS NULL OR mr.organization_id = ANY(sqlc.narg(org_ids)::bigint[]))
   AND (sqlc.narg(vin)::varchar IS NULL OR mr.vin = sqlc.narg(vin)::varchar)
   AND (sqlc.narg(device_uuid)::uuid IS NULL OR md.uuid = sqlc.narg(device_uuid)::uuid)
   AND (sqlc.narg(status)::varchar IS NULL OR mr.status = sqlc.narg(status)::varchar)
@@ -143,7 +145,7 @@ LEFT JOIN services s ON s.id = sm.service_id
 LEFT JOIN organizations o ON o.id = mr.organization_id
 WHERE mr.uuid = sqlc.arg(uuid)
   AND mr.brand_id = sqlc.arg(brand_id)
-  AND (cardinality(sqlc.arg(org_ids)::bigint[]) = 0 OR mr.organization_id = ANY(sqlc.arg(org_ids)::bigint[]));
+  AND (sqlc.narg(org_ids)::bigint[] IS NULL OR mr.organization_id = ANY(sqlc.narg(org_ids)::bigint[]));
 
 -- name: ListMeasurementDevices :many
 SELECT * FROM measurement_devices
