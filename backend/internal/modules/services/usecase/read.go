@@ -173,7 +173,7 @@ func textPtr(t pgtype.Text) *string {
 	return &v
 }
 
-func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, svc db.Service) (ServiceView, error) {
+func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, svc db.Service, gate *contractGate) (ServiceView, error) {
 	refs, err := q.GetServiceRefs(ctx, svc.ID)
 	if err != nil {
 		return ServiceView{}, fmt.Errorf("services: refs: %w", err)
@@ -185,7 +185,10 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, svc db.S
 		cust = CustomerRef{UUID: refs.CustomerUuid, Name: i18n.Translate(loc, AnonymizedNameKey), Anonymized: true}
 	}
 	canWrite := c.allows(rbac.PermServicesWrite, svc) && formEditable(c, svc)
-	contractRequired, err := s.contractRequired(ctx, svc.OrganizationID)
+	if gate == nil {
+		gate = s.newContractGate()
+	}
+	contractRequired, err := gate.required(ctx, svc.OrganizationID)
 	if err != nil {
 		return ServiceView{}, err
 	}
@@ -233,7 +236,7 @@ func ImageURL(serviceUUID, imageUUID uuid.UUID) string {
 
 // view is the full service: summary, items, images and status logs.
 func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, svc db.Service) (ServiceView, error) {
-	v, err := s.summary(ctx, q, c, svc)
+	v, err := s.summary(ctx, q, c, svc, nil)
 	if err != nil {
 		return ServiceView{}, err
 	}
@@ -438,8 +441,9 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]ServiceVi
 		}
 	}
 	out := make([]ServiceView, 0, len(rows))
+	gate := s.newContractGate() // one setting read and one feature lookup per org for the page
 	for _, r := range rows {
-		v, err := s.summary(ctx, s.q, c, r)
+		v, err := s.summary(ctx, s.q, c, r, gate)
 		if err != nil {
 			return nil, 0, err
 		}

@@ -81,3 +81,31 @@ func TestRequireExecutedContract(t *testing.T) {
 		t.Fatalf("executed contract = %v", err)
 	}
 }
+
+type countingSettings struct{ n *int }
+
+func (s countingSettings) ContractsIntakeRequired(context.Context) bool { *s.n++; return true }
+
+type countingFeatures struct{ n map[int64]int }
+
+func (f countingFeatures) Enabled(_ context.Context, orgID int64, _ string) (bool, error) {
+	f.n[orgID]++
+	return orgID != 2, nil
+}
+
+// A list page reads the setting once and each organization's module once.
+func TestContractGateMemoises(t *testing.T) {
+	ctx := context.Background()
+	reads := 0
+	feats := countingFeatures{n: map[int64]int{}}
+	gate := New(nil, nil, nil).WithContractRequirement(countingSettings{&reads}, feats).newContractGate()
+	for _, org := range []int64{1, 2, 1, 2, 1, 3} {
+		got, err := gate.required(ctx, org)
+		if err != nil || got != (org != 2) {
+			t.Fatalf("org %d = %v %v", org, got, err)
+		}
+	}
+	if reads != 1 || feats.n[1] != 1 || feats.n[2] != 1 || feats.n[3] != 1 {
+		t.Fatalf("setting reads = %d, feature lookups = %v", reads, feats.n)
+	}
+}

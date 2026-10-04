@@ -204,13 +204,42 @@ func (s *Service) WithContractRequirement(settings SettingReader, features Featu
 }
 
 func (s *Service) contractRequired(ctx context.Context, orgID int64) (bool, error) {
-	if s.settings == nil || s.features == nil || !s.settings.ContractsIntakeRequired(ctx) {
+	return s.newContractGate().required(ctx, orgID)
+}
+
+// contractGate memoises the intake-contract requirement for one request:
+// the system setting is read at most once and the intake_contracts module
+// once per organization, so a service list does not repeat the cache
+// lookups per row.
+type contractGate struct {
+	s       *Service
+	setting *bool
+	orgs    map[int64]bool
+}
+
+func (s *Service) newContractGate() *contractGate {
+	return &contractGate{s: s, orgs: map[int64]bool{}}
+}
+
+func (g *contractGate) required(ctx context.Context, orgID int64) (bool, error) {
+	if g.s.settings == nil || g.s.features == nil {
 		return false, nil
 	}
-	on, err := s.features.Enabled(ctx, orgID, features.ModuleIntakeContracts)
+	if g.setting == nil {
+		on := g.s.settings.ContractsIntakeRequired(ctx)
+		g.setting = &on
+	}
+	if !*g.setting {
+		return false, nil
+	}
+	if on, ok := g.orgs[orgID]; ok {
+		return on, nil
+	}
+	on, err := g.s.features.Enabled(ctx, orgID, features.ModuleIntakeContracts)
 	if err != nil {
 		return false, fmt.Errorf("services: intake contracts feature: %w", err)
 	}
+	g.orgs[orgID] = on
 	return on, nil
 }
 
