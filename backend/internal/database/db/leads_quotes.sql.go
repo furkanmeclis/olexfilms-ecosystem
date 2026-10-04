@@ -130,6 +130,58 @@ func (q *Queries) CountLeadsByOrganizations(ctx context.Context, arg CountLeadsB
 	return count, err
 }
 
+const countLeadsInScope = `-- name: CountLeadsInScope :one
+SELECT COUNT(*) FROM leads
+WHERE brand_id = $1
+  AND deleted_at IS NULL
+  AND ($2::bigint[] IS NULL OR organization_id = ANY($2::bigint[]))
+  AND ($3::varchar IS NULL OR status = $3::varchar)
+  AND ($4::varchar IS NULL OR target_type = $4::varchar)
+  AND ($5::text IS NULL OR (
+       candidate_company_name ILIKE '%' || $5::text || '%'
+       OR candidate_contact_name ILIKE '%' || $5::text || '%'
+       OR candidate_phone_e164 ILIKE '%' || $5::text || '%'
+       OR candidate_email ILIKE '%' || $5::text || '%'
+       OR notes ILIKE '%' || $5::text || '%'
+  ))
+  AND (NOT $6::boolean OR (
+       status IN ('new', 'contacted', 'quoted')
+       AND follow_up_date IS NOT NULL
+       AND (assignee_user_id IS NULL OR assignee_user_id = $7::bigint)
+       AND ($8::timestamptz IS NULL OR follow_up_date >= $8::timestamptz)
+       AND ($9::timestamptz IS NULL OR follow_up_date < $9::timestamptz)
+  ))
+`
+
+type CountLeadsInScopeParams struct {
+	BrandID         int64              `json:"brand_id"`
+	OrganizationIds []int64            `json:"organization_ids"`
+	Status          pgtype.Text        `json:"status"`
+	TargetType      pgtype.Text        `json:"target_type"`
+	Q               pgtype.Text        `json:"q"`
+	FollowUpOnly    bool               `json:"follow_up_only"`
+	ActorUserID     int64              `json:"actor_user_id"`
+	FollowUpFrom    pgtype.Timestamptz `json:"follow_up_from"`
+	FollowUpTo      pgtype.Timestamptz `json:"follow_up_to"`
+}
+
+func (q *Queries) CountLeadsInScope(ctx context.Context, arg CountLeadsInScopeParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countLeadsInScope,
+		arg.BrandID,
+		arg.OrganizationIds,
+		arg.Status,
+		arg.TargetType,
+		arg.Q,
+		arg.FollowUpOnly,
+		arg.ActorUserID,
+		arg.FollowUpFrom,
+		arg.FollowUpTo,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createLead = `-- name: CreateLead :one
 
 INSERT INTO leads (
@@ -555,6 +607,46 @@ func (q *Queries) GetLeadByUUID(ctx context.Context, arg GetLeadByUUIDParams) (L
 	return i, err
 }
 
+const getLeadForIndex = `-- name: GetLeadForIndex :one
+SELECT id, uuid, organization_id, brand_id, target_type, customer_user_id, vehicle_id, candidate_company_name, candidate_contact_name, candidate_phone_e164, candidate_email, country_id, province_id, district_id, source, temperature, status, lost_reason, follow_up_date, assignee_user_id, notes, won_ref_type, won_ref_id, created_by_user_id, created_at, updated_at, deleted_at FROM leads
+WHERE uuid = $1 AND deleted_at IS NULL
+`
+
+func (q *Queries) GetLeadForIndex(ctx context.Context, argUuid uuid.UUID) (Lead, error) {
+	row := q.db.QueryRow(ctx, getLeadForIndex, argUuid)
+	var i Lead
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.TargetType,
+		&i.CustomerUserID,
+		&i.VehicleID,
+		&i.CandidateCompanyName,
+		&i.CandidateContactName,
+		&i.CandidatePhoneE164,
+		&i.CandidateEmail,
+		&i.CountryID,
+		&i.ProvinceID,
+		&i.DistrictID,
+		&i.Source,
+		&i.Temperature,
+		&i.Status,
+		&i.LostReason,
+		&i.FollowUpDate,
+		&i.AssigneeUserID,
+		&i.Notes,
+		&i.WonRefType,
+		&i.WonRefID,
+		&i.CreatedByUserID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const getQuoteByPublicToken = `-- name: GetQuoteByPublicToken :one
 SELECT id, uuid, organization_id, brand_id, lead_id, quote_no, currency, subtotal, discount_total, tax_total, grand_total, valid_until, status, public_token, created_by_user_id, sent_at, accepted_at, rejected_at, expired_at, created_at, updated_at, deleted_at FROM quotes
 WHERE public_token = $1 AND deleted_at IS NULL
@@ -732,6 +824,161 @@ func (q *Queries) ListLeadsByOrganizations(ctx context.Context, arg ListLeadsByO
 		arg.BrandID,
 		arg.Status,
 		arg.TargetType,
+		arg.PageOffset,
+		arg.PageLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Lead{}
+	for rows.Next() {
+		var i Lead
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.TargetType,
+			&i.CustomerUserID,
+			&i.VehicleID,
+			&i.CandidateCompanyName,
+			&i.CandidateContactName,
+			&i.CandidatePhoneE164,
+			&i.CandidateEmail,
+			&i.CountryID,
+			&i.ProvinceID,
+			&i.DistrictID,
+			&i.Source,
+			&i.Temperature,
+			&i.Status,
+			&i.LostReason,
+			&i.FollowUpDate,
+			&i.AssigneeUserID,
+			&i.Notes,
+			&i.WonRefType,
+			&i.WonRefID,
+			&i.CreatedByUserID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listLeadsForIndex = `-- name: ListLeadsForIndex :many
+SELECT id, uuid, organization_id, brand_id, target_type, customer_user_id, vehicle_id, candidate_company_name, candidate_contact_name, candidate_phone_e164, candidate_email, country_id, province_id, district_id, source, temperature, status, lost_reason, follow_up_date, assignee_user_id, notes, won_ref_type, won_ref_id, created_by_user_id, created_at, updated_at, deleted_at FROM leads
+WHERE deleted_at IS NULL
+`
+
+func (q *Queries) ListLeadsForIndex(ctx context.Context) ([]Lead, error) {
+	rows, err := q.db.Query(ctx, listLeadsForIndex)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Lead{}
+	for rows.Next() {
+		var i Lead
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.TargetType,
+			&i.CustomerUserID,
+			&i.VehicleID,
+			&i.CandidateCompanyName,
+			&i.CandidateContactName,
+			&i.CandidatePhoneE164,
+			&i.CandidateEmail,
+			&i.CountryID,
+			&i.ProvinceID,
+			&i.DistrictID,
+			&i.Source,
+			&i.Temperature,
+			&i.Status,
+			&i.LostReason,
+			&i.FollowUpDate,
+			&i.AssigneeUserID,
+			&i.Notes,
+			&i.WonRefType,
+			&i.WonRefID,
+			&i.CreatedByUserID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listLeadsInScope = `-- name: ListLeadsInScope :many
+SELECT id, uuid, organization_id, brand_id, target_type, customer_user_id, vehicle_id, candidate_company_name, candidate_contact_name, candidate_phone_e164, candidate_email, country_id, province_id, district_id, source, temperature, status, lost_reason, follow_up_date, assignee_user_id, notes, won_ref_type, won_ref_id, created_by_user_id, created_at, updated_at, deleted_at FROM leads
+WHERE brand_id = $1
+  AND deleted_at IS NULL
+  AND ($2::bigint[] IS NULL OR organization_id = ANY($2::bigint[]))
+  AND ($3::varchar IS NULL OR status = $3::varchar)
+  AND ($4::varchar IS NULL OR target_type = $4::varchar)
+  AND ($5::text IS NULL OR (
+       candidate_company_name ILIKE '%' || $5::text || '%'
+       OR candidate_contact_name ILIKE '%' || $5::text || '%'
+       OR candidate_phone_e164 ILIKE '%' || $5::text || '%'
+       OR candidate_email ILIKE '%' || $5::text || '%'
+       OR notes ILIKE '%' || $5::text || '%'
+  ))
+  AND ($6::uuid[] IS NULL OR uuid = ANY($6::uuid[]))
+  AND (NOT $7::boolean OR (
+       status IN ('new', 'contacted', 'quoted')
+       AND follow_up_date IS NOT NULL
+       AND (assignee_user_id IS NULL OR assignee_user_id = $8::bigint)
+       AND ($9::timestamptz IS NULL OR follow_up_date >= $9::timestamptz)
+       AND ($10::timestamptz IS NULL OR follow_up_date < $10::timestamptz)
+  ))
+ORDER BY created_at DESC, id DESC
+LIMIT $12 OFFSET $11
+`
+
+type ListLeadsInScopeParams struct {
+	BrandID         int64              `json:"brand_id"`
+	OrganizationIds []int64            `json:"organization_ids"`
+	Status          pgtype.Text        `json:"status"`
+	TargetType      pgtype.Text        `json:"target_type"`
+	Q               pgtype.Text        `json:"q"`
+	Uuids           []uuid.UUID        `json:"uuids"`
+	FollowUpOnly    bool               `json:"follow_up_only"`
+	ActorUserID     int64              `json:"actor_user_id"`
+	FollowUpFrom    pgtype.Timestamptz `json:"follow_up_from"`
+	FollowUpTo      pgtype.Timestamptz `json:"follow_up_to"`
+	PageOffset      int32              `json:"page_offset"`
+	PageLimit       int32              `json:"page_limit"`
+}
+
+func (q *Queries) ListLeadsInScope(ctx context.Context, arg ListLeadsInScopeParams) ([]Lead, error) {
+	rows, err := q.db.Query(ctx, listLeadsInScope,
+		arg.BrandID,
+		arg.OrganizationIds,
+		arg.Status,
+		arg.TargetType,
+		arg.Q,
+		arg.Uuids,
+		arg.FollowUpOnly,
+		arg.ActorUserID,
+		arg.FollowUpFrom,
+		arg.FollowUpTo,
 		arg.PageOffset,
 		arg.PageLimit,
 	)

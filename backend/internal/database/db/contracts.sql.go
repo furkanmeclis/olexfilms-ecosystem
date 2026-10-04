@@ -401,6 +401,58 @@ func (q *Queries) GetContractInstanceByUUID(ctx context.Context, argUuid uuid.UU
 	return i, err
 }
 
+const getContractInstanceByUUIDScoped = `-- name: GetContractInstanceByUUIDScoped :one
+SELECT id, uuid, organization_id, brand_id, contract_no, subject_type, subject_id, subject_service_id, template_id, kind, locale, template_version, otp_required, signature_required, status, rendered_html, content_sha256, pdf_key, executed_at, voided_at, void_reason, voided_by_user_id, created_by_user_id, created_at, updated_at FROM contract_instances
+WHERE uuid = $1
+  AND (
+    $2::bigint IS NULL
+    OR brand_id = $2::bigint
+  )
+  AND (
+    $3::bigint[] IS NULL
+    OR organization_id = ANY($3::bigint[])
+  )
+`
+
+type GetContractInstanceByUUIDScopedParams struct {
+	Uuid    uuid.UUID   `json:"uuid"`
+	BrandID pgtype.Int8 `json:"brand_id"`
+	OrgIds  []int64     `json:"org_ids"`
+}
+
+func (q *Queries) GetContractInstanceByUUIDScoped(ctx context.Context, arg GetContractInstanceByUUIDScopedParams) (ContractInstance, error) {
+	row := q.db.QueryRow(ctx, getContractInstanceByUUIDScoped, arg.Uuid, arg.BrandID, arg.OrgIds)
+	var i ContractInstance
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ContractNo,
+		&i.SubjectType,
+		&i.SubjectID,
+		&i.SubjectServiceID,
+		&i.TemplateID,
+		&i.Kind,
+		&i.Locale,
+		&i.TemplateVersion,
+		&i.OtpRequired,
+		&i.SignatureRequired,
+		&i.Status,
+		&i.RenderedHtml,
+		&i.ContentSha256,
+		&i.PdfKey,
+		&i.ExecutedAt,
+		&i.VoidedAt,
+		&i.VoidReason,
+		&i.VoidedByUserID,
+		&i.CreatedByUserID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getContractInstanceForUpdate = `-- name: GetContractInstanceForUpdate :one
 SELECT id, uuid, organization_id, brand_id, contract_no, subject_type, subject_id, subject_service_id, template_id, kind, locale, template_version, otp_required, signature_required, status, rendered_html, content_sha256, pdf_key, executed_at, voided_at, void_reason, voided_by_user_id, created_by_user_id, created_at, updated_at FROM contract_instances WHERE id = $1 FOR UPDATE
 `
@@ -643,6 +695,266 @@ func (q *Queries) GetLatestContractSignature(ctx context.Context, signerID int64
 		&i.IpAddress,
 		&i.UserAgent,
 		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getServiceForContractByID = `-- name: GetServiceForContractByID :one
+SELECT
+    s.id, s.uuid, s.service_no, s.organization_id, s.brand_id, s.customer_user_id, s.vehicle_id, s.car_brand_id, s.car_model_id, s.model_year, s.plate, s.plate_country, s.vin, s.km, s.package, s.notes, s.has_measurement, s.measurement_result_id, s.contract_id, s.status, s.created_by_user_id, s.updated_by_user_id, s.completed_by_user_id, s.cancelled_by_user_id, s.cancel_reason, s.completed_at, s.cancelled_at, s.review_request_sent_at, s.created_at, s.updated_at, s.measurement_check_required, s.measurement_checked_at,
+    cu.name AS customer_name,
+    cu.surname AS customer_surname,
+    cu.email AS customer_email,
+    cu.phone_e164 AS customer_phone,
+    creator.name AS staff_name,
+    creator.surname AS staff_surname,
+    o.name AS organization_name,
+    o.phone AS organization_phone,
+    o.email AS organization_email,
+    o.address AS organization_address,
+    cb.name AS car_brand_name,
+    cm.name AS car_model_name
+FROM services s
+JOIN users cu ON cu.id = s.customer_user_id AND cu.deleted_at IS NULL
+LEFT JOIN users creator ON creator.id = s.created_by_user_id AND creator.deleted_at IS NULL
+JOIN organizations o ON o.id = s.organization_id AND o.deleted_at IS NULL
+LEFT JOIN car_brands cb ON cb.id = s.car_brand_id
+LEFT JOIN car_models cm ON cm.id = s.car_model_id
+WHERE s.id = $1
+`
+
+type GetServiceForContractByIDRow struct {
+	ID                       int64              `json:"id"`
+	Uuid                     uuid.UUID          `json:"uuid"`
+	ServiceNo                string             `json:"service_no"`
+	OrganizationID           int64              `json:"organization_id"`
+	BrandID                  int64              `json:"brand_id"`
+	CustomerUserID           int64              `json:"customer_user_id"`
+	VehicleID                int64              `json:"vehicle_id"`
+	CarBrandID               int64              `json:"car_brand_id"`
+	CarModelID               int64              `json:"car_model_id"`
+	ModelYear                pgtype.Int2        `json:"model_year"`
+	Plate                    pgtype.Text        `json:"plate"`
+	PlateCountry             pgtype.Text        `json:"plate_country"`
+	Vin                      pgtype.Text        `json:"vin"`
+	Km                       pgtype.Int4        `json:"km"`
+	Package                  pgtype.Text        `json:"package"`
+	Notes                    pgtype.Text        `json:"notes"`
+	HasMeasurement           bool               `json:"has_measurement"`
+	MeasurementResultID      pgtype.Int8        `json:"measurement_result_id"`
+	ContractID               pgtype.Int8        `json:"contract_id"`
+	Status                   string             `json:"status"`
+	CreatedByUserID          pgtype.Int8        `json:"created_by_user_id"`
+	UpdatedByUserID          pgtype.Int8        `json:"updated_by_user_id"`
+	CompletedByUserID        pgtype.Int8        `json:"completed_by_user_id"`
+	CancelledByUserID        pgtype.Int8        `json:"cancelled_by_user_id"`
+	CancelReason             pgtype.Text        `json:"cancel_reason"`
+	CompletedAt              pgtype.Timestamptz `json:"completed_at"`
+	CancelledAt              pgtype.Timestamptz `json:"cancelled_at"`
+	ReviewRequestSentAt      pgtype.Timestamptz `json:"review_request_sent_at"`
+	CreatedAt                pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                pgtype.Timestamptz `json:"updated_at"`
+	MeasurementCheckRequired bool               `json:"measurement_check_required"`
+	MeasurementCheckedAt     pgtype.Timestamptz `json:"measurement_checked_at"`
+	CustomerName             string             `json:"customer_name"`
+	CustomerSurname          string             `json:"customer_surname"`
+	CustomerEmail            pgtype.Text        `json:"customer_email"`
+	CustomerPhone            pgtype.Text        `json:"customer_phone"`
+	StaffName                pgtype.Text        `json:"staff_name"`
+	StaffSurname             pgtype.Text        `json:"staff_surname"`
+	OrganizationName         string             `json:"organization_name"`
+	OrganizationPhone        string             `json:"organization_phone"`
+	OrganizationEmail        string             `json:"organization_email"`
+	OrganizationAddress      string             `json:"organization_address"`
+	CarBrandName             pgtype.Text        `json:"car_brand_name"`
+	CarModelName             pgtype.Text        `json:"car_model_name"`
+}
+
+func (q *Queries) GetServiceForContractByID(ctx context.Context, id int64) (GetServiceForContractByIDRow, error) {
+	row := q.db.QueryRow(ctx, getServiceForContractByID, id)
+	var i GetServiceForContractByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.ServiceNo,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.CustomerUserID,
+		&i.VehicleID,
+		&i.CarBrandID,
+		&i.CarModelID,
+		&i.ModelYear,
+		&i.Plate,
+		&i.PlateCountry,
+		&i.Vin,
+		&i.Km,
+		&i.Package,
+		&i.Notes,
+		&i.HasMeasurement,
+		&i.MeasurementResultID,
+		&i.ContractID,
+		&i.Status,
+		&i.CreatedByUserID,
+		&i.UpdatedByUserID,
+		&i.CompletedByUserID,
+		&i.CancelledByUserID,
+		&i.CancelReason,
+		&i.CompletedAt,
+		&i.CancelledAt,
+		&i.ReviewRequestSentAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.MeasurementCheckRequired,
+		&i.MeasurementCheckedAt,
+		&i.CustomerName,
+		&i.CustomerSurname,
+		&i.CustomerEmail,
+		&i.CustomerPhone,
+		&i.StaffName,
+		&i.StaffSurname,
+		&i.OrganizationName,
+		&i.OrganizationPhone,
+		&i.OrganizationEmail,
+		&i.OrganizationAddress,
+		&i.CarBrandName,
+		&i.CarModelName,
+	)
+	return i, err
+}
+
+const getServiceForContractByUUID = `-- name: GetServiceForContractByUUID :one
+SELECT
+    s.id, s.uuid, s.service_no, s.organization_id, s.brand_id, s.customer_user_id, s.vehicle_id, s.car_brand_id, s.car_model_id, s.model_year, s.plate, s.plate_country, s.vin, s.km, s.package, s.notes, s.has_measurement, s.measurement_result_id, s.contract_id, s.status, s.created_by_user_id, s.updated_by_user_id, s.completed_by_user_id, s.cancelled_by_user_id, s.cancel_reason, s.completed_at, s.cancelled_at, s.review_request_sent_at, s.created_at, s.updated_at, s.measurement_check_required, s.measurement_checked_at,
+    cu.name AS customer_name,
+    cu.surname AS customer_surname,
+    cu.email AS customer_email,
+    cu.phone_e164 AS customer_phone,
+    creator.name AS staff_name,
+    creator.surname AS staff_surname,
+    o.name AS organization_name,
+    o.phone AS organization_phone,
+    o.email AS organization_email,
+    o.address AS organization_address,
+    cb.name AS car_brand_name,
+    cm.name AS car_model_name
+FROM services s
+JOIN users cu ON cu.id = s.customer_user_id AND cu.deleted_at IS NULL
+LEFT JOIN users creator ON creator.id = s.created_by_user_id AND creator.deleted_at IS NULL
+JOIN organizations o ON o.id = s.organization_id AND o.deleted_at IS NULL
+LEFT JOIN car_brands cb ON cb.id = s.car_brand_id
+LEFT JOIN car_models cm ON cm.id = s.car_model_id
+WHERE s.uuid = $1
+  AND (
+    $2::bigint IS NULL
+    OR s.brand_id = $2::bigint
+  )
+  AND (
+    $3::bigint[] IS NULL
+    OR s.organization_id = ANY($3::bigint[])
+  )
+`
+
+type GetServiceForContractByUUIDParams struct {
+	Uuid    uuid.UUID   `json:"uuid"`
+	BrandID pgtype.Int8 `json:"brand_id"`
+	OrgIds  []int64     `json:"org_ids"`
+}
+
+type GetServiceForContractByUUIDRow struct {
+	ID                       int64              `json:"id"`
+	Uuid                     uuid.UUID          `json:"uuid"`
+	ServiceNo                string             `json:"service_no"`
+	OrganizationID           int64              `json:"organization_id"`
+	BrandID                  int64              `json:"brand_id"`
+	CustomerUserID           int64              `json:"customer_user_id"`
+	VehicleID                int64              `json:"vehicle_id"`
+	CarBrandID               int64              `json:"car_brand_id"`
+	CarModelID               int64              `json:"car_model_id"`
+	ModelYear                pgtype.Int2        `json:"model_year"`
+	Plate                    pgtype.Text        `json:"plate"`
+	PlateCountry             pgtype.Text        `json:"plate_country"`
+	Vin                      pgtype.Text        `json:"vin"`
+	Km                       pgtype.Int4        `json:"km"`
+	Package                  pgtype.Text        `json:"package"`
+	Notes                    pgtype.Text        `json:"notes"`
+	HasMeasurement           bool               `json:"has_measurement"`
+	MeasurementResultID      pgtype.Int8        `json:"measurement_result_id"`
+	ContractID               pgtype.Int8        `json:"contract_id"`
+	Status                   string             `json:"status"`
+	CreatedByUserID          pgtype.Int8        `json:"created_by_user_id"`
+	UpdatedByUserID          pgtype.Int8        `json:"updated_by_user_id"`
+	CompletedByUserID        pgtype.Int8        `json:"completed_by_user_id"`
+	CancelledByUserID        pgtype.Int8        `json:"cancelled_by_user_id"`
+	CancelReason             pgtype.Text        `json:"cancel_reason"`
+	CompletedAt              pgtype.Timestamptz `json:"completed_at"`
+	CancelledAt              pgtype.Timestamptz `json:"cancelled_at"`
+	ReviewRequestSentAt      pgtype.Timestamptz `json:"review_request_sent_at"`
+	CreatedAt                pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                pgtype.Timestamptz `json:"updated_at"`
+	MeasurementCheckRequired bool               `json:"measurement_check_required"`
+	MeasurementCheckedAt     pgtype.Timestamptz `json:"measurement_checked_at"`
+	CustomerName             string             `json:"customer_name"`
+	CustomerSurname          string             `json:"customer_surname"`
+	CustomerEmail            pgtype.Text        `json:"customer_email"`
+	CustomerPhone            pgtype.Text        `json:"customer_phone"`
+	StaffName                pgtype.Text        `json:"staff_name"`
+	StaffSurname             pgtype.Text        `json:"staff_surname"`
+	OrganizationName         string             `json:"organization_name"`
+	OrganizationPhone        string             `json:"organization_phone"`
+	OrganizationEmail        string             `json:"organization_email"`
+	OrganizationAddress      string             `json:"organization_address"`
+	CarBrandName             pgtype.Text        `json:"car_brand_name"`
+	CarModelName             pgtype.Text        `json:"car_model_name"`
+}
+
+func (q *Queries) GetServiceForContractByUUID(ctx context.Context, arg GetServiceForContractByUUIDParams) (GetServiceForContractByUUIDRow, error) {
+	row := q.db.QueryRow(ctx, getServiceForContractByUUID, arg.Uuid, arg.BrandID, arg.OrgIds)
+	var i GetServiceForContractByUUIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.ServiceNo,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.CustomerUserID,
+		&i.VehicleID,
+		&i.CarBrandID,
+		&i.CarModelID,
+		&i.ModelYear,
+		&i.Plate,
+		&i.PlateCountry,
+		&i.Vin,
+		&i.Km,
+		&i.Package,
+		&i.Notes,
+		&i.HasMeasurement,
+		&i.MeasurementResultID,
+		&i.ContractID,
+		&i.Status,
+		&i.CreatedByUserID,
+		&i.UpdatedByUserID,
+		&i.CompletedByUserID,
+		&i.CancelledByUserID,
+		&i.CancelReason,
+		&i.CompletedAt,
+		&i.CancelledAt,
+		&i.ReviewRequestSentAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.MeasurementCheckRequired,
+		&i.MeasurementCheckedAt,
+		&i.CustomerName,
+		&i.CustomerSurname,
+		&i.CustomerEmail,
+		&i.CustomerPhone,
+		&i.StaffName,
+		&i.StaffSurname,
+		&i.OrganizationName,
+		&i.OrganizationPhone,
+		&i.OrganizationEmail,
+		&i.OrganizationAddress,
+		&i.CarBrandName,
+		&i.CarModelName,
 	)
 	return i, err
 }
@@ -1260,6 +1572,43 @@ type SetContractSignerOTPParams struct {
 // Stores the consumed contract_sign OTP row as the signer's proof.
 func (q *Queries) SetContractSignerOTP(ctx context.Context, arg SetContractSignerOTPParams) (ContractSigner, error) {
 	row := q.db.QueryRow(ctx, setContractSignerOTP, arg.OtpCodeID, arg.ID)
+	var i ContractSigner
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.InstanceID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.Role,
+		&i.UserID,
+		&i.Name,
+		&i.PhoneE164,
+		&i.OtpCodeID,
+		&i.OtpVerifiedAt,
+		&i.SignedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const setContractSignerOTPByUUID = `-- name: SetContractSignerOTPByUUID :one
+UPDATE contract_signers
+SET otp_code_id = o.id,
+    otp_verified_at = NOW()
+FROM otp_codes o
+WHERE contract_signers.id = $1
+  AND o.uuid = $2
+RETURNING contract_signers.id, contract_signers.uuid, contract_signers.instance_id, contract_signers.organization_id, contract_signers.brand_id, contract_signers.role, contract_signers.user_id, contract_signers.name, contract_signers.phone_e164, contract_signers.otp_code_id, contract_signers.otp_verified_at, contract_signers.signed_at, contract_signers.created_at, contract_signers.updated_at
+`
+
+type SetContractSignerOTPByUUIDParams struct {
+	SignerID int64     `json:"signer_id"`
+	OtpUuid  uuid.UUID `json:"otp_uuid"`
+}
+
+func (q *Queries) SetContractSignerOTPByUUID(ctx context.Context, arg SetContractSignerOTPByUUIDParams) (ContractSigner, error) {
+	row := q.db.QueryRow(ctx, setContractSignerOTPByUUID, arg.SignerID, arg.OtpUuid)
 	var i ContractSigner
 	err := row.Scan(
 		&i.ID,

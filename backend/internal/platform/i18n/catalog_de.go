@@ -49,6 +49,7 @@ var deCatalog = map[string]string{
 	"common.status":                            "Zustand",
 	"common.active":                            "Aktiv",
 	"common.passive":                           "Inaktiv",
+	"search.specs_leads":                       "Interessenten",
 	"customers.anonymized_name":                "Anonymer Kunde",
 	"services.status.draft":                    "Entwurf",
 	"services.status.pending":                  "Ausstehend",

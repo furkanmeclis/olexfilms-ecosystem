@@ -26,3 +26,15 @@ func TestIntegrationContractTemplatePermissions(t *testing.T) {
 		t.Fatalf("center write = %d %s", code, errCode(env))
 	}
 }
+
+func TestIntegrationContractCreateRequiresWrite(t *testing.T) {
+	it := newIntegration(t)
+	center := it.brandCenter("olex")
+	u, pw := it.user("tec287-accounting")
+	it.member(center, u, "staff", "center_accounting")
+	tok := it.loginOrg(u, pw, center)
+
+	if code, ec := it.status("POST", "/v1/services/00000000-0000-0000-0000-000000000000/contract", tok); code != http.StatusForbidden || ec != "FORBIDDEN" {
+		t.Fatalf("contract create without contracts.write = %d %s, want 403 FORBIDDEN", code, ec)
+	}
+}

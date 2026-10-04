@@ -2645,6 +2645,163 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/services/{uuid}/contract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a contract instance from a service
+         * @description Requires contracts.write. The service must be draft or pending; the default vehicle_intake template is used unless `template_uuid` is provided.
+         */
+        post: operations["createServiceContract"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contracts/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get contract content, signers and media
+         * @description Requires contracts.read in the active organization scope.
+         */
+        get: operations["getContract"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contracts/{uuid}/signers/customer/otp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send customer contract signing OTP
+         * @description Requires contracts.write. The OTP purpose is `contract_sign` and the message carries the customer's KVKK notice.
+         */
+        post: operations["requestContractCustomerOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contracts/{uuid}/signers/customer/sign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign the customer slot
+         * @description Requires contracts.write. When OTP is required, `code` must match the customer's contract_sign OTP and the signing window is 30 minutes from OTP creation.
+         */
+        post: operations["signContractCustomer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contracts/{uuid}/signers/staff/sign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign the staff slot
+         * @description Requires contracts.write. Uses the authenticated staff user; no OTP is required.
+         */
+        post: operations["signContractStaff"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contracts/{uuid}/media": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Attach contract media
+         * @description Requires contracts.write. Multipart `file` or `media`; jpeg/png/webp only, max 12 MB.
+         */
+        post: operations["addContractMedia"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contracts/{uuid}/media/{media}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete contract media before execution */
+        delete: operations["deleteContractMedia"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contracts/{uuid}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Void a contract with a required reason
+         * @description Requires contracts.void. Executed contracts keep their frozen content.
+         */
+        post: operations["voidContract"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/tenant/documents/render": {
         parameters: {
             query?: never;
@@ -8078,6 +8235,150 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/leads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List leads in the caller scope */
+        get: operations["listLeads"];
+        put?: never;
+        /** Create a lead in the active organization */
+        post: operations["createLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/leads/follow-up-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Count overdue and today follow-ups */
+        get: operations["getLeadFollowUpCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/leads/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one lead */
+        get: operations["getLead"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch lead fields and append a timeline event */
+        patch: operations["patchLead"];
+        trace?: never;
+    };
+    "/v1/leads/{uuid}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move lead status through the pipeline
+         * @description Allowed transitions: new → contacted → quoted → won|lost, and lost → contacted. Invalid transitions return 422 LEAD_INVALID_TRANSITION.
+         */
+        post: operations["setLeadStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/leads/{uuid}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add a lead timeline note */
+        post: operations["addLeadNote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/leads/{uuid}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Assign or clear a lead assignee */
+        post: operations["assignLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/leads/{uuid}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List lead timeline events */
+        get: operations["listLeadEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/leads/{uuid}/task": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a center task linked to a lead
+         * @description The active organization must be the brand center.
+         */
+        post: operations["createLeadTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/tasks": {
         parameters: {
             query?: never;
@@ -10976,6 +11277,126 @@ export interface components {
             data: {
                 items: components["schemas"]["ContractTemplateVariable"][];
             };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        ContractStatus: "draft" | "pending" | "executed" | "voided";
+        /** @enum {string} */
+        ContractSignerRole: "customer" | "staff";
+        ContractSignature: {
+            /** Format: uuid */
+            uuid: string;
+            storage_key: string;
+            sha256: string;
+            ip_address?: string | null;
+            user_agent?: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        ContractSigner: {
+            /** Format: uuid */
+            uuid: string;
+            role: components["schemas"]["ContractSignerRole"];
+            /** Format: int64 */
+            user_id?: number | null;
+            name: string;
+            phone_e164?: string | null;
+            /** Format: date-time */
+            otp_verified_at?: string | null;
+            /** Format: date-time */
+            signed_at?: string | null;
+            signature?: components["schemas"]["ContractSignature"] | null;
+        };
+        ContractMedia: {
+            /** Format: uuid */
+            uuid: string;
+            storage_key: string;
+            /** @enum {string} */
+            mime_type: "image/jpeg" | "image/png" | "image/webp";
+            /** Format: int64 */
+            size_bytes: number;
+            sha256: string;
+            title?: string | null;
+            sort_order: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        Contract: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: int64 */
+            contract_no: number;
+            /** @enum {string} */
+            subject_type: "service" | "service_subscription";
+            /** Format: int64 */
+            subject_id: number;
+            kind: components["schemas"]["ContractTemplateKind"];
+            /** @example tr */
+            locale: string;
+            template_version: number;
+            otp_required: boolean;
+            signature_required: boolean;
+            status: components["schemas"]["ContractStatus"];
+            rendered_html?: string | null;
+            content_sha256?: string | null;
+            /** Format: date-time */
+            executed_at?: string | null;
+            /** Format: date-time */
+            voided_at?: string | null;
+            void_reason?: string | null;
+            signers: components["schemas"]["ContractSigner"][];
+            media: components["schemas"]["ContractMedia"][];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        CreateServiceContractRequest: {
+            /** Format: uuid */
+            template_uuid?: string | null;
+            /** @example tr */
+            locale?: string;
+        };
+        ContractSignRequest: {
+            /** @description Customer contract_sign OTP code when OTP is required. */
+            code?: string;
+            /**
+             * Format: byte
+             * @description Canvas PNG as base64 or data URL. Required when the template requires signatures.
+             */
+            signature_png?: string;
+        };
+        ContractStaffSignRequest: {
+            /** Format: byte */
+            signature_png?: string;
+        };
+        VoidContractRequest: {
+            reason: string;
+        };
+        ContractOTP: {
+            /** @example whatsapp */
+            channel: string;
+            /** Format: date-time */
+            expires_at: string;
+            /** Format: date-time */
+            resend_at: string;
+        };
+        EnvelopeContract: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Contract"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeContractMedia: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ContractMedia"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeContractOTP: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ContractOTP"];
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
@@ -14607,6 +15028,188 @@ export interface components {
             data: {
                 items: components["schemas"]["OrderOrgRef"][];
             };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        LeadTargetType: "customer" | "dealer_candidate" | "distributor_candidate";
+        /** @enum {string} */
+        LeadSource: "incoming_call" | "outgoing_call" | "walk_in" | "whatsapp" | "social" | "referral" | "website" | "application_form" | "other";
+        /** @enum {string} */
+        LeadTemperature: "cold" | "warm" | "hot";
+        /** @enum {string} */
+        LeadStatus: "new" | "contacted" | "quoted" | "won" | "lost";
+        Lead: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            organization_uuid: string;
+            target_type: components["schemas"]["LeadTargetType"];
+            /** Format: int64 */
+            customer_user_id?: number;
+            /** Format: int64 */
+            vehicle_id?: number;
+            candidate_company_name?: string;
+            candidate_contact_name?: string;
+            candidate_phone_e164?: string;
+            /** Format: email */
+            candidate_email?: string;
+            /** Format: int64 */
+            country_id?: number;
+            /** Format: int64 */
+            province_id?: number;
+            /** Format: int64 */
+            district_id?: number;
+            source: components["schemas"]["LeadSource"];
+            temperature: components["schemas"]["LeadTemperature"];
+            status: components["schemas"]["LeadStatus"];
+            lost_reason?: string;
+            /** Format: date-time */
+            follow_up_date?: string;
+            /** Format: int64 */
+            assignee_user_id?: number;
+            notes: string;
+            /** @enum {string} */
+            won_ref_type?: "service" | "appointment" | "organization";
+            /** Format: int64 */
+            won_ref_id?: number;
+            /** Format: int64 */
+            created_by_user_id?: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        LeadCreateInput: {
+            target_type: components["schemas"]["LeadTargetType"];
+            /** Format: int64 */
+            customer_user_id?: number | null;
+            /** Format: int64 */
+            vehicle_id?: number | null;
+            candidate_company_name?: string | null;
+            candidate_contact_name?: string | null;
+            candidate_phone_e164?: string | null;
+            /** Format: email */
+            candidate_email?: string | null;
+            /** Format: int64 */
+            country_id?: number | null;
+            /** Format: int64 */
+            province_id?: number | null;
+            /** Format: int64 */
+            district_id?: number | null;
+            source: components["schemas"]["LeadSource"];
+            temperature?: components["schemas"]["LeadTemperature"];
+            /** Format: date-time */
+            follow_up_date?: string | null;
+            /** Format: int64 */
+            assignee_user_id?: number | null;
+            notes?: string;
+        };
+        LeadPatchInput: {
+            target_type?: components["schemas"]["LeadTargetType"];
+            /** Format: int64 */
+            customer_user_id?: number | null;
+            /** Format: int64 */
+            vehicle_id?: number | null;
+            candidate_company_name?: string | null;
+            candidate_contact_name?: string | null;
+            candidate_phone_e164?: string | null;
+            /** Format: email */
+            candidate_email?: string | null;
+            /** Format: int64 */
+            country_id?: number | null;
+            /** Format: int64 */
+            province_id?: number | null;
+            /** Format: int64 */
+            district_id?: number | null;
+            source?: components["schemas"]["LeadSource"];
+            temperature?: components["schemas"]["LeadTemperature"];
+            /** Format: date-time */
+            follow_up_date?: string | null;
+            /** Format: int64 */
+            assignee_user_id?: number | null;
+            notes?: string;
+        };
+        LeadStatusInput: {
+            status: components["schemas"]["LeadStatus"];
+            lost_reason?: string | null;
+            /** @enum {string|null} */
+            won_ref_type?: "service" | "appointment" | "organization" | null;
+            /** Format: int64 */
+            won_ref_id?: number | null;
+        };
+        LeadNoteInput: {
+            body: string;
+        };
+        LeadAssignInput: {
+            /** Format: int64 */
+            assignee_user_id?: number | null;
+        };
+        LeadTaskInput: {
+            title: string;
+            description?: string;
+            /** Format: uuid */
+            assignee_user_uuid?: string | null;
+            priority?: components["schemas"]["TaskPriority"];
+            /** Format: date-time */
+            due_at?: string | null;
+        };
+        LeadEvent: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            event_type: "created" | "status_changed" | "note" | "call" | "message" | "quote_sent" | "assigned" | "follow_up_set" | "converted" | "task_created";
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Format: int64 */
+            actor_user_id?: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        LeadFollowUpCount: {
+            /** Format: int64 */
+            overdue: number;
+            /** Format: int64 */
+            today: number;
+        };
+        EnvelopeLead: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Lead"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeLeadPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["Lead"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeLeadEvent: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["LeadEvent"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeLeadEventList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["LeadEvent"][];
+                /** Format: int64 */
+                total: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeLeadFollowUpCount: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["LeadFollowUpCount"];
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
@@ -20060,6 +20663,243 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeContractTemplate"];
                 };
             };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createServiceContract: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CreateServiceContractRequest"];
+            };
+        };
+        responses: {
+            /** @description Contract instance */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContract"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getContract: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Contract instance */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContract"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    requestContractCustomerOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OTP request accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContractOTP"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    signContractCustomer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContractSignRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated contract */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContract"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    signContractStaff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContractStaffSignRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated contract */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContract"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    addContractMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    title?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Attached media */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContractMedia"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    deleteContractMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                media: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    voidContract: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoidContractRequest"];
+            };
+        };
+        responses: {
+            /** @description Voided contract */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContract"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
@@ -29961,6 +30801,286 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    listLeads: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["LeadStatus"];
+                target_type?: components["schemas"]["LeadTargetType"];
+                follow_up?: "overdue" | "today";
+                q?: components["parameters"]["Q"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Leads */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLeadPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadCreateInput"];
+            };
+        };
+        responses: {
+            /** @description Lead created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLead"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getLeadFollowUpCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Follow-up counts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLeadFollowUpCount"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lead */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLead"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadPatchInput"];
+            };
+        };
+        responses: {
+            /** @description Lead updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLead"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    setLeadStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadStatusInput"];
+            };
+        };
+        responses: {
+            /** @description Lead status changed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLead"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    addLeadNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadNoteInput"];
+            };
+        };
+        responses: {
+            /** @description Note added */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLeadEvent"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    assignLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadAssignInput"];
+            };
+        };
+        responses: {
+            /** @description Lead assigned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLead"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listLeadEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lead events */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLeadEventList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createLeadTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadTaskInput"];
+            };
+        };
+        responses: {
+            /** @description Task opened */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTask"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     listTasks: {
