@@ -479,3 +479,34 @@ func TestAnnouncementLibraryGrants(t *testing.T) {
 		t.Fatalf("distributor_owner announcements.write = %q", owner.Grants[PermAnnouncementsWrite])
 	}
 }
+
+// TEC-312: leads and quotes are managed-organization permissions; the social
+// center role sees all leads, and organization conversion is limited to the
+// center brand or a distributor subtree.
+func TestLeadQuoteGrants(t *testing.T) {
+	social, _ := RoleBySlug(RoleCenterSocial)
+	if social.Grants[PermLeadsRead] != ScopeAll || social.Grants[PermLeadsWrite] != ScopeAll {
+		t.Fatalf("center_social lead grants = %v", social.Grants)
+	}
+	if social.Grants[PermQuotesRead] != ScopeManaged || social.Grants[PermQuotesWrite] != ScopeManaged {
+		t.Fatalf("center_social quote grants = %v", social.Grants)
+	}
+	staff, _ := RoleBySlug(RoleCenterStaff)
+	if staff.Grants[PermLeadsRead] != ScopeManaged || staff.Grants[PermQuotesWrite] != ScopeManaged {
+		t.Fatalf("center_staff lead/quote grants = %v", staff.Grants)
+	}
+	if staff.Grants[PermLeadsConvertOrg] != ScopeBrand {
+		t.Fatalf("center_staff convert = %q", staff.Grants[PermLeadsConvertOrg])
+	}
+	dist, _ := RoleBySlug(RoleDistributorOwner)
+	if dist.Grants[PermLeadsConvertOrg] != ScopeSubtree {
+		t.Fatalf("distributor_owner convert = %q", dist.Grants[PermLeadsConvertOrg])
+	}
+	dealer, _ := RoleBySlug(RoleDealerOwner)
+	if dealer.Grants[PermLeadsRead] != ScopeManaged || dealer.Grants[PermQuotesWrite] != ScopeManaged {
+		t.Fatalf("dealer_owner lead/quote grants = %v", dealer.Grants)
+	}
+	if _, ok := dealer.Grants[PermLeadsConvertOrg]; ok {
+		t.Fatal("dealer_owner must not convert leads to organizations")
+	}
+}

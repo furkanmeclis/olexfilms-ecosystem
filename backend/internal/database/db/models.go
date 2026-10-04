@@ -811,6 +811,48 @@ type LabelTemplate struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
+type Lead struct {
+	ID                   int64              `json:"id"`
+	Uuid                 uuid.UUID          `json:"uuid"`
+	OrganizationID       int64              `json:"organization_id"`
+	BrandID              int64              `json:"brand_id"`
+	TargetType           string             `json:"target_type"`
+	CustomerUserID       pgtype.Int8        `json:"customer_user_id"`
+	VehicleID            pgtype.Int8        `json:"vehicle_id"`
+	CandidateCompanyName pgtype.Text        `json:"candidate_company_name"`
+	CandidateContactName pgtype.Text        `json:"candidate_contact_name"`
+	CandidatePhoneE164   pgtype.Text        `json:"candidate_phone_e164"`
+	CandidateEmail       pgtype.Text        `json:"candidate_email"`
+	CountryID            pgtype.Int8        `json:"country_id"`
+	ProvinceID           pgtype.Int8        `json:"province_id"`
+	DistrictID           pgtype.Int8        `json:"district_id"`
+	Source               string             `json:"source"`
+	Temperature          string             `json:"temperature"`
+	Status               string             `json:"status"`
+	LostReason           pgtype.Text        `json:"lost_reason"`
+	FollowUpDate         pgtype.Timestamptz `json:"follow_up_date"`
+	AssigneeUserID       pgtype.Int8        `json:"assignee_user_id"`
+	Notes                string             `json:"notes"`
+	WonRefType           pgtype.Text        `json:"won_ref_type"`
+	WonRefID             pgtype.Int8        `json:"won_ref_id"`
+	CreatedByUserID      pgtype.Int8        `json:"created_by_user_id"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt            pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type LeadEvent struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	LeadID         int64              `json:"lead_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	EventType      string             `json:"event_type"`
+	Payload        []byte             `json:"payload"`
+	ActorUserID    pgtype.Int8        `json:"actor_user_id"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
 type LegacyMessage struct {
 	ID             int64              `json:"id"`
 	Uuid           uuid.UUID          `json:"uuid"`
@@ -1509,6 +1551,72 @@ type QrLoginChallenge struct {
 	DecidedAt         pgtype.Timestamptz `json:"decided_at"`
 	ConsumedAt        pgtype.Timestamptz `json:"consumed_at"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+}
+
+type Quote struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	LeadID          int64              `json:"lead_id"`
+	QuoteNo         int64              `json:"quote_no"`
+	Currency        string             `json:"currency"`
+	Subtotal        pgtype.Numeric     `json:"subtotal"`
+	DiscountTotal   pgtype.Numeric     `json:"discount_total"`
+	TaxTotal        pgtype.Numeric     `json:"tax_total"`
+	GrandTotal      pgtype.Numeric     `json:"grand_total"`
+	ValidUntil      pgtype.Date        `json:"valid_until"`
+	Status          string             `json:"status"`
+	PublicToken     uuid.UUID          `json:"public_token"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	SentAt          pgtype.Timestamptz `json:"sent_at"`
+	AcceptedAt      pgtype.Timestamptz `json:"accepted_at"`
+	RejectedAt      pgtype.Timestamptz `json:"rejected_at"`
+	ExpiredAt       pgtype.Timestamptz `json:"expired_at"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type QuoteDelivery struct {
+	ID             int64              `json:"id"`
+	QuoteID        int64              `json:"quote_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Channel        string             `json:"channel"`
+	Status         string             `json:"status"`
+	ProviderRef    pgtype.Text        `json:"provider_ref"`
+	ErrorMessage   pgtype.Text        `json:"error_message"`
+	SentAt         pgtype.Timestamptz `json:"sent_at"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type QuoteLine struct {
+	ID                   int64              `json:"id"`
+	QuoteID              int64              `json:"quote_id"`
+	OrganizationID       int64              `json:"organization_id"`
+	BrandID              int64              `json:"brand_id"`
+	LineType             string             `json:"line_type"`
+	ProductID            pgtype.Int8        `json:"product_id"`
+	ServiceCatalogItemID pgtype.Int8        `json:"service_catalog_item_id"`
+	DescriptionSnapshot  string             `json:"description_snapshot"`
+	Quantity             pgtype.Numeric     `json:"quantity"`
+	UnitPrice            pgtype.Numeric     `json:"unit_price"`
+	DiscountAmount       pgtype.Numeric     `json:"discount_amount"`
+	LineTotal            pgtype.Numeric     `json:"line_total"`
+	SortOrder            int32              `json:"sort_order"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+}
+
+type QuoteReminder struct {
+	ID             int64              `json:"id"`
+	QuoteID        int64              `json:"quote_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	ScheduledAt    pgtype.Timestamptz `json:"scheduled_at"`
+	SentAt         pgtype.Timestamptz `json:"sent_at"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
 type RefreshToken struct {
