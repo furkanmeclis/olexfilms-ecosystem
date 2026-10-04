@@ -183,6 +183,10 @@ const (
 	PermServicesCancel          = "services.cancel"
 	PermServicesCancelCompleted = "services.cancel_completed"
 
+	// TEC-350 (000091): extra review questions and review reading.
+	PermReviewsQuestionsManage = "reviews.questions.manage"
+	PermReviewsRead            = "reviews.read"
+
 	// TEC-185 (000051): warranties (void is center-only) and vehicle
 	// ownership transfer with two codes (TEC-98 decision 6).
 	PermWarrantiesRead   = "warranties.read"
