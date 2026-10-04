@@ -8407,7 +8407,10 @@ export interface paths {
         /** List appointment closure days */
         get: operations["listAppointmentClosures"];
         put?: never;
-        /** Create an appointment closure day */
+        /**
+         * Create an appointment closure day
+         * @description A day can be closed once per organization; a second closure of the same day is 409 APPOINTMENT_CLOSURE_EXISTS.
+         */
         post: operations["createAppointmentClosure"];
         delete?: never;
         options?: never;
@@ -8442,7 +8445,10 @@ export interface paths {
         /** List appointments */
         get: operations["listAppointments"];
         put?: never;
-        /** Create an appointment */
+        /**
+         * Create an appointment
+         * @description Books into the active organization. The capacity check and the insert are serialized per organization. 422 APPOINTMENT_CAPACITY_FULL when the local day already holds daily_vehicle_capacity active bookings, 422 APPOINTMENT_DAY_CLOSED on a closure day. The customer must be a customer of the brand and the vehicle the customer's (400 otherwise).
+         */
         post: operations["createAppointment"];
         delete?: never;
         options?: never;
@@ -8497,7 +8503,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Reschedule an appointment */
+        /**
+         * Reschedule an appointment
+         * @description Only scheduled or confirmed appointments of an organization the appointments.write grant covers can move (422 APPOINTMENT_INVALID_TRANSITION otherwise); capacity and closure days are checked as on create.
+         */
         patch: operations["patchAppointment"];
         trace?: never;
     };
@@ -8527,7 +8536,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Start vehicle intake from an appointment */
+        /**
+         * Start vehicle intake from an appointment
+         * @description Opens a draft service through the services usecase, links it and marks the appointment arrived. A second call is 409 APPOINTMENT_INTAKE_ALREADY_STARTED; a cancelled or no-show appointment is 422 APPOINTMENT_INVALID_TRANSITION.
+         */
         post: operations["startAppointmentIntake"];
         delete?: never;
         options?: never;
@@ -31487,6 +31499,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
         };
     };
     deleteAppointmentClosure: {
@@ -31707,6 +31720,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     listTasks: {

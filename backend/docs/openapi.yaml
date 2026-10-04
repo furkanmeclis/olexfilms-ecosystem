@@ -16181,6 +16181,9 @@ paths:
       tags: [Appointments]
       operationId: createAppointmentClosure
       summary: Create an appointment closure day
+      description: >-
+        A day can be closed once per organization; a second closure of the
+        same day is 409 APPOINTMENT_CLOSURE_EXISTS.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -16196,6 +16199,7 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
 
   /v1/appointment-closures/{uuid}:
     delete:
@@ -16236,6 +16240,12 @@ paths:
       tags: [Appointments]
       operationId: createAppointment
       summary: Create an appointment
+      description: >-
+        Books into the active organization. The capacity check and the insert
+        are serialized per organization. 422 APPOINTMENT_CAPACITY_FULL when
+        the local day already holds daily_vehicle_capacity active bookings,
+        422 APPOINTMENT_DAY_CLOSED on a closure day. The customer must be a
+        customer of the brand and the vehicle the customer's (400 otherwise).
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -16295,6 +16305,11 @@ paths:
       tags: [Appointments]
       operationId: patchAppointment
       summary: Reschedule an appointment
+      description: >-
+        Only scheduled or confirmed appointments of an organization the
+        appointments.write grant covers can move (422
+        APPOINTMENT_INVALID_TRANSITION otherwise); capacity and closure days
+        are checked as on create.
       security: [{ bearerAuth: [] }]
       parameters:
         - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
@@ -16345,6 +16360,11 @@ paths:
       tags: [Appointments]
       operationId: startAppointmentIntake
       summary: Start vehicle intake from an appointment
+      description: >-
+        Opens a draft service through the services usecase, links it and
+        marks the appointment arrived. A second call is 409
+        APPOINTMENT_INTAKE_ALREADY_STARTED; a cancelled or no-show
+        appointment is 422 APPOINTMENT_INVALID_TRANSITION.
       security: [{ bearerAuth: [] }]
       parameters:
         - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
@@ -16359,6 +16379,7 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
 
   /v1/tasks:
     get:
