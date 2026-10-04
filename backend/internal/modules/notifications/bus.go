@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"strconv"
 
+	announcementsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/catalog"
 	notifmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/model"
 	notifusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/usecase"
@@ -130,6 +131,7 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	for name, code := range TaskEventCodes {
 		on(name, taskDispatcher(code))
 	}
+	on(events.AnnouncementPublished, announcementsusecase.DispatchInput)
 	on(events.AIDraftCreated, func(event events.Event) (notifmodel.DispatchInput, bool) {
 		ids := userIDsFromAIEvent(event)
 		return notifmodel.DispatchInput{

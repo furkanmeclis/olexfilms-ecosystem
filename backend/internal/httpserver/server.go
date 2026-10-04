@@ -23,6 +23,9 @@ import (
 	activitymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/activity"
 	activityhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/activity/handler"
 	activityusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/activity/usecase"
+	announcementsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements"
+	announcementshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/handler"
+	announcementsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/usecase"
 	authmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth"
 	authhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/handler"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/identity"
@@ -37,10 +40,6 @@ import (
 	catalogmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/catalog"
 	cataloghandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/catalog/handler"
 	catalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/catalog/usecase"
-	contractsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts"
-	contractshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/handler"
-	contractsrepo "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/repository"
-	contractsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/usecase"
 	customershandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/customers/handler"
 	customersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/customers/usecase"
 	documentsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents"
@@ -100,9 +99,6 @@ import (
 	searchhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/handler"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/indexsync"
 	searchusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/usecase"
-	servicecatalogmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/servicecatalog"
-	servicecataloghandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/servicecatalog/handler"
-	servicecatalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/servicecatalog/usecase"
 	servicesmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services"
 	serviceshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/handler"
 	servicereview "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/review"
@@ -433,10 +429,6 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	pricingSvc := pricingusecase.New(deps.Queries)
 	pricingmodule.RegisterRoutes(mux, pricinghandler.New(pricingSvc, activityRec),
 		tokens, loader, deps.Queries, stepUpSvc, featureSvc)
-	// TEC-306: service catalog, distributor overrides and effective service prices.
-	serviceCatalogSvc := servicecatalogusecase.New(deps.Queries)
-	servicecatalogmodule.RegisterRoutes(mux, servicecataloghandler.New(serviceCatalogSvc, activityRec),
-		tokens, loader, deps.Queries, featureSvc)
 	// TEC-172: accounting accounts, cari, manual entries and settlements.
 	accountingPoster := accountingposting.New(deps.Queries, outbox.NewStore(deps.DB, deps.Queries), ratesSvc)
 	accountingSvc := accountingusecase.New(deps.DB, deps.Queries, accountingPoster, featureSvc).
@@ -600,8 +592,6 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		s.worker.WithDocsRender(docSvc.ProcessRender)
 	}
 	documentsmodule.RegisterRoutes(mux, dochandler.New(docSvc, ratelimit.New(deps.Redis, cfg.App.Env)), tokens, loader, deps.Queries)
-	contractsSvc := contractsusecase.New(contractsrepo.New(deps.DB, deps.Queries))
-	contractsmodule.RegisterRoutes(mux, contractshandler.New(contractsSvc), tokens, loader, deps.Queries, featureSvc)
 	exportmodule.RegisterRoutes(mux, exporthandler.New(exportSvc), tokens, loader, stepUpSvc, deps.Queries)
 	importmodule.RegisterRoutes(mux, importhandler.New(importSvc), tokens, loader, deps.Queries)
 	bulkmodule.RegisterRoutes(mux, bulkhandler.New(bulkSvc), tokens, loader)
@@ -635,6 +625,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-214: center tasks (center roles only; brand scoped).
 	tasksmodule.RegisterRoutes(mux, taskshandler.New(tasksusecase.New(deps.DB, deps.Queries,
 		outbox.NewStore(deps.DB, deps.Queries))), tokens, loader, deps.Queries)
+	// TEC-330: announcements (center brand network, distributor subtree).
+	announcementsmodule.RegisterRoutes(mux, announcementshandler.New(announcementsusecase.New(deps.DB, deps.Queries,
+		outbox.NewStore(deps.DB, deps.Queries))), tokens, loader, deps.Queries, featureSvc)
 	// TEC-149: vehicle catalog (global car brands/models, super_admin writes).
 	vehiclecatalogmodule.RegisterRoutes(mux, vehiclecataloghandler.New(
 		vehiclecatalogusecase.New(deps.Queries), deps.Storage, activityRec), tokens, loader)

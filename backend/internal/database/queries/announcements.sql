@@ -127,6 +127,28 @@ WHERE a.brand_id = sqlc.arg(brand_id)::bigint
 ORDER BY a.pinned DESC, a.publish_at DESC, a.id DESC
 LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
 
+-- name: CountVisibleAnnouncements :one
+SELECT COUNT(*)
+FROM announcements a
+LEFT JOIN announcement_reads r
+       ON r.announcement_id = a.id AND r.user_id = sqlc.arg(user_id)::bigint
+WHERE a.brand_id = sqlc.arg(brand_id)::bigint
+  AND a.status = 'published'
+  AND a.publish_at <= sqlc.arg(now)::timestamptz
+  AND (a.expires_at IS NULL OR a.expires_at > sqlc.arg(now)::timestamptz)
+  AND EXISTS (
+      SELECT 1 FROM announcement_audiences au
+      WHERE au.announcement_id = a.id
+        AND (au.role_slug IS NULL OR au.role_slug = ANY(sqlc.arg(viewer_role_slugs)::text[]))
+        AND (
+            au.target_type IN ('all_network', 'role')
+            OR (au.target_type = 'distributors' AND sqlc.arg(viewer_org_type)::varchar = 'distributor')
+            OR (au.target_type = 'dealers' AND sqlc.arg(viewer_org_type)::varchar = 'dealer')
+            OR (au.target_type = 'subtree' AND au.target_organization_id = ANY(sqlc.arg(viewer_org_lineage)::bigint[]))
+        )
+  )
+  AND (NOT sqlc.arg(unread_only)::boolean OR r.read_at IS NULL);
+
 -- name: MarkAnnouncementRead :one
 -- Idempotent: a second read keeps the first read_at.
 INSERT INTO announcement_reads (announcement_id, user_id)
@@ -142,3 +164,66 @@ SELECT * FROM announcement_reads
 WHERE announcement_id = sqlc.arg(announcement_id)
 ORDER BY read_at DESC
 LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
+
+-- name: ListAnnouncementTargetUserIDs :many
+WITH RECURSIVE subtree(root_id, id) AS (
+    SELECT au.target_organization_id, au.target_organization_id
+    FROM announcement_audiences au
+    WHERE au.announcement_id = sqlc.arg(announcement_id)
+      AND au.target_type = 'subtree'
+      AND au.target_organization_id IS NOT NULL
+    UNION ALL
+    SELECT s.root_id, o.id
+    FROM subtree s
+    JOIN organizations o ON o.parent_id = s.id AND o.deleted_at IS NULL
+)
+SELECT DISTINCT om.user_id
+FROM announcements a
+JOIN organization_members om ON TRUE
+JOIN organizations o ON o.id = om.organization_id AND o.deleted_at IS NULL
+WHERE a.id = sqlc.arg(announcement_id)
+  AND a.brand_id = o.brand_id
+  AND EXISTS (
+      SELECT 1
+      FROM announcement_audiences au
+      WHERE au.announcement_id = a.id
+        AND (
+            au.role_slug IS NULL
+            OR EXISTS (
+                SELECT 1
+                FROM organization_member_roles mr
+                JOIN roles r ON r.id = mr.role_id
+                WHERE mr.member_id = om.id AND r.slug = au.role_slug
+            )
+        )
+        AND (
+            au.target_type IN ('all_network', 'role')
+            OR (au.target_type = 'distributors' AND o.type = 'distributor')
+            OR (au.target_type = 'dealers' AND o.type = 'dealer')
+            OR (au.target_type = 'subtree' AND EXISTS (
+                SELECT 1 FROM subtree s WHERE s.root_id = au.target_organization_id AND s.id = o.id
+            ))
+        )
+  )
+ORDER BY om.user_id;
+
+-- name: ListAnnouncementReadReport :many
+SELECT u.uuid AS user_uuid, u.email, u.name, u.surname, r.read_at
+FROM announcement_reads r
+JOIN users u ON u.id = r.user_id AND u.deleted_at IS NULL
+WHERE r.announcement_id = sqlc.arg(announcement_id)
+ORDER BY r.read_at DESC
+LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
+
+-- name: OrganizationLineage :many
+WITH RECURSIVE lineage(id, parent_id, depth) AS (
+    SELECT id, parent_id, 0
+    FROM organizations
+    WHERE id = sqlc.arg(id)::bigint AND deleted_at IS NULL
+    UNION ALL
+    SELECT p.id, p.parent_id, lineage.depth + 1
+    FROM lineage
+    JOIN organizations p ON p.id = lineage.parent_id AND p.deleted_at IS NULL
+    WHERE lineage.depth < 16
+)
+SELECT id FROM lineage ORDER BY depth ASC;

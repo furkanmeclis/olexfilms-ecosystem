@@ -187,6 +187,7 @@ type Querier interface {
 	CountUserCariAccounts(ctx context.Context, userID pgtype.Int8) (int64, error)
 	CountUsers(ctx context.Context, arg CountUsersParams) (int64, error)
 	CountUsersWithRole(ctx context.Context, roleSlug string) (int64, error)
+	CountVisibleAnnouncements(ctx context.Context, arg CountVisibleAnnouncementsParams) (int64, error)
 	CountWarehouseTransferLines(ctx context.Context, transferID int64) (int64, error)
 	CountWarehouseTransfers(ctx context.Context, arg CountWarehouseTransfersParams) (int64, error)
 	CountWarrantiesInScope(ctx context.Context, arg CountWarrantiesInScopeParams) (int64, error)
@@ -984,7 +985,9 @@ type Querier interface {
 	ListAllRoles(ctx context.Context) ([]Role, error)
 	ListAnnouncementAudiences(ctx context.Context, announcementID int64) ([]AnnouncementAudience, error)
 	ListAnnouncementLocales(ctx context.Context, announcementID int64) ([]AnnouncementLocale, error)
+	ListAnnouncementReadReport(ctx context.Context, arg ListAnnouncementReadReportParams) ([]ListAnnouncementReadReportRow, error)
 	ListAnnouncementReads(ctx context.Context, arg ListAnnouncementReadsParams) ([]AnnouncementRead, error)
+	ListAnnouncementTargetUserIDs(ctx context.Context, announcementID int64) ([]int64, error)
 	// Author view: announcements written by the given organizations (the
 	// caller's resolved write scope), newest first.
 	ListAnnouncementsByOrganizations(ctx context.Context, arg ListAnnouncementsByOrganizationsParams) ([]Announcement, error)
@@ -1902,6 +1905,7 @@ type Querier interface {
 	NextDocumentTemplateVersion(ctx context.Context, arg NextDocumentTemplateVersionParams) (int32, error)
 	NextLibraryItemVersionNo(ctx context.Context, arg NextLibraryItemVersionNoParams) (int32, error)
 	NextQuoteNo(ctx context.Context, organizationID int64) (int32, error)
+	OrganizationLineage(ctx context.Context, id int64) ([]int64, error)
 	PingDB(ctx context.Context) (int32, error)
 	PublishDocumentTemplate(ctx context.Context, id int64) (DocumentTemplate, error)
 	PurgeNotificationDeliveriesBefore(ctx context.Context, arg PurgeNotificationDeliveriesBeforeParams) (int64, error)
