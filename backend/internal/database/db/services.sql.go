@@ -739,6 +739,26 @@ func (q *Queries) GetServiceByUUID(ctx context.Context, arg GetServiceByUUIDPara
 	return i, err
 }
 
+const getServiceContractSummary = `-- name: GetServiceContractSummary :one
+SELECT ci.uuid, ci.status, ci.contract_no
+FROM services s
+JOIN contract_instances ci ON ci.id = s.contract_id
+WHERE s.id = $1
+`
+
+type GetServiceContractSummaryRow struct {
+	Uuid       uuid.UUID `json:"uuid"`
+	Status     string    `json:"status"`
+	ContractNo int64     `json:"contract_no"`
+}
+
+func (q *Queries) GetServiceContractSummary(ctx context.Context, id int64) (GetServiceContractSummaryRow, error) {
+	row := q.db.QueryRow(ctx, getServiceContractSummary, id)
+	var i GetServiceContractSummaryRow
+	err := row.Scan(&i.Uuid, &i.Status, &i.ContractNo)
+	return i, err
+}
+
 const getServiceImage = `-- name: GetServiceImage :one
 SELECT id, uuid, service_id, organization_id, brand_id, storage_key, title, sort_order, uploaded_by_user_id, created_at FROM service_images
 WHERE id = $1 AND service_id = $2

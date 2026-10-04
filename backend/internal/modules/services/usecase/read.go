@@ -112,30 +112,39 @@ type WarrantyView struct {
 	VoidedAt        *time.Time `json:"voided_at"`
 }
 
+// ContractSummary summarises the service's linked intake contract.
+type ContractSummary struct {
+	UUID       uuid.UUID `json:"uuid"`
+	Status     string    `json:"status"`
+	ContractNo int64     `json:"contract_no"`
+}
+
 // ServiceView is a service as the API returns it.
 type ServiceView struct {
-	UUID           uuid.UUID   `json:"uuid"`
-	ServiceNo      string      `json:"service_no"`
-	Status         string      `json:"status"`
-	StatusLabel    string      `json:"status_label"`
-	Organization   OrgRef      `json:"organization"`
-	Customer       CustomerRef `json:"customer"`
-	VehicleUUID    uuid.UUID   `json:"vehicle_uuid"`
-	CarBrand       Ref         `json:"car_brand"`
-	CarModel       Ref         `json:"car_model"`
-	ModelYear      *int16      `json:"model_year"`
-	Plate          *string     `json:"plate"`
-	PlateCountry   *string     `json:"plate_country"`
-	VIN            *string     `json:"vin"`
-	KM             *int32      `json:"km"`
-	Package        *string     `json:"package"`
-	Notes          *string     `json:"notes"`
-	HasMeasurement bool        `json:"has_measurement"`
-	CancelReason   *string     `json:"cancel_reason"`
-	CompletedAt    *time.Time  `json:"completed_at"`
-	CancelledAt    *time.Time  `json:"cancelled_at"`
-	CreatedAt      time.Time   `json:"created_at"`
-	UpdatedAt      time.Time   `json:"updated_at"`
+	UUID             uuid.UUID        `json:"uuid"`
+	ServiceNo        string           `json:"service_no"`
+	Status           string           `json:"status"`
+	StatusLabel      string           `json:"status_label"`
+	Organization     OrgRef           `json:"organization"`
+	Customer         CustomerRef      `json:"customer"`
+	VehicleUUID      uuid.UUID        `json:"vehicle_uuid"`
+	CarBrand         Ref              `json:"car_brand"`
+	CarModel         Ref              `json:"car_model"`
+	ModelYear        *int16           `json:"model_year"`
+	Plate            *string          `json:"plate"`
+	PlateCountry     *string          `json:"plate_country"`
+	VIN              *string          `json:"vin"`
+	KM               *int32           `json:"km"`
+	Package          *string          `json:"package"`
+	Notes            *string          `json:"notes"`
+	HasMeasurement   bool             `json:"has_measurement"`
+	Contract         *ContractSummary `json:"contract"`
+	ContractRequired bool             `json:"contract_required"`
+	CancelReason     *string          `json:"cancel_reason"`
+	CompletedAt      *time.Time       `json:"completed_at"`
+	CancelledAt      *time.Time       `json:"cancelled_at"`
+	CreatedAt        time.Time        `json:"created_at"`
+	UpdatedAt        time.Time        `json:"updated_at"`
 	// Editable: the caller may edit the form (km, package, notes, images).
 	Editable bool `json:"editable"`
 	// ItemsEditable: the caller may add or remove items.
@@ -176,6 +185,10 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, svc db.S
 		cust = CustomerRef{UUID: refs.CustomerUuid, Name: i18n.Translate(loc, AnonymizedNameKey), Anonymized: true}
 	}
 	canWrite := c.allows(rbac.PermServicesWrite, svc) && formEditable(c, svc)
+	contractRequired, err := s.contractRequired(ctx, svc.OrganizationID)
+	if err != nil {
+		return ServiceView{}, err
+	}
 	v := ServiceView{
 		UUID: svc.Uuid, ServiceNo: svc.ServiceNo, Status: svc.Status,
 		StatusLabel:  i18n.Translate(loc, StatusLabelKey(svc.Status)),
@@ -185,7 +198,8 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, svc db.S
 		CarModel: Ref{UUID: refs.CarModelUuid, Name: refs.CarModelName},
 		Plate:    textPtr(svc.Plate), PlateCountry: textPtr(svc.PlateCountry), VIN: textPtr(svc.Vin),
 		Package: textPtr(svc.Package), Notes: textPtr(svc.Notes), HasMeasurement: svc.HasMeasurement,
-		CancelReason: textPtr(svc.CancelReason), CompletedAt: tsPtr(svc.CompletedAt), CancelledAt: tsPtr(svc.CancelledAt),
+		ContractRequired: contractRequired,
+		CancelReason:     textPtr(svc.CancelReason), CompletedAt: tsPtr(svc.CompletedAt), CancelledAt: tsPtr(svc.CancelledAt),
 		CreatedAt: svc.CreatedAt.Time, UpdatedAt: svc.UpdatedAt.Time,
 		Editable: canWrite, ItemsEditable: canWrite && itemsEditable(svc.Status),
 		AvailableTransitions: availableTransitions(c, svc),
@@ -197,6 +211,17 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, svc db.S
 	if svc.Km.Valid {
 		k := svc.Km.Int32
 		v.KM = &k
+	}
+	if svc.ContractID.Valid {
+		contract, err := q.GetServiceContractSummary(ctx, svc.ID)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return ServiceView{}, fmt.Errorf("services: contract summary: %w", err)
+		}
+		if err == nil {
+			v.Contract = &ContractSummary{
+				UUID: contract.Uuid, Status: contract.Status, ContractNo: contract.ContractNo,
+			}
+		}
 	}
 	return v, nil
 }

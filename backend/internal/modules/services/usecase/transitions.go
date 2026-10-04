@@ -162,6 +162,11 @@ func (s *Service) Transition(ctx context.Context, c Caller, id uuid.UUID, in Tra
 		if !r.allows(c, svc) {
 			return ErrForbidden
 		}
+		if needsExecutedContract(svc.Status, to) {
+			if err := s.requireExecutedContract(ctx, q, svc); err != nil {
+				return err
+			}
+		}
 		if to == StatusCompleted {
 			result, err = s.complete(ctx, q, tx, svc, c, in.Note)
 			return err

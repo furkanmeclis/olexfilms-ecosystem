@@ -29,6 +29,7 @@ const (
 	CodeUnitInUse         = "SERVICE_UNIT_IN_USE"
 	CodeUnitNotAvailable  = "SERVICE_UNIT_NOT_AVAILABLE"
 	CodeTooManyImages     = "SERVICE_TOO_MANY_IMAGES"
+	CodeContractRequired  = "CONTRACT_REQUIRED"
 
 	// TEC-230: consumption correction.
 	CodeCorrectionWindowClosed   = "SERVICE_CORRECTION_WINDOW_CLOSED"
@@ -73,6 +74,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Conflict(w, r, CodeUnitNotAvailable, "The unit is not available to this organization")
 	case errors.Is(err, svcuc.ErrTooManyImages):
 		response.Error(w, r, http.StatusUnprocessableEntity, CodeTooManyImages, "The image limit of the service is reached")
+	case errors.Is(err, svcuc.ErrContractRequired):
+		response.Error(w, r, http.StatusUnprocessableEntity, CodeContractRequired, "An executed intake contract is required for this service transition")
 	case errors.Is(err, svcuc.ErrCorrectionWindowClosed):
 		response.Error(w, r, http.StatusUnprocessableEntity, CodeCorrectionWindowClosed,
 			"The consumption of this service can no longer be corrected")
