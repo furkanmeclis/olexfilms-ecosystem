@@ -710,3 +710,21 @@ func (s *Service) inTx(ctx context.Context, fn func(q *db.Queries) error) error 
 	}
 	return tx.Commit(ctx)
 }
+
+// SystemEnabled reports whether a module is open system wide (no closed
+// system switch). Core modules are always open; unknown keys read as off.
+// TEC-317: the public dealer application form needs leads open here.
+func (s *Service) SystemEnabled(ctx context.Context, key string) (bool, error) {
+	def, ok := ModuleByKey(key)
+	if !ok {
+		return false, nil
+	}
+	if def.Level == LevelCore {
+		return true, nil
+	}
+	closed, err := s.systemClosed(ctx, s.q, key)
+	if err != nil {
+		return false, err
+	}
+	return !closed, nil
+}

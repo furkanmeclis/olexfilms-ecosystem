@@ -1786,6 +1786,83 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /v1/public/dealer-applications/config:
+    get:
+      tags: [Public]
+      operationId: getPublicDealerApplicationConfig
+      summary: Whether the public dealer application form is open
+      description: |
+        TEC-317. No authentication. `enabled` is true only while the system
+        setting `leads.dealer_application_enabled` is on (default off) and
+        the leads module is open system wide. The frontend `/bayi-basvuru`
+        page hides the form when it is false. 404 when the request domain
+        resolves to no brand.
+      security: []
+      responses:
+        "200":
+          description: Form state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDealerApplicationConfig"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/public/dealer-applications:
+    post:
+      tags: [Public]
+      operationId: submitPublicDealerApplication
+      summary: Submit a dealer application (public form)
+      description: |
+        TEC-317 (F3-03f). No authentication; the brand comes from the request
+        domain (K3). While the form is closed the endpoint is 404. The phone
+        is normalized to E.164 (K29; national numbers are read in the selected
+        country). The application opens a `dealer_candidate` lead with source
+        `application_form` in the distributor whose territory covers the
+        address (district > province > country) and whose leads module is
+        on; otherwise in the brand center. The message, form language and
+        KVKK consent are kept on the lead timeline, and the receiving
+        organization's members holding leads.read are notified (in-app +
+        e-mail). The response never reveals the routing. `website` is a
+        honeypot: when filled the request is answered 202 and nothing is
+        stored. Rate limited per client IP (DEALER_APPLICATION_IP_RATE_LIMIT,
+        counted before validation) and per E.164 phone
+        (DEALER_APPLICATION_PHONE_RATE_LIMIT) per
+        DEALER_APPLICATION_RATE_WINDOW; over a limit 429 with Retry-After.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DealerApplicationInput"
+      responses:
+        "202":
+          description: Application received
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDealerApplicationReceived"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          description: Rate limited per client IP or phone
+          headers:
+            Retry-After:
+              description: Seconds until the window resets
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /v1/services/{uuid}/pdf:
     post:
       tags: [Services]
@@ -5613,7 +5690,10 @@ paths:
         The value is validated against the key's catalog schema (kind,
         min/max, max_len); a mismatch is 400 VALIDATION_ERROR. Writing the
         mask `********` to a secret key keeps the stored value. The Redis
-        cache is dropped on every write.
+        cache is dropped on every write. A key with a business rule refuses
+        a well-formed value with 422 and the rule code
+        (`leads.dealer_application_enabled` can only be switched on while
+        the leads module is open system wide: LEADS_MODULE_DISABLED).
       security:
         - bearerAuth: []
       parameters:
@@ -5639,6 +5719,12 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "422":
+          description: Refused by a named business rule (e.g. LEADS_MODULE_DISABLED)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
     delete:
       tags: [Platform]
       operationId: resetSystemSetting
@@ -20918,6 +21004,64 @@ components:
         data: { $ref: "#/components/schemas/PublicShortUrl" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
+    DealerApplicationConfig:
+      type: object
+      required: [enabled]
+      properties:
+        enabled: { type: boolean }
+
+    EnvelopeDealerApplicationConfig:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/DealerApplicationConfig" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    DealerApplicationInput:
+      type: object
+      required: [company_name, contact_name, phone, country_id, kvkk_consent]
+      additionalProperties: false
+      properties:
+        company_name: { type: string, maxLength: 200 }
+        contact_name: { type: string, maxLength: 200 }
+        phone:
+          type: string
+          description: Any notation; normalized to E.164 in the selected country.
+          example: "030 12345678"
+        email: { type: string, maxLength: 255 }
+        country_id: { type: integer, format: int64 }
+        province_id: { type: [integer, "null"], format: int64 }
+        district_id:
+          type: [integer, "null"]
+          format: int64
+          description: Requires province_id.
+        message: { type: string, maxLength: 5000 }
+        kvkk_consent:
+          type: boolean
+          description: Must be true (KVKK consent); false is 400 VALIDATION_ERROR.
+        language:
+          type: string
+          description: Form language, one of the 13 locales (default tr).
+          enum: [tr, en, bg, de, el, uk, ru, fr, es, it, zh-CN, az, ar]
+        website:
+          type: string
+          description: Honeypot; leave empty (hidden in the form).
+
+    DealerApplicationReceived:
+      type: object
+      required: [received]
+      properties:
+        received: { type: boolean, enum: [true] }
+
+    EnvelopeDealerApplicationReceived:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/DealerApplicationReceived" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
     EnvelopeTokens:
       type: object
       required: [success, data, meta]
@@ -22261,7 +22405,7 @@ components:
       required: [key, group, kind, default, description, value, is_default, schema_version]
       properties:
         key: { type: string, example: contract_grace_days }
-        group: { type: string, enum: [general, contracts, forecast, services, smtp, warehouse, scanning, mobile] }
+        group: { type: string, enum: [general, contracts, forecast, services, smtp, warehouse, scanning, mobile, leads] }
         kind: { type: string, enum: [int, bool, string] }
         default: { $ref: "#/components/schemas/SystemSettingValue" }
         description: { type: string }

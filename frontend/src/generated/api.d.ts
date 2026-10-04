@@ -976,6 +976,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/dealer-applications/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whether the public dealer application form is open
+         * @description TEC-317. No authentication. `enabled` is true only while the system
+         *     setting `leads.dealer_application_enabled` is on (default off) and
+         *     the leads module is open system wide. The frontend `/bayi-basvuru`
+         *     page hides the form when it is false. 404 when the request domain
+         *     resolves to no brand.
+         */
+        get: operations["getPublicDealerApplicationConfig"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/dealer-applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit a dealer application (public form)
+         * @description TEC-317 (F3-03f). No authentication; the brand comes from the request
+         *     domain (K3). While the form is closed the endpoint is 404. The phone
+         *     is normalized to E.164 (K29; national numbers are read in the selected
+         *     country). The application opens a `dealer_candidate` lead with source
+         *     `application_form` in the distributor whose territory covers the
+         *     address (district > province > country) and whose leads module is
+         *     on; otherwise in the brand center. The message, form language and
+         *     KVKK consent are kept on the lead timeline, and the receiving
+         *     organization's members holding leads.read are notified (in-app +
+         *     e-mail). The response never reveals the routing. `website` is a
+         *     honeypot: when filled the request is answered 202 and nothing is
+         *     stored. Rate limited per client IP (DEALER_APPLICATION_IP_RATE_LIMIT,
+         *     counted before validation) and per E.164 phone
+         *     (DEALER_APPLICATION_PHONE_RATE_LIMIT) per
+         *     DEALER_APPLICATION_RATE_WINDOW; over a limit 429 with Retry-After.
+         */
+        post: operations["submitPublicDealerApplication"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/services/{uuid}/pdf": {
         parameters: {
             query?: never;
@@ -3152,7 +3210,7 @@ export interface paths {
         get: operations["getSystemSetting"];
         /**
          * Store a system setting value (platform.settings.write)
-         * @description The value is validated against the key's catalog schema (kind, min/max, max_len); a mismatch is 400 VALIDATION_ERROR. Writing the mask `********` to a secret key keeps the stored value. The Redis cache is dropped on every write.
+         * @description The value is validated against the key's catalog schema (kind, min/max, max_len); a mismatch is 400 VALIDATION_ERROR. Writing the mask `********` to a secret key keeps the stored value. The Redis cache is dropped on every write. A key with a business rule refuses a well-formed value with 422 and the rule code (`leads.dealer_application_enabled` can only be switched on while the leads module is open system wide: LEADS_MODULE_DISABLED).
          */
         put: operations["putSystemSetting"];
         post?: never;
@@ -11154,6 +11212,54 @@ export interface components {
             data: components["schemas"]["PublicShortUrl"];
             meta: components["schemas"]["ResponseMeta"];
         };
+        DealerApplicationConfig: {
+            enabled: boolean;
+        };
+        EnvelopeDealerApplicationConfig: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["DealerApplicationConfig"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        DealerApplicationInput: {
+            company_name: string;
+            contact_name: string;
+            /**
+             * @description Any notation; normalized to E.164 in the selected country.
+             * @example 030 12345678
+             */
+            phone: string;
+            email?: string;
+            /** Format: int64 */
+            country_id: number;
+            /** Format: int64 */
+            province_id?: number | null;
+            /**
+             * Format: int64
+             * @description Requires province_id.
+             */
+            district_id?: number | null;
+            message?: string;
+            /** @description Must be true (KVKK consent); false is 400 VALIDATION_ERROR. */
+            kvkk_consent: boolean;
+            /**
+             * @description Form language, one of the 13 locales (default tr).
+             * @enum {string}
+             */
+            language?: "tr" | "en" | "bg" | "de" | "el" | "uk" | "ru" | "fr" | "es" | "it" | "zh-CN" | "az" | "ar";
+            /** @description Honeypot; leave empty (hidden in the form). */
+            website?: string;
+        };
+        DealerApplicationReceived: {
+            /** @enum {boolean} */
+            received: true;
+        };
+        EnvelopeDealerApplicationReceived: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["DealerApplicationReceived"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
         EnvelopeTokens: {
             /** @enum {boolean} */
             success: true;
@@ -12179,7 +12285,7 @@ export interface components {
             /** @example contract_grace_days */
             key: string;
             /** @enum {string} */
-            group: "general" | "contracts" | "forecast" | "services" | "smtp" | "warehouse" | "scanning" | "mobile";
+            group: "general" | "contracts" | "forecast" | "services" | "smtp" | "warehouse" | "scanning" | "mobile" | "leads";
             /** @enum {string} */
             kind: "int" | "bool" | "string";
             default: components["schemas"]["SystemSettingValue"];
@@ -19114,6 +19220,66 @@ export interface operations {
             500: components["responses"]["InternalError"];
         };
     };
+    getPublicDealerApplicationConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Form state */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDealerApplicationConfig"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    submitPublicDealerApplication: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DealerApplicationInput"];
+            };
+        };
+        responses: {
+            /** @description Application received */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDealerApplicationReceived"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+            /** @description Rate limited per client IP or phone */
+            429: {
+                headers: {
+                    /** @description Seconds until the window resets */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
     requestServicePdf: {
         parameters: {
             query?: never;
@@ -22861,6 +23027,15 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            /** @description Refused by a named business rule (e.g. LEADS_MODULE_DISABLED) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     resetSystemSetting: {

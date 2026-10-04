@@ -40,6 +40,7 @@ const (
 	GroupWarehouse Group = "warehouse"
 	GroupScanning  Group = "scanning"
 	GroupMobile    Group = "mobile"
+	GroupLeads     Group = "leads"
 )
 
 // SchemaVersion is stored with every row; bump it when a key's shape
@@ -89,6 +90,11 @@ const (
 	// version cannot be read (no X-App-Version, no known User-Agent token)
 	// while a minimum is set. Off: such requests pass.
 	KeyMobileAppVersionRequired = "mobile.app_version_required"
+
+	// KeyLeadsDealerApplicationEnabled opens the public dealer application
+	// form (TEC-317). Conservative default: closed. It can only be switched
+	// on while the leads module is open system wide (guarded at write time).
+	KeyLeadsDealerApplicationEnabled = "leads.dealer_application_enabled"
 )
 
 // DefaultBulkUndoWindowHours is the catalog default of KeyBulkUndoWindowHours.
@@ -175,6 +181,8 @@ var catalog = []Definition{
 		Description: "Google Play link sent with UPDATE_REQUIRED; empty = MOBILE_APP_STORE_URL_ANDROID from the environment"},
 	{Key: KeyMobileAppVersionRequired, Group: GroupMobile, Kind: KindBool, Default: false,
 		Description: "While a minimum version is set, also refuse mobile requests whose app version is unknown (no X-App-Version header or app User-Agent token)"},
+	{Key: KeyLeadsDealerApplicationEnabled, Group: GroupLeads, Kind: KindBool, Default: false,
+		Description: "Accept public dealer applications (/bayi-basvuru); only while the leads module is open system wide (TEC-317)"},
 }
 
 var byKey = func() map[string]Definition {

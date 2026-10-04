@@ -136,3 +136,23 @@ func TestDBWriteReadInvalidate(t *testing.T) {
 		t.Fatalf("stale row = %d, want default 0", got)
 	}
 }
+
+// TEC-317: a write guard refuses a well-formed value before anything is
+// stored (the handler answers 422 with the rule code).
+func TestSetGuardRefusesBeforeWrite(t *testing.T) {
+	s := New(nil, NoCache{})
+	s.SetGuard(KeyLeadsDealerApplicationEnabled, func(_ context.Context, v json.RawMessage) error {
+		if string(v) == "true" {
+			return &RuleError{Key: KeyLeadsDealerApplicationEnabled, Code: "LEADS_MODULE_DISABLED", Message: "closed"}
+		}
+		return nil
+	})
+	_, err := s.Set(context.Background(), KeyLeadsDealerApplicationEnabled, json.RawMessage(`true`), 0)
+	var re *RuleError
+	if !errors.As(err, &re) || re.Code != "LEADS_MODULE_DISABLED" {
+		t.Fatalf("err = %v", err)
+	}
+	if d, ok := Lookup(KeyLeadsDealerApplicationEnabled); !ok || d.Default != false || d.Group != GroupLeads {
+		t.Fatalf("definition = %+v", d)
+	}
+}

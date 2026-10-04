@@ -17,8 +17,34 @@ var ErrUnknownKey = errors.New("sysconfig: unknown key")
 // Service reads settings through the cache and writes them to the
 // database, dropping the cache on every write.
 type Service struct {
-	q     *db.Queries
-	cache Cache
+	q      *db.Queries
+	cache  Cache
+	guards map[string]Guard
+}
+
+// Guard checks a business rule before a validated value of one key is
+// stored; a refusal is returned as a *RuleError (422).
+type Guard func(ctx context.Context, value json.RawMessage) error
+
+// RuleError is a well-formed value refused by a named business rule.
+type RuleError struct {
+	Key     string
+	Code    string
+	Message string
+}
+
+func (e *RuleError) Error() string { return e.Key + ": " + e.Code + ": " + e.Message }
+
+// SetGuard registers the write guard of key (one per key; nil removes it).
+func (s *Service) SetGuard(key string, g Guard) {
+	if s.guards == nil {
+		s.guards = map[string]Guard{}
+	}
+	if g == nil {
+		delete(s.guards, key)
+		return
+	}
+	s.guards[key] = g
 }
 
 // New creates a Service; cache may be NoCache{}.
@@ -269,6 +295,11 @@ func (s *Service) Set(ctx context.Context, key string, raw json.RawMessage, user
 	canonical, err := d.Validate(raw)
 	if err != nil {
 		return Entry{}, err
+	}
+	if g := s.guards[key]; g != nil {
+		if err := g(ctx, canonical); err != nil {
+			return Entry{}, err
+		}
 	}
 	if d.Secret {
 		var str string

@@ -56,3 +56,12 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/quotes/{uuid}/reject", quoteRoute(h.RejectQuote, quoteWrite))
 	mux.Handle("GET /v1/quotes/{uuid}/pdf", quoteRoute(h.QuotePDF))
 }
+
+// RegisterPublicRoutes mounts the public dealer application form (TEC-317):
+// GET /v1/public/dealer-applications/config and POST
+// /v1/public/dealer-applications, no authentication, brand from the
+// request domain.
+func RegisterPublicRoutes(mux *http.ServeMux, h *handler.Public) {
+	mux.HandleFunc("GET /v1/public/dealer-applications/config", h.Config)
+	mux.HandleFunc("POST /v1/public/dealer-applications", h.Submit)
+}
