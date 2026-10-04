@@ -46,6 +46,9 @@ RETURNING *;
 -- name: GetLibraryItemByUUID :one
 SELECT * FROM library_items WHERE uuid = $1 AND deleted_at IS NULL;
 
+-- name: GetLibraryItemByID :one
+SELECT * FROM library_items WHERE id = $1 AND deleted_at IS NULL;
+
 -- name: UpdateLibraryItem :one
 UPDATE library_items
 SET folder_id    = sqlc.narg(folder_id),
@@ -75,6 +78,15 @@ WHERE brand_id = sqlc.arg(brand_id)::bigint
   AND (role_slug IS NULL OR role_slug = ANY(sqlc.arg(viewer_role_slugs)::text[]))
   AND (sqlc.narg(folder_id)::bigint IS NULL OR folder_id = sqlc.narg(folder_id)::bigint)
   AND (sqlc.narg(tag)::text IS NULL OR tags @> ARRAY[sqlc.narg(tag)::text])
+  AND (
+      sqlc.narg(q)::text IS NULL
+      OR name ILIKE ('%' || sqlc.narg(q)::text || '%')
+      OR COALESCE(description, '') ILIKE ('%' || sqlc.narg(q)::text || '%')
+      OR EXISTS (
+          SELECT 1 FROM unnest(tags) AS tag_value
+          WHERE tag_value ILIKE ('%' || sqlc.narg(q)::text || '%')
+      )
+  )
 ORDER BY lower(name), id
 LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
 

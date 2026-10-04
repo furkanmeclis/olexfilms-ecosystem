@@ -618,6 +618,7 @@ type Querier interface {
 	GetLeadByID(ctx context.Context, arg GetLeadByIDParams) (Lead, error)
 	GetLeadByUUID(ctx context.Context, arg GetLeadByUUIDParams) (Lead, error)
 	GetLibraryFolderByUUID(ctx context.Context, argUuid uuid.UUID) (LibraryFolder, error)
+	GetLibraryItemByID(ctx context.Context, id int64) (LibraryItem, error)
 	GetLibraryItemByUUID(ctx context.Context, argUuid uuid.UUID) (LibraryItem, error)
 	GetLibraryItemVersionByUUID(ctx context.Context, argUuid uuid.UUID) (LibraryItemVersion, error)
 	// Stored locale/timezone preferences for i18n.Resolve: the user, the active

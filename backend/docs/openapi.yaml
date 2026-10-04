@@ -101,6 +101,10 @@ tags:
       Non-product service catalog (TEC-306): center-managed items, module
       bundles, distributor-specific prices and effective visible prices for
       distributors and dealers.
+  - name: Library
+    description: >-
+      Document library (TEC-331): center-managed folders, tagged items,
+      localized file versions and short-lived download URLs.
   - name: Accounting
     description: >-
       Accounting core (TEC-99/TEC-172): cash/bank accounts, cari balances,
@@ -16043,6 +16047,245 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /v1/library/folders:
+    get:
+      tags: [Library]
+      operationId: listLibraryFolders
+      summary: List document library folders
+      responses:
+        "200":
+          description: Folders
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeLibraryFolderList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Library]
+      operationId: createLibraryFolder
+      summary: Create a document library folder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LibraryFolderInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeLibraryFolder"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/library/folders/{uuid}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    patch:
+      tags: [Library]
+      operationId: patchLibraryFolder
+      summary: Update a document library folder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LibraryFolderInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeLibraryFolder"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Library]
+      operationId: deleteLibraryFolder
+      summary: Delete an empty document library folder
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDeleteResult"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/library:
+    get:
+      tags: [Library]
+      operationId: listLibraryItems
+      summary: List visible document library items
+      parameters:
+        - name: folder
+          in: query
+          schema: { type: string, format: uuid }
+        - name: tag
+          in: query
+          schema: { type: string }
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: locale
+          in: query
+          schema: { type: string, example: de }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50, maximum: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0, minimum: 0 }
+      responses:
+        "200":
+          description: Items visible to the active organization and roles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeLibraryItemList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/library/items:
+    post:
+      tags: [Library]
+      operationId: createLibraryItem
+      summary: Create a document library item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LibraryItemInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeLibraryItem"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/library/items/{uuid}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    patch:
+      tags: [Library]
+      operationId: patchLibraryItem
+      summary: Update a document library item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LibraryItemInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeLibraryItem"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Library]
+      operationId: archiveLibraryItem
+      summary: Archive a document library item
+      responses:
+        "200":
+          description: Archived
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeArchiveResult"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/library/items/{uuid}/versions:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    get:
+      tags: [Library]
+      operationId: listLibraryItemVersions
+      summary: List item version history
+      responses:
+        "200":
+          description: Version history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeLibraryVersionList"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Library]
+      operationId: createLibraryItemVersion
+      summary: Upload a localized file version
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                locale:
+                  type: string
+                  default: tr
+                file:
+                  type: string
+                  format: binary
+                  description: PDF, image, zip, docx or xlsx, up to 50 MB.
+      responses:
+        "201":
+          description: Uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeLibraryVersion"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/library/versions/{uuid}/download:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    get:
+      tags: [Library]
+      operationId: getLibraryVersionDownload
+      summary: Create a short-lived download URL
+      responses:
+        "200":
+          description: Presigned URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeLibraryDownload"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -24672,6 +24915,180 @@ components:
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    # TEC-331: document library API.
+    LibraryAccessLevel:
+      type: string
+      enum: [all_network, distributors, dealers, center_only]
+
+    LibraryFolder:
+      type: object
+      required: [uuid, name, sort_order, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        parent_uuid: { type: [string, "null"], format: uuid }
+        name: { type: string }
+        sort_order: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    LibraryFolderInput:
+      type: object
+      additionalProperties: false
+      properties:
+        parent_uuid: { type: [string, "null"], format: uuid }
+        name: { type: string, minLength: 1, maxLength: 255 }
+        sort_order: { type: integer, default: 0 }
+
+    LibraryVersion:
+      type: object
+      required: [uuid, locale, version_no, mime, size_bytes, sha256, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        locale: { type: string, example: tr }
+        version_no: { type: integer }
+        mime: { type: string }
+        size_bytes: { type: integer, format: int64 }
+        sha256: { type: string, minLength: 64, maxLength: 64 }
+        created_at: { type: string, format: date-time }
+
+    LibraryItem:
+      type: object
+      required: [uuid, name, tags, access_level, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        folder_uuid: { type: [string, "null"], format: uuid }
+        name: { type: string }
+        description: { type: string }
+        tags:
+          type: array
+          items: { type: string }
+        access_level: { $ref: "#/components/schemas/LibraryAccessLevel" }
+        role_slug: { type: string }
+        latest_version:
+          anyOf:
+            - $ref: "#/components/schemas/LibraryVersion"
+            - type: "null"
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    LibraryItemInput:
+      type: object
+      additionalProperties: false
+      properties:
+        folder_uuid: { type: [string, "null"], format: uuid }
+        name: { type: string, minLength: 1, maxLength: 255 }
+        description: { type: [string, "null"] }
+        tags:
+          type: array
+          items: { type: string }
+        access_level: { $ref: "#/components/schemas/LibraryAccessLevel" }
+        role_slug: { type: [string, "null"] }
+
+    LibraryDownload:
+      type: object
+      required: [url, expires_at]
+      properties:
+        url: { type: string, format: uri }
+        expires_at: { type: string, format: date-time }
+
+    EnvelopeLibraryFolder:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/LibraryFolder" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeLibraryFolderList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [folders]
+          properties:
+            folders:
+              type: array
+              items: { $ref: "#/components/schemas/LibraryFolder" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeLibraryItem:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/LibraryItem" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeLibraryItemList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/LibraryItem" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeLibraryVersion:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/LibraryVersion" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeLibraryVersionList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [versions]
+          properties:
+            versions:
+              type: array
+              items: { $ref: "#/components/schemas/LibraryVersion" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeLibraryDownload:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/LibraryDownload" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeDeleteResult:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [deleted]
+          properties:
+            deleted: { type: boolean }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeArchiveResult:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [archived]
+          properties:
+            archived: { type: boolean }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     # TEC-273: Glorian admin API.

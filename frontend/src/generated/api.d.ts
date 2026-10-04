@@ -8243,6 +8243,141 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/library/folders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List document library folders */
+        get: operations["listLibraryFolders"];
+        put?: never;
+        /** Create a document library folder */
+        post: operations["createLibraryFolder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/library/folders/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete an empty document library folder */
+        delete: operations["deleteLibraryFolder"];
+        options?: never;
+        head?: never;
+        /** Update a document library folder */
+        patch: operations["patchLibraryFolder"];
+        trace?: never;
+    };
+    "/v1/library": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List visible document library items */
+        get: operations["listLibraryItems"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/library/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a document library item */
+        post: operations["createLibraryItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/library/items/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Archive a document library item */
+        delete: operations["archiveLibraryItem"];
+        options?: never;
+        head?: never;
+        /** Update a document library item */
+        patch: operations["patchLibraryItem"];
+        trace?: never;
+    };
+    "/v1/library/items/{uuid}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /** List item version history */
+        get: operations["listLibraryItemVersions"];
+        put?: never;
+        /** Upload a localized file version */
+        post: operations["createLibraryItemVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/library/versions/{uuid}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /** Create a short-lived download URL */
+        get: operations["getLibraryVersionDownload"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -14590,6 +14725,135 @@ export interface components {
                 total: number;
                 limit: number;
                 offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        LibraryAccessLevel: "all_network" | "distributors" | "dealers" | "center_only";
+        LibraryFolder: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            parent_uuid?: string | null;
+            name: string;
+            sort_order: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        LibraryFolderInput: {
+            /** Format: uuid */
+            parent_uuid?: string | null;
+            name?: string;
+            /** @default 0 */
+            sort_order: number;
+        };
+        LibraryVersion: {
+            /** Format: uuid */
+            uuid: string;
+            /** @example tr */
+            locale: string;
+            version_no: number;
+            mime: string;
+            /** Format: int64 */
+            size_bytes: number;
+            sha256: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        LibraryItem: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            folder_uuid?: string | null;
+            name: string;
+            description?: string;
+            tags: string[];
+            access_level: components["schemas"]["LibraryAccessLevel"];
+            role_slug?: string;
+            latest_version?: components["schemas"]["LibraryVersion"] | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        LibraryItemInput: {
+            /** Format: uuid */
+            folder_uuid?: string | null;
+            name?: string;
+            description?: string | null;
+            tags?: string[];
+            access_level?: components["schemas"]["LibraryAccessLevel"];
+            role_slug?: string | null;
+        };
+        LibraryDownload: {
+            /** Format: uri */
+            url: string;
+            /** Format: date-time */
+            expires_at: string;
+        };
+        EnvelopeLibraryFolder: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["LibraryFolder"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeLibraryFolderList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                folders: components["schemas"]["LibraryFolder"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeLibraryItem: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["LibraryItem"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeLibraryItemList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["LibraryItem"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeLibraryVersion: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["LibraryVersion"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeLibraryVersionList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                versions: components["schemas"]["LibraryVersion"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeLibraryDownload: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["LibraryDownload"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeDeleteResult: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                deleted: boolean;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeArchiveResult: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                archived: boolean;
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -29584,6 +29848,301 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+        };
+    };
+    listLibraryFolders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Folders */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLibraryFolderList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createLibraryFolder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LibraryFolderInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLibraryFolder"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    deleteLibraryFolder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDeleteResult"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    patchLibraryFolder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LibraryFolderInput"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLibraryFolder"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listLibraryItems: {
+        parameters: {
+            query?: {
+                folder?: string;
+                tag?: string;
+                q?: string;
+                locale?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Items visible to the active organization and roles */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLibraryItemList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createLibraryItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LibraryItemInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLibraryItem"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    archiveLibraryItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Archived */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeArchiveResult"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchLibraryItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LibraryItemInput"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLibraryItem"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listLibraryItemVersions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Version history */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLibraryVersionList"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createLibraryItemVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** @default tr */
+                    locale?: string;
+                    /**
+                     * Format: binary
+                     * @description PDF, image, zip, docx or xlsx, up to 50 MB.
+                     */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Uploaded */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLibraryVersion"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getLibraryVersionDownload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Presigned URL */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLibraryDownload"];
+                };
+            };
+            404: components["responses"]["NotFound"];
         };
     };
 }

@@ -69,6 +69,9 @@ import (
 	legalmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/legal"
 	legalhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/legal/handler"
 	legalusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/legal/usecase"
+	librarymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/library"
+	libraryhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/library/handler"
+	libraryusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/library/usecase"
 	logsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/logs"
 	logshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/logs/handler"
 	logsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/logs/usecase"
@@ -689,6 +692,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		Orders: ordersSvc, Organizations: orgSvc, Stock: stockSvc,
 	})...)
 	searchmodule.RegisterRoutes(mux, searchhandler.New(searchSvc), tokens, loader, deps.Queries)
+	librarymodule.RegisterRoutes(mux, libraryhandler.New(libraryusecase.New(deps.Queries, deps.Storage)), tokens, loader, deps.Queries, featureSvc)
 	storageSvc := storageusecase.New(deps.Storage, deps.Queries, log)
 	storagemodule.RegisterRoutes(
 		mux,
