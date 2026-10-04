@@ -138,6 +138,7 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	on(events.WarrantyExpired, func(event events.Event) (notifmodel.DispatchInput, bool) {
 		return warrantyDispatch(event, catalog.EventWarrantyExpired, 0)
 	})
+	on(events.WarrantyClaimStatusChanged, warrantyClaimDispatch)
 	// TEC-192: the delayed review request goes to the service customer
 	// (WhatsApp); the task writes the event once per service.
 	on(events.ServiceReviewRequested, serviceReviewDispatch)
@@ -216,17 +217,56 @@ func warrantyDispatch(event events.Event, code string, days int64) (notifmodel.D
 	return in, true
 }
 
-// serviceReviewDispatch maps service.review_requested to a dispatch for the
-// customer; the brand is the service brand (K20), review_url the dealer's
-// google_business_url.
-func serviceReviewDispatch(event events.Event) (notifmodel.DispatchInput, bool) {
-	customer, ok := int64FromPayload(event.Payload, "customer_user_id")
-	url := stringFromPayload(event.Payload, "review_url")
-	if !ok || customer <= 0 || url == "" {
+func warrantyClaimDispatch(event events.Event) (notifmodel.DispatchInput, bool) {
+	action := stringFromPayload(event.Payload, "action")
+	to := stringFromPayload(event.Payload, "to")
+	code := catalog.EventWarrantyClaimStatusChanged
+	if action == "opened" {
+		code = catalog.EventWarrantyClaimOpened
+	}
+	ids := userIDsFromPayload(event.Payload, "notify_user_ids")
+	if to == "approved" || to == "rejected" {
+		code = catalog.EventWarrantyClaimResult
+		if customerID, ok := int64FromPayload(event.Payload, "customer_user_id"); ok && customerID > 0 {
+			ids = []int64{customerID}
+		} else {
+			ids = nil
+		}
+	}
+	if len(ids) == 0 {
 		return notifmodel.DispatchInput{}, false
 	}
 	vars := map[string]string{}
-	for _, k := range []string{"organization_name", "review_url", "plate", "service_no"} {
+	for _, k := range []string{"claim_no", "from", "to", "organization_name", "product_name", "plate"} {
+		vars[k] = stringFromPayload(event.Payload, k)
+	}
+	in := notifmodel.DispatchInput{
+		EventCode: code, UserIDs: ids, Vars: vars,
+		Payload: map[string]any{
+			"claim_uuid":    stringFromPayload(event.Payload, "claim_uuid"),
+			"warranty_uuid": stringFromPayload(event.Payload, "warranty_uuid"),
+			"public_code":   stringFromPayload(event.Payload, "public_code"),
+			"from":          vars["from"],
+			"to":            vars["to"],
+		},
+	}
+	if brand, ok := int64FromPayload(event.Payload, "brand_id"); ok && brand > 0 {
+		in.BrandID = &brand
+	}
+	return in, true
+}
+
+// serviceReviewDispatch maps service.review_requested to a dispatch for the
+// customer; the brand is the service brand (K20). form_url is always the
+// platform review form; review_url is the dealer's optional Google link.
+func serviceReviewDispatch(event events.Event) (notifmodel.DispatchInput, bool) {
+	customer, ok := int64FromPayload(event.Payload, "customer_user_id")
+	formURL := stringFromPayload(event.Payload, "form_url")
+	if !ok || customer <= 0 || formURL == "" {
+		return notifmodel.DispatchInput{}, false
+	}
+	vars := map[string]string{}
+	for _, k := range []string{"organization_name", "review_url", "form_url", "plate", "service_no"} {
 		vars[k] = stringFromPayload(event.Payload, k)
 	}
 	in := notifmodel.DispatchInput{
@@ -235,7 +275,7 @@ func serviceReviewDispatch(event events.Event) (notifmodel.DispatchInput, bool) 
 			"service_uuid": stringFromPayload(event.Payload, "service_uuid"),
 			"service_no":   vars["service_no"],
 		},
-		ActionURL: &url,
+		ActionURL: &formURL,
 	}
 	if brand, ok := int64FromPayload(event.Payload, "brand_id"); ok && brand > 0 {
 		in.BrandID = &brand

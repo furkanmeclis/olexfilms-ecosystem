@@ -1,11 +1,14 @@
 package usecase
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"testing"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -66,4 +69,38 @@ func TestGoogleURL(t *testing.T) {
 	if u == nil || *u != "https://g.page/r/x" {
 		t.Fatalf("url = %v", u)
 	}
+}
+
+func TestUserLocale(t *testing.T) {
+	if got := userLocale(i18n.WithAcceptLanguage(context.Background(), "de-DE,de;q=0.9")); got != "de" {
+		t.Fatalf("userLocale(de header) = %q, want de", got)
+	}
+	if got := userLocale(context.Background()); got != "tr" {
+		t.Fatalf("userLocale(empty context) = %q, want tr", got)
+	}
+}
+
+func TestValidateReviewAnswersRequiresActiveQuestions(t *testing.T) {
+	qid := uuidMust("11111111-1111-1111-1111-111111111111")
+	err := validateReviewAnswers(nil, []ReviewFormQuestionView{{
+		UUID: qid, QuestionType: ReviewQuestionRating1To5, Target: ReviewQuestionDealer, IsRequired: true,
+	}}, nil)
+	var ve *ValidationError
+	if !errors.As(err, &ve) || ve.Field != "answers" {
+		t.Fatalf("err = %v, want required answers validation", err)
+	}
+	err = validateReviewAnswers([]ReviewAnswerInput{{QuestionUUID: qid, Rating: intp(5)}}, []ReviewFormQuestionView{{
+		UUID: qid, QuestionType: ReviewQuestionRating1To5, Target: ReviewQuestionDealer, IsRequired: true,
+	}}, nil)
+	if err != nil {
+		t.Fatalf("valid required answer: %v", err)
+	}
+}
+
+func uuidMust(s string) uuid.UUID {
+	id, err := uuid.Parse(s)
+	if err != nil {
+		panic(err)
+	}
+	return id
 }

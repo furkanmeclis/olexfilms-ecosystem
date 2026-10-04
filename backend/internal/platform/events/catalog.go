@@ -289,16 +289,21 @@ const (
 // notification module sends the WhatsApp review request from it.
 const ServiceReviewRequested = "service.review_requested"
 
+// ServiceReviewed is written when the customer submits the platform review
+// form. Processing and reporting consume this event asynchronously.
+const ServiceReviewed = "service.reviewed"
+
 // Warranty domain events (TEC-98 / TEC-185). warranty.created is written
 // by the service.completed consumer, expiring_soon (payload days: 30 or 7)
 // and expired by the daily cron, holder_changed by a completed vehicle
 // transfer, voided by the center.
 const (
-	WarrantyCreated       = "warranty.created"
-	WarrantyExpiringSoon  = "warranty.expiring_soon"
-	WarrantyExpired       = "warranty.expired"
-	WarrantyVoided        = "warranty.voided"
-	WarrantyHolderChanged = "warranty.holder_changed"
+	WarrantyCreated            = "warranty.created"
+	WarrantyExpiringSoon       = "warranty.expiring_soon"
+	WarrantyExpired            = "warranty.expired"
+	WarrantyVoided             = "warranty.voided"
+	WarrantyHolderChanged      = "warranty.holder_changed"
+	WarrantyClaimStatusChanged = "warranty_claim.status_changed"
 )
 
 // Vehicle ownership transfer events (TEC-98 decision 6): two codes, one
@@ -637,6 +642,7 @@ func catalogConstants() []string {
 		OrganizationCreated,
 		OrganizationUpdated,
 		LeadsApplicationReceived,
+		MeasurementMatchSuggested,
 	}
 }
 
@@ -653,3 +659,8 @@ const (
 // (territory distributor or brand center) and notify_user_ids its members
 // holding leads.read.
 const LeadsApplicationReceived = "leads.application_received"
+
+// MeasurementMatchSuggested (TEC-296): the before/after matching of a
+// service linked a measurement automatically (waiting for the dealer's
+// confirmation) or found candidates; written in the matching transaction.
+const MeasurementMatchSuggested = "measurement.match_suggested"

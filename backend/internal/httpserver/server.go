@@ -144,6 +144,9 @@ import (
 	warrantymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty"
 	warrantyhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty/handler"
 	warrantyusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty/usecase"
+	warrantyclaimsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty_claims"
+	warrantyclaimshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty_claims/handler"
+	warrantyclaimsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty_claims/usecase"
 	whatsappmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp"
 	whatsapphandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/handler"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
@@ -423,6 +426,14 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	sysSvc := sysconfig.New(deps.Queries, sysCache)
 	s.sysconfig = sysSvc
 	measurementsmodule.RegisterPanelRoutes(mux, measurementsH, tokens, loader, deps.Queries, featureSvc)
+	// TEC-296: before/after matching of a service, confirmation and manual
+	// selection; an accepted upload computes the suggestions.
+	if deps.DB != nil {
+		measurementsLinker := measurementsmodule.NewLinker(deps.DB, deps.Queries, log)
+		measurementsUC.SetMatcher(measurementsLinker)
+		measurementsmodule.RegisterServiceLinkRoutes(mux, measurementshandler.NewLink(measurementsLinker),
+			tokens, loader, deps.Queries, featureSvc)
+	}
 	orgmodule.RegisterRoutes(mux, orgSvc, uc, deps.Storage, tokens, loader, deps.Queries, ratelimit.New(deps.Redis, cfg.App.Env), stepUpSvc, featureSvc)
 	featuremodule.RegisterRoutes(mux, featurehandler.New(featureSvc, deps.Queries, notifSvc, activityRec, log), featureSvc, tokens, loader, deps.Queries)
 	geomodule.RegisterRoutes(mux, geohandler.New(geoSvc, deps.Queries, activityRec), tokens, loader)
@@ -527,6 +538,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		glorianQueue = deps.Queue
 	}
 	glorian.RegisterEventHandlers(eventBus, deps.Queries, glorianQueue, log)
+	// TEC-296: service events compute the before/after measurement match.
+	measurementsmodule.RegisterEventHandlers(eventBus, deps.DB, deps.Queries, log)
 	// TEC-209: service / warranty / vehicle outbox events refresh the indexes.
 	indexsync.Register(eventBus, deps.Queries, searchIndexer, log)
 	// TEC-189: public warranty lookup behind /garanti/{public_code}.
@@ -539,6 +552,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-191: panel / portal warranty list and detail, center void.
 	warrantyReader := warrantymodule.RegisterListRoutes(mux, deps.DB, deps.Queries, cfg.Auth.FrontendURL,
 		tokens, loader, featureSvc, stepUpSvc, listFinder)
+	// TEC-335: warranty claims (open, photos, review/decision flow, portal status).
+	warrantyClaimsSvc := warrantyclaimsusecase.New(deps.DB, deps.Queries, deps.Storage, outbox.NewStore(deps.DB, deps.Queries))
+	warrantyclaimsmodule.RegisterRoutes(mux, warrantyclaimshandler.New(warrantyClaimsSvc), tokens, loader, deps.Queries, featureSvc)
 
 	// TEC-145: product catalog (brand scoped, center writes).
 	catalogSvc := catalogusecase.New(deps.Queries, searchIndexer)
@@ -608,7 +624,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 			WithWarrantyCron(warrantyCron.ExpireTask, warrantyCron.ExpiringScanTask).
 			WithWarrantyRepairScan(warrantymodule.NewRepairScanner(deps.DB, deps.Queries, cfg.Auth.FrontendURL, cfg.Warranty.RepairScanDays, log).Task).
 			WithVehicleTransferExpire(customersSvc.ExpireTransfersTask).
-			WithServiceReviewRequest(servicereview.NewTaskSender(deps.DB, deps.Queries, log).Task).
+			WithServiceReviewRequest(servicereview.NewTaskSender(deps.DB, deps.Queries, cfg.Auth.FrontendURL, log).Task).
 			WithNotificationPurge(notifSvc.PurgeExpired).
 			WithAnnouncementDispatch(func(ctx context.Context, payload queue.AnnouncementDispatchPayload) error {
 				return announcementsusecase.DispatchBatch(ctx, notifSvc, payload)
@@ -636,8 +652,19 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	contractsSvc := contractsusecase.New(contractsrepo.New(deps.DB, deps.Queries),
 		contractsusecase.WithOTP(otpSvc),
 		contractsusecase.WithStorage(deps.Storage),
+		contractsusecase.WithPDFRenderer(pdfClient),
 		contractsusecase.WithOutbox(outbox.NewStore(deps.DB, deps.Queries)),
 	)
+	_ = docSvc.RegisterLoader(docmodel.KindContract, contractsSvc.ContractDocumentLoader())
+	// TEC-288: contract.executed enqueues the worker-docs contract:pdf task.
+	var contractPDFQueue contractsmodule.Enqueuer
+	if deps.Queue != nil {
+		contractPDFQueue = deps.Queue
+	}
+	contractsmodule.RegisterEventHandlers(eventBus, contractPDFQueue, log)
+	if s.worker != nil {
+		s.worker.WithContractPDF(contractsSvc.GenerateExecutedPDF)
+	}
 	contractsmodule.RegisterRoutes(mux, contractshandler.New(contractsSvc), tokens, loader, deps.Queries, featureSvc)
 	exportmodule.RegisterRoutes(mux, exporthandler.New(exportSvc), tokens, loader, stepUpSvc, deps.Queries)
 	importmodule.RegisterRoutes(mux, importhandler.New(importSvc), tokens, loader, deps.Queries)

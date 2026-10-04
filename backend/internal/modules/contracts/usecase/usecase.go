@@ -20,6 +20,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/repository"
+	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/msgtemplate"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/otp"
@@ -102,6 +103,7 @@ type Service struct {
 	repo    *repository.Store
 	otp     OTPService
 	storage platstorage.Driver
+	pdf     PDFRenderer
 	out     outbox.Enqueuer
 	now     func() time.Time
 }
@@ -122,7 +124,8 @@ func WithOTP(svc OTPService) Option { return func(s *Service) { s.otp = svc } }
 func WithStorage(store platstorage.Driver) Option {
 	return func(s *Service) { s.storage = store }
 }
-func WithOutbox(out outbox.Enqueuer) Option { return func(s *Service) { s.out = out } }
+func WithPDFRenderer(pdf PDFRenderer) Option { return func(s *Service) { s.pdf = pdf } }
+func WithOutbox(out outbox.Enqueuer) Option  { return func(s *Service) { s.out = out } }
 func WithClock(now func() time.Time) Option {
 	return func(s *Service) {
 		if now != nil {
@@ -135,6 +138,17 @@ func WithClock(now func() time.Time) Option {
 type OTPService interface {
 	Request(ctx context.Context, in otp.RequestInput) (otp.RequestResult, error)
 	Verify(ctx context.Context, in otp.VerifyInput) (otp.Verified, error)
+}
+
+// PDFRenderer converts an executed contract HTML snapshot to a PDF.
+type PDFRenderer interface {
+	Convert(ctx context.Context, req pdfrender.Request) ([]byte, error)
+}
+
+// ContractDocumentLoader exposes executed contracts to the shared documents
+// template engine under kind=contract.
+func (s *Service) ContractDocumentLoader() docmodel.SourceLoader {
+	return contractDocumentLoader{s: s}
 }
 
 type CreateFromServiceInput struct {
@@ -1173,7 +1187,7 @@ func int8(id int64) pgtype.Int8 {
 
 func (s *Service) view(ctx context.Context, row db.ContractTemplate, withLocales bool) (model.Template, error) {
 	v := model.Template{
-		UUID: row.Uuid, Name: row.Name, Kind: row.Kind, IsDefault: row.IsDefault,
+		ID: row.ID, UUID: row.Uuid, Name: row.Name, Kind: row.Kind, IsDefault: row.IsDefault,
 		OTPRequired: row.OtpRequired, SignatureRequired: row.SignatureRequired,
 		IsActive: row.IsActive, CreatedAt: row.CreatedAt.Time, UpdatedAt: row.UpdatedAt.Time,
 	}

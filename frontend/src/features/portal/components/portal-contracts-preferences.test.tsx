@@ -102,6 +102,8 @@ async function click(el: Element | null) {
 
 function contract(): PortalContract {
   return {
+    contract_uuid: "c-1",
+    contract_no: 1001,
     service: { uuid: "s-1", service_no: "SRV-0001" },
     status: "completed",
     organization: { uuid: "o-1", name: "Bayi Kadıköy", type: "dealer" },
@@ -111,6 +113,8 @@ function contract(): PortalContract {
     model_year: 2021,
     plate: "34 ABC 123",
     plate_country: "TR",
+    executed_at: "2026-05-01T11:00:00Z",
+    pdf_ready: true,
     created_at: "2026-05-01T10:00:00Z",
   };
 }

@@ -1232,6 +1232,81 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/service-reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List service reviews inside reviews.read scope
+         * @description Dealer sees its own scope with anonymous customer fields hidden; center sees customer identity.
+         */
+        get: operations["listServiceReviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/review-questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List admin review questions */
+        get: operations["listReviewQuestions"];
+        put?: never;
+        /** Create an admin review question */
+        post: operations["createReviewQuestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/review-questions/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Patch an admin review question
+         * @description question_type and target cannot change after answers exist.
+         */
+        patch: operations["updateReviewQuestion"];
+        trace?: never;
+    };
+    "/v1/platform/review-questions/{uuid}/locales/{locale}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Upsert one review question locale */
+        put: operations["putReviewQuestionLocale"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/organizations": {
         parameters: {
             query?: never;
@@ -2735,6 +2810,26 @@ export interface paths {
          * @description Requires contracts.read in the active organization scope.
          */
         get: operations["getContract"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contracts/{uuid}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the ready executed contract PDF
+         * @description Requires contracts.read in the active organization scope. Answers 404 until the executed PDF is ready.
+         */
+        get: operations["getContractPdf"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6581,6 +6676,50 @@ export interface paths {
         patch: operations["completeMeasurementVIN"];
         trace?: never;
     };
+    "/v1/services/{uuid}/measurements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Before/after measurements of a service (TEC-296)
+         * @description The linked before/after measurements (`link_source` auto or manual; an auto link waits for confirmation with `confirmed=false`), the suggestions of the phases without a confirmed link and the other unlinked accepted measurements of the same VIN in the service's organization. Matching rule: before = the measurements in the 14 days before the service start; after = once the service is processing / ready / completed, the measurements from the start on, at most 7 days after completion. A phase is linked automatically only when it is empty and has exactly one candidate. Requires the measurements module and `measurements.link`; a service outside the caller's reach is 404.
+         */
+        get: operations["listServiceMeasurements"];
+        put?: never;
+        /**
+         * Confirm or manually select a before/after measurement (TEC-296)
+         * @description The measurement already linked to the phase is confirmed (`confirmed_by`, `confirmed_at`). An unlinked accepted measurement of the service's organization and VIN is linked manually (confirmed by the caller) into an empty phase or in place of an unconfirmed auto link. 409 `MEASUREMENT_PHASE_TAKEN` when the phase already has a confirmed link, 409 `MEASUREMENT_ALREADY_LINKED` when the measurement is linked elsewhere, 409 `SERVICE_NOT_EDITABLE` for a cancelled service; 422 `MEASUREMENT_NOT_EXPECTED` (has_measurement false), `MEASUREMENT_VIN_PENDING` or `MEASUREMENT_VIN_MISMATCH`. Replacing a link of a completed service is center only (403).
+         */
+        post: operations["linkServiceMeasurement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/services/{uuid}/measurements/{phase}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove the before/after measurement link of a service (TEC-296)
+         * @description Removes the link of the phase. After the service is completed only the center removes a link (403 otherwise); a cancelled service is 409 `SERVICE_NOT_EDITABLE`; a phase without link is 404. Requires the measurements module and `measurements.link`.
+         */
+        delete: operations["unlinkServiceMeasurement"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/mobile/measurements": {
         parameters: {
             query?: never;
@@ -7949,6 +8088,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/warranty-claims": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Warranty claims inside warranty_claims.read scope */
+        get: operations["listWarrantyClaims"];
+        put?: never;
+        /**
+         * Open a warranty claim
+         * @description Dealer or distributor opens a claim on behalf of the customer. The automatic coverage check is stored and never auto-rejects the claim. Portal/customer sessions cannot open claims.
+         */
+        post: operations["createWarrantyClaim"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warranty-claims/{uuid}/photos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add a warranty claim photo */
+        post: operations["addWarrantyClaimPhoto"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warranty-claims/{uuid}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move a warranty claim through review and decision
+         * @description Flow: open -> dealer_review -> center_review -> approved/rejected. Moving to dealer_review requires at least one photo (422 CLAIM_PHOTO_REQUIRED). Rejection requires a reason.
+         */
+        post: operations["transitionWarrantyClaim"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/warranty-claims": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Narrow warranty claim statuses for the portal user
+         * @description Descriptions and photos are intentionally omitted.
+         */
+        get: operations["listPortalWarrantyClaims"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/services": {
         parameters: {
             query?: never;
@@ -9083,10 +9300,30 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The portal user's signed vehicle intake contracts (TEC-245)
-         * @description Portal session (aud=portal) with services.read; customer and fleet sessions alike. Until the contracts module (F3) lands a contract is only the service's contract_id, so the list is the user's services that carry one (same ownership, brand, Glorian and draft rules as GET /v1/portal/services), newest first. With no contract the answer is 200 with an empty list.
+         * The portal user's executed vehicle intake contracts
+         * @description TEC-288. Portal session (aud=portal) with services.read; customer and fleet sessions alike. Lists executed contract_instances for services the user owns as customer or warranty holder, within the domain brand, excluding Glorian, newest execution first. With no executed contract the answer is 200 with an empty list.
          */
         get: operations["listPortalContracts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/contracts/{uuid}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Executed contract PDF of the signed-in customer
+         * @description TEC-288. Portal session (services.read); same ownership rule as GET /v1/portal/contracts. Another customer's contract or a PDF that is not ready answers 404.
+         */
+        get: operations["getPortalContractPdf"];
         put?: never;
         post?: never;
         delete?: never;
@@ -11736,6 +11973,8 @@ export interface components {
             updated_at: string;
         };
         ContractTemplate: {
+            /** Format: int64 */
+            id: number;
             /** Format: uuid */
             uuid: string;
             name: string;
@@ -14102,6 +14341,65 @@ export interface components {
             /** @description 17 letters or digits without I, O or Q (upper-cased) */
             vin: string;
         };
+        ServiceMeasurementLinkRequest: {
+            /** Format: uuid */
+            measurement_uuid: string;
+            /** @enum {string} */
+            phase: "before" | "after";
+        };
+        ServiceMeasurementBrief: {
+            /** Format: uuid */
+            uuid: string;
+            vin: string | null;
+            /** @enum {string} */
+            status: "accepted" | "vin_pending";
+            /** @enum {string} */
+            source: "mobile" | "legacy_import";
+            device_serial: string | null;
+            /** Format: date-time */
+            measured_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        ServiceMeasurementLink: {
+            /** @enum {string} */
+            phase: "before" | "after";
+            /** @enum {string} */
+            link_source: "auto" | "manual";
+            confirmed: boolean;
+            /** Format: date-time */
+            confirmed_at: string | null;
+            confirmed_by: null | {
+                /** Format: uuid */
+                uuid: string;
+                name: string;
+            };
+            /** Format: date-time */
+            linked_at: string;
+            measurement: components["schemas"]["ServiceMeasurementBrief"];
+        };
+        ServiceMeasurements: {
+            /** Format: uuid */
+            service_uuid: string;
+            vin: string | null;
+            has_measurement: boolean;
+            status: string;
+            links: components["schemas"]["ServiceMeasurementLink"][];
+            /** @description Window candidates of the phases without a confirmed link (before newest first, after oldest first). */
+            suggestions: {
+                /** @enum {string} */
+                phase: "before" | "after";
+                measurement: components["schemas"]["ServiceMeasurementBrief"];
+            }[];
+            /** @description The other unlinked accepted measurements of the same VIN in the service's organization. */
+            candidates: components["schemas"]["ServiceMeasurementBrief"][];
+        };
+        EnvelopeServiceMeasurements: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ServiceMeasurements"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
         MobileMeasurementRequest: {
             /** @description Idempotency key in the body (alternative to the Idempotency-Key header) */
             client_measurement_id?: string;
@@ -15250,6 +15548,79 @@ export interface components {
             };
             /** @description The caller may void it (warranties.void and an active or expired status). */
             can_void: boolean;
+            /** @description Portal warranty detail only; no descriptions or photos. */
+            claims?: components["schemas"]["PortalWarrantyClaimStatus"][];
+        };
+        /** @enum {string} */
+        WarrantyClaimStatus: "open" | "dealer_review" | "center_review" | "approved" | "rejected" | "reapplied" | "closed";
+        WarrantyClaimCoverageCheck: {
+            ok: boolean;
+            reasons: ("warranty_not_active" | "warranty_period_expired" | "product_has_no_warranty" | "part_not_covered")[];
+            /** Format: date-time */
+            checked_at: string;
+        };
+        WarrantyClaimPartInput: {
+            part_key: string;
+            /** Format: uuid */
+            service_item_uuid?: string | null;
+            note?: string;
+        };
+        WarrantyClaimCreateInput: {
+            /** Format: uuid */
+            warranty_uuid: string;
+            description: string;
+            parts: components["schemas"]["WarrantyClaimPartInput"][];
+        };
+        WarrantyClaimTransitionInput: {
+            status: components["schemas"]["WarrantyClaimStatus"];
+            rejection_reason?: string;
+        };
+        WarrantyClaimPart: {
+            /** Format: uuid */
+            uuid: string;
+            part_key: string;
+            note?: string;
+        };
+        WarrantyClaimPhoto: {
+            /** Format: uuid */
+            uuid: string;
+            mime_type: string;
+            /** Format: int64 */
+            size_bytes: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        WarrantyClaim: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: int64 */
+            claim_no: number;
+            /** Format: uuid */
+            warranty_uuid: string;
+            status: components["schemas"]["WarrantyClaimStatus"];
+            description?: string;
+            rejection_reason?: string | null;
+            coverage_check: components["schemas"]["WarrantyClaimCoverageCheck"];
+            ai_damage_type?: string | null;
+            ai_summary?: string | null;
+            ai_confidence?: string | null;
+            /** Format: date-time */
+            ai_triaged_at?: string | null;
+            parts?: components["schemas"]["WarrantyClaimPart"][];
+            photos?: components["schemas"]["WarrantyClaimPhoto"][];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        PortalWarrantyClaimStatus: {
+            /** Format: uuid */
+            uuid: string;
+            status: components["schemas"]["WarrantyClaimStatus"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
         };
         WarrantyVoidInput: {
             reason: string;
@@ -15269,6 +15640,38 @@ export interface components {
                 total: number;
                 limit: number;
                 offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWarrantyClaim: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WarrantyClaim"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWarrantyClaimPhoto: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WarrantyClaimPhoto"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWarrantyClaimPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["WarrantyClaim"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePortalWarrantyClaims: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["PortalWarrantyClaimStatus"][];
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -16522,12 +16925,20 @@ export interface components {
             data: components["schemas"]["PortalService"];
             meta: components["schemas"]["ResponseMeta"];
         };
-        /** @description TEC-244 portal service review form. */
+        /** @description TEC-244/TEC-351 portal service review form. Legacy bodies with only the two ratings are accepted. */
         PortalServiceReviewInput: {
             platform_rating: number;
             product_rating: number;
             /** @description Optional; trimmed, empty means none. */
             comment?: string | null;
+            /** @default false */
+            is_anonymous: boolean;
+            /**
+             * @default portal
+             * @enum {string}
+             */
+            source: "portal" | "whatsapp_link";
+            answers?: components["schemas"]["ReviewAnswerInput"][];
         };
         PortalServiceReviewItem: {
             /** Format: uuid */
@@ -16535,6 +16946,10 @@ export interface components {
             platform_rating: number;
             product_rating: number;
             comment: string | null;
+            is_anonymous: boolean;
+            /** @enum {string} */
+            source: "portal" | "whatsapp_link";
+            answers: components["schemas"]["ReviewAnswer"][];
             /** Format: date-time */
             created_at: string;
         };
@@ -16545,11 +16960,131 @@ export interface components {
             can_review: boolean;
             /** @description The dealer's Google review link; null when unset. */
             google_business_url: string | null;
+            questions: components["schemas"]["ReviewFormQuestion"][];
+            products: components["schemas"]["ReviewProduct"][];
         };
         EnvelopePortalServiceReview: {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["PortalServiceReview"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        ReviewQuestionType: "rating_1_5" | "text";
+        /** @enum {string} */
+        ReviewQuestionTarget: "platform" | "dealer" | "product";
+        ReviewQuestionInput: {
+            question_key?: string;
+            question_type?: components["schemas"]["ReviewQuestionType"];
+            target?: components["schemas"]["ReviewQuestionTarget"];
+            is_required?: boolean;
+            is_active?: boolean;
+            /** Format: int32 */
+            sort_order?: number;
+        };
+        ReviewQuestionLocaleInput: {
+            text: string;
+        };
+        ReviewQuestionLocale: {
+            locale: string;
+            text: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        ReviewQuestion: {
+            /** Format: uuid */
+            uuid: string;
+            question_key: string;
+            question_type: components["schemas"]["ReviewQuestionType"];
+            target: components["schemas"]["ReviewQuestionTarget"];
+            is_required: boolean;
+            is_active: boolean;
+            /** Format: int32 */
+            sort_order: number;
+            locales: components["schemas"]["ReviewQuestionLocale"][];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        ReviewFormQuestion: {
+            /** Format: uuid */
+            uuid: string;
+            question_key: string;
+            question_type: components["schemas"]["ReviewQuestionType"];
+            target: components["schemas"]["ReviewQuestionTarget"];
+            is_required: boolean;
+            /** Format: int32 */
+            sort_order: number;
+            text: string;
+        };
+        ReviewProduct: {
+            /** Format: uuid */
+            uuid: string;
+            sku: string;
+            name: string;
+        };
+        ReviewAnswerInput: {
+            /** Format: uuid */
+            question_uuid: string;
+            /** Format: uuid */
+            product_uuid?: string | null;
+            rating?: number | null;
+            text?: string | null;
+        };
+        ReviewAnswer: components["schemas"]["ReviewAnswerInput"];
+        ReviewCustomer: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            phone: string | null;
+        };
+        ServiceReview: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            service_uuid: string;
+            service_no: string;
+            plate: string | null;
+            platform_rating: number;
+            product_rating: number;
+            comment: string | null;
+            is_anonymous: boolean;
+            /** @enum {string} */
+            source: "portal" | "whatsapp_link";
+            customer: null | components["schemas"]["ReviewCustomer"];
+            answers: components["schemas"]["ReviewAnswer"][];
+            /** Format: date-time */
+            created_at: string;
+        };
+        EnvelopeReviewQuestion: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ReviewQuestion"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeReviewQuestionLocale: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ReviewQuestionLocale"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeReviewQuestionList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ReviewQuestion"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeServiceReviewList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ServiceReview"][];
+                /** Format: int64 */
+                total: number;
+            };
             meta: components["schemas"]["ResponseMeta"];
         };
         PortalNamedRef: {
@@ -16672,8 +17207,12 @@ export interface components {
             };
             meta: components["schemas"]["ResponseMeta"];
         };
-        /** @description A signed vehicle intake contract of the portal user (TEC-245). Until F3 a contract is only the service's contract_id: the item names the service, the vehicle and the organization; F3 adds the signing details and the PDF. */
+        /** @description An executed vehicle intake contract of the portal user (TEC-288). `service` remains for TEC-245 clients; flat contract fields identify the immutable executed contract and whether its PDF is ready. */
         PortalContract: {
+            /** Format: uuid */
+            contract_uuid: string;
+            /** Format: int64 */
+            contract_no: number;
             service: {
                 /** Format: uuid */
                 uuid: string;
@@ -16689,6 +17228,9 @@ export interface components {
             model_year: number | null;
             plate: string | null;
             plate_country: string | null;
+            /** Format: date-time */
+            executed_at: string | null;
+            pdf_ready: boolean;
             /** Format: date-time */
             created_at: string;
         };
@@ -19066,6 +19608,146 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    listServiceReviews: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service reviews */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceReviewList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listReviewQuestions: {
+        parameters: {
+            query?: {
+                active?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Review questions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeReviewQuestionList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createReviewQuestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewQuestionInput"];
+            };
+        };
+        responses: {
+            /** @description Created question */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeReviewQuestion"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updateReviewQuestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewQuestionInput"];
+            };
+        };
+        responses: {
+            /** @description Updated question */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeReviewQuestion"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    putReviewQuestionLocale: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                locale: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewQuestionLocaleInput"];
+            };
+        };
+        responses: {
+            /** @description Locale */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeReviewQuestionLocale"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getMeOrganizations: {
@@ -21660,6 +22342,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeContract"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getContractPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
                 };
             };
             401: components["responses"]["Unauthenticated"];
@@ -28663,6 +29370,89 @@ export interface operations {
             422: components["responses"]["UnprocessableEntity"];
         };
     };
+    listServiceMeasurements: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service measurements */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceMeasurements"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    linkServiceMeasurement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceMeasurementLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description Service measurements after the change */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceMeasurements"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    unlinkServiceMeasurement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                phase: "before" | "after";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Link removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
     postMobileMeasurement: {
         parameters: {
             query?: never;
@@ -31214,6 +32004,157 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    listWarrantyClaims: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["WarrantyClaimStatus"];
+                warranty_uuid?: string;
+                vehicle_uuid?: string;
+                created_from?: string;
+                created_to?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Warranty claims */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarrantyClaimPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createWarrantyClaim: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarrantyClaimCreateInput"];
+            };
+        };
+        responses: {
+            /** @description Created warranty claim */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarrantyClaim"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    addWarrantyClaimPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description JPEG, PNG or WebP, maximum 12 MB.
+                     */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Uploaded photo */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarrantyClaimPhoto"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    transitionWarrantyClaim: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarrantyClaimTransitionInput"];
+            };
+        };
+        responses: {
+            /** @description Updated warranty claim */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarrantyClaim"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    listPortalWarrantyClaims: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Portal warranty claim statuses */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePortalWarrantyClaims"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     listServices: {
         parameters: {
             query?: {
@@ -33327,6 +34268,32 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getPortalContractPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getPortalNotificationPreferences: {

@@ -45,6 +45,8 @@ func RegisterRoutes(
 	write := middleware.RequirePermission(rbac.PermServicesWrite)
 	act := middleware.RequireAnyPermission(rbac.PermServicesWrite, rbac.PermServicesCancel, rbac.PermServicesComplete)
 	cancelCompleted := middleware.RequirePermission(rbac.PermServicesCancelCompleted)
+	reviewsRead := middleware.RequireScope(q, rbac.PermReviewsRead)
+	questionsManage := middleware.RequireScope(q, rbac.PermReviewsQuestionsManage)
 	create := middleware.Chain(http.HandlerFunc(h.Create), authn, org, module,
 		middleware.RequireScope(q, rbac.PermServicesWrite))
 
@@ -60,6 +62,11 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/services/{uuid}/images", route(h.UploadImage, write))
 	mux.Handle("GET /v1/services/{uuid}/images/{image}", route(h.DownloadImage))
 	mux.Handle("DELETE /v1/services/{uuid}/images/{image}", route(h.DeleteImage, write))
+	mux.Handle("GET /v1/service-reviews", middleware.Chain(http.HandlerFunc(h.ListServiceReviews), authn, org, module, reviewsRead))
+	mux.Handle("GET /v1/platform/review-questions", middleware.Chain(http.HandlerFunc(h.ListReviewQuestions), authn, org, module, questionsManage))
+	mux.Handle("POST /v1/platform/review-questions", middleware.Chain(http.HandlerFunc(h.CreateReviewQuestion), authn, org, module, questionsManage))
+	mux.Handle("PATCH /v1/platform/review-questions/{uuid}", middleware.Chain(http.HandlerFunc(h.UpdateReviewQuestion), authn, org, module, questionsManage))
+	mux.Handle("PUT /v1/platform/review-questions/{uuid}/locales/{locale}", middleware.Chain(http.HandlerFunc(h.PutReviewQuestionLocale), authn, org, module, questionsManage))
 	// TEC-230: consumption correction of a completed service (center only,
 	// services.cancel; the use case checks the scope and the time window).
 	mux.Handle("POST /v1/services/{uuid}/items/{item}/consumption-correction",
