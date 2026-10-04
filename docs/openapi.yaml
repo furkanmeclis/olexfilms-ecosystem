@@ -12274,6 +12274,125 @@ paths:
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
+  /v1/services/{uuid}/measurements:
+    get:
+      tags: [Measurements]
+      operationId: listServiceMeasurements
+      summary: Before/after measurements of a service (TEC-296)
+      description: >-
+        The linked before/after measurements (`link_source` auto or manual;
+        an auto link waits for confirmation with `confirmed=false`), the
+        suggestions of the phases without a confirmed link and the other
+        unlinked accepted measurements of the same VIN in the service's
+        organization. Matching rule: before = the measurements in the 14 days
+        before the service start; after = once the service is processing /
+        ready / completed, the measurements from the start on, at most 7 days
+        after completion. A phase is linked automatically only when it is
+        empty and has exactly one candidate. Requires the measurements module
+        and `measurements.link`; a service outside the caller's reach is 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Service measurements
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeServiceMeasurements"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Measurements]
+      operationId: linkServiceMeasurement
+      summary: Confirm or manually select a before/after measurement (TEC-296)
+      description: >-
+        The measurement already linked to the phase is confirmed
+        (`confirmed_by`, `confirmed_at`). An unlinked accepted measurement of
+        the service's organization and VIN is linked manually (confirmed by
+        the caller) into an empty phase or in place of an unconfirmed auto
+        link. 409 `MEASUREMENT_PHASE_TAKEN` when the phase already has a
+        confirmed link, 409 `MEASUREMENT_ALREADY_LINKED` when the measurement
+        is linked elsewhere, 409 `SERVICE_NOT_EDITABLE` for a cancelled
+        service; 422 `MEASUREMENT_NOT_EXPECTED` (has_measurement false),
+        `MEASUREMENT_VIN_PENDING` or `MEASUREMENT_VIN_MISMATCH`. Replacing a
+        link of a completed service is center only (403).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceMeasurementLinkRequest"
+      responses:
+        "200":
+          description: Service measurements after the change
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeServiceMeasurements"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/services/{uuid}/measurements/{phase}:
+    delete:
+      tags: [Measurements]
+      operationId: unlinkServiceMeasurement
+      summary: Remove the before/after measurement link of a service (TEC-296)
+      description: >-
+        Removes the link of the phase. After the service is completed only the
+        center removes a link (403 otherwise); a cancelled service is 409
+        `SERVICE_NOT_EDITABLE`; a phase without link is 404. Requires the
+        measurements module and `measurements.link`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: phase
+          in: path
+          required: true
+          schema: { type: string, enum: [before, after] }
+      responses:
+        "204":
+          description: Link removed
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   /v1/mobile/measurements:
     post:
       tags: [Mobile]
@@ -24632,6 +24751,78 @@ components:
           minLength: 17
           maxLength: 17
           description: 17 letters or digits without I, O or Q (upper-cased)
+
+    # TEC-296 (F3-02d): before/after measurements of a service.
+    ServiceMeasurementLinkRequest:
+      type: object
+      required: [measurement_uuid, phase]
+      properties:
+        measurement_uuid: { type: string, format: uuid }
+        phase: { type: string, enum: [before, after] }
+
+    ServiceMeasurementBrief:
+      type: object
+      required: [uuid, vin, status, source, device_serial, measured_at, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        vin: { type: [string, "null"] }
+        status: { type: string, enum: [accepted, vin_pending] }
+        source: { type: string, enum: [mobile, legacy_import] }
+        device_serial: { type: [string, "null"] }
+        measured_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+
+    ServiceMeasurementLink:
+      type: object
+      required: [phase, link_source, confirmed, confirmed_at, confirmed_by, linked_at, measurement]
+      properties:
+        phase: { type: string, enum: [before, after] }
+        link_source: { type: string, enum: [auto, manual] }
+        confirmed: { type: boolean }
+        confirmed_at: { type: [string, "null"], format: date-time }
+        confirmed_by:
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [uuid, name]
+              properties:
+                uuid: { type: string, format: uuid }
+                name: { type: string }
+        linked_at: { type: string, format: date-time }
+        measurement: { $ref: "#/components/schemas/ServiceMeasurementBrief" }
+
+    ServiceMeasurements:
+      type: object
+      required: [service_uuid, vin, has_measurement, status, links, suggestions, candidates]
+      properties:
+        service_uuid: { type: string, format: uuid }
+        vin: { type: [string, "null"] }
+        has_measurement: { type: boolean }
+        status: { type: string }
+        links:
+          type: array
+          items: { $ref: "#/components/schemas/ServiceMeasurementLink" }
+        suggestions:
+          type: array
+          description: Window candidates of the phases without a confirmed link (before newest first, after oldest first).
+          items:
+            type: object
+            required: [phase, measurement]
+            properties:
+              phase: { type: string, enum: [before, after] }
+              measurement: { $ref: "#/components/schemas/ServiceMeasurementBrief" }
+        candidates:
+          type: array
+          description: The other unlinked accepted measurements of the same VIN in the service's organization.
+          items: { $ref: "#/components/schemas/ServiceMeasurementBrief" }
+
+    EnvelopeServiceMeasurements:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ServiceMeasurements" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     # K28 / TEC-233: minimal F2 storage; F3-02 (TEC-113) makes vin
     # mandatory and reads the parts.

@@ -6523,6 +6523,50 @@ export interface paths {
         patch: operations["completeMeasurementVIN"];
         trace?: never;
     };
+    "/v1/services/{uuid}/measurements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Before/after measurements of a service (TEC-296)
+         * @description The linked before/after measurements (`link_source` auto or manual; an auto link waits for confirmation with `confirmed=false`), the suggestions of the phases without a confirmed link and the other unlinked accepted measurements of the same VIN in the service's organization. Matching rule: before = the measurements in the 14 days before the service start; after = once the service is processing / ready / completed, the measurements from the start on, at most 7 days after completion. A phase is linked automatically only when it is empty and has exactly one candidate. Requires the measurements module and `measurements.link`; a service outside the caller's reach is 404.
+         */
+        get: operations["listServiceMeasurements"];
+        put?: never;
+        /**
+         * Confirm or manually select a before/after measurement (TEC-296)
+         * @description The measurement already linked to the phase is confirmed (`confirmed_by`, `confirmed_at`). An unlinked accepted measurement of the service's organization and VIN is linked manually (confirmed by the caller) into an empty phase or in place of an unconfirmed auto link. 409 `MEASUREMENT_PHASE_TAKEN` when the phase already has a confirmed link, 409 `MEASUREMENT_ALREADY_LINKED` when the measurement is linked elsewhere, 409 `SERVICE_NOT_EDITABLE` for a cancelled service; 422 `MEASUREMENT_NOT_EXPECTED` (has_measurement false), `MEASUREMENT_VIN_PENDING` or `MEASUREMENT_VIN_MISMATCH`. Replacing a link of a completed service is center only (403).
+         */
+        post: operations["linkServiceMeasurement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/services/{uuid}/measurements/{phase}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove the before/after measurement link of a service (TEC-296)
+         * @description Removes the link of the phase. After the service is completed only the center removes a link (403 otherwise); a cancelled service is 409 `SERVICE_NOT_EDITABLE`; a phase without link is 404. Requires the measurements module and `measurements.link`.
+         */
+        delete: operations["unlinkServiceMeasurement"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/mobile/measurements": {
         parameters: {
             query?: never;
@@ -14073,6 +14117,65 @@ export interface components {
         MeasurementVINRequest: {
             /** @description 17 letters or digits without I, O or Q (upper-cased) */
             vin: string;
+        };
+        ServiceMeasurementLinkRequest: {
+            /** Format: uuid */
+            measurement_uuid: string;
+            /** @enum {string} */
+            phase: "before" | "after";
+        };
+        ServiceMeasurementBrief: {
+            /** Format: uuid */
+            uuid: string;
+            vin: string | null;
+            /** @enum {string} */
+            status: "accepted" | "vin_pending";
+            /** @enum {string} */
+            source: "mobile" | "legacy_import";
+            device_serial: string | null;
+            /** Format: date-time */
+            measured_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        ServiceMeasurementLink: {
+            /** @enum {string} */
+            phase: "before" | "after";
+            /** @enum {string} */
+            link_source: "auto" | "manual";
+            confirmed: boolean;
+            /** Format: date-time */
+            confirmed_at: string | null;
+            confirmed_by: null | {
+                /** Format: uuid */
+                uuid: string;
+                name: string;
+            };
+            /** Format: date-time */
+            linked_at: string;
+            measurement: components["schemas"]["ServiceMeasurementBrief"];
+        };
+        ServiceMeasurements: {
+            /** Format: uuid */
+            service_uuid: string;
+            vin: string | null;
+            has_measurement: boolean;
+            status: string;
+            links: components["schemas"]["ServiceMeasurementLink"][];
+            /** @description Window candidates of the phases without a confirmed link (before newest first, after oldest first). */
+            suggestions: {
+                /** @enum {string} */
+                phase: "before" | "after";
+                measurement: components["schemas"]["ServiceMeasurementBrief"];
+            }[];
+            /** @description The other unlinked accepted measurements of the same VIN in the service's organization. */
+            candidates: components["schemas"]["ServiceMeasurementBrief"][];
+        };
+        EnvelopeServiceMeasurements: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ServiceMeasurements"];
+            meta: components["schemas"]["ResponseMeta"];
         };
         MobileMeasurementRequest: {
             /** @description Idempotency key in the body (alternative to the Idempotency-Key header) */
@@ -28669,6 +28772,89 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    listServiceMeasurements: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service measurements */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceMeasurements"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    linkServiceMeasurement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceMeasurementLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description Service measurements after the change */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceMeasurements"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    unlinkServiceMeasurement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                phase: "before" | "after";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Link removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     postMobileMeasurement: {
