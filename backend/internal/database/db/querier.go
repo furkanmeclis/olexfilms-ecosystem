@@ -110,6 +110,7 @@ type Querier interface {
 	CountAnnouncementsByOrganizations(ctx context.Context, arg CountAnnouncementsByOrganizationsParams) (int64, error)
 	CountAppLogs(ctx context.Context, arg CountAppLogsParams) (int64, error)
 	CountAppLogsByLevel(ctx context.Context) ([]CountAppLogsByLevelRow, error)
+	CountAppointmentsByOrganizations(ctx context.Context, arg CountAppointmentsByOrganizationsParams) (int64, error)
 	CountBarcodeBatches(ctx context.Context, organizationID int64) (int64, error)
 	CountBinProductStockRows(ctx context.Context, arg CountBinProductStockRowsParams) (int64, error)
 	// TEC-229: booked return lines of an order (a received return whose line
@@ -168,6 +169,7 @@ type Querier interface {
 	CountRoles(ctx context.Context, q_ pgtype.Text) (int64, error)
 	CountScopedVehicles(ctx context.Context, arg CountScopedVehiclesParams) (int64, error)
 	CountSearchFinanceEntries(ctx context.Context, arg CountSearchFinanceEntriesParams) (int64, error)
+	CountServiceReviewAnswersByQuestion(ctx context.Context, arg CountServiceReviewAnswersByQuestionParams) (int64, error)
 	CountServiceSubscriptionsByItem(ctx context.Context, arg CountServiceSubscriptionsByItemParams) (int64, error)
 	CountServicesInScope(ctx context.Context, arg CountServicesInScopeParams) (int64, error)
 	CountServicesOfUser(ctx context.Context, customerUserID int64) (int64, error)
@@ -197,6 +199,8 @@ type Querier interface {
 	// TEC-329 (F3-05a): announcements, their translations, audiences and read
 	// receipts (migration 000086).
 	CreateAnnouncement(ctx context.Context, arg CreateAnnouncementParams) (Announcement, error)
+	CreateAppointment(ctx context.Context, arg CreateAppointmentParams) (Appointment, error)
+	CreateAppointmentClosure(ctx context.Context, arg CreateAppointmentClosureParams) (AppointmentClosure, error)
 	CreateBarcodeBatch(ctx context.Context, arg CreateBarcodeBatchParams) (BarcodeBatch, error)
 	CreateBatchUnit(ctx context.Context, arg CreateBatchUnitParams) (Unit, error)
 	CreateBulkJob(ctx context.Context, arg CreateBulkJobParams) (BulkJob, error)
@@ -281,6 +285,7 @@ type Querier interface {
 	CreateQuoteLine(ctx context.Context, arg CreateQuoteLineParams) (QuoteLine, error)
 	CreateQuoteReminder(ctx context.Context, arg CreateQuoteReminderParams) (QuoteReminder, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
+	CreateReviewQuestion(ctx context.Context, arg CreateReviewQuestionParams) (ReviewQuestion, error)
 	CreateRole(ctx context.Context, arg CreateRoleParams) (Role, error)
 	CreateRoom(ctx context.Context, arg CreateRoomParams) (Room, error)
 	// TEC-178 (F1-05a): services, service items, images and status logs
@@ -305,6 +310,9 @@ type Querier interface {
 	// ON CONFLICT DO NOTHING: a second review of the same service returns no
 	// row (pgx.ErrNoRows), which the use case answers with 409.
 	CreateServiceReview(ctx context.Context, arg CreateServiceReviewParams) (ServiceReview, error)
+	// The trigger enforces org/brand = review, question brand = review brand,
+	// type/rating/text agreement and product target <=> product_id.
+	CreateServiceReviewAnswer(ctx context.Context, arg CreateServiceReviewAnswerParams) (ServiceReviewAnswer, error)
 	CreateServiceSubscription(ctx context.Context, arg CreateServiceSubscriptionParams) (ServiceSubscription, error)
 	CreateServiceSubscriptionCancelRequest(ctx context.Context, arg CreateServiceSubscriptionCancelRequestParams) (ServiceSubscriptionCancelRequest, error)
 	// TEC-249 (F2-04d): short URLs behind /s/{token}.
@@ -386,6 +394,7 @@ type Querier interface {
 	DeleteAppLogByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	DeleteAppLogsByUUIDs(ctx context.Context, uuids []uuid.UUID) (int64, error)
 	DeleteAppLogsMatching(ctx context.Context, arg DeleteAppLogsMatchingParams) (int64, error)
+	DeleteAppointmentClosure(ctx context.Context, arg DeleteAppointmentClosureParams) (int64, error)
 	// Fails with a restrict/foreign key violation while models still use the brand.
 	DeleteCarBrand(ctx context.Context, id int64) (int64, error)
 	DeleteCarModel(ctx context.Context, id int64) (int64, error)
@@ -430,6 +439,7 @@ type Querier interface {
 	DeletePushSubscription(ctx context.Context, arg DeletePushSubscriptionParams) error
 	DeletePushSubscriptionByEndpoint(ctx context.Context, endpoint string) error
 	DeleteQuoteLines(ctx context.Context, quoteID int64) (int64, error)
+	DeleteReviewQuestionLocale(ctx context.Context, arg DeleteReviewQuestionLocaleParams) error
 	DeleteRole(ctx context.Context, argUuid uuid.UUID) error
 	DeleteRolePermission(ctx context.Context, arg DeleteRolePermissionParams) error
 	DeleteRoom(ctx context.Context, arg DeleteRoomParams) (int64, error)
@@ -514,6 +524,9 @@ type Querier interface {
 	GetAnnouncementByUUID(ctx context.Context, argUuid uuid.UUID) (Announcement, error)
 	GetAppLogByUUID(ctx context.Context, argUuid uuid.UUID) (AppLog, error)
 	GetAppSettings(ctx context.Context) (AppSetting, error)
+	GetAppointmentByID(ctx context.Context, arg GetAppointmentByIDParams) (Appointment, error)
+	GetAppointmentByUUID(ctx context.Context, arg GetAppointmentByUUIDParams) (Appointment, error)
+	GetAppointmentSettings(ctx context.Context, organizationID int64) (AppointmentSetting, error)
 	GetAuthSettings(ctx context.Context) (GetAuthSettingsRow, error)
 	GetBarcodeBatchByUUID(ctx context.Context, arg GetBarcodeBatchByUUIDParams) (BarcodeBatch, error)
 	GetBrandByID(ctx context.Context, id int64) (Brand, error)
@@ -550,6 +563,7 @@ type Querier interface {
 	GetConsentForText(ctx context.Context, arg GetConsentForTextParams) (Consent, error)
 	GetContractInstanceByID(ctx context.Context, id int64) (ContractInstance, error)
 	GetContractInstanceByUUID(ctx context.Context, argUuid uuid.UUID) (ContractInstance, error)
+	GetContractInstanceByUUIDScoped(ctx context.Context, arg GetContractInstanceByUUIDScopedParams) (ContractInstance, error)
 	GetContractInstanceForUpdate(ctx context.Context, id int64) (ContractInstance, error)
 	GetContractMediaByUUID(ctx context.Context, arg GetContractMediaByUUIDParams) (ContractMedium, error)
 	GetContractSigner(ctx context.Context, arg GetContractSignerParams) (ContractSigner, error)
@@ -730,6 +744,8 @@ type Querier interface {
 	// queued / processing one created at or after pending_after. Failed and
 	// expired jobs are never reused.
 	GetReusablePortalServiceJob(ctx context.Context, arg GetReusablePortalServiceJobParams) (ExportJob, error)
+	GetReviewQuestionByID(ctx context.Context, arg GetReviewQuestionByIDParams) (ReviewQuestion, error)
+	GetReviewQuestionByUUID(ctx context.Context, arg GetReviewQuestionByUUIDParams) (ReviewQuestion, error)
 	GetRoleByID(ctx context.Context, id int64) (Role, error)
 	GetRoleBySlug(ctx context.Context, slug string) (Role, error)
 	GetRoleByUUID(ctx context.Context, argUuid uuid.UUID) (Role, error)
@@ -742,6 +758,8 @@ type Querier interface {
 	GetServiceCatalogItem(ctx context.Context, arg GetServiceCatalogItemParams) (ServiceCatalogItem, error)
 	GetServiceCatalogItemByID(ctx context.Context, id int64) (ServiceCatalogItem, error)
 	GetServiceCatalogItemByUUID(ctx context.Context, arg GetServiceCatalogItemByUUIDParams) (ServiceCatalogItem, error)
+	GetServiceForContractByID(ctx context.Context, id int64) (GetServiceForContractByIDRow, error)
+	GetServiceForContractByUUID(ctx context.Context, arg GetServiceForContractByUUIDParams) (GetServiceForContractByUUIDRow, error)
 	GetServiceForIndex(ctx context.Context, argUuid uuid.UUID) (GetServiceForIndexRow, error)
 	// The service a measurement is attached to, bounded by the active
 	// organization (a service of another organization is not found).
@@ -998,6 +1016,9 @@ type Querier interface {
 	ListAnnouncementsByOrganizations(ctx context.Context, arg ListAnnouncementsByOrganizationsParams) ([]Announcement, error)
 	ListAppLogSources(ctx context.Context) ([]string, error)
 	ListAppLogs(ctx context.Context, arg ListAppLogsParams) ([]AppLog, error)
+	ListAppointmentClosures(ctx context.Context, arg ListAppointmentClosuresParams) ([]AppointmentClosure, error)
+	ListAppointmentSettingsByOrganizations(ctx context.Context, organizationIds []int64) ([]AppointmentSetting, error)
+	ListAppointmentsByOrganizations(ctx context.Context, arg ListAppointmentsByOrganizationsParams) ([]Appointment, error)
 	ListBarcodeBatches(ctx context.Context, arg ListBarcodeBatchesParams) ([]BarcodeBatch, error)
 	ListBinProductStockRows(ctx context.Context, arg ListBinProductStockRowsParams) ([]ListBinProductStockRowsRow, error)
 	ListBinProductStocksByLocation(ctx context.Context, locationID int64) ([]BinProductStock, error)
@@ -1315,6 +1336,15 @@ type Querier interface {
 	// organization follows from such a movement), or a projection row it holds.
 	ListRebuildUnitIDsByOrganization(ctx context.Context, organizationID int64) ([]int64, error)
 	ListReservationsByOrder(ctx context.Context, orderID int64) ([]StockReservation, error)
+	ListReviewQuestionLocales(ctx context.Context, questionID int64) ([]ReviewQuestionLocale, error)
+	// Batch load for a question list (avoids N+1).
+	ListReviewQuestionLocalesByQuestions(ctx context.Context, questionIds []int64) ([]ReviewQuestionLocale, error)
+	// TEC-350 (F3-09a): admin-defined review questions, their translations, the
+	// answers on a service review, and the review flags (migration 000091).
+	// Questions are bounded by brand; answer reads are bounded by resolved
+	// organization ids where the API layer owns scope resolution.
+	// active_only = true lists only the active questions (the portal form).
+	ListReviewQuestionsByBrand(ctx context.Context, arg ListReviewQuestionsByBrandParams) ([]ReviewQuestion, error)
 	ListRoleGrantsByRoleID(ctx context.Context, roleID int64) ([]ListRoleGrantsByRoleIDRow, error)
 	ListRoleGrantsByRoleUUID(ctx context.Context, argUuid uuid.UUID) ([]ListRoleGrantsByRoleUUIDRow, error)
 	ListRolePermissionSlugsByRoleUUID(ctx context.Context, argUuid uuid.UUID) ([]string, error)
@@ -1346,6 +1376,12 @@ type Querier interface {
 	ListServiceMeasurements(ctx context.Context, arg ListServiceMeasurementsParams) ([]ServiceMeasurement, error)
 	ListServicePriceOverrides(ctx context.Context, arg ListServicePriceOverridesParams) ([]ServicePriceOverride, error)
 	ListServicePriceOverridesForItems(ctx context.Context, arg ListServicePriceOverridesForItemsParams) ([]ServicePriceOverride, error)
+	// organization_ids bounds the read to the caller's scope; NULL means no
+	// organization bound (scope all/brand, already bounded by brand_id).
+	ListServiceReviewAnswersByQuestion(ctx context.Context, arg ListServiceReviewAnswersByQuestionParams) ([]ServiceReviewAnswer, error)
+	ListServiceReviewAnswersByReview(ctx context.Context, reviewID int64) ([]ServiceReviewAnswer, error)
+	// Batch load for a review list (avoids N+1).
+	ListServiceReviewAnswersByReviews(ctx context.Context, reviewIds []int64) ([]ServiceReviewAnswer, error)
 	ListServiceStatusLogs(ctx context.Context, serviceID int64) ([]ServiceStatusLog, error)
 	// ---------------------------------------------------------------------------
 	// Stock picker (TEC-180): units the service organization can add as items.
@@ -1443,6 +1479,7 @@ type Querier interface {
 	ListUnitsByBatch(ctx context.Context, batchID pgtype.Int8) ([]Unit, error)
 	ListUnitsByBrandBarcodes(ctx context.Context, arg ListUnitsByBrandBarcodesParams) ([]Unit, error)
 	ListUnitsByIDs(ctx context.Context, ids []int64) ([]Unit, error)
+	ListUnprocessedServiceReviews(ctx context.Context, pageLimit int32) ([]ServiceReview, error)
 	ListUserIDsByRoleSlug(ctx context.Context, slug string) ([]int64, error)
 	ListUserRoleSlugs(ctx context.Context, userID int64) ([]string, error)
 	ListUserRolesByUserID(ctx context.Context, userID int64) ([]Role, error)
@@ -1606,6 +1643,8 @@ type Querier interface {
 	MarkAllNotificationsReadForUser(ctx context.Context, userID pgtype.Int8) (int64, error)
 	// Idempotent: a second read keeps the first read_at.
 	MarkAnnouncementRead(ctx context.Context, arg MarkAnnouncementReadParams) (AnnouncementRead, error)
+	MarkAppointmentReminder24h(ctx context.Context, arg MarkAppointmentReminder24hParams) (Appointment, error)
+	MarkAppointmentReminder2h(ctx context.Context, arg MarkAppointmentReminder2hParams) (Appointment, error)
 	MarkBarcodeBatchPrinted(ctx context.Context, id int64) (BarcodeBatch, error)
 	MarkBulkJobCompleted(ctx context.Context, arg MarkBulkJobCompletedParams) (BulkJob, error)
 	MarkBulkJobFailed(ctx context.Context, arg MarkBulkJobFailedParams) (BulkJob, error)
@@ -1643,6 +1682,8 @@ type Querier interface {
 	MarkOutboxRetry(ctx context.Context, arg MarkOutboxRetryParams) error
 	MarkQRLoginChallengeScanned(ctx context.Context, code string) (QrLoginChallenge, error)
 	MarkQuoteReminderSent(ctx context.Context, id int64) (QuoteReminder, error)
+	// Idempotent: an already processed review returns no row (pgx.ErrNoRows).
+	MarkServiceReviewProcessed(ctx context.Context, id int64) (ServiceReview, error)
 	MarkServiceSubscriptionPeriodPosted(ctx context.Context, id int64) (ServiceSubscriptionPeriod, error)
 	MarkStockEntryUndone(ctx context.Context, id int64) (StockEntry, error)
 	MarkStockImportRowUndone(ctx context.Context, arg MarkStockImportRowUndoneParams) (StockImportRow, error)
@@ -1940,6 +1981,7 @@ type Querier interface {
 	ResolveTerritory(ctx context.Context, arg ResolveTerritoryParams) (ResolveTerritoryRow, error)
 	// A failed render is re-queued with a new attempt number (new task id).
 	RetryDocumentRender(ctx context.Context, id int64) (DocumentRender, error)
+	ReviewQuestionHasAnswers(ctx context.Context, questionID int64) (bool, error)
 	RevokeAllDevicePushTokensForUser(ctx context.Context, userID int64) (int64, error)
 	RevokeAllRefreshTokensForUser(ctx context.Context, userID int64) error
 	RevokeDevicePushToken(ctx context.Context, arg RevokeDevicePushTokenParams) (int64, error)
@@ -1960,6 +2002,7 @@ type Querier interface {
 	// publish_at is stamped with NOW() when a row is published without one.
 	SetAnnouncementStatus(ctx context.Context, arg SetAnnouncementStatusParams) (Announcement, error)
 	SetAppSettingsLogo(ctx context.Context, logoObjectKey pgtype.Text) (AppSetting, error)
+	SetAppointmentStatus(ctx context.Context, arg SetAppointmentStatusParams) (Appointment, error)
 	SetBarcodeCounter(ctx context.Context, arg SetBarcodeCounterParams) error
 	SetCarBrandHero(ctx context.Context, arg SetCarBrandHeroParams) (CarBrand, error)
 	SetCarBrandLogo(ctx context.Context, arg SetCarBrandLogoParams) (CarBrand, error)
@@ -1970,6 +2013,7 @@ type Querier interface {
 	SetContractInstanceStatus(ctx context.Context, arg SetContractInstanceStatusParams) (ContractInstance, error)
 	// Stores the consumed contract_sign OTP row as the signer's proof.
 	SetContractSignerOTP(ctx context.Context, arg SetContractSignerOTPParams) (ContractSigner, error)
+	SetContractSignerOTPByUUID(ctx context.Context, arg SetContractSignerOTPByUUIDParams) (ContractSigner, error)
 	SetCountryActive(ctx context.Context, arg SetCountryActiveParams) (Country, error)
 	// Full identity edit (only when the caller's scope covers every link of the
 	// customer and the user has no panel membership).
@@ -2004,6 +2048,7 @@ type Querier interface {
 	// is locked by the integration sync is skipped (TEC-268).
 	SetProductsActiveByUUIDs(ctx context.Context, arg SetProductsActiveByUUIDsParams) ([]uuid.UUID, error)
 	SetQuoteStatus(ctx context.Context, arg SetQuoteStatusParams) (Quote, error)
+	SetReviewQuestionActive(ctx context.Context, arg SetReviewQuestionActiveParams) (ReviewQuestion, error)
 	SetRolePermissions(ctx context.Context, roleID int64) error
 	SetRoomSortOrder(ctx context.Context, arg SetRoomSortOrderParams) (int64, error)
 	// Links (or unlinks with NULL) a contract of the service's organization.
@@ -2011,6 +2056,7 @@ type Querier interface {
 	// Written in the completion transaction before the status flips.
 	SetServiceItemMovement(ctx context.Context, arg SetServiceItemMovementParams) (ServiceItem, error)
 	SetServiceMeasurementCheck(ctx context.Context, arg SetServiceMeasurementCheckParams) error
+	SetServiceReviewFlags(ctx context.Context, arg SetServiceReviewFlagsParams) (ServiceReview, error)
 	SetServiceReviewRequestSent(ctx context.Context, id int64) (Service, error)
 	SetServiceSubscriptionStatus(ctx context.Context, arg SetServiceSubscriptionStatusParams) (ServiceSubscription, error)
 	SetStockEntryLineLocation(ctx context.Context, arg SetStockEntryLineLocationParams) (int64, error)
@@ -2043,6 +2089,7 @@ type Querier interface {
 	ShipTransferRequest(ctx context.Context, arg ShipTransferRequestParams) (StockTransferRequest, error)
 	ShipWarehouseTransfer(ctx context.Context, arg ShipWarehouseTransferParams) (WarehouseTransfer, error)
 	SlugExists(ctx context.Context, slug string) (bool, error)
+	SoftDeleteAppointment(ctx context.Context, arg SoftDeleteAppointmentParams) (int64, error)
 	SoftDeleteLead(ctx context.Context, arg SoftDeleteLeadParams) (int64, error)
 	// Only an empty folder (no live subfolder or item) is removed.
 	SoftDeleteLibraryFolder(ctx context.Context, arg SoftDeleteLibraryFolderParams) (int64, error)
@@ -2086,6 +2133,7 @@ type Querier interface {
 	// Content and flags of an announcement written by the organization.
 	UpdateAnnouncement(ctx context.Context, arg UpdateAnnouncementParams) (Announcement, error)
 	UpdateAppSettings(ctx context.Context, arg UpdateAppSettingsParams) (AppSetting, error)
+	UpdateAppointment(ctx context.Context, arg UpdateAppointmentParams) (Appointment, error)
 	UpdateAuthSettings(ctx context.Context, arg UpdateAuthSettingsParams) (AuthSetting, error)
 	// Full replacement of the editable fields (read-modify-write in the use case).
 	UpdateCarBrand(ctx context.Context, arg UpdateCarBrandParams) (CarBrand, error)
@@ -2133,6 +2181,9 @@ type Querier interface {
 	UpdateProductCategory(ctx context.Context, arg UpdateProductCategoryParams) (ProductCategory, error)
 	UpdateQuoteDeliveryStatus(ctx context.Context, arg UpdateQuoteDeliveryStatusParams) (QuoteDelivery, error)
 	UpdateQuoteTotals(ctx context.Context, arg UpdateQuoteTotalsParams) (Quote, error)
+	// question_key, question_type and target are fixed once answers exist; the
+	// use case decides whether to allow changing them, this query rewrites all.
+	UpdateReviewQuestion(ctx context.Context, arg UpdateReviewQuestionParams) (ReviewQuestion, error)
 	UpdateRole(ctx context.Context, arg UpdateRoleParams) (Role, error)
 	UpdateRoom(ctx context.Context, arg UpdateRoomParams) (Room, error)
 	// Edits the form fields (wizard steps 1, 2 and 4). The caller has locked
@@ -2174,6 +2225,9 @@ type Querier interface {
 	UpdateWebAuthnCredentialName(ctx context.Context, arg UpdateWebAuthnCredentialNameParams) (WebauthnCredential, error)
 	UpdateWhatsAppStatus(ctx context.Context, arg UpdateWhatsAppStatusParams) (WhatsappSetting, error)
 	UpsertAnnouncementLocale(ctx context.Context, arg UpsertAnnouncementLocaleParams) (AnnouncementLocale, error)
+	// TEC-322 (F3-04a): appointment schema (migration 000090). Reads are
+	// bounded by resolved organization ids; the API layer owns scope resolution.
+	UpsertAppointmentSettings(ctx context.Context, arg UpsertAppointmentSettingsParams) (AppointmentSetting, error)
 	UpsertBinProductStockForRepair(ctx context.Context, arg UpsertBinProductStockForRepairParams) error
 	UpsertConnectionLocationMap(ctx context.Context, arg UpsertConnectionLocationMapParams) (ConnectionLocationMap, error)
 	// ---------------------------------------------------------------------------
@@ -2213,6 +2267,7 @@ type Querier interface {
 	// permission happens in the use case layer (TEC-146).
 	UpsertProductPrice(ctx context.Context, arg UpsertProductPriceParams) (ProductPrice, error)
 	UpsertPushSubscription(ctx context.Context, arg UpsertPushSubscriptionParams) (PushSubscription, error)
+	UpsertReviewQuestionLocale(ctx context.Context, arg UpsertReviewQuestionLocaleParams) (ReviewQuestionLocale, error)
 	UpsertServicePriceOverride(ctx context.Context, arg UpsertServicePriceOverrideParams) (ServicePriceOverride, error)
 	UpsertSystemModuleFlag(ctx context.Context, arg UpsertSystemModuleFlagParams) (ModuleFlag, error)
 	UpsertSystemRole(ctx context.Context, arg UpsertSystemRoleParams) (Role, error)

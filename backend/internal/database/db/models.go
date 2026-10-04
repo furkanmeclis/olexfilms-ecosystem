@@ -117,6 +117,55 @@ type AppSetting struct {
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 }
 
+type Appointment struct {
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	OrganizationID   int64              `json:"organization_id"`
+	BrandID          int64              `json:"brand_id"`
+	CustomerUserID   int64              `json:"customer_user_id"`
+	VehicleID        pgtype.Int8        `json:"vehicle_id"`
+	StartsAt         pgtype.Timestamptz `json:"starts_at"`
+	EndsAt           pgtype.Timestamptz `json:"ends_at"`
+	EstimatedMinutes int32              `json:"estimated_minutes"`
+	Source           string             `json:"source"`
+	Status           string             `json:"status"`
+	CancelReason     pgtype.Text        `json:"cancel_reason"`
+	LeadID           pgtype.Int8        `json:"lead_id"`
+	ServiceID        pgtype.Int8        `json:"service_id"`
+	Note             string             `json:"note"`
+	CreatedByUserID  pgtype.Int8        `json:"created_by_user_id"`
+	Reminded24hAt    pgtype.Timestamptz `json:"reminded_24h_at"`
+	Reminded2hAt     pgtype.Timestamptz `json:"reminded_2h_at"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt        pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type AppointmentClosure struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	ClosedOn       pgtype.Date        `json:"closed_on"`
+	Reason         string             `json:"reason"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type AppointmentSetting struct {
+	ID                        int64              `json:"id"`
+	Uuid                      uuid.UUID          `json:"uuid"`
+	OrganizationID            int64              `json:"organization_id"`
+	BrandID                   int64              `json:"brand_id"`
+	DailyVehicleCapacity      int32              `json:"daily_vehicle_capacity"`
+	DefaultEstimatedMinutes   int32              `json:"default_estimated_minutes"`
+	SlotIntervalMinutes       int32              `json:"slot_interval_minutes"`
+	WorkingHours              []byte             `json:"working_hours"`
+	PortalAppointmentsEnabled bool               `json:"portal_appointments_enabled"`
+	CreatedAt                 pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                 pgtype.Timestamptz `json:"updated_at"`
+}
+
 type AuthSetting struct {
 	ID                      int16              `json:"id"`
 	RegistrationEnabled     bool               `json:"registration_enabled"`
@@ -1641,6 +1690,27 @@ type RefreshToken struct {
 	RotatedAt          pgtype.Timestamptz `json:"rotated_at"`
 }
 
+type ReviewQuestion struct {
+	ID           int64              `json:"id"`
+	Uuid         uuid.UUID          `json:"uuid"`
+	BrandID      int64              `json:"brand_id"`
+	QuestionKey  string             `json:"question_key"`
+	QuestionType string             `json:"question_type"`
+	Target       string             `json:"target"`
+	IsRequired   bool               `json:"is_required"`
+	IsActive     bool               `json:"is_active"`
+	SortOrder    int32              `json:"sort_order"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ReviewQuestionLocale struct {
+	QuestionID int64              `json:"question_id"`
+	Locale     string             `json:"locale"`
+	Text       string             `json:"text"`
+	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Role struct {
 	ID          int64              `json:"id"`
 	Uuid        uuid.UUID          `json:"uuid"`
@@ -1818,6 +1888,21 @@ type ServiceReview struct {
 	PlatformRating int16              `json:"platform_rating"`
 	ProductRating  int16              `json:"product_rating"`
 	Comment        pgtype.Text        `json:"comment"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	IsAnonymous    bool               `json:"is_anonymous"`
+	Source         string             `json:"source"`
+	ProcessedAt    pgtype.Timestamptz `json:"processed_at"`
+}
+
+type ServiceReviewAnswer struct {
+	ID             int64              `json:"id"`
+	ReviewID       int64              `json:"review_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	QuestionID     int64              `json:"question_id"`
+	ProductID      pgtype.Int8        `json:"product_id"`
+	Rating         pgtype.Int2        `json:"rating"`
+	Text           pgtype.Text        `json:"text"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
