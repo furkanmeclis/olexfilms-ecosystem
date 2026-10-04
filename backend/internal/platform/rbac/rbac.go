@@ -179,8 +179,9 @@ const (
 	PermTransfersApprove = "transfers.approve"
 
 	// TEC-178 (000050): service completion and center-only cancel.
-	PermServicesComplete = "services.complete"
-	PermServicesCancel   = "services.cancel"
+	PermServicesComplete        = "services.complete"
+	PermServicesCancel          = "services.cancel"
+	PermServicesCancelCompleted = "services.cancel_completed"
 
 	// TEC-185 (000051): warranties (void is center-only) and vehicle
 	// ownership transfer with two codes (TEC-98 decision 6).

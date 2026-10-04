@@ -142,6 +142,17 @@ SET status = 'void',
 WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id) AND status IN ('active', 'expired')
 RETURNING *;
 
+-- name: VoidWarrantiesByService :many
+UPDATE warranties
+SET status = 'void',
+    voided_at = NOW(),
+    voided_by_user_id = sqlc.narg(actor_user_id),
+    void_reason = sqlc.narg(void_reason)
+WHERE service_id = sqlc.arg(service_id)
+  AND brand_id = sqlc.arg(brand_id)
+  AND status IN ('active', 'expired')
+RETURNING *;
+
 -- Vehicle transfer (decision 6): the active warranties of the vehicle move
 -- to the new owner in the transfer transaction.
 -- name: ChangeWarrantyHolderByVehicle :many

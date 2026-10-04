@@ -14420,6 +14420,56 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /v1/services/{uuid}/cancel-completed:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    post:
+      tags: [Services]
+      operationId: cancelCompletedService
+      summary: Cancel a completed service
+      description: >-
+        TEC-356 / TEC-230 decision. Needs services.cancel_completed reaching
+        the service; dealer_staff has no grant and receives 403. The service
+        must be completed; already cancelled services answer 409
+        SERVICE_INVALID_TRANSITION and non-completed services answer 409
+        SERVICE_NOT_EDITABLE. reason is mandatory. In one transaction the
+        warranties of the service are voided with reason service_cancelled,
+        whole consumed units are returned to the service organization's
+        stock with ledger return movements, open accounting rows sourced by
+        the service are reversed with append-only entries, the service moves
+        to cancelled, service.cancelled and warranty.voided outbox events
+        are written and an activity row is recorded. Services containing a
+        partial_consumption item answer 422
+        SERVICE_CONSUMPTION_NOT_REVERSIBLE because the return helper can
+        safely reverse only whole consumptions.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceCancelCompletedInput"
+      responses:
+        "200":
+          description: Cancelled service
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeService"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
   /v1/services/{uuid}/images:
     parameters:
       - $ref: "#/components/parameters/ResourceUUID"
@@ -14519,8 +14569,7 @@ paths:
       operationId: correctServiceConsumption
       summary: Correct the consumption of an item of a completed service
       description: >-
-        TEC-230 (conservative default; a completed service still cannot be
-        cancelled). The unit consumed by mistake goes back from the service
+        TEC-230. The unit consumed by mistake goes back from the service
         into the service organization's stock with a ledger return movement
         (a roll with the meters the consumption took, fixed pieces credited
         back); with replacement_barcode the correct unit of the same
@@ -23543,6 +23592,15 @@ components:
       properties:
         status: { $ref: "#/components/schemas/ServiceStatus" }
         note: { type: string, maxLength: 5000, description: Kept in the status log; the cancel reason for cancelled }
+
+    ServiceCancelCompletedInput:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
 
     EnvelopeService:
       type: object

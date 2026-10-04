@@ -48,6 +48,7 @@ type Querier interface {
 	// A brand with an integration connection takes its categories from the
 	// remote hub, so their remote-sourced fields are locked in the panel.
 	BrandHasIntegrationConnection(ctx context.Context, brandID int64) (bool, error)
+	CancelCompletedService(ctx context.Context, arg CancelCompletedServiceParams) (Service, error)
 	CancelService(ctx context.Context, arg CancelServiceParams) (Service, error)
 	CancelStockCount(ctx context.Context, id int64) (StockCount, error)
 	CancelStockEntry(ctx context.Context, id int64) (StockEntry, error)
@@ -2210,6 +2211,7 @@ type Querier interface {
 	UpsertUserTOTPSetup(ctx context.Context, arg UpsertUserTOTPSetupParams) (UserTotp, error)
 	UserHasRoleSlug(ctx context.Context, arg UserHasRoleSlugParams) (bool, error)
 	VoidContractInstance(ctx context.Context, arg VoidContractInstanceParams) (ContractInstance, error)
+	VoidWarrantiesByService(ctx context.Context, arg VoidWarrantiesByServiceParams) ([]Warranty, error)
 	// Center void (warranties.void). Expired warranties may be voided too.
 	VoidWarranty(ctx context.Context, arg VoidWarrantyParams) (Warranty, error)
 	// Center void (warranties.void, step-up). An expired warranty may be voided
