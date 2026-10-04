@@ -50,6 +50,9 @@ type Service struct {
 	out    outbox.Enqueuer
 	// TEC-207: opens the register_as_warehouse preset's warehouse (nil: none).
 	warehouseHook WarehousePresetHook
+	// TEC-316: set by WithTx; RegisterOrganization then runs in a savepoint
+	// of the caller's transaction.
+	tx pgx.Tx
 }
 
 // New creates an organizations service.
@@ -132,9 +135,12 @@ type RegisterInput struct {
 	Type                string
 	ParentUUID          *uuid.UUID
 	RegisterAsWarehouse bool
-	Currency            string
-	Locale              string
-	Timezone            string
+	// InitialStatus overrides the normal active trial start for internal flows
+	// such as lead conversion (K23: distributor-opened dealers start read-only).
+	InitialStatus string
+	Currency      string
+	Locale        string
+	Timezone      string
 }
 
 // RegisterResult is created org + owner user id after signup.
@@ -365,7 +371,7 @@ func (s *Service) RegisterOrganization(ctx context.Context, in RegisterInput, ow
 	}
 	now := time.Now().UTC()
 	trialEnd := now.Add(trialDays * 24 * time.Hour)
-	tx, err := s.pool.Begin(ctx)
+	tx, err := s.begin(ctx)
 	if err != nil {
 		return RegisterResult{}, err
 	}
@@ -373,12 +379,16 @@ func (s *Service) RegisterOrganization(ctx context.Context, in RegisterInput, ow
 	qtx := s.q.WithTx(tx)
 	city, district := addressText(place.Address, in.City, in.District)
 	countryID, provinceID, districtID := addressIDs(place.Address)
+	status := strings.TrimSpace(in.InitialStatus)
+	if status == "" {
+		status = "active"
+	}
 	org, err := qtx.CreateOrganization(ctx, db.CreateOrganizationParams{
 		Slug: orgSlug, Name: in.OrganizationName,
 		City: city, District: district,
 		CountryID: countryID, ProvinceID: provinceID, DistrictID: districtID,
 		Phone: orgPhone, Address: strings.TrimSpace(in.Address),
-		Status: "active", PlanCode: pgtype.Text{String: "trial", Valid: true},
+		Status: status, PlanCode: pgtype.Text{String: "trial", Valid: true},
 		AccessStartsAt: pgtype.Timestamptz{Time: now, Valid: true},
 		AccessEndsAt:   pgtype.Timestamptz{Time: trialEnd, Valid: true},
 		Type:           place.Type,
