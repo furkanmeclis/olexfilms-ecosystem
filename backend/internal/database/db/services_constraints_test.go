@@ -230,14 +230,18 @@ func TestServiceSchemaConstraints(t *testing.T) {
 			_, err := db.New(sp).DeleteServiceItem(ctx, db.DeleteServiceItemParams{ID: item.ID, ServiceID: svc.ID})
 			return err
 		})
-		// completed is final.
-		f.expectTrigger(t, "completed -> cancelled", func(sp pgx.Tx) error {
-			_, err := sp.Exec(ctx, `UPDATE services SET status = 'cancelled', cancelled_at = NOW(), completed_at = NULL WHERE id = $1`, svc.ID)
+		// TEC-356: completed -> cancelled is the one allowed final-status
+		// transition; completed_at is retained for history.
+		if _, err := f.tx.Exec(ctx, `UPDATE services SET status = 'cancelled', cancelled_at = NOW() WHERE id = $1`, svc.ID); err != nil {
+			t.Fatalf("completed -> cancelled: %v", err)
+		}
+		f.expectTrigger(t, "cancelled -> completed", func(sp pgx.Tx) error {
+			_, err := sp.Exec(ctx, `UPDATE services SET status = 'completed', cancelled_at = NULL WHERE id = $1`, svc.ID)
 			return err
 		})
-		// The completed service itself stays editable for the center (notes).
+		// The cancelled service itself stays editable for the center (notes).
 		if _, err := f.tx.Exec(ctx, `UPDATE services SET notes = 'center note' WHERE id = $1`, svc.ID); err != nil {
-			t.Fatalf("center edit of completed service: %v", err)
+			t.Fatalf("center edit of cancelled service: %v", err)
 		}
 	})
 

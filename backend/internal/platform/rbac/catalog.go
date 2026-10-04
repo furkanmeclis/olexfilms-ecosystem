@@ -494,6 +494,14 @@ var Permissions = []PermissionDef{
 		Scopes:      []Scope{ScopeSubtree, ScopeBrand, ScopeAll},
 		Description: "Convert dealer candidates in the distributor subtree or center brand; distributor candidates are center-only.",
 	},
+
+	// TEC-356: completed service cancellation. Appended last; migration
+	// 000088 seeds it. Unlike services.cancel, distributor and dealer owners
+	// may use this on services they manage; dealer_staff does not get it.
+	{
+		Slug: PermServicesCancelCompleted, Name: "Cancel completed services", Module: "services", Scopes: scopesRecordsInt,
+		Description: "Cancel a completed service with warranty void, stock return and accounting reversal.",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -574,8 +582,9 @@ var Roles = []RoleDef{
 			PermOrdersApprove: ScopeBrand,
 			PermOrdersCancel:  ScopeBrand,
 			// TEC-178 (000050).
-			PermServicesComplete: ScopeBrand,
-			PermServicesCancel:   ScopeBrand,
+			PermServicesComplete:        ScopeBrand,
+			PermServicesCancel:          ScopeBrand,
+			PermServicesCancelCompleted: ScopeBrand,
 			// TEC-185 (000051).
 			PermWarrantiesRead:   ScopeBrand,
 			PermWarrantiesVoid:   ScopeBrand,
@@ -745,7 +754,8 @@ var Roles = []RoleDef{
 			PermOrdersCancel:     ScopeManaged,
 			PermTransfersApprove: ScopeManaged,
 			// TEC-178 (000050).
-			PermServicesComplete: ScopeSubtree,
+			PermServicesComplete:        ScopeSubtree,
+			PermServicesCancelCompleted: ScopeSubtree,
 			// TEC-185 (000051).
 			PermWarrantiesRead:   ScopeSubtree,
 			PermVehiclesTransfer: ScopeSubtree,
@@ -882,7 +892,8 @@ var Roles = []RoleDef{
 			PermOrdersCancel:     ScopeManaged,
 			PermTransfersRequest: ScopeManaged,
 			// TEC-178 (000050).
-			PermServicesComplete: ScopeManaged,
+			PermServicesComplete:        ScopeManaged,
+			PermServicesCancelCompleted: ScopeManaged,
 			// TEC-185 (000051).
 			PermWarrantiesRead:   ScopeManaged,
 			PermVehiclesTransfer: ScopeManaged,

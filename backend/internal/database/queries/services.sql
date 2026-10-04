@@ -101,6 +101,16 @@ SET status = 'cancelled',
 WHERE id = sqlc.arg(id) AND status NOT IN ('completed', 'cancelled')
 RETURNING *;
 
+-- name: CancelCompletedService :one
+UPDATE services
+SET status = 'cancelled',
+    cancelled_at = NOW(),
+    cancelled_by_user_id = sqlc.narg(actor_user_id),
+    updated_by_user_id = sqlc.narg(actor_user_id),
+    cancel_reason = sqlc.narg(cancel_reason)
+WHERE id = sqlc.arg(id) AND status = 'completed'
+RETURNING *;
+
 -- name: SetServiceReviewRequestSent :one
 UPDATE services
 SET review_request_sent_at = COALESCE(review_request_sent_at, NOW())

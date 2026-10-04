@@ -166,6 +166,7 @@ type Service struct {
 	pool   TxBeginner
 	q      *db.Queries
 	out    outbox.Enqueuer
+	poster CompletedCancelPoster
 	finder searchengine.ListFinder // TEC-209: services index search (nil: SQL only)
 }
 
