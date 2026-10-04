@@ -21,6 +21,7 @@ import (
 	exportusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/usecase"
 	importusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/imports/usecase"
 	logsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/logs/usecase"
+	measurementsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/measurements"
 	notifmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/providers"
 	notifusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/usecase"
@@ -120,6 +121,8 @@ func main() {
 	servicereview.RegisterEventHandlers(eventBus, reviewQueue, cfg.Services.ReviewRequestDelay, log)
 	// TEC-270: glorian stock entries/placements and exits schedule the push.
 	glorian.RegisterEventHandlers(eventBus, queries, reviewQueue, log)
+	// TEC-296: service events compute the before/after measurement match.
+	measurementsmodule.RegisterEventHandlers(eventBus, pool, queries, log)
 	outboxStore := outbox.NewStore(pool, queries)
 	outboxPub := outbox.NewPublisher(outboxStore, eventBus, log)
 	outboxStop := outboxPub.StartRun(ctx)

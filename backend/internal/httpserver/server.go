@@ -393,7 +393,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	authmodule.RegisterMobileRoutes(mux, mobileH,
 		tokens, loader, cfg.Mobile.MinAPIVersion, cfg.Mobile.MaxAPIVersion)
 	// TEC-233: minimal measurement storage (K28), 202 {uuid, status}.
-	measurementsH := measurementshandler.New(measurementsusecase.New(deps.Queries))
+	measurementsUC := measurementsusecase.New(deps.Queries)
+	measurementsH := measurementshandler.New(measurementsUC)
 	measurementsmodule.RegisterMobileRoutes(mux, measurementsH,
 		tokens, loader, deps.Queries, cfg.Mobile.MinAPIVersion, cfg.Mobile.MaxAPIVersion)
 	var featureCache features.Cache = features.NoCache{}
@@ -405,6 +406,14 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	featureSvc := features.New(deps.DB, deps.Queries, featureCache, log)
 	s.features = featureSvc
 	measurementsmodule.RegisterPanelRoutes(mux, measurementsH, tokens, loader, deps.Queries, featureSvc)
+	// TEC-296: before/after matching of a service, confirmation and manual
+	// selection; an accepted upload computes the suggestions.
+	if deps.DB != nil {
+		measurementsLinker := measurementsmodule.NewLinker(deps.DB, deps.Queries, log)
+		measurementsUC.SetMatcher(measurementsLinker)
+		measurementsmodule.RegisterServiceLinkRoutes(mux, measurementshandler.NewLink(measurementsLinker),
+			tokens, loader, deps.Queries, featureSvc)
+	}
 	orgmodule.RegisterRoutes(mux, orgSvc, uc, deps.Storage, tokens, loader, deps.Queries, ratelimit.New(deps.Redis, cfg.App.Env), stepUpSvc, featureSvc)
 	featuremodule.RegisterRoutes(mux, featurehandler.New(featureSvc, deps.Queries, notifSvc, activityRec, log), featureSvc, tokens, loader, deps.Queries)
 	geomodule.RegisterRoutes(mux, geohandler.New(geoSvc, deps.Queries, activityRec), tokens, loader)
@@ -507,6 +516,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		glorianQueue = deps.Queue
 	}
 	glorian.RegisterEventHandlers(eventBus, deps.Queries, glorianQueue, log)
+	// TEC-296: service events compute the before/after measurement match.
+	measurementsmodule.RegisterEventHandlers(eventBus, deps.DB, deps.Queries, log)
 	// TEC-209: service / warranty / vehicle outbox events refresh the indexes.
 	indexsync.Register(eventBus, deps.Queries, searchIndexer, log)
 	// TEC-189: public warranty lookup behind /garanti/{public_code}.

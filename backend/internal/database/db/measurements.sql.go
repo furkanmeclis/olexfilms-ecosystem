@@ -252,6 +252,37 @@ func (q *Queries) GetMeasurementResultByUUID(ctx context.Context, arg GetMeasure
 	return i, err
 }
 
+const getMeasurementResultForLink = `-- name: GetMeasurementResultForLink :one
+SELECT id, uuid, organization_id, vin, status FROM measurement_results
+WHERE uuid = $1 AND organization_id = $2
+`
+
+type GetMeasurementResultForLinkParams struct {
+	Uuid           uuid.UUID `json:"uuid"`
+	OrganizationID int64     `json:"organization_id"`
+}
+
+type GetMeasurementResultForLinkRow struct {
+	ID             int64       `json:"id"`
+	Uuid           uuid.UUID   `json:"uuid"`
+	OrganizationID int64       `json:"organization_id"`
+	Vin            pgtype.Text `json:"vin"`
+	Status         string      `json:"status"`
+}
+
+func (q *Queries) GetMeasurementResultForLink(ctx context.Context, arg GetMeasurementResultForLinkParams) (GetMeasurementResultForLinkRow, error) {
+	row := q.db.QueryRow(ctx, getMeasurementResultForLink, arg.Uuid, arg.OrganizationID)
+	var i GetMeasurementResultForLinkRow
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.Vin,
+		&i.Status,
+	)
+	return i, err
+}
+
 const getMeasurementResultPanel = `-- name: GetMeasurementResultPanel :one
 SELECT
     mr.id, mr.uuid, mr.organization_id, mr.brand_id, mr.service_id, mr.vehicle_id, mr.vin, mr.status, mr.raw, mr.client_measurement_id, mr.idempotency_key, mr.device_serial, mr.source, mr.created_by, mr.created_at, mr.measured_at, mr.device_id, mr.customer_user_id, mr.body_type, mr.parsed_at, mr.pdf_key,
@@ -382,6 +413,87 @@ func (q *Queries) GetServiceForMeasurement(ctx context.Context, arg GetServiceFo
 	row := q.db.QueryRow(ctx, getServiceForMeasurement, arg.Uuid, arg.OrganizationID, arg.BrandID)
 	var i GetServiceForMeasurementRow
 	err := row.Scan(&i.ID, &i.VehicleID)
+	return i, err
+}
+
+const getServiceForMeasurementMatch = `-- name: GetServiceForMeasurementMatch :one
+
+SELECT id, uuid, organization_id, brand_id, vin, has_measurement, status, created_at, completed_at
+FROM services
+WHERE id = $1
+FOR UPDATE
+`
+
+type GetServiceForMeasurementMatchRow struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Vin            pgtype.Text        `json:"vin"`
+	HasMeasurement bool               `json:"has_measurement"`
+	Status         string             `json:"status"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	CompletedAt    pgtype.Timestamptz `json:"completed_at"`
+}
+
+// TEC-296 (F3-02d): VIN based before/after matching, dealer confirmation
+// and manual selection.
+// The service a measurement is matched to; FOR UPDATE serializes the
+// matching of one service (auto rule, confirmation, manual selection).
+func (q *Queries) GetServiceForMeasurementMatch(ctx context.Context, id int64) (GetServiceForMeasurementMatchRow, error) {
+	row := q.db.QueryRow(ctx, getServiceForMeasurementMatch, id)
+	var i GetServiceForMeasurementMatchRow
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.Vin,
+		&i.HasMeasurement,
+		&i.Status,
+		&i.CreatedAt,
+		&i.CompletedAt,
+	)
+	return i, err
+}
+
+const getServiceForMeasurementMatchByUUID = `-- name: GetServiceForMeasurementMatchByUUID :one
+SELECT id, uuid, organization_id, brand_id, vin, has_measurement, status, created_at, completed_at
+FROM services
+WHERE uuid = $1 AND brand_id = $2
+`
+
+type GetServiceForMeasurementMatchByUUIDParams struct {
+	Uuid    uuid.UUID `json:"uuid"`
+	BrandID int64     `json:"brand_id"`
+}
+
+type GetServiceForMeasurementMatchByUUIDRow struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Vin            pgtype.Text        `json:"vin"`
+	HasMeasurement bool               `json:"has_measurement"`
+	Status         string             `json:"status"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	CompletedAt    pgtype.Timestamptz `json:"completed_at"`
+}
+
+func (q *Queries) GetServiceForMeasurementMatchByUUID(ctx context.Context, arg GetServiceForMeasurementMatchByUUIDParams) (GetServiceForMeasurementMatchByUUIDRow, error) {
+	row := q.db.QueryRow(ctx, getServiceForMeasurementMatchByUUID, arg.Uuid, arg.BrandID)
+	var i GetServiceForMeasurementMatchByUUIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.Vin,
+		&i.HasMeasurement,
+		&i.Status,
+		&i.CreatedAt,
+		&i.CompletedAt,
+	)
 	return i, err
 }
 
@@ -698,6 +810,64 @@ func (q *Queries) ListMeasurementDevices(ctx context.Context, organizationID int
 	return items, nil
 }
 
+const listMeasurementMatchCandidates = `-- name: ListMeasurementMatchCandidates :many
+SELECT mr.id, mr.uuid, mr.vin, mr.status, mr.source, mr.device_serial, mr.measured_at, mr.created_at
+FROM measurement_results mr
+WHERE mr.organization_id = $1
+  AND mr.vin = $2
+  AND mr.status = 'accepted'
+  AND NOT EXISTS (SELECT 1 FROM service_measurements sm WHERE sm.measurement_result_id = mr.id)
+ORDER BY COALESCE(mr.measured_at, mr.created_at), mr.id
+`
+
+type ListMeasurementMatchCandidatesParams struct {
+	OrganizationID int64       `json:"organization_id"`
+	Vin            pgtype.Text `json:"vin"`
+}
+
+type ListMeasurementMatchCandidatesRow struct {
+	ID           int64              `json:"id"`
+	Uuid         uuid.UUID          `json:"uuid"`
+	Vin          pgtype.Text        `json:"vin"`
+	Status       string             `json:"status"`
+	Source       string             `json:"source"`
+	DeviceSerial pgtype.Text        `json:"device_serial"`
+	MeasuredAt   pgtype.Timestamptz `json:"measured_at"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+// Unlinked accepted measurements of the organization with the VIN; the
+// matching rule (usecase.Match) decides the phase from measured_at (device
+// time, falling back to the upload time).
+func (q *Queries) ListMeasurementMatchCandidates(ctx context.Context, arg ListMeasurementMatchCandidatesParams) ([]ListMeasurementMatchCandidatesRow, error) {
+	rows, err := q.db.Query(ctx, listMeasurementMatchCandidates, arg.OrganizationID, arg.Vin)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListMeasurementMatchCandidatesRow{}
+	for rows.Next() {
+		var i ListMeasurementMatchCandidatesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.Vin,
+			&i.Status,
+			&i.Source,
+			&i.DeviceSerial,
+			&i.MeasuredAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listMeasurementResultsPanel = `-- name: ListMeasurementResultsPanel :many
 SELECT
     mr.id, mr.uuid, mr.organization_id, mr.brand_id, mr.service_id, mr.vehicle_id, mr.vin, mr.status, mr.raw, mr.client_measurement_id, mr.idempotency_key, mr.device_serial, mr.source, mr.created_by, mr.created_at, mr.measured_at, mr.device_id, mr.customer_user_id, mr.body_type, mr.parsed_at, mr.pdf_key,
@@ -939,6 +1109,80 @@ func (q *Queries) ListMeasurementValues(ctx context.Context, arg ListMeasurement
 	return items, nil
 }
 
+const listServiceMeasurementLinks = `-- name: ListServiceMeasurementLinks :many
+SELECT
+    sm.phase, sm.link_source, sm.confirmed_at, sm.created_at AS linked_at,
+    mr.id AS measurement_id, mr.uuid AS measurement_uuid, mr.vin, mr.status, mr.source,
+    mr.device_serial, mr.measured_at, mr.created_at AS measurement_created_at,
+    u.uuid AS confirmed_by_uuid, u.name AS confirmed_by_name, u.surname AS confirmed_by_surname
+FROM service_measurements sm
+JOIN measurement_results mr ON mr.id = sm.measurement_result_id
+LEFT JOIN users u ON u.id = sm.confirmed_by
+WHERE sm.service_id = $1 AND sm.organization_id = $2
+ORDER BY sm.phase DESC
+`
+
+type ListServiceMeasurementLinksParams struct {
+	ServiceID      int64 `json:"service_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+type ListServiceMeasurementLinksRow struct {
+	Phase                string             `json:"phase"`
+	LinkSource           string             `json:"link_source"`
+	ConfirmedAt          pgtype.Timestamptz `json:"confirmed_at"`
+	LinkedAt             pgtype.Timestamptz `json:"linked_at"`
+	MeasurementID        int64              `json:"measurement_id"`
+	MeasurementUuid      uuid.UUID          `json:"measurement_uuid"`
+	Vin                  pgtype.Text        `json:"vin"`
+	Status               string             `json:"status"`
+	Source               string             `json:"source"`
+	DeviceSerial         pgtype.Text        `json:"device_serial"`
+	MeasuredAt           pgtype.Timestamptz `json:"measured_at"`
+	MeasurementCreatedAt pgtype.Timestamptz `json:"measurement_created_at"`
+	ConfirmedByUuid      pgtype.UUID        `json:"confirmed_by_uuid"`
+	ConfirmedByName      pgtype.Text        `json:"confirmed_by_name"`
+	ConfirmedBySurname   pgtype.Text        `json:"confirmed_by_surname"`
+}
+
+// The before/after links of a service with the linked measurement and the
+// confirming user.
+func (q *Queries) ListServiceMeasurementLinks(ctx context.Context, arg ListServiceMeasurementLinksParams) ([]ListServiceMeasurementLinksRow, error) {
+	rows, err := q.db.Query(ctx, listServiceMeasurementLinks, arg.ServiceID, arg.OrganizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListServiceMeasurementLinksRow{}
+	for rows.Next() {
+		var i ListServiceMeasurementLinksRow
+		if err := rows.Scan(
+			&i.Phase,
+			&i.LinkSource,
+			&i.ConfirmedAt,
+			&i.LinkedAt,
+			&i.MeasurementID,
+			&i.MeasurementUuid,
+			&i.Vin,
+			&i.Status,
+			&i.Source,
+			&i.DeviceSerial,
+			&i.MeasuredAt,
+			&i.MeasurementCreatedAt,
+			&i.ConfirmedByUuid,
+			&i.ConfirmedByName,
+			&i.ConfirmedBySurname,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listServiceMeasurements = `-- name: ListServiceMeasurements :many
 SELECT id, organization_id, brand_id, service_id, measurement_result_id, phase, link_source, confirmed_by, confirmed_at, created_at, updated_at FROM service_measurements
 WHERE service_id = $1 AND organization_id = $2
@@ -982,6 +1226,43 @@ func (q *Queries) ListServiceMeasurements(ctx context.Context, arg ListServiceMe
 	return items, nil
 }
 
+const listServicesForMeasurementMatch = `-- name: ListServicesForMeasurementMatch :many
+SELECT id FROM services
+WHERE organization_id = $1
+  AND vin = $2
+  AND has_measurement
+  AND status <> 'cancelled'
+ORDER BY created_at DESC, id DESC
+LIMIT 20
+`
+
+type ListServicesForMeasurementMatchParams struct {
+	OrganizationID int64       `json:"organization_id"`
+	Vin            pgtype.Text `json:"vin"`
+}
+
+// The services of the organization a newly accepted measurement may belong
+// to (measurement expected, same VIN, not cancelled).
+func (q *Queries) ListServicesForMeasurementMatch(ctx context.Context, arg ListServicesForMeasurementMatchParams) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listServicesForMeasurementMatch, arg.OrganizationID, arg.Vin)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int64{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const markMeasurementResultParsed = `-- name: MarkMeasurementResultParsed :exec
 UPDATE measurement_results
 SET parsed_at = NOW(),
@@ -1009,6 +1290,39 @@ func (q *Queries) MarkMeasurementResultParsed(ctx context.Context, arg MarkMeasu
 		arg.OrganizationID,
 	)
 	return err
+}
+
+const replaceServiceMeasurement = `-- name: ReplaceServiceMeasurement :execrows
+UPDATE service_measurements
+SET measurement_result_id = $1,
+    link_source = 'manual',
+    confirmed_by = $2,
+    confirmed_at = NOW()
+WHERE service_id = $3 AND phase = $4
+  AND organization_id = $5
+`
+
+type ReplaceServiceMeasurementParams struct {
+	MeasurementResultID int64       `json:"measurement_result_id"`
+	ConfirmedBy         pgtype.Int8 `json:"confirmed_by"`
+	ServiceID           int64       `json:"service_id"`
+	Phase               string      `json:"phase"`
+	OrganizationID      int64       `json:"organization_id"`
+}
+
+// Replaces an unconfirmed link of the phase with a manually chosen one.
+func (q *Queries) ReplaceServiceMeasurement(ctx context.Context, arg ReplaceServiceMeasurementParams) (int64, error) {
+	result, err := q.db.Exec(ctx, replaceServiceMeasurement,
+		arg.MeasurementResultID,
+		arg.ConfirmedBy,
+		arg.ServiceID,
+		arg.Phase,
+		arg.OrganizationID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const setMeasurementDeviceActive = `-- name: SetMeasurementDeviceActive :execrows

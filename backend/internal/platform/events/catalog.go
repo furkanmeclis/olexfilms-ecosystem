@@ -614,6 +614,7 @@ func catalogConstants() []string {
 		TasksOverdue,
 		OrganizationCreated,
 		OrganizationUpdated,
+		MeasurementMatchSuggested,
 	}
 }
 
@@ -624,3 +625,8 @@ const (
 	TasksDueSoon = "tasks.due_soon"
 	TasksOverdue = "tasks.overdue"
 )
+
+// MeasurementMatchSuggested (TEC-296): the before/after matching of a
+// service linked a measurement automatically (waiting for the dealer's
+// confirmation) or found candidates; written in the matching transaction.
+const MeasurementMatchSuggested = "measurement.match_suggested"

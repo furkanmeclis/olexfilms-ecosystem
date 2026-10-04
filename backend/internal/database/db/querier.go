@@ -670,6 +670,7 @@ type Querier interface {
 	GetMeasurementDeviceBySerial(ctx context.Context, arg GetMeasurementDeviceBySerialParams) (MeasurementDevice, error)
 	GetMeasurementDeviceByUUID(ctx context.Context, arg GetMeasurementDeviceByUUIDParams) (MeasurementDevice, error)
 	GetMeasurementResultByUUID(ctx context.Context, arg GetMeasurementResultByUUIDParams) (MeasurementResult, error)
+	GetMeasurementResultForLink(ctx context.Context, arg GetMeasurementResultForLinkParams) (GetMeasurementResultForLinkRow, error)
 	GetMeasurementResultPanel(ctx context.Context, arg GetMeasurementResultPanelParams) (GetMeasurementResultPanelRow, error)
 	// TEC-252: migrator bookkeeping (000074). Written only by cmd/migrator.
 	GetMigrationMap(ctx context.Context, arg GetMigrationMapParams) (MigrationMap, error)
@@ -783,6 +784,12 @@ type Querier interface {
 	// The service a measurement is attached to, bounded by the active
 	// organization (a service of another organization is not found).
 	GetServiceForMeasurement(ctx context.Context, arg GetServiceForMeasurementParams) (GetServiceForMeasurementRow, error)
+	// TEC-296 (F3-02d): VIN based before/after matching, dealer confirmation
+	// and manual selection.
+	// The service a measurement is matched to; FOR UPDATE serializes the
+	// matching of one service (auto rule, confirmation, manual selection).
+	GetServiceForMeasurementMatch(ctx context.Context, id int64) (GetServiceForMeasurementMatchRow, error)
+	GetServiceForMeasurementMatchByUUID(ctx context.Context, arg GetServiceForMeasurementMatchByUUIDParams) (GetServiceForMeasurementMatchByUUIDRow, error)
 	GetServiceImage(ctx context.Context, arg GetServiceImageParams) (ServiceImage, error)
 	GetServiceItem(ctx context.Context, arg GetServiceItemParams) (ServiceItem, error)
 	GetServiceItemByUUID(ctx context.Context, arg GetServiceItemByUUIDParams) (ServiceItem, error)
@@ -1222,6 +1229,10 @@ type Querier interface {
 	ListLocationsByUUIDs(ctx context.Context, arg ListLocationsByUUIDsParams) ([]WarehouseLocation, error)
 	ListLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
 	ListMeasurementDevices(ctx context.Context, organizationID int64) ([]MeasurementDevice, error)
+	// Unlinked accepted measurements of the organization with the VIN; the
+	// matching rule (usecase.Match) decides the phase from measured_at (device
+	// time, falling back to the upload time).
+	ListMeasurementMatchCandidates(ctx context.Context, arg ListMeasurementMatchCandidatesParams) ([]ListMeasurementMatchCandidatesRow, error)
 	// org_ids NULL means the whole brand (brand/all scopes); an empty set
 	// (customer scope) matches nothing.
 	ListMeasurementResultsPanel(ctx context.Context, arg ListMeasurementResultsPanelParams) ([]ListMeasurementResultsPanelRow, error)
@@ -1401,6 +1412,9 @@ type Querier interface {
 	ListServiceImages(ctx context.Context, serviceID int64) ([]ServiceImage, error)
 	ListServiceItemCorrections(ctx context.Context, serviceID int64) ([]ListServiceItemCorrectionsRow, error)
 	ListServiceItems(ctx context.Context, serviceID int64) ([]ServiceItem, error)
+	// The before/after links of a service with the linked measurement and the
+	// confirming user.
+	ListServiceMeasurementLinks(ctx context.Context, arg ListServiceMeasurementLinksParams) ([]ListServiceMeasurementLinksRow, error)
 	ListServiceMeasurements(ctx context.Context, arg ListServiceMeasurementsParams) ([]ServiceMeasurement, error)
 	ListServicePriceOverrides(ctx context.Context, arg ListServicePriceOverridesParams) ([]ServicePriceOverride, error)
 	ListServicePriceOverridesForItems(ctx context.Context, arg ListServicePriceOverridesForItemsParams) ([]ServicePriceOverride, error)
@@ -1434,6 +1448,9 @@ type Querier interface {
 	// check. The customer columns feed the document only while the customer
 	// is not anonymized (K19): the adapter drops them otherwise.
 	ListServicesForIndex(ctx context.Context) ([]ListServicesForIndexRow, error)
+	// The services of the organization a newly accepted measurement may belong
+	// to (measurement expected, same VIN, not cancelled).
+	ListServicesForMeasurementMatch(ctx context.Context, arg ListServicesForMeasurementMatchParams) ([]int64, error)
 	// Scope list: org_ids NULL = whole brand (brand/all scope); created_by for
 	// scope own, customer_user_id for scope customer (portal). q matches the
 	// service number, plate, VIN and the customer's name or phone (TEC-179;
@@ -2003,6 +2020,8 @@ type Querier interface {
 	// Optimistic replacement of the image list: no row when another request
 	// changed the list since it was read (expected).
 	ReplaceProductImages(ctx context.Context, arg ReplaceProductImagesParams) (Product, error)
+	// Replaces an unconfirmed link of the phase with a manually chosen one.
+	ReplaceServiceMeasurement(ctx context.Context, arg ReplaceServiceMeasurementParams) (int64, error)
 	ReplaceUserRoles(ctx context.Context, userID int64) error
 	ResolveAccountingDispute(ctx context.Context, arg ResolveAccountingDisputeParams) (AccountingDispute, error)
 	// Success: phone gets the E.164 form and phone_raw is cleared. A phone

@@ -54,3 +54,23 @@ func RegisterPanelRoutes(
 	mux.Handle("GET /v1/measurements", middleware.Chain(http.HandlerFunc(h.ListMeasurements), authn, org, module, read))
 	mux.Handle("GET /v1/measurements/{uuid}", middleware.Chain(http.HandlerFunc(h.GetMeasurement), authn, org, module, read))
 }
+
+// RegisterServiceLinkRoutes mounts the before/after measurements of a
+// service (TEC-296): the measurements module flag and measurements.link.
+func RegisterServiceLinkRoutes(
+	mux *http.ServeMux,
+	h *handler.LinkHandler,
+	tokens *jwt.Manager,
+	loader middleware.IdentityLoader,
+	q *db.Queries,
+	checker middleware.FeatureChecker,
+) {
+	authn := middleware.Authenticate(tokens, loader)
+	org := middleware.RequireOrganization(tokens, q)
+	module := middleware.RequireFeature(checker, features.ModuleMeasurements)
+	link := middleware.RequireScope(q, rbac.PermMeasurementsLink)
+
+	mux.Handle("GET /v1/services/{uuid}/measurements", middleware.Chain(http.HandlerFunc(h.List), authn, org, module, link))
+	mux.Handle("POST /v1/services/{uuid}/measurements", middleware.Chain(http.HandlerFunc(h.Link), authn, org, module, link))
+	mux.Handle("DELETE /v1/services/{uuid}/measurements/{phase}", middleware.Chain(http.HandlerFunc(h.Unlink), authn, org, module, link))
+}
