@@ -105,6 +105,10 @@ export const routes = {
       create: (slug: string) => `/t/${slug}/tasks/new`,
       detail: (slug: string, uuid: string) => `/t/${slug}/tasks/${uuid}`,
     },
+    /** TEC-332 announcements: feed, composer and read report. */
+    announcements: {
+      list: (slug: string) => `/t/${slug}/announcements`,
+    },
     /**
      * TEC-231 full warehouse (center and distributor, K12): location tree,
      * scan, stock entries, barcodes (center, K14). TEC-232 adds transfers,

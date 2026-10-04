@@ -21,6 +21,7 @@ import {
   MapPinned,
   MessageCircle,
   MessageSquareWarning,
+  Megaphone,
   Package,
   RectangleHorizontal,
   ScrollText,
@@ -49,6 +50,7 @@ import { githubNavIcon } from "@/components/icons/github-icon";
 import { googleNavIcon } from "@/components/icons/google-icon";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import { announcementsNavAdornment } from "@/features/announcements/nav";
 import { defineNav } from "@/features/nav-engine";
 import { usersNavItem } from "@/features/users/nav";
 
@@ -584,6 +586,27 @@ export function tenantNav(slug: string) {
             permission: permissions.stock.read,
             feature: "stock",
             orgTypes: ["distributor", "dealer"],
+          },
+        ],
+      },
+      {
+        // TEC-332: published announcements for the full network. Center can
+        // target all audiences; distributors can target their subtree.
+        id: "announcements",
+        labelKey: "announcements.nav",
+        icon: Megaphone,
+        defaultOpen: true,
+        permission: permissions.announcements.read,
+        feature: "announcements",
+        items: [
+          {
+            id: "announcements-list",
+            titleKey: "announcements.nav_list",
+            href: routes.tenant.announcements.list(slug),
+            icon: Megaphone,
+            permission: permissions.announcements.read,
+            feature: "announcements",
+            Adornment: announcementsNavAdornment,
           },
         ],
       },
