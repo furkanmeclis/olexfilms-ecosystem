@@ -102,7 +102,7 @@ function AnnouncementList({
               className={cn(
                 "hover:bg-muted/50 flex w-full items-start gap-3 px-4 py-3 text-start transition-colors",
                 selectedUuid === item.uuid && "bg-muted",
-                unread && "border-s-4 border-s-primary bg-primary/5",
+                unread && "border-s-primary bg-primary/5 border-s-4",
               )}
               onClick={() => onSelect(item.uuid)}
             >
@@ -222,7 +222,9 @@ function AnnouncementDetail({
   useEffect(() => {
     if (!query.isSuccess) return;
     void qc.invalidateQueries({ queryKey: announcementKeys.lists() });
-    void qc.invalidateQueries({ queryKey: announcementKeys.unreadCount(locale) });
+    void qc.invalidateQueries({
+      queryKey: announcementKeys.unreadCount(locale),
+    });
   }, [locale, qc, query.isSuccess]);
 
   if (!uuid) {
@@ -260,7 +262,7 @@ function AnnouncementDetail({
             {item?.read_at ? (
               <CheckCircle2 className="size-4 text-emerald-600" />
             ) : (
-              <Bell className="size-4 text-primary" />
+              <Bell className="text-primary size-4" />
             )}
             {item?.title ?? t("announcements.detail.loading")}
           </CardTitle>
@@ -270,7 +272,9 @@ function AnnouncementDetail({
             <>
               <div className="text-muted-foreground flex flex-wrap gap-3 text-xs">
                 <span>{t(`announcements.status.${item.status}`)}</span>
-                {item.pinned ? <span>{t("announcements.detail.pinned")}</span> : null}
+                {item.pinned ? (
+                  <span>{t("announcements.detail.pinned")}</span>
+                ) : null}
                 {announcementDate(item) ? (
                   <span>{format.dateTime(announcementDate(item)!)}</span>
                 ) : null}
@@ -482,7 +486,8 @@ function AnnouncementComposer({
                 onChange={(e) =>
                   setValues((v) => ({
                     ...v,
-                    audience: e.target.value as AnnouncementFormValues["audience"],
+                    audience: e.target
+                      .value as AnnouncementFormValues["audience"],
                   }))
                 }
               >
@@ -541,7 +546,10 @@ function AnnouncementComposer({
                 }
               />
               {errors.expiresAt ? (
-                <p className="text-destructive text-xs" data-testid="announcement-date-error">
+                <p
+                  className="text-destructive text-xs"
+                  data-testid="announcement-date-error"
+                >
                   {errors.expiresAt}
                 </p>
               ) : null}

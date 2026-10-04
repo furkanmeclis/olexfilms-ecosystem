@@ -5,8 +5,7 @@ type Schemas = components["schemas"];
 
 export type Announcement = Schemas["Announcement"];
 export type AnnouncementAudience = Schemas["AnnouncementAudience"];
-export type AnnouncementAudienceTarget =
-  Schemas["AnnouncementAudienceTarget"];
+export type AnnouncementAudienceTarget = Schemas["AnnouncementAudienceTarget"];
 export type AnnouncementInput = Schemas["AnnouncementInput"];
 export type AnnouncementLocaleInput = Schemas["AnnouncementLocaleInput"];
 export type AnnouncementReadReport = Schemas["AnnouncementReadReport"];

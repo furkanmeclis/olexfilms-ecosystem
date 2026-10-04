@@ -164,7 +164,8 @@ async function renderPage() {
 }
 
 async function type(sel: string, value: string) {
-  const el = container.querySelector(sel) as HTMLInputElement | HTMLTextAreaElement;
+  const el = container.querySelector(sel) as
+    HTMLInputElement | HTMLTextAreaElement;
   const proto =
     el instanceof HTMLTextAreaElement
       ? HTMLTextAreaElement.prototype
@@ -228,7 +229,9 @@ describe("AnnouncementsPage", () => {
     await renderPage();
     await type("#announcement-body", "<script>alert(1)</script> **ok**");
 
-    const preview = container.querySelector("[data-testid=announcement-preview]");
+    const preview = container.querySelector(
+      "[data-testid=announcement-preview]",
+    );
     expect(preview?.querySelector("script")).toBeNull();
     expect(preview?.innerHTML).not.toContain("<script>");
     expect(preview?.textContent).toContain("<script>alert(1)</script>");
