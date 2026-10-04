@@ -7357,7 +7357,11 @@ export interface paths {
         /** Cari accounts of a book with balances (positive = receivable) */
         get: operations["listAccountingCari"];
         put?: never;
-        post?: never;
+        /**
+         * Open the cari of a customer the organization serves (TEC-342)
+         * @description Opens (or returns) the active organization's cari with a customer (counterparty_type user) in the organization's currency. The customer must be served by the organization (customer_organizations); anything else answers 404. Organization caris open with their first entry and are not opened here. Needs accounting.write; in a dealer organization also the dealer_accounting module (403 FEATURE_DISABLED when off). The cari then takes manual income/charge entries, collections and payments by cari_uuid; its statement is GET /v1/accounting/cari/{uuid}/statement. No instalments (K18).
+         */
+        post: operations["openAccountingCustomerCari"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7393,7 +7397,7 @@ export interface paths {
         put?: never;
         /**
          * Manual income, expense or cari charge (source_type manual)
-         * @description Written to the active organization's book through the posting API. Income/expense need an account and/or a cari; a charge needs a cari only. The cari is named by cari_uuid or by the counterparty organization (the parent or a direct child of the same brand; opened when missing). System categories (sale, purchase) are refused. A repeated idempotency_key answers 200 with the earlier entry.
+         * @description Written to the active organization's book through the posting API. Income/expense need an account and/or a cari; a charge needs a cari only. The cari is named by cari_uuid or by the counterparty organization (the parent or a direct child of the same brand; opened when missing). System categories (sale, purchase) are refused. A repeated idempotency_key answers 200 with the earlier entry. TEC-342: cari_uuid may name a customer cari (POST /v1/accounting/cari); in a dealer organization every accounting write needs the dealer_accounting module (403 FEATURE_DISABLED).
          */
         post: operations["createAccountingEntry"];
         delete?: never;
@@ -13976,6 +13980,18 @@ export interface components {
             last_entry_at: string | null;
             /** Format: date-time */
             created_at: string;
+        };
+        CariOpenInput: {
+            /**
+             * @description Only customer caris are opened by hand (TEC-342).
+             * @enum {string}
+             */
+            counterparty_type: "user";
+            /**
+             * Format: uuid
+             * @description The customer's user UUID.
+             */
+            counterparty_uuid: string;
         };
         AccountingRef: {
             /** Format: uuid */
@@ -29288,6 +29304,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeCariAccountPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    openAccountingCustomerCari: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CariOpenInput"];
+            };
+        };
+        responses: {
+            /** @description The cari already existed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCariAccount"];
+                };
+            };
+            /** @description Opened cari */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCariAccount"];
                 };
             };
             400: components["responses"]["BadRequest"];
