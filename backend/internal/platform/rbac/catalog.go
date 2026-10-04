@@ -521,6 +521,17 @@ var Permissions = []PermissionDef{
 		Description: "Manage appointment capacity, working hours, closures and portal booking settings.",
 	},
 
+	// TEC-350: extra review questions (F3-09). Appended last; migration
+	// 000091 seeds them.
+	{
+		Slug: PermReviewsQuestionsManage, Name: "Manage review questions", Module: "reviews", Scopes: scopesSupplier,
+		Description: "Define the extra review questions and their translations (center only).",
+	},
+	{
+		Slug: PermReviewsRead, Name: "Read service reviews", Module: "reviews", Scopes: scopesTree,
+		Description: "Read service reviews and their answers (dealer: own, distributor: subtree, center: brand).",
+	},
+
 	// TEC-334: warranty claims (F3-06). Appended last; migration 000092
 	// seeds them.
 	{
@@ -671,6 +682,9 @@ var Roles = []RoleDef{
 			PermAppointmentsRead:          ScopeAll,
 			PermAppointmentsWrite:         ScopeManaged,
 			PermAppointmentSettingsManage: ScopeManaged,
+			// TEC-350 (000091).
+			PermReviewsQuestionsManage: ScopeBrand,
+			PermReviewsRead:            ScopeBrand,
 			// TEC-334 (000092).
 			PermWarrantyClaimsRead:   ScopeBrand,
 			PermWarrantyClaimsDecide: ScopeBrand,
@@ -766,6 +780,8 @@ var Roles = []RoleDef{
 			// TEC-322 (000090).
 			PermAppointmentsRead:  ScopeAll,
 			PermAppointmentsWrite: ScopeManaged,
+			// TEC-350 (000091).
+			PermReviewsRead: ScopeBrand,
 		}),
 	},
 	{
@@ -844,6 +860,8 @@ var Roles = []RoleDef{
 			PermAppointmentsRead:          ScopeSubtree,
 			PermAppointmentsWrite:         ScopeManaged,
 			PermAppointmentSettingsManage: ScopeManaged,
+			// TEC-350 (000091).
+			PermReviewsRead: ScopeSubtree,
 			// TEC-334 (000092).
 			PermWarrantyClaimsRead:   ScopeSubtree,
 			PermWarrantyClaimsWrite:  ScopeManaged,
@@ -882,6 +900,8 @@ var Roles = []RoleDef{
 			// TEC-322 (000090).
 			PermAppointmentsRead:  ScopeSubtree,
 			PermAppointmentsWrite: ScopeManaged,
+			// TEC-350 (000091).
+			PermReviewsRead: ScopeSubtree,
 			// TEC-334 (000092).
 			PermWarrantyClaimsRead:   ScopeSubtree,
 			PermWarrantyClaimsWrite:  ScopeManaged,
@@ -991,6 +1011,8 @@ var Roles = []RoleDef{
 			PermAppointmentsRead:          ScopeManaged,
 			PermAppointmentsWrite:         ScopeManaged,
 			PermAppointmentSettingsManage: ScopeManaged,
+			// TEC-350 (000091).
+			PermReviewsRead: ScopeManaged,
 			// TEC-334 (000092).
 			PermWarrantyClaimsRead:  ScopeManaged,
 			PermWarrantyClaimsWrite: ScopeManaged,
@@ -1029,6 +1051,8 @@ var Roles = []RoleDef{
 			// TEC-322 (000090).
 			PermAppointmentsRead:  ScopeManaged,
 			PermAppointmentsWrite: ScopeManaged,
+			// TEC-350 (000091).
+			PermReviewsRead: ScopeManaged,
 			// TEC-334 (000092).
 			PermWarrantyClaimsRead:  ScopeManaged,
 			PermWarrantyClaimsWrite: ScopeManaged,
