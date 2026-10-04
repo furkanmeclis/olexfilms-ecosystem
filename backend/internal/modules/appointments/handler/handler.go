@@ -44,6 +44,10 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Error(w, r, http.StatusUnprocessableEntity, usecase.CodeCapacityFull, "Appointment capacity is full")
 	case errors.Is(err, usecase.ErrInvalidTransition):
 		response.Error(w, r, http.StatusUnprocessableEntity, usecase.CodeInvalidTransition, "Appointment status transition is not allowed")
+	case errors.Is(err, usecase.ErrDayClosed):
+		response.Error(w, r, http.StatusUnprocessableEntity, usecase.CodeDayClosed, "The organization is closed on this day")
+	case errors.Is(err, usecase.ErrClosureExists):
+		response.Conflict(w, r, usecase.CodeClosureExists, "A closure already exists for this day")
 	case errors.Is(err, usecase.ErrIntakeStarted):
 		response.Conflict(w, r, usecase.CodeIntakeStarted, "Appointment intake is already started")
 	case errors.Is(err, usecase.ErrForbidden):

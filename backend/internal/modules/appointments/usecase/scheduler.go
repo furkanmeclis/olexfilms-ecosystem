@@ -57,6 +57,33 @@ func ParseWorkingHours(raw []byte, weekday time.Weekday) ([]WorkWindow, error) {
 	return nil, nil
 }
 
+// ValidateWorkingHours checks a working_hours object: every key is a weekday
+// (monday/mon/1 ... sunday/sun/7) and every window is a valid HH:MM range.
+func ValidateWorkingHours(raw []byte) error {
+	var byDay map[string][]WorkWindow
+	if err := json.Unmarshal(raw, &byDay); err != nil {
+		return fmt.Errorf("must map weekdays to [{start, end}] windows")
+	}
+	valid := map[string]bool{}
+	for w := time.Sunday; w <= time.Saturday; w++ {
+		for _, k := range weekdayKeys(w) {
+			valid[k] = true
+		}
+	}
+	ref := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
+	for key, windows := range byDay {
+		if !valid[key] {
+			return fmt.Errorf("unknown weekday %q", key)
+		}
+		for _, w := range windows {
+			if _, _, err := windowBounds(ref, time.UTC, w); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func BuildDayAvailability(rule DailyRule) (DayAvailability, error) {
 	if rule.Location == nil {
 		rule.Location = time.UTC
@@ -74,7 +101,7 @@ func BuildDayAvailability(rule DailyRule) (DayAvailability, error) {
 		Occupied: rule.Occupied,
 		Closed:   rule.Closed,
 	}
-	if remaining := int64(rule.Capacity) - rule.Occupied; remaining > 0 {
+	if remaining := int64(rule.Capacity) - rule.Occupied; remaining > 0 && !rule.Closed {
 		out.RemainingCapacity = int32(remaining)
 	}
 	if rule.Closed || out.RemainingCapacity <= 0 || rule.Capacity <= 0 {

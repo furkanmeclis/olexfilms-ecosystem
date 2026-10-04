@@ -18,6 +18,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -31,6 +32,11 @@ const (
 	CodeCapacityFull      = "APPOINTMENT_CAPACITY_FULL"
 	CodeInvalidTransition = "APPOINTMENT_INVALID_TRANSITION"
 	CodeIntakeStarted     = "APPOINTMENT_INTAKE_ALREADY_STARTED"
+	CodeDayClosed         = "APPOINTMENT_DAY_CLOSED"
+	CodeClosureExists     = "APPOINTMENT_CLOSURE_EXISTS"
+
+	// maxRangeDays bounds the availability window (one count query per day).
+	maxRangeDays = 62
 
 	maxNote   = 20000
 	maxReason = 1000
@@ -42,6 +48,8 @@ var (
 	ErrCapacityFull      = errors.New("appointments: capacity full")
 	ErrInvalidTransition = errors.New("appointments: invalid transition")
 	ErrIntakeStarted     = errors.New("appointments: intake already started")
+	ErrDayClosed         = errors.New("appointments: day closed")
+	ErrClosureExists     = errors.New("appointments: closure already exists")
 )
 
 type TxBeginner interface {
@@ -194,9 +202,15 @@ func (s *Service) PutSettings(ctx context.Context, c Caller, in Settings) (Setti
 	if in.SlotIntervalMinutes <= 0 {
 		return Settings{}, invalid("slot_interval_minutes", "must be greater than zero")
 	}
+	if in.WorkingHours == nil {
+		in.WorkingHours = map[string]any{}
+	}
 	raw, err := json.Marshal(in.WorkingHours)
 	if err != nil {
 		return Settings{}, invalid("working_hours", "must be a JSON object")
+	}
+	if err := ValidateWorkingHours(raw); err != nil {
+		return Settings{}, invalid("working_hours", err.Error())
 	}
 	row, err := s.q.UpsertAppointmentSettings(ctx, db.UpsertAppointmentSettingsParams{
 		OrganizationID: c.Org.InternalID, BrandID: c.Org.BrandID,
@@ -235,6 +249,9 @@ func (s *Service) CreateClosure(ctx context.Context, c Caller, date time.Time, r
 	row, err := s.q.CreateAppointmentClosure(ctx, db.CreateAppointmentClosureParams{
 		OrganizationID: c.Org.InternalID, BrandID: c.Org.BrandID, ClosedOn: dateArg(date), Reason: reason,
 	})
+	if isUniqueViolation(err) {
+		return Closure{}, ErrClosureExists
+	}
 	if err != nil {
 		return Closure{}, fmt.Errorf("appointments: create closure: %w", err)
 	}
@@ -263,10 +280,13 @@ func (s *Service) Availability(ctx context.Context, c Caller, from, to time.Time
 	if !c.Filter.AllowsOrg(org.ID, org.BrandID) {
 		return nil, ErrForbidden
 	}
-	startDay := dateOnly(from, loc)
-	endDay := dateOnly(to, loc)
+	startDay := calendarDay(from, loc)
+	endDay := calendarDay(to, loc)
 	if endDay.Before(startDay) {
 		return nil, invalid("to", "must be after from")
+	}
+	if endDay.After(startDay.AddDate(0, 0, maxRangeDays)) {
+		return nil, invalid("to", fmt.Sprintf("range must be at most %d days", maxRangeDays))
 	}
 	closures, err := s.q.ListAppointmentClosures(ctx, db.ListAppointmentClosuresParams{
 		OrganizationID: org.ID, FromDate: dateArg(startDay), ToDate: dateArg(endDay),
@@ -337,7 +357,7 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (Appoint
 	if !c.Principal.Can(rbac.PermAppointmentsWrite, rbac.ScopeManaged) {
 		return Appointment{}, ErrForbidden
 	}
-	row, err := s.save(ctx, c, db.Appointment{}, in, true)
+	row, err := s.save(ctx, c, c.Org.InternalID, db.Appointment{}, in, true)
 	if err != nil {
 		return Appointment{}, err
 	}
@@ -345,14 +365,14 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (Appoint
 }
 
 func (s *Service) Patch(ctx context.Context, c Caller, id uuid.UUID, in PatchInput) (Appointment, error) {
-	cur, err := s.byUUID(ctx, c, id)
+	cur, err := s.writableByUUID(ctx, c, id)
 	if err != nil {
 		return Appointment{}, err
 	}
-	if cur.Status == StatusCancelled || cur.Status == StatusNoShow {
+	if !reschedulable(cur.Status) {
 		return Appointment{}, ErrInvalidTransition
 	}
-	row, err := s.save(ctx, c, cur, in, false)
+	row, err := s.save(ctx, c, cur.OrganizationID, cur, in, false)
 	if err != nil {
 		return Appointment{}, err
 	}
@@ -360,7 +380,7 @@ func (s *Service) Patch(ctx context.Context, c Caller, id uuid.UUID, in PatchInp
 }
 
 func (s *Service) SetStatus(ctx context.Context, c Caller, id uuid.UUID, in StatusInput) (Appointment, error) {
-	cur, err := s.byUUID(ctx, c, id)
+	cur, err := s.writableByUUID(ctx, c, id)
 	if err != nil {
 		return Appointment{}, err
 	}
@@ -377,6 +397,16 @@ func (s *Service) SetStatus(ctx context.Context, c Caller, id uuid.UUID, in Stat
 	}
 	var row db.Appointment
 	err = s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
+		locked, err := q.LockAppointmentByID(ctx, db.LockAppointmentByIDParams{ID: cur.ID, OrganizationID: cur.OrganizationID})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return fmt.Errorf("appointments: lock: %w", err)
+		}
+		if !allowedTransition(locked.Status, next) {
+			return ErrInvalidTransition
+		}
 		updated, err := q.SetAppointmentStatus(ctx, db.SetAppointmentStatusParams{
 			ID: cur.ID, OrganizationID: cur.OrganizationID, Status: next, CancelReason: reason,
 		})
@@ -395,74 +425,101 @@ func (s *Service) SetStatus(ctx context.Context, c Caller, id uuid.UUID, in Stat
 	return appointmentView(row), nil
 }
 
+// StartIntake opens the draft service of an appointment through the services
+// usecase (F1-05) and links it. The appointment row stays locked while the
+// service is created, so a concurrent second call waits and then gets
+// ErrIntakeStarted instead of opening a second draft.
 func (s *Service) StartIntake(ctx context.Context, c Caller, id uuid.UUID) (Appointment, error) {
 	if s.services == nil {
 		return Appointment{}, fmt.Errorf("appointments: services usecase is nil")
 	}
-	cur, err := s.byUUID(ctx, c, id)
+	cur, err := s.writableByUUID(ctx, c, id)
 	if err != nil {
 		return Appointment{}, err
 	}
-	if cur.ServiceID.Valid {
-		return Appointment{}, ErrIntakeStarted
-	}
-	if !cur.VehicleID.Valid {
-		return Appointment{}, invalid("vehicle_id", "is required to start intake")
-	}
-	customer, err := s.q.GetUserByID(ctx, cur.CustomerUserID)
-	if err != nil {
-		return Appointment{}, fmt.Errorf("appointments: customer: %w", err)
-	}
-	vehicle, err := s.q.GetVehicleByID(ctx, cur.VehicleID.Int64)
-	if err != nil {
-		return Appointment{}, fmt.Errorf("appointments: vehicle: %w", err)
-	}
-	view, err := s.services.Create(ctx, servicesuc.Caller{Principal: c.Principal, Org: c.Org, Filter: c.Filter}, servicesuc.CreateInput{
-		CustomerUUID: customer.Uuid.String(), VehicleUUID: vehicle.Uuid.String(), Notes: strPtr(cur.Note),
+	var row db.Appointment
+	err = s.inTx(ctx, func(q *db.Queries, _ pgx.Tx) error {
+		locked, err := q.LockAppointmentByID(ctx, db.LockAppointmentByIDParams{ID: cur.ID, OrganizationID: cur.OrganizationID})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return fmt.Errorf("appointments: lock: %w", err)
+		}
+		if locked.ServiceID.Valid {
+			return ErrIntakeStarted
+		}
+		if locked.Status != StatusScheduled && locked.Status != StatusConfirmed && locked.Status != StatusArrived {
+			return ErrInvalidTransition
+		}
+		if !locked.VehicleID.Valid {
+			return invalid("vehicle_id", "is required to start intake")
+		}
+		customer, err := q.GetUserByID(ctx, locked.CustomerUserID)
+		if err != nil {
+			return fmt.Errorf("appointments: customer: %w", err)
+		}
+		vehicle, err := q.GetVehicleByID(ctx, locked.VehicleID.Int64)
+		if err != nil {
+			return fmt.Errorf("appointments: vehicle: %w", err)
+		}
+		view, err := s.services.Create(ctx, servicesuc.Caller{Principal: c.Principal, Org: c.Org, Filter: c.Filter}, servicesuc.CreateInput{
+			CustomerUUID: customer.Uuid.String(), VehicleUUID: vehicle.Uuid.String(), Notes: strPtr(locked.Note),
+		})
+		if err != nil {
+			return fmt.Errorf("appointments: start intake service: %w", err)
+		}
+		serviceRow, err := q.GetServiceByUUID(ctx, db.GetServiceByUUIDParams{Uuid: view.UUID, BrandID: c.Org.BrandID})
+		if err != nil {
+			return fmt.Errorf("appointments: created service lookup: %w", err)
+		}
+		linked, err := q.UpdateAppointment(ctx, db.UpdateAppointmentParams{
+			ID: locked.ID, OrganizationID: locked.OrganizationID,
+			CustomerUserID: locked.CustomerUserID, VehicleID: locked.VehicleID, StartsAt: locked.StartsAt, EndsAt: locked.EndsAt,
+			EstimatedMinutes: locked.EstimatedMinutes, Source: locked.Source, LeadID: locked.LeadID,
+			ServiceID: pgtype.Int8{Int64: serviceRow.ID, Valid: true}, Note: locked.Note,
+		})
+		if err != nil {
+			return fmt.Errorf("appointments: link service: %w", err)
+		}
+		row, err = q.SetAppointmentStatus(ctx, db.SetAppointmentStatusParams{
+			ID: linked.ID, OrganizationID: linked.OrganizationID, Status: StatusArrived,
+		})
+		if err != nil {
+			return fmt.Errorf("appointments: arrived: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return Appointment{}, fmt.Errorf("appointments: start intake service: %w", err)
-	}
-	serviceRow, err := s.q.GetServiceByUUID(ctx, db.GetServiceByUUIDParams{Uuid: view.UUID, BrandID: c.Org.BrandID})
-	if err != nil {
-		return Appointment{}, fmt.Errorf("appointments: created service lookup: %w", err)
-	}
-	serviceID := pgtype.Int8{Int64: serviceRow.ID, Valid: true}
-	row, err := s.q.UpdateAppointment(ctx, db.UpdateAppointmentParams{
-		ID: cur.ID, OrganizationID: cur.OrganizationID,
-		CustomerUserID: cur.CustomerUserID, VehicleID: cur.VehicleID, StartsAt: cur.StartsAt, EndsAt: cur.EndsAt,
-		EstimatedMinutes: cur.EstimatedMinutes, Source: cur.Source, LeadID: cur.LeadID, ServiceID: serviceID, Note: cur.Note,
-	})
-	if err != nil {
-		return Appointment{}, fmt.Errorf("appointments: link service: %w", err)
-	}
-	row, err = s.q.SetAppointmentStatus(ctx, db.SetAppointmentStatusParams{
-		ID: row.ID, OrganizationID: row.OrganizationID, Status: StatusArrived,
-	})
-	if err != nil {
-		return Appointment{}, fmt.Errorf("appointments: arrived: %w", err)
+		return Appointment{}, err
 	}
 	return appointmentView(row), nil
 }
 
+// Occupancy reports the active booking count against the daily capacity of
+// every organization in the read scope (center: the brand network,
+// distributor: its subtree, dealer: itself). date is a calendar day; each
+// organization's day is bounded in its own time zone.
 func (s *Service) Occupancy(ctx context.Context, c Caller, date time.Time) ([]OccupancyRow, error) {
 	rows, err := s.q.ListOrganizationsInScope(ctx, db.ListOrganizationsInScopeParams{
-		OrgIds: c.Filter.OrgIDsArg(), BrandID: c.Filter.BrandIDArg(), LimitCount: 1000,
+		OrgIds: c.Filter.OrgIDsArg(), BrandID: pgtype.Int8{Int64: c.Org.BrandID, Valid: true}, LimitCount: 1000,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("appointments: organizations: %w", err)
 	}
 	orgs := make([]db.Organization, 0, len(rows))
 	ids := make([]int64, 0, len(rows))
+	byZone := map[string][]int64{}
 	for _, r := range rows {
 		if r.Organization.BrandID != c.Org.BrandID || !c.Filter.AllowsOrg(r.Organization.ID, r.Organization.BrandID) {
 			continue
 		}
 		orgs = append(orgs, r.Organization)
 		ids = append(ids, r.Organization.ID)
+		byZone[r.Organization.Timezone] = append(byZone[r.Organization.Timezone], r.Organization.ID)
 	}
 	if len(ids) == 0 {
-		return nil, nil
+		return []OccupancyRow{}, nil
 	}
 	settings, err := s.q.ListAppointmentSettingsByOrganizations(ctx, ids)
 	if err != nil {
@@ -472,17 +529,18 @@ func (s *Service) Occupancy(ctx context.Context, c Caller, date time.Time) ([]Oc
 	for _, st := range settings {
 		capByOrg[st.OrganizationID] = st.DailyVehicleCapacity
 	}
-	loc := time.UTC
-	dayStart, dayEnd := DayBounds(date, loc)
-	counts, err := s.q.CountActiveAppointmentsByOrganization(ctx, db.CountActiveAppointmentsByOrganizationParams{
-		OrganizationIds: ids, BrandID: c.Org.BrandID, FromTime: tsArg(dayStart), ToTime: tsArg(dayEnd),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("appointments: occupancy count: %w", err)
-	}
 	occByOrg := map[int64]int64{}
-	for _, r := range counts {
-		occByOrg[r.OrganizationID] = r.ActiveCount
+	for zone, zoneIDs := range byZone {
+		dayStart, dayEnd := DayBounds(calendarDay(date, loadLocation(zone)), loadLocation(zone))
+		counts, err := s.q.CountActiveAppointmentsByOrganization(ctx, db.CountActiveAppointmentsByOrganizationParams{
+			OrganizationIds: zoneIDs, BrandID: c.Org.BrandID, FromTime: tsArg(dayStart), ToTime: tsArg(dayEnd),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("appointments: occupancy count: %w", err)
+		}
+		for _, r := range counts {
+			occByOrg[r.OrganizationID] = r.ActiveCount
+		}
 	}
 	out := make([]OccupancyRow, 0, len(orgs))
 	for _, org := range orgs {
@@ -497,7 +555,7 @@ func (s *Service) Occupancy(ctx context.Context, c Caller, date time.Time) ([]Oc
 	return out, nil
 }
 
-func (s *Service) save(ctx context.Context, c Caller, cur db.Appointment, in CreateInput, create bool) (db.Appointment, error) {
+func (s *Service) save(ctx context.Context, c Caller, orgID int64, cur db.Appointment, in CreateInput, create bool) (db.Appointment, error) {
 	in.Source = strings.TrimSpace(in.Source)
 	if in.Source == "" {
 		in.Source = "panel"
@@ -505,12 +563,15 @@ func (s *Service) save(ctx context.Context, c Caller, cur db.Appointment, in Cre
 	if err := validateInput(in); err != nil {
 		return db.Appointment{}, err
 	}
-	org, setting, loc, err := s.orgSettings(ctx, c.Org.InternalID)
+	org, setting, loc, err := s.orgSettings(ctx, orgID)
 	if err != nil {
 		return db.Appointment{}, err
 	}
 	if org.BrandID != c.Org.BrandID || !c.Filter.AllowsOrg(org.ID, org.BrandID) {
 		return db.Appointment{}, ErrForbidden
+	}
+	if err := s.checkParties(ctx, org, in); err != nil {
+		return db.Appointment{}, err
 	}
 	mins := setting.DefaultEstimatedMinutes
 	if in.EstimatedMinutes != nil {
@@ -525,13 +586,32 @@ func (s *Service) save(ctx context.Context, c Caller, cur db.Appointment, in Cre
 	}
 	var row db.Appointment
 	err = s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
+		// The settings row lock serializes bookings of the organization, so
+		// the count below cannot race a concurrent insert (capacity re-read
+		// under the lock).
+		locked, err := q.LockAppointmentSettings(ctx, org.ID)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return fmt.Errorf("appointments: lock settings: %w", err)
+		}
+		closed, err := q.AppointmentClosureExists(ctx, db.AppointmentClosureExistsParams{
+			OrganizationID: org.ID, ClosedOn: dateArg(dateOnly(starts, loc)),
+		})
+		if err != nil {
+			return fmt.Errorf("appointments: closure check: %w", err)
+		}
+		if closed {
+			return ErrDayClosed
+		}
 		count, err := q.CountActiveAppointmentsForOrganization(ctx, db.CountActiveAppointmentsForOrganizationParams{
 			OrganizationID: org.ID, BrandID: org.BrandID, FromTime: tsArg(dayStart), ToTime: tsArg(dayEnd), ExcludeID: exclude,
 		})
 		if err != nil {
 			return fmt.Errorf("appointments: capacity count: %w", err)
 		}
-		if count >= int64(setting.DailyVehicleCapacity) {
+		if count >= int64(locked.DailyVehicleCapacity) {
 			return ErrCapacityFull
 		}
 		params := db.CreateAppointmentParams{
@@ -580,6 +660,47 @@ func (s *Service) byUUID(ctx context.Context, c Caller, id uuid.UUID) (db.Appoin
 	return row, nil
 }
 
+// writableByUUID loads an appointment for a write: the read scope must reach
+// it and the appointments.write grant must cover its organization (managed
+// writes only the active organization; all reaches the brand).
+func (s *Service) writableByUUID(ctx context.Context, c Caller, id uuid.UUID) (db.Appointment, error) {
+	row, err := s.byUUID(ctx, c, id)
+	if err != nil {
+		return db.Appointment{}, err
+	}
+	scope, ok := c.Principal.ScopeFor(rbac.PermAppointmentsWrite)
+	if !ok || (scope != rbac.ScopeAll && row.OrganizationID != c.Org.InternalID) {
+		return db.Appointment{}, ErrForbidden
+	}
+	return row, nil
+}
+
+// checkParties keeps the booking inside the brand boundary (K20): the
+// customer must be a customer of the organization's brand and the vehicle
+// must be the customer's vehicle of the same brand.
+func (s *Service) checkParties(ctx context.Context, org db.Organization, in CreateInput) error {
+	inBrand, err := s.q.CustomerInScope(ctx, db.CustomerInScopeParams{
+		UserID: in.CustomerUserID, BrandID: pgtype.Int8{Int64: org.BrandID, Valid: true},
+	})
+	if err != nil {
+		return fmt.Errorf("appointments: customer scope: %w", err)
+	}
+	if !inBrand {
+		return invalid("customer_user_id", "customer not found")
+	}
+	if in.VehicleID == nil {
+		return nil
+	}
+	v, err := s.q.GetVehicleByID(ctx, *in.VehicleID)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && (v.UserID != in.CustomerUserID || v.BrandID != org.BrandID)) {
+		return invalid("vehicle_id", "vehicle not found for this customer")
+	}
+	if err != nil {
+		return fmt.Errorf("appointments: vehicle: %w", err)
+	}
+	return nil
+}
+
 func (s *Service) orgSettings(ctx context.Context, orgID int64) (db.Organization, db.AppointmentSetting, *time.Location, error) {
 	org, err := s.q.GetOrganizationByID(ctx, orgID)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -595,11 +716,7 @@ func (s *Service) orgSettings(ctx context.Context, orgID int64) (db.Organization
 	if err != nil {
 		return db.Organization{}, db.AppointmentSetting{}, nil, fmt.Errorf("appointments: settings: %w", err)
 	}
-	loc, err := time.LoadLocation(org.Timezone)
-	if err != nil {
-		loc = time.UTC
-	}
-	return org, setting, loc, nil
+	return org, setting, loadLocation(org.Timezone), nil
 }
 
 func validateInput(in CreateInput) error {
@@ -646,6 +763,11 @@ func validStatus(v string) bool {
 		return true
 	}
 	return false
+}
+
+// reschedulable: only bookings that have not happened yet can move.
+func reschedulable(status string) bool {
+	return status == StatusScheduled || status == StatusConfirmed
 }
 
 func allowedTransition(from, to string) bool {
@@ -750,4 +872,25 @@ func dateArg(t time.Time) pgtype.Date {
 
 func tsArg(t time.Time) pgtype.Timestamptz {
 	return pgtype.Timestamptz{Time: t.UTC(), Valid: true}
+}
+
+func loadLocation(name string) *time.Location {
+	loc, err := time.LoadLocation(name)
+	if err != nil || name == "" {
+		return time.UTC
+	}
+	return loc
+}
+
+// calendarDay is the calendar date written in t (its own year/month/day),
+// as midnight in loc. A YYYY-MM-DD query parameter parses as UTC midnight;
+// converting it with t.In(loc) would shift the day west of UTC.
+func calendarDay(t time.Time, loc *time.Location) time.Time {
+	y, m, d := t.Date()
+	return time.Date(y, m, d, 0, 0, 0, 0, loc)
+}
+
+func isUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }

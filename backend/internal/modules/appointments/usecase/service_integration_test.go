@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
+	"sync"
 	"testing"
 	"time"
 
@@ -33,6 +35,7 @@ type fixture struct {
 	dealer db.Organization
 	other  db.Organization
 	user   db.User
+	out    *outbox.Memory
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -63,6 +66,7 @@ func newFixture(t *testing.T) *fixture {
 	f.other = f.org("other", "dealer", f.center.ID, "Europe/Istanbul")
 	f.user = f.userRow("appointment-user")
 	out := outbox.NewMemory()
+	f.out = out
 	services := servicesuc.New(tx, q, out)
 	f.svc = New(tx, q, out, services)
 	f.svc.SetClock(func() time.Time { return time.Date(2026, 10, 4, 8, 0, 0, 0, time.UTC) })
@@ -186,6 +190,7 @@ func (f *fixture) caller(org db.Organization, scope rbac.Scope, orgIDs []int64) 
 func TestCreateRejectsFourthAppointmentWhenCapacityIsThree(t *testing.T) {
 	f := newFixture(t)
 	f.settings(f.dealer, 3)
+	f.link(f.user, f.dealer)
 	c := f.caller(f.dealer, rbac.ScopeManaged, []int64{f.dealer.ID})
 	start := time.Date(2026, 10, 5, 7, 0, 0, 0, time.UTC)
 	for i := 0; i < 3; i++ {
@@ -258,5 +263,222 @@ func TestDistributorOccupancySeesOnlyOwnSubtree(t *testing.T) {
 	}
 	if !seen[f.dealer.ID] || !seen[f.dist.ID] {
 		t.Fatalf("occupancy rows = %+v, want distributor and own dealer", rows)
+	}
+}
+
+func (f *fixture) closure(org db.Organization, day time.Time) {
+	f.t.Helper()
+	if _, err := f.q.CreateAppointmentClosure(f.ctx, db.CreateAppointmentClosureParams{
+		OrganizationID: org.ID, BrandID: org.BrandID, ClosedOn: dateArg(day), Reason: "holiday",
+	}); err != nil {
+		f.t.Fatalf("closure: %v", err)
+	}
+}
+
+func (f *fixture) eventNames() []string {
+	var names []string
+	for _, r := range f.out.All() {
+		names = append(names, r.EventName)
+	}
+	sort.Strings(names) // Memory.All is unordered
+	return names
+}
+
+func TestAvailabilityBerlinSlotsAndClosedDay(t *testing.T) {
+	f := newFixture(t)
+	f.settings(f.dealer, 3) // Europe/Berlin, monday 09:00-17:00
+	c := f.caller(f.dealer, rbac.ScopeManaged, []int64{f.dealer.ID})
+	monday := time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC) // parsed YYYY-MM-DD
+	days, err := f.svc.Availability(f.ctx, c, monday, monday)
+	if err != nil {
+		t.Fatalf("availability: %v", err)
+	}
+	if len(days) != 1 || days[0].Date != "2026-10-05" || len(days[0].Slots) == 0 {
+		t.Fatalf("availability = %+v", days)
+	}
+	if want := time.Date(2026, 10, 5, 7, 0, 0, 0, time.UTC); !days[0].Slots[0].Start.Equal(want) {
+		t.Fatalf("first slot = %s, want %s (09:00 Berlin, CEST)", days[0].Slots[0].Start, want)
+	}
+	f.closure(f.dealer, monday)
+	days, err = f.svc.Availability(f.ctx, c, monday, monday)
+	if err != nil {
+		t.Fatalf("availability closed: %v", err)
+	}
+	if !days[0].Closed || len(days[0].Slots) != 0 || days[0].RemainingCapacity != 0 {
+		t.Fatalf("closed day availability = %+v, want empty", days[0])
+	}
+	if _, err := f.svc.Availability(f.ctx, c, monday, monday.AddDate(0, 0, maxRangeDays+1)); err == nil {
+		t.Fatal("over-long range accepted")
+	}
+}
+
+func TestCreateRejectsClosedDayAndForeignVehicle(t *testing.T) {
+	f := newFixture(t)
+	f.settings(f.dealer, 3)
+	f.link(f.user, f.dealer)
+	c := f.caller(f.dealer, rbac.ScopeManaged, []int64{f.dealer.ID})
+	f.closure(f.dealer, time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC))
+	// 23:30 UTC on Oct 4 is 01:30 on Oct 5 in Berlin: the closed local day.
+	if _, err := f.svc.Create(f.ctx, c, CreateInput{CustomerUserID: f.user.ID, StartsAt: time.Date(2026, 10, 4, 23, 30, 0, 0, time.UTC)}); !errors.Is(err, ErrDayClosed) {
+		t.Fatalf("closed day err = %v, want ErrDayClosed", err)
+	}
+	other := f.userRow("appointment-other")
+	f.link(other, f.dealer)
+	foreign := f.vehicle(other, f.dealer)
+	var ve *ValidationError
+	if _, err := f.svc.Create(f.ctx, c, CreateInput{CustomerUserID: f.user.ID, VehicleID: &foreign.ID, StartsAt: time.Date(2026, 10, 6, 8, 0, 0, 0, time.UTC)}); !errors.As(err, &ve) || ve.Field != "vehicle_id" {
+		t.Fatalf("foreign vehicle err = %v, want vehicle_id validation", err)
+	}
+	stranger := f.userRow("appointment-stranger")
+	if _, err := f.svc.Create(f.ctx, c, CreateInput{CustomerUserID: stranger.ID, StartsAt: time.Date(2026, 10, 6, 8, 0, 0, 0, time.UTC)}); !errors.As(err, &ve) || ve.Field != "customer_user_id" {
+		t.Fatalf("non-customer err = %v, want customer_user_id validation", err)
+	}
+}
+
+func TestStatusTransitionsAndEvents(t *testing.T) {
+	f := newFixture(t)
+	f.settings(f.dealer, 5)
+	f.link(f.user, f.dealer)
+	c := f.caller(f.dealer, rbac.ScopeManaged, []int64{f.dealer.ID})
+	start := time.Date(2026, 10, 5, 8, 0, 0, 0, time.UTC)
+	a, err := f.svc.Create(f.ctx, c, CreateInput{CustomerUserID: f.user.ID, StartsAt: start})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if _, err := f.svc.SetStatus(f.ctx, c, a.UUID, StatusInput{Status: StatusArrived}); !errors.Is(err, ErrInvalidTransition) {
+		t.Fatalf("scheduled->arrived err = %v", err)
+	}
+	if _, err := f.svc.Patch(f.ctx, c, a.UUID, PatchInput{CustomerUserID: f.user.ID, StartsAt: start.Add(time.Hour)}); err != nil {
+		t.Fatalf("reschedule: %v", err)
+	}
+	for _, next := range []string{StatusConfirmed, StatusArrived} {
+		if _, err := f.svc.SetStatus(f.ctx, c, a.UUID, StatusInput{Status: next}); err != nil {
+			t.Fatalf("-> %s: %v", next, err)
+		}
+	}
+	if _, err := f.svc.SetStatus(f.ctx, c, a.UUID, StatusInput{Status: StatusCancelled, CancelReason: strPtr("x")}); !errors.Is(err, ErrInvalidTransition) {
+		t.Fatalf("arrived->cancelled err = %v", err)
+	}
+	if _, err := f.svc.Patch(f.ctx, c, a.UUID, PatchInput{CustomerUserID: f.user.ID, StartsAt: start}); !errors.Is(err, ErrInvalidTransition) {
+		t.Fatalf("reschedule arrived err = %v", err)
+	}
+	b, err := f.svc.Create(f.ctx, c, CreateInput{CustomerUserID: f.user.ID, StartsAt: start})
+	if err != nil {
+		t.Fatalf("create b: %v", err)
+	}
+	var ve *ValidationError
+	if _, err := f.svc.SetStatus(f.ctx, c, b.UUID, StatusInput{Status: StatusCancelled}); !errors.As(err, &ve) {
+		t.Fatalf("cancel without reason err = %v", err)
+	}
+	if _, err := f.svc.SetStatus(f.ctx, c, b.UUID, StatusInput{Status: StatusCancelled, CancelReason: strPtr("customer called")}); err != nil {
+		t.Fatalf("cancel: %v", err)
+	}
+	got := fmt.Sprint(f.eventNames())
+	want := "[appointment.cancelled appointment.created appointment.created appointment.rescheduled]"
+	if got != want {
+		t.Fatalf("events = %s, want %s", got, want)
+	}
+}
+
+func TestDistributorCannotWriteDealerAppointment(t *testing.T) {
+	f := newFixture(t)
+	f.settings(f.dealer, 3)
+	f.link(f.user, f.dealer)
+	dealerCaller := f.caller(f.dealer, rbac.ScopeManaged, []int64{f.dealer.ID})
+	a, err := f.svc.Create(f.ctx, dealerCaller, CreateInput{CustomerUserID: f.user.ID, StartsAt: time.Date(2026, 10, 5, 8, 0, 0, 0, time.UTC)})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	dist := f.caller(f.dist, rbac.ScopeSubtree, []int64{f.dist.ID, f.dealer.ID})
+	if _, err := f.svc.SetStatus(f.ctx, dist, a.UUID, StatusInput{Status: StatusConfirmed}); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("distributor write err = %v, want ErrForbidden", err)
+	}
+	items, total, err := f.svc.List(f.ctx, dist, ListFilter{From: time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC), To: time.Date(2026, 10, 6, 0, 0, 0, 0, time.UTC), Limit: 20})
+	if err != nil || total != 1 || len(items) != 1 {
+		t.Fatalf("distributor list = %d/%d err=%v, want the dealer appointment", len(items), total, err)
+	}
+	center := f.caller(f.center, rbac.ScopeAll, nil)
+	_, total, err = f.svc.List(f.ctx, center, ListFilter{From: time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC), To: time.Date(2026, 10, 6, 0, 0, 0, 0, time.UTC), Limit: 100})
+	if err != nil || total < 1 {
+		t.Fatalf("center (all) list total = %d err=%v, want >= 1", total, err)
+	}
+}
+
+// TestCreateCapacityHoldsUnderConcurrentInserts runs on committed rows and
+// real connections: the settings row lock must keep concurrent bookings of
+// the same day within the capacity.
+func TestCreateCapacityHoldsUnderConcurrentInserts(t *testing.T) {
+	dsn := os.Getenv("TEST_DATABASE_URL")
+	if dsn == "" {
+		t.Skip("TEST_DATABASE_URL not set")
+	}
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, dsn)
+	if err != nil {
+		t.Fatalf("pool: %v", err)
+	}
+	t.Cleanup(pool.Close)
+	q := db.New(pool)
+	var brand, center int64
+	if err := pool.QueryRow(ctx, `SELECT b.id, o.id FROM brands b JOIN organizations o ON o.brand_id = b.id AND o.type = 'center'
+		WHERE b.slug = 'olex' ORDER BY o.id LIMIT 1`).Scan(&brand, &center); err != nil {
+		t.Fatalf("brand: %v", err)
+	}
+	slug := fmt.Sprintf("tec323-race-%d", time.Now().UnixNano())
+	org, err := q.CreateOrganization(ctx, db.CreateOrganizationParams{
+		Slug: slug, Name: slug, Status: "active", Type: "dealer", BrandID: brand, ParentID: pgtype.Int8{Int64: center, Valid: true},
+		Currency: "TRY", Locale: "tr", Timezone: "Europe/Istanbul", Settings: []byte(`{}`),
+		AccessStartsAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("org: %v", err)
+	}
+	user, err := q.CreateUser(ctx, db.CreateUserParams{
+		Email: pgtype.Text{String: slug + "@example.test", Valid: true}, PasswordHash: "x", Name: "race", Surname: "User", Status: "active",
+	})
+	if err != nil {
+		t.Fatalf("user: %v", err)
+	}
+	if _, err := q.LinkCustomerOrganization(ctx, db.LinkCustomerOrganizationParams{UserID: user.ID, OrganizationID: org.ID, BrandID: brand}); err != nil {
+		t.Fatalf("link: %v", err)
+	}
+	if _, err := q.UpsertAppointmentSettings(ctx, db.UpsertAppointmentSettingsParams{
+		OrganizationID: org.ID, BrandID: brand, DailyVehicleCapacity: 3, DefaultEstimatedMinutes: 60, SlotIntervalMinutes: 60,
+		WorkingHours: []byte(`{}`),
+	}); err != nil {
+		t.Fatalf("settings: %v", err)
+	}
+	svc := New(pool, q, outbox.NewMemory(), nil)
+	c := Caller{
+		Principal: authctx.Principal{UserInternal: user.ID, PermissionScopes: map[string]rbac.Scope{
+			rbac.PermAppointmentsRead: rbac.ScopeManaged, rbac.PermAppointmentsWrite: rbac.ScopeManaged,
+		}},
+		Org:    orgctx.Scope{InternalID: org.ID, UUID: org.Uuid, OrgType: org.Type, BrandID: brand},
+		Filter: scopefilter.Filter{Permission: rbac.PermAppointmentsRead, Scope: rbac.ScopeManaged, OrgID: org.ID, OrgIDs: []int64{org.ID}},
+	}
+	const workers = 8
+	var wg sync.WaitGroup
+	errs := make([]error, workers)
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			_, errs[i] = svc.Create(ctx, c, CreateInput{CustomerUserID: user.ID, StartsAt: time.Date(2030, 3, 4, 8, i, 0, 0, time.UTC)})
+		}(i)
+	}
+	wg.Wait()
+	ok, full := 0, 0
+	for _, err := range errs {
+		switch {
+		case err == nil:
+			ok++
+		case errors.Is(err, ErrCapacityFull):
+			full++
+		default:
+			t.Fatalf("unexpected err: %v", err)
+		}
+	}
+	if ok != 3 || full != workers-3 {
+		t.Fatalf("created=%d full=%d, want 3/%d", ok, full, workers-3)
 	}
 }
