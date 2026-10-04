@@ -12,6 +12,25 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const appointmentClosureExists = `-- name: AppointmentClosureExists :one
+SELECT EXISTS (
+    SELECT 1 FROM appointment_closures
+    WHERE organization_id = $1 AND closed_on = $2::date
+)::boolean AS closed
+`
+
+type AppointmentClosureExistsParams struct {
+	OrganizationID int64       `json:"organization_id"`
+	ClosedOn       pgtype.Date `json:"closed_on"`
+}
+
+func (q *Queries) AppointmentClosureExists(ctx context.Context, arg AppointmentClosureExistsParams) (bool, error) {
+	row := q.db.QueryRow(ctx, appointmentClosureExists, arg.OrganizationID, arg.ClosedOn)
+	var closed bool
+	err := row.Scan(&closed)
+	return closed, err
+}
+
 const countActiveAppointmentsByOrganization = `-- name: CountActiveAppointmentsByOrganization :many
 SELECT organization_id, COUNT(*)::bigint AS active_count
 FROM appointments
@@ -96,7 +115,7 @@ func (q *Queries) CountActiveAppointmentsForOrganization(ctx context.Context, ar
 
 const countAppointmentsByOrganizations = `-- name: CountAppointmentsByOrganizations :one
 SELECT COUNT(*) FROM appointments
-WHERE organization_id = ANY($1::bigint[])
+WHERE ($1::bigint[] IS NULL OR organization_id = ANY($1::bigint[]))
   AND brand_id = $2
   AND deleted_at IS NULL
   AND starts_at >= $3::timestamptz
@@ -456,7 +475,7 @@ func (q *Queries) ListAppointmentSettingsByOrganizations(ctx context.Context, or
 
 const listAppointmentsByOrganizations = `-- name: ListAppointmentsByOrganizations :many
 SELECT id, uuid, organization_id, brand_id, customer_user_id, vehicle_id, starts_at, ends_at, estimated_minutes, source, status, cancel_reason, lead_id, service_id, note, created_by_user_id, reminded_24h_at, reminded_2h_at, created_at, updated_at, deleted_at FROM appointments
-WHERE organization_id = ANY($1::bigint[])
+WHERE ($1::bigint[] IS NULL OR organization_id = ANY($1::bigint[]))
   AND brand_id = $2
   AND deleted_at IS NULL
   AND starts_at >= $3::timestamptz
@@ -524,6 +543,73 @@ func (q *Queries) ListAppointmentsByOrganizations(ctx context.Context, arg ListA
 		return nil, err
 	}
 	return items, nil
+}
+
+const lockAppointmentByID = `-- name: LockAppointmentByID :one
+SELECT id, uuid, organization_id, brand_id, customer_user_id, vehicle_id, starts_at, ends_at, estimated_minutes, source, status, cancel_reason, lead_id, service_id, note, created_by_user_id, reminded_24h_at, reminded_2h_at, created_at, updated_at, deleted_at FROM appointments
+WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL
+FOR UPDATE
+`
+
+type LockAppointmentByIDParams struct {
+	ID             int64 `json:"id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) LockAppointmentByID(ctx context.Context, arg LockAppointmentByIDParams) (Appointment, error) {
+	row := q.db.QueryRow(ctx, lockAppointmentByID, arg.ID, arg.OrganizationID)
+	var i Appointment
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.CustomerUserID,
+		&i.VehicleID,
+		&i.StartsAt,
+		&i.EndsAt,
+		&i.EstimatedMinutes,
+		&i.Source,
+		&i.Status,
+		&i.CancelReason,
+		&i.LeadID,
+		&i.ServiceID,
+		&i.Note,
+		&i.CreatedByUserID,
+		&i.Reminded24hAt,
+		&i.Reminded2hAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const lockAppointmentSettings = `-- name: LockAppointmentSettings :one
+SELECT id, uuid, organization_id, brand_id, daily_vehicle_capacity, default_estimated_minutes, slot_interval_minutes, working_hours, portal_appointments_enabled, created_at, updated_at FROM appointment_settings
+WHERE organization_id = $1
+FOR UPDATE
+`
+
+// TEC-323: serializes bookings of one organization; the capacity count and
+// the insert run under this row lock so concurrent bookings cannot overfill.
+func (q *Queries) LockAppointmentSettings(ctx context.Context, organizationID int64) (AppointmentSetting, error) {
+	row := q.db.QueryRow(ctx, lockAppointmentSettings, organizationID)
+	var i AppointmentSetting
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.DailyVehicleCapacity,
+		&i.DefaultEstimatedMinutes,
+		&i.SlotIntervalMinutes,
+		&i.WorkingHours,
+		&i.PortalAppointmentsEnabled,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const markAppointmentReminder24h = `-- name: MarkAppointmentReminder24h :one

@@ -38,6 +38,7 @@ type Querier interface {
 	// Atomically appends one image while the product holds fewer than
 	// max_images; no row means the product is gone or already full.
 	AppendProductImage(ctx context.Context, arg AppendProductImageParams) (Product, error)
+	AppointmentClosureExists(ctx context.Context, arg AppointmentClosureExistsParams) (bool, error)
 	// Seller approval: freezes the rate (decision 2).
 	ApproveOrder(ctx context.Context, arg ApproveOrderParams) (Order, error)
 	ApproveStockCount(ctx context.Context, arg ApproveStockCountParams) (StockCount, error)
@@ -1603,6 +1604,10 @@ type Querier interface {
 	LockAccountingDispute(ctx context.Context, arg LockAccountingDisputeParams) (AccountingDispute, error)
 	// Active reservations of a unit (at most one for a serial unit).
 	LockActiveReservationsByUnit(ctx context.Context, unitID int64) ([]StockReservation, error)
+	LockAppointmentByID(ctx context.Context, arg LockAppointmentByIDParams) (Appointment, error)
+	// TEC-323: serializes bookings of one organization; the capacity count and
+	// the insert run under this row lock so concurrent bookings cannot overfill.
+	LockAppointmentSettings(ctx context.Context, organizationID int64) (AppointmentSetting, error)
 	// ---------------------------------------------------------------------------
 	// Barcode counters and batches.
 	// Creates the counter on first use and locks it for the batch allocation.

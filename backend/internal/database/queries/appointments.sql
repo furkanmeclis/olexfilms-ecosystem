@@ -22,6 +22,13 @@ RETURNING *;
 SELECT * FROM appointment_settings
 WHERE organization_id = sqlc.arg(organization_id);
 
+-- TEC-323: serializes bookings of one organization; the capacity count and
+-- the insert run under this row lock so concurrent bookings cannot overfill.
+-- name: LockAppointmentSettings :one
+SELECT * FROM appointment_settings
+WHERE organization_id = sqlc.arg(organization_id)
+FOR UPDATE;
+
 -- name: ListAppointmentSettingsByOrganizations :many
 SELECT * FROM appointment_settings
 WHERE organization_id = ANY(sqlc.arg(organization_ids)::bigint[])
@@ -38,6 +45,12 @@ WHERE organization_id = sqlc.arg(organization_id)
   AND closed_on >= sqlc.arg(from_date)::date
   AND closed_on <= sqlc.arg(to_date)::date
 ORDER BY closed_on, id;
+
+-- name: AppointmentClosureExists :one
+SELECT EXISTS (
+    SELECT 1 FROM appointment_closures
+    WHERE organization_id = sqlc.arg(organization_id) AND closed_on = sqlc.arg(closed_on)::date
+)::boolean AS closed;
 
 -- name: DeleteAppointmentClosure :execrows
 DELETE FROM appointment_closures
@@ -65,13 +78,18 @@ RETURNING *;
 SELECT * FROM appointments
 WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id) AND deleted_at IS NULL;
 
+-- name: LockAppointmentByID :one
+SELECT * FROM appointments
+WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id) AND deleted_at IS NULL
+FOR UPDATE;
+
 -- name: GetAppointmentByID :one
 SELECT * FROM appointments
 WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id) AND deleted_at IS NULL;
 
 -- name: ListAppointmentsByOrganizations :many
 SELECT * FROM appointments
-WHERE organization_id = ANY(sqlc.arg(organization_ids)::bigint[])
+WHERE (sqlc.narg(organization_ids)::bigint[] IS NULL OR organization_id = ANY(sqlc.narg(organization_ids)::bigint[]))
   AND brand_id = sqlc.arg(brand_id)
   AND deleted_at IS NULL
   AND starts_at >= sqlc.arg(from_time)::timestamptz
@@ -82,7 +100,7 @@ LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
 
 -- name: CountAppointmentsByOrganizations :one
 SELECT COUNT(*) FROM appointments
-WHERE organization_id = ANY(sqlc.arg(organization_ids)::bigint[])
+WHERE (sqlc.narg(organization_ids)::bigint[] IS NULL OR organization_id = ANY(sqlc.narg(organization_ids)::bigint[]))
   AND brand_id = sqlc.arg(brand_id)
   AND deleted_at IS NULL
   AND starts_at >= sqlc.arg(from_time)::timestamptz
