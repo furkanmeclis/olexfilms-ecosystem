@@ -51,6 +51,7 @@ import (
 	customersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/customers/usecase"
 	documentsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents"
 	dochandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/handler"
+	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
 	docusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/usecase"
 	exportmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports"
 	exporthandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/handler"
@@ -663,7 +664,13 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	if listFinder != nil {
 		leadsSvc.SetFinder(listFinder)
 	}
-	leadsmodule.RegisterRoutes(mux, leadshandler.New(leadsSvc), tokens, loader, deps.Queries, featureSvc)
+	if err := docSvc.RegisterLoader(docmodel.KindQuote, leadsSvc); err != nil {
+		return nil, err
+	}
+	if s.worker != nil {
+		s.worker.WithQuoteExpire(leadsSvc.ExpireDueQuotesTask)
+	}
+	leadsmodule.RegisterRoutes(mux, leadshandler.New(leadsSvc).WithDocuments(docSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-323: appointments, capacity, availability and intake start.
 	appointmentsSvc := appointmentsusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries), servicesSvc)
 	appointmentsmodule.RegisterRoutes(mux, appointmentshandler.New(appointmentsSvc), tokens, loader, deps.Queries, featureSvc)
