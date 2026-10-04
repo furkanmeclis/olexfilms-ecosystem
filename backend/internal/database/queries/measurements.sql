@@ -89,14 +89,92 @@ WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id);
 SELECT * FROM measurement_results
 WHERE uuid = sqlc.arg(uuid) AND organization_id = sqlc.arg(organization_id);
 
+-- name: ListMeasurementResultsPanel :many
+-- org_ids NULL means the whole brand (brand/all scopes); an empty set
+-- (customer scope) matches nothing.
+SELECT
+    mr.*,
+    md.uuid AS device_uuid,
+    md.serial AS registry_device_serial,
+    md.label AS device_label,
+    md.model AS device_model,
+    md.is_active AS device_is_active,
+    sm.phase AS service_phase,
+    sm.link_source AS service_link_source,
+    sm.confirmed_at AS service_confirmed_at,
+    s.uuid AS service_uuid,
+    s.service_no AS service_no,
+    o.uuid AS organization_uuid,
+    o.name AS organization_name,
+    count(*) OVER() AS total_count
+FROM measurement_results mr
+LEFT JOIN measurement_devices md ON md.id = mr.device_id
+LEFT JOIN service_measurements sm ON sm.measurement_result_id = mr.id
+LEFT JOIN services s ON s.id = sm.service_id
+LEFT JOIN organizations o ON o.id = mr.organization_id
+WHERE mr.brand_id = sqlc.arg(brand_id)
+  AND (sqlc.narg(org_ids)::bigint[] IS NULL OR mr.organization_id = ANY(sqlc.narg(org_ids)::bigint[]))
+  AND (sqlc.narg(vin)::varchar IS NULL OR mr.vin = sqlc.narg(vin)::varchar)
+  AND (sqlc.narg(device_uuid)::uuid IS NULL OR md.uuid = sqlc.narg(device_uuid)::uuid)
+  AND (sqlc.narg(status)::varchar IS NULL OR mr.status = sqlc.narg(status)::varchar)
+  AND (sqlc.narg(linked)::boolean IS NULL OR (sm.id IS NOT NULL) = sqlc.narg(linked)::boolean)
+  AND (sqlc.narg(measured_from)::timestamptz IS NULL OR COALESCE(mr.measured_at, mr.created_at) >= sqlc.narg(measured_from)::timestamptz)
+  AND (sqlc.narg(measured_to)::timestamptz IS NULL OR COALESCE(mr.measured_at, mr.created_at) < sqlc.narg(measured_to)::timestamptz)
+ORDER BY COALESCE(mr.measured_at, mr.created_at) DESC, mr.id DESC
+LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
+
+-- name: GetMeasurementResultPanel :one
+SELECT
+    mr.*,
+    md.uuid AS device_uuid,
+    md.serial AS registry_device_serial,
+    md.label AS device_label,
+    md.model AS device_model,
+    md.is_active AS device_is_active,
+    sm.phase AS service_phase,
+    sm.link_source AS service_link_source,
+    sm.confirmed_at AS service_confirmed_at,
+    s.uuid AS service_uuid,
+    s.service_no AS service_no,
+    o.uuid AS organization_uuid,
+    o.name AS organization_name
+FROM measurement_results mr
+LEFT JOIN measurement_devices md ON md.id = mr.device_id
+LEFT JOIN service_measurements sm ON sm.measurement_result_id = mr.id
+LEFT JOIN services s ON s.id = sm.service_id
+LEFT JOIN organizations o ON o.id = mr.organization_id
+WHERE mr.uuid = sqlc.arg(uuid)
+  AND mr.brand_id = sqlc.arg(brand_id)
+  AND (sqlc.narg(org_ids)::bigint[] IS NULL OR mr.organization_id = ANY(sqlc.narg(org_ids)::bigint[]));
+
 -- name: ListMeasurementDevices :many
 SELECT * FROM measurement_devices
 WHERE organization_id = sqlc.arg(organization_id)
 ORDER BY is_active DESC, serial;
 
+-- name: GetMeasurementDeviceByUUID :one
+SELECT * FROM measurement_devices
+WHERE uuid = sqlc.arg(uuid) AND organization_id = sqlc.arg(organization_id);
+
 -- name: GetMeasurementDeviceBySerial :one
 SELECT * FROM measurement_devices
 WHERE organization_id = sqlc.arg(organization_id) AND serial = sqlc.arg(serial);
+
+-- name: CreateMeasurementDevice :one
+INSERT INTO measurement_devices (organization_id, brand_id, serial, label, model, is_active)
+VALUES (
+    sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.arg(serial), sqlc.narg(label),
+    sqlc.narg(model), sqlc.arg(is_active)
+)
+RETURNING *;
+
+-- name: UpdateMeasurementDevice :one
+UPDATE measurement_devices
+SET label = sqlc.narg(label),
+    model = sqlc.narg(model),
+    is_active = sqlc.arg(is_active)
+WHERE uuid = sqlc.arg(uuid) AND organization_id = sqlc.arg(organization_id)
+RETURNING *;
 
 -- name: UpsertMeasurementDevice :one
 INSERT INTO measurement_devices (organization_id, brand_id, serial, label, model, is_active)

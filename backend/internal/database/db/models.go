@@ -1690,6 +1690,27 @@ type RefreshToken struct {
 	RotatedAt          pgtype.Timestamptz `json:"rotated_at"`
 }
 
+type ReviewQuestion struct {
+	ID           int64              `json:"id"`
+	Uuid         uuid.UUID          `json:"uuid"`
+	BrandID      int64              `json:"brand_id"`
+	QuestionKey  string             `json:"question_key"`
+	QuestionType string             `json:"question_type"`
+	Target       string             `json:"target"`
+	IsRequired   bool               `json:"is_required"`
+	IsActive     bool               `json:"is_active"`
+	SortOrder    int32              `json:"sort_order"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ReviewQuestionLocale struct {
+	QuestionID int64              `json:"question_id"`
+	Locale     string             `json:"locale"`
+	Text       string             `json:"text"`
+	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Role struct {
 	ID          int64              `json:"id"`
 	Uuid        uuid.UUID          `json:"uuid"`
@@ -1755,6 +1776,7 @@ type Service struct {
 	UpdatedAt                pgtype.Timestamptz `json:"updated_at"`
 	MeasurementCheckRequired bool               `json:"measurement_check_required"`
 	MeasurementCheckedAt     pgtype.Timestamptz `json:"measurement_checked_at"`
+	WarrantyClaimID          pgtype.Int8        `json:"warranty_claim_id"`
 }
 
 type ServiceCatalogItem struct {
@@ -1867,6 +1889,21 @@ type ServiceReview struct {
 	PlatformRating int16              `json:"platform_rating"`
 	ProductRating  int16              `json:"product_rating"`
 	Comment        pgtype.Text        `json:"comment"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	IsAnonymous    bool               `json:"is_anonymous"`
+	Source         string             `json:"source"`
+	ProcessedAt    pgtype.Timestamptz `json:"processed_at"`
+}
+
+type ServiceReviewAnswer struct {
+	ID             int64              `json:"id"`
+	ReviewID       int64              `json:"review_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	QuestionID     int64              `json:"question_id"`
+	ProductID      pgtype.Int8        `json:"product_id"`
+	Rating         pgtype.Int2        `json:"rating"`
+	Text           pgtype.Text        `json:"text"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
@@ -2556,6 +2593,77 @@ type Warranty struct {
 	Notified7At    pgtype.Timestamptz `json:"notified_7_at"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type WarrantyClaim struct {
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	OrganizationID   int64              `json:"organization_id"`
+	BrandID          int64              `json:"brand_id"`
+	ClaimNo          int64              `json:"claim_no"`
+	WarrantyID       int64              `json:"warranty_id"`
+	ServiceID        int64              `json:"service_id"`
+	VehicleID        int64              `json:"vehicle_id"`
+	CustomerUserID   int64              `json:"customer_user_id"`
+	Description      string             `json:"description"`
+	Status           string             `json:"status"`
+	RejectionReason  pgtype.Text        `json:"rejection_reason"`
+	CoverageCheck    []byte             `json:"coverage_check"`
+	AiDamageType     pgtype.Text        `json:"ai_damage_type"`
+	AiSummary        pgtype.Text        `json:"ai_summary"`
+	AiConfidence     pgtype.Numeric     `json:"ai_confidence"`
+	AiTriagedAt      pgtype.Timestamptz `json:"ai_triaged_at"`
+	ReapplyServiceID pgtype.Int8        `json:"reapply_service_id"`
+	DecidedByUserID  pgtype.Int8        `json:"decided_by_user_id"`
+	DecidedAt        pgtype.Timestamptz `json:"decided_at"`
+	CreatedByUserID  pgtype.Int8        `json:"created_by_user_id"`
+	UpdatedByUserID  pgtype.Int8        `json:"updated_by_user_id"`
+	ClosedAt         pgtype.Timestamptz `json:"closed_at"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+type WarrantyClaimEvent struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	ClaimID        int64              `json:"claim_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	EventType      string             `json:"event_type"`
+	FromStatus     pgtype.Text        `json:"from_status"`
+	ToStatus       pgtype.Text        `json:"to_status"`
+	Note           pgtype.Text        `json:"note"`
+	Payload        []byte             `json:"payload"`
+	ActorUserID    pgtype.Int8        `json:"actor_user_id"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
+type WarrantyClaimPart struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	ClaimID        int64              `json:"claim_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	PartKey        string             `json:"part_key"`
+	ServiceItemID  pgtype.Int8        `json:"service_item_id"`
+	ProductID      pgtype.Int8        `json:"product_id"`
+	UnitID         pgtype.Int8        `json:"unit_id"`
+	Note           string             `json:"note"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
+type WarrantyClaimPhoto struct {
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	ClaimID          int64              `json:"claim_id"`
+	OrganizationID   int64              `json:"organization_id"`
+	BrandID          int64              `json:"brand_id"`
+	StorageKey       string             `json:"storage_key"`
+	MimeType         string             `json:"mime_type"`
+	SizeBytes        int64              `json:"size_bytes"`
+	Sha256           string             `json:"sha256"`
+	UploadedByUserID pgtype.Int8        `json:"uploaded_by_user_id"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 }
 
 type WarrantyPublicCodeAlias struct {

@@ -12092,6 +12092,166 @@ paths:
         "426":
           $ref: "#/components/responses/MobileApiVersionUnsupported"
 
+  /v1/measurement-devices:
+    get:
+      tags: [Measurements]
+      operationId: listMeasurementDevices
+      summary: List NexPTG measurement devices
+      description: Requires the measurements module and `measurement_devices.manage` in the active organization. Inactive devices are included with `is_active=false`.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Devices
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMeasurementDeviceList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Measurements]
+      operationId: createMeasurementDevice
+      summary: Register a NexPTG measurement device
+      description: Requires the measurements module and `measurement_devices.manage`. `serial` is unique inside the active organization; duplicates answer 409 `MEASUREMENT_DEVICE_SERIAL_EXISTS`. Device type is fixed to NexPTG.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MeasurementDeviceRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMeasurementDevice"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/measurement-devices/{uuid}:
+    patch:
+      tags: [Measurements]
+      operationId: updateMeasurementDevice
+      summary: Update a NexPTG measurement device
+      description: Updates `label`, `model` and `is_active`; serial and type are immutable. Requires the measurements module and `measurement_devices.manage`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MeasurementDevicePatchRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMeasurementDevice"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/measurements:
+    get:
+      tags: [Measurements]
+      operationId: listMeasurements
+      summary: List paint measurement results
+      description: Requires the measurements module and `measurements.read`. Managed readers see the active organization; subtree readers see the active organization and descendants. Portal endpoints do not expose measurement data.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: vin
+          in: query
+          schema: { type: string, minLength: 11, maxLength: 17 }
+        - name: device_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - name: measured_from
+          in: query
+          schema: { type: string }
+          description: Date (`YYYY-MM-DD`) or RFC3339 date-time; compared to measured_at, falling back to created_at.
+        - name: measured_to
+          in: query
+          schema: { type: string }
+          description: Date (`YYYY-MM-DD`, exclusive next day) or RFC3339 date-time.
+        - name: status
+          in: query
+          schema: { type: string, enum: [accepted, vin_pending] }
+        - name: linked
+          in: query
+          schema: { type: boolean }
+          description: true for results linked to a service, false for unlinked results.
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Page of measurements
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMeasurementPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/measurements/{uuid}:
+    get:
+      tags: [Measurements]
+      operationId: getMeasurement
+      summary: Get a paint measurement result
+      description: Returns the measurement header, normalized readings, tires and the linked service when present. Records outside the reader's managed/subtree scope answer 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Measurement detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMeasurementDetail"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/mobile/measurements:
     post:
       tags: [Mobile]
@@ -23478,6 +23638,162 @@ components:
           type: string
           description: Accepted for compatibility with the previous mobile API (not stored)
         app_version: { type: string, maxLength: 32 }
+
+    MeasurementDeviceRequest:
+      type: object
+      required: [serial]
+      additionalProperties: false
+      properties:
+        serial: { type: string, maxLength: 64 }
+        label: { type: [string, "null"], maxLength: 128 }
+        model: { type: [string, "null"], maxLength: 64 }
+        is_active: { type: boolean, default: true }
+
+    MeasurementDevicePatchRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        label: { type: [string, "null"], maxLength: 128 }
+        model: { type: [string, "null"], maxLength: 64 }
+        is_active: { type: boolean }
+
+    MeasurementDevice:
+      type: object
+      required: [uuid, serial, type, label, model, is_active, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        serial: { type: string }
+        type: { type: string, enum: [NexPTG] }
+        label: { type: [string, "null"] }
+        model: { type: [string, "null"] }
+        is_active: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    MeasurementOrganizationRef:
+      type: object
+      required: [uuid, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+
+    MeasurementServiceRef:
+      type: object
+      required: [uuid, service_no, phase, link_source, confirmed_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        service_no: { type: string }
+        phase: { type: string, enum: [before, after] }
+        link_source: { type: string, enum: [auto, manual] }
+        confirmed_at: { type: [string, "null"], format: date-time }
+
+    MeasurementSummary:
+      type: object
+      required: [uuid, organization, vin, status, source, device_serial, device, service, measured_at, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        organization: { $ref: "#/components/schemas/MeasurementOrganizationRef" }
+        vin: { type: [string, "null"] }
+        status: { type: string, enum: [accepted, vin_pending] }
+        source: { type: string, enum: [mobile, legacy_import] }
+        device_serial: { type: [string, "null"] }
+        device:
+          oneOf:
+            - $ref: "#/components/schemas/MeasurementDevice"
+            - type: "null"
+        service:
+          oneOf:
+            - $ref: "#/components/schemas/MeasurementServiceRef"
+            - type: "null"
+        measured_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+
+    MeasurementValue:
+      type: object
+      required: [place_id, part_type, is_inside, position, value_um, interpretation, substrate_type, measured_at]
+      properties:
+        place_id: { type: string }
+        part_type: { type: string }
+        is_inside: { type: boolean }
+        position: { type: [integer, "null"] }
+        value_um: { type: [string, "null"] }
+        interpretation: { type: [integer, "null"], minimum: -1, maximum: 5 }
+        substrate_type: { type: [string, "null"] }
+        measured_at: { type: [string, "null"], format: date-time }
+
+    MeasurementTire:
+      type: object
+      required: [section, width, profile, diameter, maker, season, tread_depth_1_mm, tread_depth_2_mm]
+      properties:
+        section: { type: [string, "null"] }
+        width: { type: [string, "null"] }
+        profile: { type: [string, "null"] }
+        diameter: { type: [string, "null"] }
+        maker: { type: [string, "null"] }
+        season: { type: [string, "null"] }
+        tread_depth_1_mm: { type: [string, "null"] }
+        tread_depth_2_mm: { type: [string, "null"] }
+
+    MeasurementDetail:
+      allOf:
+        - $ref: "#/components/schemas/MeasurementSummary"
+        - type: object
+          required: [body_type, pdf_key, raw, values, tires]
+          properties:
+            body_type: { type: [string, "null"] }
+            pdf_key: { type: [string, "null"] }
+            raw:
+              type: object
+              additionalProperties: true
+            values:
+              type: array
+              items: { $ref: "#/components/schemas/MeasurementValue" }
+            tires:
+              type: array
+              items: { $ref: "#/components/schemas/MeasurementTire" }
+
+    EnvelopeMeasurementDevice:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/MeasurementDevice" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeMeasurementDeviceList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/MeasurementDevice" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeMeasurementPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/MeasurementSummary" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeMeasurementDetail:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/MeasurementDetail" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     # K28 / TEC-233: minimal F2 storage; F3-02 (TEC-113) makes vin
     # mandatory and reads the parts.

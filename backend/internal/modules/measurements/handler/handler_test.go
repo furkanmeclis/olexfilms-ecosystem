@@ -26,6 +26,26 @@ func (f *fakeCreator) Create(_ context.Context, c usecase.Caller, in usecase.Inp
 	return f.res, f.err
 }
 
+func (f *fakeCreator) ListDevices(context.Context, usecase.PanelCaller) ([]usecase.DeviceView, error) {
+	return nil, f.err
+}
+
+func (f *fakeCreator) CreateDevice(context.Context, usecase.PanelCaller, usecase.DeviceInput) (usecase.DeviceView, error) {
+	return usecase.DeviceView{}, f.err
+}
+
+func (f *fakeCreator) UpdateDevice(context.Context, usecase.PanelCaller, uuid.UUID, usecase.DeviceInput) (usecase.DeviceView, error) {
+	return usecase.DeviceView{}, f.err
+}
+
+func (f *fakeCreator) ListMeasurements(context.Context, usecase.PanelCaller, usecase.MeasurementFilter) ([]usecase.MeasurementSummary, int64, error) {
+	return nil, 0, f.err
+}
+
+func (f *fakeCreator) GetMeasurement(context.Context, usecase.PanelCaller, uuid.UUID) (usecase.MeasurementDetail, error) {
+	return usecase.MeasurementDetail{}, f.err
+}
+
 func call(t *testing.T, h *Handler, body, key string) (int, map[string]any) {
 	t.Helper()
 	req := httptest.NewRequest("POST", "/v1/mobile/measurements", strings.NewReader(body))

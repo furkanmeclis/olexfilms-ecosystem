@@ -21,6 +21,9 @@ type Querier interface {
 	// Signed deltas; the CHECK rejects negative stock.
 	AddOrganizationProductStock(ctx context.Context, arg AddOrganizationProductStockParams) (OrganizationProductStock, error)
 	AddServiceCatalogModule(ctx context.Context, arg AddServiceCatalogModuleParams) error
+	AddWarrantyClaimEvent(ctx context.Context, arg AddWarrantyClaimEventParams) (WarrantyClaimEvent, error)
+	AddWarrantyClaimPart(ctx context.Context, arg AddWarrantyClaimPartParams) (WarrantyClaimPart, error)
+	AddWarrantyClaimPhoto(ctx context.Context, arg AddWarrantyClaimPhotoParams) (WarrantyClaimPhoto, error)
 	// Clears every personal profile field (identity numbers: ciphertext and
 	// mask together); anonymized_at keeps the first anonymization instant.
 	AnonymizeCustomerProfile(ctx context.Context, userID int64) (CustomerProfile, error)
@@ -169,6 +172,7 @@ type Querier interface {
 	CountRoles(ctx context.Context, q_ pgtype.Text) (int64, error)
 	CountScopedVehicles(ctx context.Context, arg CountScopedVehiclesParams) (int64, error)
 	CountSearchFinanceEntries(ctx context.Context, arg CountSearchFinanceEntriesParams) (int64, error)
+	CountServiceReviewAnswersByQuestion(ctx context.Context, arg CountServiceReviewAnswersByQuestionParams) (int64, error)
 	CountServiceSubscriptionsByItem(ctx context.Context, arg CountServiceSubscriptionsByItemParams) (int64, error)
 	CountServicesInScope(ctx context.Context, arg CountServicesInScopeParams) (int64, error)
 	CountServicesOfUser(ctx context.Context, customerUserID int64) (int64, error)
@@ -194,6 +198,8 @@ type Querier interface {
 	CountWarehouseTransferLines(ctx context.Context, transferID int64) (int64, error)
 	CountWarehouseTransfers(ctx context.Context, arg CountWarehouseTransfersParams) (int64, error)
 	CountWarrantiesInScope(ctx context.Context, arg CountWarrantiesInScopeParams) (int64, error)
+	CountWarrantyClaimPhotos(ctx context.Context, claimID int64) (int64, error)
+	CountWarrantyClaimsInScope(ctx context.Context, arg CountWarrantyClaimsInScopeParams) (int64, error)
 	CountWarrantyRows(ctx context.Context, arg CountWarrantyRowsParams) (int64, error)
 	// TEC-329 (F3-05a): announcements, their translations, audiences and read
 	// receipts (migration 000086).
@@ -248,6 +254,7 @@ type Querier interface {
 	CreateLibraryItem(ctx context.Context, arg CreateLibraryItemParams) (LibraryItem, error)
 	CreateLibraryItemVersion(ctx context.Context, arg CreateLibraryItemVersionParams) (LibraryItemVersion, error)
 	CreateLogPurgeRule(ctx context.Context, arg CreateLogPurgeRuleParams) (LogPurgeRule, error)
+	CreateMeasurementDevice(ctx context.Context, arg CreateMeasurementDeviceParams) (MeasurementDevice, error)
 	CreateMigrationRun(ctx context.Context, arg CreateMigrationRunParams) (MigrationRun, error)
 	CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error)
 	CreateOAuthAccount(ctx context.Context, arg CreateOAuthAccountParams) (OauthAccount, error)
@@ -284,6 +291,7 @@ type Querier interface {
 	CreateQuoteLine(ctx context.Context, arg CreateQuoteLineParams) (QuoteLine, error)
 	CreateQuoteReminder(ctx context.Context, arg CreateQuoteReminderParams) (QuoteReminder, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
+	CreateReviewQuestion(ctx context.Context, arg CreateReviewQuestionParams) (ReviewQuestion, error)
 	CreateRole(ctx context.Context, arg CreateRoleParams) (Role, error)
 	CreateRoom(ctx context.Context, arg CreateRoomParams) (Room, error)
 	// TEC-178 (F1-05a): services, service items, images and status logs
@@ -308,6 +316,9 @@ type Querier interface {
 	// ON CONFLICT DO NOTHING: a second review of the same service returns no
 	// row (pgx.ErrNoRows), which the use case answers with 409.
 	CreateServiceReview(ctx context.Context, arg CreateServiceReviewParams) (ServiceReview, error)
+	// The trigger enforces org/brand = review, question brand = review brand,
+	// type/rating/text agreement and product target <=> product_id.
+	CreateServiceReviewAnswer(ctx context.Context, arg CreateServiceReviewAnswerParams) (ServiceReviewAnswer, error)
 	CreateServiceSubscription(ctx context.Context, arg CreateServiceSubscriptionParams) (ServiceSubscription, error)
 	CreateServiceSubscriptionCancelRequest(ctx context.Context, arg CreateServiceSubscriptionCancelRequestParams) (ServiceSubscriptionCancelRequest, error)
 	// TEC-249 (F2-04d): short URLs behind /s/{token}.
@@ -356,6 +367,14 @@ type Querier interface {
 	// TEC-205: warehouse -> warehouse transfer documents (draft -> in_transit ->
 	// completed / cancelled) inside one organization.
 	CreateWarehouseTransfer(ctx context.Context, arg CreateWarehouseTransferParams) (WarehouseTransfer, error)
+	// TEC-334 (F3-06a): warranty claim schema (migration 000092). Reads are
+	// bounded by the brand and, when given, the resolved organization ids
+	// (NULL = the whole brand); the API layer owns scope resolution.
+	// claim_no is the next number of the organization. Two concurrent creates
+	// of one organization may collide on uq_warranty_claims_org_no; the caller
+	// retries. A second live claim of the warranty hits
+	// uq_warranty_claims_live_warranty.
+	CreateWarrantyClaim(ctx context.Context, arg CreateWarrantyClaimParams) (WarrantyClaim, error)
 	// TEC-185 (F1-06a): warranties and vehicle ownership transfers (migration
 	// 000051). Panel reads are brand-bound (K20); the public lookup by
 	// public_code is brand-bound too (a warranty of another brand is 404).
@@ -434,6 +453,7 @@ type Querier interface {
 	DeletePushSubscription(ctx context.Context, arg DeletePushSubscriptionParams) error
 	DeletePushSubscriptionByEndpoint(ctx context.Context, endpoint string) error
 	DeleteQuoteLines(ctx context.Context, quoteID int64) (int64, error)
+	DeleteReviewQuestionLocale(ctx context.Context, arg DeleteReviewQuestionLocaleParams) error
 	DeleteRole(ctx context.Context, argUuid uuid.UUID) error
 	DeleteRolePermission(ctx context.Context, arg DeleteRolePermissionParams) error
 	DeleteRoom(ctx context.Context, arg DeleteRoomParams) (int64, error)
@@ -457,6 +477,9 @@ type Querier interface {
 	DeleteUserTOTP(ctx context.Context, userID int64) error
 	DeleteWarehouse(ctx context.Context, arg DeleteWarehouseParams) (int64, error)
 	DeleteWarehouseTransferLine(ctx context.Context, arg DeleteWarehouseTransferLineParams) (int64, error)
+	DeleteWarrantyClaimPart(ctx context.Context, arg DeleteWarrantyClaimPartParams) (int64, error)
+	// Returns the storage key so the caller can remove the object.
+	DeleteWarrantyClaimPhoto(ctx context.Context, arg DeleteWarrantyClaimPhotoParams) (string, error)
 	DeleteWebAuthnCredentialByCredentialID(ctx context.Context, credentialID string) error
 	DeleteWebAuthnCredentialByUUID(ctx context.Context, arg DeleteWebAuthnCredentialByUUIDParams) error
 	// Every organization below the given one (not including itself).
@@ -633,6 +656,8 @@ type Querier interface {
 	GetLibraryItemByID(ctx context.Context, id int64) (LibraryItem, error)
 	GetLibraryItemByUUID(ctx context.Context, argUuid uuid.UUID) (LibraryItem, error)
 	GetLibraryItemVersionByUUID(ctx context.Context, argUuid uuid.UUID) (LibraryItemVersion, error)
+	// The live (not rejected / closed) claim of a warranty, if any.
+	GetLiveWarrantyClaimByWarranty(ctx context.Context, warrantyID int64) (WarrantyClaim, error)
 	// Stored locale/timezone preferences for i18n.Resolve: the user, the active
 	// organization (when given) and the center of its brand, or of the request
 	// brand when there is no active organization.
@@ -643,7 +668,9 @@ type Querier interface {
 	// opening balance once the previous one is reversed.
 	GetMaxFinanceEntryRevisionBySource(ctx context.Context, arg GetMaxFinanceEntryRevisionBySourceParams) (int32, error)
 	GetMeasurementDeviceBySerial(ctx context.Context, arg GetMeasurementDeviceBySerialParams) (MeasurementDevice, error)
+	GetMeasurementDeviceByUUID(ctx context.Context, arg GetMeasurementDeviceByUUIDParams) (MeasurementDevice, error)
 	GetMeasurementResultByUUID(ctx context.Context, arg GetMeasurementResultByUUIDParams) (MeasurementResult, error)
+	GetMeasurementResultPanel(ctx context.Context, arg GetMeasurementResultPanelParams) (GetMeasurementResultPanelRow, error)
 	// TEC-252: migrator bookkeeping (000074). Written only by cmd/migrator.
 	GetMigrationMap(ctx context.Context, arg GetMigrationMapParams) (MigrationMap, error)
 	GetModule(ctx context.Context, key string) (Module, error)
@@ -738,6 +765,8 @@ type Querier interface {
 	// queued / processing one created at or after pending_after. Failed and
 	// expired jobs are never reused.
 	GetReusablePortalServiceJob(ctx context.Context, arg GetReusablePortalServiceJobParams) (ExportJob, error)
+	GetReviewQuestionByID(ctx context.Context, arg GetReviewQuestionByIDParams) (ReviewQuestion, error)
+	GetReviewQuestionByUUID(ctx context.Context, arg GetReviewQuestionByUUIDParams) (ReviewQuestion, error)
 	GetRoleByID(ctx context.Context, id int64) (Role, error)
 	GetRoleBySlug(ctx context.Context, slug string) (Role, error)
 	GetRoleByUUID(ctx context.Context, argUuid uuid.UUID) (Role, error)
@@ -838,6 +867,9 @@ type Querier interface {
 	GetWarrantyByPublicCode(ctx context.Context, arg GetWarrantyByPublicCodeParams) (Warranty, error)
 	GetWarrantyByServiceItem(ctx context.Context, serviceItemID int64) (Warranty, error)
 	GetWarrantyByUUID(ctx context.Context, arg GetWarrantyByUUIDParams) (Warranty, error)
+	GetWarrantyClaimByID(ctx context.Context, arg GetWarrantyClaimByIDParams) (WarrantyClaim, error)
+	GetWarrantyClaimByUUID(ctx context.Context, arg GetWarrantyClaimByUUIDParams) (WarrantyClaim, error)
+	GetWarrantyClaimByUUIDForUpdate(ctx context.Context, arg GetWarrantyClaimByUUIDForUpdateParams) (WarrantyClaim, error)
 	GetWarrantyForIndex(ctx context.Context, argUuid uuid.UUID) (GetWarrantyForIndexRow, error)
 	// service.completed consumer (TEC-186): the service, its organization's
 	// time zone (end_at is the end of the last day there, decision 4) and its
@@ -980,6 +1012,9 @@ type Querier interface {
 	// LinkServiceMeasurement fails with 23505 when the service already has a
 	// measurement in the phase or the measurement is linked to another service.
 	LinkServiceMeasurement(ctx context.Context, arg LinkServiceMeasurementParams) (ServiceMeasurement, error)
+	// Links the re-application service to an approved claim and moves it to
+	// reapplied. The reverse link is SetServiceWarrantyClaim.
+	LinkWarrantyClaimReapplyService(ctx context.Context, arg LinkWarrantyClaimReapplyServiceParams) (WarrantyClaim, error)
 	ListAccountingDisputes(ctx context.Context, arg ListAccountingDisputesParams) ([]ListAccountingDisputesRow, error)
 	ListActiveDevicePushTokens(ctx context.Context, userID int64) ([]DevicePushToken, error)
 	ListActiveMobileSessionUUIDsForDevice(ctx context.Context, arg ListActiveMobileSessionUUIDsForDeviceParams) ([]uuid.UUID, error)
@@ -1189,6 +1224,9 @@ type Querier interface {
 	ListLocationsByUUIDs(ctx context.Context, arg ListLocationsByUUIDsParams) ([]WarehouseLocation, error)
 	ListLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
 	ListMeasurementDevices(ctx context.Context, organizationID int64) ([]MeasurementDevice, error)
+	// org_ids NULL means the whole brand (brand/all scopes); an empty set
+	// (customer scope) matches nothing.
+	ListMeasurementResultsPanel(ctx context.Context, arg ListMeasurementResultsPanelParams) ([]ListMeasurementResultsPanelRow, error)
 	ListMeasurementTires(ctx context.Context, arg ListMeasurementTiresParams) ([]MeasurementTire, error)
 	ListMeasurementValues(ctx context.Context, arg ListMeasurementValuesParams) ([]MeasurementValue, error)
 	// Grants of the user's roles in one organization (active org context).
@@ -1327,6 +1365,15 @@ type Querier interface {
 	// organization follows from such a movement), or a projection row it holds.
 	ListRebuildUnitIDsByOrganization(ctx context.Context, organizationID int64) ([]int64, error)
 	ListReservationsByOrder(ctx context.Context, orderID int64) ([]StockReservation, error)
+	ListReviewQuestionLocales(ctx context.Context, questionID int64) ([]ReviewQuestionLocale, error)
+	// Batch load for a question list (avoids N+1).
+	ListReviewQuestionLocalesByQuestions(ctx context.Context, questionIds []int64) ([]ReviewQuestionLocale, error)
+	// TEC-350 (F3-09a): admin-defined review questions, their translations, the
+	// answers on a service review, and the review flags (migration 000091).
+	// Questions are bounded by brand; answer reads are bounded by resolved
+	// organization ids where the API layer owns scope resolution.
+	// active_only = true lists only the active questions (the portal form).
+	ListReviewQuestionsByBrand(ctx context.Context, arg ListReviewQuestionsByBrandParams) ([]ReviewQuestion, error)
 	ListRoleGrantsByRoleID(ctx context.Context, roleID int64) ([]ListRoleGrantsByRoleIDRow, error)
 	ListRoleGrantsByRoleUUID(ctx context.Context, argUuid uuid.UUID) ([]ListRoleGrantsByRoleUUIDRow, error)
 	ListRolePermissionSlugsByRoleUUID(ctx context.Context, argUuid uuid.UUID) ([]string, error)
@@ -1358,6 +1405,12 @@ type Querier interface {
 	ListServiceMeasurements(ctx context.Context, arg ListServiceMeasurementsParams) ([]ServiceMeasurement, error)
 	ListServicePriceOverrides(ctx context.Context, arg ListServicePriceOverridesParams) ([]ServicePriceOverride, error)
 	ListServicePriceOverridesForItems(ctx context.Context, arg ListServicePriceOverridesForItemsParams) ([]ServicePriceOverride, error)
+	// organization_ids bounds the read to the caller's scope; NULL means no
+	// organization bound (scope all/brand, already bounded by brand_id).
+	ListServiceReviewAnswersByQuestion(ctx context.Context, arg ListServiceReviewAnswersByQuestionParams) ([]ServiceReviewAnswer, error)
+	ListServiceReviewAnswersByReview(ctx context.Context, reviewID int64) ([]ServiceReviewAnswer, error)
+	// Batch load for a review list (avoids N+1).
+	ListServiceReviewAnswersByReviews(ctx context.Context, reviewIds []int64) ([]ServiceReviewAnswer, error)
 	ListServiceStatusLogs(ctx context.Context, serviceID int64) ([]ServiceStatusLog, error)
 	// ---------------------------------------------------------------------------
 	// Stock picker (TEC-180): units the service organization can add as items.
@@ -1455,6 +1508,7 @@ type Querier interface {
 	ListUnitsByBatch(ctx context.Context, batchID pgtype.Int8) ([]Unit, error)
 	ListUnitsByBrandBarcodes(ctx context.Context, arg ListUnitsByBrandBarcodesParams) ([]Unit, error)
 	ListUnitsByIDs(ctx context.Context, ids []int64) ([]Unit, error)
+	ListUnprocessedServiceReviews(ctx context.Context, pageLimit int32) ([]ServiceReview, error)
 	ListUserIDsByRoleSlug(ctx context.Context, slug string) ([]int64, error)
 	ListUserRoleSlugs(ctx context.Context, userID int64) ([]string, error)
 	ListUserRolesByUserID(ctx context.Context, userID int64) ([]Role, error)
@@ -1513,6 +1567,11 @@ type Querier interface {
 	// holder_user_id narrows to the portal customer's own warranties (a
 	// transferred vehicle's warranties belong to the new holder).
 	ListWarrantyCertificateItems(ctx context.Context, arg ListWarrantyCertificateItemsParams) ([]ListWarrantyCertificateItemsRow, error)
+	ListWarrantyClaimEvents(ctx context.Context, claimID int64) ([]WarrantyClaimEvent, error)
+	ListWarrantyClaimParts(ctx context.Context, claimID int64) ([]WarrantyClaimPart, error)
+	ListWarrantyClaimPhotos(ctx context.Context, claimID int64) ([]WarrantyClaimPhoto, error)
+	ListWarrantyClaimsByWarranty(ctx context.Context, arg ListWarrantyClaimsByWarrantyParams) ([]WarrantyClaim, error)
+	ListWarrantyClaimsInScope(ctx context.Context, arg ListWarrantyClaimsInScopeParams) ([]WarrantyClaim, error)
 	// Notification context of the cron events (TEC-187): plate, product and the
 	// organization's name and time zone (end date is shown in the org zone).
 	ListWarrantyNoticeContexts(ctx context.Context, ids []int64) ([]ListWarrantyNoticeContextsRow, error)
@@ -1657,6 +1716,8 @@ type Querier interface {
 	MarkOutboxRetry(ctx context.Context, arg MarkOutboxRetryParams) error
 	MarkQRLoginChallengeScanned(ctx context.Context, code string) (QrLoginChallenge, error)
 	MarkQuoteReminderSent(ctx context.Context, id int64) (QuoteReminder, error)
+	// Idempotent: an already processed review returns no row (pgx.ErrNoRows).
+	MarkServiceReviewProcessed(ctx context.Context, id int64) (ServiceReview, error)
 	MarkServiceSubscriptionPeriodPosted(ctx context.Context, id int64) (ServiceSubscriptionPeriod, error)
 	MarkStockEntryUndone(ctx context.Context, id int64) (StockEntry, error)
 	MarkStockImportRowUndone(ctx context.Context, arg MarkStockImportRowUndoneParams) (StockImportRow, error)
@@ -1954,6 +2015,7 @@ type Querier interface {
 	ResolveTerritory(ctx context.Context, arg ResolveTerritoryParams) (ResolveTerritoryRow, error)
 	// A failed render is re-queued with a new attempt number (new task id).
 	RetryDocumentRender(ctx context.Context, id int64) (DocumentRender, error)
+	ReviewQuestionHasAnswers(ctx context.Context, questionID int64) (bool, error)
 	RevokeAllDevicePushTokensForUser(ctx context.Context, userID int64) (int64, error)
 	RevokeAllRefreshTokensForUser(ctx context.Context, userID int64) error
 	RevokeDevicePushToken(ctx context.Context, arg RevokeDevicePushTokenParams) (int64, error)
@@ -2020,6 +2082,7 @@ type Querier interface {
 	// is locked by the integration sync is skipped (TEC-268).
 	SetProductsActiveByUUIDs(ctx context.Context, arg SetProductsActiveByUUIDsParams) ([]uuid.UUID, error)
 	SetQuoteStatus(ctx context.Context, arg SetQuoteStatusParams) (Quote, error)
+	SetReviewQuestionActive(ctx context.Context, arg SetReviewQuestionActiveParams) (ReviewQuestion, error)
 	SetRolePermissions(ctx context.Context, roleID int64) error
 	SetRoomSortOrder(ctx context.Context, arg SetRoomSortOrderParams) (int64, error)
 	// Links (or unlinks with NULL) a contract of the service's organization.
@@ -2027,8 +2090,10 @@ type Querier interface {
 	// Written in the completion transaction before the status flips.
 	SetServiceItemMovement(ctx context.Context, arg SetServiceItemMovementParams) (ServiceItem, error)
 	SetServiceMeasurementCheck(ctx context.Context, arg SetServiceMeasurementCheckParams) error
+	SetServiceReviewFlags(ctx context.Context, arg SetServiceReviewFlagsParams) (ServiceReview, error)
 	SetServiceReviewRequestSent(ctx context.Context, id int64) (Service, error)
 	SetServiceSubscriptionStatus(ctx context.Context, arg SetServiceSubscriptionStatusParams) (ServiceSubscription, error)
+	SetServiceWarrantyClaim(ctx context.Context, arg SetServiceWarrantyClaimParams) (SetServiceWarrantyClaimRow, error)
 	SetStockEntryLineLocation(ctx context.Context, arg SetStockEntryLineLocationParams) (int64, error)
 	SetStockEntryLineMovements(ctx context.Context, arg SetStockEntryLineMovementsParams) error
 	SetStockEntryLineUndone(ctx context.Context, arg SetStockEntryLineUndoneParams) error
@@ -2054,6 +2119,13 @@ type Querier interface {
 	SetWarehouseTransferLineOut(ctx context.Context, arg SetWarehouseTransferLineOutParams) error
 	SetWarehouseTransferLineRestore(ctx context.Context, arg SetWarehouseTransferLineRestoreParams) error
 	SetWarehouseTransferLineTarget(ctx context.Context, arg SetWarehouseTransferLineTargetParams) (int64, error)
+	SetWarrantyClaimAITriage(ctx context.Context, arg SetWarrantyClaimAITriageParams) (WarrantyClaim, error)
+	SetWarrantyClaimCoverageCheck(ctx context.Context, arg SetWarrantyClaimCoverageCheckParams) (WarrantyClaim, error)
+	// Moves the claim from from_status to status (no row when the claim moved
+	// meanwhile). approved / rejected stamp the decision; rejected stores the
+	// reason; closed stamps closed_at. The status_changed event is written by
+	// trigger with actor = updated_by_user_id.
+	SetWarrantyClaimStatus(ctx context.Context, arg SetWarrantyClaimStatusParams) (WarrantyClaim, error)
 	SetWhatsAppInstance(ctx context.Context, arg SetWhatsAppInstanceParams) (WhatsappSetting, error)
 	SetWhatsAppSMSFallback(ctx context.Context, smsFallbackEnabled bool) (WhatsappSetting, error)
 	ShipTransferRequest(ctx context.Context, arg ShipTransferRequestParams) (StockTransferRequest, error)
@@ -2124,6 +2196,7 @@ type Querier interface {
 	UpdateLibraryFolder(ctx context.Context, arg UpdateLibraryFolderParams) (LibraryFolder, error)
 	UpdateLibraryItem(ctx context.Context, arg UpdateLibraryItemParams) (LibraryItem, error)
 	UpdateLogPurgeRule(ctx context.Context, arg UpdateLogPurgeRuleParams) (LogPurgeRule, error)
+	UpdateMeasurementDevice(ctx context.Context, arg UpdateMeasurementDeviceParams) (MeasurementDevice, error)
 	UpdateMessageStatusByExternalIDs(ctx context.Context, arg UpdateMessageStatusByExternalIDsParams) (int64, error)
 	UpdateMigrationMapChecksum(ctx context.Context, arg UpdateMigrationMapChecksumParams) error
 	UpdateModuleDefaults(ctx context.Context, arg UpdateModuleDefaultsParams) (Module, error)
@@ -2151,6 +2224,9 @@ type Querier interface {
 	UpdateProductCategory(ctx context.Context, arg UpdateProductCategoryParams) (ProductCategory, error)
 	UpdateQuoteDeliveryStatus(ctx context.Context, arg UpdateQuoteDeliveryStatusParams) (QuoteDelivery, error)
 	UpdateQuoteTotals(ctx context.Context, arg UpdateQuoteTotalsParams) (Quote, error)
+	// question_key, question_type and target are fixed once answers exist; the
+	// use case decides whether to allow changing them, this query rewrites all.
+	UpdateReviewQuestion(ctx context.Context, arg UpdateReviewQuestionParams) (ReviewQuestion, error)
 	UpdateRole(ctx context.Context, arg UpdateRoleParams) (Role, error)
 	UpdateRoom(ctx context.Context, arg UpdateRoomParams) (Room, error)
 	// Edits the form fields (wizard steps 1, 2 and 4). The caller has locked
@@ -2234,6 +2310,7 @@ type Querier interface {
 	// permission happens in the use case layer (TEC-146).
 	UpsertProductPrice(ctx context.Context, arg UpsertProductPriceParams) (ProductPrice, error)
 	UpsertPushSubscription(ctx context.Context, arg UpsertPushSubscriptionParams) (PushSubscription, error)
+	UpsertReviewQuestionLocale(ctx context.Context, arg UpsertReviewQuestionLocaleParams) (ReviewQuestionLocale, error)
 	UpsertServicePriceOverride(ctx context.Context, arg UpsertServicePriceOverrideParams) (ServicePriceOverride, error)
 	UpsertSystemModuleFlag(ctx context.Context, arg UpsertSystemModuleFlagParams) (ModuleFlag, error)
 	UpsertSystemRole(ctx context.Context, arg UpsertSystemRoleParams) (Role, error)
