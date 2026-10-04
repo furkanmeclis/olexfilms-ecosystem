@@ -59,6 +59,8 @@ tags:
     description: Centrifugo connection and subscription tokens
   - name: Notifications
     description: In-app notification center, preferences, and admin send
+  - name: Announcements
+    description: "Duyuru API: authoring, feed, read receipts and unread badge"
   - name: WhatsApp
     description: WhatsApp gateway (wuzapi), phone OTP and the wuzapi webhook
   - name: Portal
@@ -2936,6 +2938,237 @@ paths:
           $ref: "#/components/responses/TooManyRequests"
         "500":
           $ref: "#/components/responses/InternalError"
+
+  /v1/announcements:
+    get:
+      tags: [Announcements]
+      operationId: listAnnouncements
+      summary: Visible announcements
+      description: Requires `announcements.read` and enabled `announcements` feature. Published, non-expired announcements matching the caller's organization type, role or subtree are returned pinned first.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: locale
+          in: query
+          schema: { $ref: "#/components/schemas/LocaleCode" }
+        - name: unread_only
+          in: query
+          schema: { type: boolean }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Announcement feed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAnnouncementPage"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Announcements]
+      operationId: createAnnouncement
+      summary: Create announcement draft
+      description: Requires `announcements.write`; center writes inside the active brand and distributor writes inside its subtree.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AnnouncementInput" }
+      responses:
+        "201":
+          description: Announcement created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAnnouncement" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/announcements/unread-count:
+    get:
+      tags: [Announcements]
+      operationId: getAnnouncementsUnreadCount
+      summary: Announcement unread badge
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: locale
+          in: query
+          schema: { $ref: "#/components/schemas/LocaleCode" }
+      responses:
+        "200":
+          description: Unread count
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAnnouncementUnreadCount" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/announcements/{uuid}:
+    get:
+      tags: [Announcements]
+      operationId: getAnnouncement
+      summary: Read one visible announcement
+      description: Marks the announcement read with an idempotent read receipt.
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: locale, in: query, schema: { $ref: "#/components/schemas/LocaleCode" } }
+      responses:
+        "200":
+          description: Announcement
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAnnouncement" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Announcements]
+      operationId: updateAnnouncement
+      summary: Update draft announcement
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AnnouncementInput" }
+      responses:
+        "200":
+          description: Announcement
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAnnouncement" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/announcements/{uuid}/locales/{locale}:
+    put:
+      tags: [Announcements]
+      operationId: putAnnouncementLocale
+      summary: Upsert localized announcement content
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: locale, in: path, required: true, schema: { $ref: "#/components/schemas/LocaleCode" } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AnnouncementLocaleInput" }
+      responses:
+        "200":
+          description: Announcement
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAnnouncement" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/announcements/{uuid}/publish:
+    post:
+      tags: [Announcements]
+      operationId: publishAnnouncement
+      summary: Publish announcement
+      description: If `notify=true`, writes one `announcement.published` outbox event for in-app, e-mail and push fan-out. A second publish returns 409.
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Published announcement
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAnnouncement" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/announcements/{uuid}/archive:
+    post:
+      tags: [Announcements]
+      operationId: archiveAnnouncement
+      summary: Archive announcement
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Archived announcement
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAnnouncement" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/announcements/{uuid}/pin:
+    post:
+      tags: [Announcements]
+      operationId: pinAnnouncement
+      summary: Pin or unpin announcement
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [pinned]
+              properties:
+                pinned: { type: boolean }
+      responses:
+        "200":
+          description: Announcement
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAnnouncement" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/announcements/{uuid}/reads:
+    get:
+      tags: [Announcements]
+      operationId: getAnnouncementReads
+      summary: Announcement read report
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Read report
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAnnouncementReadReport" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /v1/notifications:
     get:
@@ -16506,6 +16739,143 @@ components:
             $ref: "#/components/schemas/Error"
 
   schemas:
+    LocaleCode:
+      type: string
+      enum: [tr, en, bg, de, el, uk, ru, fr, es, it, zh-CN, az, ar]
+
+    AnnouncementStatus:
+      type: string
+      enum: [draft, published, archived]
+
+    AnnouncementAudienceTarget:
+      type: string
+      enum: [all_network, distributors, dealers, role, subtree]
+
+    AnnouncementAudience:
+      type: object
+      additionalProperties: false
+      required: [target_type]
+      properties:
+        target_type: { $ref: "#/components/schemas/AnnouncementAudienceTarget" }
+        role_slug: { type: [string, "null"], maxLength: 100 }
+        target_organization_uuid: { type: [string, "null"], format: uuid }
+
+    AnnouncementInput:
+      type: object
+      additionalProperties: false
+      required: [title, body, audiences]
+      properties:
+        default_locale: { $ref: "#/components/schemas/LocaleCode" }
+        title: { type: string, maxLength: 200 }
+        body: { type: string, maxLength: 20000 }
+        body_format: { type: string, enum: [markdown, html], default: markdown }
+        pinned: { type: boolean, default: false }
+        notify: { type: boolean, default: false }
+        publish_at: { type: [string, "null"], format: date-time }
+        expires_at: { type: [string, "null"], format: date-time }
+        audiences:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/AnnouncementAudience" }
+
+    AnnouncementLocaleInput:
+      type: object
+      additionalProperties: false
+      required: [title, body]
+      properties:
+        title: { type: string, maxLength: 200 }
+        body: { type: string, maxLength: 20000 }
+
+    Announcement:
+      type: object
+      required: [uuid, default_locale, title, body, body_format, status, pinned, notify]
+      properties:
+        uuid: { type: string, format: uuid }
+        default_locale: { $ref: "#/components/schemas/LocaleCode" }
+        locale: { type: string }
+        title: { type: string }
+        body: { type: string }
+        body_format: { type: string, enum: [markdown, html] }
+        status: { $ref: "#/components/schemas/AnnouncementStatus" }
+        pinned: { type: boolean }
+        notify: { type: boolean }
+        read_at: { type: [string, "null"], format: date-time }
+        publish_at: { type: [string, "null"], format: date-time }
+        expires_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        audiences:
+          type: array
+          items: { $ref: "#/components/schemas/AnnouncementAudience" }
+
+    AnnouncementUnreadCount:
+      type: object
+      required: [unread_count]
+      properties:
+        unread_count: { type: integer, format: int64, minimum: 0 }
+
+    AnnouncementReadItem:
+      type: object
+      required: [user_uuid, email, name, surname, read_at]
+      properties:
+        user_uuid: { type: string, format: uuid }
+        email: { type: string }
+        name: { type: string }
+        surname: { type: string }
+        read_at: { type: string, format: date-time }
+
+    AnnouncementReadReport:
+      type: object
+      required: [target_total, read_total, read_rate, items]
+      properties:
+        target_total: { type: integer, format: int64, minimum: 0 }
+        read_total: { type: integer, format: int64, minimum: 0 }
+        read_rate: { type: number, format: double, minimum: 0, maximum: 1 }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AnnouncementReadItem" }
+
+    EnvelopeAnnouncement:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Announcement" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAnnouncementPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/Announcement" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAnnouncementUnreadCount:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/AnnouncementUnreadCount" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAnnouncementReadReport:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/AnnouncementReadReport" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
 
     SearchSpec:
       type: object

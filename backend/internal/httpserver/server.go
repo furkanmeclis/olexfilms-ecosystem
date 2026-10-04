@@ -23,6 +23,9 @@ import (
 	activitymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/activity"
 	activityhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/activity/handler"
 	activityusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/activity/usecase"
+	announcementsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements"
+	announcementshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/handler"
+	announcementsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/usecase"
 	authmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth"
 	authhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/handler"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/identity"
@@ -482,7 +485,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 
 	nh := notifhandler.New(notifSvc)
 	notifmodule.RegisterRoutes(mux, nh, tokens, loader)
-	notifmodule.RegisterEventHandlers(eventBus, notifSvc, log)
+	notifmodule.RegisterEventHandlers(eventBus, notifSvc, log,
+		notifmodule.WithAnnouncementFanout(deps.Queries, deps.Queue))
 	// TEC-186: service.completed opens one warranty per service item.
 	warrantymodule.RegisterEventHandlers(eventBus, deps.DB, deps.Queries, cfg.Auth.FrontendURL, log)
 	// TEC-192: service.completed schedules the delayed review request.
@@ -580,6 +584,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 			WithVehicleTransferExpire(customersSvc.ExpireTransfersTask).
 			WithServiceReviewRequest(servicereview.NewTaskSender(deps.DB, deps.Queries, log).Task).
 			WithNotificationPurge(notifSvc.PurgeExpired).
+			WithAnnouncementDispatch(func(ctx context.Context, payload queue.AnnouncementDispatchPayload) error {
+				return announcementsusecase.DispatchBatch(ctx, notifSvc, payload)
+			}).
 			WithWhatsAppPoll(waSvc.PollStatus).
 			WithTasksDueScan(tasksusecase.NewCron(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)).DueScanTask)
 		if searchIndexer != nil {
@@ -635,6 +642,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-214: center tasks (center roles only; brand scoped).
 	tasksmodule.RegisterRoutes(mux, taskshandler.New(tasksusecase.New(deps.DB, deps.Queries,
 		outbox.NewStore(deps.DB, deps.Queries))), tokens, loader, deps.Queries)
+	// TEC-330: announcements (center brand network, distributor subtree).
+	announcementsmodule.RegisterRoutes(mux, announcementshandler.New(announcementsusecase.New(deps.DB, deps.Queries,
+		outbox.NewStore(deps.DB, deps.Queries))), tokens, loader, deps.Queries, featureSvc)
 	// TEC-149: vehicle catalog (global car brands/models, super_admin writes).
 	vehiclecatalogmodule.RegisterRoutes(mux, vehiclecataloghandler.New(
 		vehiclecatalogusecase.New(deps.Queries), deps.Storage, activityRec), tokens, loader)
