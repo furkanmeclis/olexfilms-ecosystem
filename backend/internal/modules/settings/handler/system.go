@@ -79,11 +79,14 @@ func (h *SystemHandler) fail(w http.ResponseWriter, r *http.Request, err error, 
 		return false
 	}
 	var ve *sysconfig.ValidationError
+	var re *sysconfig.RuleError
 	switch {
 	case errors.Is(err, sysconfig.ErrUnknownKey):
 		response.NotFound(w, r, "unknown setting key")
 	case errors.As(err, &ve):
 		response.ValidationError(w, r, []response.Detail{{Field: "value", Message: ve.Message}})
+	case errors.As(err, &re):
+		response.Error(w, r, http.StatusUnprocessableEntity, re.Code, re.Message)
 	default:
 		response.InternalErr(w, r, err, msg)
 	}

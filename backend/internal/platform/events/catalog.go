@@ -614,6 +614,7 @@ func catalogConstants() []string {
 		TasksOverdue,
 		OrganizationCreated,
 		OrganizationUpdated,
+		LeadsApplicationReceived,
 	}
 }
 
@@ -624,3 +625,9 @@ const (
 	TasksDueSoon = "tasks.due_soon"
 	TasksOverdue = "tasks.overdue"
 )
+
+// LeadsApplicationReceived (TEC-317) is written when the public dealer
+// application form opens a lead; tenant is the receiving organization
+// (territory distributor or brand center) and notify_user_ids its members
+// holding leads.read.
+const LeadsApplicationReceived = "leads.application_received"

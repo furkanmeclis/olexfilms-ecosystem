@@ -39,6 +39,17 @@ type Config struct {
 	Services   ServicesConfig
 	Glorian    GlorianConfig
 	ShortURLs  ShortURLsConfig
+	Leads      LeadsConfig
+}
+
+// LeadsConfig caps the public dealer application form
+// POST /v1/public/dealer-applications (TEC-317): ApplicationIPLimit
+// submissions per client IP and ApplicationPhoneLimit per E.164 phone in
+// ApplicationRateWindow. Zero disables a limit.
+type LeadsConfig struct {
+	ApplicationIPLimit    int
+	ApplicationPhoneLimit int
+	ApplicationRateWindow time.Duration
 }
 
 // ShortURLsConfig caps the public short URL resolver
@@ -408,6 +419,11 @@ func Load() (Config, error) {
 		ShortURLs: ShortURLsConfig{
 			PublicRateLimit:  getInt("SHORT_URL_PUBLIC_RATE_LIMIT", 60),
 			PublicRateWindow: getDuration("SHORT_URL_PUBLIC_RATE_WINDOW", time.Minute),
+		},
+		Leads: LeadsConfig{
+			ApplicationIPLimit:    getInt("DEALER_APPLICATION_IP_RATE_LIMIT", 5),
+			ApplicationPhoneLimit: getInt("DEALER_APPLICATION_PHONE_RATE_LIMIT", 3),
+			ApplicationRateWindow: getDuration("DEALER_APPLICATION_RATE_WINDOW", time.Hour),
 		},
 		Services: ServicesConfig{
 			ReviewRequestDelay: getDuration("SERVICE_REVIEW_REQUEST_DELAY", 24*time.Hour),
