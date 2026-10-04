@@ -122,3 +122,63 @@ func (s *Service) cari(ctx context.Context, orgID int64, id uuid.UUID) (Cari, er
 	}
 	return cariOf(r), nil
 }
+
+// ErrCustomerNotFound: the customer does not exist or the organization does
+// not serve it (no customer_organizations row); reads as 404 (TEC-342).
+var ErrCustomerNotFound = errors.New("accounting: customer not found")
+
+// CounterpartyTypeUser is the counterparty type of a customer cari.
+const CounterpartyTypeUser = "user"
+
+// OpenCariInput opens a cari by hand. Only customer caris are opened this
+// way (TEC-342, F3-07b); organization caris open with their first entry.
+type OpenCariInput struct {
+	CounterpartyType string
+	CounterpartyUUID *uuid.UUID
+}
+
+// OpenCustomerCari opens (or returns) the active organization's cari with a
+// customer it serves, in the organization's currency. It is a write: a
+// dealer needs the dealer_accounting module. created is false when the cari
+// already existed.
+func (s *Service) OpenCustomerCari(ctx context.Context, c Caller, in OpenCariInput) (Cari, bool, error) {
+	if in.CounterpartyType != CounterpartyTypeUser {
+		return Cari{}, false, invalid("counterparty_type", "must be user")
+	}
+	if in.CounterpartyUUID == nil || *in.CounterpartyUUID == uuid.Nil {
+		return Cari{}, false, invalid("counterparty_uuid", "is required")
+	}
+	book, err := s.writeBook(ctx, c)
+	if err != nil {
+		return Cari{}, false, err
+	}
+	u, err := s.q.GetUserByUUID(ctx, *in.CounterpartyUUID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Cari{}, false, ErrCustomerNotFound
+	}
+	if err != nil {
+		return Cari{}, false, fmt.Errorf("accounting: customer: %w", err)
+	}
+	if _, err := s.q.GetCustomerOrganization(ctx, db.GetCustomerOrganizationParams{
+		UserID: u.ID, OrganizationID: book.ID,
+	}); errors.Is(err, pgx.ErrNoRows) {
+		return Cari{}, false, ErrCustomerNotFound
+	} else if err != nil {
+		return Cari{}, false, fmt.Errorf("accounting: customer link: %w", err)
+	}
+	created := true
+	ca, err := s.q.CreateCariForUserIfMissing(ctx, db.CreateCariForUserIfMissingParams{
+		OrganizationID: book.ID, BrandID: book.BrandID, CounterpartyUserID: u.ID, Currency: book.Currency,
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		created = false
+		ca, err = s.q.GetCariAccountByCounterpartyUser(ctx, db.GetCariAccountByCounterpartyUserParams{
+			OrganizationID: book.ID, CounterpartyUserID: u.ID,
+		})
+	}
+	if err != nil {
+		return Cari{}, false, fmt.Errorf("accounting: open customer cari: %w", err)
+	}
+	out, err := s.cari(ctx, book.ID, ca.Uuid)
+	return out, created, err
+}

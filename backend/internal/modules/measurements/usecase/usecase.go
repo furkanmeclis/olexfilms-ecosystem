@@ -15,6 +15,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"regexp"
 	"strings"
 	"time"
@@ -79,10 +80,18 @@ type Store interface {
 	GetMeasurementResultPanel(ctx context.Context, arg db.GetMeasurementResultPanelParams) (db.GetMeasurementResultPanelRow, error)
 	ListMeasurementValues(ctx context.Context, arg db.ListMeasurementValuesParams) ([]db.MeasurementValue, error)
 	ListMeasurementTires(ctx context.Context, arg db.ListMeasurementTiresParams) ([]db.MeasurementTire, error)
+	// TEC-294: VIN completion.
+	CompleteMeasurementResultVIN(ctx context.Context, arg db.CompleteMeasurementResultVINParams) (int64, error)
 }
 
 // Service stores measurement uploads.
-type Service struct{ store Store }
+type Service struct {
+	store Store
+	// TEC-294: with a transaction source an upload is normalized in its
+	// insert transaction (normalize.go).
+	tx  TxBeginner
+	log *slog.Logger
+}
 
 // New creates the use case.
 func New(store Store) *Service { return &Service{store: store} }
@@ -246,9 +255,9 @@ func numericOut(v pgtype.Numeric) *string {
 	return &s
 }
 
-// Create stores one upload, or returns the first row of a repeated
-// Idempotency-Key / client_measurement_id.
-func (s *Service) Create(ctx context.Context, c Caller, in Input) (Result, error) {
+// create stores one upload, or returns the first row of a repeated
+// Idempotency-Key / client_measurement_id (Create wraps it, normalize.go).
+func (s *Service) create(ctx context.Context, c Caller, in Input) (Result, error) {
 	p, err := parse(in)
 	if err != nil {
 		return Result{}, err

@@ -55,6 +55,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.NotFound(w, r, "Organization not found")
 	case errors.Is(err, acc.ErrAccountNotFound):
 		response.NotFound(w, r, "Account not found")
+	case errors.Is(err, acc.ErrCustomerNotFound):
+		response.NotFound(w, r, "Customer not found")
 	case errors.Is(err, acc.ErrCariNotFound):
 		response.NotFound(w, r, "Cari account not found")
 	case errors.Is(err, acc.ErrEntryNotFound):
@@ -301,6 +303,33 @@ func (h *Handler) GetCari(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, r, http.StatusOK, c)
+}
+
+type openCariBody struct {
+	CounterpartyType string     `json:"counterparty_type"`
+	CounterpartyUUID *uuid.UUID `json:"counterparty_uuid"`
+}
+
+// OpenCari opens the cari of a customer the organization serves
+// (POST /v1/accounting/cari, TEC-342): 201 when opened, 200 with the
+// existing cari, 404 when the organization does not serve the customer.
+func (h *Handler) OpenCari(w http.ResponseWriter, r *http.Request) {
+	var b openCariBody
+	if !decode(w, r, &b) {
+		return
+	}
+	c, created, err := h.svc.OpenCustomerCari(r.Context(), caller(r), acc.OpenCariInput{
+		CounterpartyType: strings.TrimSpace(b.CounterpartyType), CounterpartyUUID: b.CounterpartyUUID,
+	})
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	status := http.StatusOK
+	if created {
+		status = http.StatusCreated
+	}
+	response.JSON(w, r, status, c)
 }
 
 // --- Entries -----------------------------------------------------------------

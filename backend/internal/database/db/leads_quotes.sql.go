@@ -517,6 +517,60 @@ func (q *Queries) DeleteQuoteLines(ctx context.Context, quoteID int64) (int64, e
 	return result.RowsAffected(), nil
 }
 
+const expireDueQuotes = `-- name: ExpireDueQuotes :many
+UPDATE quotes
+SET status = 'expired',
+    expired_at = COALESCE(expired_at, NOW())
+WHERE status IN ('draft', 'sent')
+  AND valid_until IS NOT NULL
+  AND valid_until < $1::date
+  AND deleted_at IS NULL
+RETURNING id, uuid, organization_id, brand_id, lead_id, quote_no, currency, subtotal, discount_total, tax_total, grand_total, valid_until, status, public_token, created_by_user_id, sent_at, accepted_at, rejected_at, expired_at, created_at, updated_at, deleted_at
+`
+
+func (q *Queries) ExpireDueQuotes(ctx context.Context, today pgtype.Date) ([]Quote, error) {
+	rows, err := q.db.Query(ctx, expireDueQuotes, today)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Quote{}
+	for rows.Next() {
+		var i Quote
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.LeadID,
+			&i.QuoteNo,
+			&i.Currency,
+			&i.Subtotal,
+			&i.DiscountTotal,
+			&i.TaxTotal,
+			&i.GrandTotal,
+			&i.ValidUntil,
+			&i.Status,
+			&i.PublicToken,
+			&i.CreatedByUserID,
+			&i.SentAt,
+			&i.AcceptedAt,
+			&i.RejectedAt,
+			&i.ExpiredAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getLeadByID = `-- name: GetLeadByID :one
 SELECT id, uuid, organization_id, brand_id, target_type, customer_user_id, vehicle_id, candidate_company_name, candidate_contact_name, candidate_phone_e164, candidate_email, country_id, province_id, district_id, source, temperature, status, lost_reason, follow_up_date, assignee_user_id, notes, won_ref_type, won_ref_id, created_by_user_id, created_at, updated_at, deleted_at FROM leads
 WHERE id = $1 AND brand_id = $2 AND deleted_at IS NULL
@@ -529,6 +583,53 @@ type GetLeadByIDParams struct {
 
 func (q *Queries) GetLeadByID(ctx context.Context, arg GetLeadByIDParams) (Lead, error) {
 	row := q.db.QueryRow(ctx, getLeadByID, arg.ID, arg.BrandID)
+	var i Lead
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.TargetType,
+		&i.CustomerUserID,
+		&i.VehicleID,
+		&i.CandidateCompanyName,
+		&i.CandidateContactName,
+		&i.CandidatePhoneE164,
+		&i.CandidateEmail,
+		&i.CountryID,
+		&i.ProvinceID,
+		&i.DistrictID,
+		&i.Source,
+		&i.Temperature,
+		&i.Status,
+		&i.LostReason,
+		&i.FollowUpDate,
+		&i.AssigneeUserID,
+		&i.Notes,
+		&i.WonRefType,
+		&i.WonRefID,
+		&i.CreatedByUserID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getLeadByIDForUpdate = `-- name: GetLeadByIDForUpdate :one
+SELECT id, uuid, organization_id, brand_id, target_type, customer_user_id, vehicle_id, candidate_company_name, candidate_contact_name, candidate_phone_e164, candidate_email, country_id, province_id, district_id, source, temperature, status, lost_reason, follow_up_date, assignee_user_id, notes, won_ref_type, won_ref_id, created_by_user_id, created_at, updated_at, deleted_at FROM leads
+WHERE id = $1 AND brand_id = $2 AND deleted_at IS NULL
+FOR UPDATE
+`
+
+type GetLeadByIDForUpdateParams struct {
+	ID      int64 `json:"id"`
+	BrandID int64 `json:"brand_id"`
+}
+
+// TEC-316: lead conversion serializes on the lead row.
+func (q *Queries) GetLeadByIDForUpdate(ctx context.Context, arg GetLeadByIDForUpdateParams) (Lead, error) {
+	row := q.db.QueryRow(ctx, getLeadByIDForUpdate, arg.ID, arg.BrandID)
 	var i Lead
 	err := row.Scan(
 		&i.ID,
@@ -1226,6 +1327,52 @@ func (q *Queries) ListQuotesByOrganizations(ctx context.Context, arg ListQuotesB
 		return nil, err
 	}
 	return items, nil
+}
+
+const lockQuoteByID = `-- name: LockQuoteByID :one
+SELECT id, uuid, organization_id, brand_id, lead_id, quote_no, currency, subtotal, discount_total, tax_total, grand_total, valid_until, status, public_token, created_by_user_id, sent_at, accepted_at, rejected_at, expired_at, created_at, updated_at, deleted_at FROM quotes
+WHERE id = $1 AND deleted_at IS NULL
+FOR UPDATE
+`
+
+func (q *Queries) LockQuoteByID(ctx context.Context, id int64) (Quote, error) {
+	row := q.db.QueryRow(ctx, lockQuoteByID, id)
+	var i Quote
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.LeadID,
+		&i.QuoteNo,
+		&i.Currency,
+		&i.Subtotal,
+		&i.DiscountTotal,
+		&i.TaxTotal,
+		&i.GrandTotal,
+		&i.ValidUntil,
+		&i.Status,
+		&i.PublicToken,
+		&i.CreatedByUserID,
+		&i.SentAt,
+		&i.AcceptedAt,
+		&i.RejectedAt,
+		&i.ExpiredAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const lockQuoteNumbering = `-- name: LockQuoteNumbering :exec
+SELECT pg_advisory_xact_lock(hashtextextended('quotes:' || $1::bigint::text, 314))
+`
+
+// Serializes quote number allocation per organization (transaction scoped).
+func (q *Queries) LockQuoteNumbering(ctx context.Context, organizationID int64) error {
+	_, err := q.db.Exec(ctx, lockQuoteNumbering, organizationID)
+	return err
 }
 
 const markQuoteReminderSent = `-- name: MarkQuoteReminderSent :one
