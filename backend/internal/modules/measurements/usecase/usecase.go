@@ -21,6 +21,9 @@ import (
 	"unicode/utf8"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting/posting"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -45,9 +48,13 @@ const (
 
 var vinRe = regexp.MustCompile(`^[A-Z0-9]{11,17}$`)
 
-// ErrServiceNotFound is returned when service_uuid is not a service of the
-// active organization.
-var ErrServiceNotFound = errors.New("measurements: service not found")
+var (
+	// ErrServiceNotFound is returned when service_uuid is not a service of the
+	// active organization.
+	ErrServiceNotFound = errors.New("measurements: service not found")
+	ErrNotFound        = errors.New("measurements: not found")
+	ErrSerialExists    = errors.New("measurements: device serial exists")
+)
 
 // ValidationError is a 400 VALIDATION_ERROR on one field.
 type ValidationError struct {
@@ -64,6 +71,14 @@ type Store interface {
 	InsertMeasurementResult(ctx context.Context, arg db.InsertMeasurementResultParams) (db.MeasurementResult, error)
 	FindMeasurementResultByKeys(ctx context.Context, arg db.FindMeasurementResultByKeysParams) (db.MeasurementResult, error)
 	GetServiceForMeasurement(ctx context.Context, arg db.GetServiceForMeasurementParams) (db.GetServiceForMeasurementRow, error)
+	ListMeasurementDevices(ctx context.Context, organizationID int64) ([]db.MeasurementDevice, error)
+	GetMeasurementDeviceByUUID(ctx context.Context, arg db.GetMeasurementDeviceByUUIDParams) (db.MeasurementDevice, error)
+	CreateMeasurementDevice(ctx context.Context, arg db.CreateMeasurementDeviceParams) (db.MeasurementDevice, error)
+	UpdateMeasurementDevice(ctx context.Context, arg db.UpdateMeasurementDeviceParams) (db.MeasurementDevice, error)
+	ListMeasurementResultsPanel(ctx context.Context, arg db.ListMeasurementResultsPanelParams) ([]db.ListMeasurementResultsPanelRow, error)
+	GetMeasurementResultPanel(ctx context.Context, arg db.GetMeasurementResultPanelParams) (db.GetMeasurementResultPanelRow, error)
+	ListMeasurementValues(ctx context.Context, arg db.ListMeasurementValuesParams) ([]db.MeasurementValue, error)
+	ListMeasurementTires(ctx context.Context, arg db.ListMeasurementTiresParams) ([]db.MeasurementTire, error)
 }
 
 // Service stores measurement uploads.
@@ -77,6 +92,11 @@ type Caller struct {
 	UserID         int64
 	OrganizationID int64
 	BrandID        int64
+}
+
+type PanelCaller struct {
+	Org    orgctx.Scope
+	Filter scopefilter.Filter
 }
 
 // Input is one upload: the Idempotency-Key header and the JSON body as
@@ -174,6 +194,57 @@ func parse(in Input) (parsed, error) {
 }
 
 func text(s string) pgtype.Text { return pgtype.Text{String: s, Valid: s != ""} }
+
+func textPtr(v *string) pgtype.Text {
+	if v == nil {
+		return pgtype.Text{}
+	}
+	return text(*v)
+}
+
+func uuidPtr(v *uuid.UUID) pgtype.UUID {
+	if v == nil {
+		return pgtype.UUID{}
+	}
+	return pgtype.UUID{Bytes: *v, Valid: true}
+}
+
+func timePtr(v *time.Time) pgtype.Timestamptz {
+	if v == nil {
+		return pgtype.Timestamptz{}
+	}
+	return pgtype.Timestamptz{Time: *v, Valid: true}
+}
+
+func textOut(v pgtype.Text) *string {
+	if !v.Valid {
+		return nil
+	}
+	return &v.String
+}
+
+func timeOut(v pgtype.Timestamptz) *time.Time {
+	if !v.Valid {
+		return nil
+	}
+	return &v.Time
+}
+
+func uuidOut(v pgtype.UUID) *uuid.UUID {
+	if !v.Valid {
+		return nil
+	}
+	id := uuid.UUID(v.Bytes)
+	return &id
+}
+
+func numericOut(v pgtype.Numeric) *string {
+	if !v.Valid {
+		return nil
+	}
+	s := posting.FormatNumeric(v)
+	return &s
+}
 
 // Create stores one upload, or returns the first row of a repeated
 // Idempotency-Key / client_measurement_id.
