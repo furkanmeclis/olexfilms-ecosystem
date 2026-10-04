@@ -118,6 +118,8 @@ export const Permission = {
 
   VehicleCatalogRead: "vehicle_catalog.read",
   VehicleCatalogWrite: "vehicle_catalog.write",
+  ServiceCatalogRead: "service_catalog.read",
+  ServiceCatalogManage: "service_catalog.manage",
 
   StockRead: "stock.read",
   StockWrite: "stock.write",
@@ -416,6 +418,10 @@ export const permissions = {
   vehicleCatalog: {
     read: Permission.VehicleCatalogRead,
     write: Permission.VehicleCatalogWrite,
+  },
+  serviceCatalog: {
+    read: Permission.ServiceCatalogRead,
+    manage: Permission.ServiceCatalogManage,
   },
   stock: {
     read: Permission.StockRead,
