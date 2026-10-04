@@ -437,7 +437,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	pricingmodule.RegisterRoutes(mux, pricinghandler.New(pricingSvc, activityRec),
 		tokens, loader, deps.Queries, stepUpSvc, featureSvc)
 	// TEC-306: service catalog, distributor overrides and effective service prices.
-	serviceCatalogSvc := servicecatalogusecase.New(deps.Queries)
+	serviceCatalogSvc := servicecatalogusecase.New(deps.Queries).
+		WithLifecycle(deps.DB, outbox.NewStore(deps.DB, deps.Queries), ratesSvc, featureSvc)
 	servicecatalogmodule.RegisterRoutes(mux, servicecataloghandler.New(serviceCatalogSvc, activityRec),
 		tokens, loader, deps.Queries, featureSvc)
 	// TEC-172: accounting accounts, cari, manual entries and settlements.

@@ -13269,6 +13269,155 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /v1/service-subscriptions:
+    post:
+      tags: [ServiceCatalog]
+      operationId: assignServiceSubscription
+      summary: Assign a non-product service subscription
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ServiceSubscriptionInput" }
+      responses:
+        "201":
+          description: Subscription assigned
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeServiceSubscription" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+    get:
+      tags: [ServiceCatalog]
+      operationId: listServiceSubscriptions
+      summary: List visible service subscriptions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/ServiceSubscriptionStatus" }
+      responses:
+        "200":
+          description: Subscriptions
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeServiceSubscriptionList" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/service-subscriptions/{uuid}:
+    get:
+      tags: [ServiceCatalog]
+      operationId: getServiceSubscription
+      summary: Get a visible service subscription
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Subscription
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeServiceSubscription" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/service-subscriptions/{uuid}/cancel-request:
+    post:
+      tags: [ServiceCatalog]
+      operationId: requestServiceSubscriptionCancel
+      summary: Request early cancellation for own subscription
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ServiceSubscriptionCancelInput" }
+      responses:
+        "201":
+          description: Cancellation requested
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeServiceSubscriptionCancelRequest" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/service-subscriptions/cancel-requests/{uuid}/approve:
+    post:
+      tags: [ServiceCatalog]
+      operationId: approveServiceSubscriptionCancel
+      summary: Approve an early cancellation request
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ServiceSubscriptionDecisionInput" }
+      responses:
+        "200":
+          description: Cancellation approved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeServiceSubscriptionCancelRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/service-subscriptions/cancel-requests/{uuid}/reject:
+    post:
+      tags: [ServiceCatalog]
+      operationId: rejectServiceSubscriptionCancel
+      summary: Reject an early cancellation request
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ServiceSubscriptionDecisionInput" }
+      responses:
+        "200":
+          description: Cancellation rejected
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeServiceSubscriptionCancelRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
   /v1/accounting/categories:
     get:
       tags: [Accounting]
@@ -23083,6 +23232,95 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/ServiceCatalogOverride" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    ServiceSubscriptionStatus:
+      type: string
+      enum: [active, cancel_requested, cancelled, expired]
+
+    ServiceSubscriptionInput:
+      type: object
+      additionalProperties: false
+      required: [item_uuid, organization_uuid, starts_on, ends_on]
+      properties:
+        item_uuid: { type: string, format: uuid }
+        organization_uuid: { type: string, format: uuid }
+        starts_on: { type: string, format: date }
+        ends_on: { type: string, format: date }
+        contract_id: { type: [integer, "null"], format: int64 }
+
+    ServiceSubscription:
+      type: object
+      required: [uuid, organization_uuid, item_uuid, starts_on, ends_on, recurrence, price, currency, rate_snapshot, cancellation_fee, status, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        organization_uuid: { type: string, format: uuid }
+        item_uuid: { type: string, format: uuid }
+        assigned_by_org_id: { type: integer, format: int64 }
+        starts_on: { type: string, format: date }
+        ends_on: { type: string, format: date }
+        recurrence: { $ref: "#/components/schemas/ServiceCatalogRecurrence" }
+        price: { type: string }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        rate_snapshot: { type: object, additionalProperties: true }
+        cancellation_fee: { type: string }
+        status: { $ref: "#/components/schemas/ServiceSubscriptionStatus" }
+        created_at: { type: string, format: date-time }
+
+    ServiceSubscriptionCancelInput:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 5000 }
+
+    ServiceSubscriptionDecisionInput:
+      type: object
+      additionalProperties: false
+      properties:
+        note: { type: [string, "null"], maxLength: 5000 }
+
+    ServiceSubscriptionCancelRequest:
+      type: object
+      required: [uuid, subscription_uuid, reason, status, cancellation_fee, currency, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        subscription_uuid: { type: string, format: uuid }
+        reason: { type: string }
+        status: { type: string, enum: [pending, approved, rejected] }
+        cancellation_fee: { type: string }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        decision_note: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+
+    EnvelopeServiceSubscription:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ServiceSubscription" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeServiceSubscriptionList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/ServiceSubscription" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeServiceSubscriptionCancelRequest:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ServiceSubscriptionCancelRequest" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeDistributorPrice:

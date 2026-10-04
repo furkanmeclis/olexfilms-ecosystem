@@ -363,6 +363,49 @@ func (s *Service) ClearByAdmin(ctx context.Context, orgID int64, key string) (St
 	return s.stateOf(ctx, orgID, key)
 }
 
+// SetByService sets an organization's value from a paid service subscription
+// (source=service). Unlike admin overrides it obeys the parent/system chain.
+func (s *Service) SetByService(ctx context.Context, actorID, orgID, serviceID int64, key string) (State, error) {
+	if _, err := switchable(key); err != nil {
+		return State{}, err
+	}
+	st, err := s.stateOf(ctx, orgID, key)
+	if err != nil {
+		return State{}, err
+	}
+	if !st.UpstreamEnabled {
+		return State{}, ErrUpstreamDisabled
+	}
+	if _, err := s.q.UpsertServiceModuleFlag(ctx, db.UpsertServiceModuleFlagParams{
+		OrganizationID: pgtype.Int8{Int64: orgID, Valid: true},
+		ModuleKey:      key,
+		Enabled:        true,
+		SetByUserID:    actorArg(actorID),
+		ServiceID:      pgtype.Int8{Int64: serviceID, Valid: true},
+		Note:           pgtype.Text{String: "service_subscription", Valid: true},
+	}); err != nil {
+		return State{}, err
+	}
+	s.invalidateTree(ctx, orgID)
+	return s.stateOf(ctx, orgID, key)
+}
+
+// ClearByService removes a service-owned flag; callers decide whether another
+// active subscription still keeps the module open.
+func (s *Service) ClearByService(ctx context.Context, orgID int64, key string) error {
+	if _, err := switchable(key); err != nil {
+		return err
+	}
+	if _, err := s.q.DeleteServiceModuleFlag(ctx, db.DeleteServiceModuleFlagParams{
+		OrganizationID: pgtype.Int8{Int64: orgID, Valid: true},
+		ModuleKey:      key,
+	}); err != nil {
+		return err
+	}
+	s.invalidateTree(ctx, orgID)
+	return nil
+}
+
 // OrgStates resolves an organization without the cache (platform detail).
 func (s *Service) OrgStates(ctx context.Context, orgID int64) ([]State, error) {
 	st, _, err := s.resolve(ctx, s.q, orgID)

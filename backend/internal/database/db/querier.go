@@ -101,6 +101,7 @@ type Querier interface {
 	ConsumeStockReservation(ctx context.Context, id int64) (StockReservation, error)
 	CountAccountingDisputes(ctx context.Context, arg CountAccountingDisputesParams) (int64, error)
 	CountActiveRefreshTokensForUser(ctx context.Context, userID int64) (int64, error)
+	CountActiveServiceModuleSubscriptions(ctx context.Context, arg CountActiveServiceModuleSubscriptionsParams) (int64, error)
 	CountActivityEvents(ctx context.Context, arg CountActivityEventsParams) (int64, error)
 	CountAllBulkJobs(ctx context.Context) (int64, error)
 	CountAllExportJobs(ctx context.Context) (int64, error)
@@ -435,6 +436,7 @@ type Querier interface {
 	DeleteServiceImage(ctx context.Context, arg DeleteServiceImageParams) (ServiceImage, error)
 	DeleteServiceItem(ctx context.Context, arg DeleteServiceItemParams) (int64, error)
 	DeleteServiceItemsByService(ctx context.Context, serviceID int64) (int64, error)
+	DeleteServiceModuleFlag(ctx context.Context, arg DeleteServiceModuleFlagParams) (int64, error)
 	DeleteServicePriceOverride(ctx context.Context, arg DeleteServicePriceOverrideParams) (int64, error)
 	DeleteStaleQRLoginChallenges(ctx context.Context) (int64, error)
 	DeleteStockCountScan(ctx context.Context, arg DeleteStockCountScanParams) (int64, error)
@@ -1352,6 +1354,7 @@ type Querier interface {
 	ListServiceStockUnits(ctx context.Context, arg ListServiceStockUnitsParams) ([]ListServiceStockUnitsRow, error)
 	ListServiceSubscriptionCancelRequests(ctx context.Context, arg ListServiceSubscriptionCancelRequestsParams) ([]ServiceSubscriptionCancelRequest, error)
 	ListServiceSubscriptionPeriods(ctx context.Context, subscriptionID int64) ([]ServiceSubscriptionPeriod, error)
+	ListServiceSubscriptionsByBrand(ctx context.Context, arg ListServiceSubscriptionsByBrandParams) ([]ServiceSubscription, error)
 	ListServiceSubscriptionsByOrgs(ctx context.Context, arg ListServiceSubscriptionsByOrgsParams) ([]ServiceSubscription, error)
 	// Services of a customer across brands' organizations in scope (portal and
 	// customer detail).
@@ -2005,6 +2008,7 @@ type Querier interface {
 	SetServiceItemMovement(ctx context.Context, arg SetServiceItemMovementParams) (ServiceItem, error)
 	SetServiceMeasurementCheck(ctx context.Context, arg SetServiceMeasurementCheckParams) error
 	SetServiceReviewRequestSent(ctx context.Context, id int64) (Service, error)
+	SetServiceSubscriptionCancelRequested(ctx context.Context, arg SetServiceSubscriptionCancelRequestedParams) (ServiceSubscription, error)
 	SetServiceSubscriptionStatus(ctx context.Context, arg SetServiceSubscriptionStatusParams) (ServiceSubscription, error)
 	SetStockEntryLineLocation(ctx context.Context, arg SetStockEntryLineLocationParams) (int64, error)
 	SetStockEntryLineMovements(ctx context.Context, arg SetStockEntryLineMovementsParams) error
@@ -2206,6 +2210,7 @@ type Querier interface {
 	// permission happens in the use case layer (TEC-146).
 	UpsertProductPrice(ctx context.Context, arg UpsertProductPriceParams) (ProductPrice, error)
 	UpsertPushSubscription(ctx context.Context, arg UpsertPushSubscriptionParams) (PushSubscription, error)
+	UpsertServiceModuleFlag(ctx context.Context, arg UpsertServiceModuleFlagParams) (ModuleFlag, error)
 	UpsertServicePriceOverride(ctx context.Context, arg UpsertServicePriceOverrideParams) (ServicePriceOverride, error)
 	UpsertSystemModuleFlag(ctx context.Context, arg UpsertSystemModuleFlagParams) (ModuleFlag, error)
 	UpsertSystemRole(ctx context.Context, arg UpsertSystemRoleParams) (Role, error)
