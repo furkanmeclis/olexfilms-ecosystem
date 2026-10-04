@@ -6412,6 +6412,90 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/measurement-devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List NexPTG measurement devices
+         * @description Requires the measurements module and `measurement_devices.manage` in the active organization. Inactive devices are included with `is_active=false`.
+         */
+        get: operations["listMeasurementDevices"];
+        put?: never;
+        /**
+         * Register a NexPTG measurement device
+         * @description Requires the measurements module and `measurement_devices.manage`. `serial` is unique inside the active organization; duplicates answer 409 `MEASUREMENT_DEVICE_SERIAL_EXISTS`. Device type is fixed to NexPTG.
+         */
+        post: operations["createMeasurementDevice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/measurement-devices/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update a NexPTG measurement device
+         * @description Updates `label`, `model` and `is_active`; serial and type are immutable. Requires the measurements module and `measurement_devices.manage`.
+         */
+        patch: operations["updateMeasurementDevice"];
+        trace?: never;
+    };
+    "/v1/measurements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List paint measurement results
+         * @description Requires the measurements module and `measurements.read`. Managed readers see the active organization; subtree readers see the active organization and descendants. Portal endpoints do not expose measurement data.
+         */
+        get: operations["listMeasurements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/measurements/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a paint measurement result
+         * @description Returns the measurement header, normalized readings, tires and the linked service when present. Records outside the reader's managed/subtree scope answer 404.
+         */
+        get: operations["getMeasurement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/mobile/measurements": {
         parameters: {
             query?: never;
@@ -13400,6 +13484,125 @@ export interface components {
             /** @description Accepted for compatibility with the previous mobile API (not stored) */
             device_name?: string;
             app_version?: string;
+        };
+        MeasurementDeviceRequest: {
+            serial: string;
+            label?: string | null;
+            model?: string | null;
+            /** @default true */
+            is_active: boolean;
+        };
+        MeasurementDevicePatchRequest: {
+            label?: string | null;
+            model?: string | null;
+            is_active?: boolean;
+        };
+        MeasurementDevice: {
+            /** Format: uuid */
+            uuid: string;
+            serial: string;
+            /** @enum {string} */
+            type: "NexPTG";
+            label: string | null;
+            model: string | null;
+            is_active: boolean;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        MeasurementOrganizationRef: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+        };
+        MeasurementServiceRef: {
+            /** Format: uuid */
+            uuid: string;
+            service_no: string;
+            /** @enum {string} */
+            phase: "before" | "after";
+            /** @enum {string} */
+            link_source: "auto" | "manual";
+            /** Format: date-time */
+            confirmed_at: string | null;
+        };
+        MeasurementSummary: {
+            /** Format: uuid */
+            uuid: string;
+            organization: components["schemas"]["MeasurementOrganizationRef"];
+            vin: string | null;
+            /** @enum {string} */
+            status: "accepted" | "vin_pending";
+            /** @enum {string} */
+            source: "mobile" | "legacy_import";
+            device_serial: string | null;
+            device: components["schemas"]["MeasurementDevice"] | null;
+            service: components["schemas"]["MeasurementServiceRef"] | null;
+            /** Format: date-time */
+            measured_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        MeasurementValue: {
+            place_id: string;
+            part_type: string;
+            is_inside: boolean;
+            position: number | null;
+            value_um: string | null;
+            interpretation: number | null;
+            substrate_type: string | null;
+            /** Format: date-time */
+            measured_at: string | null;
+        };
+        MeasurementTire: {
+            section: string | null;
+            width: string | null;
+            profile: string | null;
+            diameter: string | null;
+            maker: string | null;
+            season: string | null;
+            tread_depth_1_mm: string | null;
+            tread_depth_2_mm: string | null;
+        };
+        MeasurementDetail: components["schemas"]["MeasurementSummary"] & {
+            body_type: string | null;
+            pdf_key: string | null;
+            raw: {
+                [key: string]: unknown;
+            };
+            values: components["schemas"]["MeasurementValue"][];
+            tires: components["schemas"]["MeasurementTire"][];
+        };
+        EnvelopeMeasurementDevice: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["MeasurementDevice"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeMeasurementDeviceList: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["MeasurementDevice"][];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeMeasurementPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["MeasurementSummary"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeMeasurementDetail: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["MeasurementDetail"];
+            meta: components["schemas"]["ResponseMeta"];
         };
         MobileMeasurementRequest: {
             /** @description Idempotency key in the body (alternative to the Idempotency-Key header) */
@@ -27388,6 +27591,146 @@ export interface operations {
             409: components["responses"]["Conflict"];
             410: components["responses"]["QRLoginExpired"];
             426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    listMeasurementDevices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Devices */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeMeasurementDeviceList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createMeasurementDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeasurementDeviceRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeMeasurementDevice"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    updateMeasurementDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeasurementDevicePatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeMeasurementDevice"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listMeasurements: {
+        parameters: {
+            query?: {
+                vin?: string;
+                device_uuid?: string;
+                /** @description Date (`YYYY-MM-DD`) or RFC3339 date-time; compared to measured_at, falling back to created_at. */
+                measured_from?: string;
+                /** @description Date (`YYYY-MM-DD`, exclusive next day) or RFC3339 date-time. */
+                measured_to?: string;
+                status?: "accepted" | "vin_pending";
+                /** @description true for results linked to a service, false for unlinked results. */
+                linked?: boolean;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of measurements */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeMeasurementPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getMeasurement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Measurement detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeMeasurementDetail"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     postMobileMeasurement: {
