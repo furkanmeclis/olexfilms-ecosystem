@@ -6496,6 +6496,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/measurements/{uuid}/vin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Complete the VIN of a vin_pending measurement
+         * @description Fills the VIN of a `vin_pending` ("tamamlanacak") measurement and
+         *     makes it `accepted`; a `vin_pending` measurement cannot be linked to
+         *     a service until then. The VIN is upper-cased and must be 17 letters
+         *     or digits without I, O or Q (else 400 `VALIDATION_ERROR`). Sending
+         *     the VIN already on an accepted measurement answers it unchanged;
+         *     another VIN answers 422 `MEASUREMENT_VIN_ALREADY_SET`. Requires the
+         *     measurements module and `measurements.link` (managed scope: the
+         *     active organization); a measurement outside it answers 404.
+         */
+        patch: operations["completeMeasurementVIN"];
+        trace?: never;
+    };
     "/v1/mobile/measurements": {
         parameters: {
             query?: never;
@@ -7265,6 +7292,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/service-subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List visible service subscriptions */
+        get: operations["listServiceSubscriptions"];
+        put?: never;
+        /** Assign a non-product service subscription */
+        post: operations["assignServiceSubscription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/service-subscriptions/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a visible service subscription */
+        get: operations["getServiceSubscription"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/service-subscriptions/{uuid}/cancel-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request early cancellation for own subscription */
+        post: operations["requestServiceSubscriptionCancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/service-subscriptions/cancel-requests/{uuid}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve an early cancellation request */
+        post: operations["approveServiceSubscriptionCancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/service-subscriptions/cancel-requests/{uuid}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject an early cancellation request */
+        post: operations["rejectServiceSubscriptionCancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/accounting/categories": {
         parameters: {
             query?: never;
@@ -7357,7 +7470,11 @@ export interface paths {
         /** Cari accounts of a book with balances (positive = receivable) */
         get: operations["listAccountingCari"];
         put?: never;
-        post?: never;
+        /**
+         * Open the cari of a customer the organization serves (TEC-342)
+         * @description Opens (or returns) the active organization's cari with a customer (counterparty_type user) in the organization's currency. The customer must be served by the organization (customer_organizations); anything else answers 404. Organization caris open with their first entry and are not opened here. Needs accounting.write; in a dealer organization also the dealer_accounting module (403 FEATURE_DISABLED when off). The cari then takes manual income/charge entries, collections and payments by cari_uuid; its statement is GET /v1/accounting/cari/{uuid}/statement. No instalments (K18).
+         */
+        post: operations["openAccountingCustomerCari"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7393,7 +7510,7 @@ export interface paths {
         put?: never;
         /**
          * Manual income, expense or cari charge (source_type manual)
-         * @description Written to the active organization's book through the posting API. Income/expense need an account and/or a cari; a charge needs a cari only. The cari is named by cari_uuid or by the counterparty organization (the parent or a direct child of the same brand; opened when missing). System categories (sale, purchase) are refused. A repeated idempotency_key answers 200 with the earlier entry.
+         * @description Written to the active organization's book through the posting API. Income/expense need an account and/or a cari; a charge needs a cari only. The cari is named by cari_uuid or by the counterparty organization (the parent or a direct child of the same brand; opened when missing). System categories (sale, purchase) are refused. A repeated idempotency_key answers 200 with the earlier entry. TEC-342: cari_uuid may name a customer cari (POST /v1/accounting/cari); in a dealer organization every accounting write needs the dealer_accounting module (403 FEATURE_DISABLED).
          */
         post: operations["createAccountingEntry"];
         delete?: never;
@@ -7984,7 +8101,7 @@ export interface paths {
         put?: never;
         /**
          * Move a service to another status
-         * @description Legacy state machine (TEC-179): draft -> pending -> processing -> ready (services.write); center shortcuts draft -> processing and pending -> ready; draft | pending | processing | ready -> cancelled (services.cancel, center only; a dealer gets 403). draft | processing | ready -> completed (services.complete, TEC-180) consumes the stock of every item in the same transaction (consumption for a whole unit, partial_consumption for a cut; idempotency key service:service_item:<id>), links each item to its stock movement and writes one service.completed outbox event. A service without items answers 400; a unit that is no longer held or a cut longer than the rest of the roll answers 409 SERVICE_UNIT_NOT_AVAILABLE and nothing is written. Completed and cancelled are final (409 SERVICE_INVALID_TRANSITION). A request for the current status is a no-op (completing a completed service consumes nothing and emits nothing). Every move writes a status log and a service.* outbox event.
+         * @description Legacy state machine (TEC-179): draft -> pending -> processing -> ready (services.write); center shortcuts draft -> processing and pending -> ready; draft | pending | processing | ready -> cancelled (services.cancel, center only; a dealer gets 403). draft | processing | ready -> completed (services.complete, TEC-180) consumes the stock of every item in the same transaction (consumption for a whole unit, partial_consumption for a cut; idempotency key service:service_item:<id>), links each item to its stock movement and writes one service.completed outbox event. A service without items answers 400; a unit that is no longer held or a cut longer than the rest of the roll answers 409 SERVICE_UNIT_NOT_AVAILABLE and nothing is written. Completed and cancelled are final (409 SERVICE_INVALID_TRANSITION). A request for the current status is a no-op (completing a completed service consumes nothing and emits nothing). Every move writes a status log and a service.* outbox event. When contracts.intake_required and the intake_contracts module are both enabled for the service organization, draft/pending -> processing and direct completion from draft require the linked contract to be executed; otherwise the transition answers 422 CONTRACT_REQUIRED.
          */
         post: operations["transitionService"];
         delete?: never;
@@ -8451,6 +8568,109 @@ export interface paths {
          * @description The active organization must be the brand center.
          */
         post: operations["createLeadTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/leads/{uuid}/quotes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a draft quote for a lead */
+        post: operations["createLeadQuote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/quotes/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a quote */
+        get: operations["getQuote"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update mutable draft quote fields */
+        patch: operations["patchQuote"];
+        trace?: never;
+    };
+    "/v1/quotes/{uuid}/lines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace draft quote lines and recalculate totals */
+        put: operations["replaceQuoteLines"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/quotes/{uuid}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept a sent quote */
+        post: operations["acceptQuote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/quotes/{uuid}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject a sent quote */
+        post: operations["rejectQuote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/quotes/{uuid}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Request or fetch the quote PDF render */
+        get: operations["requestQuotePdf"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -11157,7 +11377,7 @@ export interface components {
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
-        DocumentKind: "service" | "measurement" | "contract" | "order_slip" | "invoice_view" | "warranty";
+        DocumentKind: "service" | "measurement" | "contract" | "order_slip" | "invoice_view" | "warranty" | "quote";
         DocumentVariable: {
             /** @example customer_name */
             key: string;
@@ -13662,6 +13882,10 @@ export interface components {
             data: components["schemas"]["MeasurementDetail"];
             meta: components["schemas"]["ResponseMeta"];
         };
+        MeasurementVINRequest: {
+            /** @description 17 letters or digits without I, O or Q (upper-cased) */
+            vin: string;
+        };
         MobileMeasurementRequest: {
             /** @description Idempotency key in the body (alternative to the Idempotency-Key header) */
             client_measurement_id?: string;
@@ -13952,6 +14176,84 @@ export interface components {
             data: components["schemas"]["ServiceCatalogOverride"];
             meta: components["schemas"]["ResponseMeta"];
         };
+        /** @enum {string} */
+        ServiceSubscriptionStatus: "active" | "cancel_requested" | "cancelled" | "expired";
+        ServiceSubscriptionInput: {
+            /** Format: uuid */
+            item_uuid: string;
+            /** Format: uuid */
+            organization_uuid: string;
+            /** Format: date */
+            starts_on: string;
+            /** Format: date */
+            ends_on: string;
+            /** Format: int64 */
+            contract_id?: number | null;
+        };
+        ServiceSubscription: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            organization_uuid: string;
+            /** Format: uuid */
+            item_uuid: string;
+            /** Format: int64 */
+            assigned_by_org_id?: number;
+            /** Format: date */
+            starts_on: string;
+            /** Format: date */
+            ends_on: string;
+            recurrence: components["schemas"]["ServiceCatalogRecurrence"];
+            price: string;
+            currency: string;
+            rate_snapshot: {
+                [key: string]: unknown;
+            };
+            cancellation_fee: string;
+            status: components["schemas"]["ServiceSubscriptionStatus"];
+            /** Format: date-time */
+            created_at: string;
+        };
+        ServiceSubscriptionCancelInput: {
+            reason: string;
+        };
+        ServiceSubscriptionDecisionInput: {
+            note?: string | null;
+        };
+        ServiceSubscriptionCancelRequest: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            subscription_uuid: string;
+            reason: string;
+            /** @enum {string} */
+            status: "pending" | "approved" | "rejected";
+            cancellation_fee: string;
+            currency: string;
+            decision_note?: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        EnvelopeServiceSubscription: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ServiceSubscription"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeServiceSubscriptionList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ServiceSubscription"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeServiceSubscriptionCancelRequest: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ServiceSubscriptionCancelRequest"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
         EnvelopeDistributorPrice: {
             /** @enum {boolean} */
             success: true;
@@ -14054,6 +14356,18 @@ export interface components {
             last_entry_at: string | null;
             /** Format: date-time */
             created_at: string;
+        };
+        CariOpenInput: {
+            /**
+             * @description Only customer caris are opened by hand (TEC-342).
+             * @enum {string}
+             */
+            counterparty_type: "user";
+            /**
+             * Format: uuid
+             * @description The customer's user UUID.
+             */
+            counterparty_uuid: string;
         };
         AccountingRef: {
             /** Format: uuid */
@@ -14549,6 +14863,13 @@ export interface components {
             /** Format: date-time */
             voided_at: string | null;
         };
+        ServiceContractSummary: {
+            /** Format: uuid */
+            uuid: string;
+            status: components["schemas"]["ContractStatus"];
+            /** Format: int64 */
+            contract_no: number;
+        };
         Service: {
             /** Format: uuid */
             uuid: string;
@@ -14570,6 +14891,9 @@ export interface components {
             package: string | null;
             notes: string | null;
             has_measurement: boolean;
+            /** @description Linked intake contract summary, if any */
+            contract: components["schemas"]["ServiceContractSummary"] | null;
+            contract_required: boolean;
             cancel_reason: string | null;
             /** Format: date-time */
             completed_at: string | null;
@@ -15393,6 +15717,91 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["LeadFollowUpCount"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        QuoteStatus: "draft" | "sent" | "accepted" | "rejected" | "expired";
+        /** @enum {string} */
+        QuoteLineType: "product" | "catalog_service";
+        QuoteLine: {
+            line_type: components["schemas"]["QuoteLineType"];
+            /** Format: uuid */
+            product_uuid?: string | null;
+            /** Format: uuid */
+            service_catalog_item_uuid?: string | null;
+            description: string;
+            /** @example 1 */
+            quantity: string;
+            /** @example 100.00 */
+            unit_price: string;
+            /** @example 10.00 */
+            discount_amount: string;
+            /** @example 90.00 */
+            line_total: string;
+            sort_order: number;
+        };
+        Quote: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            lead_uuid: string;
+            /** Format: int64 */
+            quote_no: number;
+            /** @example Q-000042 */
+            display_no: string;
+            currency: string;
+            /** @example 100.00 */
+            subtotal: string;
+            /** @example 10.00 */
+            discount_total: string;
+            /** @example 0.00 */
+            tax_total: string;
+            /** @example 90.00 */
+            grand_total: string;
+            /** Format: date-time */
+            valid_until?: string | null;
+            status: components["schemas"]["QuoteStatus"];
+            /** Format: int64 */
+            created_by_user_id?: number | null;
+            lines: components["schemas"]["QuoteLine"][];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        QuoteLineInput: {
+            line_type: components["schemas"]["QuoteLineType"];
+            /** Format: uuid */
+            product_uuid?: string | null;
+            /** Format: uuid */
+            service_catalog_item_uuid?: string | null;
+            description?: string | null;
+            /** @default 1 */
+            quantity: string;
+            /** @description Requires pricing.sale.write when provided. */
+            unit_price?: string | null;
+            /** @default 0.00 */
+            discount_amount: string | null;
+        };
+        QuoteInput: {
+            /** Format: date-time */
+            valid_until?: string | null;
+            lines?: components["schemas"]["QuoteLineInput"][];
+        };
+        QuotePatchInput: {
+            /** Format: date-time */
+            valid_until?: string | null;
+        };
+        QuoteLinesInput: {
+            lines: components["schemas"]["QuoteLineInput"][];
+        };
+        QuoteDecisionInput: {
+            reason?: string | null;
+        };
+        EnvelopeQuote: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Quote"];
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
@@ -27863,6 +28272,37 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    completeMeasurementVIN: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeasurementVINRequest"];
+            };
+        };
+        responses: {
+            /** @description Measurement detail with the VIN */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeMeasurementDetail"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
     postMobileMeasurement: {
         parameters: {
             query?: never;
@@ -29267,6 +29707,175 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    listServiceSubscriptions: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["ServiceSubscriptionStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Subscriptions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceSubscriptionList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    assignServiceSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceSubscriptionInput"];
+            };
+        };
+        responses: {
+            /** @description Subscription assigned */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceSubscription"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getServiceSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Subscription */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceSubscription"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    requestServiceSubscriptionCancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceSubscriptionCancelInput"];
+            };
+        };
+        responses: {
+            /** @description Cancellation requested */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceSubscriptionCancelRequest"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    approveServiceSubscriptionCancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ServiceSubscriptionDecisionInput"];
+            };
+        };
+        responses: {
+            /** @description Cancellation approved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceSubscriptionCancelRequest"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    rejectServiceSubscriptionCancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ServiceSubscriptionDecisionInput"];
+            };
+        };
+        responses: {
+            /** @description Cancellation rejected */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceSubscriptionCancelRequest"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
     listAccountingCategories: {
         parameters: {
             query?: {
@@ -29471,6 +30080,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeCariAccountPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    openAccountingCustomerCari: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CariOpenInput"];
+            };
+        };
+        responses: {
+            /** @description The cari already existed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCariAccount"];
+                };
+            };
+            /** @description Opened cari */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCariAccount"];
                 };
             };
             400: components["responses"]["BadRequest"];
@@ -31412,6 +32058,221 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createLeadQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteInput"];
+            };
+        };
+        responses: {
+            /** @description Quote created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQuote"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Quote */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQuote"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuotePatchInput"];
+            };
+        };
+        responses: {
+            /** @description Quote updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQuote"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    replaceQuoteLines: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteLinesInput"];
+            };
+        };
+        responses: {
+            /** @description Quote lines replaced */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQuote"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    acceptQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["QuoteDecisionInput"];
+            };
+        };
+        responses: {
+            /** @description Quote accepted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQuote"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    rejectQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["QuoteDecisionInput"];
+            };
+        };
+        responses: {
+            /** @description Quote rejected */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQuote"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    requestQuotePdf: {
+        parameters: {
+            query?: {
+                locale?: string;
+            };
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Quote PDF render is ready */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDocumentRender"];
+                };
+            };
+            /** @description Quote PDF render queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDocumentRender"];
+                };
+            };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];

@@ -305,7 +305,7 @@ func (s *Service) write(ctx context.Context, c Caller, direction, category, amou
 		}
 		e.AccountID = a.ID
 	}
-	if e.CounterpartyOrgID, err = s.counterparty(ctx, book, cariUUID, counterpartyUUID); err != nil {
+	if e.CounterpartyOrgID, e.CariID, err = s.writeTarget(ctx, book, cariUUID, counterpartyUUID); err != nil {
 		return Entry{}, false, err
 	}
 
@@ -371,6 +371,29 @@ func (s *Service) counterparty(ctx context.Context, book db.Organization, cariUU
 	default:
 		return 0, nil
 	}
+}
+
+// writeTarget resolves the cari side of a manual write: an organization
+// counterparty (see counterparty) or, by cari_uuid, a customer (user) cari
+// of the book (TEC-342, F3-07b), returned as its id.
+func (s *Service) writeTarget(ctx context.Context, book db.Organization, cariUUID, orgUUID *uuid.UUID) (int64, int64, error) {
+	if cariUUID != nil && orgUUID == nil {
+		ca, err := s.q.GetCariAccountByUUID(ctx, *cariUUID)
+		if errors.Is(err, pgx.ErrNoRows) || (err == nil && ca.OrganizationID != book.ID) {
+			return 0, 0, ErrCariNotFound
+		}
+		if err != nil {
+			return 0, 0, fmt.Errorf("accounting: cari: %w", err)
+		}
+		if ca.CounterpartyUserID.Valid {
+			if !ca.Active {
+				return 0, 0, invalid("cari_uuid", "the cari account is inactive")
+			}
+			return 0, ca.ID, nil
+		}
+	}
+	orgID, err := s.counterparty(ctx, book, cariUUID, orgUUID)
+	return orgID, 0, err
 }
 
 // Void reverses a manual entry, a cari opening balance (TEC-177) or a

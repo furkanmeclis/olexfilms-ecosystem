@@ -150,14 +150,25 @@ func TestStockGrants(t *testing.T) {
 }
 
 // TEC-171 (TEC-99 decision 7, K9/K24): dealer roles read their ledger and
-// dispute entries posted by the parent; no dealer role writes accounting.
+// dispute entries posted by the parent. TEC-341 (F3-07) opens manual writes
+// of the dealer's own book to dealer_owner and dealer_accounting (the use
+// case still requires the dealer_accounting module); dealer_staff never
+// writes accounting.
 func TestAccountingGrants(t *testing.T) {
 	for _, r := range Roles {
 		if r.OrgType != OrgTypeDealer {
 			continue
 		}
-		if _, ok := r.Grants[PermAccountingWrite]; ok {
-			t.Fatalf("%s must not hold accounting.write", r.Slug)
+		_, ok := r.Grants[PermAccountingWrite]
+		switch r.Slug {
+		case RoleDealerOwner, RoleDealerAccounting:
+			if !ok || r.Grants[PermAccountingWrite] != ScopeManaged {
+				t.Fatalf("%s accounting.write = %q, want managed", r.Slug, r.Grants[PermAccountingWrite])
+			}
+		default:
+			if ok {
+				t.Fatalf("%s must not hold accounting.write", r.Slug)
+			}
 		}
 		// TEC-174: a dealer has no child to resolve disputes for.
 		if _, ok := r.Grants[PermAccountingResolve]; ok {
@@ -508,5 +519,45 @@ func TestLeadQuoteGrants(t *testing.T) {
 	}
 	if _, ok := dealer.Grants[PermLeadsConvertOrg]; ok {
 		t.Fatal("dealer_owner must not convert leads to organizations")
+	}
+}
+
+// TEC-341 (F3-07): the dealer accounting permissions and the dealer's own
+// accounting writes belong to dealer_owner and dealer_accounting at the
+// managed scope; dealer_staff holds none of them and no other role does.
+func TestDealerAccountingGrants(t *testing.T) {
+	perms := []string{
+		PermDealerPricingWrite, PermProductSalesWrite, PermSuppliersManage,
+		PermPurchasesWrite, PermStaffManage, PermStaffPaymentsWrite,
+	}
+	for _, slug := range []string{RoleDealerOwner, RoleDealerAccounting} {
+		r, _ := RoleBySlug(slug)
+		for _, p := range append([]string{PermAccountingWrite}, perms...) {
+			if r.Grants[p] != ScopeManaged {
+				t.Fatalf("%s %s = %q, want managed", slug, p, r.Grants[p])
+			}
+		}
+	}
+	staff, _ := RoleBySlug(RoleDealerStaff)
+	for _, p := range append([]string{PermAccountingWrite, PermAccountingRead}, perms...) {
+		if _, ok := staff.Grants[p]; ok {
+			t.Fatalf("dealer_staff must not hold %s", p)
+		}
+	}
+	for _, r := range Roles {
+		if r.Slug == RoleSuperAdmin || r.Slug == RoleDealerOwner || r.Slug == RoleDealerAccounting {
+			continue
+		}
+		for _, p := range perms {
+			if _, ok := r.Grants[p]; ok {
+				t.Fatalf("%s must not hold %s", r.Slug, p)
+			}
+		}
+	}
+	sa, _ := RoleBySlug(RoleSuperAdmin)
+	for _, p := range perms {
+		if RoleGrants(sa)[p] != ScopeAll {
+			t.Fatalf("super_admin %s = %q, want all", p, RoleGrants(sa)[p])
+		}
 	}
 }

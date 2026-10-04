@@ -30,6 +30,27 @@ func (q *Queries) DeleteOrgModuleFlag(ctx context.Context, arg DeleteOrgModuleFl
 	return result.RowsAffected(), nil
 }
 
+const deleteServiceModuleFlag = `-- name: DeleteServiceModuleFlag :execrows
+DELETE FROM module_flags
+WHERE scope = 'org'
+  AND organization_id = $1
+  AND module_key = $2
+  AND source = 'service'
+`
+
+type DeleteServiceModuleFlagParams struct {
+	OrganizationID pgtype.Int8 `json:"organization_id"`
+	ModuleKey      string      `json:"module_key"`
+}
+
+func (q *Queries) DeleteServiceModuleFlag(ctx context.Context, arg DeleteServiceModuleFlagParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteServiceModuleFlag, arg.OrganizationID, arg.ModuleKey)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const deleteSystemModuleFlag = `-- name: DeleteSystemModuleFlag :execrows
 DELETE FROM module_flags WHERE scope = 'system' AND module_key = $1
 `
@@ -331,6 +352,54 @@ func (q *Queries) UpsertOrgModuleFlag(ctx context.Context, arg UpsertOrgModuleFl
 		arg.Enabled,
 		arg.Source,
 		arg.SetByUserID,
+		arg.Note,
+	)
+	var i ModuleFlag
+	err := row.Scan(
+		&i.ID,
+		&i.Scope,
+		&i.OrganizationID,
+		&i.ModuleKey,
+		&i.Enabled,
+		&i.Source,
+		&i.SetByUserID,
+		&i.ServiceID,
+		&i.Note,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const upsertServiceModuleFlag = `-- name: UpsertServiceModuleFlag :one
+INSERT INTO module_flags (scope, organization_id, module_key, enabled, source, set_by_user_id, service_id, note)
+VALUES ('org', $1, $2, $3, 'service',
+        $4, $5, $6)
+ON CONFLICT (scope, organization_id, module_key) WHERE organization_id IS NOT NULL DO UPDATE SET
+    enabled = EXCLUDED.enabled,
+    source = EXCLUDED.source,
+    set_by_user_id = EXCLUDED.set_by_user_id,
+    service_id = EXCLUDED.service_id,
+    note = EXCLUDED.note
+RETURNING id, scope, organization_id, module_key, enabled, source, set_by_user_id, service_id, note, created_at, updated_at
+`
+
+type UpsertServiceModuleFlagParams struct {
+	OrganizationID pgtype.Int8 `json:"organization_id"`
+	ModuleKey      string      `json:"module_key"`
+	Enabled        bool        `json:"enabled"`
+	SetByUserID    pgtype.Int8 `json:"set_by_user_id"`
+	ServiceID      pgtype.Int8 `json:"service_id"`
+	Note           pgtype.Text `json:"note"`
+}
+
+func (q *Queries) UpsertServiceModuleFlag(ctx context.Context, arg UpsertServiceModuleFlagParams) (ModuleFlag, error) {
+	row := q.db.QueryRow(ctx, upsertServiceModuleFlag,
+		arg.OrganizationID,
+		arg.ModuleKey,
+		arg.Enabled,
+		arg.SetByUserID,
+		arg.ServiceID,
 		arg.Note,
 	)
 	var i ModuleFlag

@@ -38,3 +38,21 @@ func RequireFeature(ent FeatureChecker, key string) func(http.Handler) http.Hand
 		})
 	}
 }
+
+// RequireFeatureForOrgType is RequireFeature for organizations of one type
+// only (TEC-342): other organization types pass unchanged. Accounting writes
+// use it so a dealer needs dealer_accounting while the center and
+// distributors keep their F1 behaviour.
+func RequireFeatureForOrgType(ent FeatureChecker, orgType, key string) func(http.Handler) http.Handler {
+	gate := RequireFeature(ent, key)
+	return func(next http.Handler) http.Handler {
+		gated := gate(next)
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if scope, ok := orgctx.ScopeFrom(r.Context()); ok && scope.OrgType == orgType {
+				gated.ServeHTTP(w, r)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}

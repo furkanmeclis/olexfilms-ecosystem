@@ -88,8 +88,12 @@ type Entry struct {
 	// CounterpartyOrgID opens (ensures) the organization's cari with that
 	// organization and books the row on it (0: none).
 	CounterpartyOrgID int64
-	Description       string
-	ActorUserID       *int64
+	// CariID books the row on an existing cari of the organization, e.g. a
+	// customer (user) cari (TEC-342); exclusive with CounterpartyOrgID
+	// (0: none).
+	CariID      int64
+	Description string
+	ActorUserID *int64
 	// PostedAt places the row in the ledger order (created_at); zero means
 	// now. Only an opening balance (TEC-177) sets it, to its opening date.
 	PostedAt time.Time
