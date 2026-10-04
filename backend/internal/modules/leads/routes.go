@@ -29,7 +29,13 @@ func RegisterRoutes(
 		mws := append([]func(http.Handler) http.Handler{authn, org, module, read}, extra...)
 		return middleware.Chain(fn, mws...)
 	}
+	quoteRead := middleware.RequireScope(q, rbac.PermQuotesRead)
+	quoteRoute := func(fn http.HandlerFunc, extra ...func(http.Handler) http.Handler) http.Handler {
+		mws := append([]func(http.Handler) http.Handler{authn, org, module, quoteRead}, extra...)
+		return middleware.Chain(fn, mws...)
+	}
 	write := middleware.RequirePermission(rbac.PermLeadsWrite)
+	quoteWrite := middleware.RequirePermission(rbac.PermQuotesWrite)
 
 	mux.Handle("GET /v1/leads", route(h.List))
 	mux.Handle("POST /v1/leads", route(h.Create, write))
@@ -41,6 +47,13 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/leads/{uuid}/assign", route(h.Assign, write))
 	mux.Handle("GET /v1/leads/{uuid}/events", route(h.Events))
 	mux.Handle("POST /v1/leads/{uuid}/task", route(h.CreateTask, write))
+	mux.Handle("POST /v1/leads/{uuid}/quotes", route(h.CreateQuote, quoteWrite))
+	mux.Handle("GET /v1/quotes/{uuid}", quoteRoute(h.GetQuote))
+	mux.Handle("PATCH /v1/quotes/{uuid}", quoteRoute(h.PatchQuote, quoteWrite))
+	mux.Handle("PUT /v1/quotes/{uuid}/lines", quoteRoute(h.ReplaceQuoteLines, quoteWrite))
+	mux.Handle("POST /v1/quotes/{uuid}/accept", quoteRoute(h.AcceptQuote, quoteWrite))
+	mux.Handle("POST /v1/quotes/{uuid}/reject", quoteRoute(h.RejectQuote, quoteWrite))
+	mux.Handle("GET /v1/quotes/{uuid}/pdf", quoteRoute(h.QuotePDF))
 }
 
 // RegisterPublicRoutes mounts the public dealer application form (TEC-317):

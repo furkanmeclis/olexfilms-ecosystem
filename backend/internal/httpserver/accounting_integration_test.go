@@ -62,7 +62,7 @@ func (it *itest) accDo(method, path, token string, body any, want int) envelope 
 
 // TEC-172 acceptance: the center opens an account, writes a manual charge
 // to a distributor, collects it; the cari balance is back to 0 and the
-// collection wrote no income. Dealers get 403 on writes; a void needs a
+// collection wrote no income. Dealer staff get 403 on writes; a void needs a
 // step-up.
 func TestIntegrationAccountingFlow(t *testing.T) {
 	it := newIntegration(t)
@@ -209,10 +209,15 @@ func TestIntegrationAccountingFlow(t *testing.T) {
 	it.accDo("GET", "/v1/accounting/accounts?organization_uuid="+center.Uuid.String(), distTok, nil, http.StatusNotFound)
 	it.accDo("GET", cariPath, distTok, nil, http.StatusNotFound)
 
-	// 7. Dealer roles read only: GET 200, every write 403.
+	// 7. Dealer owner reads and, since TEC-341 (F3-07, dealer_accounting
+	// module on), writes its own book; dealer staff gets 403 on every write.
 	dealerTok := it.loginOrg(dealerOwner, rpw, dealer)
 	it.accDo("GET", "/v1/accounting/accounts", dealerTok, nil, http.StatusOK)
 	it.accDo("GET", "/v1/accounting/entries", dealerTok, nil, http.StatusOK)
+	it.accDo("POST", "/v1/accounting/accounts", dealerTok, map[string]any{"type": "cash", "name": "Dealer cash " + it.suffix}, http.StatusCreated)
+	dealerStaff, spw := it.user("t172-dealer-staff")
+	it.member(dealer, dealerStaff, "staff")
+	staffTok := it.loginOrg(dealerStaff, spw, dealer)
 	for _, w := range []struct {
 		path string
 		body map[string]any
@@ -221,9 +226,9 @@ func TestIntegrationAccountingFlow(t *testing.T) {
 		{"/v1/accounting/entries", map[string]any{"direction": "expense", "category": "rent", "amount": "1", "counterparty_organization_uuid": dist.Uuid.String()}},
 		{"/v1/accounting/payments", map[string]any{"amount": "1", "counterparty_organization_uuid": dist.Uuid.String()}},
 	} {
-		code, env := it.do("POST", w.path, hostOlex, dealerTok, w.body)
+		code, env := it.do("POST", w.path, hostOlex, staffTok, w.body)
 		if code != http.StatusForbidden || errCode(env) != "FORBIDDEN" {
-			t.Fatalf("dealer POST %s = %d %s", w.path, code, errCode(env))
+			t.Fatalf("dealer staff POST %s = %d %s", w.path, code, errCode(env))
 		}
 	}
 }

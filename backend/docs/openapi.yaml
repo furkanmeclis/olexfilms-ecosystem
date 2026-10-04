@@ -16206,6 +16206,201 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /v1/leads/{uuid}/quotes:
+    post:
+      tags: [Leads]
+      operationId: createLeadQuote
+      summary: Create a draft quote for a lead
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/QuoteInput" }
+      responses:
+        "201":
+          description: Quote created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeQuote" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/quotes/{uuid}:
+    get:
+      tags: [Leads]
+      operationId: getQuote
+      summary: Get a quote
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Quote
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeQuote" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Leads]
+      operationId: patchQuote
+      summary: Update mutable draft quote fields
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/QuotePatchInput" }
+      responses:
+        "200":
+          description: Quote updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeQuote" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/quotes/{uuid}/lines:
+    put:
+      tags: [Leads]
+      operationId: replaceQuoteLines
+      summary: Replace draft quote lines and recalculate totals
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/QuoteLinesInput" }
+      responses:
+        "200":
+          description: Quote lines replaced
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeQuote" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/quotes/{uuid}/accept:
+    post:
+      tags: [Leads]
+      operationId: acceptQuote
+      summary: Accept a sent quote
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/QuoteDecisionInput" }
+      responses:
+        "200":
+          description: Quote accepted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeQuote" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/quotes/{uuid}/reject:
+    post:
+      tags: [Leads]
+      operationId: rejectQuote
+      summary: Reject a sent quote
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/QuoteDecisionInput" }
+      responses:
+        "200":
+          description: Quote rejected
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeQuote" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/quotes/{uuid}/pdf:
+    get:
+      tags: [Leads]
+      operationId: requestQuotePdf
+      summary: Request or fetch the quote PDF render
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: locale
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: Quote PDF render is ready
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeDocumentRender" }
+        "202":
+          description: Quote PDF render queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeDocumentRender" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /v1/tasks:
     get:
       tags: [Tasks]
@@ -20604,7 +20799,7 @@ components:
 
     DocumentKind:
       type: string
-      enum: [service, measurement, contract, order_slip, invoice_view, warranty]
+      enum: [service, measurement, contract, order_slip, invoice_view, warranty, quote]
 
     DocumentVariable:
       type: object
@@ -25935,6 +26130,96 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/LeadFollowUpCount" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    QuoteStatus:
+      type: string
+      enum: [draft, sent, accepted, rejected, expired]
+
+    QuoteLineType:
+      type: string
+      enum: [product, catalog_service]
+
+    QuoteLine:
+      type: object
+      required: [line_type, description, quantity, unit_price, discount_amount, line_total, sort_order]
+      properties:
+        line_type: { $ref: "#/components/schemas/QuoteLineType" }
+        product_uuid: { type: [string, "null"], format: uuid }
+        service_catalog_item_uuid: { type: [string, "null"], format: uuid }
+        description: { type: string }
+        quantity: { type: string, example: "1" }
+        unit_price: { type: string, example: "100.00" }
+        discount_amount: { type: string, example: "10.00" }
+        line_total: { type: string, example: "90.00" }
+        sort_order: { type: integer }
+
+    Quote:
+      type: object
+      required: [uuid, lead_uuid, quote_no, display_no, currency, subtotal, discount_total, tax_total, grand_total, status, lines, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        lead_uuid: { type: string, format: uuid }
+        quote_no: { type: integer, format: int64 }
+        display_no: { type: string, example: Q-000042 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        subtotal: { type: string, example: "100.00" }
+        discount_total: { type: string, example: "10.00" }
+        tax_total: { type: string, example: "0.00" }
+        grand_total: { type: string, example: "90.00" }
+        valid_until: { type: [string, "null"], format: date-time }
+        status: { $ref: "#/components/schemas/QuoteStatus" }
+        created_by_user_id: { type: [integer, "null"], format: int64 }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/QuoteLine" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    QuoteLineInput:
+      type: object
+      required: [line_type]
+      properties:
+        line_type: { $ref: "#/components/schemas/QuoteLineType" }
+        product_uuid: { type: [string, "null"], format: uuid }
+        service_catalog_item_uuid: { type: [string, "null"], format: uuid }
+        description: { type: [string, "null"], maxLength: 500 }
+        quantity: { type: string, default: "1" }
+        unit_price: { type: [string, "null"], description: Requires pricing.sale.write when provided. }
+        discount_amount: { type: [string, "null"], default: "0.00" }
+
+    QuoteInput:
+      type: object
+      properties:
+        valid_until: { type: [string, "null"], format: date-time }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/QuoteLineInput" }
+
+    QuotePatchInput:
+      type: object
+      properties:
+        valid_until: { type: [string, "null"], format: date-time }
+
+    QuoteLinesInput:
+      type: object
+      required: [lines]
+      properties:
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/QuoteLineInput" }
+
+    QuoteDecisionInput:
+      type: object
+      properties:
+        reason: { type: [string, "null"], maxLength: 1000 }
+
+    EnvelopeQuote:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Quote" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     TaskStatus:
