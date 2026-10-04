@@ -14,14 +14,14 @@ import (
 
 const countPortalContracts = `-- name: CountPortalContracts :one
 SELECT COUNT(*)::bigint
-FROM services s
-JOIN brands b ON b.id = s.brand_id
-WHERE s.contract_id IS NOT NULL
+FROM contract_instances ci
+JOIN services s ON s.id = ci.subject_service_id
+JOIN brands b ON b.id = ci.brand_id
+WHERE ci.status = 'executed'
   AND (s.customer_user_id = $1::bigint
        OR EXISTS (SELECT 1 FROM warranties hw
                   WHERE hw.service_id = s.id AND hw.holder_user_id = $1::bigint))
-  AND s.brand_id = $2::bigint
-  AND s.status <> 'draft'
+  AND ci.brand_id = $2::bigint
   AND b.slug <> 'glorian'
 `
 
@@ -185,21 +185,23 @@ const listPortalContracts = `-- name: ListPortalContracts :many
 SELECT s.uuid, s.service_no, s.status, s.plate, s.plate_country, s.model_year, s.created_at,
        o.uuid AS organization_uuid, o.name AS organization_name, o.type AS organization_type,
        v.uuid AS vehicle_uuid,
-       cb.name AS car_brand_name, cm.name AS car_model_name
-FROM services s
+       cb.name AS car_brand_name, cm.name AS car_model_name,
+       ci.uuid AS contract_uuid, ci.contract_no, ci.executed_at,
+       (ci.pdf_key IS NOT NULL)::boolean AS pdf_ready
+FROM contract_instances ci
+JOIN services s ON s.id = ci.subject_service_id
 JOIN brands b ON b.id = s.brand_id
 JOIN organizations o ON o.id = s.organization_id
 JOIN vehicles v ON v.id = s.vehicle_id
 JOIN car_brands cb ON cb.id = s.car_brand_id
 JOIN car_models cm ON cm.id = s.car_model_id
-WHERE s.contract_id IS NOT NULL
+WHERE ci.status = 'executed'
   AND (s.customer_user_id = $1::bigint
        OR EXISTS (SELECT 1 FROM warranties hw
                   WHERE hw.service_id = s.id AND hw.holder_user_id = $1::bigint))
-  AND s.brand_id = $2::bigint
-  AND s.status <> 'draft'
+  AND ci.brand_id = $2::bigint
   AND b.slug <> 'glorian'
-ORDER BY s.created_at DESC, s.id DESC
+ORDER BY ci.executed_at DESC, ci.id DESC
 LIMIT $4::int OFFSET $3::int
 `
 
@@ -224,12 +226,15 @@ type ListPortalContractsRow struct {
 	VehicleUuid      uuid.UUID          `json:"vehicle_uuid"`
 	CarBrandName     string             `json:"car_brand_name"`
 	CarModelName     string             `json:"car_model_name"`
+	ContractUuid     uuid.UUID          `json:"contract_uuid"`
+	ContractNo       int64              `json:"contract_no"`
+	ExecutedAt       pgtype.Timestamptz `json:"executed_at"`
+	PdfReady         bool               `json:"pdf_ready"`
 }
 
-// TEC-245 (F2-03e): the user's signed vehicle intake contracts. Until the
-// contracts module (F3) lands a contract is only services.contract_id, so
-// the list is the user's services that carry one (same ownership, brand,
-// Glorian and draft rules as ListPortalServices); empty until F3 fills it.
+// TEC-288 (F3-01d): the user's executed vehicle intake contracts. The
+// ownership rule stays identical to portal services: the service customer or
+// warranty holder sees it, within the domain brand, excluding Glorian.
 func (q *Queries) ListPortalContracts(ctx context.Context, arg ListPortalContractsParams) ([]ListPortalContractsRow, error) {
 	rows, err := q.db.Query(ctx, listPortalContracts,
 		arg.UserID,
@@ -258,6 +263,10 @@ func (q *Queries) ListPortalContracts(ctx context.Context, arg ListPortalContrac
 			&i.VehicleUuid,
 			&i.CarBrandName,
 			&i.CarModelName,
+			&i.ContractUuid,
+			&i.ContractNo,
+			&i.ExecutedAt,
+			&i.PdfReady,
 		); err != nil {
 			return nil, err
 		}

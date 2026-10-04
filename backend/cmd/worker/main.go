@@ -16,7 +16,11 @@ import (
 	announcementsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/usecase"
 	bulkusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/bulk/usecase"
 	catalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/catalog/usecase"
+	contractsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts"
+	contractsrepo "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/repository"
+	contractsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/usecase"
 	customersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/customers/usecase"
+	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
 	docusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/usecase"
 	exportusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/usecase"
 	importusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/imports/usecase"
@@ -184,6 +188,13 @@ func main() {
 	exportSvc.SetDocumentPDF(pdfClient)
 	// Business modules (F1) register their SourceLoader per kind on docSvc.
 	docSvc := docusecase.New(pool, queries, store, pdfClient, nil, pdfrender.ParseFontMode(cfg.Gotenberg.Fonts), log)
+	contractsSvc := contractsusecase.New(contractsrepo.New(pool, queries),
+		contractsusecase.WithStorage(store),
+		contractsusecase.WithPDFRenderer(pdfClient),
+		contractsusecase.WithOutbox(outboxStore),
+	)
+	_ = docSvc.RegisterLoader(docmodel.KindContract, contractsSvc.ContractDocumentLoader())
+	contractsmodule.RegisterEventHandlers(eventBus, contractsSvc, log)
 	importSvc := importusecase.New(queries, store, ioReg, nil, notifSvc, activityRec, log)
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(queries),

@@ -4773,6 +4773,34 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/contracts/{uuid}/pdf:
+    get:
+      tags: [Contracts]
+      operationId: getContractPdf
+      summary: Download the ready executed contract PDF
+      description: Requires contracts.read in the active organization scope. Answers 404 until the executed PDF is ready.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: PDF bytes
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/contracts/{uuid}/signers/customer/otp:
     post:
       tags: [Contracts]
@@ -16465,14 +16493,13 @@ paths:
     get:
       tags: [Portal]
       operationId: listPortalContracts
-      summary: The portal user's signed vehicle intake contracts (TEC-245)
+      summary: The portal user's executed vehicle intake contracts
       description: >-
-        Portal session (aud=portal) with services.read; customer and fleet
-        sessions alike. Until the contracts module (F3) lands a contract is
-        only the service's contract_id, so the list is the user's services
-        that carry one (same ownership, brand, Glorian and draft rules as
-        GET /v1/portal/services), newest first. With no contract the answer
-        is 200 with an empty list.
+        TEC-288. Portal session (aud=portal) with services.read; customer and
+        fleet sessions alike. Lists executed contract_instances for services
+        the user owns as customer or warranty holder, within the domain brand,
+        excluding Glorian, newest execution first. With no executed contract
+        the answer is 200 with an empty list.
       security:
         - bearerAuth: []
       parameters:
@@ -16493,6 +16520,34 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           $ref: "#/components/responses/Forbidden"
+
+  /v1/portal/contracts/{uuid}/pdf:
+    get:
+      tags: [Portal]
+      operationId: getPortalContractPdf
+      summary: Executed contract PDF of the signed-in customer
+      description: >-
+        TEC-288. Portal session (services.read); same ownership rule as
+        GET /v1/portal/contracts. Another customer's contract or a PDF that is
+        not ready answers 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: PDF bytes
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /v1/portal/notification-preferences:
     get:
@@ -26203,13 +26258,15 @@ components:
     PortalContract:
       type: object
       description: >-
-        A signed vehicle intake contract of the portal user (TEC-245). Until
-        F3 a contract is only the service's contract_id: the item names the
-        service, the vehicle and the organization; F3 adds the signing
-        details and the PDF.
-      required: [service, status, organization, vehicle_uuid, car_brand_name, car_model_name,
-        model_year, plate, plate_country, created_at]
+        An executed vehicle intake contract of the portal user (TEC-288).
+        `service` remains for TEC-245 clients; flat contract fields identify
+        the immutable executed contract and whether its PDF is ready.
+      required: [contract_uuid, contract_no, service, status, organization, vehicle_uuid,
+        car_brand_name, car_model_name, model_year, plate, plate_country, executed_at,
+        pdf_ready, created_at]
       properties:
+        contract_uuid: { type: string, format: uuid }
+        contract_no: { type: integer, format: int64 }
         service:
           type: object
           required: [uuid, service_no]
@@ -26224,6 +26281,8 @@ components:
         model_year: { type: [integer, "null"] }
         plate: { type: [string, "null"] }
         plate_country: { type: [string, "null"] }
+        executed_at: { type: [string, "null"], format: date-time }
+        pdf_ready: { type: boolean }
         created_at: { type: string, format: date-time }
 
     EnvelopePortalContractPage:

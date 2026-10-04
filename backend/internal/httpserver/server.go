@@ -48,6 +48,7 @@ import (
 	customersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/customers/usecase"
 	documentsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents"
 	dochandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/handler"
+	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
 	docusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/usecase"
 	exportmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports"
 	exporthandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/handler"
@@ -615,8 +616,11 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	contractsSvc := contractsusecase.New(contractsrepo.New(deps.DB, deps.Queries),
 		contractsusecase.WithOTP(otpSvc),
 		contractsusecase.WithStorage(deps.Storage),
+		contractsusecase.WithPDFRenderer(pdfClient),
 		contractsusecase.WithOutbox(outbox.NewStore(deps.DB, deps.Queries)),
 	)
+	_ = docSvc.RegisterLoader(docmodel.KindContract, contractsSvc.ContractDocumentLoader())
+	contractsmodule.RegisterEventHandlers(eventBus, contractsSvc, log)
 	contractsmodule.RegisterRoutes(mux, contractshandler.New(contractsSvc), tokens, loader, deps.Queries, featureSvc)
 	exportmodule.RegisterRoutes(mux, exporthandler.New(exportSvc), tokens, loader, stepUpSvc, deps.Queries)
 	importmodule.RegisterRoutes(mux, importhandler.New(importSvc), tokens, loader, deps.Queries)

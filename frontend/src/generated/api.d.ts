@@ -2685,6 +2685,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/contracts/{uuid}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the ready executed contract PDF
+         * @description Requires contracts.read in the active organization scope. Answers 404 until the executed PDF is ready.
+         */
+        get: operations["getContractPdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/contracts/{uuid}/signers/customer/otp": {
         parameters: {
             query?: never;
@@ -8533,10 +8553,30 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The portal user's signed vehicle intake contracts (TEC-245)
-         * @description Portal session (aud=portal) with services.read; customer and fleet sessions alike. Until the contracts module (F3) lands a contract is only the service's contract_id, so the list is the user's services that carry one (same ownership, brand, Glorian and draft rules as GET /v1/portal/services), newest first. With no contract the answer is 200 with an empty list.
+         * The portal user's executed vehicle intake contracts
+         * @description TEC-288. Portal session (aud=portal) with services.read; customer and fleet sessions alike. Lists executed contract_instances for services the user owns as customer or warranty holder, within the domain brand, excluding Glorian, newest execution first. With no executed contract the answer is 200 with an empty list.
          */
         get: operations["listPortalContracts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/contracts/{uuid}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Executed contract PDF of the signed-in customer
+         * @description TEC-288. Portal session (services.read); same ownership rule as GET /v1/portal/contracts. Another customer's contract or a PDF that is not ready answers 404.
+         */
+        get: operations["getPortalContractPdf"];
         put?: never;
         post?: never;
         delete?: never;
@@ -15586,8 +15626,12 @@ export interface components {
             };
             meta: components["schemas"]["ResponseMeta"];
         };
-        /** @description A signed vehicle intake contract of the portal user (TEC-245). Until F3 a contract is only the service's contract_id: the item names the service, the vehicle and the organization; F3 adds the signing details and the PDF. */
+        /** @description An executed vehicle intake contract of the portal user (TEC-288). `service` remains for TEC-245 clients; flat contract fields identify the immutable executed contract and whether its PDF is ready. */
         PortalContract: {
+            /** Format: uuid */
+            contract_uuid: string;
+            /** Format: int64 */
+            contract_no: number;
             service: {
                 /** Format: uuid */
                 uuid: string;
@@ -15603,6 +15647,9 @@ export interface components {
             model_year: number | null;
             plate: string | null;
             plate_country: string | null;
+            /** Format: date-time */
+            executed_at: string | null;
+            pdf_ready: boolean;
             /** Format: date-time */
             created_at: string;
         };
@@ -20514,6 +20561,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeContract"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getContractPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
                 };
             };
             401: components["responses"]["Unauthenticated"];
@@ -31224,6 +31296,32 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getPortalContractPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getPortalNotificationPreferences: {

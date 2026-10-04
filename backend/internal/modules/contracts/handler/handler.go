@@ -10,6 +10,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/otp"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
@@ -202,6 +203,40 @@ func (h *Handler) GetContract(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, item)
 }
 
+// PDF streams the ready executed contract PDF for panel users.
+func (h *Handler) PDF(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+	rc, name, err := h.svc.DownloadPDF(r.Context(), caller(r), id)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	defer func() { _ = rc.Close() }()
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", `inline; filename="`+name+`"`)
+	_, _ = io.Copy(w, rc)
+}
+
+// PortalPDF streams the ready executed contract PDF for the portal owner.
+func (h *Handler) PortalPDF(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+	rc, name, err := h.svc.DownloadPortalPDF(r.Context(), portalCaller(r), id)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	defer func() { _ = rc.Close() }()
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", `inline; filename="`+name+`"`)
+	_, _ = io.Copy(w, rc)
+}
+
 // RequestCustomerOTP sends a contract_sign OTP to the customer signer.
 func (h *Handler) RequestCustomerOTP(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathUUID(w, r)
@@ -338,6 +373,15 @@ func caller(r *http.Request) usecase.Caller {
 	org := orgctx.MustScope(r.Context())
 	f, _ := scopefilter.From(r.Context())
 	return usecase.Caller{UserID: p.UserInternal, OrganizationID: org.InternalID, BrandID: org.BrandID, Filter: f}
+}
+
+func portalCaller(r *http.Request) usecase.PortalCaller {
+	p := authctx.MustPrincipal(r.Context())
+	c := usecase.PortalCaller{UserID: p.UserInternal}
+	if b, ok := brandctx.From(r.Context()); ok {
+		c.BrandID = b.ID
+	}
+	return c
 }
 
 func pathUUID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {

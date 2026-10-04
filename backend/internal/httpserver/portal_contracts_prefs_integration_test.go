@@ -1,13 +1,19 @@
 package httpserver
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"testing"
 
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type portalPrefs struct {
@@ -106,5 +112,81 @@ func TestIntegrationPortalContractsPrefsFleet(t *testing.T) {
 	var transfers int64
 	if err := it.pool.QueryRow(ctx, `SELECT COUNT(*) FROM vehicle_transfers WHERE vehicle_id = $1`, veh.ID).Scan(&transfers); err != nil || transfers != 0 {
 		t.Fatalf("fleet started a transfer: %d %v", transfers, err)
+	}
+}
+
+func TestIntegrationPortalContractPDFOwnership(t *testing.T) {
+	store := storage.NewMemory()
+	it := newIntegrationWithDeps(t, nil, func(d *Deps) { d.Storage = store })
+	ctx := context.Background()
+	center := it.brandCenter("olex")
+	dist := it.org("t288-dist", "distributor", center)
+	dealer := it.org("t288-dealer", "dealer", dist)
+	tail := it.suffix[len(it.suffix)-4:]
+
+	owner, veh := it.svcCustomer(dealer, "t288-owner", "34C288"+tail)
+	stranger, _ := it.svcCustomer(dealer, "t288-stranger", "34S288"+tail)
+	svc := it.directService(dealer, owner, veh, 288)
+	tpl, err := it.q.CreateContractTemplate(ctx, db.CreateContractTemplateParams{
+		OrganizationID: center.ID, BrandID: center.BrandID, Name: "TEC288 " + it.suffix,
+		Kind: "vehicle_intake", IsActive: true,
+	})
+	if err != nil {
+		t.Fatalf("template: %v", err)
+	}
+	body := "<p>executed</p>"
+	sum := sha256.Sum256([]byte(body))
+	executed, err := it.q.CreateContractInstance(ctx, db.CreateContractInstanceParams{
+		OrganizationID: dealer.ID, BrandID: dealer.BrandID, ContractNo: 288001,
+		SubjectType: "service", SubjectID: svc.ID, TemplateID: tpl.ID, Kind: "vehicle_intake", Locale: "tr",
+		TemplateVersion: 1, Status: "pending", RenderedHtml: pgtype.Text{String: body, Valid: true},
+		ContentSha256: pgtype.Text{String: hex.EncodeToString(sum[:]), Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("contract instance: %v", err)
+	}
+	executed, err = it.q.ExecuteContractInstance(ctx, db.ExecuteContractInstanceParams{
+		ID: executed.ID, RenderedHtml: body, ContentSha256: hex.EncodeToString(sum[:]),
+	})
+	if err != nil {
+		t.Fatalf("execute contract: %v", err)
+	}
+	key := storage.ContractExecutedPDFObjectKey(dealer.Uuid, executed.Uuid)
+	if err := store.Upload(ctx, storage.File{
+		Body: bytes.NewReader([]byte("%PDF-1.7\ntec288\n")), Size: 16, ContentType: "application/pdf", Filename: "contract.pdf",
+	}, key); err != nil {
+		t.Fatalf("upload pdf: %v", err)
+	}
+	if _, err := it.q.SetContractInstancePDFKey(ctx, db.SetContractInstancePDFKeyParams{ID: executed.ID, PdfKey: key}); err != nil {
+		t.Fatalf("set pdf key: %v", err)
+	}
+	if _, err := it.q.CreateContractInstance(ctx, db.CreateContractInstanceParams{
+		OrganizationID: dealer.ID, BrandID: dealer.BrandID, ContractNo: 288002,
+		SubjectType: "service", SubjectID: svc.ID, TemplateID: tpl.ID, Kind: "vehicle_intake", Locale: "tr",
+		TemplateVersion: 1, Status: "pending",
+	}); err != nil {
+		t.Fatalf("pending contract: %v", err)
+	}
+
+	ownerTok, _, err := it.tokens.IssueAccess(jwt.AccessInput{UserID: owner.Uuid, Roles: []string{rbac.RoleCustomer}, Audience: jwt.AudiencePortal})
+	if err != nil {
+		t.Fatal(err)
+	}
+	strangerTok, _, err := it.tokens.IssueAccess(jwt.AccessInput{UserID: stranger.Uuid, Roles: []string{rbac.RoleCustomer}, Audience: jwt.AudiencePortal})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	page := decodeData[portalCountPage](t, it.custDo("GET", "/v1/portal/contracts", ownerTok, nil, http.StatusOK))
+	if page.Total != 1 || len(page.Items) != 1 || page.Items[0]["contract_uuid"] != executed.Uuid.String() || page.Items[0]["pdf_ready"] != true {
+		t.Fatalf("portal contracts = %+v, want executed PDF-ready contract only", page)
+	}
+	path := "/v1/portal/contracts/" + executed.Uuid.String() + "/pdf"
+	rec := it.raw("GET", path, ownerTok, "", nil, nil)
+	if rec.Code != http.StatusOK || rec.Header().Get("Content-Type") != "application/pdf" || !bytes.HasPrefix(rec.Body.Bytes(), []byte("%PDF-")) {
+		t.Fatalf("owner pdf = %d %s %q", rec.Code, rec.Header().Get("Content-Type"), rec.Body.String())
+	}
+	if rec := it.raw("GET", path, strangerTok, "", nil, nil); rec.Code != http.StatusNotFound {
+		t.Fatalf("stranger pdf = %d, want 404", rec.Code)
 	}
 }

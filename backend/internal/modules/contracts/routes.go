@@ -33,6 +33,9 @@ func RegisterRoutes(
 	instance := func(fn http.HandlerFunc, slug string) http.Handler {
 		return middleware.Chain(fn, authn, org, module, middleware.RequireScope(q, slug))
 	}
+	portal := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, authn, middleware.RequirePermission(rbac.PermServicesRead))
+	}
 
 	mux.Handle("GET /v1/contract-templates/variables", route(h.Variables))
 	mux.Handle("GET /v1/platform/contract-templates", route(h.List))
@@ -45,6 +48,8 @@ func RegisterRoutes(
 
 	mux.Handle("POST /v1/services/{uuid}/contract", instance(h.CreateForService, rbac.PermContractsWrite))
 	mux.Handle("GET /v1/contracts/{uuid}", instance(h.GetContract, rbac.PermContractsRead))
+	mux.Handle("GET /v1/contracts/{uuid}/pdf", instance(h.PDF, rbac.PermContractsRead))
+	mux.Handle("GET /v1/portal/contracts/{uuid}/pdf", portal(h.PortalPDF))
 	mux.Handle("POST /v1/contracts/{uuid}/signers/customer/otp", instance(h.RequestCustomerOTP, rbac.PermContractsWrite))
 	mux.Handle("POST /v1/contracts/{uuid}/signers/customer/sign", instance(h.SignCustomer, rbac.PermContractsWrite))
 	mux.Handle("POST /v1/contracts/{uuid}/signers/staff/sign", instance(h.SignStaff, rbac.PermContractsWrite))
