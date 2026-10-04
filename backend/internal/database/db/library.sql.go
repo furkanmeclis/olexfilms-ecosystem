@@ -186,6 +186,32 @@ func (q *Queries) GetLibraryFolderByUUID(ctx context.Context, argUuid uuid.UUID)
 	return i, err
 }
 
+const getLibraryItemByID = `-- name: GetLibraryItemByID :one
+SELECT id, uuid, organization_id, brand_id, folder_id, name, description, tags, access_level, role_slug, created_by_user_id, created_at, updated_at, deleted_at FROM library_items WHERE id = $1 AND deleted_at IS NULL
+`
+
+func (q *Queries) GetLibraryItemByID(ctx context.Context, id int64) (LibraryItem, error) {
+	row := q.db.QueryRow(ctx, getLibraryItemByID, id)
+	var i LibraryItem
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.FolderID,
+		&i.Name,
+		&i.Description,
+		&i.Tags,
+		&i.AccessLevel,
+		&i.RoleSlug,
+		&i.CreatedByUserID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const getLibraryItemByUUID = `-- name: GetLibraryItemByUUID :one
 SELECT id, uuid, organization_id, brand_id, folder_id, name, description, tags, access_level, role_slug, created_by_user_id, created_at, updated_at, deleted_at FROM library_items WHERE uuid = $1 AND deleted_at IS NULL
 `
@@ -359,8 +385,17 @@ WHERE brand_id = $1::bigint
   AND (role_slug IS NULL OR role_slug = ANY($3::text[]))
   AND ($4::bigint IS NULL OR folder_id = $4::bigint)
   AND ($5::text IS NULL OR tags @> ARRAY[$5::text])
+  AND (
+      $6::text IS NULL
+      OR name ILIKE ('%' || $6::text || '%')
+      OR COALESCE(description, '') ILIKE ('%' || $6::text || '%')
+      OR EXISTS (
+          SELECT 1 FROM unnest(tags) AS tag_value
+          WHERE tag_value ILIKE ('%' || $6::text || '%')
+      )
+  )
 ORDER BY lower(name), id
-LIMIT $7 OFFSET $6
+LIMIT $8 OFFSET $7
 `
 
 type ListLibraryItemsParams struct {
@@ -369,6 +404,7 @@ type ListLibraryItemsParams struct {
 	ViewerRoleSlugs []string    `json:"viewer_role_slugs"`
 	FolderID        pgtype.Int8 `json:"folder_id"`
 	Tag             pgtype.Text `json:"tag"`
+	Q               pgtype.Text `json:"q"`
 	PageOffset      int32       `json:"page_offset"`
 	PageLimit       int32       `json:"page_limit"`
 }
@@ -385,6 +421,7 @@ func (q *Queries) ListLibraryItems(ctx context.Context, arg ListLibraryItemsPara
 		arg.ViewerRoleSlugs,
 		arg.FolderID,
 		arg.Tag,
+		arg.Q,
 		arg.PageOffset,
 		arg.PageLimit,
 	)
