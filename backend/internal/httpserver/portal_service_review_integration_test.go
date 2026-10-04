@@ -23,11 +23,45 @@ type portalServiceReviewState struct {
 	GoogleBusinessURL *string `json:"google_business_url"`
 }
 
+type serviceReviewListState struct {
+	Items []struct {
+		UUID        string `json:"uuid"`
+		ServiceUUID string `json:"service_uuid"`
+		IsAnonymous bool   `json:"is_anonymous"`
+		Customer    *struct {
+			UUID  string  `json:"uuid"`
+			Name  string  `json:"name"`
+			Phone *string `json:"phone"`
+		} `json:"customer"`
+	} `json:"items"`
+	Total int64 `json:"total"`
+}
+
+func (s serviceReviewListState) byService(id string) *struct {
+	UUID        string `json:"uuid"`
+	ServiceUUID string `json:"service_uuid"`
+	IsAnonymous bool   `json:"is_anonymous"`
+	Customer    *struct {
+		UUID  string  `json:"uuid"`
+		Name  string  `json:"name"`
+		Phone *string `json:"phone"`
+	} `json:"customer"`
+} {
+	for i := range s.Items {
+		if s.Items[i].ServiceUUID == id {
+			return &s.Items[i]
+		}
+	}
+	return nil
+}
+
 // TEC-244 acceptance: the owner customer reviews a completed service once
 // (a second attempt is 409); an out-of-range rating is 400
 // VALIDATION_ERROR; another customer gets 404 on GET and POST; a service
 // that is not completed is 422; the review state carries the dealer's
-// Google review link only when it is set.
+// Google review link only when it is set. TEC-351 extends the form with
+// anonymous reviews: dealer reads mask customer fields while center reads
+// retain them.
 func TestIntegrationPortalServiceReview(t *testing.T) {
 	it := newIntegration(t)
 	ctx := context.Background()
@@ -125,5 +159,37 @@ func TestIntegrationPortalServiceReview(t *testing.T) {
 	if st.Review == nil || st.Review.UUID != created.Review.UUID || st.CanReview ||
 		st.GoogleBusinessURL == nil || *st.GoogleBusinessURL != gurl {
 		t.Fatalf("final state = %+v", st)
+	}
+
+	anonCust, anonVeh := it.svcCustomer(dealer, "t351-anon", "34T351"+it.suffix[len(it.suffix)-4:])
+	if _, err := it.pool.Exec(ctx, `UPDATE users SET phone_e164 = $1 WHERE id = $2`, "+90555111"+it.suffix[len(it.suffix)-4:], anonCust.ID); err != nil {
+		t.Fatalf("anonymous customer phone: %v", err)
+	}
+	if err := it.q.AssignUserRoleBySlug(ctx, db.AssignUserRoleBySlugParams{UserID: anonCust.ID, Slug: rbac.RoleCustomer}); err != nil {
+		t.Fatalf("anonymous customer role: %v", err)
+	}
+	anonSvc := it.directService(dealer, anonCust, anonVeh, 351)
+	anonPath := "/v1/portal/services/" + anonSvc.Uuid.String() + "/review"
+	it.accDo("POST", anonPath, portalTok(anonCust), map[string]any{
+		"platform_rating": 5, "product_rating": 5, "is_anonymous": true,
+	}, http.StatusCreated)
+
+	dealerOwner, dpw := it.user("t351-dealer-owner")
+	it.member(dealer, dealerOwner, "owner", rbac.RoleDealerOwner)
+	centerStaff, cpw := it.user("t351-center-staff")
+	it.member(center, centerStaff, "staff", rbac.RoleCenterStaff)
+	dealerTok := it.loginOrg(dealerOwner, dpw, dealer)
+	centerTok := it.loginOrg(centerStaff, cpw, center)
+
+	dealerReviews := decodeData[serviceReviewListState](t, it.accDo("GET", "/v1/service-reviews?limit=100", dealerTok, nil, http.StatusOK))
+	dealerItem := dealerReviews.byService(anonSvc.Uuid.String())
+	if dealerItem == nil || !dealerItem.IsAnonymous || dealerItem.Customer != nil {
+		t.Fatalf("dealer anonymous review = %+v", dealerItem)
+	}
+	centerReviews := decodeData[serviceReviewListState](t, it.accDo("GET", "/v1/service-reviews?limit=100", centerTok, nil, http.StatusOK))
+	centerItem := centerReviews.byService(anonSvc.Uuid.String())
+	if centerItem == nil || !centerItem.IsAnonymous || centerItem.Customer == nil ||
+		centerItem.Customer.UUID != anonCust.Uuid.String() || centerItem.Customer.Phone == nil {
+		t.Fatalf("center anonymous review = %+v", centerItem)
 	}
 }

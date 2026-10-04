@@ -11,6 +11,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -277,7 +278,7 @@ func normalizeReviewSource(source *string) string {
 	}
 }
 
-func userLocale(ctx context.Context) string { return "tr" }
+func userLocale(ctx context.Context) string { return string(i18n.FromContext(ctx).Locale) }
 
 func (s *Service) reviewForm(ctx context.Context, brandID, serviceID int64, locale string) ([]ReviewFormQuestionView, []ReviewProductView, error) {
 	rows, err := s.q.ListReviewQuestionsByBrand(ctx, db.ListReviewQuestionsByBrandParams{BrandID: brandID, ActiveOnly: true})

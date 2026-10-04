@@ -56,8 +56,8 @@ type ClaimServiceReviewRequestRow struct {
 
 // TEC-192 (F1-06h): review request 24 hours after a service is completed.
 // Stamps review_request_sent_at when every send condition holds: the
-// service is still completed, the request was not sent yet, the dealer has
-// a customer is a live, non-anonymized (TEC-161), non-merged user with a
+// service is still completed, the request was not sent yet, and the
+// customer is a live, non-anonymized (TEC-161), non-merged user with a
 // phone. The conditional
 // UPDATE is the idempotency barrier: a second run (or a concurrent one)
 // matches no row, so only one outbox event is ever written.

@@ -127,7 +127,8 @@ func (s *Sender) Send(ctx context.Context, serviceID int64) (bool, error) {
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	row, err := s.q.WithTx(tx).ClaimServiceReviewRequest(ctx, db.ClaimServiceReviewRequestParams{
+	q := s.q.WithTx(tx)
+	row, err := q.ClaimServiceReviewRequest(ctx, db.ClaimServiceReviewRequestParams{
 		Now:       pgtype.Timestamptz{Time: s.now(), Valid: true},
 		ServiceID: serviceID,
 	})
@@ -140,7 +141,7 @@ func (s *Sender) Send(ctx context.Context, serviceID int64) (bool, error) {
 	}
 	formURL := serviceuc.ReviewFormTarget(row.Uuid)
 	if s.links != nil {
-		link, err := s.links.Link(ctx, shorturls.CreateInput{
+		link, err := s.links.LinkWithStore(ctx, q, shorturls.CreateInput{
 			BrandID: row.BrandID, OrganizationID: &row.OrganizationID, Target: formURL,
 		})
 		if err != nil {

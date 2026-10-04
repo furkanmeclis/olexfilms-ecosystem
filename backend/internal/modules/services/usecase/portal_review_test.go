@@ -1,11 +1,13 @@
 package usecase
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"testing"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -66,6 +68,15 @@ func TestGoogleURL(t *testing.T) {
 	u := googleURL(db.Organization{GoogleBusinessUrl: pgtype.Text{String: "https://g.page/r/x", Valid: true}})
 	if u == nil || *u != "https://g.page/r/x" {
 		t.Fatalf("url = %v", u)
+	}
+}
+
+func TestUserLocale(t *testing.T) {
+	if got := userLocale(i18n.WithAcceptLanguage(context.Background(), "de-DE,de;q=0.9")); got != "de" {
+		t.Fatalf("userLocale(de header) = %q, want de", got)
+	}
+	if got := userLocale(context.Background()); got != "tr" {
+		t.Fatalf("userLocale(empty context) = %q, want tr", got)
 	}
 }
 

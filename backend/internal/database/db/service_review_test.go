@@ -1,14 +1,17 @@
 package db_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/review"
+	shorturls "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/shorturls/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -78,6 +81,12 @@ func (f *serviceFixture) reviewState(t *testing.T, svc db.Service) (sentAt bool,
 		t.Fatal(err)
 	}
 	return sent.Valid, f.outboxCount(t, events.ServiceReviewRequested, svc.ID, -1)
+}
+
+type failingOutbox struct{}
+
+func (failingOutbox) Enqueue(context.Context, pgx.Tx, events.Event) error {
+	return fmt.Errorf("boom")
 }
 
 func TestServiceReviewRequest(t *testing.T) {
@@ -176,4 +185,32 @@ func TestServiceReviewRequest(t *testing.T) {
 			t.Fatalf("draft: sent=%v events=%d", sent, n)
 		}
 	})
+}
+
+func TestServiceReviewRequestRollsBackShortURLWithOutbox(t *testing.T) {
+	f := newServiceFixture(t)
+	sender := review.NewSender(
+		f.tx,
+		f.q,
+		failingOutbox{},
+		shorturls.NewLinker(shorturls.New(f.q), "https://olexfilms.app"),
+		nil,
+	)
+	u, v := f.reviewCustomer(t, true)
+	svc := f.reviewService(t, u, v, true)
+
+	if sent, err := sender.Send(f.ctx, svc.ID); err == nil || sent {
+		t.Fatalf("send = %v, %v; want outbox error", sent, err)
+	}
+	var urls int
+	target := "/portal/services/" + svc.Uuid.String() + "/review?source=whatsapp_link"
+	if err := f.tx.QueryRow(f.ctx, `SELECT COUNT(*) FROM short_urls WHERE target_path = $1`, target).Scan(&urls); err != nil {
+		t.Fatal(err)
+	}
+	if urls != 0 {
+		t.Fatalf("short URL rows after rollback = %d, want 0", urls)
+	}
+	if sent, n := f.reviewState(t, svc); sent || n != 0 {
+		t.Fatalf("review request state after rollback: sent=%v events=%d", sent, n)
+	}
 }
