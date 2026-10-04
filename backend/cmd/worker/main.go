@@ -124,6 +124,8 @@ func main() {
 	servicereview.RegisterEventHandlers(eventBus, reviewQueue, cfg.Services.ReviewRequestDelay, log)
 	// TEC-270: glorian stock entries/placements and exits schedule the push.
 	glorian.RegisterEventHandlers(eventBus, queries, reviewQueue, log)
+	// TEC-288: contract.executed enqueues the worker-docs contract:pdf task.
+	contractsmodule.RegisterEventHandlers(eventBus, reviewQueue, log)
 	outboxStore := outbox.NewStore(pool, queries)
 	outboxPub := outbox.NewPublisher(outboxStore, eventBus, log)
 	outboxStop := outboxPub.StartRun(ctx)
@@ -194,7 +196,6 @@ func main() {
 		contractsusecase.WithOutbox(outboxStore),
 	)
 	_ = docSvc.RegisterLoader(docmodel.KindContract, contractsSvc.ContractDocumentLoader())
-	contractsmodule.RegisterEventHandlers(eventBus, contractsSvc, log)
 	importSvc := importusecase.New(queries, store, ioReg, nil, notifSvc, activityRec, log)
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(queries),
@@ -242,6 +243,8 @@ func main() {
 			return announcementsusecase.DispatchBatch(ctx, notifSvc, payload)
 		}).
 		WithDocsRender(docSvc.ProcessRender).
+		// TEC-288: executed contract PDF (docs queue).
+		WithContractPDF(contractsSvc.GenerateExecutedPDF).
 		WithRatesFetch(ratesSvc.FetchTask).
 		WithWarrantyCron(warrantyCron.ExpireTask, warrantyCron.ExpiringScanTask).
 		WithWarrantyRepairScan(warrantymodule.NewRepairScanner(pool, queries, cfg.Auth.FrontendURL, cfg.Warranty.RepairScanDays, log).Task).

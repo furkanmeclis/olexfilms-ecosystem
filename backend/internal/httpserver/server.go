@@ -621,7 +621,15 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		contractsusecase.WithOutbox(outbox.NewStore(deps.DB, deps.Queries)),
 	)
 	_ = docSvc.RegisterLoader(docmodel.KindContract, contractsSvc.ContractDocumentLoader())
-	contractsmodule.RegisterEventHandlers(eventBus, contractsSvc, log)
+	// TEC-288: contract.executed enqueues the worker-docs contract:pdf task.
+	var contractPDFQueue contractsmodule.Enqueuer
+	if deps.Queue != nil {
+		contractPDFQueue = deps.Queue
+	}
+	contractsmodule.RegisterEventHandlers(eventBus, contractPDFQueue, log)
+	if s.worker != nil {
+		s.worker.WithContractPDF(contractsSvc.GenerateExecutedPDF)
+	}
 	contractsmodule.RegisterRoutes(mux, contractshandler.New(contractsSvc), tokens, loader, deps.Queries, featureSvc)
 	exportmodule.RegisterRoutes(mux, exporthandler.New(exportSvc), tokens, loader, stepUpSvc, deps.Queries)
 	importmodule.RegisterRoutes(mux, importhandler.New(importSvc), tokens, loader, deps.Queries)
