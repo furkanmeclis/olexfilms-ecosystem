@@ -7760,6 +7760,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/services/{uuid}/cancel-completed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel a completed service
+         * @description TEC-356 / TEC-230 decision. Needs services.cancel_completed reaching the service; dealer_staff has no grant and receives 403. The service must be completed; already cancelled services answer 409 SERVICE_INVALID_TRANSITION and non-completed services answer 409 SERVICE_NOT_EDITABLE. reason is mandatory. In one transaction the warranties of the service are voided with reason service_cancelled, whole consumed units are returned to the service organization's stock with ledger return movements, open accounting rows sourced by the service are reversed with append-only entries, the service moves to cancelled, service.cancelled and warranty.voided outbox events are written and an activity row is recorded. Services containing a partial_consumption item answer 422 SERVICE_CONSUMPTION_NOT_REVERSIBLE because the return helper can safely reverse only whole consumptions.
+         */
+        post: operations["cancelCompletedService"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/services/{uuid}/images": {
         parameters: {
             query?: never;
@@ -7820,7 +7843,7 @@ export interface paths {
         put?: never;
         /**
          * Correct the consumption of an item of a completed service
-         * @description TEC-230 (conservative default; a completed service still cannot be cancelled). The unit consumed by mistake goes back from the service into the service organization's stock with a ledger return movement (a roll with the meters the consumption took, fixed pieces credited back); with replacement_barcode the correct unit of the same product is consumed instead (same kind and amount, held by the service organization, not in an open service). Idempotency keys service:service_item_correction:{item id}:{return or consumption}:{barcode}. Center only (services.cancel on the service, else 403), within 24 hours of the completion (422 SERVICE_CORRECTION_WINDOW_CLOSED), once per item (409 SERVICE_ITEM_ALREADY_CORRECTED), whole consumptions only (a partial cut answers 422 SERVICE_CONSUMPTION_NOT_REVERSIBLE). An item with an active or expired warranty answers 422 SERVICE_ITEM_WARRANTY_ACTIVE (void the warranty first); the replacement gets no warranty. A service that is not completed answers 409 SERVICE_NOT_EDITABLE; a replacement that is not held answers 409 SERVICE_UNIT_NOT_AVAILABLE, one in an open service 409 SERVICE_UNIT_IN_USE. Accounting is not touched. Writes a service.updated outbox event (change consumption_corrected) and the stock.* events of the movements.
+         * @description TEC-230. The unit consumed by mistake goes back from the service into the service organization's stock with a ledger return movement (a roll with the meters the consumption took, fixed pieces credited back); with replacement_barcode the correct unit of the same product is consumed instead (same kind and amount, held by the service organization, not in an open service). Idempotency keys service:service_item_correction:{item id}:{return or consumption}:{barcode}. Center only (services.cancel on the service, else 403), within 24 hours of the completion (422 SERVICE_CORRECTION_WINDOW_CLOSED), once per item (409 SERVICE_ITEM_ALREADY_CORRECTED), whole consumptions only (a partial cut answers 422 SERVICE_CONSUMPTION_NOT_REVERSIBLE). An item with an active or expired warranty answers 422 SERVICE_ITEM_WARRANTY_ACTIVE (void the warranty first); the replacement gets no warranty. A service that is not completed answers 409 SERVICE_NOT_EDITABLE; a replacement that is not held answers 409 SERVICE_UNIT_NOT_AVAILABLE, one in an open service 409 SERVICE_UNIT_IN_USE. Accounting is not touched. Writes a service.updated outbox event (change consumption_corrected) and the stock.* events of the movements.
          */
         post: operations["correctServiceConsumption"];
         delete?: never;
@@ -8051,6 +8074,150 @@ export interface paths {
          * @description requested -> approved | rejected (receiver with transfers.request or the common parent with transfers.approve; approval freezes the giver's purchase price per unit, K13; a rejection writes no stock movement); requested -> cancelled (giver or parent); approved -> shipped (giver: one ledger transfer_out per unit with idempotency key transfer:transfer_item:<id>:transfer_out:<barcode>, serial units go in_transit owned by the receiver; 409 TRANSFER_STOCK_UNAVAILABLE when the ledger refuses); approved -> cancelled (any party, no movement); shipped -> received (receiver: one transfer_in per unit, available at the receiver); shipped -> cancelled (giver, once the goods are back: one transfer_cancel_restore per unit). rejected, received and cancelled are final. A request for the current status is a no-op; other moves answer 409 TRANSFER_INVALID_TRANSITION. Every move writes a transfers.* outbox event. On receipt the giver books income on the receiver's cari and the receiver a purchase expense on the giver's cari for the line totals frozen at approval, in the same transaction (K13, source stock_transfer); 400 RATE_NOT_FOUND rolls the receipt back when an organization's currency has no rate for the day. A return (kind=return, TEC-223) has the parent as receiver: the parent (transfers.approve) approves or rejects, the giver ships or cancels, the parent receives; approval freezes the unit's order price to the giver (else the giver's purchase price), and the receipt books the reversal of the parent's sale (the giver income on the parent's cari, the parent a purchase expense on the giver's cari, source stock_return).
          */
         post: operations["transitionStockTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/leads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List leads in the caller scope */
+        get: operations["listLeads"];
+        put?: never;
+        /** Create a lead in the active organization */
+        post: operations["createLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/leads/follow-up-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Count overdue and today follow-ups */
+        get: operations["getLeadFollowUpCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/leads/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one lead */
+        get: operations["getLead"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch lead fields and append a timeline event */
+        patch: operations["patchLead"];
+        trace?: never;
+    };
+    "/v1/leads/{uuid}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move lead status through the pipeline
+         * @description Allowed transitions: new → contacted → quoted → won|lost, and lost → contacted. Invalid transitions return 422 LEAD_INVALID_TRANSITION.
+         */
+        post: operations["setLeadStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/leads/{uuid}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add a lead timeline note */
+        post: operations["addLeadNote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/leads/{uuid}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Assign or clear a lead assignee */
+        post: operations["assignLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/leads/{uuid}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List lead timeline events */
+        get: operations["listLeadEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/leads/{uuid}/task": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a center task linked to a lead
+         * @description The active organization must be the brand center.
+         */
+        post: operations["createLeadTask"];
         delete?: never;
         options?: never;
         head?: never;
@@ -14071,6 +14238,9 @@ export interface components {
             /** @description Kept in the status log; the cancel reason for cancelled */
             note?: string;
         };
+        ServiceCancelCompletedInput: {
+            reason: string;
+        };
         EnvelopeService: {
             /** @enum {boolean} */
             success: true;
@@ -14542,6 +14712,188 @@ export interface components {
             data: {
                 items: components["schemas"]["OrderOrgRef"][];
             };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        LeadTargetType: "customer" | "dealer_candidate" | "distributor_candidate";
+        /** @enum {string} */
+        LeadSource: "incoming_call" | "outgoing_call" | "walk_in" | "whatsapp" | "social" | "referral" | "website" | "application_form" | "other";
+        /** @enum {string} */
+        LeadTemperature: "cold" | "warm" | "hot";
+        /** @enum {string} */
+        LeadStatus: "new" | "contacted" | "quoted" | "won" | "lost";
+        Lead: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            organization_uuid: string;
+            target_type: components["schemas"]["LeadTargetType"];
+            /** Format: int64 */
+            customer_user_id?: number;
+            /** Format: int64 */
+            vehicle_id?: number;
+            candidate_company_name?: string;
+            candidate_contact_name?: string;
+            candidate_phone_e164?: string;
+            /** Format: email */
+            candidate_email?: string;
+            /** Format: int64 */
+            country_id?: number;
+            /** Format: int64 */
+            province_id?: number;
+            /** Format: int64 */
+            district_id?: number;
+            source: components["schemas"]["LeadSource"];
+            temperature: components["schemas"]["LeadTemperature"];
+            status: components["schemas"]["LeadStatus"];
+            lost_reason?: string;
+            /** Format: date-time */
+            follow_up_date?: string;
+            /** Format: int64 */
+            assignee_user_id?: number;
+            notes: string;
+            /** @enum {string} */
+            won_ref_type?: "service" | "appointment" | "organization";
+            /** Format: int64 */
+            won_ref_id?: number;
+            /** Format: int64 */
+            created_by_user_id?: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        LeadCreateInput: {
+            target_type: components["schemas"]["LeadTargetType"];
+            /** Format: int64 */
+            customer_user_id?: number | null;
+            /** Format: int64 */
+            vehicle_id?: number | null;
+            candidate_company_name?: string | null;
+            candidate_contact_name?: string | null;
+            candidate_phone_e164?: string | null;
+            /** Format: email */
+            candidate_email?: string | null;
+            /** Format: int64 */
+            country_id?: number | null;
+            /** Format: int64 */
+            province_id?: number | null;
+            /** Format: int64 */
+            district_id?: number | null;
+            source: components["schemas"]["LeadSource"];
+            temperature?: components["schemas"]["LeadTemperature"];
+            /** Format: date-time */
+            follow_up_date?: string | null;
+            /** Format: int64 */
+            assignee_user_id?: number | null;
+            notes?: string;
+        };
+        LeadPatchInput: {
+            target_type?: components["schemas"]["LeadTargetType"];
+            /** Format: int64 */
+            customer_user_id?: number | null;
+            /** Format: int64 */
+            vehicle_id?: number | null;
+            candidate_company_name?: string | null;
+            candidate_contact_name?: string | null;
+            candidate_phone_e164?: string | null;
+            /** Format: email */
+            candidate_email?: string | null;
+            /** Format: int64 */
+            country_id?: number | null;
+            /** Format: int64 */
+            province_id?: number | null;
+            /** Format: int64 */
+            district_id?: number | null;
+            source?: components["schemas"]["LeadSource"];
+            temperature?: components["schemas"]["LeadTemperature"];
+            /** Format: date-time */
+            follow_up_date?: string | null;
+            /** Format: int64 */
+            assignee_user_id?: number | null;
+            notes?: string;
+        };
+        LeadStatusInput: {
+            status: components["schemas"]["LeadStatus"];
+            lost_reason?: string | null;
+            /** @enum {string|null} */
+            won_ref_type?: "service" | "appointment" | "organization" | null;
+            /** Format: int64 */
+            won_ref_id?: number | null;
+        };
+        LeadNoteInput: {
+            body: string;
+        };
+        LeadAssignInput: {
+            /** Format: int64 */
+            assignee_user_id?: number | null;
+        };
+        LeadTaskInput: {
+            title: string;
+            description?: string;
+            /** Format: uuid */
+            assignee_user_uuid?: string | null;
+            priority?: components["schemas"]["TaskPriority"];
+            /** Format: date-time */
+            due_at?: string | null;
+        };
+        LeadEvent: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            event_type: "created" | "status_changed" | "note" | "call" | "message" | "quote_sent" | "assigned" | "follow_up_set" | "converted" | "task_created";
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Format: int64 */
+            actor_user_id?: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        LeadFollowUpCount: {
+            /** Format: int64 */
+            overdue: number;
+            /** Format: int64 */
+            today: number;
+        };
+        EnvelopeLead: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Lead"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeLeadPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["Lead"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeLeadEvent: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["LeadEvent"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeLeadEventList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["LeadEvent"][];
+                /** Format: int64 */
+                total: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeLeadFollowUpCount: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["LeadFollowUpCount"];
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
@@ -29394,6 +29746,39 @@ export interface operations {
             409: components["responses"]["Conflict"];
         };
     };
+    cancelCompletedService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceCancelCompletedInput"];
+            };
+        };
+        responses: {
+            /** @description Cancelled service */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeService"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
     uploadServiceImage: {
         parameters: {
             query?: never;
@@ -29892,6 +30277,286 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    listLeads: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["LeadStatus"];
+                target_type?: components["schemas"]["LeadTargetType"];
+                follow_up?: "overdue" | "today";
+                q?: components["parameters"]["Q"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Leads */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLeadPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadCreateInput"];
+            };
+        };
+        responses: {
+            /** @description Lead created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLead"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getLeadFollowUpCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Follow-up counts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLeadFollowUpCount"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lead */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLead"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadPatchInput"];
+            };
+        };
+        responses: {
+            /** @description Lead updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLead"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    setLeadStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadStatusInput"];
+            };
+        };
+        responses: {
+            /** @description Lead status changed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLead"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    addLeadNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadNoteInput"];
+            };
+        };
+        responses: {
+            /** @description Note added */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLeadEvent"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    assignLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadAssignInput"];
+            };
+        };
+        responses: {
+            /** @description Lead assigned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLead"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listLeadEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lead events */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLeadEventList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createLeadTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadTaskInput"];
+            };
+        };
+        responses: {
+            /** @description Task opened */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTask"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     listTasks: {

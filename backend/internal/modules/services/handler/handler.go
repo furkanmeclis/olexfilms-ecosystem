@@ -12,6 +12,7 @@ import (
 	"time"
 
 	svcuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/usecase"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
@@ -290,6 +291,33 @@ func (h *Handler) Transition(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v, err := h.svc.Transition(r.Context(), caller(r), id, svcuc.TransitionInput{Status: b.Status, Note: b.Note})
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, v)
+}
+
+type cancelCompletedBody struct {
+	Reason string `json:"reason"`
+}
+
+// CancelCompleted (POST /v1/services/{uuid}/cancel-completed): cancels a
+// completed service and reverses its warranties, stock consumption and
+// accounting rows in one transaction.
+func (h *Handler) CancelCompleted(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	var b cancelCompletedBody
+	if !decode(w, r, &b) {
+		return
+	}
+	v, err := h.svc.CancelCompleted(r.Context(), caller(r), id, svcuc.CancelCompletedInput{
+		Reason: b.Reason,
+		Meta:   activity.MetaFromRequest(r),
+	})
 	if err != nil {
 		writeError(w, r, err)
 		return

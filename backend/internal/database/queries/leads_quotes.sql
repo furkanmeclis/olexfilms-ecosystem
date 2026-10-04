@@ -47,6 +47,61 @@ WHERE organization_id = ANY(sqlc.arg(organization_ids)::bigint[])
   AND (sqlc.narg(status)::varchar IS NULL OR status = sqlc.narg(status)::varchar)
   AND (sqlc.narg(target_type)::varchar IS NULL OR target_type = sqlc.narg(target_type)::varchar);
 
+-- name: ListLeadsInScope :many
+SELECT * FROM leads
+WHERE brand_id = sqlc.arg(brand_id)
+  AND deleted_at IS NULL
+  AND (sqlc.arg(organization_ids)::bigint[] IS NULL OR organization_id = ANY(sqlc.arg(organization_ids)::bigint[]))
+  AND (sqlc.narg(status)::varchar IS NULL OR status = sqlc.narg(status)::varchar)
+  AND (sqlc.narg(target_type)::varchar IS NULL OR target_type = sqlc.narg(target_type)::varchar)
+  AND (sqlc.narg(q)::text IS NULL OR (
+       candidate_company_name ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR candidate_contact_name ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR candidate_phone_e164 ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR candidate_email ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR notes ILIKE '%' || sqlc.narg(q)::text || '%'
+  ))
+  AND (sqlc.arg(uuids)::uuid[] IS NULL OR uuid = ANY(sqlc.arg(uuids)::uuid[]))
+  AND (NOT sqlc.arg(follow_up_only)::boolean OR (
+       status IN ('new', 'contacted', 'quoted')
+       AND follow_up_date IS NOT NULL
+       AND (assignee_user_id IS NULL OR assignee_user_id = sqlc.arg(actor_user_id)::bigint)
+       AND (sqlc.narg(follow_up_from)::timestamptz IS NULL OR follow_up_date >= sqlc.narg(follow_up_from)::timestamptz)
+       AND (sqlc.narg(follow_up_to)::timestamptz IS NULL OR follow_up_date < sqlc.narg(follow_up_to)::timestamptz)
+  ))
+ORDER BY created_at DESC, id DESC
+LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
+
+-- name: CountLeadsInScope :one
+SELECT COUNT(*) FROM leads
+WHERE brand_id = sqlc.arg(brand_id)
+  AND deleted_at IS NULL
+  AND (sqlc.arg(organization_ids)::bigint[] IS NULL OR organization_id = ANY(sqlc.arg(organization_ids)::bigint[]))
+  AND (sqlc.narg(status)::varchar IS NULL OR status = sqlc.narg(status)::varchar)
+  AND (sqlc.narg(target_type)::varchar IS NULL OR target_type = sqlc.narg(target_type)::varchar)
+  AND (sqlc.narg(q)::text IS NULL OR (
+       candidate_company_name ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR candidate_contact_name ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR candidate_phone_e164 ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR candidate_email ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR notes ILIKE '%' || sqlc.narg(q)::text || '%'
+  ))
+  AND (NOT sqlc.arg(follow_up_only)::boolean OR (
+       status IN ('new', 'contacted', 'quoted')
+       AND follow_up_date IS NOT NULL
+       AND (assignee_user_id IS NULL OR assignee_user_id = sqlc.arg(actor_user_id)::bigint)
+       AND (sqlc.narg(follow_up_from)::timestamptz IS NULL OR follow_up_date >= sqlc.narg(follow_up_from)::timestamptz)
+       AND (sqlc.narg(follow_up_to)::timestamptz IS NULL OR follow_up_date < sqlc.narg(follow_up_to)::timestamptz)
+  ));
+
+-- name: GetLeadForIndex :one
+SELECT * FROM leads
+WHERE uuid = sqlc.arg(uuid) AND deleted_at IS NULL;
+
+-- name: ListLeadsForIndex :many
+SELECT * FROM leads
+WHERE deleted_at IS NULL;
+
 -- name: UpdateLead :one
 UPDATE leads
 SET target_type = sqlc.arg(target_type),

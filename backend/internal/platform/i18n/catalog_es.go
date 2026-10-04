@@ -49,6 +49,7 @@ var esCatalog = map[string]string{
 	"common.status":                            "Estado",
 	"common.active":                            "Activo",
 	"common.passive":                           "Inactivo",
+	"search.specs_leads":                       "Prospectos",
 	"customers.anonymized_name":                "Cliente anónimo",
 	"services.status.draft":                    "Borrador",
 	"services.status.pending":                  "Pendiente",
