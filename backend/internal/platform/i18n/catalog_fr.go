@@ -49,6 +49,7 @@ var frCatalog = map[string]string{
 	"common.status":                            "Statut",
 	"common.active":                            "Actif",
 	"common.passive":                           "Inactif",
+	"search.specs_leads":                       "Prospects",
 	"customers.anonymized_name":                "Client anonyme",
 	"services.status.draft":                    "Brouillon",
 	"services.status.pending":                  "En attente",

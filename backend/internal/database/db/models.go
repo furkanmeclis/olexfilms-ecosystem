@@ -117,6 +117,55 @@ type AppSetting struct {
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 }
 
+type Appointment struct {
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	OrganizationID   int64              `json:"organization_id"`
+	BrandID          int64              `json:"brand_id"`
+	CustomerUserID   int64              `json:"customer_user_id"`
+	VehicleID        pgtype.Int8        `json:"vehicle_id"`
+	StartsAt         pgtype.Timestamptz `json:"starts_at"`
+	EndsAt           pgtype.Timestamptz `json:"ends_at"`
+	EstimatedMinutes int32              `json:"estimated_minutes"`
+	Source           string             `json:"source"`
+	Status           string             `json:"status"`
+	CancelReason     pgtype.Text        `json:"cancel_reason"`
+	LeadID           pgtype.Int8        `json:"lead_id"`
+	ServiceID        pgtype.Int8        `json:"service_id"`
+	Note             string             `json:"note"`
+	CreatedByUserID  pgtype.Int8        `json:"created_by_user_id"`
+	Reminded24hAt    pgtype.Timestamptz `json:"reminded_24h_at"`
+	Reminded2hAt     pgtype.Timestamptz `json:"reminded_2h_at"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt        pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type AppointmentClosure struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	ClosedOn       pgtype.Date        `json:"closed_on"`
+	Reason         string             `json:"reason"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type AppointmentSetting struct {
+	ID                        int64              `json:"id"`
+	Uuid                      uuid.UUID          `json:"uuid"`
+	OrganizationID            int64              `json:"organization_id"`
+	BrandID                   int64              `json:"brand_id"`
+	DailyVehicleCapacity      int32              `json:"daily_vehicle_capacity"`
+	DefaultEstimatedMinutes   int32              `json:"default_estimated_minutes"`
+	SlotIntervalMinutes       int32              `json:"slot_interval_minutes"`
+	WorkingHours              []byte             `json:"working_hours"`
+	PortalAppointmentsEnabled bool               `json:"portal_appointments_enabled"`
+	CreatedAt                 pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                 pgtype.Timestamptz `json:"updated_at"`
+}
+
 type AuthSetting struct {
 	ID                      int16              `json:"id"`
 	RegistrationEnabled     bool               `json:"registration_enabled"`
