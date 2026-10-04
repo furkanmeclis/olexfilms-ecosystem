@@ -145,6 +145,10 @@ tags:
     description: >-
       Lead pipeline (TEC-313): organization-scoped leads, status transitions,
       follow-up queue, timeline notes and center task linkage.
+  - name: Appointments
+    description: >-
+      Appointment capacity (TEC-323): organization working hours, closure
+      days, availability, booking CRUD, intake start and network occupancy.
   - name: Mobile
     description: |
       Mobile app API (TEC-91). `/v1/mobile/*` is reached through the BFF
@@ -16560,6 +16564,263 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /v1/appointment-settings:
+    get:
+      tags: [Appointments]
+      operationId: getAppointmentSettings
+      summary: Get appointment capacity settings
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Appointment settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAppointmentSettings" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Appointments]
+      operationId: putAppointmentSettings
+      summary: Update appointment capacity settings
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AppointmentSettingsInput" }
+      responses:
+        "200":
+          description: Appointment settings updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAppointmentSettings" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/appointment-closures:
+    get:
+      tags: [Appointments]
+      operationId: listAppointmentClosures
+      summary: List appointment closure days
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: from, in: query, required: true, schema: { type: string, format: date } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: Appointment closures
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAppointmentClosureList" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Appointments]
+      operationId: createAppointmentClosure
+      summary: Create an appointment closure day
+      description: >-
+        A day can be closed once per organization; a second closure of the
+        same day is 409 APPOINTMENT_CLOSURE_EXISTS.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AppointmentClosureInput" }
+      responses:
+        "201":
+          description: Appointment closure created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAppointmentClosure" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/appointment-closures/{uuid}:
+    delete:
+      tags: [Appointments]
+      operationId: deleteAppointmentClosure
+      summary: Delete an appointment closure day
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "204": { description: Appointment closure deleted }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/appointments:
+    get:
+      tags: [Appointments]
+      operationId: listAppointments
+      summary: List appointments
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: from, in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: status, in: query, schema: { $ref: "#/components/schemas/AppointmentStatus" } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 } }
+      responses:
+        "200":
+          description: Appointments
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAppointmentPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Appointments]
+      operationId: createAppointment
+      summary: Create an appointment
+      description: >-
+        Books into the active organization. The capacity check and the insert
+        are serialized per organization. 422 APPOINTMENT_CAPACITY_FULL when
+        the local day already holds daily_vehicle_capacity active bookings,
+        422 APPOINTMENT_DAY_CLOSED on a closure day. The customer must be a
+        customer of the brand and the vehicle the customer's (400 otherwise).
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AppointmentInput" }
+      responses:
+        "201":
+          description: Appointment created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAppointment" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /v1/appointments/availability:
+    get:
+      tags: [Appointments]
+      operationId: getAppointmentAvailability
+      summary: Get appointment availability
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: from, in: query, required: true, schema: { type: string, format: date } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: Appointment availability
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAppointmentAvailabilityList" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/appointments/occupancy:
+    get:
+      tags: [Appointments]
+      operationId: getAppointmentOccupancy
+      summary: Get network appointment occupancy
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: date, in: query, required: true, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: Appointment occupancy
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAppointmentOccupancyList" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/appointments/{uuid}:
+    patch:
+      tags: [Appointments]
+      operationId: patchAppointment
+      summary: Reschedule an appointment
+      description: >-
+        Only scheduled or confirmed appointments of an organization the
+        appointments.write grant covers can move (422
+        APPOINTMENT_INVALID_TRANSITION otherwise); capacity and closure days
+        are checked as on create.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AppointmentInput" }
+      responses:
+        "200":
+          description: Appointment updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAppointment" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /v1/appointments/{uuid}/status:
+    post:
+      tags: [Appointments]
+      operationId: setAppointmentStatus
+      summary: Change appointment status
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AppointmentStatusInput" }
+      responses:
+        "200":
+          description: Appointment status changed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAppointment" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /v1/appointments/{uuid}/start-intake:
+    post:
+      tags: [Appointments]
+      operationId: startAppointmentIntake
+      summary: Start vehicle intake from an appointment
+      description: >-
+        Opens a draft service through the services usecase, links it and
+        marks the appointment arrived. A second call is 409
+        APPOINTMENT_INTAKE_ALREADY_STARTED; a cancelled or no-show
+        appointment is 422 APPOINTMENT_INVALID_TRANSITION.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Draft service opened and linked
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAppointment" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
   /v1/tasks:
     get:
       tags: [Tasks]
@@ -26451,6 +26712,190 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/Quote" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    AppointmentStatus:
+      type: string
+      enum: [scheduled, confirmed, arrived, no_show, cancelled]
+
+    AppointmentSource:
+      type: string
+      enum: [panel, portal, assistant, lead]
+
+    AppointmentSettingsInput:
+      type: object
+      required: [daily_vehicle_capacity, default_estimated_minutes, slot_interval_minutes, working_hours, portal_appointments_enabled]
+      properties:
+        daily_vehicle_capacity: { type: integer, minimum: 1 }
+        default_estimated_minutes: { type: integer, minimum: 1 }
+        slot_interval_minutes: { type: integer, minimum: 1 }
+        working_hours:
+          type: object
+          additionalProperties: true
+        portal_appointments_enabled: { type: boolean }
+
+    AppointmentSettings:
+      allOf:
+        - $ref: "#/components/schemas/AppointmentSettingsInput"
+        - type: object
+          required: [uuid, organization_id]
+          properties:
+            uuid: { type: string, format: uuid }
+            organization_id: { type: integer, format: int64 }
+
+    AppointmentClosureInput:
+      type: object
+      required: [closed_on]
+      properties:
+        closed_on: { type: string, format: date }
+        reason: { type: string, maxLength: 1000 }
+
+    AppointmentClosure:
+      allOf:
+        - $ref: "#/components/schemas/AppointmentClosureInput"
+        - type: object
+          required: [uuid, organization_id, reason]
+          properties:
+            uuid: { type: string, format: uuid }
+            organization_id: { type: integer, format: int64 }
+
+    AppointmentInput:
+      type: object
+      required: [customer_user_id, starts_at]
+      properties:
+        customer_user_id: { type: integer, format: int64 }
+        vehicle_id: { type: [integer, "null"], format: int64 }
+        starts_at: { type: string, format: date-time }
+        estimated_minutes: { type: [integer, "null"], minimum: 1 }
+        source: { $ref: "#/components/schemas/AppointmentSource" }
+        note: { type: string, maxLength: 20000 }
+
+    Appointment:
+      type: object
+      required: [uuid, organization_id, customer_user_id, starts_at, ends_at, estimated_minutes, source, status, note]
+      properties:
+        uuid: { type: string, format: uuid }
+        organization_id: { type: integer, format: int64 }
+        customer_user_id: { type: integer, format: int64 }
+        vehicle_id: { type: [integer, "null"], format: int64 }
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+        estimated_minutes: { type: integer }
+        source: { $ref: "#/components/schemas/AppointmentSource" }
+        status: { $ref: "#/components/schemas/AppointmentStatus" }
+        cancel_reason: { type: [string, "null"] }
+        lead_id: { type: [integer, "null"], format: int64 }
+        service_id: { type: [integer, "null"], format: int64 }
+        note: { type: string }
+        created_by_user_id: { type: [integer, "null"], format: int64 }
+        created_at: { type: [string, "null"], format: date-time }
+        updated_at: { type: [string, "null"], format: date-time }
+
+    AppointmentStatusInput:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: "#/components/schemas/AppointmentStatus" }
+        cancel_reason: { type: [string, "null"] }
+
+    AppointmentSlot:
+      type: object
+      required: [start, end]
+      properties:
+        start: { type: string, format: date-time }
+        end: { type: string, format: date-time }
+
+    AppointmentAvailabilityDay:
+      type: object
+      required: [date, capacity, occupied, remaining_capacity, closed, slots]
+      properties:
+        date: { type: string, format: date }
+        capacity: { type: integer }
+        occupied: { type: integer, format: int64 }
+        remaining_capacity: { type: integer }
+        closed: { type: boolean }
+        slots:
+          type: array
+          items: { $ref: "#/components/schemas/AppointmentSlot" }
+
+    AppointmentOccupancy:
+      type: object
+      required: [organization_id, organization_uuid, organization_name, capacity, occupied, remaining]
+      properties:
+        organization_id: { type: integer, format: int64 }
+        organization_uuid: { type: string, format: uuid }
+        organization_name: { type: string }
+        capacity: { type: integer }
+        occupied: { type: integer, format: int64 }
+        remaining: { type: integer }
+
+    EnvelopeAppointmentSettings:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/AppointmentSettings" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAppointmentClosure:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/AppointmentClosure" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAppointmentClosureList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/AppointmentClosure" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAppointment:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Appointment" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAppointmentPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/Appointment" }
+            total: { type: integer, format: int64 }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAppointmentAvailabilityList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/AppointmentAvailabilityDay" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAppointmentOccupancyList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/AppointmentOccupancy" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     TaskStatus:

@@ -8599,6 +8599,174 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/appointment-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get appointment capacity settings */
+        get: operations["getAppointmentSettings"];
+        /** Update appointment capacity settings */
+        put: operations["putAppointmentSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/appointment-closures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List appointment closure days */
+        get: operations["listAppointmentClosures"];
+        put?: never;
+        /**
+         * Create an appointment closure day
+         * @description A day can be closed once per organization; a second closure of the same day is 409 APPOINTMENT_CLOSURE_EXISTS.
+         */
+        post: operations["createAppointmentClosure"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/appointment-closures/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete an appointment closure day */
+        delete: operations["deleteAppointmentClosure"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/appointments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List appointments */
+        get: operations["listAppointments"];
+        put?: never;
+        /**
+         * Create an appointment
+         * @description Books into the active organization. The capacity check and the insert are serialized per organization. 422 APPOINTMENT_CAPACITY_FULL when the local day already holds daily_vehicle_capacity active bookings, 422 APPOINTMENT_DAY_CLOSED on a closure day. The customer must be a customer of the brand and the vehicle the customer's (400 otherwise).
+         */
+        post: operations["createAppointment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/appointments/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get appointment availability */
+        get: operations["getAppointmentAvailability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/appointments/occupancy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get network appointment occupancy */
+        get: operations["getAppointmentOccupancy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/appointments/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Reschedule an appointment
+         * @description Only scheduled or confirmed appointments of an organization the appointments.write grant covers can move (422 APPOINTMENT_INVALID_TRANSITION otherwise); capacity and closure days are checked as on create.
+         */
+        patch: operations["patchAppointment"];
+        trace?: never;
+    };
+    "/v1/appointments/{uuid}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change appointment status */
+        post: operations["setAppointmentStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/appointments/{uuid}/start-intake": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start vehicle intake from an appointment
+         * @description Opens a draft service through the services usecase, links it and marks the appointment arrived. A second call is 409 APPOINTMENT_INTAKE_ALREADY_STARTED; a cancelled or no-show appointment is 422 APPOINTMENT_INVALID_TRANSITION.
+         */
+        post: operations["startAppointmentIntake"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/tasks": {
         parameters: {
             query?: never;
@@ -15619,6 +15787,153 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["Quote"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        AppointmentStatus: "scheduled" | "confirmed" | "arrived" | "no_show" | "cancelled";
+        /** @enum {string} */
+        AppointmentSource: "panel" | "portal" | "assistant" | "lead";
+        AppointmentSettingsInput: {
+            daily_vehicle_capacity: number;
+            default_estimated_minutes: number;
+            slot_interval_minutes: number;
+            working_hours: {
+                [key: string]: unknown;
+            };
+            portal_appointments_enabled: boolean;
+        };
+        AppointmentSettings: components["schemas"]["AppointmentSettingsInput"] & {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: int64 */
+            organization_id: number;
+        };
+        AppointmentClosureInput: {
+            /** Format: date */
+            closed_on: string;
+            reason?: string;
+        };
+        AppointmentClosure: components["schemas"]["AppointmentClosureInput"] & {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: int64 */
+            organization_id: number;
+        };
+        AppointmentInput: {
+            /** Format: int64 */
+            customer_user_id: number;
+            /** Format: int64 */
+            vehicle_id?: number | null;
+            /** Format: date-time */
+            starts_at: string;
+            estimated_minutes?: number | null;
+            source?: components["schemas"]["AppointmentSource"];
+            note?: string;
+        };
+        Appointment: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: int64 */
+            organization_id: number;
+            /** Format: int64 */
+            customer_user_id: number;
+            /** Format: int64 */
+            vehicle_id?: number | null;
+            /** Format: date-time */
+            starts_at: string;
+            /** Format: date-time */
+            ends_at: string;
+            estimated_minutes: number;
+            source: components["schemas"]["AppointmentSource"];
+            status: components["schemas"]["AppointmentStatus"];
+            cancel_reason?: string | null;
+            /** Format: int64 */
+            lead_id?: number | null;
+            /** Format: int64 */
+            service_id?: number | null;
+            note: string;
+            /** Format: int64 */
+            created_by_user_id?: number | null;
+            /** Format: date-time */
+            created_at?: string | null;
+            /** Format: date-time */
+            updated_at?: string | null;
+        };
+        AppointmentStatusInput: {
+            status: components["schemas"]["AppointmentStatus"];
+            cancel_reason?: string | null;
+        };
+        AppointmentSlot: {
+            /** Format: date-time */
+            start: string;
+            /** Format: date-time */
+            end: string;
+        };
+        AppointmentAvailabilityDay: {
+            /** Format: date */
+            date: string;
+            capacity: number;
+            /** Format: int64 */
+            occupied: number;
+            remaining_capacity: number;
+            closed: boolean;
+            slots: components["schemas"]["AppointmentSlot"][];
+        };
+        AppointmentOccupancy: {
+            /** Format: int64 */
+            organization_id: number;
+            /** Format: uuid */
+            organization_uuid: string;
+            organization_name: string;
+            capacity: number;
+            /** Format: int64 */
+            occupied: number;
+            remaining: number;
+        };
+        EnvelopeAppointmentSettings: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AppointmentSettings"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAppointmentClosure: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AppointmentClosure"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAppointmentClosureList: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AppointmentClosure"][];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAppointment: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Appointment"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAppointmentPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["Appointment"][];
+                /** Format: int64 */
+                total: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAppointmentAvailabilityList: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AppointmentAvailabilityDay"][];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAppointmentOccupancyList: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AppointmentOccupancy"][];
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
@@ -31942,6 +32257,331 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getAppointmentSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Appointment settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointmentSettings"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    putAppointmentSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppointmentSettingsInput"];
+            };
+        };
+        responses: {
+            /** @description Appointment settings updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointmentSettings"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listAppointmentClosures: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Appointment closures */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointmentClosureList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createAppointmentClosure: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppointmentClosureInput"];
+            };
+        };
+        responses: {
+            /** @description Appointment closure created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointmentClosure"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    deleteAppointmentClosure: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Appointment closure deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listAppointments: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                status?: components["schemas"]["AppointmentStatus"];
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Appointments */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointmentPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createAppointment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppointmentInput"];
+            };
+        };
+        responses: {
+            /** @description Appointment created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getAppointmentAvailability: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Appointment availability */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointmentAvailabilityList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getAppointmentOccupancy: {
+        parameters: {
+            query: {
+                date: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Appointment occupancy */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointmentOccupancyList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    patchAppointment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppointmentInput"];
+            };
+        };
+        responses: {
+            /** @description Appointment updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    setAppointmentStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppointmentStatusInput"];
+            };
+        };
+        responses: {
+            /** @description Appointment status changed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    startAppointmentIntake: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Draft service opened and linked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     listTasks: {

@@ -38,6 +38,7 @@ type Querier interface {
 	// Atomically appends one image while the product holds fewer than
 	// max_images; no row means the product is gone or already full.
 	AppendProductImage(ctx context.Context, arg AppendProductImageParams) (Product, error)
+	AppointmentClosureExists(ctx context.Context, arg AppointmentClosureExistsParams) (bool, error)
 	// Seller approval: freezes the rate (decision 2).
 	ApproveOrder(ctx context.Context, arg ApproveOrderParams) (Order, error)
 	ApproveStockCount(ctx context.Context, arg ApproveStockCountParams) (StockCount, error)
@@ -106,6 +107,8 @@ type Querier interface {
 	ConsumeQRLoginChallenge(ctx context.Context, code string) (QrLoginChallenge, error)
 	ConsumeStockReservation(ctx context.Context, id int64) (StockReservation, error)
 	CountAccountingDisputes(ctx context.Context, arg CountAccountingDisputesParams) (int64, error)
+	CountActiveAppointmentsByOrganization(ctx context.Context, arg CountActiveAppointmentsByOrganizationParams) ([]CountActiveAppointmentsByOrganizationRow, error)
+	CountActiveAppointmentsForOrganization(ctx context.Context, arg CountActiveAppointmentsForOrganizationParams) (int64, error)
 	CountActiveRefreshTokensForUser(ctx context.Context, userID int64) (int64, error)
 	CountActiveServiceModuleSubscriptions(ctx context.Context, arg CountActiveServiceModuleSubscriptionsParams) (int64, error)
 	CountActivityEvents(ctx context.Context, arg CountActivityEventsParams) (int64, error)
@@ -444,6 +447,7 @@ type Querier interface {
 	DeleteAppLogsByUUIDs(ctx context.Context, uuids []uuid.UUID) (int64, error)
 	DeleteAppLogsMatching(ctx context.Context, arg DeleteAppLogsMatchingParams) (int64, error)
 	DeleteAppointmentClosure(ctx context.Context, arg DeleteAppointmentClosureParams) (int64, error)
+	DeleteAppointmentClosureByUUID(ctx context.Context, arg DeleteAppointmentClosureByUUIDParams) (int64, error)
 	// Fails with a restrict/foreign key violation while models still use the brand.
 	DeleteCarBrand(ctx context.Context, id int64) (int64, error)
 	DeleteCarModel(ctx context.Context, id int64) (int64, error)
@@ -1665,6 +1669,10 @@ type Querier interface {
 	LockAccountingDispute(ctx context.Context, arg LockAccountingDisputeParams) (AccountingDispute, error)
 	// Active reservations of a unit (at most one for a serial unit).
 	LockActiveReservationsByUnit(ctx context.Context, unitID int64) ([]StockReservation, error)
+	LockAppointmentByID(ctx context.Context, arg LockAppointmentByIDParams) (Appointment, error)
+	// TEC-323: serializes bookings of one organization; the capacity count and
+	// the insert run under this row lock so concurrent bookings cannot overfill.
+	LockAppointmentSettings(ctx context.Context, organizationID int64) (AppointmentSetting, error)
 	// ---------------------------------------------------------------------------
 	// Barcode counters and batches.
 	// Creates the counter on first use and locks it for the batch allocation.
