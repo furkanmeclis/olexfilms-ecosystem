@@ -6,12 +6,14 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	pricing "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/pricing/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/servicecatalog/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
 	"github.com/google/uuid"
 )
@@ -38,6 +40,18 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Conflict(w, r, "SERVICE_CATALOG_ITEM_IN_USE", "Service catalog item has subscriptions")
 	case errors.Is(err, usecase.ErrModuleOnly):
 		response.ValidationError(w, r, []response.Detail{{Field: "category", Message: "item must be a module_bundle"}})
+	case errors.Is(err, usecase.ErrInvalidTarget):
+		response.ValidationError(w, r, []response.Detail{{Field: "organization_uuid", Message: "invalid target organization"}})
+	case errors.Is(err, usecase.ErrInvalidStatus):
+		response.Conflict(w, r, response.CodeConflict, "Subscription cancellation request is already decided or not active")
+	case errors.Is(err, usecase.ErrDuplicateCancel):
+		response.Conflict(w, r, response.CodeConflict, "Subscription already has a pending cancellation request")
+	case errors.Is(err, usecase.ErrModuleBlockedByParent):
+		response.Error(w, r, http.StatusUnprocessableEntity, response.CodeModuleBlockedByParent,
+			"Module is disabled at a higher level")
+	case errors.Is(err, usecase.ErrRateNotFound):
+		response.Error(w, r, http.StatusUnprocessableEntity, response.CodeRateNotFound,
+			"No exchange rate for this subscription")
 	default:
 		response.InternalErr(w, r, err, "service catalog request failed")
 	}
@@ -64,6 +78,15 @@ func pathUUID(w http.ResponseWriter, r *http.Request, name string) (uuid.UUID, b
 
 func viewer(r *http.Request) pricing.Viewer {
 	return pricing.ViewerFrom(authctx.MustPrincipal(r.Context()), orgctx.MustScope(r.Context()))
+}
+
+func caller(r *http.Request) usecase.Caller {
+	f, _ := scopefilter.From(r.Context())
+	return usecase.Caller{
+		Principal: authctx.MustPrincipal(r.Context()),
+		Org:       orgctx.MustScope(r.Context()),
+		Filter:    f,
+	}
 }
 
 func (h *Handler) record(r *http.Request, action string, id uuid.UUID, payload map[string]any) {
@@ -243,6 +266,132 @@ func (h *Handler) GetOverride(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, r, http.StatusOK, ov)
+}
+
+type subscriptionBody struct {
+	ItemUUID         string `json:"item_uuid"`
+	OrganizationUUID string `json:"organization_uuid"`
+	StartsOn         string `json:"starts_on"`
+	EndsOn           string `json:"ends_on"`
+	ContractID       *int64 `json:"contract_id"`
+}
+
+func (h *Handler) AssignSubscription(w http.ResponseWriter, r *http.Request) {
+	var body subscriptionBody
+	if !decode(w, r, &body) {
+		return
+	}
+	itemID, err := uuid.Parse(body.ItemUUID)
+	if err != nil {
+		response.ValidationError(w, r, []response.Detail{{Field: "item_uuid", Message: "is invalid"}})
+		return
+	}
+	orgID, err := uuid.Parse(body.OrganizationUUID)
+	if err != nil {
+		response.ValidationError(w, r, []response.Detail{{Field: "organization_uuid", Message: "is invalid"}})
+		return
+	}
+	starts, err := time.Parse(time.DateOnly, body.StartsOn)
+	if err != nil {
+		response.ValidationError(w, r, []response.Detail{{Field: "starts_on", Message: "must be YYYY-MM-DD"}})
+		return
+	}
+	ends, err := time.Parse(time.DateOnly, body.EndsOn)
+	if err != nil {
+		response.ValidationError(w, r, []response.Detail{{Field: "ends_on", Message: "must be YYYY-MM-DD"}})
+		return
+	}
+	sub, err := h.svc.Assign(r.Context(), caller(r), usecase.SubscriptionInput{
+		ItemUUID: itemID, OrganizationUUID: orgID, StartsOn: starts, EndsOn: ends, ContractID: body.ContractID,
+	})
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	h.record(r, "service_subscription.assigned", sub.UUID, map[string]any{"organization_uuid": body.OrganizationUUID})
+	response.JSON(w, r, http.StatusCreated, sub)
+}
+
+func (h *Handler) ListSubscriptions(w http.ResponseWriter, r *http.Request) {
+	items, err := h.svc.ListSubscriptions(r.Context(), caller(r), r.URL.Query().Get("status"))
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, map[string]any{"items": items})
+}
+
+func (h *Handler) GetSubscription(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	sub, err := h.svc.GetSubscription(r.Context(), caller(r), id)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, sub)
+}
+
+type cancelBody struct {
+	Reason string `json:"reason"`
+}
+
+func (h *Handler) RequestCancel(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	var body cancelBody
+	if !decode(w, r, &body) {
+		return
+	}
+	req, err := h.svc.RequestCancel(r.Context(), caller(r), id, usecase.CancelRequestInput{Reason: body.Reason})
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	h.record(r, "service_subscription.cancel_requested", id, nil)
+	response.JSON(w, r, http.StatusCreated, req)
+}
+
+type decisionBody struct {
+	Note *string `json:"note"`
+}
+
+func (h *Handler) ApproveCancel(w http.ResponseWriter, r *http.Request) {
+	h.decideCancel(w, r, true)
+}
+
+func (h *Handler) RejectCancel(w http.ResponseWriter, r *http.Request) {
+	h.decideCancel(w, r, false)
+}
+
+func (h *Handler) decideCancel(w http.ResponseWriter, r *http.Request, approve bool) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	var body decisionBody
+	if r.ContentLength != 0 && !decode(w, r, &body) {
+		return
+	}
+	var (
+		req usecase.CancelRequestView
+		err error
+	)
+	if approve {
+		req, err = h.svc.ApproveCancel(r.Context(), caller(r), id, usecase.DecisionInput{Note: body.Note})
+	} else {
+		req, err = h.svc.RejectCancel(r.Context(), caller(r), id, usecase.DecisionInput{Note: body.Note})
+	}
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	h.record(r, "service_subscription.cancel_decided", id, map[string]any{"approved": approve})
+	response.JSON(w, r, http.StatusOK, req)
 }
 
 func (h *Handler) DeleteOverride(w http.ResponseWriter, r *http.Request) {

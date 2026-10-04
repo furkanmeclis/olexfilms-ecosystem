@@ -54,11 +54,6 @@ var (
 	ErrLinkNotFound = errors.New("measurements: link not found")
 )
 
-// TxBeginner opens a transaction (the pgx pool).
-type TxBeginner interface {
-	Begin(ctx context.Context) (pgx.Tx, error)
-}
-
 // Linker matches, confirms and selects the before/after measurements of a
 // service.
 type Linker struct {

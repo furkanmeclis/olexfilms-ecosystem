@@ -26,6 +26,9 @@ import (
 	announcementsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements"
 	announcementshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/handler"
 	announcementsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/usecase"
+	appointmentsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/appointments"
+	appointmentshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/appointments/handler"
+	appointmentsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/appointments/usecase"
 	authmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth"
 	authhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/handler"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/identity"
@@ -395,6 +398,10 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		tokens, loader, cfg.Mobile.MinAPIVersion, cfg.Mobile.MaxAPIVersion)
 	// TEC-233: minimal measurement storage (K28), 202 {uuid, status}.
 	measurementsUC := measurementsusecase.New(deps.Queries)
+	// TEC-294: uploads are normalized (NexPTG parser) in their insert transaction.
+	if deps.DB != nil {
+		measurementsUC.WithNormalizer(deps.DB, log)
+	}
 	measurementsH := measurementshandler.New(measurementsUC)
 	measurementsmodule.RegisterMobileRoutes(mux, measurementsH,
 		tokens, loader, deps.Queries, cfg.Mobile.MinAPIVersion, cfg.Mobile.MaxAPIVersion)
@@ -406,6 +413,15 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	}
 	featureSvc := features.New(deps.DB, deps.Queries, featureCache, log)
 	s.features = featureSvc
+	// TEC-215: system settings store with a 30 s Redis cache.
+	var sysCache sysconfig.Cache = sysconfig.NoCache{}
+	if deps.Redis != nil {
+		sysCache = sysconfig.NewRedisCache(deps.Redis, cfg.App.Env, func(op string, err error) {
+			log.Warn("sysconfig_cache_error", "op", op, "error", err)
+		})
+	}
+	sysSvc := sysconfig.New(deps.Queries, sysCache)
+	s.sysconfig = sysSvc
 	measurementsmodule.RegisterPanelRoutes(mux, measurementsH, tokens, loader, deps.Queries, featureSvc)
 	// TEC-296: before/after matching of a service, confirmation and manual
 	// selection; an accepted upload computes the suggestions.
@@ -452,7 +468,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	pricingmodule.RegisterRoutes(mux, pricinghandler.New(pricingSvc, activityRec),
 		tokens, loader, deps.Queries, stepUpSvc, featureSvc)
 	// TEC-306: service catalog, distributor overrides and effective service prices.
-	serviceCatalogSvc := servicecatalogusecase.New(deps.Queries)
+	serviceCatalogSvc := servicecatalogusecase.New(deps.Queries).
+		WithLifecycle(deps.DB, outbox.NewStore(deps.DB, deps.Queries), ratesSvc, featureSvc)
 	servicecatalogmodule.RegisterRoutes(mux, servicecataloghandler.New(serviceCatalogSvc, activityRec),
 		tokens, loader, deps.Queries, featureSvc)
 	// TEC-172: accounting accounts, cari, manual entries and settlements.
@@ -480,6 +497,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	transfersmodule.RegisterRoutes(mux, transfershandler.New(transfersSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-179: services (draft, items from stock, stock-free transitions, images).
 	servicesSvc := servicesusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)).
+		WithContractRequirement(sysSvc, featureSvc).
 		WithCompletedCancelAccounting(accountingPoster)
 	if listFinder != nil {
 		servicesSvc.SetFinder(listFinder) // TEC-209
@@ -669,6 +687,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		outbox.NewStore(deps.DB, deps.Queries))), tokens, loader, deps.Queries, featureSvc)
 	// TEC-313: leads and follow-up queue.
 	leadsSvc := leadsusecase.New(deps.DB, deps.Queries, tasksSvc)
+	leadsSvc.SetConverters(customersSvc, servicesSvc, orgSvc)
 	if listFinder != nil {
 		leadsSvc.SetFinder(listFinder)
 	}
@@ -679,18 +698,12 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		s.worker.WithQuoteExpire(leadsSvc.ExpireDueQuotesTask)
 	}
 	leadsmodule.RegisterRoutes(mux, leadshandler.New(leadsSvc).WithDocuments(docSvc), tokens, loader, deps.Queries, featureSvc)
+	// TEC-323: appointments, capacity, availability and intake start.
+	appointmentsSvc := appointmentsusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries), servicesSvc)
+	appointmentsmodule.RegisterRoutes(mux, appointmentshandler.New(appointmentsSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-149: vehicle catalog (global car brands/models, super_admin writes).
 	vehiclecatalogmodule.RegisterRoutes(mux, vehiclecataloghandler.New(
 		vehiclecatalogusecase.New(deps.Queries), deps.Storage, activityRec), tokens, loader)
-	// TEC-215: system settings store with a 30 s Redis cache.
-	var sysCache sysconfig.Cache = sysconfig.NoCache{}
-	if deps.Redis != nil {
-		sysCache = sysconfig.NewRedisCache(deps.Redis, cfg.App.Env, func(op string, err error) {
-			log.Warn("sysconfig_cache_error", "op", op, "error", err)
-		})
-	}
-	sysSvc := sysconfig.New(deps.Queries, sysCache)
-	s.sysconfig = sysSvc
 	bulkSvc.WithUndoWindow(sysSvc.BulkUndoWindowHours)
 	// TEC-206: stock counts (scans through the TEC-203 resolver, approval via the ledger).
 	warehousemodule.RegisterCountRoutes(mux, warehousehandler.NewCounts(warehouseusecase.NewCounts(deps.DB, deps.Queries,

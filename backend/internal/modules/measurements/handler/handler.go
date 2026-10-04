@@ -30,6 +30,8 @@ type Creator interface {
 	UpdateDevice(ctx context.Context, c usecase.PanelCaller, id uuid.UUID, in usecase.DeviceInput) (usecase.DeviceView, error)
 	ListMeasurements(ctx context.Context, c usecase.PanelCaller, f usecase.MeasurementFilter) ([]usecase.MeasurementSummary, int64, error)
 	GetMeasurement(ctx context.Context, c usecase.PanelCaller, id uuid.UUID) (usecase.MeasurementDetail, error)
+	// TEC-294: VIN completion.
+	CompleteVIN(ctx context.Context, c usecase.PanelCaller, id uuid.UUID, vin string) (usecase.MeasurementDetail, error)
 }
 
 // Handler serves the measurement upload.
