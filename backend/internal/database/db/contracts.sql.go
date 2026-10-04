@@ -699,6 +699,62 @@ func (q *Queries) GetLatestContractSignature(ctx context.Context, signerID int64
 	return i, err
 }
 
+const getPortalContractPDF = `-- name: GetPortalContractPDF :one
+SELECT ci.id, ci.uuid, ci.organization_id, ci.brand_id, ci.contract_no, ci.subject_type, ci.subject_id, ci.subject_service_id, ci.template_id, ci.kind, ci.locale, ci.template_version, ci.otp_required, ci.signature_required, ci.status, ci.rendered_html, ci.content_sha256, ci.pdf_key, ci.executed_at, ci.voided_at, ci.void_reason, ci.voided_by_user_id, ci.created_by_user_id, ci.created_at, ci.updated_at
+FROM contract_instances ci
+JOIN services s ON s.id = ci.subject_service_id
+JOIN brands b ON b.id = ci.brand_id
+WHERE ci.uuid = $1
+  AND ci.status = 'executed'
+  AND ci.pdf_key IS NOT NULL
+  AND ci.brand_id = $2::bigint
+  AND b.slug <> 'glorian'
+  AND (
+    s.customer_user_id = $3::bigint
+    OR EXISTS (SELECT 1 FROM warranties hw
+               WHERE hw.service_id = s.id AND hw.holder_user_id = $3::bigint)
+  )
+`
+
+type GetPortalContractPDFParams struct {
+	Uuid    uuid.UUID `json:"uuid"`
+	BrandID int64     `json:"brand_id"`
+	UserID  int64     `json:"user_id"`
+}
+
+func (q *Queries) GetPortalContractPDF(ctx context.Context, arg GetPortalContractPDFParams) (ContractInstance, error) {
+	row := q.db.QueryRow(ctx, getPortalContractPDF, arg.Uuid, arg.BrandID, arg.UserID)
+	var i ContractInstance
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ContractNo,
+		&i.SubjectType,
+		&i.SubjectID,
+		&i.SubjectServiceID,
+		&i.TemplateID,
+		&i.Kind,
+		&i.Locale,
+		&i.TemplateVersion,
+		&i.OtpRequired,
+		&i.SignatureRequired,
+		&i.Status,
+		&i.RenderedHtml,
+		&i.ContentSha256,
+		&i.PdfKey,
+		&i.ExecutedAt,
+		&i.VoidedAt,
+		&i.VoidReason,
+		&i.VoidedByUserID,
+		&i.CreatedByUserID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getServiceForContractByID = `-- name: GetServiceForContractByID :one
 SELECT
     s.id, s.uuid, s.service_no, s.organization_id, s.brand_id, s.customer_user_id, s.vehicle_id, s.car_brand_id, s.car_model_id, s.model_year, s.plate, s.plate_country, s.vin, s.km, s.package, s.notes, s.has_measurement, s.measurement_result_id, s.contract_id, s.status, s.created_by_user_id, s.updated_by_user_id, s.completed_by_user_id, s.cancelled_by_user_id, s.cancel_reason, s.completed_at, s.cancelled_at, s.review_request_sent_at, s.created_at, s.updated_at, s.measurement_check_required, s.measurement_checked_at, s.warranty_claim_id, s.income_entry_id, s.income_amount,
@@ -1241,6 +1297,83 @@ func (q *Queries) ListContractMedia(ctx context.Context, instanceID int64) ([]Co
 			&i.SortOrder,
 			&i.UploadedByUserID,
 			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listContractPDFSigners = `-- name: ListContractPDFSigners :many
+SELECT cs.id, cs.uuid, cs.instance_id, cs.organization_id, cs.brand_id, cs.role,
+       cs.user_id, cs.name, cs.phone_e164, cs.otp_code_id, cs.otp_verified_at,
+       cs.signed_at, cs.created_at, cs.updated_at,
+       o.kvkk_locale, o.kvkk_version,
+       COALESCE(sig.storage_key, '')::text AS signature_storage_key
+FROM contract_signers cs
+LEFT JOIN otp_codes o ON o.id = cs.otp_code_id
+LEFT JOIN LATERAL (
+  SELECT storage_key
+  FROM contract_signatures
+  WHERE signer_id = cs.id
+  ORDER BY created_at DESC, id DESC
+  LIMIT 1
+) sig ON true
+WHERE cs.instance_id = $1
+ORDER BY cs.role, cs.id
+`
+
+type ListContractPDFSignersRow struct {
+	ID                  int64              `json:"id"`
+	Uuid                uuid.UUID          `json:"uuid"`
+	InstanceID          int64              `json:"instance_id"`
+	OrganizationID      int64              `json:"organization_id"`
+	BrandID             int64              `json:"brand_id"`
+	Role                string             `json:"role"`
+	UserID              pgtype.Int8        `json:"user_id"`
+	Name                string             `json:"name"`
+	PhoneE164           pgtype.Text        `json:"phone_e164"`
+	OtpCodeID           pgtype.Int8        `json:"otp_code_id"`
+	OtpVerifiedAt       pgtype.Timestamptz `json:"otp_verified_at"`
+	SignedAt            pgtype.Timestamptz `json:"signed_at"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	KvkkLocale          pgtype.Text        `json:"kvkk_locale"`
+	KvkkVersion         pgtype.Int4        `json:"kvkk_version"`
+	SignatureStorageKey string             `json:"signature_storage_key"`
+}
+
+func (q *Queries) ListContractPDFSigners(ctx context.Context, instanceID int64) ([]ListContractPDFSignersRow, error) {
+	rows, err := q.db.Query(ctx, listContractPDFSigners, instanceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListContractPDFSignersRow{}
+	for rows.Next() {
+		var i ListContractPDFSignersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.InstanceID,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.Role,
+			&i.UserID,
+			&i.Name,
+			&i.PhoneE164,
+			&i.OtpCodeID,
+			&i.OtpVerifiedAt,
+			&i.SignedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.KvkkLocale,
+			&i.KvkkVersion,
+			&i.SignatureStorageKey,
 		); err != nil {
 			return nil, err
 		}

@@ -193,6 +193,22 @@ SET pdf_key = sqlc.arg(pdf_key)::text
 WHERE id = sqlc.arg(id) AND status = 'executed' AND pdf_key IS NULL
 RETURNING *;
 
+-- name: GetPortalContractPDF :one
+SELECT ci.*
+FROM contract_instances ci
+JOIN services s ON s.id = ci.subject_service_id
+JOIN brands b ON b.id = ci.brand_id
+WHERE ci.uuid = sqlc.arg(uuid)
+  AND ci.status = 'executed'
+  AND ci.pdf_key IS NOT NULL
+  AND ci.brand_id = sqlc.arg(brand_id)::bigint
+  AND b.slug <> 'glorian'
+  AND (
+    s.customer_user_id = sqlc.arg(user_id)::bigint
+    OR EXISTS (SELECT 1 FROM warranties hw
+               WHERE hw.service_id = s.id AND hw.holder_user_id = sqlc.arg(user_id)::bigint)
+  );
+
 -- name: VoidContractInstance :one
 UPDATE contract_instances
 SET status = 'voided',
@@ -303,6 +319,24 @@ RETURNING *;
 SELECT * FROM contract_signers
 WHERE instance_id = sqlc.arg(instance_id)
 ORDER BY role, id;
+
+-- name: ListContractPDFSigners :many
+SELECT cs.id, cs.uuid, cs.instance_id, cs.organization_id, cs.brand_id, cs.role,
+       cs.user_id, cs.name, cs.phone_e164, cs.otp_code_id, cs.otp_verified_at,
+       cs.signed_at, cs.created_at, cs.updated_at,
+       o.kvkk_locale, o.kvkk_version,
+       COALESCE(sig.storage_key, '')::text AS signature_storage_key
+FROM contract_signers cs
+LEFT JOIN otp_codes o ON o.id = cs.otp_code_id
+LEFT JOIN LATERAL (
+  SELECT storage_key
+  FROM contract_signatures
+  WHERE signer_id = cs.id
+  ORDER BY created_at DESC, id DESC
+  LIMIT 1
+) sig ON true
+WHERE cs.instance_id = sqlc.arg(instance_id)
+ORDER BY cs.role, cs.id;
 
 -- name: GetContractSigner :one
 SELECT * FROM contract_signers

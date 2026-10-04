@@ -759,6 +759,7 @@ type Querier interface {
 	GetPendingVehicleTransfer(ctx context.Context, vehicleID int64) (VehicleTransfer, error)
 	GetPermissionBySlug(ctx context.Context, slug string) (Permission, error)
 	GetPlateFormatByCountry(ctx context.Context, iso2 string) (GetPlateFormatByCountryRow, error)
+	GetPortalContractPDF(ctx context.Context, arg GetPortalContractPDFParams) (ContractInstance, error)
 	GetPortalVehicle(ctx context.Context, arg GetPortalVehicleParams) (GetPortalVehicleRow, error)
 	// Service summary of one vehicle across every organization of the brand.
 	GetPortalVehicleServiceSummary(ctx context.Context, arg GetPortalVehicleServiceSummaryParams) (GetPortalVehicleServiceSummaryRow, error)
@@ -1142,6 +1143,7 @@ type Querier interface {
 	ListContractInstances(ctx context.Context, arg ListContractInstancesParams) ([]ContractInstance, error)
 	ListContractInstancesBySubject(ctx context.Context, arg ListContractInstancesBySubjectParams) ([]ContractInstance, error)
 	ListContractMedia(ctx context.Context, instanceID int64) ([]ContractMedium, error)
+	ListContractPDFSigners(ctx context.Context, instanceID int64) ([]ListContractPDFSignersRow, error)
 	ListContractSignatures(ctx context.Context, instanceID int64) ([]ContractSignature, error)
 	ListContractSigners(ctx context.Context, instanceID int64) ([]ContractSigner, error)
 	// ---------------------------------------------------------------------------
@@ -1385,10 +1387,9 @@ type Querier interface {
 	ListPlateFormats(ctx context.Context, activeOnly bool) ([]ListPlateFormatsRow, error)
 	ListPlatformNotifications(ctx context.Context, arg ListPlatformNotificationsParams) ([]Notification, error)
 	ListPlatformNotificationsForExport(ctx context.Context, arg ListPlatformNotificationsForExportParams) ([]Notification, error)
-	// TEC-245 (F2-03e): the user's signed vehicle intake contracts. Until the
-	// contracts module (F3) lands a contract is only services.contract_id, so
-	// the list is the user's services that carry one (same ownership, brand,
-	// Glorian and draft rules as ListPortalServices); empty until F3 fills it.
+	// TEC-288 (F3-01d): the user's executed vehicle intake contracts. The
+	// ownership rule stays identical to portal services: the service customer or
+	// warranty holder sees it, within the domain brand, excluding Glorian.
 	ListPortalContracts(ctx context.Context, arg ListPortalContractsParams) ([]ListPortalContractsRow, error)
 	// Services of the user across every organization of the brand (one list,
 	// newest first). vehicle_id narrows to one vehicle (vehicle detail).

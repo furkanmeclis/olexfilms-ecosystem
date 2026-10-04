@@ -5,6 +5,8 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
+	"log/slog"
 	"os"
 	"strings"
 	"testing"
@@ -13,8 +15,12 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/repository"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/documentstest"
+	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
+	docusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/otp"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
@@ -208,6 +214,67 @@ func TestCustomerSignWindowExpires(t *testing.T) {
 	}
 }
 
+func TestExecutedContractPDFGeneratedOnce(t *testing.T) {
+	d := newTestDB(t)
+	f := d.signingFixture(t, d.caller.OrganizationID)
+	d.publishContractDocumentTemplate(t)
+	gotb := documentstest.NewGotenberg(t, 0)
+	f.svc.pdf = pdfrender.New(gotb.URL)
+	executed := f.execute(t)
+	row, err := d.q.GetContractInstanceByUUID(d.ctx, executed.UUID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := f.svc.GenerateExecutedPDF(d.ctx, row.ID); err != nil {
+		t.Fatalf("generate pdf: %v", err)
+	}
+	row, err = d.q.GetContractInstanceByUUID(d.ctx, executed.UUID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !row.PdfKey.Valid || row.PdfKey.String == "" {
+		t.Fatal("pdf_key was not set")
+	}
+	if ok, err := f.store.Exists(d.ctx, row.PdfKey.String); err != nil || !ok {
+		t.Fatalf("stored pdf exists = %v, %v; want true", ok, err)
+	}
+	if calls := gotb.Calls.Load(); calls != 1 {
+		t.Fatalf("gotenberg calls = %d, want 1", calls)
+	}
+	if err := f.svc.GenerateExecutedPDF(d.ctx, row.ID); err != nil {
+		t.Fatalf("second generate pdf: %v", err)
+	}
+	if calls := gotb.Calls.Load(); calls != 1 {
+		t.Fatalf("gotenberg calls after second event = %d, want 1", calls)
+	}
+}
+
+func TestExecutedContractPDFHTMLContainsEvidence(t *testing.T) {
+	d := newTestDB(t)
+	f := d.signingFixture(t, d.caller.OrganizationID)
+	d.publishContractDocumentTemplate(t)
+	gotb := documentstest.NewGotenberg(t, 0)
+	f.svc.pdf = pdfrender.New(gotb.URL)
+	executed := f.execute(t)
+	row, err := d.q.GetContractInstanceByUUID(d.ctx, executed.UUID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.svc.GenerateExecutedPDF(d.ctx, row.ID); err != nil {
+		t.Fatalf("generate pdf: %v", err)
+	}
+	html := gotb.LastHTML()
+	for _, want := range []string{"data:image/png;base64", "KVKK notice version", row.ContentSha256.String} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("rendered HTML missing %q:\n%s", want, html)
+		}
+	}
+	if count := strings.Count(html, "data:image/png;base64"); count < 2 {
+		t.Fatalf("signature images = %d, want at least 2", count)
+	}
+}
+
 func TestInvalidPNGAndOtherOrgService(t *testing.T) {
 	d := newTestDB(t)
 	f := d.signingFixture(t, d.caller.OrganizationID)
@@ -229,6 +296,7 @@ type signingFixture struct {
 	contract model.Contract
 	otp      *fakeOTP
 	out      *outbox.Memory
+	store    *storage.Memory
 	now      time.Time
 }
 
@@ -237,7 +305,8 @@ func (d *testDB) signingFixture(t *testing.T, orgID int64) signingFixture {
 	now := time.Now().UTC().Truncate(time.Second)
 	fake := &fakeOTP{q: d.q, now: now, createdAt: now}
 	out := outbox.NewMemory()
-	svc := New(repository.New(d.pool, d.q), WithOTP(fake), WithStorage(storage.NewMemory()), WithOutbox(out), WithClock(func() time.Time { return now }))
+	store := storage.NewMemory()
+	svc := New(repository.New(d.pool, d.q), WithOTP(fake), WithStorage(store), WithOutbox(out), WithClock(func() time.Time { return now }))
 	tpl := d.create(t, model.KindVehicleIntake, true)
 	if _, err := svc.PutLocale(d.ctx, d.caller, tpl.UUID, LocaleInput{
 		Locale: "tr", HTML: `<p>{{service_no}} {{customer_name}} {{staff_name}}</p>`,
@@ -251,7 +320,40 @@ func (d *testDB) signingFixture(t *testing.T, orgID int64) signingFixture {
 	if err != nil {
 		t.Fatalf("create contract: %v", err)
 	}
-	return signingFixture{svc: svc, caller: caller, contract: contract, otp: fake, out: out, now: now}
+	return signingFixture{svc: svc, caller: caller, contract: contract, otp: fake, out: out, store: store, now: now}
+}
+
+func (f signingFixture) execute(t *testing.T) model.Contract {
+	t.Helper()
+	if _, err := f.svc.SignCustomer(context.Background(), f.caller, f.contract.UUID, SignatureInput{
+		Code: "123456", PNGBase64: pngBase64(), IP: "203.0.113.10", UserAgent: "go-test",
+	}); err != nil {
+		t.Fatalf("customer sign: %v", err)
+	}
+	got, err := f.svc.SignStaff(context.Background(), f.caller, f.contract.UUID, SignatureInput{PNGBase64: pngBase64()})
+	if err != nil {
+		t.Fatalf("staff sign: %v", err)
+	}
+	return got
+}
+
+func (d *testDB) publishContractDocumentTemplate(t *testing.T) {
+	t.Helper()
+	svc := docusecase.New(d.pool, d.q, storage.NewMemory(), nil, nil, pdfrender.FontsEmbedded, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	name := "tec288-contract " + uuid.NewString()
+	view, err := svc.SaveDraft(d.ctx, 0, docusecase.SaveInput{
+		Kind: docmodel.KindContract, BrandSlug: "olex", Language: "tr", Name: name,
+		HTML: `<h1>{{contract_title}}</h1>{{contract_body_html}}{{signatures_html}}<h2>OTP</h2>{{otp_proof_html}}<p>{{content_sha256}}</p>{{media_html}}`,
+	})
+	if err != nil {
+		t.Fatalf("save document template: %v", err)
+	}
+	if _, err := svc.Publish(d.ctx, view.UUID); err != nil {
+		t.Fatalf("publish document template: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = d.pool.Exec(context.Background(), `DELETE FROM document_templates WHERE name = $1`, name)
+	})
 }
 
 func (d *testDB) createService(t *testing.T, orgID int64) db.Service {

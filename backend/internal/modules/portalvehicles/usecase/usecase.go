@@ -337,11 +337,12 @@ func serviceViews(rows []db.ListPortalServicesRow) []ServiceView {
 	return out
 }
 
-// ContractView is one signed vehicle intake contract of the portal user
-// (TEC-245). Until the contracts module (F3) lands a contract is only the
-// service's contract_id, so the view names the service, the vehicle and
-// the organization; F3 adds the signing details and the PDF.
+// ContractView is one executed vehicle intake contract of the portal user
+// (TEC-288). The legacy service field stays for TEC-245 clients; F3 adds the
+// contract identity, execution time and PDF readiness.
 type ContractView struct {
+	ContractUUID uuid.UUID       `json:"contract_uuid"`
+	ContractNo   int64           `json:"contract_no"`
 	Service      ServiceRef      `json:"service"`
 	Status       string          `json:"status"`
 	Organization OrganizationRef `json:"organization"`
@@ -351,6 +352,8 @@ type ContractView struct {
 	ModelYear    *int16          `json:"model_year"`
 	Plate        *string         `json:"plate"`
 	PlateCountry *string         `json:"plate_country"`
+	ExecutedAt   *time.Time      `json:"executed_at"`
+	PDFReady     bool            `json:"pdf_ready"`
 	CreatedAt    time.Time       `json:"created_at"`
 }
 
@@ -373,10 +376,12 @@ func (s *Service) ListContracts(ctx context.Context, c Caller, p Page) ([]Contra
 	out := make([]ContractView, 0, len(rows))
 	for _, r := range rows {
 		out = append(out, ContractView{
+			ContractUUID: r.ContractUuid, ContractNo: r.ContractNo,
 			Service: ServiceRef{UUID: r.Uuid, ServiceNo: r.ServiceNo}, Status: r.Status,
 			Organization: OrganizationRef{UUID: r.OrganizationUuid, Name: r.OrganizationName, Type: r.OrganizationType},
 			VehicleUUID:  r.VehicleUuid, CarBrandName: r.CarBrandName, CarModelName: r.CarModelName,
 			ModelYear: yearPtr(r.ModelYear), Plate: textPtr(r.Plate), PlateCountry: textPtr(r.PlateCountry),
+			ExecutedAt: timePtr(r.ExecutedAt), PDFReady: r.PdfReady,
 			CreatedAt: r.CreatedAt.Time,
 		})
 	}

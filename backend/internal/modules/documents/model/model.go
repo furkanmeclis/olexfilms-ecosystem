@@ -198,8 +198,12 @@ var specs = map[string]KindSpec{
 		text("contract", "contract_title", "Sözleşme başlığı", "Contract title", "Bayilik Sözleşmesi", "Dealership Agreement"),
 		text("contract", "party_name", "Karşı taraf", "Counterparty", "Tech Oto Ltd. Şti.", "Tech Oto Ltd."),
 		text("contract", "signed_at", "İmza tarihi", "Signed at", "01.10.2026", "Oct 1, 2026"),
+		text("contract", "content_sha256", "İçerik SHA-256", "Content SHA-256", strings.Repeat("a", 64), strings.Repeat("a", 64)),
 		block("contract", "contract_body_html", "Sözleşme metni", "Contract body"),
 		block("contract", "signature_image", "İmza görseli", "Signature image"),
+		block("contract", "signatures_html", "İmza görselleri", "Signature images"),
+		block("contract", "otp_proof_html", "OTP kanıt bloğu", "OTP proof block"),
+		block("contract", "media_html", "Gömülü medya", "Embedded media"),
 	})},
 	KindOrderSlip: {Kind: KindOrderSlip, Variables: join(companyVars, customerVars, totalsVars, []Variable{
 		text("order", "order_number", "Sipariş no", "Order number", "SIP-2026-000042", "ORD-2026-000042"),
@@ -302,6 +306,23 @@ var sampleBlocks = map[string]func(tr bool) string{
 	},
 	"signature_image": func(bool) string {
 		return `<svg xmlns="http://www.w3.org/2000/svg" width="140" height="40" viewBox="0 0 140 40"><path d="M5 30 C 30 5, 40 40, 65 20 S 110 10, 135 25" stroke="#1e3a8a" stroke-width="2" fill="none"/></svg>`
+	},
+	"signatures_html": func(tr bool) string {
+		label := "Müşteri"
+		if !tr {
+			label = "Customer"
+		}
+		img := `<svg xmlns="http://www.w3.org/2000/svg" width="140" height="40" viewBox="0 0 140 40"><path d="M5 30 C 30 5, 40 40, 65 20 S 110 10, 135 25" stroke="#1e3a8a" stroke-width="2" fill="none"/></svg>`
+		return `<div class="doc-sign"><div>` + label + `<br>` + img + `</div><div>Staff<br>` + img + `</div></div>`
+	},
+	"otp_proof_html": func(tr bool) string {
+		if tr {
+			return pdfrender.Table([]pdfrender.Column{{Label: "OTP kanıtı"}, {Label: "Değer"}}, [][]string{{"Telefon", "+90 555 *** 67"}, {"Doğrulama", "01.10.2026 14:30"}, {"KVKK metin sürümü", "tr v1"}, {"İçerik SHA-256", strings.Repeat("a", 64)}})
+		}
+		return pdfrender.Table([]pdfrender.Column{{Label: "OTP proof"}, {Label: "Value"}}, [][]string{{"Phone", "+90 555 *** 67"}, {"Verified", "Oct 1, 2026 2:30 PM"}, {"KVKK notice version", "tr v1"}, {"Content SHA-256", strings.Repeat("a", 64)}})
+	},
+	"media_html": func(bool) string {
+		return `<figure><svg xmlns="http://www.w3.org/2000/svg" width="180" height="90"><rect width="180" height="90" fill="#e5e7eb"/><text x="90" y="50" text-anchor="middle" font-family="sans-serif" font-size="12">MEDIA</text></svg></figure>`
 	},
 	"qr_code": func(bool) string {
 		return `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 8 8"><rect width="8" height="8" fill="#fff"/><path d="M0 0h3v3H0zM5 0h3v3H5zM0 5h3v3H0zM4 4h1v1H4zM6 5h1v2H6zM4 6h1v2H4z" fill="#000"/></svg>`

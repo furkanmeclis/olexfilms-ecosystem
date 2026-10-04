@@ -86,6 +86,8 @@ type Worker struct {
 	// TEC-273: admin-triggered reconcile run and single outbound replay.
 	glorianReconcile GlorianReconcileFunc
 	glorianReplayOne GlorianOutboundReplayOneFunc
+	// TEC-288: executed contract PDF (docs queue).
+	contractPDF ContractPDFFunc
 }
 
 // NewWorker builds a worker that handles known task types on every queue.
@@ -145,6 +147,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskSearchDelete, w.handleSearchDelete)
 	mux.HandleFunc(TaskSearchReindex, w.handleSearchReindex)
 	mux.HandleFunc(TaskDocsRender, w.handleDocsRender)
+	mux.HandleFunc(TaskContractPDF, w.handleContractPDF)
 	mux.HandleFunc(TaskRatesFetch, w.handleRatesFetch)
 	mux.HandleFunc(TaskNotificationPurge, w.handleNotificationPurge)
 	mux.HandleFunc(TaskWhatsAppStatusPoll, w.handleWhatsAppPoll)

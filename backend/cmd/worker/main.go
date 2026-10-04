@@ -16,6 +16,9 @@ import (
 	announcementsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/usecase"
 	bulkusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/bulk/usecase"
 	catalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/catalog/usecase"
+	contractsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts"
+	contractsrepo "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/repository"
+	contractsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/usecase"
 	customersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/customers/usecase"
 	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
 	docusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/usecase"
@@ -123,6 +126,8 @@ func main() {
 	servicereview.RegisterEventHandlers(eventBus, reviewQueue, cfg.Services.ReviewRequestDelay, log)
 	// TEC-270: glorian stock entries/placements and exits schedule the push.
 	glorian.RegisterEventHandlers(eventBus, queries, reviewQueue, log)
+	// TEC-288: contract.executed enqueues the worker-docs contract:pdf task.
+	contractsmodule.RegisterEventHandlers(eventBus, reviewQueue, log)
 	// TEC-296: service events compute the before/after measurement match.
 	measurementsmodule.RegisterEventHandlers(eventBus, pool, queries, log)
 	outboxStore := outbox.NewStore(pool, queries)
@@ -195,6 +200,12 @@ func main() {
 		log.Error("documents_loader_failed", "kind", docmodel.KindQuote, "error", err)
 		os.Exit(1)
 	}
+	contractsSvc := contractsusecase.New(contractsrepo.New(pool, queries),
+		contractsusecase.WithStorage(store),
+		contractsusecase.WithPDFRenderer(pdfClient),
+		contractsusecase.WithOutbox(outboxStore),
+	)
+	_ = docSvc.RegisterLoader(docmodel.KindContract, contractsSvc.ContractDocumentLoader())
 	importSvc := importusecase.New(queries, store, ioReg, nil, notifSvc, activityRec, log)
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(queries),
@@ -242,6 +253,8 @@ func main() {
 			return announcementsusecase.DispatchBatch(ctx, notifSvc, payload)
 		}).
 		WithDocsRender(docSvc.ProcessRender).
+		// TEC-288: executed contract PDF (docs queue).
+		WithContractPDF(contractsSvc.GenerateExecutedPDF).
 		WithRatesFetch(ratesSvc.FetchTask).
 		WithWarrantyCron(warrantyCron.ExpireTask, warrantyCron.ExpiringScanTask).
 		WithWarrantyRepairScan(warrantymodule.NewRepairScanner(pool, queries, cfg.Auth.FrontendURL, cfg.Warranty.RepairScanDays, log).Task).
