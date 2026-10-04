@@ -536,6 +536,19 @@ type CustomerProfile struct {
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
 
+type DealerProductPrice struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	ProductID       int64              `json:"product_id"`
+	SalePrice       pgtype.Numeric     `json:"sale_price"`
+	Currency        string             `json:"currency"`
+	UpdatedByUserID pgtype.Int8        `json:"updated_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
 type DevicePushToken struct {
 	ID         int64              `json:"id"`
 	Uuid       uuid.UUID          `json:"uuid"`
@@ -1563,12 +1576,77 @@ type ProductPrice struct {
 	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
 }
 
+type ProductSale struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	CustomerUserID  pgtype.Int8        `json:"customer_user_id"`
+	PaymentMethod   string             `json:"payment_method"`
+	CariID          pgtype.Int8        `json:"cari_id"`
+	Currency        string             `json:"currency"`
+	Total           pgtype.Numeric     `json:"total"`
+	SoldAt          pgtype.Timestamptz `json:"sold_at"`
+	Note            string             `json:"note"`
+	FinanceEntryID  pgtype.Int8        `json:"finance_entry_id"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ProductSaleLine struct {
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	SaleID           int64              `json:"sale_id"`
+	OrganizationID   int64              `json:"organization_id"`
+	BrandID          int64              `json:"brand_id"`
+	ProductID        int64              `json:"product_id"`
+	UnitID           pgtype.Int8        `json:"unit_id"`
+	Quantity         pgtype.Numeric     `json:"quantity"`
+	UnitPrice        pgtype.Numeric     `json:"unit_price"`
+	LineTotal        pgtype.Numeric     `json:"line_total"`
+	PurchaseUnitCost pgtype.Numeric     `json:"purchase_unit_cost"`
+	StockMovementID  pgtype.Int8        `json:"stock_movement_id"`
+	SortOrder        int32              `json:"sort_order"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+}
+
 type Province struct {
 	ID        int64              `json:"id"`
 	CountryID int64              `json:"country_id"`
 	Code      string             `json:"code"`
 	Name      string             `json:"name"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type Purchase struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	SupplierID      int64              `json:"supplier_id"`
+	PurchasedOn     pgtype.Date        `json:"purchased_on"`
+	Currency        string             `json:"currency"`
+	Amount          pgtype.Numeric     `json:"amount"`
+	PaymentMethod   string             `json:"payment_method"`
+	Note            string             `json:"note"`
+	FinanceEntryID  pgtype.Int8        `json:"finance_entry_id"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type PurchaseLine struct {
+	ID             int64              `json:"id"`
+	PurchaseID     int64              `json:"purchase_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Description    string             `json:"description"`
+	Quantity       pgtype.Numeric     `json:"quantity"`
+	UnitPrice      pgtype.Numeric     `json:"unit_price"`
+	LineTotal      pgtype.Numeric     `json:"line_total"`
+	SortOrder      int32              `json:"sort_order"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
 type PushSubscription struct {
@@ -1776,6 +1854,8 @@ type Service struct {
 	UpdatedAt                pgtype.Timestamptz `json:"updated_at"`
 	MeasurementCheckRequired bool               `json:"measurement_check_required"`
 	MeasurementCheckedAt     pgtype.Timestamptz `json:"measurement_checked_at"`
+	IncomeEntryID            pgtype.Int8        `json:"income_entry_id"`
+	IncomeAmount             pgtype.Numeric     `json:"income_amount"`
 }
 
 type ServiceCatalogItem struct {
@@ -1987,6 +2067,41 @@ type ShortUrl struct {
 	HitCount        int64              `json:"hit_count"`
 	LastHitAt       pgtype.Timestamptz `json:"last_hit_at"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+}
+
+type StaffPayment struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	StaffID         int64              `json:"staff_id"`
+	Type            string             `json:"type"`
+	Period          string             `json:"period"`
+	Amount          pgtype.Numeric     `json:"amount"`
+	Currency        string             `json:"currency"`
+	PaidOn          pgtype.Date        `json:"paid_on"`
+	Description     pgtype.Text        `json:"description"`
+	FinanceEntryID  pgtype.Int8        `json:"finance_entry_id"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	VoidedAt        pgtype.Timestamptz `json:"voided_at"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type StaffProfile struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	UserID         pgtype.Int8        `json:"user_id"`
+	Name           string             `json:"name"`
+	Title          pgtype.Text        `json:"title"`
+	HiredOn        pgtype.Date        `json:"hired_on"`
+	MonthlySalary  pgtype.Numeric     `json:"monthly_salary"`
+	Currency       string             `json:"currency"`
+	Active         bool               `json:"active"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
 type StepupSetting struct {
@@ -2329,6 +2444,21 @@ type StorageTrash struct {
 	DeletedBy   pgtype.Int8        `json:"deleted_by"`
 	DeletedAt   pgtype.Timestamptz `json:"deleted_at"`
 	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
+}
+
+type Supplier struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Name           string             `json:"name"`
+	TaxNo          pgtype.Text        `json:"tax_no"`
+	PhoneE164      pgtype.Text        `json:"phone_e164"`
+	Email          pgtype.Text        `json:"email"`
+	Note           string             `json:"note"`
+	Active         bool               `json:"active"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
 type SystemSetting struct {

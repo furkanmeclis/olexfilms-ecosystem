@@ -531,6 +531,39 @@ var Permissions = []PermissionDef{
 		Slug: PermReviewsRead, Name: "Read service reviews", Module: "reviews", Scopes: scopesTree,
 		Description: "Read service reviews and their answers (dealer: own, distributor: subtree, center: brand).",
 	},
+
+	// TEC-341: full dealer accounting (F3-07). Appended last; migration
+	// 000093 seeds them.
+	{
+		Slug: PermDealerPricingWrite, Name: "Write dealer product prices", Module: "dealer_accounting",
+		Scopes:      []Scope{ScopeManaged, ScopeAll},
+		Description: "Set the dealer's own sale price of products.",
+	},
+	{
+		Slug: PermProductSalesWrite, Name: "Write product sales", Module: "dealer_accounting",
+		Scopes:      []Scope{ScopeManaged, ScopeAll},
+		Description: "Record quick product sales outside services.",
+	},
+	{
+		Slug: PermSuppliersManage, Name: "Manage suppliers", Module: "dealer_accounting",
+		Scopes:      []Scope{ScopeManaged, ScopeAll},
+		Description: "Create and update the organization's suppliers.",
+	},
+	{
+		Slug: PermPurchasesWrite, Name: "Write purchases", Module: "dealer_accounting",
+		Scopes:      []Scope{ScopeManaged, ScopeAll},
+		Description: "Record purchases from suppliers (no stock movement).",
+	},
+	{
+		Slug: PermStaffManage, Name: "Manage staff", Module: "dealer_accounting",
+		Scopes:      []Scope{ScopeManaged, ScopeAll},
+		Description: "Manage staff cards and salaries of the organization.",
+	},
+	{
+		Slug: PermStaffPaymentsWrite, Name: "Write staff payments", Module: "dealer_accounting",
+		Scopes:      []Scope{ScopeManaged, ScopeAll},
+		Description: "Record salary, advance and bonus payments to staff.",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -979,6 +1012,14 @@ var Roles = []RoleDef{
 			PermAppointmentSettingsManage: ScopeManaged,
 			// TEC-350 (000091).
 			PermReviewsRead: ScopeManaged,
+			// TEC-341 (000093).
+			PermAccountingWrite:    ScopeManaged,
+			PermDealerPricingWrite: ScopeManaged,
+			PermProductSalesWrite:  ScopeManaged,
+			PermSuppliersManage:    ScopeManaged,
+			PermPurchasesWrite:     ScopeManaged,
+			PermStaffManage:        ScopeManaged,
+			PermStaffPaymentsWrite: ScopeManaged,
 		}),
 	},
 	{
@@ -1036,6 +1077,14 @@ var Roles = []RoleDef{
 			// TEC-329 (000086).
 			PermAnnouncementsRead: ScopeManaged,
 			PermLibraryRead:       ScopeManaged,
+			// TEC-341 (000093).
+			PermAccountingWrite:    ScopeManaged,
+			PermDealerPricingWrite: ScopeManaged,
+			PermProductSalesWrite:  ScopeManaged,
+			PermSuppliersManage:    ScopeManaged,
+			PermPurchasesWrite:     ScopeManaged,
+			PermStaffManage:        ScopeManaged,
+			PermStaffPaymentsWrite: ScopeManaged,
 		}),
 	},
 	{
