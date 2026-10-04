@@ -663,11 +663,14 @@ function OverridesDialog({
   const selected = distributors.data?.find((d) => d.uuid === orgUuid);
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: serviceCatalogKeys.platform() });
-  const onError = useCallback((error: unknown) => {
-    appToast.error(
-      isApiError(error) ? error.message : t("catalog.toast.failed"),
-    );
-  }, [t]);
+  const onError = useCallback(
+    (error: unknown) => {
+      appToast.error(
+        isApiError(error) ? error.message : t("catalog.toast.failed"),
+      );
+    },
+    [t],
+  );
 
   useEffect(() => {
     if (!item || !orgUuid || !selected) return;
