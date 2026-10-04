@@ -187,3 +187,53 @@ RETURNING *;
 SELECT * FROM warranty_claim_events
 WHERE claim_id = sqlc.arg(claim_id)
 ORDER BY created_at, id;
+
+-- name: GetWarrantyClaimOpenContext :one
+SELECT c.id AS claim_id, c.uuid AS claim_uuid, c.organization_id, c.brand_id,
+       c.claim_no, c.warranty_id, c.service_id, c.vehicle_id,
+       c.customer_user_id, c.status, c.created_at,
+       w.uuid AS warranty_uuid, w.public_code, w.start_at, w.end_at,
+       w.status AS warranty_status, w.service_item_id,
+       s.service_no, s.plate,
+       p.name AS product_name,
+       o.name AS organization_name, o.parent_id AS organization_parent_id
+FROM warranty_claims c
+JOIN warranties w ON w.id = c.warranty_id
+JOIN services s ON s.id = c.service_id
+JOIN products p ON p.id = w.product_id
+JOIN organizations o ON o.id = c.organization_id
+WHERE c.id = sqlc.arg(id) AND c.brand_id = sqlc.arg(brand_id);
+
+-- name: GetWarrantyClaimCoverageContext :one
+SELECT w.id AS warranty_id, w.status AS warranty_status, w.start_at, w.end_at,
+       w.service_item_id AS warranty_service_item_id,
+       si.product_id AS service_item_product_id, si.applied_parts,
+       p.warranty_duration_months
+FROM warranties w
+JOIN service_items si ON si.id = w.service_item_id
+JOIN products p ON p.id = si.product_id
+WHERE w.id = sqlc.arg(warranty_id) AND w.brand_id = sqlc.arg(brand_id);
+
+-- name: ListWarrantyClaimNotifyUsersByOrg :many
+SELECT DISTINCT om.user_id
+FROM organization_members om
+JOIN organization_member_roles mr ON mr.member_id = om.id
+JOIN roles r ON r.id = mr.role_id
+JOIN role_permissions rp ON rp.role_id = r.id
+JOIN permissions p ON p.id = rp.permission_id
+WHERE om.organization_id = ANY(sqlc.arg(organization_ids)::bigint[])
+  AND p.slug = sqlc.arg(permission_slug)::text
+ORDER BY om.user_id;
+
+-- name: ListWarrantyClaimCenterNotifyUsers :many
+SELECT DISTINCT om.user_id
+FROM organizations o
+JOIN organization_members om ON om.organization_id = o.id
+JOIN organization_member_roles mr ON mr.member_id = om.id
+JOIN roles r ON r.id = mr.role_id
+JOIN role_permissions rp ON rp.role_id = r.id
+JOIN permissions p ON p.id = rp.permission_id
+WHERE o.brand_id = sqlc.arg(brand_id)
+  AND o.type = 'center'
+  AND p.slug = sqlc.arg(permission_slug)::text
+ORDER BY om.user_id;

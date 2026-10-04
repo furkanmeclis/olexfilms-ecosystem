@@ -138,6 +138,7 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	on(events.WarrantyExpired, func(event events.Event) (notifmodel.DispatchInput, bool) {
 		return warrantyDispatch(event, catalog.EventWarrantyExpired, 0)
 	})
+	on(events.WarrantyClaimStatusChanged, warrantyClaimDispatch)
 	// TEC-192: the delayed review request goes to the service customer
 	// (WhatsApp); the task writes the event once per service.
 	on(events.ServiceReviewRequested, serviceReviewDispatch)
@@ -205,6 +206,40 @@ func warrantyDispatch(event events.Event, code string, days int64) (notifmodel.D
 	}
 	if u := vars["verify_url"]; u != "" {
 		in.ActionURL = &u
+	}
+	return in, true
+}
+
+func warrantyClaimDispatch(event events.Event) (notifmodel.DispatchInput, bool) {
+	action := stringFromPayload(event.Payload, "action")
+	to := stringFromPayload(event.Payload, "to")
+	code := catalog.EventWarrantyClaimStatusChanged
+	if action == "opened" {
+		code = catalog.EventWarrantyClaimOpened
+	}
+	if to == "approved" || to == "rejected" {
+		code = catalog.EventWarrantyClaimResult
+	}
+	ids := userIDsFromPayload(event.Payload, "notify_user_ids")
+	if len(ids) == 0 {
+		return notifmodel.DispatchInput{}, false
+	}
+	vars := map[string]string{}
+	for _, k := range []string{"claim_no", "from", "to", "organization_name", "product_name", "plate"} {
+		vars[k] = stringFromPayload(event.Payload, k)
+	}
+	in := notifmodel.DispatchInput{
+		EventCode: code, UserIDs: ids, Vars: vars,
+		Payload: map[string]any{
+			"claim_uuid":    stringFromPayload(event.Payload, "claim_uuid"),
+			"warranty_uuid": stringFromPayload(event.Payload, "warranty_uuid"),
+			"public_code":   stringFromPayload(event.Payload, "public_code"),
+			"from":          vars["from"],
+			"to":            vars["to"],
+		},
+	}
+	if brand, ok := int64FromPayload(event.Payload, "brand_id"); ok && brand > 0 {
+		in.BrandID = &brand
 	}
 	return in, true
 }

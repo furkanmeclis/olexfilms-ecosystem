@@ -7774,6 +7774,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/warranty-claims": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Warranty claims inside warranty_claims.read scope */
+        get: operations["listWarrantyClaims"];
+        put?: never;
+        /**
+         * Open a warranty claim
+         * @description Dealer or distributor opens a claim on behalf of the customer. The automatic coverage check is stored and never auto-rejects the claim. Portal/customer sessions cannot open claims.
+         */
+        post: operations["createWarrantyClaim"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warranty-claims/{uuid}/photos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add a warranty claim photo */
+        post: operations["addWarrantyClaimPhoto"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warranty-claims/{uuid}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move a warranty claim through review and decision
+         * @description Flow: open -> dealer_review -> center_review -> approved/rejected. Moving to dealer_review requires at least one photo (422 CLAIM_PHOTO_REQUIRED). Rejection requires a reason.
+         */
+        post: operations["transitionWarrantyClaim"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/warranty-claims": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Narrow warranty claim statuses for the portal user
+         * @description Descriptions and photos are intentionally omitted.
+         */
+        get: operations["listPortalWarrantyClaims"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/services": {
         parameters: {
             query?: never;
@@ -14632,6 +14710,79 @@ export interface components {
             };
             /** @description The caller may void it (warranties.void and an active or expired status). */
             can_void: boolean;
+            /** @description Portal warranty detail only; no descriptions or photos. */
+            claims?: components["schemas"]["PortalWarrantyClaimStatus"][];
+        };
+        /** @enum {string} */
+        WarrantyClaimStatus: "open" | "dealer_review" | "center_review" | "approved" | "rejected" | "reapplied" | "closed";
+        WarrantyClaimCoverageCheck: {
+            ok: boolean;
+            reasons: ("warranty_not_active" | "warranty_period_expired" | "product_has_no_warranty" | "part_not_covered")[];
+            /** Format: date-time */
+            checked_at: string;
+        };
+        WarrantyClaimPartInput: {
+            part_key: string;
+            /** Format: uuid */
+            service_item_uuid?: string | null;
+            note?: string;
+        };
+        WarrantyClaimCreateInput: {
+            /** Format: uuid */
+            warranty_uuid: string;
+            description: string;
+            parts: components["schemas"]["WarrantyClaimPartInput"][];
+        };
+        WarrantyClaimTransitionInput: {
+            status: components["schemas"]["WarrantyClaimStatus"];
+            rejection_reason?: string;
+        };
+        WarrantyClaimPart: {
+            /** Format: uuid */
+            uuid: string;
+            part_key: string;
+            note?: string;
+        };
+        WarrantyClaimPhoto: {
+            /** Format: uuid */
+            uuid: string;
+            mime_type: string;
+            /** Format: int64 */
+            size_bytes: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        WarrantyClaim: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: int64 */
+            claim_no: number;
+            /** Format: uuid */
+            warranty_uuid: string;
+            status: components["schemas"]["WarrantyClaimStatus"];
+            description?: string;
+            rejection_reason?: string | null;
+            coverage_check: components["schemas"]["WarrantyClaimCoverageCheck"];
+            ai_damage_type?: string | null;
+            ai_summary?: string | null;
+            ai_confidence?: string | null;
+            /** Format: date-time */
+            ai_triaged_at?: string | null;
+            parts?: components["schemas"]["WarrantyClaimPart"][];
+            photos?: components["schemas"]["WarrantyClaimPhoto"][];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        PortalWarrantyClaimStatus: {
+            /** Format: uuid */
+            uuid: string;
+            status: components["schemas"]["WarrantyClaimStatus"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
         };
         WarrantyVoidInput: {
             reason: string;
@@ -14651,6 +14802,38 @@ export interface components {
                 total: number;
                 limit: number;
                 offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWarrantyClaim: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WarrantyClaim"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWarrantyClaimPhoto: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WarrantyClaimPhoto"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWarrantyClaimPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["WarrantyClaim"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePortalWarrantyClaims: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["PortalWarrantyClaimStatus"][];
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -30023,6 +30206,157 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    listWarrantyClaims: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["WarrantyClaimStatus"];
+                warranty_uuid?: string;
+                vehicle_uuid?: string;
+                created_from?: string;
+                created_to?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Warranty claims */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarrantyClaimPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createWarrantyClaim: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarrantyClaimCreateInput"];
+            };
+        };
+        responses: {
+            /** @description Created warranty claim */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarrantyClaim"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    addWarrantyClaimPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description JPEG, PNG or WebP, maximum 12 MB.
+                     */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Uploaded photo */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarrantyClaimPhoto"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    transitionWarrantyClaim: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarrantyClaimTransitionInput"];
+            };
+        };
+        responses: {
+            /** @description Updated warranty claim */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarrantyClaim"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    listPortalWarrantyClaims: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Portal warranty claim statuses */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePortalWarrantyClaims"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     listServices: {

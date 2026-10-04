@@ -869,6 +869,8 @@ type Querier interface {
 	GetWarrantyClaimByID(ctx context.Context, arg GetWarrantyClaimByIDParams) (WarrantyClaim, error)
 	GetWarrantyClaimByUUID(ctx context.Context, arg GetWarrantyClaimByUUIDParams) (WarrantyClaim, error)
 	GetWarrantyClaimByUUIDForUpdate(ctx context.Context, arg GetWarrantyClaimByUUIDForUpdateParams) (WarrantyClaim, error)
+	GetWarrantyClaimCoverageContext(ctx context.Context, arg GetWarrantyClaimCoverageContextParams) (GetWarrantyClaimCoverageContextRow, error)
+	GetWarrantyClaimOpenContext(ctx context.Context, arg GetWarrantyClaimOpenContextParams) (GetWarrantyClaimOpenContextRow, error)
 	GetWarrantyForIndex(ctx context.Context, argUuid uuid.UUID) (GetWarrantyForIndexRow, error)
 	// service.completed consumer (TEC-186): the service, its organization's
 	// time zone (end_at is the end of the last day there, decision 4) and its
@@ -1566,7 +1568,9 @@ type Querier interface {
 	// holder_user_id narrows to the portal customer's own warranties (a
 	// transferred vehicle's warranties belong to the new holder).
 	ListWarrantyCertificateItems(ctx context.Context, arg ListWarrantyCertificateItemsParams) ([]ListWarrantyCertificateItemsRow, error)
+	ListWarrantyClaimCenterNotifyUsers(ctx context.Context, arg ListWarrantyClaimCenterNotifyUsersParams) ([]int64, error)
 	ListWarrantyClaimEvents(ctx context.Context, claimID int64) ([]WarrantyClaimEvent, error)
+	ListWarrantyClaimNotifyUsersByOrg(ctx context.Context, arg ListWarrantyClaimNotifyUsersByOrgParams) ([]int64, error)
 	ListWarrantyClaimParts(ctx context.Context, claimID int64) ([]WarrantyClaimPart, error)
 	ListWarrantyClaimPhotos(ctx context.Context, claimID int64) ([]WarrantyClaimPhoto, error)
 	ListWarrantyClaimsByWarranty(ctx context.Context, arg ListWarrantyClaimsByWarrantyParams) ([]WarrantyClaim, error)
