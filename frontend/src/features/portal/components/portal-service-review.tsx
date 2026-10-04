@@ -108,6 +108,8 @@ export function PortalServiceReviewView({
         platform_rating: platform,
         product_rating: product,
         comment: comment.trim() || null,
+        is_anonymous: false,
+        source: "portal",
       }),
     onSuccess: (next) => {
       setError(null);
