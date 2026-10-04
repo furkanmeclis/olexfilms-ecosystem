@@ -51,7 +51,8 @@ func TestServiceReviewDispatch(t *testing.T) {
 	ev := events.New(events.ServiceReviewRequested).WithPayload(map[string]any{
 		"customer_user_id": int64(42), "brand_id": int64(3),
 		"organization_name": "Tech Oto", "review_url": "https://g.page/r/x/review",
-		"plate": "34 ABC 123", "service_no": "DS00000001", "service_uuid": "u-1",
+		"form_url": "https://olexfilms.app/s/AbCdEfGhIj",
+		"plate":    "34 ABC 123", "service_no": "DS00000001", "service_uuid": "u-1",
 	})
 	in, ok := serviceReviewDispatch(ev)
 	if !ok {
@@ -60,19 +61,20 @@ func TestServiceReviewDispatch(t *testing.T) {
 	if in.EventCode != catalog.EventServiceReviewRequest || len(in.UserIDs) != 1 || in.UserIDs[0] != 42 {
 		t.Fatalf("dispatch = %+v", in)
 	}
-	if in.BrandID == nil || *in.BrandID != 3 || in.ActionURL == nil || *in.ActionURL != "https://g.page/r/x/review" {
+	if in.BrandID == nil || *in.BrandID != 3 || in.ActionURL == nil || *in.ActionURL != "https://olexfilms.app/s/AbCdEfGhIj" {
 		t.Fatalf("brand/action = %v %v", in.BrandID, in.ActionURL)
 	}
-	if in.Vars["review_url"] != "https://g.page/r/x/review" || in.Vars["organization_name"] != "Tech Oto" {
+	if in.Vars["review_url"] != "https://g.page/r/x/review" || in.Vars["form_url"] != "https://olexfilms.app/s/AbCdEfGhIj" ||
+		in.Vars["organization_name"] != "Tech Oto" {
 		t.Fatalf("vars = %v", in.Vars)
 	}
 	if _, ok := serviceReviewDispatch(events.New(events.ServiceReviewRequested).WithPayload(map[string]any{
 		"customer_user_id": int64(42),
 	})); ok {
-		t.Fatal("no review_url: want no dispatch")
+		t.Fatal("no form_url: want no dispatch")
 	}
 	if _, ok := serviceReviewDispatch(events.New(events.ServiceReviewRequested).WithPayload(map[string]any{
-		"review_url": "https://g.page/r/x/review",
+		"form_url": "https://olexfilms.app/s/AbCdEfGhIj",
 	})); ok {
 		t.Fatal("no customer: want no dispatch")
 	}
