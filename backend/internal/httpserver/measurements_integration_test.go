@@ -8,8 +8,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // TEC-233 acceptance (F2-05a, K28): a mobile upload answers 202 and stores a
@@ -124,6 +126,238 @@ func TestIntegrationMobileMeasurements(t *testing.T) {
 	if code, env, _ := it.doMobile("POST", "/v1/mobile/measurements", panel, "1", map[string]any{"raw": raw}); code != http.StatusForbidden ||
 		errCode(env) != "REALM_FORBIDDEN" {
 		t.Fatalf("panel token = %d %s", code, errCode(env))
+	}
+}
+
+type measurementPage struct {
+	Items []struct {
+		UUID         string `json:"uuid"`
+		Organization struct {
+			UUID string `json:"uuid"`
+		} `json:"organization"`
+		Service *struct {
+			UUID  string `json:"uuid"`
+			Phase string `json:"phase"`
+		} `json:"service"`
+	} `json:"items"`
+	Total int64 `json:"total"`
+}
+
+// TEC-295 acceptance: panel reads are scoped by measurements.read. A
+// distributor sees its dealer subtree, another distributor does not, and a
+// dealer cannot read another dealer's measurement.
+func TestIntegrationPanelMeasurementScope(t *testing.T) {
+	it := newIntegration(t)
+	ctx := context.Background()
+	center := it.brandCenter("olex")
+	distA := it.org("t295-dist-a", "distributor", center)
+	distB := it.org("t295-dist-b", "distributor", center)
+	dealerA := it.org("t295-dealer-a", "dealer", distA)
+	dealerB := it.org("t295-dealer-b", "dealer", distB)
+	t.Cleanup(func() {
+		_, _ = it.pool.Exec(context.Background(), "DELETE FROM service_measurements WHERE organization_id IN ($1, $2)", dealerA.ID, dealerB.ID)
+		_, _ = it.pool.Exec(context.Background(), "DELETE FROM measurement_results WHERE organization_id IN ($1, $2)", dealerA.ID, dealerB.ID)
+		_, _ = it.pool.Exec(context.Background(), "DELETE FROM measurement_devices WHERE organization_id IN ($1, $2)", dealerA.ID, dealerB.ID)
+	})
+
+	distOwnerA, distPWA := it.user("t295-dist-a")
+	distOwnerB, distPWB := it.user("t295-dist-b")
+	dealerOwnerA, dealerPWA := it.user("t295-dealer-a")
+	dealerOwnerB, dealerPWB := it.user("t295-dealer-b")
+	it.member(distA, distOwnerA, "owner")
+	it.member(distB, distOwnerB, "owner")
+	it.member(dealerA, dealerOwnerA, "owner")
+	it.member(dealerB, dealerOwnerB, "owner")
+
+	service := func(org db.Organization, name, plate string, seq int) db.Service {
+		t.Helper()
+		cust, veh := it.svcCustomer(org, name, plate)
+		svc, err := it.q.CreateService(ctx, db.CreateServiceParams{
+			ServiceNo:      fmt.Sprintf("T295-%s-%d", it.suffix[len(it.suffix)-10:], seq),
+			OrganizationID: org.ID, BrandID: org.BrandID, CustomerUserID: cust.ID, VehicleID: veh.ID,
+			CarBrandID: veh.CarBrandID.Int64, CarModelID: veh.CarModelID.Int64, Status: "draft",
+			Vin: pgtype.Text{String: "WVWZZZ1JZ3W386752", Valid: true},
+		})
+		if err != nil {
+			t.Fatalf("service: %v", err)
+		}
+		return svc
+	}
+	deviceA, err := it.q.CreateMeasurementDevice(ctx, db.CreateMeasurementDeviceParams{
+		OrganizationID: dealerA.ID, BrandID: dealerA.BrandID, Serial: "NX-295-A", Label: pgtype.Text{String: "A", Valid: true}, IsActive: true,
+	})
+	if err != nil {
+		t.Fatalf("device A: %v", err)
+	}
+	deviceB, err := it.q.CreateMeasurementDevice(ctx, db.CreateMeasurementDeviceParams{
+		OrganizationID: dealerB.ID, BrandID: dealerB.BrandID, Serial: "NX-295-B", Label: pgtype.Text{String: "B", Valid: true}, IsActive: true,
+	})
+	if err != nil {
+		t.Fatalf("device B: %v", err)
+	}
+	svcA := service(dealerA, "t295-cust-a", "34T295A", 1)
+	svcB := service(dealerB, "t295-cust-b", "34T295B", 2)
+
+	insertResult := func(org db.Organization, dev db.MeasurementDevice, svc db.Service, vin string) db.MeasurementResult {
+		t.Helper()
+		var row db.MeasurementResult
+		if err := it.pool.QueryRow(ctx, `
+			INSERT INTO measurement_results (
+				organization_id, brand_id, service_id, vehicle_id, vin, status, raw,
+				device_serial, source, created_by, measured_at, device_id, parsed_at
+			) VALUES ($1,$2,$3,$4,$5,'accepted','{"raw":true}'::jsonb,$6,'mobile',$7,$8,$9,$8)
+			RETURNING id, uuid, organization_id, brand_id, status
+		`, org.ID, org.BrandID, svc.ID, svc.VehicleID, vin, dev.Serial, dealerOwnerA.ID, time.Now(), dev.ID).
+			Scan(&row.ID, &row.Uuid, &row.OrganizationID, &row.BrandID, &row.Status); err != nil {
+			t.Fatalf("measurement: %v", err)
+		}
+		return row
+	}
+	own := insertResult(dealerA, deviceA, svcA, "WVWZZZ1JZ3W386752")
+	foreign := insertResult(dealerB, deviceB, svcB, "WVWZZZ1JZ3W386753")
+	if _, err := it.q.LinkServiceMeasurement(ctx, db.LinkServiceMeasurementParams{
+		OrganizationID: dealerA.ID, BrandID: dealerA.BrandID, ServiceID: svcA.ID,
+		MeasurementResultID: own.ID, Phase: "before", LinkSource: "manual",
+	}); err != nil {
+		t.Fatalf("link: %v", err)
+	}
+
+	distTokA := it.loginOrg(distOwnerA, distPWA, distA)
+	distTokB := it.loginOrg(distOwnerB, distPWB, distB)
+	dealerTokA := it.loginOrg(dealerOwnerA, dealerPWA, dealerA)
+	dealerTokB := it.loginOrg(dealerOwnerB, dealerPWB, dealerB)
+
+	code, env := it.do("GET", "/v1/measurements?vin=WVWZZZ1JZ3W386752", hostOlex, distTokA, nil)
+	if code != http.StatusOK {
+		t.Fatalf("dist A list = %d %s", code, errCode(env))
+	}
+	var page measurementPage
+	if err := json.Unmarshal(env.Data, &page); err != nil {
+		t.Fatal(err)
+	}
+	if page.Total != 1 || len(page.Items) != 1 || page.Items[0].UUID != own.Uuid.String() ||
+		page.Items[0].Organization.UUID != dealerA.Uuid.String() {
+		t.Fatalf("dist A page = %+v", page)
+	}
+	code, env = it.do("GET", "/v1/measurements/"+own.Uuid.String(), hostOlex, distTokA, nil)
+	if code != http.StatusOK {
+		t.Fatalf("dist A detail = %d %s", code, errCode(env))
+	}
+	var detail struct {
+		UUID    string `json:"uuid"`
+		Service *struct {
+			UUID  string `json:"uuid"`
+			Phase string `json:"phase"`
+		} `json:"service"`
+	}
+	if err := json.Unmarshal(env.Data, &detail); err != nil {
+		t.Fatal(err)
+	}
+	if detail.UUID != own.Uuid.String() || detail.Service == nil || detail.Service.UUID != svcA.Uuid.String() || detail.Service.Phase != "before" {
+		t.Fatalf("detail = %+v", detail)
+	}
+
+	code, env = it.do("GET", "/v1/measurements/"+own.Uuid.String(), hostOlex, distTokB, nil)
+	if code != http.StatusNotFound {
+		t.Fatalf("other dist detail = %d %s, foreign=%s", code, errCode(env), foreign.Uuid)
+	}
+	code, env = it.do("GET", "/v1/measurements/"+own.Uuid.String(), hostOlex, dealerTokB, nil)
+	if code != http.StatusNotFound {
+		t.Fatalf("other dealer detail = %d %s", code, errCode(env))
+	}
+	code, env = it.do("GET", "/v1/measurements/"+own.Uuid.String(), hostOlex, dealerTokA, nil)
+	if code != http.StatusOK {
+		t.Fatalf("own dealer detail = %d %s", code, errCode(env))
+	}
+
+	// Unfiltered lists stay inside the caller's reach: distributor A and
+	// dealer A see only dealer A's row, distributor B only dealer B's.
+	listUUIDs := func(tok string) []string {
+		t.Helper()
+		code, env := it.do("GET", "/v1/measurements", hostOlex, tok, nil)
+		if code != http.StatusOK {
+			t.Fatalf("list = %d %s", code, errCode(env))
+		}
+		var p measurementPage
+		if err := json.Unmarshal(env.Data, &p); err != nil {
+			t.Fatal(err)
+		}
+		out := make([]string, 0, len(p.Items))
+		for _, i := range p.Items {
+			out = append(out, i.UUID)
+		}
+		return out
+	}
+	for name, tc := range map[string]struct {
+		tok  string
+		want string
+	}{
+		"dist A": {distTokA, own.Uuid.String()}, "dealer A": {dealerTokA, own.Uuid.String()},
+		"dist B": {distTokB, foreign.Uuid.String()}, "dealer B": {dealerTokB, foreign.Uuid.String()},
+	} {
+		if got := listUUIDs(tc.tok); len(got) != 1 || got[0] != tc.want {
+			t.Fatalf("%s list = %v, want [%s]", name, got, tc.want)
+		}
+	}
+}
+
+// TEC-295 acceptance: the device registry. A second device with the same
+// serial in the organization is 409; a deactivated device is still listed
+// with is_active=false; another organization's device is 404 on PATCH.
+func TestIntegrationPanelMeasurementDevices(t *testing.T) {
+	it := newIntegration(t)
+	center := it.brandCenter("olex")
+	dealerA := it.org("t295-dev-a", "dealer", center)
+	dealerB := it.org("t295-dev-b", "dealer", center)
+	t.Cleanup(func() {
+		_, _ = it.pool.Exec(context.Background(), "DELETE FROM measurement_devices WHERE organization_id IN ($1, $2)", dealerA.ID, dealerB.ID)
+	})
+	ownerA, pwA := it.user("t295-dev-a")
+	ownerB, pwB := it.user("t295-dev-b")
+	it.member(dealerA, ownerA, "owner")
+	it.member(dealerB, ownerB, "owner")
+	tokA := it.loginOrg(ownerA, pwA, dealerA)
+	tokB := it.loginOrg(ownerB, pwB, dealerB)
+
+	type device struct {
+		UUID     string `json:"uuid"`
+		Serial   string `json:"serial"`
+		Type     string `json:"type"`
+		IsActive bool   `json:"is_active"`
+	}
+	code, env := it.do("POST", "/v1/measurement-devices", hostOlex, tokA, map[string]any{"serial": "NX-295-D", "label": "Bench"})
+	if code != http.StatusCreated {
+		t.Fatalf("create = %d %s", code, errCode(env))
+	}
+	var created device
+	if err := json.Unmarshal(env.Data, &created); err != nil {
+		t.Fatal(err)
+	}
+	if created.Serial != "NX-295-D" || created.Type != "NexPTG" || !created.IsActive {
+		t.Fatalf("created = %+v", created)
+	}
+	if code, env := it.do("POST", "/v1/measurement-devices", hostOlex, tokA, map[string]any{"serial": "NX-295-D"}); code != http.StatusConflict {
+		t.Fatalf("duplicate serial = %d %s", code, errCode(env))
+	}
+	if code, env := it.do("POST", "/v1/measurement-devices", hostOlex, tokB, map[string]any{"serial": "NX-295-D"}); code != http.StatusCreated {
+		t.Fatalf("same serial in another org = %d %s", code, errCode(env))
+	}
+	if code, env := it.do("PATCH", "/v1/measurement-devices/"+created.UUID, hostOlex, tokB, map[string]any{"is_active": false}); code != http.StatusNotFound {
+		t.Fatalf("foreign patch = %d %s", code, errCode(env))
+	}
+	if code, env := it.do("PATCH", "/v1/measurement-devices/"+created.UUID, hostOlex, tokA, map[string]any{"is_active": false}); code != http.StatusOK {
+		t.Fatalf("deactivate = %d %s", code, errCode(env))
+	}
+	code, env = it.do("GET", "/v1/measurement-devices", hostOlex, tokA, nil)
+	if code != http.StatusOK {
+		t.Fatalf("list = %d %s", code, errCode(env))
+	}
+	var list []device
+	if err := json.Unmarshal(env.Data, &list); err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 || list[0].UUID != created.UUID || list[0].IsActive {
+		t.Fatalf("list = %+v", list)
 	}
 }
 
