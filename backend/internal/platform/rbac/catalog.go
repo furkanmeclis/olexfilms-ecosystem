@@ -139,8 +139,14 @@ var Permissions = []PermissionDef{
 
 	{Slug: PermCampaignsRead, Name: "Read campaigns", Module: "campaigns", Scopes: scopesTree},
 	{Slug: PermCampaignsWrite, Name: "Write campaigns", Module: "campaigns", Scopes: scopesTree},
-	{Slug: PermLeadsRead, Name: "Read leads", Module: "leads", Scopes: scopesTree},
-	{Slug: PermLeadsWrite, Name: "Write leads", Module: "leads", Scopes: scopesTree},
+	{
+		Slug: PermLeadsRead, Name: "Read leads", Module: "leads", Scopes: scopesTree,
+		Description: "Read leads of the managed organization.",
+	},
+	{
+		Slug: PermLeadsWrite, Name: "Write leads", Module: "leads", Scopes: scopesTree,
+		Description: "Create and update leads of the managed organization.",
+	},
 	{Slug: PermSocialRead, Name: "Read social", Module: "social", Scopes: scopesTree},
 	{Slug: PermSocialWrite, Name: "Write social", Module: "social", Scopes: scopesTree},
 
@@ -472,6 +478,22 @@ var Permissions = []PermissionDef{
 		Slug: PermLibraryManage, Name: "Manage the document library", Module: "library", Scopes: scopesSupplier,
 		Description: "Create folders, upload documents and new language versions, set access levels (center only).",
 	},
+
+	// TEC-312: quotes and lead conversion (F3-03). Appended last; migration
+	// 000087 seeds these new rows and updates the old lead grants.
+	{
+		Slug: PermQuotesRead, Name: "Read quotes", Module: "quotes", Scopes: scopesTree,
+		Description: "Read quotes and quote deliveries of the managed organization.",
+	},
+	{
+		Slug: PermQuotesWrite, Name: "Write quotes", Module: "quotes", Scopes: scopesTree,
+		Description: "Create, edit, send and decide quotes of the managed organization.",
+	},
+	{
+		Slug: PermLeadsConvertOrg, Name: "Convert lead to organization", Module: "leads",
+		Scopes:      []Scope{ScopeSubtree, ScopeBrand, ScopeAll},
+		Description: "Convert dealer candidates in the distributor subtree or center brand; distributor candidates are center-only.",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -482,6 +504,9 @@ var BrandIndependentGrants = map[string]map[string]bool{
 	RoleCenterWarehouse: {
 		PermStockRead: true, PermStockWrite: true, PermStockAdjust: true,
 		PermStockReclassify: true, PermStockImport: true,
+	},
+	RoleCenterSocial: {
+		PermLeadsRead: true, PermLeadsWrite: true,
 	},
 }
 
@@ -582,6 +607,12 @@ var Roles = []RoleDef{
 			PermAnnouncementsWrite: ScopeBrand,
 			PermLibraryRead:        ScopeManaged,
 			PermLibraryManage:      ScopeBrand,
+			// TEC-312 (000087).
+			PermLeadsRead:       ScopeManaged,
+			PermLeadsWrite:      ScopeManaged,
+			PermQuotesRead:      ScopeManaged,
+			PermQuotesWrite:     ScopeManaged,
+			PermLeadsConvertOrg: ScopeBrand,
 		}),
 	},
 	{
@@ -656,8 +687,8 @@ var Roles = []RoleDef{
 			PermVehiclesRead:       ScopeBrand,
 			PermCampaignsRead:      ScopeBrand,
 			PermCampaignsWrite:     ScopeBrand,
-			PermLeadsRead:          ScopeBrand,
-			PermLeadsWrite:         ScopeBrand,
+			PermLeadsRead:          ScopeAll,
+			PermLeadsWrite:         ScopeAll,
 			PermSocialRead:         ScopeBrand,
 			PermSocialWrite:        ScopeBrand,
 			PermTasksRead:          ScopeBrand, // TEC-214 (000058)
@@ -667,6 +698,10 @@ var Roles = []RoleDef{
 			PermAnnouncementsWrite: ScopeBrand,
 			PermLibraryRead:        ScopeManaged,
 			PermLibraryManage:      ScopeBrand,
+			// TEC-312 (000087).
+			PermQuotesRead:      ScopeManaged,
+			PermQuotesWrite:     ScopeManaged,
+			PermLeadsConvertOrg: ScopeBrand,
 		}),
 	},
 	{
@@ -734,6 +769,12 @@ var Roles = []RoleDef{
 			PermAnnouncementsRead:  ScopeManaged,
 			PermAnnouncementsWrite: ScopeSubtree,
 			PermLibraryRead:        ScopeManaged,
+			// TEC-312 (000087).
+			PermLeadsRead:       ScopeManaged,
+			PermLeadsWrite:      ScopeManaged,
+			PermQuotesRead:      ScopeManaged,
+			PermQuotesWrite:     ScopeManaged,
+			PermLeadsConvertOrg: ScopeSubtree,
 		}),
 	},
 	{
@@ -760,6 +801,11 @@ var Roles = []RoleDef{
 			// TEC-329 (000086).
 			PermAnnouncementsRead: ScopeManaged,
 			PermLibraryRead:       ScopeManaged,
+			// TEC-312 (000087).
+			PermLeadsRead:   ScopeManaged,
+			PermLeadsWrite:  ScopeManaged,
+			PermQuotesRead:  ScopeManaged,
+			PermQuotesWrite: ScopeManaged,
 		}),
 	},
 	{
@@ -855,6 +901,11 @@ var Roles = []RoleDef{
 			// TEC-329 (000086).
 			PermAnnouncementsRead: ScopeManaged,
 			PermLibraryRead:       ScopeManaged,
+			// TEC-312 (000087).
+			PermLeadsRead:   ScopeManaged,
+			PermLeadsWrite:  ScopeManaged,
+			PermQuotesRead:  ScopeManaged,
+			PermQuotesWrite: ScopeManaged,
 		}),
 	},
 	{
@@ -882,6 +933,11 @@ var Roles = []RoleDef{
 			// TEC-329 (000086).
 			PermAnnouncementsRead: ScopeManaged,
 			PermLibraryRead:       ScopeManaged,
+			// TEC-312 (000087).
+			PermLeadsRead:   ScopeManaged,
+			PermLeadsWrite:  ScopeManaged,
+			PermQuotesRead:  ScopeManaged,
+			PermQuotesWrite: ScopeManaged,
 		}),
 	},
 	{

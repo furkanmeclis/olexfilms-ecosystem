@@ -17,6 +17,7 @@ type Querier interface {
 	AddBinProductStock(ctx context.Context, arg AddBinProductStockParams) (BinProductStock, error)
 	// The CHECK rejects a negative result.
 	AddFixedBarcodeHolding(ctx context.Context, arg AddFixedBarcodeHoldingParams) (FixedBarcodeHolding, error)
+	AddLeadEvent(ctx context.Context, arg AddLeadEventParams) (LeadEvent, error)
 	// Signed deltas; the CHECK rejects negative stock.
 	AddOrganizationProductStock(ctx context.Context, arg AddOrganizationProductStockParams) (OrganizationProductStock, error)
 	AddServiceCatalogModule(ctx context.Context, arg AddServiceCatalogModuleParams) error
@@ -40,6 +41,7 @@ type Querier interface {
 	ApproveStockCountStart(ctx context.Context, arg ApproveStockCountStartParams) (StockCount, error)
 	// Approval freezes A's purchase price (K13).
 	ApproveStockTransferRequest(ctx context.Context, arg ApproveStockTransferRequestParams) (StockTransferRequest, error)
+	AssignLead(ctx context.Context, arg AssignLeadParams) (Lead, error)
 	AssignMemberRoleBySlug(ctx context.Context, arg AssignMemberRoleBySlugParams) error
 	AssignUserRoleBySlug(ctx context.Context, arg AssignUserRoleBySlugParams) error
 	AttachNotificationDelivery(ctx context.Context, arg AttachNotificationDeliveryParams) error
@@ -129,6 +131,7 @@ type Querier interface {
 	CountExportJobsForOrganization(ctx context.Context, organizationID pgtype.Int8) (int64, error)
 	CountImportJobsForActor(ctx context.Context, actorID int64) (int64, error)
 	CountImportJobsForOrganization(ctx context.Context, organizationID int64) (int64, error)
+	CountLeadsByOrganizations(ctx context.Context, arg CountLeadsByOrganizationsParams) (int64, error)
 	CountLegacyMessagesByChannel(ctx context.Context, brandID int64) ([]CountLegacyMessagesByChannelRow, error)
 	CountMessagesByExternalID(ctx context.Context, arg CountMessagesByExternalIDParams) (int64, error)
 	CountMigrationMap(ctx context.Context) ([]CountMigrationMapRow, error)
@@ -229,6 +232,9 @@ type Querier interface {
 	// crypto.SecretBox ciphertext; callers never pass a plain key here.
 	CreateIntegrationConnection(ctx context.Context, arg CreateIntegrationConnectionParams) (IntegrationConnection, error)
 	CreateLabelTemplate(ctx context.Context, arg CreateLabelTemplateParams) (LabelTemplate, error)
+	// TEC-312 (F3-03a): lead and quote schema (migration 000087). Reads are
+	// bounded by resolved organization ids; the API layer owns scope resolution.
+	CreateLead(ctx context.Context, arg CreateLeadParams) (Lead, error)
 	// TEC-329 (F3-05a): document library folders, items and append-only file
 	// versions (migration 000086).
 	CreateLibraryFolder(ctx context.Context, arg CreateLibraryFolderParams) (LibraryFolder, error)
@@ -266,6 +272,10 @@ type Querier interface {
 	CreateProvince(ctx context.Context, arg CreateProvinceParams) (Province, error)
 	// TEC-91: QR web sign-in challenges.
 	CreateQRLoginChallenge(ctx context.Context, arg CreateQRLoginChallengeParams) (QrLoginChallenge, error)
+	CreateQuote(ctx context.Context, arg CreateQuoteParams) (Quote, error)
+	CreateQuoteDelivery(ctx context.Context, arg CreateQuoteDeliveryParams) (QuoteDelivery, error)
+	CreateQuoteLine(ctx context.Context, arg CreateQuoteLineParams) (QuoteLine, error)
+	CreateQuoteReminder(ctx context.Context, arg CreateQuoteReminderParams) (QuoteReminder, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
 	CreateRole(ctx context.Context, arg CreateRoleParams) (Role, error)
 	CreateRoom(ctx context.Context, arg CreateRoomParams) (Room, error)
@@ -415,6 +425,7 @@ type Querier interface {
 	DeleteProvince(ctx context.Context, id int64) (int64, error)
 	DeletePushSubscription(ctx context.Context, arg DeletePushSubscriptionParams) error
 	DeletePushSubscriptionByEndpoint(ctx context.Context, endpoint string) error
+	DeleteQuoteLines(ctx context.Context, quoteID int64) (int64, error)
 	DeleteRole(ctx context.Context, argUuid uuid.UUID) error
 	DeleteRolePermission(ctx context.Context, arg DeleteRolePermissionParams) error
 	DeleteRoom(ctx context.Context, arg DeleteRoomParams) (int64, error)
@@ -603,6 +614,8 @@ type Querier interface {
 	// Portal legal texts and consents (TEC-90).
 	GetLatestLegalText(ctx context.Context, arg GetLatestLegalTextParams) (LegalText, error)
 	GetLatestPhoneOTP(ctx context.Context, arg GetLatestPhoneOTPParams) (OtpCode, error)
+	GetLeadByID(ctx context.Context, arg GetLeadByIDParams) (Lead, error)
+	GetLeadByUUID(ctx context.Context, arg GetLeadByUUIDParams) (Lead, error)
 	GetLibraryFolderByUUID(ctx context.Context, argUuid uuid.UUID) (LibraryFolder, error)
 	GetLibraryItemByUUID(ctx context.Context, argUuid uuid.UUID) (LibraryItem, error)
 	GetLibraryItemVersionByUUID(ctx context.Context, argUuid uuid.UUID) (LibraryItemVersion, error)
@@ -701,6 +714,8 @@ type Querier interface {
 	// to the kept warranty; the row carries that warranty's own public_code.
 	GetPublicWarrantyByCode(ctx context.Context, arg GetPublicWarrantyByCodeParams) (GetPublicWarrantyByCodeRow, error)
 	GetQRLoginChallengeByCode(ctx context.Context, code string) (QrLoginChallenge, error)
+	GetQuoteByPublicToken(ctx context.Context, publicToken uuid.UUID) (Quote, error)
+	GetQuoteByUUID(ctx context.Context, arg GetQuoteByUUIDParams) (Quote, error)
 	GetRefreshTokenByHashAny(ctx context.Context, tokenHash string) (RefreshToken, error)
 	GetRefreshTokenByUUID(ctx context.Context, argUuid uuid.UUID) (RefreshToken, error)
 	// TEC-239: the newest reusable portal job of the actor for one service
@@ -1047,6 +1062,7 @@ type Querier interface {
 	ListDistrictsByProvince(ctx context.Context, provinceID int64) ([]District, error)
 	ListDocumentTemplateVersions(ctx context.Context, arg ListDocumentTemplateVersionsParams) ([]DocumentTemplate, error)
 	ListDocumentTemplates(ctx context.Context, arg ListDocumentTemplatesParams) ([]ListDocumentTemplatesRow, error)
+	ListDueQuoteReminders(ctx context.Context, arg ListDueQuoteRemindersParams) ([]QuoteReminder, error)
 	// The organizations the cron reports on: active centers and distributors
 	// with at least one active warehouse.
 	ListEODReportOrganizations(ctx context.Context) ([]ListEODReportOrganizationsRow, error)
@@ -1126,6 +1142,8 @@ type Querier interface {
 	ListLatestLegalTexts(ctx context.Context, kind string) ([]LegalText, error)
 	// The newest version of each language of an item.
 	ListLatestLibraryItemVersions(ctx context.Context, itemID int64) ([]LibraryItemVersion, error)
+	ListLeadEvents(ctx context.Context, leadID int64) ([]LeadEvent, error)
+	ListLeadsByOrganizations(ctx context.Context, arg ListLeadsByOrganizationsParams) ([]Lead, error)
 	// TEC-263: read-only access to the old hub's message archive
 	// (legacy_messages). No UI; the table is append-only and only the K19
 	// anonymization may mask a row.
@@ -1270,6 +1288,10 @@ type Querier interface {
 	// GetPublicDealerBySlug; code and last change only.
 	ListPublicDealerCodes(ctx context.Context, arg ListPublicDealerCodesParams) ([]ListPublicDealerCodesRow, error)
 	ListPushSubscriptionsByUser(ctx context.Context, userID int64) ([]PushSubscription, error)
+	ListQuoteDeliveries(ctx context.Context, quoteID int64) ([]QuoteDelivery, error)
+	ListQuoteLines(ctx context.Context, quoteID int64) ([]QuoteLine, error)
+	ListQuotesByLead(ctx context.Context, arg ListQuotesByLeadParams) ([]Quote, error)
+	ListQuotesByOrganizations(ctx context.Context, arg ListQuotesByOrganizationsParams) ([]Quote, error)
 	// TEC-156 (F1-02d): projection rebuild, drift scan and repair.
 	// Movements are read only (append-only ledger); the repair writes the
 	// projections (unit_current_state, fixed_barcode_holdings, units.status /
@@ -1607,6 +1629,7 @@ type Querier interface {
 	MarkOutboxPublished(ctx context.Context, id int64) error
 	MarkOutboxRetry(ctx context.Context, arg MarkOutboxRetryParams) error
 	MarkQRLoginChallengeScanned(ctx context.Context, code string) (QrLoginChallenge, error)
+	MarkQuoteReminderSent(ctx context.Context, id int64) (QuoteReminder, error)
 	MarkServiceSubscriptionPeriodPosted(ctx context.Context, id int64) (ServiceSubscriptionPeriod, error)
 	MarkStockEntryUndone(ctx context.Context, id int64) (StockEntry, error)
 	MarkStockImportRowUndone(ctx context.Context, arg MarkStockImportRowUndoneParams) (StockImportRow, error)
@@ -1875,6 +1898,7 @@ type Querier interface {
 	NextContractNo(ctx context.Context, organizationID int64) (int64, error)
 	NextDocumentTemplateVersion(ctx context.Context, arg NextDocumentTemplateVersionParams) (int32, error)
 	NextLibraryItemVersionNo(ctx context.Context, arg NextLibraryItemVersionNoParams) (int32, error)
+	NextQuoteNo(ctx context.Context, organizationID int64) (int32, error)
 	PingDB(ctx context.Context) (int32, error)
 	PublishDocumentTemplate(ctx context.Context, id int64) (DocumentTemplate, error)
 	PurgeNotificationDeliveriesBefore(ctx context.Context, arg PurgeNotificationDeliveriesBeforeParams) (int64, error)
@@ -1942,6 +1966,8 @@ type Querier interface {
 	// TEC-158: staged importers keep their apply/undo report in preview_json.
 	SetImportJobPreview(ctx context.Context, arg SetImportJobPreviewParams) (ImportJob, error)
 	SetIntegrationConnectionAPIKey(ctx context.Context, arg SetIntegrationConnectionAPIKeyParams) (IntegrationConnection, error)
+	SetLeadFollowUp(ctx context.Context, arg SetLeadFollowUpParams) (Lead, error)
+	SetLeadStatus(ctx context.Context, arg SetLeadStatusParams) (Lead, error)
 	SetLocationSortOrder(ctx context.Context, arg SetLocationSortOrderParams) (int64, error)
 	SetMeasurementDeviceActive(ctx context.Context, arg SetMeasurementDeviceActiveParams) (int64, error)
 	SetMeasurementResultPDFKey(ctx context.Context, arg SetMeasurementResultPDFKeyParams) error
@@ -1963,6 +1989,7 @@ type Querier interface {
 	// that changed so the caller can reindex them. A product whose active flag
 	// is locked by the integration sync is skipped (TEC-268).
 	SetProductsActiveByUUIDs(ctx context.Context, arg SetProductsActiveByUUIDsParams) ([]uuid.UUID, error)
+	SetQuoteStatus(ctx context.Context, arg SetQuoteStatusParams) (Quote, error)
 	SetRolePermissions(ctx context.Context, roleID int64) error
 	SetRoomSortOrder(ctx context.Context, arg SetRoomSortOrderParams) (int64, error)
 	// Links (or unlinks with NULL) a contract of the service's organization.
@@ -2002,9 +2029,11 @@ type Querier interface {
 	ShipTransferRequest(ctx context.Context, arg ShipTransferRequestParams) (StockTransferRequest, error)
 	ShipWarehouseTransfer(ctx context.Context, arg ShipWarehouseTransferParams) (WarehouseTransfer, error)
 	SlugExists(ctx context.Context, slug string) (bool, error)
+	SoftDeleteLead(ctx context.Context, arg SoftDeleteLeadParams) (int64, error)
 	// Only an empty folder (no live subfolder or item) is removed.
 	SoftDeleteLibraryFolder(ctx context.Context, arg SoftDeleteLibraryFolderParams) (int64, error)
 	SoftDeleteLibraryItem(ctx context.Context, arg SoftDeleteLibraryItemParams) (int64, error)
+	SoftDeleteQuote(ctx context.Context, arg SoftDeleteQuoteParams) (int64, error)
 	SoftDeleteVehicle(ctx context.Context, id int64) (int64, error)
 	StartIntegrationSyncRun(ctx context.Context, arg StartIntegrationSyncRunParams) (IntegrationSyncRun, error)
 	StartStockCount(ctx context.Context, arg StartStockCountParams) (StockCount, error)
@@ -2059,6 +2088,7 @@ type Querier interface {
 	UpdateImportJobPreview(ctx context.Context, arg UpdateImportJobPreviewParams) (ImportJob, error)
 	UpdateIntegrationConnection(ctx context.Context, arg UpdateIntegrationConnectionParams) (IntegrationConnection, error)
 	UpdateLabelTemplate(ctx context.Context, arg UpdateLabelTemplateParams) (LabelTemplate, error)
+	UpdateLead(ctx context.Context, arg UpdateLeadParams) (Lead, error)
 	UpdateLibraryFolder(ctx context.Context, arg UpdateLibraryFolderParams) (LibraryFolder, error)
 	UpdateLibraryItem(ctx context.Context, arg UpdateLibraryItemParams) (LibraryItem, error)
 	UpdateLogPurgeRule(ctx context.Context, arg UpdateLogPurgeRuleParams) (LogPurgeRule, error)
@@ -2087,6 +2117,8 @@ type Querier interface {
 	UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error)
 	// Full replacement of the editable fields (read-modify-write in the use case).
 	UpdateProductCategory(ctx context.Context, arg UpdateProductCategoryParams) (ProductCategory, error)
+	UpdateQuoteDeliveryStatus(ctx context.Context, arg UpdateQuoteDeliveryStatusParams) (QuoteDelivery, error)
+	UpdateQuoteTotals(ctx context.Context, arg UpdateQuoteTotalsParams) (Quote, error)
 	UpdateRole(ctx context.Context, arg UpdateRoleParams) (Role, error)
 	UpdateRoom(ctx context.Context, arg UpdateRoomParams) (Room, error)
 	// Edits the form fields (wizard steps 1, 2 and 4). The caller has locked
