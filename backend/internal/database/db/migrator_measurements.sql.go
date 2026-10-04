@@ -219,7 +219,9 @@ SET organization_id = $1::bigint,
     status          = $6::varchar,
     raw             = $7::jsonb,
     device_serial   = $8::varchar,
-    created_by      = $9::bigint
+    created_by      = $9::bigint,
+    -- TEC-294: a changed raw is normalized again (measurement-reparse).
+    parsed_at       = NULL
 WHERE id = $10::bigint AND source = 'legacy_import'
 `
 

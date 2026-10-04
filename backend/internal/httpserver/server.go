@@ -394,7 +394,12 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	authmodule.RegisterMobileRoutes(mux, mobileH,
 		tokens, loader, cfg.Mobile.MinAPIVersion, cfg.Mobile.MaxAPIVersion)
 	// TEC-233: minimal measurement storage (K28), 202 {uuid, status}.
-	measurementsH := measurementshandler.New(measurementsusecase.New(deps.Queries))
+	measurementsUC := measurementsusecase.New(deps.Queries)
+	// TEC-294: uploads are normalized (NexPTG parser) in their insert transaction.
+	if deps.DB != nil {
+		measurementsUC.WithNormalizer(deps.DB, log)
+	}
+	measurementsH := measurementshandler.New(measurementsUC)
 	measurementsmodule.RegisterMobileRoutes(mux, measurementsH,
 		tokens, loader, deps.Queries, cfg.Mobile.MinAPIVersion, cfg.Mobile.MaxAPIVersion)
 	var featureCache features.Cache = features.NoCache{}

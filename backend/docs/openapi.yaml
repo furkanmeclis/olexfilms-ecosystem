@@ -12224,6 +12224,52 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  # --- TEC-294: VIN completion of a vin_pending measurement -------------
+  /v1/measurements/{uuid}/vin:
+    patch:
+      tags: [Measurements]
+      operationId: completeMeasurementVIN
+      summary: Complete the VIN of a vin_pending measurement
+      description: |
+        Fills the VIN of a `vin_pending` ("tamamlanacak") measurement and
+        makes it `accepted`; a `vin_pending` measurement cannot be linked to
+        a service until then. The VIN is upper-cased and must be 17 letters
+        or digits without I, O or Q (else 400 `VALIDATION_ERROR`). Sending
+        the VIN already on an accepted measurement answers it unchanged;
+        another VIN answers 422 `MEASUREMENT_VIN_ALREADY_SET`. Requires the
+        measurements module and `measurements.link` (managed scope: the
+        active organization); a measurement outside it answers 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MeasurementVINRequest"
+      responses:
+        "200":
+          description: Measurement detail with the VIN
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMeasurementDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
   /v1/mobile/measurements:
     post:
       tags: [Mobile]
@@ -24087,6 +24133,17 @@ components:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/MeasurementDetail" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    # TEC-294: VIN completion.
+    MeasurementVINRequest:
+      type: object
+      required: [vin]
+      properties:
+        vin:
+          type: string
+          minLength: 17
+          maxLength: 17
+          description: 17 letters or digits without I, O or Q (upper-cased)
 
     # K28 / TEC-233: minimal F2 storage; F3-02 (TEC-113) makes vin
     # mandatory and reads the parts.

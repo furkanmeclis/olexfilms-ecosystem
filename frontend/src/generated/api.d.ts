@@ -6496,6 +6496,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/measurements/{uuid}/vin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Complete the VIN of a vin_pending measurement
+         * @description Fills the VIN of a `vin_pending` ("tamamlanacak") measurement and
+         *     makes it `accepted`; a `vin_pending` measurement cannot be linked to
+         *     a service until then. The VIN is upper-cased and must be 17 letters
+         *     or digits without I, O or Q (else 400 `VALIDATION_ERROR`). Sending
+         *     the VIN already on an accepted measurement answers it unchanged;
+         *     another VIN answers 422 `MEASUREMENT_VIN_ALREADY_SET`. Requires the
+         *     measurements module and `measurements.link` (managed scope: the
+         *     active organization); a measurement outside it answers 404.
+         */
+        patch: operations["completeMeasurementVIN"];
+        trace?: never;
+    };
     "/v1/mobile/measurements": {
         parameters: {
             query?: never;
@@ -13772,6 +13799,10 @@ export interface components {
             success: true;
             data: components["schemas"]["MeasurementDetail"];
             meta: components["schemas"]["ResponseMeta"];
+        };
+        MeasurementVINRequest: {
+            /** @description 17 letters or digits without I, O or Q (upper-cased) */
+            vin: string;
         };
         MobileMeasurementRequest: {
             /** @description Idempotency key in the body (alternative to the Idempotency-Key header) */
@@ -28040,6 +28071,37 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    completeMeasurementVIN: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeasurementVINRequest"];
+            };
+        };
+        responses: {
+            /** @description Measurement detail with the VIN */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeMeasurementDetail"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     postMobileMeasurement: {

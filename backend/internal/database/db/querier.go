@@ -91,6 +91,8 @@ type Querier interface {
 	CloseMergedUser(ctx context.Context, arg CloseMergedUserParams) (User, error)
 	// Releases the unit lock when the transfer is completed or cancelled.
 	CloseWarehouseTransferLines(ctx context.Context, transferID int64) error
+	// Completes the VIN of a vin_pending result (status accepted).
+	CompleteMeasurementResultVIN(ctx context.Context, arg CompleteMeasurementResultVINParams) (int64, error)
 	CompleteService(ctx context.Context, arg CompleteServiceParams) (Service, error)
 	CompleteStockCount(ctx context.Context, arg CompleteStockCountParams) (StockCount, error)
 	CompleteStockTransferRequest(ctx context.Context, id int64) (StockTransferRequest, error)
@@ -973,6 +975,11 @@ type Querier interface {
 	InsertIntegrationExternalParty(ctx context.Context, arg InsertIntegrationExternalPartyParams) (IntegrationExternalParty, error)
 	InsertKVKKNotice(ctx context.Context, arg InsertKVKKNoticeParams) (KvkkNotice, error)
 	InsertLegalText(ctx context.Context, arg InsertLegalTextParams) (LegalText, error)
+	// TEC-294 (F3-02b): NexPTG normalization, device auto-registration, VIN
+	// completion and the reparse backfill.
+	// A device first seen in an upload is registered to the organization; a
+	// concurrent upload of the same serial wins the insert (no row then).
+	InsertMeasurementDeviceIfAbsent(ctx context.Context, arg InsertMeasurementDeviceIfAbsentParams) (MeasurementDevice, error)
 	// InsertMeasurementResult skips the insert when the idempotency key or the
 	// client_measurement_id was already used in the organization (no row then).
 	InsertMeasurementResult(ctx context.Context, arg InsertMeasurementResultParams) (MeasurementResult, error)
@@ -1563,6 +1570,8 @@ type Querier interface {
 	ListUnitsByBatch(ctx context.Context, batchID pgtype.Int8) ([]Unit, error)
 	ListUnitsByBrandBarcodes(ctx context.Context, arg ListUnitsByBrandBarcodesParams) ([]Unit, error)
 	ListUnitsByIDs(ctx context.Context, ids []int64) ([]Unit, error)
+	// The next page of results still waiting for normalization (keyset by id).
+	ListUnparsedMeasurementResultIDs(ctx context.Context, arg ListUnparsedMeasurementResultIDsParams) ([]int64, error)
 	ListUnprocessedServiceReviews(ctx context.Context, pageLimit int32) ([]ServiceReview, error)
 	ListUserIDsByRoleSlug(ctx context.Context, slug string) ([]int64, error)
 	ListUserRoleSlugs(ctx context.Context, userID int64) ([]string, error)
@@ -1718,6 +1727,9 @@ type Querier interface {
 	LockUnitCurrentState(ctx context.Context, unitID int64) (UnitCurrentState, error)
 	// Same first lock as ledger.Post (the unit row), in id order.
 	LockUnitsByIDs(ctx context.Context, ids []int64) ([]int64, error)
+	// Locks one unparsed result for normalization; no row when another run
+	// normalized it meanwhile.
+	LockUnparsedMeasurementResult(ctx context.Context, id int64) (MeasurementResult, error)
 	// TEC-161 (F1-08c): KVKK/GDPR anonymization and personal data export
 	// (K19, TEC-100 decision 2). Nothing here deletes a row: users, vehicles,
 	// services and warranties stay; only personal fields are overwritten.
