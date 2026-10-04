@@ -123,6 +123,18 @@ RETURNING *;
 -- name: GetContractInstanceByUUID :one
 SELECT * FROM contract_instances WHERE uuid = sqlc.arg(uuid);
 
+-- name: GetContractInstanceByUUIDScoped :one
+SELECT * FROM contract_instances
+WHERE uuid = sqlc.arg(uuid)
+  AND (
+    sqlc.narg(brand_id)::bigint IS NULL
+    OR brand_id = sqlc.narg(brand_id)::bigint
+  )
+  AND (
+    sqlc.arg(org_ids)::bigint[] IS NULL
+    OR organization_id = ANY(sqlc.arg(org_ids)::bigint[])
+  );
+
 -- name: GetContractInstanceByID :one
 SELECT * FROM contract_instances WHERE id = sqlc.arg(id);
 
@@ -202,6 +214,60 @@ UPDATE services
 SET contract_id = sqlc.narg(contract_id)
 WHERE id = sqlc.arg(service_id);
 
+-- name: GetServiceForContractByUUID :one
+SELECT
+    s.*,
+    cu.name AS customer_name,
+    cu.surname AS customer_surname,
+    cu.email AS customer_email,
+    cu.phone_e164 AS customer_phone,
+    creator.name AS staff_name,
+    creator.surname AS staff_surname,
+    o.name AS organization_name,
+    o.phone AS organization_phone,
+    o.email AS organization_email,
+    o.address AS organization_address,
+    cb.name AS car_brand_name,
+    cm.name AS car_model_name
+FROM services s
+JOIN users cu ON cu.id = s.customer_user_id AND cu.deleted_at IS NULL
+LEFT JOIN users creator ON creator.id = s.created_by_user_id AND creator.deleted_at IS NULL
+JOIN organizations o ON o.id = s.organization_id AND o.deleted_at IS NULL
+LEFT JOIN car_brands cb ON cb.id = s.car_brand_id
+LEFT JOIN car_models cm ON cm.id = s.car_model_id
+WHERE s.uuid = sqlc.arg(uuid)
+  AND (
+    sqlc.narg(brand_id)::bigint IS NULL
+    OR s.brand_id = sqlc.narg(brand_id)::bigint
+  )
+  AND (
+    sqlc.arg(org_ids)::bigint[] IS NULL
+    OR s.organization_id = ANY(sqlc.arg(org_ids)::bigint[])
+  );
+
+-- name: GetServiceForContractByID :one
+SELECT
+    s.*,
+    cu.name AS customer_name,
+    cu.surname AS customer_surname,
+    cu.email AS customer_email,
+    cu.phone_e164 AS customer_phone,
+    creator.name AS staff_name,
+    creator.surname AS staff_surname,
+    o.name AS organization_name,
+    o.phone AS organization_phone,
+    o.email AS organization_email,
+    o.address AS organization_address,
+    cb.name AS car_brand_name,
+    cm.name AS car_model_name
+FROM services s
+JOIN users cu ON cu.id = s.customer_user_id AND cu.deleted_at IS NULL
+LEFT JOIN users creator ON creator.id = s.created_by_user_id AND creator.deleted_at IS NULL
+JOIN organizations o ON o.id = s.organization_id AND o.deleted_at IS NULL
+LEFT JOIN car_brands cb ON cb.id = s.car_brand_id
+LEFT JOIN car_models cm ON cm.id = s.car_model_id
+WHERE s.id = sqlc.arg(id);
+
 -- ---------------------------------------------------------------------------
 -- Signers.
 
@@ -249,6 +315,15 @@ SET otp_code_id = sqlc.arg(otp_code_id),
     otp_verified_at = NOW()
 WHERE id = sqlc.arg(id)
 RETURNING *;
+
+-- name: SetContractSignerOTPByUUID :one
+UPDATE contract_signers
+SET otp_code_id = o.id,
+    otp_verified_at = NOW()
+FROM otp_codes o
+WHERE contract_signers.id = sqlc.arg(signer_id)
+  AND o.uuid = sqlc.arg(otp_uuid)
+RETURNING contract_signers.*;
 
 -- name: MarkContractSignerSigned :one
 UPDATE contract_signers
