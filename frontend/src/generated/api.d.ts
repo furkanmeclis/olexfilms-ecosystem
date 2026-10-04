@@ -7674,6 +7674,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/services/{uuid}/cancel-completed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel a completed service
+         * @description TEC-356 / TEC-230 decision. Needs services.cancel_completed reaching the service; dealer_staff has no grant and receives 403. The service must be completed; already cancelled services answer 409 SERVICE_INVALID_TRANSITION and non-completed services answer 409 SERVICE_NOT_EDITABLE. reason is mandatory. In one transaction the warranties of the service are voided with reason service_cancelled, whole consumed units are returned to the service organization's stock with ledger return movements, open accounting rows sourced by the service are reversed with append-only entries, the service moves to cancelled, service.cancelled and warranty.voided outbox events are written and an activity row is recorded. Services containing a partial_consumption item answer 422 SERVICE_CONSUMPTION_NOT_REVERSIBLE because the return helper can safely reverse only whole consumptions.
+         */
+        post: operations["cancelCompletedService"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/services/{uuid}/images": {
         parameters: {
             query?: never;
@@ -7734,7 +7757,7 @@ export interface paths {
         put?: never;
         /**
          * Correct the consumption of an item of a completed service
-         * @description TEC-230 (conservative default; a completed service still cannot be cancelled). The unit consumed by mistake goes back from the service into the service organization's stock with a ledger return movement (a roll with the meters the consumption took, fixed pieces credited back); with replacement_barcode the correct unit of the same product is consumed instead (same kind and amount, held by the service organization, not in an open service). Idempotency keys service:service_item_correction:{item id}:{return or consumption}:{barcode}. Center only (services.cancel on the service, else 403), within 24 hours of the completion (422 SERVICE_CORRECTION_WINDOW_CLOSED), once per item (409 SERVICE_ITEM_ALREADY_CORRECTED), whole consumptions only (a partial cut answers 422 SERVICE_CONSUMPTION_NOT_REVERSIBLE). An item with an active or expired warranty answers 422 SERVICE_ITEM_WARRANTY_ACTIVE (void the warranty first); the replacement gets no warranty. A service that is not completed answers 409 SERVICE_NOT_EDITABLE; a replacement that is not held answers 409 SERVICE_UNIT_NOT_AVAILABLE, one in an open service 409 SERVICE_UNIT_IN_USE. Accounting is not touched. Writes a service.updated outbox event (change consumption_corrected) and the stock.* events of the movements.
+         * @description TEC-230. The unit consumed by mistake goes back from the service into the service organization's stock with a ledger return movement (a roll with the meters the consumption took, fixed pieces credited back); with replacement_barcode the correct unit of the same product is consumed instead (same kind and amount, held by the service organization, not in an open service). Idempotency keys service:service_item_correction:{item id}:{return or consumption}:{barcode}. Center only (services.cancel on the service, else 403), within 24 hours of the completion (422 SERVICE_CORRECTION_WINDOW_CLOSED), once per item (409 SERVICE_ITEM_ALREADY_CORRECTED), whole consumptions only (a partial cut answers 422 SERVICE_CONSUMPTION_NOT_REVERSIBLE). An item with an active or expired warranty answers 422 SERVICE_ITEM_WARRANTY_ACTIVE (void the warranty first); the replacement gets no warranty. A service that is not completed answers 409 SERVICE_NOT_EDITABLE; a replacement that is not held answers 409 SERVICE_UNIT_NOT_AVAILABLE, one in an open service 409 SERVICE_UNIT_IN_USE. Accounting is not touched. Writes a service.updated outbox event (change consumption_corrected) and the stock.* events of the movements.
          */
         post: operations["correctServiceConsumption"];
         delete?: never;
@@ -13906,6 +13929,9 @@ export interface components {
             status: components["schemas"]["ServiceStatus"];
             /** @description Kept in the status log; the cancel reason for cancelled */
             note?: string;
+        };
+        ServiceCancelCompletedInput: {
+            reason: string;
         };
         EnvelopeService: {
             /** @enum {boolean} */
@@ -29059,6 +29085,39 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    cancelCompletedService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceCancelCompletedInput"];
+            };
+        };
+        responses: {
+            /** @description Cancelled service */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeService"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     uploadServiceImage: {

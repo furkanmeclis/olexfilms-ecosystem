@@ -1840,6 +1840,74 @@ func (q *Queries) SetVehicleTransferVerified(ctx context.Context, arg SetVehicle
 	return i, err
 }
 
+const voidWarrantiesByService = `-- name: VoidWarrantiesByService :many
+UPDATE warranties
+SET status = 'void',
+    voided_at = NOW(),
+    voided_by_user_id = $1,
+    void_reason = $2
+WHERE service_id = $3
+  AND brand_id = $4
+  AND status IN ('active', 'expired')
+RETURNING id, uuid, public_code, organization_id, brand_id, service_id, service_item_id, product_id, unit_id, item_kind, vehicle_id, holder_user_id, start_at, end_at, status, expired_at, voided_at, voided_by_user_id, void_reason, notified_30_at, notified_7_at, created_at, updated_at
+`
+
+type VoidWarrantiesByServiceParams struct {
+	ActorUserID pgtype.Int8 `json:"actor_user_id"`
+	VoidReason  pgtype.Text `json:"void_reason"`
+	ServiceID   int64       `json:"service_id"`
+	BrandID     int64       `json:"brand_id"`
+}
+
+func (q *Queries) VoidWarrantiesByService(ctx context.Context, arg VoidWarrantiesByServiceParams) ([]Warranty, error) {
+	rows, err := q.db.Query(ctx, voidWarrantiesByService,
+		arg.ActorUserID,
+		arg.VoidReason,
+		arg.ServiceID,
+		arg.BrandID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Warranty{}
+	for rows.Next() {
+		var i Warranty
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.PublicCode,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.ServiceID,
+			&i.ServiceItemID,
+			&i.ProductID,
+			&i.UnitID,
+			&i.ItemKind,
+			&i.VehicleID,
+			&i.HolderUserID,
+			&i.StartAt,
+			&i.EndAt,
+			&i.Status,
+			&i.ExpiredAt,
+			&i.VoidedAt,
+			&i.VoidedByUserID,
+			&i.VoidReason,
+			&i.Notified30At,
+			&i.Notified7At,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const voidWarranty = `-- name: VoidWarranty :one
 UPDATE warranties
 SET status = 'void',

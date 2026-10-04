@@ -464,7 +464,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		WithAccounting(accountingPoster)
 	transfersmodule.RegisterRoutes(mux, transfershandler.New(transfersSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-179: services (draft, items from stock, stock-free transitions, images).
-	servicesSvc := servicesusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries))
+	servicesSvc := servicesusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)).
+		WithCompletedCancelAccounting(accountingPoster)
 	if listFinder != nil {
 		servicesSvc.SetFinder(listFinder) // TEC-209
 	}

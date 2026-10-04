@@ -44,6 +44,7 @@ func RegisterRoutes(
 	}
 	write := middleware.RequirePermission(rbac.PermServicesWrite)
 	act := middleware.RequireAnyPermission(rbac.PermServicesWrite, rbac.PermServicesCancel, rbac.PermServicesComplete)
+	cancelCompleted := middleware.RequirePermission(rbac.PermServicesCancelCompleted)
 	create := middleware.Chain(http.HandlerFunc(h.Create), authn, org, module,
 		middleware.RequireScope(q, rbac.PermServicesWrite))
 
@@ -55,6 +56,7 @@ func RegisterRoutes(
 	mux.Handle("DELETE /v1/services/{uuid}/items/{item}", route(h.RemoveItem, write))
 	mux.Handle("GET /v1/services/{uuid}/stock-units", route(h.StockUnits, write))
 	mux.Handle("POST /v1/services/{uuid}/transitions", route(h.Transition, act))
+	mux.Handle("POST /v1/services/{uuid}/cancel-completed", route(h.CancelCompleted, cancelCompleted))
 	mux.Handle("POST /v1/services/{uuid}/images", route(h.UploadImage, write))
 	mux.Handle("GET /v1/services/{uuid}/images/{image}", route(h.DownloadImage))
 	mux.Handle("DELETE /v1/services/{uuid}/images/{image}", route(h.DeleteImage, write))
