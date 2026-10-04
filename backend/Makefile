@@ -72,6 +72,12 @@ roles-sync:
 normalize-org-phones:
 	@$(load_env) go run ./cmd/normalize-org-phones $(ARGS)
 
+# TEC-294: normalize measurement_results rows with parsed_at NULL (NexPTG
+# parser backfill, migrator rows included). Idempotent.
+.PHONY: measurement-reparse
+measurement-reparse:
+	@$(load_env) go run ./cmd/measurement-reparse $(ARGS)
+
 build:
 	go build -o bin/$(APP_NAME) ./cmd/server
 	go build -o bin/$(APP_NAME)-worker ./cmd/worker
