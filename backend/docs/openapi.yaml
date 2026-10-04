@@ -16262,6 +16262,43 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/UnprocessableEntity" }
 
+  /v1/leads/{uuid}/convert:
+    post:
+      tags: [Leads]
+      operationId: convertLead
+      summary: Convert a lead into a draft service or organization (lead becomes won)
+      description: >-
+        customer creates a draft service; dealer_candidate creates a read-only
+        dealer organization under a distributor; distributor_candidate creates
+        a distributor organization (center super_admin only). The created
+        records, the won status/won_ref and the converted event commit in one
+        transaction. 409 LEAD_ALREADY_CONVERTED for a converted lead;
+        409 LEAD_USER_CONFLICT (error data existing_user, masked) when the
+        candidate phone/e-mail already belongs to a user.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LeadConvertInput" }
+      responses:
+        "200":
+          description: Lead converted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeLeadConvertResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
   /v1/leads/{uuid}/notes:
     post:
       tags: [Leads]
@@ -26523,6 +26560,44 @@ components:
         won_ref_type: { type: [string, "null"], enum: [service, appointment, organization, null] }
         won_ref_id: { type: [integer, "null"], format: int64 }
 
+    LeadConvertInput:
+      type: object
+      required: [kind]
+      additionalProperties: false
+      properties:
+        kind:
+          type: string
+          enum: [customer, dealer_candidate, distributor_candidate]
+        distributor_uuid:
+          type: [string, "null"]
+          format: uuid
+          description: Required when the center converts a dealer candidate.
+        currency:
+          type: string
+          description: Required for distributor_candidate; ISO 4217.
+        register_as_warehouse:
+          type: boolean
+          description: Distributor candidate only; opens the preset warehouse.
+
+    LeadExistingUser:
+      type: object
+      required: [uuid, name, surname]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        surname: { type: string }
+        email_masked: { type: string }
+        phone_masked: { type: string }
+
+    LeadConvertResult:
+      type: object
+      required: [lead]
+      properties:
+        lead: { $ref: "#/components/schemas/Lead" }
+        service_draft: { $ref: "#/components/schemas/Service" }
+        organization: { $ref: "#/components/schemas/Organization" }
+        existing_user: { $ref: "#/components/schemas/LeadExistingUser" }
+
     LeadNoteInput:
       type: object
       required: [body]
@@ -26574,6 +26649,14 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/Lead" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeLeadConvertResult:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/LeadConvertResult" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeLeadPage:
