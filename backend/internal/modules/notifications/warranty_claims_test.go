@@ -9,13 +9,13 @@ import (
 
 func TestWarrantyClaimDispatch(t *testing.T) {
 	base := map[string]any{
-		"brand_id": int64(2), "notify_user_ids": []any{float64(7), float64(0)},
+		"brand_id": int64(2), "customer_user_id": float64(9), "notify_user_ids": []any{float64(7), float64(0)},
 		"claim_uuid": "claim-1", "warranty_uuid": "warranty-1", "claim_no": "42",
 		"from": "center_review", "to": "approved", "organization_name": "Tech Oto",
 		"product_name": "PPF", "plate": "34 ABC 123",
 	}
 	in, ok := warrantyClaimDispatch(events.New(events.WarrantyClaimStatusChanged).WithPayload(base))
-	if !ok || in.EventCode != catalog.EventWarrantyClaimResult || len(in.UserIDs) != 1 || in.UserIDs[0] != 7 {
+	if !ok || in.EventCode != catalog.EventWarrantyClaimResult || len(in.UserIDs) != 1 || in.UserIDs[0] != 9 {
 		t.Fatalf("result dispatch = %+v, %v", in, ok)
 	}
 	if in.BrandID == nil || *in.BrandID != 2 || in.Vars["claim_no"] != "42" || in.Vars["to"] != "approved" {

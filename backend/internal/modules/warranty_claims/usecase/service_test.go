@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -35,5 +36,24 @@ func TestCheckCoverage(t *testing.T) {
 	}
 	if len(want) != 0 {
 		t.Fatalf("missing reasons: %v in %+v", want, expired)
+	}
+}
+
+func TestCanForwardDealerReviewToCenter(t *testing.T) {
+	ok, err := canForwardDealerReviewToCenter(false, true, pgtype.Text{String: "center", Valid: true})
+	if err != nil || !ok {
+		t.Fatalf("direct dealer -> center_review = %v, %v", ok, err)
+	}
+	ok, err = canForwardDealerReviewToCenter(false, true, pgtype.Text{String: "distributor", Valid: true})
+	if !errors.Is(err, ErrUnsupportedFlow) || ok {
+		t.Fatalf("dealer under distributor bypass = %v, %v", ok, err)
+	}
+	ok, err = canForwardDealerReviewToCenter(false, false, pgtype.Text{String: "center", Valid: true})
+	if !errors.Is(err, ErrForbidden) || ok {
+		t.Fatalf("missing permission = %v, %v", ok, err)
+	}
+	ok, err = canForwardDealerReviewToCenter(true, false, pgtype.Text{String: "distributor", Valid: true})
+	if err != nil || !ok {
+		t.Fatalf("distributor review = %v, %v", ok, err)
 	}
 }

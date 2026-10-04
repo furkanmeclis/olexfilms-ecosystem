@@ -221,10 +221,15 @@ func warrantyClaimDispatch(event events.Event) (notifmodel.DispatchInput, bool) 
 	if action == "opened" {
 		code = catalog.EventWarrantyClaimOpened
 	}
+	ids := userIDsFromPayload(event.Payload, "notify_user_ids")
 	if to == "approved" || to == "rejected" {
 		code = catalog.EventWarrantyClaimResult
+		if customerID, ok := int64FromPayload(event.Payload, "customer_user_id"); ok && customerID > 0 {
+			ids = []int64{customerID}
+		} else {
+			ids = nil
+		}
 	}
-	ids := userIDsFromPayload(event.Payload, "notify_user_ids")
 	if len(ids) == 0 {
 		return notifmodel.DispatchInput{}, false
 	}

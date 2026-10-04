@@ -196,12 +196,14 @@ SELECT c.id AS claim_id, c.uuid AS claim_uuid, c.organization_id, c.brand_id,
        w.status AS warranty_status, w.service_item_id,
        s.service_no, s.plate,
        p.name AS product_name,
-       o.name AS organization_name, o.parent_id AS organization_parent_id
+       o.name AS organization_name, o.parent_id AS organization_parent_id,
+       parent.type AS organization_parent_type
 FROM warranty_claims c
 JOIN warranties w ON w.id = c.warranty_id
 JOIN services s ON s.id = c.service_id
 JOIN products p ON p.id = w.product_id
 JOIN organizations o ON o.id = c.organization_id
+LEFT JOIN organizations parent ON parent.id = o.parent_id
 WHERE c.id = sqlc.arg(id) AND c.brand_id = sqlc.arg(brand_id);
 
 -- name: GetWarrantyClaimCoverageContext :one

@@ -364,7 +364,10 @@ func (s *Service) claim(ctx context.Context, c Caller, id uuid.UUID, write bool)
 func (s *Service) nextStatus(ctx context.Context, q *db.Queries, c Caller, claim db.WarrantyClaim, requested string) (string, error) {
 	switch requested {
 	case StatusDealerReview:
-		if claim.Status != StatusOpen || !has(c, rbac.PermWarrantyClaimsWrite) {
+		if !has(c, rbac.PermWarrantyClaimsWrite) {
+			return "", ErrForbidden
+		}
+		if claim.Status != StatusOpen {
 			return "", ErrUnsupportedFlow
 		}
 		n, err := q.CountWarrantyClaimPhotos(ctx, claim.ID)
@@ -376,21 +379,54 @@ func (s *Service) nextStatus(ctx context.Context, q *db.Queries, c Caller, claim
 		}
 		return StatusDealerReview, nil
 	case StatusCenterReview:
-		if claim.Status == StatusOpen && c.OrgType == "distributor" && has(c, rbac.PermWarrantyClaimsReview) {
+		if claim.Status == StatusOpen && c.OrgType == "distributor" {
+			if !has(c, rbac.PermWarrantyClaimsReview) {
+				return "", ErrForbidden
+			}
 			return StatusCenterReview, nil
 		}
-		if claim.Status == StatusDealerReview && has(c, rbac.PermWarrantyClaimsReview) {
-			return StatusCenterReview, nil
+		if claim.Status == StatusDealerReview {
+			nc, err := q.GetWarrantyClaimOpenContext(ctx, db.GetWarrantyClaimOpenContextParams{ID: claim.ID, BrandID: claim.BrandID})
+			if err != nil {
+				return "", err
+			}
+			ok, err := canForwardDealerReviewToCenter(
+				has(c, rbac.PermWarrantyClaimsReview),
+				has(c, rbac.PermWarrantyClaimsWrite),
+				nc.OrganizationParentType,
+			)
+			if err != nil {
+				return "", err
+			}
+			if ok {
+				return StatusCenterReview, nil
+			}
 		}
 		return "", ErrUnsupportedFlow
 	case StatusApproved, StatusRejected:
-		if claim.Status != StatusCenterReview || !has(c, rbac.PermWarrantyClaimsDecide) {
+		if !has(c, rbac.PermWarrantyClaimsDecide) {
+			return "", ErrForbidden
+		}
+		if claim.Status != StatusCenterReview {
 			return "", ErrUnsupportedFlow
 		}
 		return requested, nil
 	default:
 		return "", invalid("status", "unsupported status")
 	}
+}
+
+func canForwardDealerReviewToCenter(hasReview, hasWrite bool, parentType pgtype.Text) (bool, error) {
+	if hasReview {
+		return true, nil
+	}
+	if !hasWrite {
+		return false, ErrForbidden
+	}
+	if !parentType.Valid || parentType.String == "center" {
+		return true, nil
+	}
+	return false, ErrUnsupportedFlow
 }
 
 func has(c Caller, perm string) bool {

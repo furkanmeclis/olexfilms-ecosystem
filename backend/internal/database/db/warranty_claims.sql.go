@@ -561,12 +561,14 @@ SELECT c.id AS claim_id, c.uuid AS claim_uuid, c.organization_id, c.brand_id,
        w.status AS warranty_status, w.service_item_id,
        s.service_no, s.plate,
        p.name AS product_name,
-       o.name AS organization_name, o.parent_id AS organization_parent_id
+       o.name AS organization_name, o.parent_id AS organization_parent_id,
+       parent.type AS organization_parent_type
 FROM warranty_claims c
 JOIN warranties w ON w.id = c.warranty_id
 JOIN services s ON s.id = c.service_id
 JOIN products p ON p.id = w.product_id
 JOIN organizations o ON o.id = c.organization_id
+LEFT JOIN organizations parent ON parent.id = o.parent_id
 WHERE c.id = $1 AND c.brand_id = $2
 `
 
@@ -576,28 +578,29 @@ type GetWarrantyClaimOpenContextParams struct {
 }
 
 type GetWarrantyClaimOpenContextRow struct {
-	ClaimID              int64              `json:"claim_id"`
-	ClaimUuid            uuid.UUID          `json:"claim_uuid"`
-	OrganizationID       int64              `json:"organization_id"`
-	BrandID              int64              `json:"brand_id"`
-	ClaimNo              int64              `json:"claim_no"`
-	WarrantyID           int64              `json:"warranty_id"`
-	ServiceID            int64              `json:"service_id"`
-	VehicleID            int64              `json:"vehicle_id"`
-	CustomerUserID       int64              `json:"customer_user_id"`
-	Status               string             `json:"status"`
-	CreatedAt            pgtype.Timestamptz `json:"created_at"`
-	WarrantyUuid         uuid.UUID          `json:"warranty_uuid"`
-	PublicCode           string             `json:"public_code"`
-	StartAt              pgtype.Timestamptz `json:"start_at"`
-	EndAt                pgtype.Timestamptz `json:"end_at"`
-	WarrantyStatus       string             `json:"warranty_status"`
-	ServiceItemID        int64              `json:"service_item_id"`
-	ServiceNo            string             `json:"service_no"`
-	Plate                pgtype.Text        `json:"plate"`
-	ProductName          string             `json:"product_name"`
-	OrganizationName     string             `json:"organization_name"`
-	OrganizationParentID pgtype.Int8        `json:"organization_parent_id"`
+	ClaimID                int64              `json:"claim_id"`
+	ClaimUuid              uuid.UUID          `json:"claim_uuid"`
+	OrganizationID         int64              `json:"organization_id"`
+	BrandID                int64              `json:"brand_id"`
+	ClaimNo                int64              `json:"claim_no"`
+	WarrantyID             int64              `json:"warranty_id"`
+	ServiceID              int64              `json:"service_id"`
+	VehicleID              int64              `json:"vehicle_id"`
+	CustomerUserID         int64              `json:"customer_user_id"`
+	Status                 string             `json:"status"`
+	CreatedAt              pgtype.Timestamptz `json:"created_at"`
+	WarrantyUuid           uuid.UUID          `json:"warranty_uuid"`
+	PublicCode             string             `json:"public_code"`
+	StartAt                pgtype.Timestamptz `json:"start_at"`
+	EndAt                  pgtype.Timestamptz `json:"end_at"`
+	WarrantyStatus         string             `json:"warranty_status"`
+	ServiceItemID          int64              `json:"service_item_id"`
+	ServiceNo              string             `json:"service_no"`
+	Plate                  pgtype.Text        `json:"plate"`
+	ProductName            string             `json:"product_name"`
+	OrganizationName       string             `json:"organization_name"`
+	OrganizationParentID   pgtype.Int8        `json:"organization_parent_id"`
+	OrganizationParentType pgtype.Text        `json:"organization_parent_type"`
 }
 
 func (q *Queries) GetWarrantyClaimOpenContext(ctx context.Context, arg GetWarrantyClaimOpenContextParams) (GetWarrantyClaimOpenContextRow, error) {
@@ -626,6 +629,7 @@ func (q *Queries) GetWarrantyClaimOpenContext(ctx context.Context, arg GetWarran
 		&i.ProductName,
 		&i.OrganizationName,
 		&i.OrganizationParentID,
+		&i.OrganizationParentType,
 	)
 	return i, err
 }
