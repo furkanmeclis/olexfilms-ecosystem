@@ -17,9 +17,11 @@ import (
 	bulkusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/bulk/usecase"
 	catalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/catalog/usecase"
 	customersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/customers/usecase"
+	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
 	docusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/usecase"
 	exportusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/usecase"
 	importusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/imports/usecase"
+	leadsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/leads/usecase"
 	logsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/logs/usecase"
 	measurementsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/measurements"
 	notifmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications"
@@ -187,6 +189,12 @@ func main() {
 	exportSvc.SetDocumentPDF(pdfClient)
 	// Business modules (F1) register their SourceLoader per kind on docSvc.
 	docSvc := docusecase.New(pool, queries, store, pdfClient, nil, pdfrender.ParseFontMode(cfg.Gotenberg.Fonts), log)
+	// TEC-314: quote PDF source (worker-docs renders) and daily quote expiry.
+	leadsSvc := leadsusecase.New(pool, queries, nil)
+	if err := docSvc.RegisterLoader(docmodel.KindQuote, leadsSvc); err != nil {
+		log.Error("documents_loader_failed", "kind", docmodel.KindQuote, "error", err)
+		os.Exit(1)
+	}
 	importSvc := importusecase.New(queries, store, ioReg, nil, notifSvc, activityRec, log)
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(queries),
@@ -244,6 +252,8 @@ func main() {
 		// TEC-156: nightly projection drift scan; report only, no repair.
 		WithInventoryRebuild(stockrebuild.New(pool, queries).ScanTask(log)).
 		// TEC-221: hourly center task due date reminders.
+		// TEC-314: daily quote expiry (valid_until passed).
+		WithQuoteExpire(leadsSvc.ExpireDueQuotesTask).
 		WithTasksDueScan(tasksusecase.NewCron(pool, queries, outbox.NewStore(pool, queries)).DueScanTask).
 		// TEC-207: hourly end-of-day warehouse reports (previous local day).
 		WithWarehouseEOD(eodSvc.DailyTask(log)).
