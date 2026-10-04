@@ -50,6 +50,9 @@ type Service struct {
 	out    outbox.Enqueuer
 	// TEC-207: opens the register_as_warehouse preset's warehouse (nil: none).
 	warehouseHook WarehousePresetHook
+	// TEC-316: set by WithTx; RegisterOrganization then runs in a savepoint
+	// of the caller's transaction.
+	tx pgx.Tx
 }
 
 // New creates an organizations service.
@@ -368,7 +371,7 @@ func (s *Service) RegisterOrganization(ctx context.Context, in RegisterInput, ow
 	}
 	now := time.Now().UTC()
 	trialEnd := now.Add(trialDays * 24 * time.Hour)
-	tx, err := s.pool.Begin(ctx)
+	tx, err := s.begin(ctx)
 	if err != nil {
 		return RegisterResult{}, err
 	}

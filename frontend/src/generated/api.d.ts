@@ -8318,8 +8318,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Convert a won lead into a draft service or organization
-         * @description customer creates a draft service; dealer_candidate creates a read-only dealer organization under a distributor; distributor_candidate creates a distributor organization (center super_admin only).
+         * Convert a lead into a draft service or organization (lead becomes won)
+         * @description customer creates a draft service; dealer_candidate creates a read-only dealer organization under a distributor; distributor_candidate creates a distributor organization (center super_admin only). The created records, the won status/won_ref and the converted event commit in one transaction. 409 LEAD_ALREADY_CONVERTED for a converted lead; 409 LEAD_USER_CONFLICT (error data existing_user, masked) when the candidate phone/e-mail already belongs to a user.
          */
         post: operations["convertLead"];
         delete?: never;

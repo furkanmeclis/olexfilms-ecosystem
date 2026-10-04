@@ -562,6 +562,53 @@ func (q *Queries) GetLeadByID(ctx context.Context, arg GetLeadByIDParams) (Lead,
 	return i, err
 }
 
+const getLeadByIDForUpdate = `-- name: GetLeadByIDForUpdate :one
+SELECT id, uuid, organization_id, brand_id, target_type, customer_user_id, vehicle_id, candidate_company_name, candidate_contact_name, candidate_phone_e164, candidate_email, country_id, province_id, district_id, source, temperature, status, lost_reason, follow_up_date, assignee_user_id, notes, won_ref_type, won_ref_id, created_by_user_id, created_at, updated_at, deleted_at FROM leads
+WHERE id = $1 AND brand_id = $2 AND deleted_at IS NULL
+FOR UPDATE
+`
+
+type GetLeadByIDForUpdateParams struct {
+	ID      int64 `json:"id"`
+	BrandID int64 `json:"brand_id"`
+}
+
+// TEC-316: lead conversion serializes on the lead row.
+func (q *Queries) GetLeadByIDForUpdate(ctx context.Context, arg GetLeadByIDForUpdateParams) (Lead, error) {
+	row := q.db.QueryRow(ctx, getLeadByIDForUpdate, arg.ID, arg.BrandID)
+	var i Lead
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.TargetType,
+		&i.CustomerUserID,
+		&i.VehicleID,
+		&i.CandidateCompanyName,
+		&i.CandidateContactName,
+		&i.CandidatePhoneE164,
+		&i.CandidateEmail,
+		&i.CountryID,
+		&i.ProvinceID,
+		&i.DistrictID,
+		&i.Source,
+		&i.Temperature,
+		&i.Status,
+		&i.LostReason,
+		&i.FollowUpDate,
+		&i.AssigneeUserID,
+		&i.Notes,
+		&i.WonRefType,
+		&i.WonRefID,
+		&i.CreatedByUserID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const getLeadByUUID = `-- name: GetLeadByUUID :one
 SELECT id, uuid, organization_id, brand_id, target_type, customer_user_id, vehicle_id, candidate_company_name, candidate_contact_name, candidate_phone_e164, candidate_email, country_id, province_id, district_id, source, temperature, status, lost_reason, follow_up_date, assignee_user_id, notes, won_ref_type, won_ref_id, created_by_user_id, created_at, updated_at, deleted_at FROM leads
 WHERE uuid = $1 AND brand_id = $2 AND deleted_at IS NULL

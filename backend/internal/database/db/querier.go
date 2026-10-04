@@ -650,6 +650,8 @@ type Querier interface {
 	GetLatestLegalText(ctx context.Context, arg GetLatestLegalTextParams) (LegalText, error)
 	GetLatestPhoneOTP(ctx context.Context, arg GetLatestPhoneOTPParams) (OtpCode, error)
 	GetLeadByID(ctx context.Context, arg GetLeadByIDParams) (Lead, error)
+	// TEC-316: lead conversion serializes on the lead row.
+	GetLeadByIDForUpdate(ctx context.Context, arg GetLeadByIDForUpdateParams) (Lead, error)
 	GetLeadByUUID(ctx context.Context, arg GetLeadByUUIDParams) (Lead, error)
 	GetLeadForIndex(ctx context.Context, argUuid uuid.UUID) (Lead, error)
 	GetLibraryFolderByUUID(ctx context.Context, argUuid uuid.UUID) (LibraryFolder, error)

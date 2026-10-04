@@ -29,6 +29,12 @@ WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id) AND deleted_at IS 
 SELECT * FROM leads
 WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id) AND deleted_at IS NULL;
 
+-- name: GetLeadByIDForUpdate :one
+-- TEC-316: lead conversion serializes on the lead row.
+SELECT * FROM leads
+WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id) AND deleted_at IS NULL
+FOR UPDATE;
+
 -- name: ListLeadsByOrganizations :many
 SELECT * FROM leads
 WHERE organization_id = ANY(sqlc.arg(organization_ids)::bigint[])

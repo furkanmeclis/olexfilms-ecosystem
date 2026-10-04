@@ -82,7 +82,7 @@ func newFixture(t *testing.T) *fixture {
 	f.other = f.org("dealer-b", "dealer", f.center)
 	f.user = f.userRow("lead-user")
 	f.svc = New(tx, q, nil)
-	f.svc.SetConverters(customeruc.New(tx, q, nil, nil), serviceuc.New(tx, q, outbox.NewMemory()), &orgRegistrarFake{f: f})
+	f.svc.SetConverters(customeruc.New(tx, q, nil, nil), serviceuc.New(tx, q, outbox.NewMemory()), orguc.New(nil, q))
 	f.svc.SetClock(func() time.Time { return time.Date(2026, 10, 4, 12, 0, 0, 0, time.UTC) })
 	return f
 }
@@ -128,42 +128,6 @@ func (f *fixture) caller(org db.Organization, scope rbac.Scope) Caller {
 		Org:       orgctx.Scope{InternalID: org.ID, UUID: org.Uuid, OrgType: org.Type, BrandID: org.BrandID},
 		Filter:    scopefilter.Filter{Permission: rbac.PermLeadsRead, Scope: scope, UserID: f.user.ID, OrgID: org.ID, OrgIDs: orgIDs, BrandID: org.BrandID},
 	}
-}
-
-type orgRegistrarFake struct{ f *fixture }
-
-func (r *orgRegistrarFake) RegisterOrganization(ctx context.Context, in orguc.RegisterInput, ownerUserID int64) (orguc.RegisterResult, error) {
-	parent, err := r.f.q.GetOrganizationByUUID(ctx, *in.ParentUUID)
-	if err != nil {
-		return orguc.RegisterResult{}, err
-	}
-	status := in.InitialStatus
-	if status == "" {
-		status = "active"
-	}
-	slug := fmt.Sprintf("tec316-%d", time.Now().UnixNano())
-	org, err := r.f.q.CreateOrganization(ctx, db.CreateOrganizationParams{
-		Slug: slug, Name: in.OrganizationName, Status: status, Type: in.Type,
-		ParentID: pgtype.Int8{Int64: parent.ID, Valid: true}, BrandID: parent.BrandID,
-		Currency: in.Currency, Locale: parent.Locale, Timezone: parent.Timezone,
-		Phone: in.Phone, Settings: []byte(`{}`),
-		AccessStartsAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
-	})
-	if err != nil {
-		return orguc.RegisterResult{}, err
-	}
-	if _, err := r.f.q.CreateOrganizationMember(ctx, db.CreateOrganizationMemberParams{
-		OrganizationID: org.ID, UserID: ownerUserID, Role: "owner",
-	}); err != nil {
-		return orguc.RegisterResult{}, err
-	}
-	return orguc.RegisterResult{Organization: orguc.Organization{
-		UUID: org.Uuid, Slug: org.Slug, Name: org.Name, Status: org.Status, Type: org.Type,
-		Currency: org.Currency, Locale: org.Locale, Timezone: org.Timezone,
-		Brand:     orguc.BrandRef{Slug: "olex"},
-		Parent:    &orguc.ParentRef{UUID: parent.Uuid, Slug: parent.Slug, Name: parent.Name},
-		CreatedAt: org.CreatedAt.Time, UpdatedAt: org.UpdatedAt.Time,
-	}}, nil
 }
 
 func (f *fixture) lead(org db.Organization, status string, follow *time.Time) db.Lead {
@@ -407,3 +371,145 @@ func (f *fixture) vehicle(u db.User, org db.Organization) db.Vehicle {
 }
 
 func strp(v string) *string { return &v }
+
+func uniquePhone(prefix string) string {
+	return fmt.Sprintf("+90%s%07d", prefix, time.Now().UnixNano()%10000000)
+}
+
+func (f *fixture) candidateLead(c Caller, target, ph string) Lead {
+	f.t.Helper()
+	lead, err := f.svc.Create(f.ctx, c, CreateInput{
+		TargetType: target, Source: "website", Temperature: "hot",
+		CandidateCompanyName: strp(fmt.Sprintf("Lead Org %d", time.Now().UnixNano())), CandidateContactName: strp("Ayse Owner"),
+		CandidatePhoneE164: &ph,
+	})
+	if err != nil {
+		f.t.Fatalf("create lead: %v", err)
+	}
+	return lead
+}
+
+func (f *fixture) count(sql string, args ...any) int {
+	f.t.Helper()
+	var n int
+	if err := f.tx.QueryRow(f.ctx, sql, args...).Scan(&n); err != nil {
+		f.t.Fatalf("count: %v", err)
+	}
+	return n
+}
+
+func TestConvertDealerCandidateByDealerForbidden(t *testing.T) {
+	f := newFixture(t)
+	c := f.caller(f.dealer, rbac.ScopeManaged)
+	ph := uniquePhone("557")
+	lead := f.candidateLead(c, "dealer_candidate", ph)
+	if _, err := f.svc.Convert(f.ctx, c, lead.UUID, ConvertInput{Kind: ConvertKindDealerCandidate}); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("convert err = %v, want forbidden", err)
+	}
+	if n := f.count(`SELECT count(*) FROM users WHERE phone_e164 = $1`, ph); n != 0 {
+		t.Fatalf("users created = %d, want 0", n)
+	}
+}
+
+func TestConvertCenterDealerCandidateRequiresDistributor(t *testing.T) {
+	f := newFixture(t)
+	c := f.caller(f.center, rbac.ScopeBrand)
+	ph := uniquePhone("558")
+	lead := f.candidateLead(c, "dealer_candidate", ph)
+	var ve *ValidationError
+	if _, err := f.svc.Convert(f.ctx, c, lead.UUID, ConvertInput{Kind: ConvertKindDealerCandidate}); !errors.As(err, &ve) || ve.Field != "distributor_uuid" {
+		t.Fatalf("convert without distributor err = %v, want distributor_uuid validation", err)
+	}
+	// A dealer is not a valid parent either (no dealer directly under center, no dealer under dealer).
+	if _, err := f.svc.Convert(f.ctx, c, lead.UUID, ConvertInput{Kind: ConvertKindDealerCandidate, DistributorUUID: &f.dealer.Uuid}); !errors.As(err, &ve) {
+		t.Fatalf("convert with dealer parent err = %v, want validation", err)
+	}
+	if n := f.count(`SELECT count(*) FROM users WHERE phone_e164 = $1`, ph); n != 0 {
+		t.Fatalf("users created = %d, want 0", n)
+	}
+	out, err := f.svc.Convert(f.ctx, c, lead.UUID, ConvertInput{Kind: ConvertKindDealerCandidate, DistributorUUID: &f.dist.Uuid})
+	if err != nil {
+		t.Fatalf("convert: %v", err)
+	}
+	if out.Organization == nil || out.Organization.Status != "read_only" || out.Organization.Parent == nil || out.Organization.Parent.UUID != f.dist.Uuid {
+		t.Fatalf("organization = %+v, want read_only dealer under distributor", out.Organization)
+	}
+	var owner int
+	if err := f.tx.QueryRow(f.ctx, `SELECT count(*) FROM organization_members m JOIN users u ON u.id = m.user_id
+		JOIN organizations o ON o.id = m.organization_id WHERE o.uuid = $1 AND u.phone_e164 = $2 AND m.role = 'owner'`,
+		out.Organization.UUID, ph).Scan(&owner); err != nil || owner != 1 {
+		t.Fatalf("owner membership = %d (%v), want 1", owner, err)
+	}
+}
+
+func TestConvertDistributorCandidateByCenter(t *testing.T) {
+	f := newFixture(t)
+	c := f.caller(f.center, rbac.ScopeBrand)
+	lead := f.candidateLead(c, "distributor_candidate", uniquePhone("559"))
+	var ve *ValidationError
+	if _, err := f.svc.Convert(f.ctx, c, lead.UUID, ConvertInput{Kind: ConvertKindDistributorCandidate}); !errors.As(err, &ve) || ve.Field != "currency" {
+		t.Fatalf("convert without currency err = %v, want currency validation", err)
+	}
+	if _, err := f.svc.Convert(f.ctx, c, lead.UUID, ConvertInput{Kind: ConvertKindDistributorCandidate, Currency: "XX"}); !errors.As(err, &ve) {
+		t.Fatalf("convert with bad currency err = %v, want validation", err)
+	}
+	// center staff (not super admin) holding leads.convert_org is still refused.
+	staff := c
+	staff.Principal.IsSuperAdmin = false
+	if _, err := f.svc.Convert(f.ctx, staff, lead.UUID, ConvertInput{Kind: ConvertKindDistributorCandidate, Currency: "EUR"}); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("center staff convert err = %v, want forbidden", err)
+	}
+	out, err := f.svc.Convert(f.ctx, c, lead.UUID, ConvertInput{Kind: ConvertKindDistributorCandidate, Currency: "eur"})
+	if err != nil {
+		t.Fatalf("convert: %v", err)
+	}
+	if out.Organization == nil || out.Organization.Type != "distributor" || out.Organization.Currency != "EUR" || out.Organization.Status != "active" {
+		t.Fatalf("organization = %+v", out.Organization)
+	}
+}
+
+func TestConvertOrgCandidatePhoneConflictReturnsMaskedUser(t *testing.T) {
+	f := newFixture(t)
+	c := f.caller(f.dist, rbac.ScopeSubtree)
+	ph := uniquePhone("551")
+	existing := f.userWithPhone("lead-conflict", ph)
+	lead := f.candidateLead(c, "dealer_candidate", ph)
+	var conflict *UserConflictError
+	if _, err := f.svc.Convert(f.ctx, c, lead.UUID, ConvertInput{Kind: ConvertKindDealerCandidate}); !errors.As(err, &conflict) {
+		t.Fatalf("convert err = %v, want user conflict", err)
+	}
+	if conflict.User.UUID != existing.Uuid || conflict.User.PhoneMasked == nil || *conflict.User.PhoneMasked == ph ||
+		conflict.User.EmailMasked == nil || *conflict.User.EmailMasked == existing.Email.String {
+		t.Fatalf("existing user = %+v, want masked contact", conflict.User)
+	}
+	got, err := f.svc.Get(f.ctx, c, lead.UUID)
+	if err != nil || got.Status == StatusWon {
+		t.Fatalf("lead after conflict = %+v (%v)", got, err)
+	}
+}
+
+// A failure after the customer/user was created rolls everything back.
+func TestConvertCustomerFailureRollsBack(t *testing.T) {
+	f := newFixture(t)
+	c := f.caller(f.dealer, rbac.ScopeManaged)
+	other := f.userWithPhone("lead-vehicle-owner", uniquePhone("552"))
+	vehicle := f.vehicle(other, f.dealer)
+	ph := uniquePhone("553")
+	lead, err := f.svc.Create(f.ctx, c, CreateInput{
+		TargetType: "customer", Source: "walk_in", Temperature: "warm",
+		CandidateContactName: strp("New Customer"), CandidatePhoneE164: &ph, VehicleID: &vehicle.ID,
+	})
+	if err != nil {
+		t.Fatalf("create lead: %v", err)
+	}
+	var ve *ValidationError
+	if _, err := f.svc.Convert(f.ctx, c, lead.UUID, ConvertInput{Kind: ConvertKindCustomer}); !errors.As(err, &ve) || ve.Field != "vehicle_id" {
+		t.Fatalf("convert err = %v, want vehicle_id validation", err)
+	}
+	if n := f.count(`SELECT count(*) FROM users WHERE phone_e164 = $1`, ph); n != 0 {
+		t.Fatalf("customer user left behind = %d, want 0", n)
+	}
+	if n := f.count(`SELECT count(*) FROM lead_events WHERE lead_id = (SELECT id FROM leads WHERE uuid = $1) AND event_type = 'converted'`, lead.UUID); n != 0 {
+		t.Fatalf("converted events = %d, want 0", n)
+	}
+}

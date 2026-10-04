@@ -40,23 +40,10 @@ var (
 	ErrUserConflict     = errors.New("leads: user conflict")
 )
 
-// CustomerConverter is the customer module entry point used by conversion.
-type CustomerConverter interface {
-	CreateCustomer(ctx context.Context, c customeruc.Caller, in customeruc.CreateCustomerInput) (customeruc.CustomerWrite, error)
-}
-
-// ServiceDrafter is the service module entry point used by conversion.
-type ServiceDrafter interface {
-	Create(ctx context.Context, c serviceuc.Caller, in serviceuc.CreateInput) (serviceuc.ServiceView, error)
-}
-
-// OrganizationRegistrar is the organization module entry point used by conversion.
-type OrganizationRegistrar interface {
-	RegisterOrganization(ctx context.Context, in orguc.RegisterInput, ownerUserID int64) (orguc.RegisterResult, error)
-}
-
 // SetConverters wires the domain services needed by POST /v1/leads/{uuid}/convert.
-func (s *Service) SetConverters(customers CustomerConverter, services ServiceDrafter, organizations OrganizationRegistrar) {
+// Conversion binds each of them to its own transaction (WithTx) so the lead,
+// its event and the created customer/service/organization commit together.
+func (s *Service) SetConverters(customers *customeruc.Service, services *serviceuc.Service, organizations *orguc.Service) {
 	s.customers = customers
 	s.services = services
 	s.organizations = organizations
@@ -104,7 +91,19 @@ func validConvertKind(kind string) bool {
 	}
 }
 
+// converted is what a conversion branch created inside the transaction.
+type converted struct {
+	refType string
+	refID   int64
+	payload map[string]any
+	result  ConvertResult
+	flush   func(context.Context)
+}
+
 // Convert wins a lead and creates the matching draft service or organization.
+// Everything (created user/customer link/service or organization, lead won +
+// won_ref, converted event) commits in one transaction; the lead row is
+// locked first so a concurrent second convert waits and then gets 409.
 func (s *Service) Convert(ctx context.Context, c Caller, id uuid.UUID, in ConvertInput) (ConvertResult, error) {
 	row, err := s.getRow(ctx, c, id)
 	if err != nil {
@@ -120,74 +119,161 @@ func (s *Service) Convert(ctx context.Context, c Caller, id uuid.UUID, in Conver
 	if row.TargetType != kind {
 		return ConvertResult{}, invalid("kind", "must match the lead target_type")
 	}
-	if row.Status == StatusWon || row.WonRefType.Valid || row.WonRefID.Valid {
+	if converted := row.Status == StatusWon || row.WonRefType.Valid || row.WonRefID.Valid; converted {
 		return ConvertResult{}, ErrAlreadyConverted
 	}
-	switch kind {
-	case ConvertKindCustomer:
-		return s.convertCustomer(ctx, c, row)
-	case ConvertKindDealerCandidate:
-		return s.convertDealerCandidate(ctx, c, row, in)
-	case ConvertKindDistributorCandidate:
-		return s.convertDistributorCandidate(ctx, c, row, in)
-	default:
-		return ConvertResult{}, invalid("kind", "is not supported")
+	if err := s.authorizeConvert(c, kind, in); err != nil {
+		return ConvertResult{}, err
 	}
-}
-
-func (s *Service) convertCustomer(ctx context.Context, c Caller, row db.Lead) (ConvertResult, error) {
-	if s.customers == nil || s.services == nil {
+	if s.pool == nil || s.customers == nil || s.services == nil || s.organizations == nil {
 		return ConvertResult{}, fmt.Errorf("leads: converters are not configured")
 	}
-	if !row.VehicleID.Valid {
-		return ConvertResult{}, invalid("vehicle_id", "is required for customer conversion")
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return ConvertResult{}, fmt.Errorf("leads: convert begin: %w", err)
 	}
-	cust, err := s.customerForLead(ctx, c, row)
+	defer func() { _ = tx.Rollback(ctx) }()
+	q := s.q.WithTx(tx)
+	locked, err := q.GetLeadByIDForUpdate(ctx, db.GetLeadByIDForUpdateParams{ID: row.ID, BrandID: row.BrandID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ConvertResult{}, ErrNotFound
+	}
+	if err != nil {
+		return ConvertResult{}, fmt.Errorf("leads: convert lock: %w", err)
+	}
+	if locked.Status == StatusWon || locked.WonRefType.Valid || locked.WonRefID.Valid {
+		return ConvertResult{}, ErrAlreadyConverted
+	}
+	if locked.TargetType != kind {
+		return ConvertResult{}, invalid("kind", "must match the lead target_type")
+	}
+	var out converted
+	switch kind {
+	case ConvertKindCustomer:
+		out, err = s.convertCustomer(ctx, tx, q, c, locked)
+	case ConvertKindDealerCandidate:
+		out, err = s.convertDealerCandidate(ctx, tx, q, c, locked, in)
+	case ConvertKindDistributorCandidate:
+		out, err = s.convertDistributorCandidate(ctx, tx, q, c, locked, in)
+	default:
+		err = invalid("kind", "is not supported")
+	}
+	if err != nil {
+		return ConvertResult{}, convertError(err)
+	}
+	won, err := q.SetLeadStatus(ctx, db.SetLeadStatusParams{
+		ID: locked.ID, OrganizationID: locked.OrganizationID, Status: StatusWon,
+		WonRefType: pgtype.Text{String: out.refType, Valid: true}, WonRefID: pgtype.Int8{Int64: out.refID, Valid: true},
+	})
+	if err != nil {
+		return ConvertResult{}, fmt.Errorf("leads: convert status: %w", err)
+	}
+	out.payload["won_ref_type"] = out.refType
+	out.payload["won_ref_id"] = out.refID
+	if err := addEvent(ctx, q, won, EventConverted, out.payload, c.actor()); err != nil {
+		return ConvertResult{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return ConvertResult{}, fmt.Errorf("leads: convert commit: %w", err)
+	}
+	if out.flush != nil {
+		out.flush(ctx)
+	}
+	lead, err := s.toLead(ctx, won)
 	if err != nil {
 		return ConvertResult{}, err
 	}
-	veh, err := s.q.GetVehicleByID(ctx, row.VehicleID.Int64)
-	custRow, custErr := s.q.GetUserByUUID(ctx, cust.UUID)
+	out.result.Lead = lead
+	return out.result, nil
+}
+
+// authorizeConvert applies the org-conversion permissions before any write.
+func (s *Service) authorizeConvert(c Caller, kind string, in ConvertInput) error {
+	switch kind {
+	case ConvertKindDealerCandidate:
+		if !c.Principal.HasPermission(rbac.PermLeadsConvertOrg) {
+			return ErrForbidden
+		}
+	case ConvertKindDistributorCandidate:
+		if c.Org.OrgType != rbac.OrgTypeCenter || !c.Principal.IsSuperAdmin {
+			return ErrForbidden
+		}
+		if strings.TrimSpace(in.Currency) == "" {
+			return invalid("currency", "is required for distributor conversion")
+		}
+	}
+	return nil
+}
+
+// convertError maps the reused use cases' errors onto the lead API contract.
+func convertError(err error) error {
+	var cve *customeruc.ValidationError
+	var sve *serviceuc.ValidationError
+	switch {
+	case errors.As(err, &cve):
+		return invalid(cve.Field, cve.Message)
+	case errors.As(err, &sve):
+		return invalid(sve.Field, sve.Message)
+	case errors.Is(err, orguc.ErrInvalidRequest):
+		msg := strings.TrimPrefix(err.Error(), orguc.ErrInvalidRequest.Error()+": ")
+		return invalid("organization", msg)
+	case errors.Is(err, customeruc.ErrForbidden), errors.Is(err, serviceuc.ErrForbidden):
+		return ErrForbidden
+	default:
+		return err
+	}
+}
+
+func (s *Service) convertCustomer(ctx context.Context, tx pgx.Tx, q *db.Queries, c Caller, row db.Lead) (converted, error) {
+	if !row.VehicleID.Valid {
+		return converted{}, invalid("vehicle_id", "is required for customer conversion")
+	}
+	customers, flush := s.customers.WithTx(tx)
+	cust, err := s.customerForLead(ctx, customers, q, c, row)
+	if err != nil {
+		return converted{}, err
+	}
+	veh, err := q.GetVehicleByID(ctx, row.VehicleID.Int64)
+	custRow, custErr := q.GetUserByUUID(ctx, cust.UUID)
 	if errors.Is(custErr, pgx.ErrNoRows) {
-		return ConvertResult{}, invalid("customer_user_id", "customer not found")
+		return converted{}, invalid("customer_user_id", "customer not found")
 	}
 	if custErr != nil {
-		return ConvertResult{}, fmt.Errorf("leads: customer ref: %w", custErr)
+		return converted{}, fmt.Errorf("leads: customer ref: %w", custErr)
 	}
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && veh.UserID != custRow.ID) {
-		return ConvertResult{}, invalid("vehicle_id", "vehicle not found for this customer")
+		return converted{}, invalid("vehicle_id", "vehicle not found for this customer")
 	}
 	if err != nil {
-		return ConvertResult{}, fmt.Errorf("leads: vehicle: %w", err)
+		return converted{}, fmt.Errorf("leads: vehicle: %w", err)
 	}
 	serviceCaller := serviceuc.Caller{
 		Principal: withInternalPermission(c.Principal, rbac.PermServicesWrite, rbac.PermLeadsWrite),
 		Org:       c.Org,
 		Filter:    c.Filter,
 	}
-	draft, err := s.services.Create(ctx, serviceCaller, serviceuc.CreateInput{
+	draft, err := s.services.WithTx(tx).Create(ctx, serviceCaller, serviceuc.CreateInput{
 		CustomerUUID: cust.UUID.String(), VehicleUUID: veh.Uuid.String(),
 	})
 	if err != nil {
-		return ConvertResult{}, err
+		return converted{}, err
 	}
-	serviceRow, err := s.q.GetServiceByUUID(ctx, db.GetServiceByUUIDParams{Uuid: draft.UUID, BrandID: c.Org.BrandID})
+	serviceRow, err := q.GetServiceByUUID(ctx, db.GetServiceByUUIDParams{Uuid: draft.UUID, BrandID: c.Org.BrandID})
 	if err != nil {
-		return ConvertResult{}, fmt.Errorf("leads: service ref: %w", err)
+		return converted{}, fmt.Errorf("leads: service ref: %w", err)
 	}
-	lead, err := s.markConverted(ctx, c, row, WonRefService, serviceRow.ID, map[string]any{
-		"kind": "service_draft", "service_uuid": draft.UUID.String(), "customer_uuid": cust.UUID.String(),
-	})
-	if err != nil {
-		return ConvertResult{}, err
-	}
-	return ConvertResult{Lead: lead, ServiceDraft: &draft}, nil
+	return converted{
+		refType: WonRefService, refID: serviceRow.ID,
+		payload: map[string]any{"kind": "service_draft", "service_uuid": draft.UUID.String(), "customer_uuid": cust.UUID.String()},
+		result:  ConvertResult{ServiceDraft: &draft},
+		flush:   flush,
+	}, nil
 }
 
-func (s *Service) customerForLead(ctx context.Context, c Caller, row db.Lead) (customeruc.CustomerWrite, error) {
+func (s *Service) customerForLead(ctx context.Context, customers *customeruc.Service, q *db.Queries, c Caller, row db.Lead) (customeruc.CustomerWrite, error) {
 	cc := customeruc.Caller{UserID: c.Principal.UserInternal, Org: c.Org, Filter: c.Filter}
 	if row.CustomerUserID.Valid {
-		u, err := s.q.GetUserByID(ctx, row.CustomerUserID.Int64)
+		u, err := q.GetUserByID(ctx, row.CustomerUserID.Int64)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return customeruc.CustomerWrite{}, invalid("customer_user_id", "customer not found")
 		}
@@ -200,7 +286,7 @@ func (s *Service) customerForLead(ctx context.Context, c Caller, row db.Lead) (c
 		} else if row.CandidatePhoneE164.Valid {
 			phoneText = row.CandidatePhoneE164.String
 		}
-		return s.customers.CreateCustomer(ctx, cc, customeruc.CreateCustomerInput{
+		return customers.CreateCustomer(ctx, cc, customeruc.CreateCustomerInput{
 			Phone: phoneText, Name: firstNonEmpty(u.Name, textString(row.CandidateContactName), "Customer"), Surname: firstNonEmpty(u.Surname, "-"),
 			Email: textString(u.Email),
 		})
@@ -215,76 +301,50 @@ func (s *Service) customerForLead(ctx context.Context, c Caller, row db.Lead) (c
 	if surname == "" {
 		surname = "-"
 	}
-	return s.customers.CreateCustomer(ctx, cc, customeruc.CreateCustomerInput{
+	return customers.CreateCustomer(ctx, cc, customeruc.CreateCustomerInput{
 		Phone: row.CandidatePhoneE164.String, Name: name, Surname: surname, Email: textString(row.CandidateEmail),
 	})
 }
 
-func (s *Service) convertDealerCandidate(ctx context.Context, c Caller, row db.Lead, in ConvertInput) (ConvertResult, error) {
-	if s.organizations == nil {
-		return ConvertResult{}, fmt.Errorf("leads: organization converter is not configured")
-	}
-	if !c.Principal.HasPermission(rbac.PermLeadsConvertOrg) {
-		return ConvertResult{}, ErrForbidden
-	}
-	owner, err := s.createCandidateOwner(ctx, row)
+func (s *Service) convertDealerCandidate(ctx context.Context, tx pgx.Tx, q *db.Queries, c Caller, row db.Lead, in ConvertInput) (converted, error) {
+	parent, err := s.dealerParent(ctx, q, c, row, in.DistributorUUID)
 	if err != nil {
-		return ConvertResult{}, err
+		return converted{}, err
 	}
-	parent, err := s.dealerParent(ctx, c, row, in.DistributorUUID)
+	owner, err := s.createCandidateOwner(ctx, q, row)
 	if err != nil {
-		return ConvertResult{}, err
+		return converted{}, err
 	}
-	result, err := s.organizations.RegisterOrganization(ctx, orgInput(row, orguc.TypeDealer, &parent.Uuid, parent.Currency, false, "read_only"), owner.ID)
-	if err != nil {
-		return ConvertResult{}, err
-	}
-	orgRow, err := s.q.GetOrganizationByUUID(ctx, result.Organization.UUID)
-	if err != nil {
-		return ConvertResult{}, fmt.Errorf("leads: organization ref: %w", err)
-	}
-	lead, err := s.markConverted(ctx, c, row, WonRefOrganization, orgRow.ID, map[string]any{
-		"kind": "dealer_org", "organization_uuid": result.Organization.UUID.String(),
-	})
-	if err != nil {
-		return ConvertResult{}, err
-	}
-	return ConvertResult{Lead: lead, Organization: &result.Organization}, nil
+	// K23: a dealer opened from a lead starts read-only (no grace period).
+	return s.registerCandidateOrg(ctx, tx, q, owner, orgInput(row, orguc.TypeDealer, &parent.Uuid, parent.Currency, false, "read_only"), "dealer_org")
 }
 
-func (s *Service) convertDistributorCandidate(ctx context.Context, c Caller, row db.Lead, in ConvertInput) (ConvertResult, error) {
-	if s.organizations == nil {
-		return ConvertResult{}, fmt.Errorf("leads: organization converter is not configured")
-	}
-	if c.Org.OrgType != rbac.OrgTypeCenter || !c.Principal.IsSuperAdmin {
-		return ConvertResult{}, ErrForbidden
-	}
-	if strings.TrimSpace(in.Currency) == "" {
-		return ConvertResult{}, invalid("currency", "is required for distributor conversion")
-	}
-	owner, err := s.createCandidateOwner(ctx, row)
+func (s *Service) convertDistributorCandidate(ctx context.Context, tx pgx.Tx, q *db.Queries, c Caller, row db.Lead, in ConvertInput) (converted, error) {
+	owner, err := s.createCandidateOwner(ctx, q, row)
 	if err != nil {
-		return ConvertResult{}, err
+		return converted{}, err
 	}
-	result, err := s.organizations.RegisterOrganization(ctx, orgInput(row, orguc.TypeDistributor, &c.Org.UUID, in.Currency, in.RegisterAsWarehouse, ""), owner.ID)
-	if err != nil {
-		return ConvertResult{}, err
-	}
-	orgRow, err := s.q.GetOrganizationByUUID(ctx, result.Organization.UUID)
-	if err != nil {
-		return ConvertResult{}, fmt.Errorf("leads: organization ref: %w", err)
-	}
-	lead, err := s.markConverted(ctx, c, row, WonRefOrganization, orgRow.ID, map[string]any{
-		"kind": "distributor_org", "organization_uuid": result.Organization.UUID.String(),
-	})
-	if err != nil {
-		return ConvertResult{}, err
-	}
-	return ConvertResult{Lead: lead, Organization: &result.Organization}, nil
+	return s.registerCandidateOrg(ctx, tx, q, owner, orgInput(row, orguc.TypeDistributor, &c.Org.UUID, in.Currency, in.RegisterAsWarehouse, ""), "distributor_org")
 }
 
-func (s *Service) dealerParent(ctx context.Context, c Caller, row db.Lead, selected *uuid.UUID) (db.Organization, error) {
-	owner, err := s.q.GetOrganizationByID(ctx, row.OrganizationID)
+func (s *Service) registerCandidateOrg(ctx context.Context, tx pgx.Tx, q *db.Queries, owner db.User, in orguc.RegisterInput, eventKind string) (converted, error) {
+	result, err := s.organizations.WithTx(tx).RegisterOrganization(ctx, in, owner.ID)
+	if err != nil {
+		return converted{}, err
+	}
+	orgRow, err := q.GetOrganizationByUUID(ctx, result.Organization.UUID)
+	if err != nil {
+		return converted{}, fmt.Errorf("leads: organization ref: %w", err)
+	}
+	return converted{
+		refType: WonRefOrganization, refID: orgRow.ID,
+		payload: map[string]any{"kind": eventKind, "organization_uuid": result.Organization.UUID.String()},
+		result:  ConvertResult{Organization: &result.Organization},
+	}, nil
+}
+
+func (s *Service) dealerParent(ctx context.Context, q *db.Queries, c Caller, row db.Lead, selected *uuid.UUID) (db.Organization, error) {
+	owner, err := q.GetOrganizationByID(ctx, row.OrganizationID)
 	if err != nil {
 		return db.Organization{}, fmt.Errorf("leads: owner organization: %w", err)
 	}
@@ -297,7 +357,7 @@ func (s *Service) dealerParent(ctx context.Context, c Caller, row db.Lead, selec
 	if selected == nil {
 		return db.Organization{}, invalid("distributor_uuid", "is required for center-owned dealer candidates")
 	}
-	parent, err := s.q.GetOrganizationByUUID(ctx, *selected)
+	parent, err := q.GetOrganizationByUUID(ctx, *selected)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && (parent.BrandID != row.BrandID || parent.Type != orguc.TypeDistributor)) {
 		return db.Organization{}, invalid("distributor_uuid", "distributor not found")
 	}
@@ -319,11 +379,11 @@ func orgInput(row db.Lead, typ string, parent *uuid.UUID, currency string, wareh
 	}
 }
 
-func (s *Service) createCandidateOwner(ctx context.Context, row db.Lead) (db.User, error) {
+func (s *Service) createCandidateOwner(ctx context.Context, q *db.Queries, row db.Lead) (db.User, error) {
 	if !row.CandidatePhoneE164.Valid {
 		return db.User{}, invalid("candidate_phone_e164", "is required")
 	}
-	if u, err := s.q.GetUserByPhone(ctx, row.CandidatePhoneE164); err == nil {
+	if u, err := q.GetUserByPhone(ctx, row.CandidatePhoneE164); err == nil {
 		return db.User{}, &UserConflictError{User: maskedUser(u)}
 	} else if !errors.Is(err, pgx.ErrNoRows) {
 		return db.User{}, fmt.Errorf("leads: phone lookup: %w", err)
@@ -333,7 +393,7 @@ func (s *Service) createCandidateOwner(ctx context.Context, row db.Lead) (db.Use
 		if _, err := mail.ParseAddress(email); err != nil {
 			return db.User{}, invalid("candidate_email", "must be a valid email")
 		}
-		if u, err := s.q.GetUserByEmail(ctx, pgtype.Text{String: email, Valid: true}); err == nil {
+		if u, err := q.GetUserByEmail(ctx, pgtype.Text{String: email, Valid: true}); err == nil {
 			return db.User{}, &UserConflictError{User: maskedUser(u)}
 		} else if !errors.Is(err, pgx.ErrNoRows) {
 			return db.User{}, fmt.Errorf("leads: email lookup: %w", err)
@@ -354,7 +414,7 @@ func (s *Service) createCandidateOwner(ctx context.Context, row db.Lead) (db.Use
 	if err != nil {
 		return db.User{}, err
 	}
-	u, err := s.q.CreateUser(ctx, db.CreateUserParams{
+	u, err := q.CreateUser(ctx, db.CreateUserParams{
 		Email: pgtype.Text{String: email, Valid: email != ""}, PasswordHash: hash,
 		Name: name, Surname: surname, Status: "active", PhoneE164: row.CandidatePhoneE164,
 	})
@@ -362,33 +422,6 @@ func (s *Service) createCandidateOwner(ctx context.Context, row db.Lead) (db.Use
 		return db.User{}, err
 	}
 	return u, nil
-}
-
-func (s *Service) markConverted(ctx context.Context, c Caller, row db.Lead, refType string, refID int64, payload map[string]any) (Lead, error) {
-	var out db.Lead
-	err := s.inTx(ctx, func(q *db.Queries) error {
-		locked, err := q.GetLeadByID(ctx, db.GetLeadByIDParams{ID: row.ID, BrandID: row.BrandID})
-		if err != nil {
-			return err
-		}
-		if locked.Status == StatusWon || locked.WonRefType.Valid || locked.WonRefID.Valid {
-			return ErrAlreadyConverted
-		}
-		out, err = q.SetLeadStatus(ctx, db.SetLeadStatusParams{
-			ID: locked.ID, OrganizationID: locked.OrganizationID, Status: StatusWon,
-			WonRefType: pgtype.Text{String: refType, Valid: true}, WonRefID: pgtype.Int8{Int64: refID, Valid: true},
-		})
-		if err != nil {
-			return fmt.Errorf("leads: convert status: %w", err)
-		}
-		payload["won_ref_type"] = refType
-		payload["won_ref_id"] = refID
-		return addEvent(ctx, q, out, EventConverted, payload, c.actor())
-	})
-	if err != nil {
-		return Lead{}, err
-	}
-	return s.toLead(ctx, out)
 }
 
 func withInternalPermission(p authctx.Principal, add, from string) authctx.Principal {
@@ -421,6 +454,9 @@ func maskedUser(u db.User) ExistingUser {
 func maskEmail(v string) string {
 	v = strings.TrimSpace(v)
 	at := strings.IndexByte(v, '@')
+	if at < 0 {
+		return "***"
+	}
 	if at <= 1 {
 		return "***" + v[at:]
 	}
