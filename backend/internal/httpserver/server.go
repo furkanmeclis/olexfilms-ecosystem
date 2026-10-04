@@ -692,7 +692,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		Orders: ordersSvc, Organizations: orgSvc, Stock: stockSvc,
 	})...)
 	searchmodule.RegisterRoutes(mux, searchhandler.New(searchSvc), tokens, loader, deps.Queries)
-	librarymodule.RegisterRoutes(mux, libraryhandler.New(libraryusecase.New(deps.Queries, deps.Storage)), tokens, loader, deps.Queries)
+	librarymodule.RegisterRoutes(mux, libraryhandler.New(libraryusecase.New(deps.Queries, deps.Storage)), tokens, loader, deps.Queries, featureSvc)
 	storageSvc := storageusecase.New(deps.Storage, deps.Queries, log)
 	storagemodule.RegisterRoutes(
 		mux,
