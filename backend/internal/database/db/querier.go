@@ -48,6 +48,7 @@ type Querier interface {
 	// A brand with an integration connection takes its categories from the
 	// remote hub, so their remote-sourced fields are locked in the panel.
 	BrandHasIntegrationConnection(ctx context.Context, brandID int64) (bool, error)
+	CancelCompletedService(ctx context.Context, arg CancelCompletedServiceParams) (Service, error)
 	CancelService(ctx context.Context, arg CancelServiceParams) (Service, error)
 	CancelStockCount(ctx context.Context, id int64) (StockCount, error)
 	CancelStockEntry(ctx context.Context, id int64) (StockEntry, error)
@@ -188,6 +189,7 @@ type Querier interface {
 	CountUserCariAccounts(ctx context.Context, userID pgtype.Int8) (int64, error)
 	CountUsers(ctx context.Context, arg CountUsersParams) (int64, error)
 	CountUsersWithRole(ctx context.Context, roleSlug string) (int64, error)
+	CountVisibleAnnouncements(ctx context.Context, arg CountVisibleAnnouncementsParams) (int64, error)
 	CountWarehouseTransferLines(ctx context.Context, transferID int64) (int64, error)
 	CountWarehouseTransfers(ctx context.Context, arg CountWarehouseTransfersParams) (int64, error)
 	CountWarrantiesInScope(ctx context.Context, arg CountWarrantiesInScopeParams) (int64, error)
@@ -986,7 +988,9 @@ type Querier interface {
 	ListAllRoles(ctx context.Context) ([]Role, error)
 	ListAnnouncementAudiences(ctx context.Context, announcementID int64) ([]AnnouncementAudience, error)
 	ListAnnouncementLocales(ctx context.Context, announcementID int64) ([]AnnouncementLocale, error)
+	ListAnnouncementReadReport(ctx context.Context, arg ListAnnouncementReadReportParams) ([]ListAnnouncementReadReportRow, error)
 	ListAnnouncementReads(ctx context.Context, arg ListAnnouncementReadsParams) ([]AnnouncementRead, error)
+	ListAnnouncementTargetUserIDs(ctx context.Context, announcementID int64) ([]int64, error)
 	// Author view: announcements written by the given organizations (the
 	// caller's resolved write scope), newest first.
 	ListAnnouncementsByOrganizations(ctx context.Context, arg ListAnnouncementsByOrganizationsParams) ([]Announcement, error)
@@ -1906,6 +1910,7 @@ type Querier interface {
 	NextDocumentTemplateVersion(ctx context.Context, arg NextDocumentTemplateVersionParams) (int32, error)
 	NextLibraryItemVersionNo(ctx context.Context, arg NextLibraryItemVersionNoParams) (int32, error)
 	NextQuoteNo(ctx context.Context, organizationID int64) (int32, error)
+	OrganizationLineage(ctx context.Context, id int64) ([]int64, error)
 	PingDB(ctx context.Context) (int32, error)
 	PublishDocumentTemplate(ctx context.Context, id int64) (DocumentTemplate, error)
 	PurgeNotificationDeliveriesBefore(ctx context.Context, arg PurgeNotificationDeliveriesBeforeParams) (int64, error)
@@ -2214,6 +2219,7 @@ type Querier interface {
 	UpsertUserTOTPSetup(ctx context.Context, arg UpsertUserTOTPSetupParams) (UserTotp, error)
 	UserHasRoleSlug(ctx context.Context, arg UserHasRoleSlugParams) (bool, error)
 	VoidContractInstance(ctx context.Context, arg VoidContractInstanceParams) (ContractInstance, error)
+	VoidWarrantiesByService(ctx context.Context, arg VoidWarrantiesByServiceParams) ([]Warranty, error)
 	// Center void (warranties.void). Expired warranties may be voided too.
 	VoidWarranty(ctx context.Context, arg VoidWarrantyParams) (Warranty, error)
 	// Center void (warranties.void, step-up). An expired warranty may be voided

@@ -23,6 +23,9 @@ import (
 	activitymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/activity"
 	activityhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/activity/handler"
 	activityusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/activity/usecase"
+	announcementsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements"
+	announcementshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/handler"
+	announcementsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/usecase"
 	authmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth"
 	authhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/handler"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/identity"
@@ -465,7 +468,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		WithAccounting(accountingPoster)
 	transfersmodule.RegisterRoutes(mux, transfershandler.New(transfersSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-179: services (draft, items from stock, stock-free transitions, images).
-	servicesSvc := servicesusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries))
+	servicesSvc := servicesusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)).
+		WithCompletedCancelAccounting(accountingPoster)
 	if listFinder != nil {
 		servicesSvc.SetFinder(listFinder) // TEC-209
 	}
@@ -486,7 +490,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 
 	nh := notifhandler.New(notifSvc)
 	notifmodule.RegisterRoutes(mux, nh, tokens, loader)
-	notifmodule.RegisterEventHandlers(eventBus, notifSvc, log)
+	notifmodule.RegisterEventHandlers(eventBus, notifSvc, log,
+		notifmodule.WithAnnouncementFanout(deps.Queries, deps.Queue))
 	// TEC-186: service.completed opens one warranty per service item.
 	warrantymodule.RegisterEventHandlers(eventBus, deps.DB, deps.Queries, cfg.Auth.FrontendURL, log)
 	// TEC-192: service.completed schedules the delayed review request.
@@ -584,6 +589,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 			WithVehicleTransferExpire(customersSvc.ExpireTransfersTask).
 			WithServiceReviewRequest(servicereview.NewTaskSender(deps.DB, deps.Queries, log).Task).
 			WithNotificationPurge(notifSvc.PurgeExpired).
+			WithAnnouncementDispatch(func(ctx context.Context, payload queue.AnnouncementDispatchPayload) error {
+				return announcementsusecase.DispatchBatch(ctx, notifSvc, payload)
+			}).
 			WithWhatsAppPoll(waSvc.PollStatus).
 			WithTasksDueScan(tasksusecase.NewCron(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)).DueScanTask)
 		if searchIndexer != nil {
@@ -639,6 +647,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-214: center tasks (center roles only; brand scoped).
 	tasksSvc := tasksusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries))
 	tasksmodule.RegisterRoutes(mux, taskshandler.New(tasksSvc), tokens, loader, deps.Queries)
+	// TEC-330: announcements (center brand network, distributor subtree).
+	announcementsmodule.RegisterRoutes(mux, announcementshandler.New(announcementsusecase.New(deps.DB, deps.Queries,
+		outbox.NewStore(deps.DB, deps.Queries))), tokens, loader, deps.Queries, featureSvc)
 	// TEC-313: leads and follow-up queue.
 	leadsSvc := leadsusecase.New(deps.DB, deps.Queries, tasksSvc)
 	if listFinder != nil {

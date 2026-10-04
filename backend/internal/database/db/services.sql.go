@@ -12,6 +12,63 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const cancelCompletedService = `-- name: CancelCompletedService :one
+UPDATE services
+SET status = 'cancelled',
+    cancelled_at = NOW(),
+    cancelled_by_user_id = $1,
+    updated_by_user_id = $1,
+    cancel_reason = $2
+WHERE id = $3 AND status = 'completed'
+RETURNING id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at
+`
+
+type CancelCompletedServiceParams struct {
+	ActorUserID  pgtype.Int8 `json:"actor_user_id"`
+	CancelReason pgtype.Text `json:"cancel_reason"`
+	ID           int64       `json:"id"`
+}
+
+func (q *Queries) CancelCompletedService(ctx context.Context, arg CancelCompletedServiceParams) (Service, error) {
+	row := q.db.QueryRow(ctx, cancelCompletedService, arg.ActorUserID, arg.CancelReason, arg.ID)
+	var i Service
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.ServiceNo,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.CustomerUserID,
+		&i.VehicleID,
+		&i.CarBrandID,
+		&i.CarModelID,
+		&i.ModelYear,
+		&i.Plate,
+		&i.PlateCountry,
+		&i.Vin,
+		&i.Km,
+		&i.Package,
+		&i.Notes,
+		&i.HasMeasurement,
+		&i.MeasurementResultID,
+		&i.ContractID,
+		&i.Status,
+		&i.CreatedByUserID,
+		&i.UpdatedByUserID,
+		&i.CompletedByUserID,
+		&i.CancelledByUserID,
+		&i.CancelReason,
+		&i.CompletedAt,
+		&i.CancelledAt,
+		&i.ReviewRequestSentAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.MeasurementCheckRequired,
+		&i.MeasurementCheckedAt,
+	)
+	return i, err
+}
+
 const cancelService = `-- name: CancelService :one
 UPDATE services
 SET status = 'cancelled',

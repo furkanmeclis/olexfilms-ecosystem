@@ -73,6 +73,54 @@ func (q *Queries) CountAnnouncementsByOrganizations(ctx context.Context, arg Cou
 	return count, err
 }
 
+const countVisibleAnnouncements = `-- name: CountVisibleAnnouncements :one
+SELECT COUNT(*)
+FROM announcements a
+LEFT JOIN announcement_reads r
+       ON r.announcement_id = a.id AND r.user_id = $1::bigint
+WHERE a.brand_id = $2::bigint
+  AND a.status = 'published'
+  AND a.publish_at <= $3::timestamptz
+  AND (a.expires_at IS NULL OR a.expires_at > $3::timestamptz)
+  AND EXISTS (
+      SELECT 1 FROM announcement_audiences au
+      WHERE au.announcement_id = a.id
+        AND (au.role_slug IS NULL OR au.role_slug = ANY($4::text[]))
+        AND (
+            au.target_type IN ('all_network', 'role')
+            OR (au.target_type = 'distributors' AND $5::varchar = 'distributor')
+            OR (au.target_type = 'dealers' AND $5::varchar = 'dealer')
+            OR (au.target_type = 'subtree' AND au.target_organization_id = ANY($6::bigint[]))
+        )
+  )
+  AND (NOT $7::boolean OR r.read_at IS NULL)
+`
+
+type CountVisibleAnnouncementsParams struct {
+	UserID           int64              `json:"user_id"`
+	BrandID          int64              `json:"brand_id"`
+	Now              pgtype.Timestamptz `json:"now"`
+	ViewerRoleSlugs  []string           `json:"viewer_role_slugs"`
+	ViewerOrgType    string             `json:"viewer_org_type"`
+	ViewerOrgLineage []int64            `json:"viewer_org_lineage"`
+	UnreadOnly       bool               `json:"unread_only"`
+}
+
+func (q *Queries) CountVisibleAnnouncements(ctx context.Context, arg CountVisibleAnnouncementsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countVisibleAnnouncements,
+		arg.UserID,
+		arg.BrandID,
+		arg.Now,
+		arg.ViewerRoleSlugs,
+		arg.ViewerOrgType,
+		arg.ViewerOrgLineage,
+		arg.UnreadOnly,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createAnnouncement = `-- name: CreateAnnouncement :one
 
 INSERT INTO announcements (
@@ -308,6 +356,55 @@ func (q *Queries) ListAnnouncementLocales(ctx context.Context, announcementID in
 	return items, nil
 }
 
+const listAnnouncementReadReport = `-- name: ListAnnouncementReadReport :many
+SELECT u.uuid AS user_uuid, u.email, u.name, u.surname, r.read_at
+FROM announcement_reads r
+JOIN users u ON u.id = r.user_id AND u.deleted_at IS NULL
+WHERE r.announcement_id = $1
+ORDER BY r.read_at DESC
+LIMIT $3 OFFSET $2
+`
+
+type ListAnnouncementReadReportParams struct {
+	AnnouncementID int64 `json:"announcement_id"`
+	PageOffset     int32 `json:"page_offset"`
+	PageLimit      int32 `json:"page_limit"`
+}
+
+type ListAnnouncementReadReportRow struct {
+	UserUuid uuid.UUID          `json:"user_uuid"`
+	Email    pgtype.Text        `json:"email"`
+	Name     string             `json:"name"`
+	Surname  string             `json:"surname"`
+	ReadAt   pgtype.Timestamptz `json:"read_at"`
+}
+
+func (q *Queries) ListAnnouncementReadReport(ctx context.Context, arg ListAnnouncementReadReportParams) ([]ListAnnouncementReadReportRow, error) {
+	rows, err := q.db.Query(ctx, listAnnouncementReadReport, arg.AnnouncementID, arg.PageOffset, arg.PageLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListAnnouncementReadReportRow{}
+	for rows.Next() {
+		var i ListAnnouncementReadReportRow
+		if err := rows.Scan(
+			&i.UserUuid,
+			&i.Email,
+			&i.Name,
+			&i.Surname,
+			&i.ReadAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAnnouncementReads = `-- name: ListAnnouncementReads :many
 SELECT announcement_id, user_id, read_at FROM announcement_reads
 WHERE announcement_id = $1
@@ -334,6 +431,69 @@ func (q *Queries) ListAnnouncementReads(ctx context.Context, arg ListAnnouncemen
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAnnouncementTargetUserIDs = `-- name: ListAnnouncementTargetUserIDs :many
+WITH RECURSIVE subtree(root_id, id) AS (
+    SELECT au.target_organization_id, au.target_organization_id
+    FROM announcement_audiences au
+    WHERE au.announcement_id = $1
+      AND au.target_type = 'subtree'
+      AND au.target_organization_id IS NOT NULL
+    UNION ALL
+    SELECT s.root_id, o.id
+    FROM subtree s
+    JOIN organizations o ON o.parent_id = s.id AND o.deleted_at IS NULL
+)
+SELECT DISTINCT om.user_id
+FROM announcements a
+JOIN organization_members om ON TRUE
+JOIN organizations o ON o.id = om.organization_id AND o.deleted_at IS NULL
+WHERE a.id = $1
+  AND a.brand_id = o.brand_id
+  AND EXISTS (
+      SELECT 1
+      FROM announcement_audiences au
+      WHERE au.announcement_id = a.id
+        AND (
+            au.role_slug IS NULL
+            OR EXISTS (
+                SELECT 1
+                FROM organization_member_roles mr
+                JOIN roles r ON r.id = mr.role_id
+                WHERE mr.member_id = om.id AND r.slug = au.role_slug
+            )
+        )
+        AND (
+            au.target_type IN ('all_network', 'role')
+            OR (au.target_type = 'distributors' AND o.type = 'distributor')
+            OR (au.target_type = 'dealers' AND o.type = 'dealer')
+            OR (au.target_type = 'subtree' AND EXISTS (
+                SELECT 1 FROM subtree s WHERE s.root_id = au.target_organization_id AND s.id = o.id
+            ))
+        )
+  )
+ORDER BY om.user_id
+`
+
+func (q *Queries) ListAnnouncementTargetUserIDs(ctx context.Context, announcementID int64) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listAnnouncementTargetUserIDs, announcementID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int64{}
+	for rows.Next() {
+		var user_id int64
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -528,6 +688,40 @@ func (q *Queries) MarkAnnouncementRead(ctx context.Context, arg MarkAnnouncement
 	var i AnnouncementRead
 	err := row.Scan(&i.AnnouncementID, &i.UserID, &i.ReadAt)
 	return i, err
+}
+
+const organizationLineage = `-- name: OrganizationLineage :many
+WITH RECURSIVE lineage(id, parent_id, depth) AS (
+    SELECT id, parent_id, 0
+    FROM organizations
+    WHERE id = $1::bigint AND deleted_at IS NULL
+    UNION ALL
+    SELECT p.id, p.parent_id, lineage.depth + 1
+    FROM lineage
+    JOIN organizations p ON p.id = lineage.parent_id AND p.deleted_at IS NULL
+    WHERE lineage.depth < 16
+)
+SELECT id FROM lineage ORDER BY depth ASC
+`
+
+func (q *Queries) OrganizationLineage(ctx context.Context, id int64) ([]int64, error) {
+	rows, err := q.db.Query(ctx, organizationLineage, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int64{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const setAnnouncementStatus = `-- name: SetAnnouncementStatus :one

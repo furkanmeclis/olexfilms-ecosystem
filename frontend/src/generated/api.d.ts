@@ -1606,6 +1606,156 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/announcements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Visible announcements
+         * @description Requires `announcements.read` and enabled `announcements` feature. Published, non-expired announcements matching the caller's organization type, role or subtree are returned pinned first.
+         */
+        get: operations["listAnnouncements"];
+        put?: never;
+        /**
+         * Create announcement draft
+         * @description Requires `announcements.write`; center writes inside the active brand and distributor writes inside its subtree.
+         */
+        post: operations["createAnnouncement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/announcements/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Announcement unread badge */
+        get: operations["getAnnouncementsUnreadCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/announcements/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read one visible announcement
+         * @description Marks the announcement read with an idempotent read receipt.
+         */
+        get: operations["getAnnouncement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update draft announcement */
+        patch: operations["updateAnnouncement"];
+        trace?: never;
+    };
+    "/v1/announcements/{uuid}/locales/{locale}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Upsert localized announcement content */
+        put: operations["putAnnouncementLocale"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/announcements/{uuid}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish announcement
+         * @description If `notify=true`, writes one `announcement.published` outbox event for in-app, e-mail and push fan-out. A second publish returns 409.
+         */
+        post: operations["publishAnnouncement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/announcements/{uuid}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive announcement */
+        post: operations["archiveAnnouncement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/announcements/{uuid}/pin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pin or unpin announcement */
+        post: operations["pinAnnouncement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/announcements/{uuid}/reads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Announcement read report */
+        get: operations["getAnnouncementReads"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/notifications": {
         parameters: {
             query?: never;
@@ -7524,6 +7674,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/services/{uuid}/cancel-completed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel a completed service
+         * @description TEC-356 / TEC-230 decision. Needs services.cancel_completed reaching the service; dealer_staff has no grant and receives 403. The service must be completed; already cancelled services answer 409 SERVICE_INVALID_TRANSITION and non-completed services answer 409 SERVICE_NOT_EDITABLE. reason is mandatory. In one transaction the warranties of the service are voided with reason service_cancelled, whole consumed units are returned to the service organization's stock with ledger return movements, open accounting rows sourced by the service are reversed with append-only entries, the service moves to cancelled, service.cancelled and warranty.voided outbox events are written and an activity row is recorded. Services containing a partial_consumption item answer 422 SERVICE_CONSUMPTION_NOT_REVERSIBLE because the return helper can safely reverse only whole consumptions.
+         */
+        post: operations["cancelCompletedService"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/services/{uuid}/images": {
         parameters: {
             query?: never;
@@ -7584,7 +7757,7 @@ export interface paths {
         put?: never;
         /**
          * Correct the consumption of an item of a completed service
-         * @description TEC-230 (conservative default; a completed service still cannot be cancelled). The unit consumed by mistake goes back from the service into the service organization's stock with a ledger return movement (a roll with the meters the consumption took, fixed pieces credited back); with replacement_barcode the correct unit of the same product is consumed instead (same kind and amount, held by the service organization, not in an open service). Idempotency keys service:service_item_correction:{item id}:{return or consumption}:{barcode}. Center only (services.cancel on the service, else 403), within 24 hours of the completion (422 SERVICE_CORRECTION_WINDOW_CLOSED), once per item (409 SERVICE_ITEM_ALREADY_CORRECTED), whole consumptions only (a partial cut answers 422 SERVICE_CONSUMPTION_NOT_REVERSIBLE). An item with an active or expired warranty answers 422 SERVICE_ITEM_WARRANTY_ACTIVE (void the warranty first); the replacement gets no warranty. A service that is not completed answers 409 SERVICE_NOT_EDITABLE; a replacement that is not held answers 409 SERVICE_UNIT_NOT_AVAILABLE, one in an open service 409 SERVICE_UNIT_IN_USE. Accounting is not touched. Writes a service.updated outbox event (change consumption_corrected) and the stock.* events of the movements.
+         * @description TEC-230. The unit consumed by mistake goes back from the service into the service organization's stock with a ledger return movement (a roll with the meters the consumption took, fixed pieces credited back); with replacement_barcode the correct unit of the same product is consumed instead (same kind and amount, held by the service organization, not in an open service). Idempotency keys service:service_item_correction:{item id}:{return or consumption}:{barcode}. Center only (services.cancel on the service, else 403), within 24 hours of the completion (422 SERVICE_CORRECTION_WINDOW_CLOSED), once per item (409 SERVICE_ITEM_ALREADY_CORRECTED), whole consumptions only (a partial cut answers 422 SERVICE_CONSUMPTION_NOT_REVERSIBLE). An item with an active or expired warranty answers 422 SERVICE_ITEM_WARRANTY_ACTIVE (void the warranty first); the replacement gets no warranty. A service that is not completed answers 409 SERVICE_NOT_EDITABLE; a replacement that is not held answers 409 SERVICE_UNIT_NOT_AVAILABLE, one in an open service 409 SERVICE_UNIT_IN_USE. Accounting is not touched. Writes a service.updated outbox event (change consumption_corrected) and the stock.* events of the movements.
          */
         post: operations["correctServiceConsumption"];
         delete?: never;
@@ -8526,6 +8699,117 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @enum {string} */
+        LocaleCode: "tr" | "en" | "bg" | "de" | "el" | "uk" | "ru" | "fr" | "es" | "it" | "zh-CN" | "az" | "ar";
+        /** @enum {string} */
+        AnnouncementStatus: "draft" | "published" | "archived";
+        /** @enum {string} */
+        AnnouncementAudienceTarget: "all_network" | "distributors" | "dealers" | "role" | "subtree";
+        AnnouncementAudience: {
+            target_type: components["schemas"]["AnnouncementAudienceTarget"];
+            role_slug?: string | null;
+            /** Format: uuid */
+            target_organization_uuid?: string | null;
+        };
+        AnnouncementInput: {
+            default_locale?: components["schemas"]["LocaleCode"];
+            title: string;
+            body: string;
+            /**
+             * @default markdown
+             * @enum {string}
+             */
+            body_format: "markdown" | "html";
+            /** @default false */
+            pinned: boolean;
+            /** @default false */
+            notify: boolean;
+            /** Format: date-time */
+            publish_at?: string | null;
+            /** Format: date-time */
+            expires_at?: string | null;
+            audiences: components["schemas"]["AnnouncementAudience"][];
+        };
+        AnnouncementLocaleInput: {
+            title: string;
+            body: string;
+        };
+        Announcement: {
+            /** Format: uuid */
+            uuid: string;
+            default_locale: components["schemas"]["LocaleCode"];
+            locale?: string;
+            title: string;
+            body: string;
+            /** @enum {string} */
+            body_format: "markdown" | "html";
+            status: components["schemas"]["AnnouncementStatus"];
+            pinned: boolean;
+            notify: boolean;
+            /** Format: date-time */
+            read_at?: string | null;
+            /** Format: date-time */
+            publish_at?: string | null;
+            /** Format: date-time */
+            expires_at?: string | null;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+            audiences?: components["schemas"]["AnnouncementAudience"][];
+        };
+        AnnouncementUnreadCount: {
+            /** Format: int64 */
+            unread_count: number;
+        };
+        AnnouncementReadItem: {
+            /** Format: uuid */
+            user_uuid: string;
+            email: string;
+            name: string;
+            surname: string;
+            /** Format: date-time */
+            read_at: string;
+        };
+        AnnouncementReadReport: {
+            /** Format: int64 */
+            target_total: number;
+            /** Format: int64 */
+            read_total: number;
+            /** Format: double */
+            read_rate: number;
+            items: components["schemas"]["AnnouncementReadItem"][];
+        };
+        EnvelopeAnnouncement: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Announcement"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAnnouncementPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["Announcement"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAnnouncementUnreadCount: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AnnouncementUnreadCount"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAnnouncementReadReport: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AnnouncementReadReport"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
         SearchSpec: {
             /** @example users */
             id: string;
@@ -13790,6 +14074,9 @@ export interface components {
             /** @description Kept in the status log; the cancel reason for cancelled */
             note?: string;
         };
+        ServiceCancelCompletedInput: {
+            reason: string;
+        };
         EnvelopeService: {
             /** @enum {boolean} */
             success: true;
@@ -18128,6 +18415,285 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalError"];
+        };
+    };
+    listAnnouncements: {
+        parameters: {
+            query?: {
+                locale?: components["schemas"]["LocaleCode"];
+                unread_only?: boolean;
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Announcement feed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAnnouncementPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createAnnouncement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnnouncementInput"];
+            };
+        };
+        responses: {
+            /** @description Announcement created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAnnouncement"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getAnnouncementsUnreadCount: {
+        parameters: {
+            query?: {
+                locale?: components["schemas"]["LocaleCode"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Unread count */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAnnouncementUnreadCount"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getAnnouncement: {
+        parameters: {
+            query?: {
+                locale?: components["schemas"]["LocaleCode"];
+            };
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Announcement */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAnnouncement"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateAnnouncement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnnouncementInput"];
+            };
+        };
+        responses: {
+            /** @description Announcement */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAnnouncement"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    putAnnouncementLocale: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                locale: components["schemas"]["LocaleCode"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnnouncementLocaleInput"];
+            };
+        };
+        responses: {
+            /** @description Announcement */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAnnouncement"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    publishAnnouncement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Published announcement */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAnnouncement"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    archiveAnnouncement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Archived announcement */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAnnouncement"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    pinAnnouncement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    pinned: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Announcement */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAnnouncement"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getAnnouncementReads: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Read report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAnnouncementReadReport"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getNotifications: {
@@ -28845,6 +29411,39 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    cancelCompletedService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceCancelCompletedInput"];
+            };
+        };
+        responses: {
+            /** @description Cancelled service */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeService"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     uploadServiceImage: {
