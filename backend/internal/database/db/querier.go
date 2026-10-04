@@ -110,6 +110,7 @@ type Querier interface {
 	CountAnnouncementsByOrganizations(ctx context.Context, arg CountAnnouncementsByOrganizationsParams) (int64, error)
 	CountAppLogs(ctx context.Context, arg CountAppLogsParams) (int64, error)
 	CountAppLogsByLevel(ctx context.Context) ([]CountAppLogsByLevelRow, error)
+	CountAppointmentsByOrganizations(ctx context.Context, arg CountAppointmentsByOrganizationsParams) (int64, error)
 	CountBarcodeBatches(ctx context.Context, organizationID int64) (int64, error)
 	CountBinProductStockRows(ctx context.Context, arg CountBinProductStockRowsParams) (int64, error)
 	// TEC-229: booked return lines of an order (a received return whose line
@@ -196,6 +197,8 @@ type Querier interface {
 	// TEC-329 (F3-05a): announcements, their translations, audiences and read
 	// receipts (migration 000086).
 	CreateAnnouncement(ctx context.Context, arg CreateAnnouncementParams) (Announcement, error)
+	CreateAppointment(ctx context.Context, arg CreateAppointmentParams) (Appointment, error)
+	CreateAppointmentClosure(ctx context.Context, arg CreateAppointmentClosureParams) (AppointmentClosure, error)
 	CreateBarcodeBatch(ctx context.Context, arg CreateBarcodeBatchParams) (BarcodeBatch, error)
 	CreateBatchUnit(ctx context.Context, arg CreateBatchUnitParams) (Unit, error)
 	CreateBulkJob(ctx context.Context, arg CreateBulkJobParams) (BulkJob, error)
@@ -385,6 +388,7 @@ type Querier interface {
 	DeleteAppLogByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	DeleteAppLogsByUUIDs(ctx context.Context, uuids []uuid.UUID) (int64, error)
 	DeleteAppLogsMatching(ctx context.Context, arg DeleteAppLogsMatchingParams) (int64, error)
+	DeleteAppointmentClosure(ctx context.Context, arg DeleteAppointmentClosureParams) (int64, error)
 	// Fails with a restrict/foreign key violation while models still use the brand.
 	DeleteCarBrand(ctx context.Context, id int64) (int64, error)
 	DeleteCarModel(ctx context.Context, id int64) (int64, error)
@@ -512,6 +516,9 @@ type Querier interface {
 	GetAnnouncementByUUID(ctx context.Context, argUuid uuid.UUID) (Announcement, error)
 	GetAppLogByUUID(ctx context.Context, argUuid uuid.UUID) (AppLog, error)
 	GetAppSettings(ctx context.Context) (AppSetting, error)
+	GetAppointmentByID(ctx context.Context, arg GetAppointmentByIDParams) (Appointment, error)
+	GetAppointmentByUUID(ctx context.Context, arg GetAppointmentByUUIDParams) (Appointment, error)
+	GetAppointmentSettings(ctx context.Context, organizationID int64) (AppointmentSetting, error)
 	GetAuthSettings(ctx context.Context) (GetAuthSettingsRow, error)
 	GetBarcodeBatchByUUID(ctx context.Context, arg GetBarcodeBatchByUUIDParams) (BarcodeBatch, error)
 	GetBrandByID(ctx context.Context, id int64) (Brand, error)
@@ -994,6 +1001,9 @@ type Querier interface {
 	ListAnnouncementsByOrganizations(ctx context.Context, arg ListAnnouncementsByOrganizationsParams) ([]Announcement, error)
 	ListAppLogSources(ctx context.Context) ([]string, error)
 	ListAppLogs(ctx context.Context, arg ListAppLogsParams) ([]AppLog, error)
+	ListAppointmentClosures(ctx context.Context, arg ListAppointmentClosuresParams) ([]AppointmentClosure, error)
+	ListAppointmentSettingsByOrganizations(ctx context.Context, organizationIds []int64) ([]AppointmentSetting, error)
+	ListAppointmentsByOrganizations(ctx context.Context, arg ListAppointmentsByOrganizationsParams) ([]Appointment, error)
 	ListBarcodeBatches(ctx context.Context, arg ListBarcodeBatchesParams) ([]BarcodeBatch, error)
 	ListBinProductStockRows(ctx context.Context, arg ListBinProductStockRowsParams) ([]ListBinProductStockRowsRow, error)
 	ListBinProductStocksByLocation(ctx context.Context, locationID int64) ([]BinProductStock, error)
@@ -1600,6 +1610,8 @@ type Querier interface {
 	MarkAllNotificationsReadForUser(ctx context.Context, userID pgtype.Int8) (int64, error)
 	// Idempotent: a second read keeps the first read_at.
 	MarkAnnouncementRead(ctx context.Context, arg MarkAnnouncementReadParams) (AnnouncementRead, error)
+	MarkAppointmentReminder24h(ctx context.Context, arg MarkAppointmentReminder24hParams) (Appointment, error)
+	MarkAppointmentReminder2h(ctx context.Context, arg MarkAppointmentReminder2hParams) (Appointment, error)
 	MarkBarcodeBatchPrinted(ctx context.Context, id int64) (BarcodeBatch, error)
 	MarkBulkJobCompleted(ctx context.Context, arg MarkBulkJobCompletedParams) (BulkJob, error)
 	MarkBulkJobFailed(ctx context.Context, arg MarkBulkJobFailedParams) (BulkJob, error)
@@ -1954,6 +1966,7 @@ type Querier interface {
 	// publish_at is stamped with NOW() when a row is published without one.
 	SetAnnouncementStatus(ctx context.Context, arg SetAnnouncementStatusParams) (Announcement, error)
 	SetAppSettingsLogo(ctx context.Context, logoObjectKey pgtype.Text) (AppSetting, error)
+	SetAppointmentStatus(ctx context.Context, arg SetAppointmentStatusParams) (Appointment, error)
 	SetBarcodeCounter(ctx context.Context, arg SetBarcodeCounterParams) error
 	SetCarBrandHero(ctx context.Context, arg SetCarBrandHeroParams) (CarBrand, error)
 	SetCarBrandLogo(ctx context.Context, arg SetCarBrandLogoParams) (CarBrand, error)
@@ -2037,6 +2050,7 @@ type Querier interface {
 	ShipTransferRequest(ctx context.Context, arg ShipTransferRequestParams) (StockTransferRequest, error)
 	ShipWarehouseTransfer(ctx context.Context, arg ShipWarehouseTransferParams) (WarehouseTransfer, error)
 	SlugExists(ctx context.Context, slug string) (bool, error)
+	SoftDeleteAppointment(ctx context.Context, arg SoftDeleteAppointmentParams) (int64, error)
 	SoftDeleteLead(ctx context.Context, arg SoftDeleteLeadParams) (int64, error)
 	// Only an empty folder (no live subfolder or item) is removed.
 	SoftDeleteLibraryFolder(ctx context.Context, arg SoftDeleteLibraryFolderParams) (int64, error)
@@ -2080,6 +2094,7 @@ type Querier interface {
 	// Content and flags of an announcement written by the organization.
 	UpdateAnnouncement(ctx context.Context, arg UpdateAnnouncementParams) (Announcement, error)
 	UpdateAppSettings(ctx context.Context, arg UpdateAppSettingsParams) (AppSetting, error)
+	UpdateAppointment(ctx context.Context, arg UpdateAppointmentParams) (Appointment, error)
 	UpdateAuthSettings(ctx context.Context, arg UpdateAuthSettingsParams) (AuthSetting, error)
 	// Full replacement of the editable fields (read-modify-write in the use case).
 	UpdateCarBrand(ctx context.Context, arg UpdateCarBrandParams) (CarBrand, error)
@@ -2168,6 +2183,9 @@ type Querier interface {
 	UpdateWebAuthnCredentialName(ctx context.Context, arg UpdateWebAuthnCredentialNameParams) (WebauthnCredential, error)
 	UpdateWhatsAppStatus(ctx context.Context, arg UpdateWhatsAppStatusParams) (WhatsappSetting, error)
 	UpsertAnnouncementLocale(ctx context.Context, arg UpsertAnnouncementLocaleParams) (AnnouncementLocale, error)
+	// TEC-322 (F3-04a): appointment schema (migration 000090). Reads are
+	// bounded by resolved organization ids; the API layer owns scope resolution.
+	UpsertAppointmentSettings(ctx context.Context, arg UpsertAppointmentSettingsParams) (AppointmentSetting, error)
 	UpsertBinProductStockForRepair(ctx context.Context, arg UpsertBinProductStockForRepairParams) error
 	UpsertConnectionLocationMap(ctx context.Context, arg UpsertConnectionLocationMapParams) (ConnectionLocationMap, error)
 	// ---------------------------------------------------------------------------
