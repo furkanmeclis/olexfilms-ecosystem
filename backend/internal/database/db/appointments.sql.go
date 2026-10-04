@@ -12,9 +12,110 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const appointmentClosureExists = `-- name: AppointmentClosureExists :one
+SELECT EXISTS (
+    SELECT 1 FROM appointment_closures
+    WHERE organization_id = $1 AND closed_on = $2::date
+)::boolean AS closed
+`
+
+type AppointmentClosureExistsParams struct {
+	OrganizationID int64       `json:"organization_id"`
+	ClosedOn       pgtype.Date `json:"closed_on"`
+}
+
+func (q *Queries) AppointmentClosureExists(ctx context.Context, arg AppointmentClosureExistsParams) (bool, error) {
+	row := q.db.QueryRow(ctx, appointmentClosureExists, arg.OrganizationID, arg.ClosedOn)
+	var closed bool
+	err := row.Scan(&closed)
+	return closed, err
+}
+
+const countActiveAppointmentsByOrganization = `-- name: CountActiveAppointmentsByOrganization :many
+SELECT organization_id, COUNT(*)::bigint AS active_count
+FROM appointments
+WHERE organization_id = ANY($1::bigint[])
+  AND brand_id = $2
+  AND deleted_at IS NULL
+  AND status IN ('scheduled', 'confirmed', 'arrived')
+  AND starts_at >= $3::timestamptz
+  AND starts_at < $4::timestamptz
+GROUP BY organization_id
+ORDER BY organization_id
+`
+
+type CountActiveAppointmentsByOrganizationParams struct {
+	OrganizationIds []int64            `json:"organization_ids"`
+	BrandID         int64              `json:"brand_id"`
+	FromTime        pgtype.Timestamptz `json:"from_time"`
+	ToTime          pgtype.Timestamptz `json:"to_time"`
+}
+
+type CountActiveAppointmentsByOrganizationRow struct {
+	OrganizationID int64 `json:"organization_id"`
+	ActiveCount    int64 `json:"active_count"`
+}
+
+func (q *Queries) CountActiveAppointmentsByOrganization(ctx context.Context, arg CountActiveAppointmentsByOrganizationParams) ([]CountActiveAppointmentsByOrganizationRow, error) {
+	rows, err := q.db.Query(ctx, countActiveAppointmentsByOrganization,
+		arg.OrganizationIds,
+		arg.BrandID,
+		arg.FromTime,
+		arg.ToTime,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CountActiveAppointmentsByOrganizationRow{}
+	for rows.Next() {
+		var i CountActiveAppointmentsByOrganizationRow
+		if err := rows.Scan(&i.OrganizationID, &i.ActiveCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const countActiveAppointmentsForOrganization = `-- name: CountActiveAppointmentsForOrganization :one
+SELECT COUNT(*) FROM appointments
+WHERE organization_id = $1
+  AND brand_id = $2
+  AND deleted_at IS NULL
+  AND status IN ('scheduled', 'confirmed', 'arrived')
+  AND starts_at >= $3::timestamptz
+  AND starts_at < $4::timestamptz
+  AND ($5::bigint IS NULL OR id <> $5::bigint)
+`
+
+type CountActiveAppointmentsForOrganizationParams struct {
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	FromTime       pgtype.Timestamptz `json:"from_time"`
+	ToTime         pgtype.Timestamptz `json:"to_time"`
+	ExcludeID      pgtype.Int8        `json:"exclude_id"`
+}
+
+func (q *Queries) CountActiveAppointmentsForOrganization(ctx context.Context, arg CountActiveAppointmentsForOrganizationParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countActiveAppointmentsForOrganization,
+		arg.OrganizationID,
+		arg.BrandID,
+		arg.FromTime,
+		arg.ToTime,
+		arg.ExcludeID,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countAppointmentsByOrganizations = `-- name: CountAppointmentsByOrganizations :one
 SELECT COUNT(*) FROM appointments
-WHERE organization_id = ANY($1::bigint[])
+WHERE ($1::bigint[] IS NULL OR organization_id = ANY($1::bigint[]))
   AND brand_id = $2
   AND deleted_at IS NULL
   AND starts_at >= $3::timestamptz
@@ -165,6 +266,24 @@ type DeleteAppointmentClosureParams struct {
 
 func (q *Queries) DeleteAppointmentClosure(ctx context.Context, arg DeleteAppointmentClosureParams) (int64, error) {
 	result, err := q.db.Exec(ctx, deleteAppointmentClosure, arg.ID, arg.OrganizationID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteAppointmentClosureByUUID = `-- name: DeleteAppointmentClosureByUUID :execrows
+DELETE FROM appointment_closures
+WHERE uuid = $1 AND organization_id = $2
+`
+
+type DeleteAppointmentClosureByUUIDParams struct {
+	Uuid           uuid.UUID `json:"uuid"`
+	OrganizationID int64     `json:"organization_id"`
+}
+
+func (q *Queries) DeleteAppointmentClosureByUUID(ctx context.Context, arg DeleteAppointmentClosureByUUIDParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteAppointmentClosureByUUID, arg.Uuid, arg.OrganizationID)
 	if err != nil {
 		return 0, err
 	}
@@ -356,7 +475,7 @@ func (q *Queries) ListAppointmentSettingsByOrganizations(ctx context.Context, or
 
 const listAppointmentsByOrganizations = `-- name: ListAppointmentsByOrganizations :many
 SELECT id, uuid, organization_id, brand_id, customer_user_id, vehicle_id, starts_at, ends_at, estimated_minutes, source, status, cancel_reason, lead_id, service_id, note, created_by_user_id, reminded_24h_at, reminded_2h_at, created_at, updated_at, deleted_at FROM appointments
-WHERE organization_id = ANY($1::bigint[])
+WHERE ($1::bigint[] IS NULL OR organization_id = ANY($1::bigint[]))
   AND brand_id = $2
   AND deleted_at IS NULL
   AND starts_at >= $3::timestamptz
@@ -424,6 +543,73 @@ func (q *Queries) ListAppointmentsByOrganizations(ctx context.Context, arg ListA
 		return nil, err
 	}
 	return items, nil
+}
+
+const lockAppointmentByID = `-- name: LockAppointmentByID :one
+SELECT id, uuid, organization_id, brand_id, customer_user_id, vehicle_id, starts_at, ends_at, estimated_minutes, source, status, cancel_reason, lead_id, service_id, note, created_by_user_id, reminded_24h_at, reminded_2h_at, created_at, updated_at, deleted_at FROM appointments
+WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL
+FOR UPDATE
+`
+
+type LockAppointmentByIDParams struct {
+	ID             int64 `json:"id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) LockAppointmentByID(ctx context.Context, arg LockAppointmentByIDParams) (Appointment, error) {
+	row := q.db.QueryRow(ctx, lockAppointmentByID, arg.ID, arg.OrganizationID)
+	var i Appointment
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.CustomerUserID,
+		&i.VehicleID,
+		&i.StartsAt,
+		&i.EndsAt,
+		&i.EstimatedMinutes,
+		&i.Source,
+		&i.Status,
+		&i.CancelReason,
+		&i.LeadID,
+		&i.ServiceID,
+		&i.Note,
+		&i.CreatedByUserID,
+		&i.Reminded24hAt,
+		&i.Reminded2hAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const lockAppointmentSettings = `-- name: LockAppointmentSettings :one
+SELECT id, uuid, organization_id, brand_id, daily_vehicle_capacity, default_estimated_minutes, slot_interval_minutes, working_hours, portal_appointments_enabled, created_at, updated_at FROM appointment_settings
+WHERE organization_id = $1
+FOR UPDATE
+`
+
+// TEC-323: serializes bookings of one organization; the capacity count and
+// the insert run under this row lock so concurrent bookings cannot overfill.
+func (q *Queries) LockAppointmentSettings(ctx context.Context, organizationID int64) (AppointmentSetting, error) {
+	row := q.db.QueryRow(ctx, lockAppointmentSettings, organizationID)
+	var i AppointmentSetting
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.DailyVehicleCapacity,
+		&i.DefaultEstimatedMinutes,
+		&i.SlotIntervalMinutes,
+		&i.WorkingHours,
+		&i.PortalAppointmentsEnabled,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const markAppointmentReminder24h = `-- name: MarkAppointmentReminder24h :one
