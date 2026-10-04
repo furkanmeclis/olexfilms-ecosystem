@@ -108,6 +108,7 @@ type Querier interface {
 	CountActiveAppointmentsByOrganization(ctx context.Context, arg CountActiveAppointmentsByOrganizationParams) ([]CountActiveAppointmentsByOrganizationRow, error)
 	CountActiveAppointmentsForOrganization(ctx context.Context, arg CountActiveAppointmentsForOrganizationParams) (int64, error)
 	CountActiveRefreshTokensForUser(ctx context.Context, userID int64) (int64, error)
+	CountActiveServiceModuleSubscriptions(ctx context.Context, arg CountActiveServiceModuleSubscriptionsParams) (int64, error)
 	CountActivityEvents(ctx context.Context, arg CountActivityEventsParams) (int64, error)
 	CountAllBulkJobs(ctx context.Context) (int64, error)
 	CountAllExportJobs(ctx context.Context) (int64, error)
@@ -498,6 +499,7 @@ type Querier interface {
 	DeleteServiceImage(ctx context.Context, arg DeleteServiceImageParams) (ServiceImage, error)
 	DeleteServiceItem(ctx context.Context, arg DeleteServiceItemParams) (int64, error)
 	DeleteServiceItemsByService(ctx context.Context, serviceID int64) (int64, error)
+	DeleteServiceModuleFlag(ctx context.Context, arg DeleteServiceModuleFlagParams) (int64, error)
 	DeleteServicePriceOverride(ctx context.Context, arg DeleteServicePriceOverrideParams) (int64, error)
 	DeleteStaleQRLoginChallenges(ctx context.Context) (int64, error)
 	DeleteStockCountScan(ctx context.Context, arg DeleteStockCountScanParams) (int64, error)
@@ -820,6 +822,7 @@ type Querier interface {
 	GetServiceCatalogItem(ctx context.Context, arg GetServiceCatalogItemParams) (ServiceCatalogItem, error)
 	GetServiceCatalogItemByID(ctx context.Context, id int64) (ServiceCatalogItem, error)
 	GetServiceCatalogItemByUUID(ctx context.Context, arg GetServiceCatalogItemByUUIDParams) (ServiceCatalogItem, error)
+	GetServiceContractSummary(ctx context.Context, id int64) (GetServiceContractSummaryRow, error)
 	GetServiceForContractByID(ctx context.Context, id int64) (GetServiceForContractByIDRow, error)
 	GetServiceForContractByUUID(ctx context.Context, arg GetServiceForContractByUUIDParams) (GetServiceForContractByUUIDRow, error)
 	GetServiceForIndex(ctx context.Context, argUuid uuid.UUID) (GetServiceForIndexRow, error)
@@ -1476,6 +1479,7 @@ type Querier interface {
 	ListServiceStockUnits(ctx context.Context, arg ListServiceStockUnitsParams) ([]ListServiceStockUnitsRow, error)
 	ListServiceSubscriptionCancelRequests(ctx context.Context, arg ListServiceSubscriptionCancelRequestsParams) ([]ServiceSubscriptionCancelRequest, error)
 	ListServiceSubscriptionPeriods(ctx context.Context, subscriptionID int64) ([]ServiceSubscriptionPeriod, error)
+	ListServiceSubscriptionsByBrand(ctx context.Context, arg ListServiceSubscriptionsByBrandParams) ([]ServiceSubscription, error)
 	ListServiceSubscriptionsByOrgs(ctx context.Context, arg ListServiceSubscriptionsByOrgsParams) ([]ServiceSubscription, error)
 	// Services of a customer across brands' organizations in scope (portal and
 	// customer detail).
@@ -2163,6 +2167,7 @@ type Querier interface {
 	SetServiceMeasurementCheck(ctx context.Context, arg SetServiceMeasurementCheckParams) error
 	SetServiceReviewFlags(ctx context.Context, arg SetServiceReviewFlagsParams) (ServiceReview, error)
 	SetServiceReviewRequestSent(ctx context.Context, id int64) (Service, error)
+	SetServiceSubscriptionCancelRequested(ctx context.Context, arg SetServiceSubscriptionCancelRequestedParams) (ServiceSubscription, error)
 	SetServiceSubscriptionStatus(ctx context.Context, arg SetServiceSubscriptionStatusParams) (ServiceSubscription, error)
 	SetServiceWarrantyClaim(ctx context.Context, arg SetServiceWarrantyClaimParams) (SetServiceWarrantyClaimRow, error)
 	SetStaffPaymentFinanceEntry(ctx context.Context, arg SetStaffPaymentFinanceEntryParams) (StaffPayment, error)
@@ -2391,6 +2396,7 @@ type Querier interface {
 	UpsertProductPrice(ctx context.Context, arg UpsertProductPriceParams) (ProductPrice, error)
 	UpsertPushSubscription(ctx context.Context, arg UpsertPushSubscriptionParams) (PushSubscription, error)
 	UpsertReviewQuestionLocale(ctx context.Context, arg UpsertReviewQuestionLocaleParams) (ReviewQuestionLocale, error)
+	UpsertServiceModuleFlag(ctx context.Context, arg UpsertServiceModuleFlagParams) (ModuleFlag, error)
 	UpsertServicePriceOverride(ctx context.Context, arg UpsertServicePriceOverrideParams) (ServicePriceOverride, error)
 	UpsertSystemModuleFlag(ctx context.Context, arg UpsertSystemModuleFlagParams) (ModuleFlag, error)
 	UpsertSystemRole(ctx context.Context, arg UpsertSystemRoleParams) (Role, error)

@@ -55,6 +55,9 @@ const (
 	// (design §4). Default 0 keeps K23 ("grace yok"); raising it is a product
 	// decision.
 	KeyContractGraceDays = "contract_grace_days"
+	// KeyContractsIntakeRequired blocks intake status moves until the linked
+	// contract is executed, when the intake_contracts module is also enabled.
+	KeyContractsIntakeRequired = "contracts.intake_required"
 	// KeyPhotoStandardEnabled switches the vehicle intake photo standard
 	// (design §4, default off).
 	KeyPhotoStandardEnabled = "photo_standard_enabled"
@@ -138,6 +141,8 @@ var catalog = []Definition{
 		Description: "Minimum days of movement history before the stock forecast proposes anything (K15)"},
 	{Key: KeyContractGraceDays, Group: GroupContracts, Kind: KindInt, Default: int64(0), Min: i64(0), Max: i64(365),
 		Description: "Read-only grace period after a contract expires; 0 = no grace (K23)"},
+	{Key: KeyContractsIntakeRequired, Group: GroupContracts, Kind: KindBool, Default: false,
+		Description: "Require an executed intake contract before a service can start processing or be completed directly"},
 	{Key: KeyPhotoStandardEnabled, Group: GroupServices, Kind: KindBool, Default: false,
 		Description: "Require the vehicle intake photo standard"},
 	{Key: KeyBulkUndoWindowHours, Group: GroupGeneral, Kind: KindInt, Default: int64(DefaultBulkUndoWindowHours), Min: i64(1), Max: i64(720),

@@ -7265,6 +7265,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/service-subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List visible service subscriptions */
+        get: operations["listServiceSubscriptions"];
+        put?: never;
+        /** Assign a non-product service subscription */
+        post: operations["assignServiceSubscription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/service-subscriptions/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a visible service subscription */
+        get: operations["getServiceSubscription"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/service-subscriptions/{uuid}/cancel-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request early cancellation for own subscription */
+        post: operations["requestServiceSubscriptionCancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/service-subscriptions/cancel-requests/{uuid}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve an early cancellation request */
+        post: operations["approveServiceSubscriptionCancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/service-subscriptions/cancel-requests/{uuid}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject an early cancellation request */
+        post: operations["rejectServiceSubscriptionCancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/accounting/categories": {
         parameters: {
             query?: never;
@@ -7906,7 +7992,7 @@ export interface paths {
         put?: never;
         /**
          * Move a service to another status
-         * @description Legacy state machine (TEC-179): draft -> pending -> processing -> ready (services.write); center shortcuts draft -> processing and pending -> ready; draft | pending | processing | ready -> cancelled (services.cancel, center only; a dealer gets 403). draft | processing | ready -> completed (services.complete, TEC-180) consumes the stock of every item in the same transaction (consumption for a whole unit, partial_consumption for a cut; idempotency key service:service_item:<id>), links each item to its stock movement and writes one service.completed outbox event. A service without items answers 400; a unit that is no longer held or a cut longer than the rest of the roll answers 409 SERVICE_UNIT_NOT_AVAILABLE and nothing is written. Completed and cancelled are final (409 SERVICE_INVALID_TRANSITION). A request for the current status is a no-op (completing a completed service consumes nothing and emits nothing). Every move writes a status log and a service.* outbox event.
+         * @description Legacy state machine (TEC-179): draft -> pending -> processing -> ready (services.write); center shortcuts draft -> processing and pending -> ready; draft | pending | processing | ready -> cancelled (services.cancel, center only; a dealer gets 403). draft | processing | ready -> completed (services.complete, TEC-180) consumes the stock of every item in the same transaction (consumption for a whole unit, partial_consumption for a cut; idempotency key service:service_item:<id>), links each item to its stock movement and writes one service.completed outbox event. A service without items answers 400; a unit that is no longer held or a cut longer than the rest of the roll answers 409 SERVICE_UNIT_NOT_AVAILABLE and nothing is written. Completed and cancelled are final (409 SERVICE_INVALID_TRANSITION). A request for the current status is a no-op (completing a completed service consumes nothing and emits nothing). Every move writes a status log and a service.* outbox event. When contracts.intake_required and the intake_contracts module are both enabled for the service organization, draft/pending -> processing and direct completion from draft require the linked contract to be executed; otherwise the transition answers 422 CONTRACT_REQUIRED.
          */
         post: operations["transitionService"];
         delete?: never;
@@ -14145,6 +14231,84 @@ export interface components {
             data: components["schemas"]["ServiceCatalogOverride"];
             meta: components["schemas"]["ResponseMeta"];
         };
+        /** @enum {string} */
+        ServiceSubscriptionStatus: "active" | "cancel_requested" | "cancelled" | "expired";
+        ServiceSubscriptionInput: {
+            /** Format: uuid */
+            item_uuid: string;
+            /** Format: uuid */
+            organization_uuid: string;
+            /** Format: date */
+            starts_on: string;
+            /** Format: date */
+            ends_on: string;
+            /** Format: int64 */
+            contract_id?: number | null;
+        };
+        ServiceSubscription: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            organization_uuid: string;
+            /** Format: uuid */
+            item_uuid: string;
+            /** Format: int64 */
+            assigned_by_org_id?: number;
+            /** Format: date */
+            starts_on: string;
+            /** Format: date */
+            ends_on: string;
+            recurrence: components["schemas"]["ServiceCatalogRecurrence"];
+            price: string;
+            currency: string;
+            rate_snapshot: {
+                [key: string]: unknown;
+            };
+            cancellation_fee: string;
+            status: components["schemas"]["ServiceSubscriptionStatus"];
+            /** Format: date-time */
+            created_at: string;
+        };
+        ServiceSubscriptionCancelInput: {
+            reason: string;
+        };
+        ServiceSubscriptionDecisionInput: {
+            note?: string | null;
+        };
+        ServiceSubscriptionCancelRequest: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            subscription_uuid: string;
+            reason: string;
+            /** @enum {string} */
+            status: "pending" | "approved" | "rejected";
+            cancellation_fee: string;
+            currency: string;
+            decision_note?: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        EnvelopeServiceSubscription: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ServiceSubscription"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeServiceSubscriptionList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ServiceSubscription"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeServiceSubscriptionCancelRequest: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ServiceSubscriptionCancelRequest"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
         EnvelopeDistributorPrice: {
             /** @enum {boolean} */
             success: true;
@@ -14742,6 +14906,13 @@ export interface components {
             /** Format: date-time */
             voided_at: string | null;
         };
+        ServiceContractSummary: {
+            /** Format: uuid */
+            uuid: string;
+            status: components["schemas"]["ContractStatus"];
+            /** Format: int64 */
+            contract_no: number;
+        };
         Service: {
             /** Format: uuid */
             uuid: string;
@@ -14763,6 +14934,9 @@ export interface components {
             package: string | null;
             notes: string | null;
             has_measurement: boolean;
+            /** @description Linked intake contract summary, if any */
+            contract: components["schemas"]["ServiceContractSummary"] | null;
+            contract_required: boolean;
             cancel_reason: string | null;
             /** Format: date-time */
             completed_at: string | null;
@@ -29585,6 +29759,175 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    listServiceSubscriptions: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["ServiceSubscriptionStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Subscriptions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceSubscriptionList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    assignServiceSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceSubscriptionInput"];
+            };
+        };
+        responses: {
+            /** @description Subscription assigned */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceSubscription"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getServiceSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Subscription */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceSubscription"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    requestServiceSubscriptionCancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceSubscriptionCancelInput"];
+            };
+        };
+        responses: {
+            /** @description Cancellation requested */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceSubscriptionCancelRequest"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    approveServiceSubscriptionCancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ServiceSubscriptionDecisionInput"];
+            };
+        };
+        responses: {
+            /** @description Cancellation approved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceSubscriptionCancelRequest"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    rejectServiceSubscriptionCancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ServiceSubscriptionDecisionInput"];
+            };
+        };
+        responses: {
+            /** @description Cancellation rejected */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceSubscriptionCancelRequest"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     listAccountingCategories: {

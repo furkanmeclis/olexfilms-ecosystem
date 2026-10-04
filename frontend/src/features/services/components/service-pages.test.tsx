@@ -192,6 +192,8 @@ function service(over: Partial<Service> = {}): Service {
     package: null,
     notes: null,
     has_measurement: false,
+    contract: null,
+    contract_required: false,
     cancel_reason: null,
     completed_at: "2026-10-01T10:00:00Z",
     cancelled_at: null,

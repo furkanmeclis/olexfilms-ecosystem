@@ -43,6 +43,7 @@ func invalid(field, msg string) error { return &ValidationError{Field: field, Me
 type Store interface {
 	CreateServiceCatalogItem(ctx context.Context, arg db.CreateServiceCatalogItemParams) (db.ServiceCatalogItem, error)
 	GetServiceCatalogItemByUUID(ctx context.Context, arg db.GetServiceCatalogItemByUUIDParams) (db.ServiceCatalogItem, error)
+	GetServiceCatalogItem(ctx context.Context, arg db.GetServiceCatalogItemParams) (db.ServiceCatalogItem, error)
 	ListServiceCatalogItems(ctx context.Context, arg db.ListServiceCatalogItemsParams) ([]db.ServiceCatalogItem, error)
 	UpdateServiceCatalogItem(ctx context.Context, arg db.UpdateServiceCatalogItemParams) (db.ServiceCatalogItem, error)
 	AddServiceCatalogModule(ctx context.Context, arg db.AddServiceCatalogModuleParams) error
@@ -54,15 +55,40 @@ type Store interface {
 	ListServicePriceOverrides(ctx context.Context, arg db.ListServicePriceOverridesParams) ([]db.ServicePriceOverride, error)
 	ListServicePriceOverridesForItems(ctx context.Context, arg db.ListServicePriceOverridesForItemsParams) ([]db.ServicePriceOverride, error)
 	CountServiceSubscriptionsByItem(ctx context.Context, arg db.CountServiceSubscriptionsByItemParams) (int64, error)
+	CountActiveServiceModuleSubscriptions(ctx context.Context, arg db.CountActiveServiceModuleSubscriptionsParams) (int64, error)
+	CreateServiceSubscription(ctx context.Context, arg db.CreateServiceSubscriptionParams) (db.ServiceSubscription, error)
+	GetServiceSubscriptionByUUID(ctx context.Context, arg db.GetServiceSubscriptionByUUIDParams) (db.ServiceSubscription, error)
+	ListServiceSubscriptionsByBrand(ctx context.Context, arg db.ListServiceSubscriptionsByBrandParams) ([]db.ServiceSubscription, error)
+	ListServiceSubscriptionsByOrgs(ctx context.Context, arg db.ListServiceSubscriptionsByOrgsParams) ([]db.ServiceSubscription, error)
+	SetServiceSubscriptionCancelRequested(ctx context.Context, arg db.SetServiceSubscriptionCancelRequestedParams) (db.ServiceSubscription, error)
+	SetServiceSubscriptionStatus(ctx context.Context, arg db.SetServiceSubscriptionStatusParams) (db.ServiceSubscription, error)
+	CreateServiceSubscriptionCancelRequest(ctx context.Context, arg db.CreateServiceSubscriptionCancelRequestParams) (db.ServiceSubscriptionCancelRequest, error)
+	GetServiceSubscriptionCancelRequestByUUID(ctx context.Context, arg db.GetServiceSubscriptionCancelRequestByUUIDParams) (db.ServiceSubscriptionCancelRequest, error)
+	DecideServiceSubscriptionCancelRequest(ctx context.Context, arg db.DecideServiceSubscriptionCancelRequestParams) (db.ServiceSubscriptionCancelRequest, error)
 	GetOrganizationByUUID(ctx context.Context, argUuid uuid.UUID) (db.Organization, error)
+	GetOrganizationByID(ctx context.Context, id int64) (db.Organization, error)
 	SupplierOf(ctx context.Context, id int64) (db.Organization, error)
+	Descendants(ctx context.Context, id int64) ([]db.Organization, error)
+	ListOrganizationOwnerUserIDs(ctx context.Context, organizationID int64) ([]int64, error)
+	ListUserIDsByRoleSlug(ctx context.Context, slug string) ([]int64, error)
 }
 
 type Service struct {
-	q Store
+	q       Store
+	queries *db.Queries
+	pool    TxBeginner
+	out     Outbox
+	rates   RateResolver
+	feature FeatureService
 }
 
-func New(q Store) *Service { return &Service{q: q} }
+func New(q Store) *Service {
+	s := &Service{q: q}
+	if queries, ok := q.(*db.Queries); ok {
+		s.queries = queries
+	}
+	return s
+}
 
 func platformViewer() pricing.Viewer {
 	return pricing.Viewer{PurchaseRead: true, SaleRead: true}

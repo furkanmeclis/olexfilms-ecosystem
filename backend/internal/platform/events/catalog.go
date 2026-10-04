@@ -265,6 +265,17 @@ const (
 	ServiceNoteAdded    = "service.note_added"
 )
 
+// Service subscription events (TEC-307): assignment, early cancellation
+// request and final center decision. Notifications consume all three; the
+// cancellation approval also lets downstream accounting/search consumers see
+// a single durable service_subscription.cancelled event.
+const (
+	ServiceSubscriptionAssigned        = "service_subscription.assigned"
+	ServiceSubscriptionCancelRequested = "service_subscription.cancel_requested"
+	ServiceSubscriptionCancelled       = "service_subscription.cancelled"
+	ServiceSubscriptionCancelRejected  = "service_subscription.cancel_rejected"
+)
+
 // Appointment domain events (TEC-323): written when a booking is created,
 // rescheduled or cancelled.
 const (

@@ -166,6 +166,8 @@ const service = (over: Partial<Service> = {}): Service => ({
   package: null,
   notes: null,
   has_measurement: false,
+  contract: null,
+  contract_required: false,
   cancel_reason: null,
   completed_at: null,
   cancelled_at: null,
