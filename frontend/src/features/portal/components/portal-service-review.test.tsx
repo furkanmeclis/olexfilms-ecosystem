@@ -162,7 +162,10 @@ describe("PortalServiceReview (TEC-244)", () => {
       platform_rating: 4,
       product_rating: 5,
       comment: "Great",
+      is_anonymous: false,
+      source: "portal",
     });
+    expect(reviewApi.create.mock.calls[0]?.[1]).not.toHaveProperty("answers");
     expect(q("[data-testid=portal-review-form]")).toBeNull();
     expect(q("[data-testid=portal-review-done]")?.textContent).toContain(
       "Great",
