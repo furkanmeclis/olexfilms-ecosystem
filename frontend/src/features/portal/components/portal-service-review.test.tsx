@@ -93,6 +93,8 @@ function state(
     review: null,
     can_review: true,
     google_business_url: null,
+    questions: [],
+    products: [],
     ...patch,
   };
 }
@@ -140,6 +142,9 @@ describe("PortalServiceReview (TEC-244)", () => {
           platform_rating: 4,
           product_rating: 5,
           comment: "Great",
+          is_anonymous: false,
+          source: "portal",
+          answers: [],
           created_at: "2026-10-03T10:00:00Z",
         },
       }),

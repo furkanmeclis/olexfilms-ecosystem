@@ -66,8 +66,8 @@ type Querier interface {
 	// TEC-192 (F1-06h): review request 24 hours after a service is completed.
 	// Stamps review_request_sent_at when every send condition holds: the
 	// service is still completed, the request was not sent yet, the dealer has
-	// a google_business_url (TEC-98 decision 7) and the customer is a live,
-	// non-anonymized (TEC-161), non-merged user with a phone. The conditional
+	// a customer is a live, non-anonymized (TEC-161), non-merged user with a
+	// phone. The conditional
 	// UPDATE is the idempotency barrier: a second run (or a concurrent one)
 	// matches no row, so only one outbox event is ever written.
 	ClaimServiceReviewRequest(ctx context.Context, arg ClaimServiceReviewRequestParams) (ClaimServiceReviewRequestRow, error)
@@ -173,6 +173,7 @@ type Querier interface {
 	CountScopedVehicles(ctx context.Context, arg CountScopedVehiclesParams) (int64, error)
 	CountSearchFinanceEntries(ctx context.Context, arg CountSearchFinanceEntriesParams) (int64, error)
 	CountServiceReviewAnswersByQuestion(ctx context.Context, arg CountServiceReviewAnswersByQuestionParams) (int64, error)
+	CountServiceReviewsInScope(ctx context.Context, arg CountServiceReviewsInScopeParams) (int64, error)
 	CountServiceSubscriptionsByItem(ctx context.Context, arg CountServiceSubscriptionsByItemParams) (int64, error)
 	CountServicesInScope(ctx context.Context, arg CountServicesInScopeParams) (int64, error)
 	CountServicesOfUser(ctx context.Context, customerUserID int64) (int64, error)
@@ -1410,6 +1411,8 @@ type Querier interface {
 	ListServiceReviewAnswersByReview(ctx context.Context, reviewID int64) ([]ServiceReviewAnswer, error)
 	// Batch load for a review list (avoids N+1).
 	ListServiceReviewAnswersByReviews(ctx context.Context, reviewIds []int64) ([]ServiceReviewAnswer, error)
+	ListServiceReviewProducts(ctx context.Context, serviceID int64) ([]ListServiceReviewProductsRow, error)
+	ListServiceReviewsInScope(ctx context.Context, arg ListServiceReviewsInScopeParams) ([]ListServiceReviewsInScopeRow, error)
 	ListServiceStatusLogs(ctx context.Context, serviceID int64) ([]ServiceStatusLog, error)
 	// ---------------------------------------------------------------------------
 	// Stock picker (TEC-180): units the service organization can add as items.

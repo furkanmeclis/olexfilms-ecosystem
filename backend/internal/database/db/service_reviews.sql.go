@@ -8,18 +8,40 @@ package db
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const countServiceReviewsInScope = `-- name: CountServiceReviewsInScope :one
+SELECT COUNT(*)
+FROM service_reviews sr
+WHERE sr.brand_id = $1::bigint
+  AND ($2::bigint[] IS NULL
+       OR sr.organization_id = ANY($2::bigint[]))
+`
+
+type CountServiceReviewsInScopeParams struct {
+	BrandID         int64   `json:"brand_id"`
+	OrganizationIds []int64 `json:"organization_ids"`
+}
+
+func (q *Queries) CountServiceReviewsInScope(ctx context.Context, arg CountServiceReviewsInScopeParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countServiceReviewsInScope, arg.BrandID, arg.OrganizationIds)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
 
 const createServiceReview = `-- name: CreateServiceReview :one
 INSERT INTO service_reviews (
     organization_id, brand_id, service_id, customer_user_id,
-    platform_rating, product_rating, comment
+    platform_rating, product_rating, comment, is_anonymous, source
 ) VALUES (
     $1::bigint, $2::bigint,
     $3::bigint, $4::bigint,
     $5::smallint, $6::smallint,
-    $7::varchar
+    $7::varchar, $8::boolean,
+    $9::varchar
 )
 ON CONFLICT (service_id) DO NOTHING
 RETURNING id, uuid, organization_id, brand_id, service_id, customer_user_id, platform_rating, product_rating, comment, created_at, is_anonymous, source, processed_at
@@ -33,6 +55,8 @@ type CreateServiceReviewParams struct {
 	PlatformRating int16       `json:"platform_rating"`
 	ProductRating  int16       `json:"product_rating"`
 	Comment        pgtype.Text `json:"comment"`
+	IsAnonymous    bool        `json:"is_anonymous"`
+	Source         string      `json:"source"`
 }
 
 // ON CONFLICT DO NOTHING: a second review of the same service returns no
@@ -46,6 +70,8 @@ func (q *Queries) CreateServiceReview(ctx context.Context, arg CreateServiceRevi
 		arg.PlatformRating,
 		arg.ProductRating,
 		arg.Comment,
+		arg.IsAnonymous,
+		arg.Source,
 	)
 	var i ServiceReview
 	err := row.Scan(
@@ -92,4 +118,137 @@ func (q *Queries) GetServiceReviewByService(ctx context.Context, serviceID int64
 		&i.ProcessedAt,
 	)
 	return i, err
+}
+
+const listServiceReviewProducts = `-- name: ListServiceReviewProducts :many
+SELECT DISTINCT p.id, p.uuid, p.sku, p.name
+FROM service_items si
+JOIN products p ON p.id = si.product_id AND p.brand_id = si.brand_id
+WHERE si.service_id = $1::bigint
+ORDER BY p.name, p.id
+`
+
+type ListServiceReviewProductsRow struct {
+	ID   int64     `json:"id"`
+	Uuid uuid.UUID `json:"uuid"`
+	Sku  string    `json:"sku"`
+	Name string    `json:"name"`
+}
+
+func (q *Queries) ListServiceReviewProducts(ctx context.Context, serviceID int64) ([]ListServiceReviewProductsRow, error) {
+	rows, err := q.db.Query(ctx, listServiceReviewProducts, serviceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListServiceReviewProductsRow{}
+	for rows.Next() {
+		var i ListServiceReviewProductsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.Sku,
+			&i.Name,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listServiceReviewsInScope = `-- name: ListServiceReviewsInScope :many
+SELECT sr.id, sr.uuid, sr.organization_id, sr.brand_id, sr.service_id,
+       sr.customer_user_id, sr.platform_rating, sr.product_rating, sr.comment,
+       sr.created_at, sr.is_anonymous, sr.source, sr.processed_at,
+       s.uuid AS service_uuid, s.service_no, s.plate,
+       u.uuid AS customer_uuid, u.name AS customer_name, u.surname AS customer_surname,
+       u.phone_e164 AS customer_phone
+FROM service_reviews sr
+JOIN services s ON s.id = sr.service_id
+JOIN users u ON u.id = sr.customer_user_id
+WHERE sr.brand_id = $1::bigint
+  AND ($2::bigint[] IS NULL
+       OR sr.organization_id = ANY($2::bigint[]))
+ORDER BY sr.created_at DESC, sr.id DESC
+LIMIT $4 OFFSET $3
+`
+
+type ListServiceReviewsInScopeParams struct {
+	BrandID         int64   `json:"brand_id"`
+	OrganizationIds []int64 `json:"organization_ids"`
+	RowOffset       int32   `json:"row_offset"`
+	RowLimit        int32   `json:"row_limit"`
+}
+
+type ListServiceReviewsInScopeRow struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	ServiceID       int64              `json:"service_id"`
+	CustomerUserID  int64              `json:"customer_user_id"`
+	PlatformRating  int16              `json:"platform_rating"`
+	ProductRating   int16              `json:"product_rating"`
+	Comment         pgtype.Text        `json:"comment"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	IsAnonymous     bool               `json:"is_anonymous"`
+	Source          string             `json:"source"`
+	ProcessedAt     pgtype.Timestamptz `json:"processed_at"`
+	ServiceUuid     uuid.UUID          `json:"service_uuid"`
+	ServiceNo       string             `json:"service_no"`
+	Plate           pgtype.Text        `json:"plate"`
+	CustomerUuid    uuid.UUID          `json:"customer_uuid"`
+	CustomerName    string             `json:"customer_name"`
+	CustomerSurname string             `json:"customer_surname"`
+	CustomerPhone   pgtype.Text        `json:"customer_phone"`
+}
+
+func (q *Queries) ListServiceReviewsInScope(ctx context.Context, arg ListServiceReviewsInScopeParams) ([]ListServiceReviewsInScopeRow, error) {
+	rows, err := q.db.Query(ctx, listServiceReviewsInScope,
+		arg.BrandID,
+		arg.OrganizationIds,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListServiceReviewsInScopeRow{}
+	for rows.Next() {
+		var i ListServiceReviewsInScopeRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.ServiceID,
+			&i.CustomerUserID,
+			&i.PlatformRating,
+			&i.ProductRating,
+			&i.Comment,
+			&i.CreatedAt,
+			&i.IsAnonymous,
+			&i.Source,
+			&i.ProcessedAt,
+			&i.ServiceUuid,
+			&i.ServiceNo,
+			&i.Plate,
+			&i.CustomerUuid,
+			&i.CustomerName,
+			&i.CustomerSurname,
+			&i.CustomerPhone,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

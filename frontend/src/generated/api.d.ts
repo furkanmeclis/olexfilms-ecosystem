@@ -1174,6 +1174,81 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/service-reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List service reviews inside reviews.read scope
+         * @description Dealer sees its own scope with anonymous customer fields hidden; center sees customer identity.
+         */
+        get: operations["listServiceReviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/review-questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List admin review questions */
+        get: operations["listReviewQuestions"];
+        put?: never;
+        /** Create an admin review question */
+        post: operations["createReviewQuestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/review-questions/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Patch an admin review question
+         * @description question_type and target cannot change after answers exist.
+         */
+        patch: operations["updateReviewQuestion"];
+        trace?: never;
+    };
+    "/v1/platform/review-questions/{uuid}/locales/{locale}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Upsert one review question locale */
+        put: operations["putReviewQuestionLocale"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/organizations": {
         parameters: {
             query?: never;
@@ -15639,12 +15714,20 @@ export interface components {
             data: components["schemas"]["PortalService"];
             meta: components["schemas"]["ResponseMeta"];
         };
-        /** @description TEC-244 portal service review form. */
+        /** @description TEC-244/TEC-351 portal service review form. Legacy bodies with only the two ratings are accepted. */
         PortalServiceReviewInput: {
             platform_rating: number;
             product_rating: number;
             /** @description Optional; trimmed, empty means none. */
             comment?: string | null;
+            /** @default false */
+            is_anonymous: boolean;
+            /**
+             * @default portal
+             * @enum {string}
+             */
+            source: "portal" | "whatsapp_link";
+            answers?: components["schemas"]["ReviewAnswerInput"][];
         };
         PortalServiceReviewItem: {
             /** Format: uuid */
@@ -15652,6 +15735,10 @@ export interface components {
             platform_rating: number;
             product_rating: number;
             comment: string | null;
+            is_anonymous: boolean;
+            /** @enum {string} */
+            source: "portal" | "whatsapp_link";
+            answers: components["schemas"]["ReviewAnswer"][];
             /** Format: date-time */
             created_at: string;
         };
@@ -15662,11 +15749,131 @@ export interface components {
             can_review: boolean;
             /** @description The dealer's Google review link; null when unset. */
             google_business_url: string | null;
+            questions: components["schemas"]["ReviewFormQuestion"][];
+            products: components["schemas"]["ReviewProduct"][];
         };
         EnvelopePortalServiceReview: {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["PortalServiceReview"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        ReviewQuestionType: "rating_1_5" | "text";
+        /** @enum {string} */
+        ReviewQuestionTarget: "platform" | "dealer" | "product";
+        ReviewQuestionInput: {
+            question_key?: string;
+            question_type?: components["schemas"]["ReviewQuestionType"];
+            target?: components["schemas"]["ReviewQuestionTarget"];
+            is_required?: boolean;
+            is_active?: boolean;
+            /** Format: int32 */
+            sort_order?: number;
+        };
+        ReviewQuestionLocaleInput: {
+            text: string;
+        };
+        ReviewQuestionLocale: {
+            locale: string;
+            text: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        ReviewQuestion: {
+            /** Format: uuid */
+            uuid: string;
+            question_key: string;
+            question_type: components["schemas"]["ReviewQuestionType"];
+            target: components["schemas"]["ReviewQuestionTarget"];
+            is_required: boolean;
+            is_active: boolean;
+            /** Format: int32 */
+            sort_order: number;
+            locales: components["schemas"]["ReviewQuestionLocale"][];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        ReviewFormQuestion: {
+            /** Format: uuid */
+            uuid: string;
+            question_key: string;
+            question_type: components["schemas"]["ReviewQuestionType"];
+            target: components["schemas"]["ReviewQuestionTarget"];
+            is_required: boolean;
+            /** Format: int32 */
+            sort_order: number;
+            text: string;
+        };
+        ReviewProduct: {
+            /** Format: uuid */
+            uuid: string;
+            sku: string;
+            name: string;
+        };
+        ReviewAnswerInput: {
+            /** Format: uuid */
+            question_uuid: string;
+            /** Format: uuid */
+            product_uuid?: string | null;
+            rating?: number | null;
+            text?: string | null;
+        };
+        ReviewAnswer: components["schemas"]["ReviewAnswerInput"];
+        ReviewCustomer: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            phone: string | null;
+        };
+        ServiceReview: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            service_uuid: string;
+            service_no: string;
+            plate: string | null;
+            platform_rating: number;
+            product_rating: number;
+            comment: string | null;
+            is_anonymous: boolean;
+            /** @enum {string} */
+            source: "portal" | "whatsapp_link";
+            customer: null | components["schemas"]["ReviewCustomer"];
+            answers: components["schemas"]["ReviewAnswer"][];
+            /** Format: date-time */
+            created_at: string;
+        };
+        EnvelopeReviewQuestion: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ReviewQuestion"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeReviewQuestionLocale: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ReviewQuestionLocale"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeReviewQuestionList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ReviewQuestion"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeServiceReviewList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ServiceReview"][];
+                /** Format: int64 */
+                total: number;
+            };
             meta: components["schemas"]["ResponseMeta"];
         };
         PortalNamedRef: {
@@ -18123,6 +18330,146 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    listServiceReviews: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service reviews */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceReviewList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listReviewQuestions: {
+        parameters: {
+            query?: {
+                active?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Review questions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeReviewQuestionList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createReviewQuestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewQuestionInput"];
+            };
+        };
+        responses: {
+            /** @description Created question */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeReviewQuestion"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updateReviewQuestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewQuestionInput"];
+            };
+        };
+        responses: {
+            /** @description Updated question */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeReviewQuestion"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    putReviewQuestionLocale: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                locale: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewQuestionLocaleInput"];
+            };
+        };
+        responses: {
+            /** @description Locale */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeReviewQuestionLocale"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getMeOrganizations: {

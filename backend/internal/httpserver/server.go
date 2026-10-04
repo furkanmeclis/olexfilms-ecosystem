@@ -588,7 +588,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 			WithWarrantyCron(warrantyCron.ExpireTask, warrantyCron.ExpiringScanTask).
 			WithWarrantyRepairScan(warrantymodule.NewRepairScanner(deps.DB, deps.Queries, cfg.Auth.FrontendURL, cfg.Warranty.RepairScanDays, log).Task).
 			WithVehicleTransferExpire(customersSvc.ExpireTransfersTask).
-			WithServiceReviewRequest(servicereview.NewTaskSender(deps.DB, deps.Queries, log).Task).
+			WithServiceReviewRequest(servicereview.NewTaskSender(deps.DB, deps.Queries, cfg.Auth.FrontendURL, log).Task).
 			WithNotificationPurge(notifSvc.PurgeExpired).
 			WithAnnouncementDispatch(func(ctx context.Context, payload queue.AnnouncementDispatchPayload) error {
 				return announcementsusecase.DispatchBatch(ctx, notifSvc, payload)

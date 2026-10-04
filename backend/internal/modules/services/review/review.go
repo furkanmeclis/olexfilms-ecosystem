@@ -21,6 +21,8 @@ import (
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	serviceuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/usecase"
+	shorturls "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/shorturls/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
@@ -93,19 +95,20 @@ func (s *Scheduler) HandleServiceCompleted(ctx context.Context, ev events.Event)
 
 // Sender runs the service:review_request task.
 type Sender struct {
-	pool TxBeginner
-	q    *db.Queries
-	out  outbox.Enqueuer
-	log  *slog.Logger
-	now  func() time.Time
+	pool  TxBeginner
+	q     *db.Queries
+	out   outbox.Enqueuer
+	links *shorturls.Linker
+	log   *slog.Logger
+	now   func() time.Time
 }
 
 // NewSender builds the task runner; log may be nil.
-func NewSender(pool TxBeginner, q *db.Queries, out outbox.Enqueuer, log *slog.Logger) *Sender {
+func NewSender(pool TxBeginner, q *db.Queries, out outbox.Enqueuer, links *shorturls.Linker, log *slog.Logger) *Sender {
 	if log == nil {
 		log = slog.Default()
 	}
-	return &Sender{pool: pool, q: q, out: out, log: log, now: time.Now}
+	return &Sender{pool: pool, q: q, out: out, links: links, log: log, now: time.Now}
 }
 
 // Task is the service:review_request handler.
@@ -135,7 +138,17 @@ func (s *Sender) Send(ctx context.Context, serviceID int64) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("service review: claim: %w", err)
 	}
-	if err := s.out.Enqueue(ctx, tx, Event(row)); err != nil {
+	formURL := serviceuc.ReviewFormTarget(row.Uuid)
+	if s.links != nil {
+		link, err := s.links.Link(ctx, shorturls.CreateInput{
+			BrandID: row.BrandID, OrganizationID: &row.OrganizationID, Target: formURL,
+		})
+		if err != nil {
+			return false, fmt.Errorf("service review: short url: %w", err)
+		}
+		formURL = link
+	}
+	if err := s.out.Enqueue(ctx, tx, Event(row, formURL)); err != nil {
 		return false, fmt.Errorf("service review: outbox: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -147,7 +160,7 @@ func (s *Sender) Send(ctx context.Context, serviceID int64) (bool, error) {
 
 // Event builds the service.review_requested outbox event; the payload
 // carries the recipient, brand and template variables.
-func Event(row db.ClaimServiceReviewRequestRow) events.Event {
+func Event(row db.ClaimServiceReviewRequestRow, formURL string) events.Event {
 	id, u := row.ID, row.Uuid
 	return events.New(events.ServiceReviewRequested).
 		WithTenant(row.OrganizationID).
@@ -162,6 +175,7 @@ func Event(row db.ClaimServiceReviewRequestRow) events.Event {
 			"plate":             row.Plate.String,
 			"organization_name": row.OrganizationName,
 			"review_url":        row.ReviewUrl,
+			"form_url":          formURL,
 		})
 }
 

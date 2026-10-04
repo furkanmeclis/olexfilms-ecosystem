@@ -37,6 +37,7 @@ func TestReviewQuestionsSchema(t *testing.T) {
 	rv, err := f.q.CreateServiceReview(ctx, db.CreateServiceReviewParams{
 		OrganizationID: svc.OrganizationID, BrandID: svc.BrandID, ServiceID: svc.ID,
 		CustomerUserID: f.customer.ID, PlatformRating: 5, ProductRating: 4,
+		Source: "portal",
 	})
 	if err != nil {
 		t.Fatalf("review: %v", err)

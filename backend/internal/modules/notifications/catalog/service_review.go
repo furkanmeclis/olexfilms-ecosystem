@@ -5,8 +5,8 @@ import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ms
 // Service review request (TEC-192, F1-06h; TEC-98 decision 7). The delayed
 // service:review_request task writes service.review_requested once per
 // service; the bus handler dispatches this event to the service customer
-// over WhatsApp (wuzapi, K16/K21). review_url is the dealer's
-// google_business_url. Default templates ship in all 13 locales and are
+// over WhatsApp (wuzapi, K16/K21). form_url is the platform review form and
+// review_url is the optional dealer Google link. Default templates ship in all 13 locales and are
 // seeded with InsertNotificationTemplateIfMissing by SyncCatalog.
 const EventServiceReviewRequest = "SERVICE_REVIEW_REQUEST"
 
@@ -15,31 +15,31 @@ var ServiceReviewChannels = []string{ChannelWhatsApp}
 
 var serviceReviewRequestTexts = map[string]localizedText{
 	"tr": {"Hizmetimizi değerlendirir misiniz?",
-		"Merhaba, {{organization_name}} olarak aracınıza yaptığımız hizmetten memnun kaldıysanız birkaç saniyenizi ayırıp bizi Google'da değerlendirir misiniz? {{review_url}} Teşekkür ederiz!"},
+		"Merhaba, {{organization_name}} hizmetinizi değerlendirmek için formu açabilirsiniz: {{form_url}} Google yorum linkimiz: {{review_url}} Teşekkür ederiz!"},
 	"en": {"How did we do?",
-		"Hello, if you were happy with the service {{organization_name}} provided for your vehicle, could you take a few seconds to review us on Google? {{review_url}} Thank you!"},
+		"Hello, you can review the service from {{organization_name}} here: {{form_url}} Our Google review link: {{review_url}} Thank you!"},
 	"bg": {"Как се справихме?",
-		"Здравейте, ако сте доволни от услугата, която {{organization_name}} извърши за вашия автомобил, бихте ли отделили няколко секунди, за да ни оцените в Google? {{review_url}} Благодарим ви!"},
+		"Здравейте, можете да оцените услугата от {{organization_name}} тук: {{form_url}} Линк за Google отзив: {{review_url}} Благодарим ви!"},
 	"de": {"Wie zufrieden waren Sie?",
-		"Hallo, wenn Sie mit dem Service von {{organization_name}} an Ihrem Fahrzeug zufrieden waren, würden Sie uns in wenigen Sekunden auf Google bewerten? {{review_url}} Vielen Dank!"},
+		"Hallo, Sie können den Service von {{organization_name}} hier bewerten: {{form_url}} Unser Google-Bewertungslink: {{review_url}} Vielen Dank!"},
 	"el": {"Πώς τα πήγαμε;",
-		"Γεια σας, αν μείνατε ικανοποιημένοι από την υπηρεσία που παρείχε η {{organization_name}} στο όχημά σας, θα αφιερώνατε λίγα δευτερόλεπτα για να μας αξιολογήσετε στη Google; {{review_url}} Σας ευχαριστούμε!"},
+		"Γεια σας, μπορείτε να αξιολογήσετε την υπηρεσία της {{organization_name}} εδώ: {{form_url}} Σύνδεσμος Google: {{review_url}} Ευχαριστούμε!"},
 	"uk": {"Як ми впоралися?",
-		"Вітаємо! Якщо ви задоволені послугою, яку {{organization_name}} надала для вашого автомобіля, приділіть, будь ласка, кілька секунд, щоб оцінити нас у Google: {{review_url}} Дякуємо!"},
+		"Вітаємо! Оцініть послугу від {{organization_name}} тут: {{form_url}} Посилання для Google-відгуку: {{review_url}} Дякуємо!"},
 	"ru": {"Как мы справились?",
-		"Здравствуйте! Если вы довольны услугой, которую {{organization_name}} оказала для вашего автомобиля, уделите, пожалуйста, несколько секунд, чтобы оценить нас в Google: {{review_url}} Спасибо!"},
+		"Здравствуйте! Оцените услугу от {{organization_name}} здесь: {{form_url}} Ссылка для отзыва в Google: {{review_url}} Спасибо!"},
 	"fr": {"Votre avis compte",
-		"Bonjour, si vous êtes satisfait du service réalisé par {{organization_name}} sur votre véhicule, pourriez-vous prendre quelques secondes pour nous évaluer sur Google ? {{review_url}} Merci !"},
+		"Bonjour, vous pouvez évaluer le service de {{organization_name}} ici : {{form_url}} Lien d'avis Google : {{review_url}} Merci !"},
 	"es": {"¿Qué tal lo hicimos?",
-		"Hola, si quedó satisfecho con el servicio que {{organization_name}} realizó en su vehículo, ¿podría dedicar unos segundos a valorarnos en Google? {{review_url}} ¡Gracias!"},
+		"Hola, puede valorar el servicio de {{organization_name}} aquí: {{form_url}} Enlace de reseña en Google: {{review_url}} ¡Gracias!"},
 	"it": {"Com'è andata?",
-		"Salve, se è rimasto soddisfatto del servizio che {{organization_name}} ha eseguito sul suo veicolo, potrebbe dedicare qualche secondo a recensirci su Google? {{review_url}} Grazie!"},
+		"Salve, può valutare il servizio di {{organization_name}} qui: {{form_url}} Link recensione Google: {{review_url}} Grazie!"},
 	"zh-CN": {"请评价我们的服务",
-		"您好，如果您对 {{organization_name}} 为您的车辆提供的服务感到满意，能否花几秒钟在 Google 上为我们评价？{{review_url}} 谢谢！"},
+		"您好，您可以在这里评价 {{organization_name}} 的服务：{{form_url}} Google 评价链接：{{review_url}} 谢谢！"},
 	"az": {"Xidmətimizi qiymətləndirərdiniz?",
-		"Salam, {{organization_name}} olaraq avtomobilinizə göstərdiyimiz xidmətdən razı qaldınızsa, bir neçə saniyə ayırıb bizi Google-da qiymətləndirərdiniz? {{review_url}} Təşəkkür edirik!"},
+		"Salam, {{organization_name}} xidmətini buradan qiymətləndirə bilərsiniz: {{form_url}} Google rəy linki: {{review_url}} Təşəkkür edirik!"},
 	"ar": {"كيف كانت خدمتنا؟",
-		"مرحبًا، إذا كنت راضيًا عن الخدمة التي قدمتها {{organization_name}} لمركبتك، هل يمكنك تخصيص بضع ثوانٍ لتقييمنا على Google؟ {{review_url}} شكرًا لك!"},
+		"مرحبًا، يمكنك تقييم خدمة {{organization_name}} من هنا: {{form_url}} رابط تقييم Google: {{review_url}} شكرًا لك!"},
 }
 
 func serviceReviewTemplates() []DefaultTemplate {
@@ -67,6 +67,7 @@ func init() {
 		Placeholders: []msgtemplate.Placeholder{
 			ph("organization_name", "Tech Oto", "Tech Oto"),
 			ph("review_url", "https://g.page/r/tech-oto/review", "https://g.page/r/tech-oto/review"),
+			ph("form_url", "https://olexfilms.app/s/AbCdEfGhIj", "https://olexfilms.app/s/AbCdEfGhIj"),
 			ph("plate", "34 ABC 123", "34 ABC 123"),
 			ph("service_no", "DS00001234", "DS00001234"),
 		},
