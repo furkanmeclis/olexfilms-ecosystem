@@ -24546,7 +24546,7 @@ components:
         uuid: { type: string, format: uuid }
         event_type:
           type: string
-          enum: [created, status_changed, note, call, message, quote_sent, assigned, follow_up_set, converted]
+          enum: [created, status_changed, note, call, message, quote_sent, assigned, follow_up_set, converted, task_created]
         payload:
           type: object
           additionalProperties: true

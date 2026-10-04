@@ -14390,7 +14390,7 @@ export interface components {
             /** Format: uuid */
             uuid: string;
             /** @enum {string} */
-            event_type: "created" | "status_changed" | "note" | "call" | "message" | "quote_sent" | "assigned" | "follow_up_set" | "converted";
+            event_type: "created" | "status_changed" | "note" | "call" | "message" | "quote_sent" | "assigned" | "follow_up_set" | "converted" | "task_created";
             payload: {
                 [key: string]: unknown;
             };

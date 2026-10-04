@@ -35,6 +35,7 @@ const (
 	EventAssigned    = "assigned"
 	EventFollowUpSet = "follow_up_set"
 	EventConverted   = "converted"
+	EventTaskCreated = "task_created"
 
 	CodeInvalidTransition = "LEAD_INVALID_TRANSITION"
 
@@ -821,9 +822,7 @@ func (s *Service) CreateTask(ctx context.Context, c Caller, id uuid.UUID, in Tas
 	if err != nil {
 		return tasksuc.Task{}, err
 	}
-	// lead_events currently has no task_created enum in migration 000087.
-	// Use the existing converted event with an explicit kind in the payload.
-	_, err = s.add(ctx, row, EventConverted, map[string]any{"kind": "task_created", "task_uuid": t.UUID.String()}, c.actor())
+	_, err = s.add(ctx, row, EventTaskCreated, map[string]any{"task_uuid": t.UUID.String()}, c.actor())
 	if err != nil {
 		return tasksuc.Task{}, err
 	}
