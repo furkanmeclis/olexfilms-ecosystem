@@ -25,8 +25,8 @@ func TestIntegrationAccountingOpeningBalance(t *testing.T) {
 	it.member(center, accUser, "staff", rbac.RoleCenterAccounting)
 	distOwner, dpw := it.user("t177-dist-owner")
 	it.member(dist, distOwner, "owner")
-	dealerOwner, rpw := it.user("t177-dealer-owner")
-	it.member(dealer, dealerOwner, "owner")
+	dealerStaff, rpw := it.user("t177-dealer-staff")
+	it.member(dealer, dealerStaff, "staff")
 	tok := it.loginOrg(accUser, apw, center)
 
 	const path = "/v1/accounting/opening-balances"
@@ -131,14 +131,15 @@ func TestIntegrationAccountingOpeningBalance(t *testing.T) {
 		t.Fatalf("opening wrote %d income rows", incomes.Total)
 	}
 
-	// 7. Scope: dealer roles 403; the distributor books on its own book only.
-	dealerTok := it.loginOrg(dealerOwner, rpw, dealer)
-	it.stepUp(dealerOwner.Uuid)
+	// 7. Scope: dealer staff 403 (TEC-341 opens own-book writes to the dealer
+	// owner and dealer accounting); the distributor books on its own book only.
+	dealerTok := it.loginOrg(dealerStaff, rpw, dealer)
+	it.stepUp(dealerStaff.Uuid)
 	code, env = it.do("POST", path, hostOlex, dealerTok, map[string]any{
 		"counterparty_organization_uuid": dist.Uuid.String(), "side": "debit", "amount": "1", "opening_date": "2020-01-15",
 	})
 	if code != http.StatusForbidden {
-		t.Fatalf("dealer opening = %d %s", code, errCode(env))
+		t.Fatalf("dealer staff opening = %d %s", code, errCode(env))
 	}
 	distTok := it.loginOrg(distOwner, dpw, dist)
 	it.stepUp(distOwner.Uuid)

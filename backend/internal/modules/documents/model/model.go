@@ -23,6 +23,7 @@ const (
 	KindOrderSlip   = "order_slip"
 	KindInvoiceView = "invoice_view"
 	KindWarranty    = "warranty"
+	KindQuote       = "quote"
 )
 
 // Languages a template may be written in (K10: 12 languages + Arabic).
@@ -226,6 +227,13 @@ var specs = map[string]KindSpec{
 		block("warranty", "qr_code", "Doğrulama QR kodu", "Verification QR code"),
 		text("warranty", "verify_url", "Doğrulama adresi", "Verification URL", "https://olexfilms.app/garanti/OLX-W-000042", "https://olexfilms.app/garanti/OLX-W-000042"),
 	})},
+	KindQuote: {Kind: KindQuote, Variables: join(companyVars, documentVars, customerVars, totalsVars, []Variable{
+		text("quote", "quote_number", "Teklif no", "Quote number", "Q-000042", "Q-000042"),
+		text("quote", "valid_until", "Geçerlilik tarihi", "Valid until", "15.10.2026", "Oct 15, 2026"),
+		text("quote", "status", "Durum", "Status", "draft", "draft"),
+		block("quote", "items_table", "Teklif kalemleri tablosu", "Quote line items table"),
+		text("totals", "discount_total", "İndirim", "Discount", "500,00 TRY", "TRY 500.00"),
+	})},
 }
 
 func init() {
@@ -247,7 +255,7 @@ func init() {
 }
 
 // Kinds lists the document kinds in display order.
-var Kinds = []string{KindService, KindMeasurement, KindContract, KindOrderSlip, KindInvoiceView, KindWarranty}
+var Kinds = []string{KindService, KindMeasurement, KindContract, KindOrderSlip, KindInvoiceView, KindWarranty, KindQuote}
 
 // Spec returns the schema of a kind.
 func Spec(kind string) (KindSpec, bool) {

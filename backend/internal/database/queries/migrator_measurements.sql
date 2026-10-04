@@ -61,5 +61,7 @@ SET organization_id = sqlc.arg(organization_id)::bigint,
     status          = sqlc.arg(status)::varchar,
     raw             = sqlc.arg(raw)::jsonb,
     device_serial   = sqlc.narg(device_serial)::varchar,
-    created_by      = sqlc.narg(created_by)::bigint
+    created_by      = sqlc.narg(created_by)::bigint,
+    -- TEC-294: a changed raw is normalized again (measurement-reparse).
+    parsed_at       = NULL
 WHERE id = sqlc.arg(id)::bigint AND source = 'legacy_import';

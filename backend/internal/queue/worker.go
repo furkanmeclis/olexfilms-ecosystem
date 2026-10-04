@@ -71,6 +71,8 @@ type Worker struct {
 	serviceReviewRequest ServiceReviewRequestFunc
 	// TEC-221: center task due date reminders.
 	tasksDueScan TasksDueScanFunc
+	// TEC-314: daily quote expiry.
+	quoteExpire QuoteExpireFunc
 	// TEC-207: end-of-day warehouse reports.
 	warehouseEOD WarehouseEODFunc
 	// TEC-268: Glorian catalog and dealer pull.
@@ -156,6 +158,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskVehicleTransferExpire, w.handleVehicleTransferExpire)
 	mux.HandleFunc(TaskServiceReviewRequest, w.handleServiceReviewRequest)
 	mux.HandleFunc(TaskTasksDueScan, w.handleTasksDueScan)
+	mux.HandleFunc(TaskQuoteExpire, w.handleQuoteExpire)
 	mux.HandleFunc(TaskWarehouseEODReports, w.handleWarehouseEOD)
 	mux.HandleFunc(TaskGlorianPullCatalog, w.handleGlorianPull)
 	mux.HandleFunc(TaskGlorianPushBarcodes, w.handleGlorianPush)

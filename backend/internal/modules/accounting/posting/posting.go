@@ -66,7 +66,7 @@ func (p *Poster) PostExpense(ctx context.Context, tx pgx.Tx, e Entry) (Result, e
 
 // Charge books a non-P&L debit on the counterparty's cari (no account).
 func (p *Poster) Charge(ctx context.Context, tx pgx.Tx, e Entry) (Result, error) {
-	if e.AccountID != 0 || e.CounterpartyOrgID == 0 {
+	if e.AccountID != 0 || !e.hasCari() {
 		return Result{}, fmt.Errorf("%w: a charge books a cari only", ErrInvalid)
 	}
 	return p.post(ctx, tx, DirectionCharge, e)
@@ -75,7 +75,7 @@ func (p *Poster) Charge(ctx context.Context, tx pgx.Tx, e Entry) (Result, error)
 // Collect books a collection: the counterparty paid the organization into a
 // cash/bank account; the cari receivable goes down, no income is written.
 func (p *Poster) Collect(ctx context.Context, tx pgx.Tx, e Entry) (Result, error) {
-	if e.AccountID == 0 || e.CounterpartyOrgID == 0 {
+	if e.AccountID == 0 || !e.hasCari() {
 		return Result{}, fmt.Errorf("%w: a collection needs an account and a cari", ErrInvalid)
 	}
 	return p.post(ctx, tx, DirectionCollection, e)
@@ -84,7 +84,7 @@ func (p *Poster) Collect(ctx context.Context, tx pgx.Tx, e Entry) (Result, error
 // Pay books a payment: the organization paid the counterparty from a
 // cash/bank account; the cari debt goes down, no expense is written.
 func (p *Poster) Pay(ctx context.Context, tx pgx.Tx, e Entry) (Result, error) {
-	if e.AccountID == 0 || e.CounterpartyOrgID == 0 {
+	if e.AccountID == 0 || !e.hasCari() {
 		return Result{}, fmt.Errorf("%w: a payment needs an account and a cari", ErrInvalid)
 	}
 	return p.post(ctx, tx, DirectionPayment, e)
@@ -262,6 +262,9 @@ func (p *Poster) ReviseBySourceTx(ctx context.Context, tx pgx.Tx, src Source, am
 	return out, nil
 }
 
+// hasCari reports whether the entry books a cari (by counterparty or id).
+func (e Entry) hasCari() bool { return e.CounterpartyOrgID != 0 || e.CariID != 0 }
+
 var codeRe = regexp.MustCompile(`^[a-z][a-z0-9_]{0,63}$`)
 var categoryRe = regexp.MustCompile(`^[a-z][a-z0-9_.]{0,63}$`)
 var roleRe = regexp.MustCompile(`^[a-z][a-z0-9_]{0,31}$`)
@@ -289,8 +292,11 @@ func (p *Poster) post(ctx context.Context, tx pgx.Tx, direction string, e Entry)
 	if !roleRe.MatchString(e.Role) || e.Revision < 1 || !categoryRe.MatchString(e.Category) {
 		return Result{}, fmt.Errorf("%w: role %q, revision %d, category %q", ErrInvalid, e.Role, e.Revision, e.Category)
 	}
-	if e.AccountID == 0 && e.CounterpartyOrgID == 0 {
+	if e.AccountID == 0 && !e.hasCari() {
 		return Result{}, fmt.Errorf("%w: an entry needs an account or a counterparty", ErrInvalid)
+	}
+	if e.CounterpartyOrgID != 0 && e.CariID != 0 {
+		return Result{}, fmt.Errorf("%w: give a counterparty or a cari, not both", ErrInvalid)
 	}
 	amount, err := parseAmount(e.Amount)
 	if err != nil {
@@ -317,10 +323,20 @@ func (p *Poster) post(ctx context.Context, tx pgx.Tx, direction string, e Entry)
 	}
 
 	var cari pgtype.Int8
-	if e.CounterpartyOrgID != 0 {
+	switch {
+	case e.CounterpartyOrgID != 0:
 		c, err := ensureCari(ctx, q, owner, e.CounterpartyOrgID)
 		if err != nil {
 			return Result{}, err
+		}
+		cari = pgtype.Int8{Int64: c.ID, Valid: true}
+	case e.CariID != 0:
+		c, err := q.GetCariAccount(ctx, db.GetCariAccountParams{ID: e.CariID, OrganizationID: owner.ID})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return Result{}, fmt.Errorf("%w: cari %d is not a cari of organization %d", ErrInvalid, e.CariID, owner.ID)
+		}
+		if err != nil {
+			return Result{}, fmt.Errorf("posting: cari %d: %w", e.CariID, err)
 		}
 		cari = pgtype.Int8{Int64: c.ID, Valid: true}
 	}
@@ -385,7 +401,8 @@ func (p *Poster) replay(ctx context.Context, q *db.Queries, key db.GetFinanceEnt
 	}
 	same := prev.Direction == direction && prev.OrigCurrency == cur &&
 		FormatNumeric(prev.OrigAmount) == amount && prev.Category == e.Category &&
-		prev.AccountID.Int64 == e.AccountID && prev.CariID.Valid == (e.CounterpartyOrgID != 0)
+		prev.AccountID.Int64 == e.AccountID && prev.CariID.Valid == e.hasCari() &&
+		(e.CariID == 0 || prev.CariID.Int64 == e.CariID)
 	if !same {
 		return Result{}, true, fmt.Errorf("%w: %s/%s role %s revision %d in organization %d",
 			ErrIdempotencyConflict, key.SourceType, key.SourceUuid, key.Role, key.Revision, key.OrganizationID)

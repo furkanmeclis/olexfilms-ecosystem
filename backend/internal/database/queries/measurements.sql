@@ -231,3 +231,34 @@ UPDATE services
 SET measurement_check_required = sqlc.arg(measurement_check_required),
     measurement_checked_at = sqlc.narg(measurement_checked_at)
 WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id);
+
+-- TEC-294 (F3-02b): NexPTG normalization, device auto-registration, VIN
+-- completion and the reparse backfill.
+
+-- A device first seen in an upload is registered to the organization; a
+-- concurrent upload of the same serial wins the insert (no row then).
+-- name: InsertMeasurementDeviceIfAbsent :one
+INSERT INTO measurement_devices (organization_id, brand_id, serial, model)
+VALUES (sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.arg(serial), sqlc.narg(model))
+ON CONFLICT (organization_id, serial) DO NOTHING
+RETURNING *;
+
+-- The next page of results still waiting for normalization (keyset by id).
+-- name: ListUnparsedMeasurementResultIDs :many
+SELECT id FROM measurement_results
+WHERE parsed_at IS NULL AND id > sqlc.arg(after_id)
+ORDER BY id
+LIMIT sqlc.arg(limit_count);
+
+-- Locks one unparsed result for normalization; no row when another run
+-- normalized it meanwhile.
+-- name: LockUnparsedMeasurementResult :one
+SELECT * FROM measurement_results
+WHERE id = sqlc.arg(id) AND parsed_at IS NULL
+FOR UPDATE;
+
+-- Completes the VIN of a vin_pending result (status accepted).
+-- name: CompleteMeasurementResultVIN :execrows
+UPDATE measurement_results
+SET vin = sqlc.arg(vin), status = 'accepted'
+WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id) AND status = 'vin_pending';

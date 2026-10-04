@@ -119,6 +119,11 @@ func (s *Service) ContractGraceDays(ctx context.Context) int {
 	return int(s.Int(ctx, KeyContractGraceDays))
 }
 
+// ContractsIntakeRequired is the typed accessor for KeyContractsIntakeRequired.
+func (s *Service) ContractsIntakeRequired(ctx context.Context) bool {
+	return s.Bool(ctx, KeyContractsIntakeRequired)
+}
+
 // ForecastMinDays is the typed accessor for KeyForecastMinDays.
 func (s *Service) ForecastMinDays(ctx context.Context) int {
 	return int(s.Int(ctx, KeyForecastMinDays))
