@@ -18,6 +18,10 @@ RETURNING *;
 SELECT * FROM service_catalog_items
 WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id);
 
+-- name: GetServiceCatalogItemByID :one
+SELECT * FROM service_catalog_items
+WHERE id = sqlc.arg(id);
+
 -- name: GetServiceCatalogItem :one
 SELECT * FROM service_catalog_items
 WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id);
