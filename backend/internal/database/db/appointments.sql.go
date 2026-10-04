@@ -12,6 +12,88 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countActiveAppointmentsByOrganization = `-- name: CountActiveAppointmentsByOrganization :many
+SELECT organization_id, COUNT(*)::bigint AS active_count
+FROM appointments
+WHERE organization_id = ANY($1::bigint[])
+  AND brand_id = $2
+  AND deleted_at IS NULL
+  AND status IN ('scheduled', 'confirmed', 'arrived')
+  AND starts_at >= $3::timestamptz
+  AND starts_at < $4::timestamptz
+GROUP BY organization_id
+ORDER BY organization_id
+`
+
+type CountActiveAppointmentsByOrganizationParams struct {
+	OrganizationIds []int64            `json:"organization_ids"`
+	BrandID         int64              `json:"brand_id"`
+	FromTime        pgtype.Timestamptz `json:"from_time"`
+	ToTime          pgtype.Timestamptz `json:"to_time"`
+}
+
+type CountActiveAppointmentsByOrganizationRow struct {
+	OrganizationID int64 `json:"organization_id"`
+	ActiveCount    int64 `json:"active_count"`
+}
+
+func (q *Queries) CountActiveAppointmentsByOrganization(ctx context.Context, arg CountActiveAppointmentsByOrganizationParams) ([]CountActiveAppointmentsByOrganizationRow, error) {
+	rows, err := q.db.Query(ctx, countActiveAppointmentsByOrganization,
+		arg.OrganizationIds,
+		arg.BrandID,
+		arg.FromTime,
+		arg.ToTime,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CountActiveAppointmentsByOrganizationRow{}
+	for rows.Next() {
+		var i CountActiveAppointmentsByOrganizationRow
+		if err := rows.Scan(&i.OrganizationID, &i.ActiveCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const countActiveAppointmentsForOrganization = `-- name: CountActiveAppointmentsForOrganization :one
+SELECT COUNT(*) FROM appointments
+WHERE organization_id = $1
+  AND brand_id = $2
+  AND deleted_at IS NULL
+  AND status IN ('scheduled', 'confirmed', 'arrived')
+  AND starts_at >= $3::timestamptz
+  AND starts_at < $4::timestamptz
+  AND ($5::bigint IS NULL OR id <> $5::bigint)
+`
+
+type CountActiveAppointmentsForOrganizationParams struct {
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	FromTime       pgtype.Timestamptz `json:"from_time"`
+	ToTime         pgtype.Timestamptz `json:"to_time"`
+	ExcludeID      pgtype.Int8        `json:"exclude_id"`
+}
+
+func (q *Queries) CountActiveAppointmentsForOrganization(ctx context.Context, arg CountActiveAppointmentsForOrganizationParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countActiveAppointmentsForOrganization,
+		arg.OrganizationID,
+		arg.BrandID,
+		arg.FromTime,
+		arg.ToTime,
+		arg.ExcludeID,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countAppointmentsByOrganizations = `-- name: CountAppointmentsByOrganizations :one
 SELECT COUNT(*) FROM appointments
 WHERE organization_id = ANY($1::bigint[])
@@ -165,6 +247,24 @@ type DeleteAppointmentClosureParams struct {
 
 func (q *Queries) DeleteAppointmentClosure(ctx context.Context, arg DeleteAppointmentClosureParams) (int64, error) {
 	result, err := q.db.Exec(ctx, deleteAppointmentClosure, arg.ID, arg.OrganizationID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteAppointmentClosureByUUID = `-- name: DeleteAppointmentClosureByUUID :execrows
+DELETE FROM appointment_closures
+WHERE uuid = $1 AND organization_id = $2
+`
+
+type DeleteAppointmentClosureByUUIDParams struct {
+	Uuid           uuid.UUID `json:"uuid"`
+	OrganizationID int64     `json:"organization_id"`
+}
+
+func (q *Queries) DeleteAppointmentClosureByUUID(ctx context.Context, arg DeleteAppointmentClosureByUUIDParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteAppointmentClosureByUUID, arg.Uuid, arg.OrganizationID)
 	if err != nil {
 		return 0, err
 	}

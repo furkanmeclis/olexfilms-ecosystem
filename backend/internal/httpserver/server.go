@@ -26,6 +26,9 @@ import (
 	announcementsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements"
 	announcementshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/handler"
 	announcementsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/usecase"
+	appointmentsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/appointments"
+	appointmentshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/appointments/handler"
+	appointmentsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/appointments/usecase"
 	authmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth"
 	authhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/handler"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/identity"
@@ -656,6 +659,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		leadsSvc.SetFinder(listFinder)
 	}
 	leadsmodule.RegisterRoutes(mux, leadshandler.New(leadsSvc), tokens, loader, deps.Queries, featureSvc)
+	// TEC-323: appointments, capacity, availability and intake start.
+	appointmentsSvc := appointmentsusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries), servicesSvc)
+	appointmentsmodule.RegisterRoutes(mux, appointmentshandler.New(appointmentsSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-149: vehicle catalog (global car brands/models, super_admin writes).
 	vehiclecatalogmodule.RegisterRoutes(mux, vehiclecataloghandler.New(
 		vehiclecatalogusecase.New(deps.Queries), deps.Storage, activityRec), tokens, loader)

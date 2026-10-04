@@ -43,6 +43,10 @@ ORDER BY closed_on, id;
 DELETE FROM appointment_closures
 WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id);
 
+-- name: DeleteAppointmentClosureByUUID :execrows
+DELETE FROM appointment_closures
+WHERE uuid = sqlc.arg(uuid) AND organization_id = sqlc.arg(organization_id);
+
 -- name: CreateAppointment :one
 INSERT INTO appointments (
     organization_id, brand_id, customer_user_id, vehicle_id, starts_at, ends_at,
@@ -84,6 +88,28 @@ WHERE organization_id = ANY(sqlc.arg(organization_ids)::bigint[])
   AND starts_at >= sqlc.arg(from_time)::timestamptz
   AND starts_at < sqlc.arg(to_time)::timestamptz
   AND (sqlc.narg(status)::varchar IS NULL OR status = sqlc.narg(status)::varchar);
+
+-- name: CountActiveAppointmentsForOrganization :one
+SELECT COUNT(*) FROM appointments
+WHERE organization_id = sqlc.arg(organization_id)
+  AND brand_id = sqlc.arg(brand_id)
+  AND deleted_at IS NULL
+  AND status IN ('scheduled', 'confirmed', 'arrived')
+  AND starts_at >= sqlc.arg(from_time)::timestamptz
+  AND starts_at < sqlc.arg(to_time)::timestamptz
+  AND (sqlc.narg(exclude_id)::bigint IS NULL OR id <> sqlc.narg(exclude_id)::bigint);
+
+-- name: CountActiveAppointmentsByOrganization :many
+SELECT organization_id, COUNT(*)::bigint AS active_count
+FROM appointments
+WHERE organization_id = ANY(sqlc.arg(organization_ids)::bigint[])
+  AND brand_id = sqlc.arg(brand_id)
+  AND deleted_at IS NULL
+  AND status IN ('scheduled', 'confirmed', 'arrived')
+  AND starts_at >= sqlc.arg(from_time)::timestamptz
+  AND starts_at < sqlc.arg(to_time)::timestamptz
+GROUP BY organization_id
+ORDER BY organization_id;
 
 -- name: UpdateAppointment :one
 UPDATE appointments

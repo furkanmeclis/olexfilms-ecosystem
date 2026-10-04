@@ -101,6 +101,8 @@ type Querier interface {
 	ConsumeQRLoginChallenge(ctx context.Context, code string) (QrLoginChallenge, error)
 	ConsumeStockReservation(ctx context.Context, id int64) (StockReservation, error)
 	CountAccountingDisputes(ctx context.Context, arg CountAccountingDisputesParams) (int64, error)
+	CountActiveAppointmentsByOrganization(ctx context.Context, arg CountActiveAppointmentsByOrganizationParams) ([]CountActiveAppointmentsByOrganizationRow, error)
+	CountActiveAppointmentsForOrganization(ctx context.Context, arg CountActiveAppointmentsForOrganizationParams) (int64, error)
 	CountActiveRefreshTokensForUser(ctx context.Context, userID int64) (int64, error)
 	CountActivityEvents(ctx context.Context, arg CountActivityEventsParams) (int64, error)
 	CountAllBulkJobs(ctx context.Context) (int64, error)
@@ -390,6 +392,7 @@ type Querier interface {
 	DeleteAppLogsByUUIDs(ctx context.Context, uuids []uuid.UUID) (int64, error)
 	DeleteAppLogsMatching(ctx context.Context, arg DeleteAppLogsMatchingParams) (int64, error)
 	DeleteAppointmentClosure(ctx context.Context, arg DeleteAppointmentClosureParams) (int64, error)
+	DeleteAppointmentClosureByUUID(ctx context.Context, arg DeleteAppointmentClosureByUUIDParams) (int64, error)
 	// Fails with a restrict/foreign key violation while models still use the brand.
 	DeleteCarBrand(ctx context.Context, id int64) (int64, error)
 	DeleteCarModel(ctx context.Context, id int64) (int64, error)
