@@ -2645,6 +2645,163 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/services/{uuid}/contract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a contract instance from a service
+         * @description Requires contracts.write. The service must be draft or pending; the default vehicle_intake template is used unless `template_uuid` is provided.
+         */
+        post: operations["createServiceContract"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contracts/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get contract content, signers and media
+         * @description Requires contracts.read in the active organization scope.
+         */
+        get: operations["getContract"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contracts/{uuid}/signers/customer/otp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send customer contract signing OTP
+         * @description Requires contracts.write. The OTP purpose is `contract_sign` and the message carries the customer's KVKK notice.
+         */
+        post: operations["requestContractCustomerOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contracts/{uuid}/signers/customer/sign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign the customer slot
+         * @description Requires contracts.write. When OTP is required, `code` must match the customer's contract_sign OTP and the signing window is 30 minutes from OTP creation.
+         */
+        post: operations["signContractCustomer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contracts/{uuid}/signers/staff/sign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign the staff slot
+         * @description Requires contracts.write. Uses the authenticated staff user; no OTP is required.
+         */
+        post: operations["signContractStaff"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contracts/{uuid}/media": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Attach contract media
+         * @description Requires contracts.write. Multipart `file` or `media`; jpeg/png/webp only, max 12 MB.
+         */
+        post: operations["addContractMedia"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contracts/{uuid}/media/{media}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete contract media before execution */
+        delete: operations["deleteContractMedia"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contracts/{uuid}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Void a contract with a required reason
+         * @description Requires contracts.void. Executed contracts keep their frozen content.
+         */
+        post: operations["voidContract"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/tenant/documents/render": {
         parameters: {
             query?: never;
@@ -11036,6 +11193,126 @@ export interface components {
             data: {
                 items: components["schemas"]["ContractTemplateVariable"][];
             };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        ContractStatus: "draft" | "pending" | "executed" | "voided";
+        /** @enum {string} */
+        ContractSignerRole: "customer" | "staff";
+        ContractSignature: {
+            /** Format: uuid */
+            uuid: string;
+            storage_key: string;
+            sha256: string;
+            ip_address?: string | null;
+            user_agent?: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        ContractSigner: {
+            /** Format: uuid */
+            uuid: string;
+            role: components["schemas"]["ContractSignerRole"];
+            /** Format: int64 */
+            user_id?: number | null;
+            name: string;
+            phone_e164?: string | null;
+            /** Format: date-time */
+            otp_verified_at?: string | null;
+            /** Format: date-time */
+            signed_at?: string | null;
+            signature?: components["schemas"]["ContractSignature"] | null;
+        };
+        ContractMedia: {
+            /** Format: uuid */
+            uuid: string;
+            storage_key: string;
+            /** @enum {string} */
+            mime_type: "image/jpeg" | "image/png" | "image/webp";
+            /** Format: int64 */
+            size_bytes: number;
+            sha256: string;
+            title?: string | null;
+            sort_order: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        Contract: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: int64 */
+            contract_no: number;
+            /** @enum {string} */
+            subject_type: "service" | "service_subscription";
+            /** Format: int64 */
+            subject_id: number;
+            kind: components["schemas"]["ContractTemplateKind"];
+            /** @example tr */
+            locale: string;
+            template_version: number;
+            otp_required: boolean;
+            signature_required: boolean;
+            status: components["schemas"]["ContractStatus"];
+            rendered_html?: string | null;
+            content_sha256?: string | null;
+            /** Format: date-time */
+            executed_at?: string | null;
+            /** Format: date-time */
+            voided_at?: string | null;
+            void_reason?: string | null;
+            signers: components["schemas"]["ContractSigner"][];
+            media: components["schemas"]["ContractMedia"][];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        CreateServiceContractRequest: {
+            /** Format: uuid */
+            template_uuid?: string | null;
+            /** @example tr */
+            locale?: string;
+        };
+        ContractSignRequest: {
+            /** @description Customer contract_sign OTP code when OTP is required. */
+            code?: string;
+            /**
+             * Format: byte
+             * @description Canvas PNG as base64 or data URL. Required when the template requires signatures.
+             */
+            signature_png?: string;
+        };
+        ContractStaffSignRequest: {
+            /** Format: byte */
+            signature_png?: string;
+        };
+        VoidContractRequest: {
+            reason: string;
+        };
+        ContractOTP: {
+            /** @example whatsapp */
+            channel: string;
+            /** Format: date-time */
+            expires_at: string;
+            /** Format: date-time */
+            resend_at: string;
+        };
+        EnvelopeContract: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Contract"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeContractMedia: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ContractMedia"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeContractOTP: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ContractOTP"];
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
@@ -20183,6 +20460,243 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeContractTemplate"];
                 };
             };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createServiceContract: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CreateServiceContractRequest"];
+            };
+        };
+        responses: {
+            /** @description Contract instance */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContract"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getContract: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Contract instance */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContract"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    requestContractCustomerOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OTP request accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContractOTP"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    signContractCustomer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContractSignRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated contract */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContract"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    signContractStaff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContractStaffSignRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated contract */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContract"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    addContractMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    title?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Attached media */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContractMedia"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    deleteContractMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                media: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    voidContract: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoidContractRequest"];
+            };
+        };
+        responses: {
+            /** @description Voided contract */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContract"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];

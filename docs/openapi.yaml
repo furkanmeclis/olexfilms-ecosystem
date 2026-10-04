@@ -117,6 +117,10 @@ tags:
       Vehicle services (TEC-97/TEC-179): draft by the serving organization,
       items from its stock, the legacy status flow and images. Completion
       with stock consumption arrives with TEC-180.
+  - name: Contracts
+    description: >-
+      Vehicle intake/service contracts: rendered template snapshots, customer
+      OTP + KVKK proof, canvas signatures, staff signature, media and voiding.
   - name: Warranties
     description: >-
       Warranties opened from completed services (TEC-98): panel and portal
@@ -4698,6 +4702,286 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeContractTemplate"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/services/{uuid}/contract:
+    post:
+      tags: [Contracts]
+      operationId: createServiceContract
+      summary: Create a contract instance from a service
+      description: Requires contracts.write. The service must be draft or pending; the default vehicle_intake template is used unless `template_uuid` is provided.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateServiceContractRequest"
+      responses:
+        "201":
+          description: Contract instance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeContract"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/contracts/{uuid}:
+    get:
+      tags: [Contracts]
+      operationId: getContract
+      summary: Get contract content, signers and media
+      description: Requires contracts.read in the active organization scope.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Contract instance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeContract"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/contracts/{uuid}/signers/customer/otp:
+    post:
+      tags: [Contracts]
+      operationId: requestContractCustomerOtp
+      summary: Send customer contract signing OTP
+      description: Requires contracts.write. The OTP purpose is `contract_sign` and the message carries the customer's KVKK notice.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "202":
+          description: OTP request accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeContractOTP"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/contracts/{uuid}/signers/customer/sign:
+    post:
+      tags: [Contracts]
+      operationId: signContractCustomer
+      summary: Sign the customer slot
+      description: Requires contracts.write. When OTP is required, `code` must match the customer's contract_sign OTP and the signing window is 30 minutes from OTP creation.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractSignRequest"
+      responses:
+        "200":
+          description: Updated contract
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeContract"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/contracts/{uuid}/signers/staff/sign:
+    post:
+      tags: [Contracts]
+      operationId: signContractStaff
+      summary: Sign the staff slot
+      description: Requires contracts.write. Uses the authenticated staff user; no OTP is required.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractStaffSignRequest"
+      responses:
+        "200":
+          description: Updated contract
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeContract"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/contracts/{uuid}/media:
+    post:
+      tags: [Contracts]
+      operationId: addContractMedia
+      summary: Attach contract media
+      description: Requires contracts.write. Multipart `file` or `media`; jpeg/png/webp only, max 12 MB.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                title:
+                  type: string
+      responses:
+        "201":
+          description: Attached media
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeContractMedia"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/contracts/{uuid}/media/{media}:
+    delete:
+      tags: [Contracts]
+      operationId: deleteContractMedia
+      summary: Delete contract media before execution
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: media
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Deleted
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/contracts/{uuid}/void:
+    post:
+      tags: [Contracts]
+      operationId: voidContract
+      summary: Void a contract with a required reason
+      description: Requires contracts.void. Executed contracts keep their frozen content.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoidContractRequest"
+      responses:
+        "200":
+          description: Voided contract
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeContract"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "403":
@@ -20261,6 +20545,155 @@ components:
             items:
               type: array
               items: { $ref: "#/components/schemas/ContractTemplateVariable" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    ContractStatus:
+      type: string
+      enum: [draft, pending, executed, voided]
+
+    ContractSignerRole:
+      type: string
+      enum: [customer, staff]
+
+    ContractSignature:
+      type: object
+      required: [uuid, storage_key, sha256, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        storage_key: { type: string }
+        sha256: { type: string, pattern: "^[0-9a-f]{64}$" }
+        ip_address: { type: [string, "null"] }
+        user_agent: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+
+    ContractSigner:
+      type: object
+      required: [uuid, role, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        role: { $ref: "#/components/schemas/ContractSignerRole" }
+        user_id: { type: [integer, "null"], format: int64 }
+        name: { type: string }
+        phone_e164: { type: [string, "null"] }
+        otp_verified_at: { type: [string, "null"], format: date-time }
+        signed_at: { type: [string, "null"], format: date-time }
+        signature:
+          oneOf:
+            - $ref: "#/components/schemas/ContractSignature"
+            - type: "null"
+
+    ContractMedia:
+      type: object
+      required: [uuid, storage_key, mime_type, size_bytes, sha256, sort_order, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        storage_key: { type: string }
+        mime_type: { type: string, enum: [image/jpeg, image/png, image/webp] }
+        size_bytes: { type: integer, format: int64, maximum: 12582912 }
+        sha256: { type: string, pattern: "^[0-9a-f]{64}$" }
+        title: { type: [string, "null"] }
+        sort_order: { type: integer }
+        created_at: { type: string, format: date-time }
+
+    Contract:
+      type: object
+      required:
+        - uuid
+        - contract_no
+        - subject_type
+        - subject_id
+        - kind
+        - locale
+        - template_version
+        - otp_required
+        - signature_required
+        - status
+        - signers
+        - media
+        - created_at
+        - updated_at
+      properties:
+        uuid: { type: string, format: uuid }
+        contract_no: { type: integer, format: int64 }
+        subject_type: { type: string, enum: [service, service_subscription] }
+        subject_id: { type: integer, format: int64 }
+        kind: { $ref: "#/components/schemas/ContractTemplateKind" }
+        locale: { type: string, example: tr }
+        template_version: { type: integer }
+        otp_required: { type: boolean }
+        signature_required: { type: boolean }
+        status: { $ref: "#/components/schemas/ContractStatus" }
+        rendered_html: { type: [string, "null"] }
+        content_sha256: { type: [string, "null"], pattern: "^[0-9a-f]{64}$" }
+        executed_at: { type: [string, "null"], format: date-time }
+        voided_at: { type: [string, "null"], format: date-time }
+        void_reason: { type: [string, "null"] }
+        signers:
+          type: array
+          items: { $ref: "#/components/schemas/ContractSigner" }
+        media:
+          type: array
+          items: { $ref: "#/components/schemas/ContractMedia" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    CreateServiceContractRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        template_uuid: { type: [string, "null"], format: uuid }
+        locale: { type: string, example: tr }
+
+    ContractSignRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        code: { type: string, description: "Customer contract_sign OTP code when OTP is required." }
+        signature_png: { type: string, format: byte, description: "Canvas PNG as base64 or data URL. Required when the template requires signatures." }
+
+    ContractStaffSignRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        signature_png: { type: string, format: byte }
+
+    VoidContractRequest:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1 }
+
+    ContractOTP:
+      type: object
+      required: [channel, expires_at, resend_at]
+      properties:
+        channel: { type: string, example: whatsapp }
+        expires_at: { type: string, format: date-time }
+        resend_at: { type: string, format: date-time }
+
+    EnvelopeContract:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Contract" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeContractMedia:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ContractMedia" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeContractOTP:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ContractOTP" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     ModuleLevel:

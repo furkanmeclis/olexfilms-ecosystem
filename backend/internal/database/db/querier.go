@@ -556,6 +556,7 @@ type Querier interface {
 	GetConsentForText(ctx context.Context, arg GetConsentForTextParams) (Consent, error)
 	GetContractInstanceByID(ctx context.Context, id int64) (ContractInstance, error)
 	GetContractInstanceByUUID(ctx context.Context, argUuid uuid.UUID) (ContractInstance, error)
+	GetContractInstanceByUUIDScoped(ctx context.Context, arg GetContractInstanceByUUIDScopedParams) (ContractInstance, error)
 	GetContractInstanceForUpdate(ctx context.Context, id int64) (ContractInstance, error)
 	GetContractMediaByUUID(ctx context.Context, arg GetContractMediaByUUIDParams) (ContractMedium, error)
 	GetContractSigner(ctx context.Context, arg GetContractSignerParams) (ContractSigner, error)
@@ -747,6 +748,8 @@ type Querier interface {
 	GetServiceByUUID(ctx context.Context, arg GetServiceByUUIDParams) (Service, error)
 	GetServiceCatalogItem(ctx context.Context, arg GetServiceCatalogItemParams) (ServiceCatalogItem, error)
 	GetServiceCatalogItemByUUID(ctx context.Context, arg GetServiceCatalogItemByUUIDParams) (ServiceCatalogItem, error)
+	GetServiceForContractByID(ctx context.Context, id int64) (GetServiceForContractByIDRow, error)
+	GetServiceForContractByUUID(ctx context.Context, arg GetServiceForContractByUUIDParams) (GetServiceForContractByUUIDRow, error)
 	GetServiceForIndex(ctx context.Context, argUuid uuid.UUID) (GetServiceForIndexRow, error)
 	// The service a measurement is attached to, bounded by the active
 	// organization (a service of another organization is not found).
@@ -1981,6 +1984,7 @@ type Querier interface {
 	SetContractInstanceStatus(ctx context.Context, arg SetContractInstanceStatusParams) (ContractInstance, error)
 	// Stores the consumed contract_sign OTP row as the signer's proof.
 	SetContractSignerOTP(ctx context.Context, arg SetContractSignerOTPParams) (ContractSigner, error)
+	SetContractSignerOTPByUUID(ctx context.Context, arg SetContractSignerOTPByUUIDParams) (ContractSigner, error)
 	SetCountryActive(ctx context.Context, arg SetCountryActiveParams) (Country, error)
 	// Full identity edit (only when the caller's scope covers every link of the
 	// customer and the user has no panel membership).
