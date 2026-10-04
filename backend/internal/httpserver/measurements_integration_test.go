@@ -269,6 +269,96 @@ func TestIntegrationPanelMeasurementScope(t *testing.T) {
 	if code != http.StatusOK {
 		t.Fatalf("own dealer detail = %d %s", code, errCode(env))
 	}
+
+	// Unfiltered lists stay inside the caller's reach: distributor A and
+	// dealer A see only dealer A's row, distributor B only dealer B's.
+	listUUIDs := func(tok string) []string {
+		t.Helper()
+		code, env := it.do("GET", "/v1/measurements", hostOlex, tok, nil)
+		if code != http.StatusOK {
+			t.Fatalf("list = %d %s", code, errCode(env))
+		}
+		var p measurementPage
+		if err := json.Unmarshal(env.Data, &p); err != nil {
+			t.Fatal(err)
+		}
+		out := make([]string, 0, len(p.Items))
+		for _, i := range p.Items {
+			out = append(out, i.UUID)
+		}
+		return out
+	}
+	for name, tc := range map[string]struct {
+		tok  string
+		want string
+	}{
+		"dist A": {distTokA, own.Uuid.String()}, "dealer A": {dealerTokA, own.Uuid.String()},
+		"dist B": {distTokB, foreign.Uuid.String()}, "dealer B": {dealerTokB, foreign.Uuid.String()},
+	} {
+		if got := listUUIDs(tc.tok); len(got) != 1 || got[0] != tc.want {
+			t.Fatalf("%s list = %v, want [%s]", name, got, tc.want)
+		}
+	}
+}
+
+// TEC-295 acceptance: the device registry. A second device with the same
+// serial in the organization is 409; a deactivated device is still listed
+// with is_active=false; another organization's device is 404 on PATCH.
+func TestIntegrationPanelMeasurementDevices(t *testing.T) {
+	it := newIntegration(t)
+	center := it.brandCenter("olex")
+	dealerA := it.org("t295-dev-a", "dealer", center)
+	dealerB := it.org("t295-dev-b", "dealer", center)
+	t.Cleanup(func() {
+		_, _ = it.pool.Exec(context.Background(), "DELETE FROM measurement_devices WHERE organization_id IN ($1, $2)", dealerA.ID, dealerB.ID)
+	})
+	ownerA, pwA := it.user("t295-dev-a")
+	ownerB, pwB := it.user("t295-dev-b")
+	it.member(dealerA, ownerA, "owner")
+	it.member(dealerB, ownerB, "owner")
+	tokA := it.loginOrg(ownerA, pwA, dealerA)
+	tokB := it.loginOrg(ownerB, pwB, dealerB)
+
+	type device struct {
+		UUID     string `json:"uuid"`
+		Serial   string `json:"serial"`
+		Type     string `json:"type"`
+		IsActive bool   `json:"is_active"`
+	}
+	code, env := it.do("POST", "/v1/measurement-devices", hostOlex, tokA, map[string]any{"serial": "NX-295-D", "label": "Bench"})
+	if code != http.StatusCreated {
+		t.Fatalf("create = %d %s", code, errCode(env))
+	}
+	var created device
+	if err := json.Unmarshal(env.Data, &created); err != nil {
+		t.Fatal(err)
+	}
+	if created.Serial != "NX-295-D" || created.Type != "NexPTG" || !created.IsActive {
+		t.Fatalf("created = %+v", created)
+	}
+	if code, env := it.do("POST", "/v1/measurement-devices", hostOlex, tokA, map[string]any{"serial": "NX-295-D"}); code != http.StatusConflict {
+		t.Fatalf("duplicate serial = %d %s", code, errCode(env))
+	}
+	if code, env := it.do("POST", "/v1/measurement-devices", hostOlex, tokB, map[string]any{"serial": "NX-295-D"}); code != http.StatusCreated {
+		t.Fatalf("same serial in another org = %d %s", code, errCode(env))
+	}
+	if code, env := it.do("PATCH", "/v1/measurement-devices/"+created.UUID, hostOlex, tokB, map[string]any{"is_active": false}); code != http.StatusNotFound {
+		t.Fatalf("foreign patch = %d %s", code, errCode(env))
+	}
+	if code, env := it.do("PATCH", "/v1/measurement-devices/"+created.UUID, hostOlex, tokA, map[string]any{"is_active": false}); code != http.StatusOK {
+		t.Fatalf("deactivate = %d %s", code, errCode(env))
+	}
+	code, env = it.do("GET", "/v1/measurement-devices", hostOlex, tokA, nil)
+	if code != http.StatusOK {
+		t.Fatalf("list = %d %s", code, errCode(env))
+	}
+	var list []device
+	if err := json.Unmarshal(env.Data, &list); err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 || list[0].UUID != created.UUID || list[0].IsActive {
+		t.Fatalf("list = %+v", list)
+	}
 }
 
 // doMobileKey is doMobile (version 1) with an optional Idempotency-Key.
