@@ -7994,6 +7994,150 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/leads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List leads in the caller scope */
+        get: operations["listLeads"];
+        put?: never;
+        /** Create a lead in the active organization */
+        post: operations["createLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/leads/follow-up-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Count overdue and today follow-ups */
+        get: operations["getLeadFollowUpCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/leads/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one lead */
+        get: operations["getLead"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch lead fields and append a timeline event */
+        patch: operations["patchLead"];
+        trace?: never;
+    };
+    "/v1/leads/{uuid}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move lead status through the pipeline
+         * @description Allowed transitions: new → contacted → quoted → won|lost, and lost → contacted. Invalid transitions return 422 LEAD_INVALID_TRANSITION.
+         */
+        post: operations["setLeadStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/leads/{uuid}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add a lead timeline note */
+        post: operations["addLeadNote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/leads/{uuid}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Assign or clear a lead assignee */
+        post: operations["assignLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/leads/{uuid}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List lead timeline events */
+        get: operations["listLeadEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/leads/{uuid}/task": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a center task linked to a lead
+         * @description The active organization must be the brand center.
+         */
+        post: operations["createLeadTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/tasks": {
         parameters: {
             query?: never;
@@ -14404,6 +14548,188 @@ export interface components {
             data: {
                 items: components["schemas"]["OrderOrgRef"][];
             };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        LeadTargetType: "customer" | "dealer_candidate" | "distributor_candidate";
+        /** @enum {string} */
+        LeadSource: "incoming_call" | "outgoing_call" | "walk_in" | "whatsapp" | "social" | "referral" | "website" | "application_form" | "other";
+        /** @enum {string} */
+        LeadTemperature: "cold" | "warm" | "hot";
+        /** @enum {string} */
+        LeadStatus: "new" | "contacted" | "quoted" | "won" | "lost";
+        Lead: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            organization_uuid: string;
+            target_type: components["schemas"]["LeadTargetType"];
+            /** Format: int64 */
+            customer_user_id?: number;
+            /** Format: int64 */
+            vehicle_id?: number;
+            candidate_company_name?: string;
+            candidate_contact_name?: string;
+            candidate_phone_e164?: string;
+            /** Format: email */
+            candidate_email?: string;
+            /** Format: int64 */
+            country_id?: number;
+            /** Format: int64 */
+            province_id?: number;
+            /** Format: int64 */
+            district_id?: number;
+            source: components["schemas"]["LeadSource"];
+            temperature: components["schemas"]["LeadTemperature"];
+            status: components["schemas"]["LeadStatus"];
+            lost_reason?: string;
+            /** Format: date-time */
+            follow_up_date?: string;
+            /** Format: int64 */
+            assignee_user_id?: number;
+            notes: string;
+            /** @enum {string} */
+            won_ref_type?: "service" | "appointment" | "organization";
+            /** Format: int64 */
+            won_ref_id?: number;
+            /** Format: int64 */
+            created_by_user_id?: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        LeadCreateInput: {
+            target_type: components["schemas"]["LeadTargetType"];
+            /** Format: int64 */
+            customer_user_id?: number | null;
+            /** Format: int64 */
+            vehicle_id?: number | null;
+            candidate_company_name?: string | null;
+            candidate_contact_name?: string | null;
+            candidate_phone_e164?: string | null;
+            /** Format: email */
+            candidate_email?: string | null;
+            /** Format: int64 */
+            country_id?: number | null;
+            /** Format: int64 */
+            province_id?: number | null;
+            /** Format: int64 */
+            district_id?: number | null;
+            source: components["schemas"]["LeadSource"];
+            temperature?: components["schemas"]["LeadTemperature"];
+            /** Format: date-time */
+            follow_up_date?: string | null;
+            /** Format: int64 */
+            assignee_user_id?: number | null;
+            notes?: string;
+        };
+        LeadPatchInput: {
+            target_type?: components["schemas"]["LeadTargetType"];
+            /** Format: int64 */
+            customer_user_id?: number | null;
+            /** Format: int64 */
+            vehicle_id?: number | null;
+            candidate_company_name?: string | null;
+            candidate_contact_name?: string | null;
+            candidate_phone_e164?: string | null;
+            /** Format: email */
+            candidate_email?: string | null;
+            /** Format: int64 */
+            country_id?: number | null;
+            /** Format: int64 */
+            province_id?: number | null;
+            /** Format: int64 */
+            district_id?: number | null;
+            source?: components["schemas"]["LeadSource"];
+            temperature?: components["schemas"]["LeadTemperature"];
+            /** Format: date-time */
+            follow_up_date?: string | null;
+            /** Format: int64 */
+            assignee_user_id?: number | null;
+            notes?: string;
+        };
+        LeadStatusInput: {
+            status: components["schemas"]["LeadStatus"];
+            lost_reason?: string | null;
+            /** @enum {string|null} */
+            won_ref_type?: "service" | "appointment" | "organization" | null;
+            /** Format: int64 */
+            won_ref_id?: number | null;
+        };
+        LeadNoteInput: {
+            body: string;
+        };
+        LeadAssignInput: {
+            /** Format: int64 */
+            assignee_user_id?: number | null;
+        };
+        LeadTaskInput: {
+            title: string;
+            description?: string;
+            /** Format: uuid */
+            assignee_user_uuid?: string | null;
+            priority?: components["schemas"]["TaskPriority"];
+            /** Format: date-time */
+            due_at?: string | null;
+        };
+        LeadEvent: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            event_type: "created" | "status_changed" | "note" | "call" | "message" | "quote_sent" | "assigned" | "follow_up_set" | "converted" | "task_created";
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Format: int64 */
+            actor_user_id?: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        LeadFollowUpCount: {
+            /** Format: int64 */
+            overdue: number;
+            /** Format: int64 */
+            today: number;
+        };
+        EnvelopeLead: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Lead"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeLeadPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["Lead"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeLeadEvent: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["LeadEvent"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeLeadEventList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["LeadEvent"][];
+                /** Format: int64 */
+                total: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeLeadFollowUpCount: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["LeadFollowUpCount"];
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
@@ -29618,6 +29944,286 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    listLeads: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["LeadStatus"];
+                target_type?: components["schemas"]["LeadTargetType"];
+                follow_up?: "overdue" | "today";
+                q?: components["parameters"]["Q"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Leads */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLeadPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadCreateInput"];
+            };
+        };
+        responses: {
+            /** @description Lead created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLead"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getLeadFollowUpCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Follow-up counts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLeadFollowUpCount"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lead */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLead"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadPatchInput"];
+            };
+        };
+        responses: {
+            /** @description Lead updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLead"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    setLeadStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadStatusInput"];
+            };
+        };
+        responses: {
+            /** @description Lead status changed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLead"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    addLeadNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadNoteInput"];
+            };
+        };
+        responses: {
+            /** @description Note added */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLeadEvent"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    assignLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadAssignInput"];
+            };
+        };
+        responses: {
+            /** @description Lead assigned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLead"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listLeadEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lead events */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLeadEventList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createLeadTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadTaskInput"];
+            };
+        };
+        responses: {
+            /** @description Task opened */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTask"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     listTasks: {

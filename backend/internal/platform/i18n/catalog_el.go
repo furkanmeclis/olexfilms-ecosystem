@@ -49,6 +49,7 @@ var elCatalog = map[string]string{
 	"common.status":                            "Κατάσταση",
 	"common.active":                            "Ενεργό",
 	"common.passive":                           "Ανενεργό",
+	"search.specs_leads":                       "Υποψήφιοι πελάτες",
 	"customers.anonymized_name":                "Ανώνυμος πελάτης",
 	"services.status.draft":                    "Πρόχειρο",
 	"services.status.pending":                  "Σε αναμονή",

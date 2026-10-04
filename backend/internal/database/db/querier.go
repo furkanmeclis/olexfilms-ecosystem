@@ -133,6 +133,7 @@ type Querier interface {
 	CountImportJobsForActor(ctx context.Context, actorID int64) (int64, error)
 	CountImportJobsForOrganization(ctx context.Context, organizationID int64) (int64, error)
 	CountLeadsByOrganizations(ctx context.Context, arg CountLeadsByOrganizationsParams) (int64, error)
+	CountLeadsInScope(ctx context.Context, arg CountLeadsInScopeParams) (int64, error)
 	CountLegacyMessagesByChannel(ctx context.Context, brandID int64) ([]CountLegacyMessagesByChannelRow, error)
 	CountMessagesByExternalID(ctx context.Context, arg CountMessagesByExternalIDParams) (int64, error)
 	CountMigrationMap(ctx context.Context) ([]CountMigrationMapRow, error)
@@ -619,6 +620,7 @@ type Querier interface {
 	GetLatestPhoneOTP(ctx context.Context, arg GetLatestPhoneOTPParams) (OtpCode, error)
 	GetLeadByID(ctx context.Context, arg GetLeadByIDParams) (Lead, error)
 	GetLeadByUUID(ctx context.Context, arg GetLeadByUUIDParams) (Lead, error)
+	GetLeadForIndex(ctx context.Context, argUuid uuid.UUID) (Lead, error)
 	GetLibraryFolderByUUID(ctx context.Context, argUuid uuid.UUID) (LibraryFolder, error)
 	GetLibraryItemByID(ctx context.Context, id int64) (LibraryItem, error)
 	GetLibraryItemByUUID(ctx context.Context, argUuid uuid.UUID) (LibraryItem, error)
@@ -1150,6 +1152,8 @@ type Querier interface {
 	ListLatestLibraryItemVersions(ctx context.Context, itemID int64) ([]LibraryItemVersion, error)
 	ListLeadEvents(ctx context.Context, leadID int64) ([]LeadEvent, error)
 	ListLeadsByOrganizations(ctx context.Context, arg ListLeadsByOrganizationsParams) ([]Lead, error)
+	ListLeadsForIndex(ctx context.Context) ([]Lead, error)
+	ListLeadsInScope(ctx context.Context, arg ListLeadsInScopeParams) ([]Lead, error)
 	// TEC-263: read-only access to the old hub's message archive
 	// (legacy_messages). No UI; the table is append-only and only the K19
 	// anonymization may mask a row.

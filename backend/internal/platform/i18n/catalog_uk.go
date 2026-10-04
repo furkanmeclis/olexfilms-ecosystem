@@ -49,6 +49,7 @@ var ukCatalog = map[string]string{
 	"common.status":                            "Статус",
 	"common.active":                            "Активний",
 	"common.passive":                           "Неактивний",
+	"search.specs_leads":                       "Ліди",
 	"customers.anonymized_name":                "Анонімний клієнт",
 	"services.status.draft":                    "Чернетка",
 	"services.status.pending":                  "Очікує",
