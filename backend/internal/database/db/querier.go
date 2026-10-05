@@ -875,6 +875,7 @@ type Querier interface {
 	GetServiceRefs(ctx context.Context, id int64) (GetServiceRefsRow, error)
 	// TEC-244 (F2-03h): the portal service review form (one per service).
 	GetServiceReviewByService(ctx context.Context, serviceID int64) (ServiceReview, error)
+	GetServiceReviewProcessingDetails(ctx context.Context, reviewID int64) (GetServiceReviewProcessingDetailsRow, error)
 	GetServiceSubscriptionByUUID(ctx context.Context, arg GetServiceSubscriptionByUUIDParams) (ServiceSubscription, error)
 	GetServiceSubscriptionCancelRequestByUUID(ctx context.Context, arg GetServiceSubscriptionCancelRequestByUUIDParams) (ServiceSubscriptionCancelRequest, error)
 	GetServiceSubscriptionForContractByID(ctx context.Context, id int64) (ServiceSubscription, error)
@@ -2159,6 +2160,8 @@ type Querier interface {
 	ResolveTerritory(ctx context.Context, arg ResolveTerritoryParams) (ResolveTerritoryRow, error)
 	// A failed render is re-queued with a new attempt number (new task id).
 	RetryDocumentRender(ctx context.Context, id int64) (DocumentRender, error)
+	ReviewDealerStats(ctx context.Context, arg ReviewDealerStatsParams) ([]ReviewDealerStatsRow, error)
+	ReviewProductStats(ctx context.Context, arg ReviewProductStatsParams) ([]ReviewProductStatsRow, error)
 	ReviewQuestionHasAnswers(ctx context.Context, questionID int64) (bool, error)
 	RevokeAllDevicePushTokensForUser(ctx context.Context, userID int64) (int64, error)
 	RevokeAllRefreshTokensForUser(ctx context.Context, userID int64) error

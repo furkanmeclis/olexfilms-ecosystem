@@ -137,3 +137,38 @@ SELECT * FROM service_reviews
 WHERE processed_at IS NULL
 ORDER BY created_at, id
 LIMIT sqlc.arg(page_limit);
+
+-- name: GetServiceReviewProcessingDetails :one
+SELECT sr.id, sr.uuid, sr.organization_id, sr.brand_id, sr.service_id,
+       sr.customer_user_id, sr.platform_rating, sr.product_rating, sr.comment,
+       sr.created_at, sr.is_anonymous, sr.source, sr.processed_at,
+       s.uuid AS service_uuid, s.service_no, s.plate,
+       o.name AS organization_name,
+       center.id AS center_organization_id,
+       u.name AS customer_name, u.surname AS customer_surname,
+       COALESCE(
+           array_remove(array_agg(DISTINCT om.user_id) FILTER (
+               WHERE om.user_id IS NOT NULL
+                 AND (om.role = 'owner' OR r.slug = 'dealer_owner')
+           ), NULL),
+           ARRAY[]::bigint[]
+       )::bigint[] AS dealer_owner_user_ids,
+       LEAST(
+           sr.platform_rating,
+           sr.product_rating,
+           COALESCE((
+               SELECT MIN(a.rating)
+               FROM service_review_answers a
+               WHERE a.review_id = sr.id AND a.rating IS NOT NULL
+           ), 5)
+       )::smallint AS min_rating
+FROM service_reviews sr
+JOIN services s ON s.id = sr.service_id
+JOIN organizations o ON o.id = sr.organization_id
+JOIN organizations center ON center.brand_id = sr.brand_id AND center.type = 'center'
+JOIN users u ON u.id = sr.customer_user_id
+LEFT JOIN organization_members om ON om.organization_id = sr.organization_id
+LEFT JOIN organization_member_roles mr ON mr.member_id = om.id
+LEFT JOIN roles r ON r.id = mr.role_id
+WHERE sr.id = sqlc.arg(review_id)::bigint
+GROUP BY sr.id, s.uuid, s.service_no, s.plate, o.name, center.id, u.name, u.surname;

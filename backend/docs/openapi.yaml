@@ -2259,6 +2259,133 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /v1/reviews:
+    get:
+      tags: [Reviews]
+      operationId: listReviews
+      summary: List service reviews inside reviews.read scope
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: dealer_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - name: product_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - name: min_rating
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 5 }
+        - name: max_rating
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 5 }
+        - name: created_from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: created_to
+          in: query
+          schema: { type: string, format: date-time }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Reviews
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeServiceReviewList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/reviews/stats/dealers:
+    get:
+      tags: [Reviews]
+      operationId: reviewDealerStats
+      summary: Dealer review averages
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: created_from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: created_to
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        "200":
+          description: Dealer stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeReviewDealerStats"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/reviews/stats/products:
+    get:
+      tags: [Reviews]
+      operationId: reviewProductStats
+      summary: Product review averages
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: created_from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: created_to
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        "200":
+          description: Product stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeReviewProductStats"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/reviews/export:
+    post:
+      tags: [Reviews]
+      operationId: requestReviewsExport
+      summary: Queue a review list export
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewExportInput"
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /v1/platform/review-questions:
     get:
       tags: [Reviews]
@@ -29227,6 +29354,35 @@ components:
           items: { $ref: "#/components/schemas/ReviewAnswer" }
         created_at: { type: string, format: date-time }
 
+    ReviewDealerStat:
+      type: object
+      required: [dealer_uuid, dealer_name, review_count, average_rating]
+      properties:
+        dealer_uuid: { type: string, format: uuid }
+        dealer_name: { type: string }
+        review_count: { type: integer, format: int64 }
+        average_rating: { type: number, format: double }
+
+    ReviewProductStat:
+      type: object
+      required: [product_uuid, sku, product_name, review_count, average_rating]
+      properties:
+        product_uuid: { type: string, format: uuid }
+        sku: { type: string }
+        product_name: { type: string }
+        review_count: { type: integer, format: int64 }
+        average_rating: { type: number, format: double }
+
+    ReviewExportInput:
+      type: object
+      required: [format]
+      properties:
+        format: { type: string, enum: [pdf, xlsx, csv, json] }
+        locale: { type: string, example: tr }
+        query:
+          type: object
+          additionalProperties: { type: string }
+
     EnvelopeReviewQuestion:
       type: object
       required: [success, data, meta]
@@ -29270,6 +29426,34 @@ components:
               type: array
               items: { $ref: "#/components/schemas/ServiceReview" }
             total: { type: integer, format: int64 }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeReviewDealerStats:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/ReviewDealerStat" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeReviewProductStats:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/ReviewProductStat" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     PortalNamedRef:
