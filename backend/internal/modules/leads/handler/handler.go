@@ -59,6 +59,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Error(w, r, http.StatusUnprocessableEntity, usecase.CodeInvalidTransition, "Lead status transition is not allowed")
 	case errors.Is(err, usecase.ErrQuoteConflict):
 		response.Error(w, r, http.StatusConflict, "QUOTE_CONFLICT", "Quote state does not allow this action")
+	case errors.Is(err, usecase.ErrQuoteNoRecipient):
+		response.Error(w, r, http.StatusUnprocessableEntity, usecase.CodeQuoteNoRecipient, "Quote has no WhatsApp recipient")
 	case errors.Is(err, usecase.ErrQuoteForbidden):
 		response.Forbidden(w, r, "This quote price override requires pricing.sale.write")
 	case errors.Is(err, usecase.ErrForbidden):
@@ -136,6 +138,34 @@ func (h *Handler) GetQuote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q, err := h.svc.GetQuote(r.Context(), caller(r), id)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, q)
+}
+
+// SendQuote (POST /v1/quotes/{uuid}/send).
+func (h *Handler) SendQuote(w http.ResponseWriter, r *http.Request) {
+	id, ok := quoteUUID(w, r)
+	if !ok {
+		return
+	}
+	out, err := h.svc.SendQuote(r.Context(), caller(r), id)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
+// RemindQuote (POST /v1/quotes/{uuid}/remind).
+func (h *Handler) RemindQuote(w http.ResponseWriter, r *http.Request) {
+	id, ok := quoteUUID(w, r)
+	if !ok {
+		return
+	}
+	q, err := h.svc.RemindQuote(r.Context(), caller(r), id)
 	if err != nil {
 		writeError(w, r, err)
 		return

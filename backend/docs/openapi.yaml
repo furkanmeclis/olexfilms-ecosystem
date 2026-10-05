@@ -17091,6 +17091,54 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
 
+  /v1/quotes/{uuid}/send:
+    post:
+      tags: [Leads]
+      operationId: sendQuote
+      summary: Send a quote over WhatsApp with a public short link
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Quote sent
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeQuoteSendResult" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /v1/quotes/{uuid}/remind:
+    post:
+      tags: [Leads]
+      operationId: remindQuote
+      summary: Send a manual WhatsApp reminder for a sent quote
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Quote reminder sent
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeQuote" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
   /v1/quotes/{uuid}/lines:
     put:
       tags: [Leads]
@@ -17208,6 +17256,53 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/public/quotes/{token}:
+    get:
+      tags: [Leads]
+      operationId: getPublicQuote
+      summary: Read a public quote by token
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Public quote without recipient personal data
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePublicQuote" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /v1/public/quotes/{token}/pdf:
+    get:
+      tags: [Leads]
+      operationId: requestPublicQuotePdf
+      summary: Request or fetch a public quote PDF render
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: locale
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: Quote PDF render is ready
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeDocumentRender" }
+        "202":
+          description: Quote PDF render queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeDocumentRender" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
 
   /v1/portal/dealers/{uuid}/availability:
     get:
@@ -27879,12 +27974,59 @@ components:
       properties:
         reason: { type: [string, "null"], maxLength: 1000 }
 
+    QuoteSendResult:
+      type: object
+      required: [quote, public_url]
+      properties:
+        quote: { $ref: "#/components/schemas/Quote" }
+        public_url: { type: string, format: uri }
+
+    PublicQuotePDFRef:
+      type: object
+      required: [url]
+      properties:
+        url: { type: string }
+
+    PublicQuote:
+      type: object
+      required: [uuid, display_no, organization_name, currency, subtotal, discount_total, tax_total, grand_total, lines, pdf]
+      properties:
+        uuid: { type: string, format: uuid }
+        display_no: { type: string, example: Q-000042 }
+        organization_name: { type: string }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        subtotal: { type: string, example: "100.00" }
+        discount_total: { type: string, example: "10.00" }
+        tax_total: { type: string, example: "0.00" }
+        grand_total: { type: string, example: "90.00" }
+        valid_until: { type: [string, "null"], format: date-time }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/QuoteLine" }
+        pdf: { $ref: "#/components/schemas/PublicQuotePDFRef" }
+
     EnvelopeQuote:
       type: object
       required: [success, data, meta]
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/Quote" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeQuoteSendResult:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/QuoteSendResult" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePublicQuote:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PublicQuote" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     AppointmentStatus:

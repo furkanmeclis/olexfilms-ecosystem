@@ -8876,6 +8876,40 @@ export interface paths {
         patch: operations["patchQuote"];
         trace?: never;
     };
+    "/v1/quotes/{uuid}/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a quote over WhatsApp with a public short link */
+        post: operations["sendQuote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/quotes/{uuid}/remind": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a manual WhatsApp reminder for a sent quote */
+        post: operations["remindQuote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/quotes/{uuid}/lines": {
         parameters: {
             query?: never;
@@ -8936,6 +8970,40 @@ export interface paths {
         };
         /** Request or fetch the quote PDF render */
         get: operations["requestQuotePdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/quotes/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a public quote by token */
+        get: operations["getPublicQuote"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/quotes/{token}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Request or fetch a public quote PDF render */
+        get: operations["requestPublicQuotePdf"];
         put?: never;
         post?: never;
         delete?: never;
@@ -16506,10 +16574,50 @@ export interface components {
         QuoteDecisionInput: {
             reason?: string | null;
         };
+        QuoteSendResult: {
+            quote: components["schemas"]["Quote"];
+            /** Format: uri */
+            public_url: string;
+        };
+        PublicQuotePDFRef: {
+            url: string;
+        };
+        PublicQuote: {
+            /** Format: uuid */
+            uuid: string;
+            /** @example Q-000042 */
+            display_no: string;
+            organization_name: string;
+            currency: string;
+            /** @example 100.00 */
+            subtotal: string;
+            /** @example 10.00 */
+            discount_total: string;
+            /** @example 0.00 */
+            tax_total: string;
+            /** @example 90.00 */
+            grand_total: string;
+            /** Format: date-time */
+            valid_until?: string | null;
+            lines: components["schemas"]["QuoteLine"][];
+            pdf: components["schemas"]["PublicQuotePDFRef"];
+        };
         EnvelopeQuote: {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["Quote"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeQuoteSendResult: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["QuoteSendResult"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePublicQuote: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PublicQuote"];
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
@@ -33590,6 +33698,60 @@ export interface operations {
             409: components["responses"]["Conflict"];
         };
     };
+    sendQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Quote sent */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQuoteSendResult"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    remindQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Quote reminder sent */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQuote"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
     replaceQuoteLines: {
         parameters: {
             query?: never;
@@ -33717,6 +33879,65 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getPublicQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Public quote without recipient personal data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePublicQuote"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    requestPublicQuotePdf: {
+        parameters: {
+            query?: {
+                locale?: string;
+            };
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Quote PDF render is ready */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDocumentRender"];
+                };
+            };
+            /** @description Quote PDF render queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDocumentRender"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     getPortalDealerAvailability: {
