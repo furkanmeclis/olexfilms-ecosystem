@@ -1252,6 +1252,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List service reviews inside reviews.read scope */
+        get: operations["listReviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reviews/stats/dealers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dealer review averages */
+        get: operations["reviewDealerStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reviews/stats/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Product review averages */
+        get: operations["reviewProductStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reviews/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Queue a review list export */
+        post: operations["requestReviewsExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/platform/review-questions": {
         parameters: {
             query?: never;
@@ -17772,6 +17840,34 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        ReviewDealerStat: {
+            /** Format: uuid */
+            dealer_uuid: string;
+            dealer_name: string;
+            /** Format: int64 */
+            review_count: number;
+            /** Format: double */
+            average_rating: number;
+        };
+        ReviewProductStat: {
+            /** Format: uuid */
+            product_uuid: string;
+            sku: string;
+            product_name: string;
+            /** Format: int64 */
+            review_count: number;
+            /** Format: double */
+            average_rating: number;
+        };
+        ReviewExportInput: {
+            /** @enum {string} */
+            format: "pdf" | "xlsx" | "csv" | "json";
+            /** @example tr */
+            locale?: string;
+            query?: {
+                [key: string]: string;
+            };
+        };
         EnvelopeReviewQuestion: {
             /** @enum {boolean} */
             success: true;
@@ -17799,6 +17895,22 @@ export interface components {
                 items: components["schemas"]["ServiceReview"][];
                 /** Format: int64 */
                 total: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeReviewDealerStats: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ReviewDealerStat"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeReviewProductStats: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ReviewProductStat"][];
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -20506,6 +20618,116 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeServiceReviewList"];
                 };
             };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listReviews: {
+        parameters: {
+            query?: {
+                dealer_uuid?: string;
+                product_uuid?: string;
+                min_rating?: number;
+                max_rating?: number;
+                created_from?: string;
+                created_to?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reviews */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceReviewList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    reviewDealerStats: {
+        parameters: {
+            query?: {
+                created_from?: string;
+                created_to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dealer stats */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeReviewDealerStats"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    reviewProductStats: {
+        parameters: {
+            query?: {
+                created_from?: string;
+                created_to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Product stats */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeReviewProductStats"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    requestReviewsExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
         };

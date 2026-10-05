@@ -204,6 +204,97 @@ func (q *Queries) GetReviewQuestionByUUID(ctx context.Context, arg GetReviewQues
 	return i, err
 }
 
+const getServiceReviewProcessingDetails = `-- name: GetServiceReviewProcessingDetails :one
+SELECT sr.id, sr.uuid, sr.organization_id, sr.brand_id, sr.service_id,
+       sr.customer_user_id, sr.platform_rating, sr.product_rating, sr.comment,
+       sr.created_at, sr.is_anonymous, sr.source, sr.processed_at,
+       s.uuid AS service_uuid, s.service_no, s.plate,
+       o.name AS organization_name,
+       center.id AS center_organization_id,
+       u.name AS customer_name, u.surname AS customer_surname,
+       COALESCE(
+           array_remove(array_agg(DISTINCT om.user_id) FILTER (
+               WHERE om.user_id IS NOT NULL
+                 AND (om.role = 'owner' OR r.slug = 'dealer_owner')
+           ), NULL),
+           ARRAY[]::bigint[]
+       )::bigint[] AS dealer_owner_user_ids,
+       LEAST(
+           sr.platform_rating,
+           sr.product_rating,
+           COALESCE((
+               SELECT MIN(a.rating)
+               FROM service_review_answers a
+               WHERE a.review_id = sr.id AND a.rating IS NOT NULL
+           ), 5)
+       )::smallint AS min_rating
+FROM service_reviews sr
+JOIN services s ON s.id = sr.service_id
+JOIN organizations o ON o.id = sr.organization_id
+JOIN organizations center ON center.brand_id = sr.brand_id AND center.type = 'center'
+JOIN users u ON u.id = sr.customer_user_id
+LEFT JOIN organization_members om ON om.organization_id = sr.organization_id
+LEFT JOIN organization_member_roles mr ON mr.member_id = om.id
+LEFT JOIN roles r ON r.id = mr.role_id
+WHERE sr.id = $1::bigint
+GROUP BY sr.id, s.uuid, s.service_no, s.plate, o.name, center.id, u.name, u.surname
+`
+
+type GetServiceReviewProcessingDetailsRow struct {
+	ID                   int64              `json:"id"`
+	Uuid                 uuid.UUID          `json:"uuid"`
+	OrganizationID       int64              `json:"organization_id"`
+	BrandID              int64              `json:"brand_id"`
+	ServiceID            int64              `json:"service_id"`
+	CustomerUserID       int64              `json:"customer_user_id"`
+	PlatformRating       int16              `json:"platform_rating"`
+	ProductRating        int16              `json:"product_rating"`
+	Comment              pgtype.Text        `json:"comment"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	IsAnonymous          bool               `json:"is_anonymous"`
+	Source               string             `json:"source"`
+	ProcessedAt          pgtype.Timestamptz `json:"processed_at"`
+	ServiceUuid          uuid.UUID          `json:"service_uuid"`
+	ServiceNo            string             `json:"service_no"`
+	Plate                pgtype.Text        `json:"plate"`
+	OrganizationName     string             `json:"organization_name"`
+	CenterOrganizationID int64              `json:"center_organization_id"`
+	CustomerName         string             `json:"customer_name"`
+	CustomerSurname      string             `json:"customer_surname"`
+	DealerOwnerUserIds   []int64            `json:"dealer_owner_user_ids"`
+	MinRating            int16              `json:"min_rating"`
+}
+
+func (q *Queries) GetServiceReviewProcessingDetails(ctx context.Context, reviewID int64) (GetServiceReviewProcessingDetailsRow, error) {
+	row := q.db.QueryRow(ctx, getServiceReviewProcessingDetails, reviewID)
+	var i GetServiceReviewProcessingDetailsRow
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ServiceID,
+		&i.CustomerUserID,
+		&i.PlatformRating,
+		&i.ProductRating,
+		&i.Comment,
+		&i.CreatedAt,
+		&i.IsAnonymous,
+		&i.Source,
+		&i.ProcessedAt,
+		&i.ServiceUuid,
+		&i.ServiceNo,
+		&i.Plate,
+		&i.OrganizationName,
+		&i.CenterOrganizationID,
+		&i.CustomerName,
+		&i.CustomerSurname,
+		&i.DealerOwnerUserIds,
+		&i.MinRating,
+	)
+	return i, err
+}
+
 const listReviewQuestionLocales = `-- name: ListReviewQuestionLocales :many
 SELECT question_id, locale, text, updated_at FROM review_question_locales
 WHERE question_id = $1::bigint

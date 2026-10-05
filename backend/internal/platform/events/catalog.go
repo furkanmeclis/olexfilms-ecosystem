@@ -301,6 +301,11 @@ const ServiceReviewRequested = "service.review_requested"
 // form. Processing and reporting consume this event asynchronously.
 const ServiceReviewed = "service.reviewed"
 
+// ServiceReviewLowScore is written by review processing when a review falls
+// at or below the low-score threshold; notification center sends it to the
+// dealer owner(s).
+const ServiceReviewLowScore = "service.review.low_score"
+
 // Warranty domain events (TEC-98 / TEC-185). warranty.created is written
 // by the service.completed consumer, expiring_soon (payload days: 30 or 7)
 // and expired by the daily cron, holder_changed by a completed vehicle
