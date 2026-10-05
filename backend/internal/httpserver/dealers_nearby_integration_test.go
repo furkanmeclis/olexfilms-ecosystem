@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // TEC-240: dealer coordinates (tenant settings) and the public nearby
@@ -85,14 +87,15 @@ func TestIntegrationDealersNearby(t *testing.T) {
 	}
 
 	type item struct {
-		Slug       string  `json:"slug"`
-		DistanceKm float64 `json:"distance_km"`
-		WhatsApp   *string `json:"whatsapp"`
-		Latitude   float64 `json:"latitude"`
-		Longitude  float64 `json:"longitude"`
-		City       string  `json:"city"`
-		Name       string  `json:"name"`
-		District   string  `json:"district"`
+		Slug                string  `json:"slug"`
+		DistanceKm          float64 `json:"distance_km"`
+		WhatsApp            *string `json:"whatsapp"`
+		Latitude            float64 `json:"latitude"`
+		Longitude           float64 `json:"longitude"`
+		City                string  `json:"city"`
+		Name                string  `json:"name"`
+		District            string  `json:"district"`
+		AcceptsAppointments bool    `json:"accepts_appointments"`
 	}
 	nearby := func(host, query string) []item {
 		t.Helper()
@@ -128,6 +131,25 @@ func TestIntegrationDealersNearby(t *testing.T) {
 	}
 	if got[1].WhatsApp == nil || *got[1].WhatsApp != "+905321112233" {
 		t.Fatalf("whatsapp: %+v", got[1].WhatsApp)
+	}
+	for _, org := range []db.Organization{near, mid, far} {
+		if _, err := it.q.UpsertAppointmentSettings(ctx, db.UpsertAppointmentSettingsParams{
+			OrganizationID: org.ID, BrandID: org.BrandID, DailyVehicleCapacity: 3,
+			DefaultEstimatedMinutes: 60, SlotIntervalMinutes: 60, WorkingHours: []byte(`{}`),
+			PortalAppointmentsEnabled: true,
+		}); err != nil {
+			t.Fatalf("appointment settings %s: %v", org.Slug, err)
+		}
+	}
+	if _, err := it.q.UpsertOrgModuleFlag(ctx, db.UpsertOrgModuleFlagParams{
+		Scope: "org", OrganizationID: pgtype.Int8{Int64: far.ID, Valid: true},
+		ModuleKey: features.ModuleAppointments, Enabled: false, Source: "admin",
+	}); err != nil {
+		t.Fatalf("disable appointments feature: %v", err)
+	}
+	got = nearby(hostOlex, "?lat=10.0&lng=-150.0&radius_km=50")
+	if !got[0].AcceptsAppointments || !got[1].AcceptsAppointments || got[2].AcceptsAppointments {
+		t.Fatalf("accepts_appointments = %+v, want enabled near/mid and disabled far", got)
 	}
 
 	// The radius cuts the far dealer.

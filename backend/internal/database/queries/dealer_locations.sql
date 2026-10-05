@@ -21,7 +21,19 @@ FROM (
            o.latitude::float8 AS latitude,
            o.longitude::float8 AS longitude,
            o.phone,
-           COALESCE(s.portal_appointments_enabled, FALSE)::boolean AS accepts_appointments,
+           (COALESCE(s.portal_appointments_enabled, FALSE) AND
+            CASE
+                WHEN sys.enabled = FALSE THEN FALSE
+                WHEN o.type = 'dealer' AND parent.type = 'distributor' THEN
+                    CASE
+                        WHEN own.source = 'admin' THEN own.enabled
+                        WHEN COALESCE(parent_own.enabled, m.default_enabled) = FALSE THEN FALSE
+                        WHEN own.id IS NOT NULL THEN own.enabled
+                        WHEN dealer_std.id IS NOT NULL THEN dealer_std.enabled
+                        ELSE m.default_enabled
+                    END
+                ELSE COALESCE(own.enabled, m.default_enabled)
+            END)::boolean AS accepts_appointments,
            (6371.0088 * 2 * asin(sqrt(LEAST(1.0,
                power(sin(radians(o.latitude::float8 - sqlc.arg(lat)::float8) / 2), 2)
                + cos(radians(sqlc.arg(lat)::float8)) * cos(radians(o.latitude::float8))
@@ -29,6 +41,12 @@ FROM (
            ))))::float8 AS distance_km
     FROM organizations o
     LEFT JOIN appointment_settings s ON s.organization_id = o.id
+    JOIN modules m ON m.key = 'appointments'
+    LEFT JOIN organizations parent ON parent.id = o.parent_id
+    LEFT JOIN module_flags sys ON sys.scope = 'system' AND sys.module_key = m.key
+    LEFT JOIN module_flags own ON own.scope = 'org' AND own.organization_id = o.id AND own.module_key = m.key
+    LEFT JOIN module_flags parent_own ON parent_own.scope = 'org' AND parent_own.organization_id = parent.id AND parent_own.module_key = m.key
+    LEFT JOIN module_flags dealer_std ON dealer_std.scope = 'dealer_standard' AND dealer_std.organization_id = parent.id AND dealer_std.module_key = m.key
     LEFT JOIN provinces p ON p.id = o.province_id
     LEFT JOIN districts d ON d.id = o.district_id
     WHERE o.brand_id = sqlc.arg(brand_id)
