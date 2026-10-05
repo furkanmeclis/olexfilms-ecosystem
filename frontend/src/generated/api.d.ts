@@ -8894,6 +8894,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portal/dealers/{uuid}/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get portal appointment availability for a dealer
+         * @description Customer portal only. Returns 404 unless the dealer belongs to the request brand, the appointments module is enabled and portal booking is enabled for the dealer.
+         */
+        get: operations["getPortalDealerAvailability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/appointments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List my portal appointments */
+        get: operations["listPortalAppointments"];
+        put?: never;
+        /**
+         * Book an appointment from the customer portal
+         * @description The signed-in customer may book only their own vehicle. The source is forced to portal. Capacity and closure checks use the same locked booking path as panel appointments.
+         */
+        post: operations["createPortalAppointment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/appointments/{uuid}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel my portal appointment
+         * @description Customer portal cancellation is allowed until two hours before the appointment starts; later attempts return 422 APPOINTMENT_CANCEL_WINDOW_CLOSED.
+         */
+        post: operations["cancelPortalAppointment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/appointment-settings": {
         parameters: {
             query?: never;
@@ -11778,6 +11839,7 @@ export interface components {
             longitude: number;
             /** @description Haversine distance in km (2 decimals) */
             distance_km: number;
+            accepts_appointments: boolean;
             /** @description E.164 phone */
             whatsapp: string | null;
         };
@@ -16390,6 +16452,15 @@ export interface components {
             starts_at: string;
             estimated_minutes?: number | null;
             source?: components["schemas"]["AppointmentSource"];
+            note?: string;
+        };
+        PortalAppointmentInput: {
+            /** Format: uuid */
+            dealer_uuid: string;
+            /** Format: uuid */
+            vehicle_uuid: string;
+            /** Format: date-time */
+            starts_at: string;
             note?: string;
         };
         Appointment: {
@@ -33457,6 +33528,116 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getPortalDealerAvailability: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Portal appointment availability */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointmentAvailabilityList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listPortalAppointments: {
+        parameters: {
+            query?: {
+                period?: "upcoming" | "past" | "all";
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Portal appointments */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointmentPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    createPortalAppointment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortalAppointmentInput"];
+            };
+        };
+        responses: {
+            /** @description Portal appointment created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    cancelPortalAppointment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Portal appointment cancelled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointment"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     getAppointmentSettings: {

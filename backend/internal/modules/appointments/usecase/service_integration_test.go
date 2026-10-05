@@ -79,7 +79,7 @@ func (f *fixture) org(prefix, typ string, parent int64, tz string) db.Organizati
 	params := db.CreateOrganizationParams{
 		Slug: slug, Name: slug, Status: "active", Type: typ, BrandID: f.brand,
 		Currency: "TRY", Locale: "tr", Timezone: tz, Settings: []byte(`{}`),
-		AccessStartsAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+		AccessStartsAt: pgtype.Timestamptz{Time: time.Now().Add(-time.Hour).UTC(), Valid: true},
 	}
 	if parent != 0 {
 		params.ParentID = pgtype.Int8{Int64: parent, Valid: true}
@@ -165,14 +165,24 @@ func (f *fixture) link(user db.User, org db.Organization) {
 
 func (f *fixture) settings(org db.Organization, capacity int32) {
 	f.t.Helper()
+	f.portalSettings(org, capacity, false)
+}
+
+func (f *fixture) portalSettings(org db.Organization, capacity int32, enabled bool) {
+	f.t.Helper()
 	_, err := f.q.UpsertAppointmentSettings(f.ctx, db.UpsertAppointmentSettingsParams{
 		OrganizationID: org.ID, BrandID: org.BrandID, DailyVehicleCapacity: capacity,
 		DefaultEstimatedMinutes: 60, SlotIntervalMinutes: 60,
-		WorkingHours: []byte(`{"monday":[{"start":"09:00","end":"17:00"}]}`),
+		WorkingHours:              []byte(`{"monday":[{"start":"09:00","end":"17:00"}]}`),
+		PortalAppointmentsEnabled: enabled,
 	})
 	if err != nil {
 		f.t.Fatalf("settings: %v", err)
 	}
+}
+
+func (f *fixture) portalCaller(user db.User) PortalCaller {
+	return PortalCaller{UserID: user.ID, BrandID: f.brand}
 }
 
 func (f *fixture) caller(org db.Organization, scope rbac.Scope, orgIDs []int64) Caller {
@@ -332,6 +342,79 @@ func TestCreateRejectsClosedDayAndForeignVehicle(t *testing.T) {
 	stranger := f.userRow("appointment-stranger")
 	if _, err := f.svc.Create(f.ctx, c, CreateInput{CustomerUserID: stranger.ID, StartsAt: time.Date(2026, 10, 6, 8, 0, 0, 0, time.UTC)}); !errors.As(err, &ve) || ve.Field != "customer_user_id" {
 		t.Fatalf("non-customer err = %v, want customer_user_id validation", err)
+	}
+}
+
+func TestPortalCreateRejectsForeignVehicleAsNotFound(t *testing.T) {
+	f := newFixture(t)
+	f.portalSettings(f.dealer, 3, true)
+	f.link(f.user, f.dealer)
+	other := f.userRow("portal-appointment-other")
+	f.link(other, f.dealer)
+	foreign := f.vehicle(other, f.dealer)
+	if _, err := f.svc.PortalCreate(f.ctx, f.portalCaller(f.user), PortalCreateInput{
+		DealerUUID: f.dealer.Uuid, VehicleUUID: foreign.Uuid, StartsAt: time.Date(2026, 10, 5, 8, 0, 0, 0, time.UTC),
+	}); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("foreign vehicle err = %v, want ErrNotFound", err)
+	}
+}
+
+func TestPortalCreateDisabledDealerNotFound(t *testing.T) {
+	f := newFixture(t)
+	f.portalSettings(f.dealer, 3, false)
+	f.link(f.user, f.dealer)
+	vehicle := f.vehicle(f.user, f.dealer)
+	if _, err := f.svc.PortalCreate(f.ctx, f.portalCaller(f.user), PortalCreateInput{
+		DealerUUID: f.dealer.Uuid, VehicleUUID: vehicle.Uuid, StartsAt: time.Date(2026, 10, 5, 8, 0, 0, 0, time.UTC),
+	}); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("disabled dealer err = %v, want ErrNotFound", err)
+	}
+}
+
+func TestPortalCreateRejectsFullDay(t *testing.T) {
+	f := newFixture(t)
+	f.portalSettings(f.dealer, 1, true)
+	f.link(f.user, f.dealer)
+	vehicle := f.vehicle(f.user, f.dealer)
+	in := PortalCreateInput{
+		DealerUUID: f.dealer.Uuid, VehicleUUID: vehicle.Uuid, StartsAt: time.Date(2026, 10, 5, 8, 0, 0, 0, time.UTC),
+	}
+	if _, err := f.svc.PortalCreate(f.ctx, f.portalCaller(f.user), in); err != nil {
+		t.Fatalf("first portal create: %v", err)
+	}
+	in.StartsAt = in.StartsAt.Add(time.Hour)
+	if _, err := f.svc.PortalCreate(f.ctx, f.portalCaller(f.user), in); !errors.Is(err, ErrCapacityFull) {
+		t.Fatalf("full day err = %v, want ErrCapacityFull", err)
+	}
+}
+
+func TestPortalCancelWindow(t *testing.T) {
+	f := newFixture(t)
+	f.portalSettings(f.dealer, 5, true)
+	f.link(f.user, f.dealer)
+	vehicle := f.vehicle(f.user, f.dealer)
+	c := f.portalCaller(f.user)
+	soon, err := f.svc.PortalCreate(f.ctx, c, PortalCreateInput{
+		DealerUUID: f.dealer.Uuid, VehicleUUID: vehicle.Uuid, StartsAt: f.svc.nowFunc().Add(time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("soon create: %v", err)
+	}
+	if _, err := f.svc.PortalCancel(f.ctx, c, soon.UUID); !errors.Is(err, ErrCancelWindow) {
+		t.Fatalf("one-hour cancel err = %v, want ErrCancelWindow", err)
+	}
+	later, err := f.svc.PortalCreate(f.ctx, c, PortalCreateInput{
+		DealerUUID: f.dealer.Uuid, VehicleUUID: vehicle.Uuid, StartsAt: f.svc.nowFunc().Add(3 * time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("later create: %v", err)
+	}
+	cancelled, err := f.svc.PortalCancel(f.ctx, c, later.UUID)
+	if err != nil {
+		t.Fatalf("three-hour cancel: %v", err)
+	}
+	if cancelled.Status != StatusCancelled {
+		t.Fatalf("cancelled status = %s", cancelled.Status)
 	}
 }
 

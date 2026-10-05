@@ -12,6 +12,7 @@ import (
 	servicesuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
@@ -34,6 +35,7 @@ const (
 	CodeIntakeStarted     = "APPOINTMENT_INTAKE_ALREADY_STARTED"
 	CodeDayClosed         = "APPOINTMENT_DAY_CLOSED"
 	CodeClosureExists     = "APPOINTMENT_CLOSURE_EXISTS"
+	CodeCancelWindow      = "APPOINTMENT_CANCEL_WINDOW_CLOSED"
 
 	// maxRangeDays bounds the availability window (one count query per day).
 	maxRangeDays = 62
@@ -50,6 +52,7 @@ var (
 	ErrIntakeStarted     = errors.New("appointments: intake already started")
 	ErrDayClosed         = errors.New("appointments: day closed")
 	ErrClosureExists     = errors.New("appointments: closure already exists")
+	ErrCancelWindow      = errors.New("appointments: cancel window closed")
 )
 
 type TxBeginner interface {
@@ -58,6 +61,10 @@ type TxBeginner interface {
 
 type DraftServiceCreator interface {
 	Create(ctx context.Context, c servicesuc.Caller, in servicesuc.CreateInput) (servicesuc.ServiceView, error)
+}
+
+type FeatureChecker interface {
+	Enabled(ctx context.Context, organizationID int64, key string) (bool, error)
 }
 
 type Caller struct {
@@ -71,6 +78,7 @@ type Service struct {
 	q        *db.Queries
 	out      outbox.Enqueuer
 	services DraftServiceCreator
+	features FeatureChecker
 	nowFunc  func() time.Time
 }
 
@@ -97,6 +105,10 @@ func (s *Service) SetClock(fn func() time.Time) {
 	if fn != nil {
 		s.nowFunc = fn
 	}
+}
+
+func (s *Service) SetFeatureChecker(checker FeatureChecker) {
+	s.features = checker
 }
 
 type ValidationError struct {
@@ -167,6 +179,24 @@ type ListFilter struct {
 	Status   string
 	Limit    int32
 	Offset   int32
+}
+
+type PortalCaller struct {
+	UserID  int64
+	BrandID int64
+}
+
+type PortalCreateInput struct {
+	DealerUUID  uuid.UUID `json:"dealer_uuid"`
+	VehicleUUID uuid.UUID `json:"vehicle_uuid"`
+	StartsAt    time.Time `json:"starts_at"`
+	Note        string    `json:"note"`
+}
+
+type PortalListFilter struct {
+	Period string
+	Limit  int32
+	Offset int32
 }
 
 type OccupancyRow struct {
@@ -280,6 +310,131 @@ func (s *Service) Availability(ctx context.Context, c Caller, from, to time.Time
 	if !c.Filter.AllowsOrg(org.ID, org.BrandID) {
 		return nil, ErrForbidden
 	}
+	return s.availabilityForOrg(ctx, org, setting, loc, from, to)
+}
+
+func (s *Service) PortalAvailability(ctx context.Context, c PortalCaller, dealerID uuid.UUID, from, to time.Time) ([]DayAvailability, error) {
+	dealer, err := s.portalDealer(ctx, c, dealerID)
+	if err != nil {
+		return nil, err
+	}
+	org, setting, loc, err := s.orgSettings(ctx, dealer.ID)
+	if err != nil {
+		return nil, err
+	}
+	return s.availabilityForOrg(ctx, org, setting, loc, from, to)
+}
+
+func (s *Service) PortalCreate(ctx context.Context, c PortalCaller, in PortalCreateInput) (Appointment, error) {
+	dealer, err := s.portalDealer(ctx, c, in.DealerUUID)
+	if err != nil {
+		return Appointment{}, err
+	}
+	v, err := s.q.GetPortalVehicle(ctx, db.GetPortalVehicleParams{
+		Uuid: in.VehicleUUID, UserID: c.UserID, BrandID: c.BrandID,
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Appointment{}, ErrNotFound
+	}
+	if err != nil {
+		return Appointment{}, fmt.Errorf("appointments: portal vehicle: %w", err)
+	}
+	row, err := s.save(ctx, portalSaveCaller(c), dealer.ID, db.Appointment{}, CreateInput{
+		CustomerUserID: c.UserID, VehicleID: &v.ID, StartsAt: in.StartsAt, Source: "portal", Note: in.Note,
+	}, true)
+	if err != nil {
+		return Appointment{}, err
+	}
+	return appointmentView(row), nil
+}
+
+func (s *Service) PortalList(ctx context.Context, c PortalCaller, f PortalListFilter) ([]Appointment, int64, error) {
+	upcoming, past, err := portalPeriod(f.Period)
+	if err != nil {
+		return nil, 0, err
+	}
+	now := tsArg(s.nowFunc().UTC())
+	params := db.ListPortalAppointmentsParams{
+		CustomerUserID: c.UserID, BrandID: c.BrandID, Upcoming: upcoming, Past: past,
+		Now: now, PageLimit: f.Limit, PageOffset: f.Offset,
+	}
+	rows, err := s.q.ListPortalAppointments(ctx, params)
+	if err != nil {
+		return nil, 0, fmt.Errorf("appointments: portal list: %w", err)
+	}
+	total, err := s.q.CountPortalAppointments(ctx, db.CountPortalAppointmentsParams{
+		CustomerUserID: c.UserID, BrandID: c.BrandID, Upcoming: upcoming, Past: past, Now: now,
+	})
+	if err != nil {
+		return nil, 0, fmt.Errorf("appointments: portal count: %w", err)
+	}
+	out := make([]Appointment, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, appointmentView(r))
+	}
+	return out, total, nil
+}
+
+func (s *Service) PortalCancel(ctx context.Context, c PortalCaller, id uuid.UUID) (Appointment, error) {
+	cur, err := s.q.GetPortalAppointmentByUUID(ctx, db.GetPortalAppointmentByUUIDParams{
+		Uuid: id, CustomerUserID: c.UserID, BrandID: c.BrandID,
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Appointment{}, ErrNotFound
+	}
+	if err != nil {
+		return Appointment{}, fmt.Errorf("appointments: portal get: %w", err)
+	}
+	if cur.StartsAt.Time.UTC().Sub(s.nowFunc().UTC()) < 2*time.Hour {
+		return Appointment{}, ErrCancelWindow
+	}
+	if !allowedTransition(cur.Status, StatusCancelled) {
+		return Appointment{}, ErrInvalidTransition
+	}
+	reason := pgtype.Text{String: "portal cancellation", Valid: true}
+	var row db.Appointment
+	err = s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
+		locked, err := q.LockAppointmentByID(ctx, db.LockAppointmentByIDParams{
+			ID: cur.ID, OrganizationID: cur.OrganizationID,
+		})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return fmt.Errorf("appointments: portal lock: %w", err)
+		}
+		if locked.CustomerUserID != c.UserID || locked.BrandID != c.BrandID {
+			return ErrNotFound
+		}
+		if locked.StartsAt.Time.UTC().Sub(s.nowFunc().UTC()) < 2*time.Hour {
+			return ErrCancelWindow
+		}
+		if !allowedTransition(locked.Status, StatusCancelled) {
+			return ErrInvalidTransition
+		}
+		updated, err := q.SetAppointmentStatus(ctx, db.SetAppointmentStatusParams{
+			ID: locked.ID, OrganizationID: locked.OrganizationID, Status: StatusCancelled, CancelReason: reason,
+		})
+		if err != nil {
+			return fmt.Errorf("appointments: portal cancel: %w", err)
+		}
+		row = updated
+		return s.emit(ctx, tx, events.AppointmentCancelled, row)
+	})
+	if err != nil {
+		return Appointment{}, err
+	}
+	return appointmentView(row), nil
+}
+
+func (s *Service) availabilityForOrg(
+	ctx context.Context,
+	org db.Organization,
+	setting db.AppointmentSetting,
+	loc *time.Location,
+	from time.Time,
+	to time.Time,
+) ([]DayAvailability, error) {
 	startDay := calendarDay(from, loc)
 	endDay := calendarDay(to, loc)
 	if endDay.Before(startDay) {
@@ -701,6 +856,29 @@ func (s *Service) checkParties(ctx context.Context, org db.Organization, in Crea
 	return nil
 }
 
+func (s *Service) portalDealer(ctx context.Context, c PortalCaller, id uuid.UUID) (db.GetPortalAppointmentDealerRow, error) {
+	if c.UserID <= 0 || c.BrandID <= 0 {
+		return db.GetPortalAppointmentDealerRow{}, ErrNotFound
+	}
+	dealer, err := s.q.GetPortalAppointmentDealer(ctx, db.GetPortalAppointmentDealerParams{Uuid: id, BrandID: c.BrandID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return db.GetPortalAppointmentDealerRow{}, ErrNotFound
+	}
+	if err != nil {
+		return db.GetPortalAppointmentDealerRow{}, fmt.Errorf("appointments: portal dealer: %w", err)
+	}
+	if s.features != nil {
+		on, err := s.features.Enabled(ctx, dealer.ID, features.ModuleAppointments)
+		if err != nil {
+			return db.GetPortalAppointmentDealerRow{}, fmt.Errorf("appointments: portal feature: %w", err)
+		}
+		if !on {
+			return db.GetPortalAppointmentDealerRow{}, ErrNotFound
+		}
+	}
+	return dealer, nil
+}
+
 func (s *Service) orgSettings(ctx context.Context, orgID int64) (db.Organization, db.AppointmentSetting, *time.Location, error) {
 	org, err := s.q.GetOrganizationByID(ctx, orgID)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -717,6 +895,35 @@ func (s *Service) orgSettings(ctx context.Context, orgID int64) (db.Organization
 		return db.Organization{}, db.AppointmentSetting{}, nil, fmt.Errorf("appointments: settings: %w", err)
 	}
 	return org, setting, loadLocation(org.Timezone), nil
+}
+
+func portalSaveCaller(c PortalCaller) Caller {
+	return Caller{
+		Principal: authctx.Principal{UserInternal: c.UserID, PermissionScopes: map[string]rbac.Scope{
+			rbac.PermAppointmentsRead:  rbac.ScopeManaged,
+			rbac.PermAppointmentsWrite: rbac.ScopeManaged,
+		}},
+		Org: orgctx.Scope{BrandID: c.BrandID},
+		Filter: scopefilter.Filter{
+			Permission: rbac.PermAppointmentsRead,
+			Scope:      rbac.ScopeAll,
+			UserID:     c.UserID,
+			BrandID:    c.BrandID,
+		},
+	}
+}
+
+func portalPeriod(v string) (upcoming, past bool, err error) {
+	switch strings.TrimSpace(v) {
+	case "", "upcoming":
+		return true, false, nil
+	case "past":
+		return false, true, nil
+	case "all":
+		return false, false, nil
+	default:
+		return false, false, invalid("period", "must be upcoming, past or all")
+	}
 }
 
 func validateInput(in CreateInput) error {

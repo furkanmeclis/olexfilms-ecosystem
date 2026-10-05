@@ -12,7 +12,7 @@ RETURNING *;
 -- Active, serving (access window open) dealers and distributors of a brand
 -- with coordinates, within radius_km of (lat, lng). Distance is the
 -- haversine great-circle distance in km (mean Earth radius 6371.0088).
-SELECT n.slug, n.name, n.city, n.district, n.latitude, n.longitude, n.phone, n.distance_km
+SELECT n.slug, n.name, n.city, n.district, n.latitude, n.longitude, n.phone, n.distance_km, n.accepts_appointments
 FROM (
     SELECT o.slug,
            o.name,
@@ -21,12 +21,14 @@ FROM (
            o.latitude::float8 AS latitude,
            o.longitude::float8 AS longitude,
            o.phone,
+           COALESCE(s.portal_appointments_enabled, FALSE)::boolean AS accepts_appointments,
            (6371.0088 * 2 * asin(sqrt(LEAST(1.0,
                power(sin(radians(o.latitude::float8 - sqlc.arg(lat)::float8) / 2), 2)
                + cos(radians(sqlc.arg(lat)::float8)) * cos(radians(o.latitude::float8))
                  * power(sin(radians(o.longitude::float8 - sqlc.arg(lng)::float8) / 2), 2)
            ))))::float8 AS distance_km
     FROM organizations o
+    LEFT JOIN appointment_settings s ON s.organization_id = o.id
     LEFT JOIN provinces p ON p.id = o.province_id
     LEFT JOIN districts d ON d.id = o.district_id
     WHERE o.brand_id = sqlc.arg(brand_id)

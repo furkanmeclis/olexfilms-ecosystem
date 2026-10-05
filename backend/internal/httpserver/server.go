@@ -717,7 +717,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	leadsmodule.RegisterRoutes(mux, leadshandler.New(leadsSvc).WithDocuments(docSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-323: appointments, capacity, availability and intake start.
 	appointmentsSvc := appointmentsusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries), servicesSvc)
+	appointmentsSvc.SetFeatureChecker(featureSvc)
 	appointmentsmodule.RegisterRoutes(mux, appointmentshandler.New(appointmentsSvc), tokens, loader, deps.Queries, featureSvc)
+	appointmentsmodule.RegisterPortalRoutes(mux, appointmentshandler.New(appointmentsSvc), tokens, loader)
 	// TEC-149: vehicle catalog (global car brands/models, super_admin writes).
 	vehiclecatalogmodule.RegisterRoutes(mux, vehiclecataloghandler.New(
 		vehiclecatalogusecase.New(deps.Queries), deps.Storage, activityRec), tokens, loader)
