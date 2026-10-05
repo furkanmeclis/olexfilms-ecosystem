@@ -174,6 +174,7 @@ func main() {
 	servicePDF := servicesusecase.NewPDF(servicesusecase.New(pool, queries, nil), warrantyCert, store, log)
 	// TEC-207: end-of-day reports (cron on worker-core, PDF on worker-docs).
 	eodSvc := warehouseusecase.NewEOD(pool, queries)
+	warrantyClaimsSvc := warrantyclaimsusecase.New(pool, queries, store, outboxStore)
 	ioReg := ioengine.NewRegistry(
 		catalogusecase.NewIOAdapter(catalogSvc, queries),
 		ioadapters.NewUsers(queries),
@@ -200,6 +201,10 @@ func main() {
 		servicesusecase.NewReviewsExportAdapter(servicesusecase.New(pool, queries, nil)),
 		// TEC-207: end-of-day report PDF (read only).
 		warehouseusecase.NewEODPDFAdapter(warehouseusecase.NewEODPDF(eodSvc, store, log)),
+		// TEC-338: warranty claim reports and CSV/XLSX exports.
+		warrantyclaimsusecase.NewFailureRateAdapter(warrantyClaimsSvc),
+		warrantyclaimsusecase.NewByDealerAdapter(warrantyClaimsSvc),
+		warrantyclaimsusecase.NewPartsAdapter(warrantyClaimsSvc),
 	)
 	exportSvc := exportusecase.New(queries, store, ioReg, nil, notifSvc, activityRec, log)
 	pdfClient := pdfrender.NewWithOptions(cfg.Gotenberg.URL, pdfrender.Options{MaxConnsPerHost: cfg.Queue.Concurrency})

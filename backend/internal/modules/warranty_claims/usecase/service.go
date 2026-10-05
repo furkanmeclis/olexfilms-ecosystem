@@ -86,6 +86,12 @@ type Store interface {
 	SetWarrantyClaimStatus(ctx context.Context, arg db.SetWarrantyClaimStatusParams) (db.WarrantyClaim, error)
 	ListWarrantyClaimNotifyUsersByOrg(ctx context.Context, arg db.ListWarrantyClaimNotifyUsersByOrgParams) ([]int64, error)
 	ListWarrantyClaimCenterNotifyUsers(ctx context.Context, arg db.ListWarrantyClaimCenterNotifyUsersParams) ([]int64, error)
+	Descendants(ctx context.Context, id int64) ([]db.Organization, error)
+	GetOrganizationByID(ctx context.Context, id int64) (db.Organization, error)
+	WarrantyClaimFailureRateByProduct(ctx context.Context, arg db.WarrantyClaimFailureRateByProductParams) ([]db.WarrantyClaimFailureRateByProductRow, error)
+	WarrantyClaimFailureRateByLot(ctx context.Context, arg db.WarrantyClaimFailureRateByLotParams) ([]db.WarrantyClaimFailureRateByLotRow, error)
+	WarrantyClaimsByDealerReport(ctx context.Context, arg db.WarrantyClaimsByDealerReportParams) ([]db.WarrantyClaimsByDealerReportRow, error)
+	WarrantyClaimPartsReport(ctx context.Context, arg db.WarrantyClaimPartsReportParams) ([]db.WarrantyClaimPartsReportRow, error)
 }
 
 type txBeginner interface {
@@ -347,6 +353,91 @@ func (s *Service) PortalByWarranty(ctx context.Context, brandID, userID int64, w
 		}
 	}
 	return out, nil
+}
+
+func (s *Service) FailureRateReport(ctx context.Context, c Caller, f model.ReportFilter) (model.FailureRateReport, error) {
+	group, err := reportGroup(f.Group)
+	if err != nil {
+		return model.FailureRateReport{}, err
+	}
+	from, to := reportPeriod(f)
+	if group == "lot" {
+		rows, err := s.q.WarrantyClaimFailureRateByLot(ctx, db.WarrantyClaimFailureRateByLotParams{
+			BrandID: c.BrandID, OrganizationIds: c.Filter.OrgIDsArg(), FromAt: from, ToAt: to,
+		})
+		if err != nil {
+			return model.FailureRateReport{}, err
+		}
+		out := make([]model.FailureRateRow, 0, len(rows))
+		for _, r := range rows {
+			lotUUID := r.UnitUuid
+			lotCode := r.LotCode
+			out = append(out, model.FailureRateRow{
+				Group: group, ProductUUID: r.ProductUuid, ProductSKU: r.ProductSku, ProductName: r.ProductName,
+				LotUUID: &lotUUID, LotCode: &lotCode,
+				WarrantyCount: r.WarrantyCount, ClaimCount: r.ClaimCount, ApprovedClaimCount: r.ApprovedClaimCount,
+				ClaimRate: rate(r.ClaimCount, r.WarrantyCount), ApprovedRate: rate(r.ApprovedClaimCount, r.WarrantyCount),
+			})
+		}
+		return model.FailureRateReport{Group: group, Items: out}, nil
+	}
+	rows, err := s.q.WarrantyClaimFailureRateByProduct(ctx, db.WarrantyClaimFailureRateByProductParams{
+		BrandID: c.BrandID, OrganizationIds: c.Filter.OrgIDsArg(), FromAt: from, ToAt: to,
+	})
+	if err != nil {
+		return model.FailureRateReport{}, err
+	}
+	out := make([]model.FailureRateRow, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, model.FailureRateRow{
+			Group: group, ProductUUID: r.ProductUuid, ProductSKU: r.ProductSku, ProductName: r.ProductName,
+			WarrantyCount: r.WarrantyCount, ClaimCount: r.ClaimCount, ApprovedClaimCount: r.ApprovedClaimCount,
+			ClaimRate: rate(r.ClaimCount, r.WarrantyCount), ApprovedRate: rate(r.ApprovedClaimCount, r.WarrantyCount),
+		})
+	}
+	return model.FailureRateReport{Group: group, Items: out}, nil
+}
+
+func (s *Service) ByDealerReport(ctx context.Context, c Caller, f model.ReportFilter) (model.DealerReport, error) {
+	from, to := reportPeriod(f)
+	rows, err := s.q.WarrantyClaimsByDealerReport(ctx, db.WarrantyClaimsByDealerReportParams{
+		BrandID: c.BrandID, OrganizationIds: c.Filter.OrgIDsArg(), FromAt: from, ToAt: to,
+	})
+	if err != nil {
+		return model.DealerReport{}, err
+	}
+	out := make([]model.DealerReportRow, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, model.DealerReportRow{
+			OrganizationUUID: r.OrganizationUuid, OrganizationName: r.OrganizationName, OrganizationType: r.OrganizationType,
+			ClaimCount: r.ClaimCount, ApprovedClaimCount: r.ApprovedClaimCount, RejectedClaimCount: r.RejectedClaimCount,
+			ApprovalRate: rate(r.ApprovedClaimCount, r.ClaimCount),
+		})
+	}
+	return model.DealerReport{Items: out}, nil
+}
+
+func (s *Service) PartsReport(ctx context.Context, c Caller, f model.ReportFilter) (model.PartsReport, error) {
+	from, to := reportPeriod(f)
+	rows, err := s.q.WarrantyClaimPartsReport(ctx, db.WarrantyClaimPartsReportParams{
+		BrandID: c.BrandID, OrganizationIds: c.Filter.OrgIDsArg(), FromAt: from, ToAt: to,
+	})
+	if err != nil {
+		return model.PartsReport{}, err
+	}
+	out := make([]model.PartsReportRow, 0, len(rows))
+	for _, r := range rows {
+		var productUUID *uuid.UUID
+		if r.ProductUuid.Valid {
+			v := uuid.UUID(r.ProductUuid.Bytes)
+			productUUID = &v
+		}
+		out = append(out, model.PartsReportRow{
+			PartKey: r.PartKey, ProductUUID: productUUID, ProductSKU: r.ProductSku, ProductName: r.ProductName,
+			PartCount: r.PartCount, ClaimCount: r.ClaimCount, ApprovedClaimCount: r.ApprovedClaimCount,
+		})
+	}
+	return model.PartsReport{Items: out}, nil
 }
 
 func (s *Service) claim(ctx context.Context, c Caller, id uuid.UUID, write bool) (db.WarrantyClaim, error) {

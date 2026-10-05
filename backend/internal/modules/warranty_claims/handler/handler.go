@@ -2,26 +2,40 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
+	exportusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty_claims/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty_claims/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
 	"github.com/google/uuid"
 )
 
-type Handler struct{ svc *usecase.Service }
+type Exporter interface {
+	RequestExport(ctx context.Context, actorID int64, organizationID *int64, resource string,
+		format ioengine.ExportFormat, query ioengine.ExportQuery, locale string) (exportusecase.ExportJobView, error)
+}
 
-func New(svc *usecase.Service) *Handler { return &Handler{svc: svc} }
+type Handler struct {
+	svc     *usecase.Service
+	exports Exporter
+}
+
+func New(svc *usecase.Service, exports Exporter) *Handler {
+	return &Handler{svc: svc, exports: exports}
+}
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var body model.CreateInput
@@ -117,6 +131,57 @@ func (h *Handler) PortalList(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, map[string]any{"items": items})
 }
 
+func (h *Handler) FailureRateReport(w http.ResponseWriter, r *http.Request) {
+	f, ok := reportFilter(w, r)
+	if !ok {
+		return
+	}
+	out, err := h.svc.FailureRateReport(r.Context(), caller(r), f)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
+func (h *Handler) ByDealerReport(w http.ResponseWriter, r *http.Request) {
+	f, ok := reportFilter(w, r)
+	if !ok {
+		return
+	}
+	out, err := h.svc.ByDealerReport(r.Context(), caller(r), f)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
+func (h *Handler) PartsReport(w http.ResponseWriter, r *http.Request) {
+	f, ok := reportFilter(w, r)
+	if !ok {
+		return
+	}
+	out, err := h.svc.PartsReport(r.Context(), caller(r), f)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
+func (h *Handler) ExportFailureRateReport(w http.ResponseWriter, r *http.Request) {
+	h.exportReport(w, r, usecase.ResourceFailureRateReport, true)
+}
+
+func (h *Handler) ExportByDealerReport(w http.ResponseWriter, r *http.Request) {
+	h.exportReport(w, r, usecase.ResourceByDealerReport, false)
+}
+
+func (h *Handler) ExportPartsReport(w http.ResponseWriter, r *http.Request) {
+	h.exportReport(w, r, usecase.ResourcePartsReport, false)
+}
+
 func caller(r *http.Request) usecase.Caller {
 	p := authctx.MustPrincipal(r.Context())
 	org := orgctx.MustScope(r.Context())
@@ -132,6 +197,100 @@ func portalBrandID(r *http.Request) int64 {
 		return b.ID
 	}
 	return 0
+}
+
+func reportFilter(w http.ResponseWriter, r *http.Request) (model.ReportFilter, bool) {
+	q := r.URL.Query()
+	var f model.ReportFilter
+	var ok bool
+	if f.From, ok = reportTime(w, r, "from"); !ok {
+		return f, false
+	}
+	if f.To, ok = reportTime(w, r, "to"); !ok {
+		return f, false
+	}
+	f.Group = q.Get("group")
+	if f.Group == "" {
+		f.Group = "product"
+	}
+	if f.Group != "product" && f.Group != "lot" {
+		response.BadRequest(w, r, response.CodeValidationError, "group must be product or lot")
+		return f, false
+	}
+	return f, true
+}
+
+func reportTime(w http.ResponseWriter, r *http.Request, key string) (*time.Time, bool) {
+	raw := strings.TrimSpace(r.URL.Query().Get(key))
+	if raw == "" {
+		return nil, true
+	}
+	if d, err := time.Parse(time.DateOnly, raw); err == nil {
+		if key == "to" {
+			d = d.AddDate(0, 0, 1)
+		}
+		return &d, true
+	}
+	t, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, key+" must be a date or RFC3339 timestamp")
+		return nil, false
+	}
+	return &t, true
+}
+
+type exportBody struct {
+	Format string            `json:"format"`
+	Query  map[string]string `json:"query"`
+	Locale string            `json:"locale"`
+}
+
+func (h *Handler) exportReport(w http.ResponseWriter, r *http.Request, resource string, allowGroup bool) {
+	if h.exports == nil {
+		response.ServiceUnavailable(w, r, response.CodeInternalError, "exports are not configured")
+		return
+	}
+	var in exportBody
+	if !decode(w, r, &in) {
+		return
+	}
+	format := ioengine.ExportFormat(strings.ToLower(strings.TrimSpace(in.Format)))
+	if format != ioengine.ExportCSV && format != ioengine.ExportXLSX {
+		response.BadRequest(w, r, response.CodeValidationError, "format must be csv or xlsx")
+		return
+	}
+	query := ioengine.ExportQuery{}
+	for _, k := range []string{usecase.QueryFrom, usecase.QueryTo} {
+		if v := strings.TrimSpace(in.Query[k]); v != "" {
+			query[k] = v
+		}
+	}
+	if allowGroup {
+		group := strings.TrimSpace(in.Query[usecase.QueryGroup])
+		if group == "" {
+			group = "product"
+		}
+		if group != "product" && group != "lot" {
+			response.BadRequest(w, r, response.CodeValidationError, "group must be product or lot")
+			return
+		}
+		query[usecase.QueryGroup] = group
+	}
+	if in.Locale == "" {
+		in.Locale = "tr"
+	}
+	p := authctx.MustPrincipal(r.Context())
+	orgID := orgctx.MustScope(r.Context()).InternalID
+	job, err := h.exports.RequestExport(r.Context(), p.UserInternal, &orgID, resource, format, query, in.Locale)
+	if err != nil {
+		if errors.Is(err, exportusecase.ErrInvalidRequest) {
+			response.BadRequest(w, r, response.CodeValidationError, err.Error())
+			return
+		}
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusAccepted, job)
 }
 
 func pathUUID(w http.ResponseWriter, r *http.Request, name string) (uuid.UUID, bool) {
