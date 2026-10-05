@@ -14287,6 +14287,132 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
 
+  /v1/dealer-prices:
+    get:
+      tags: [Dealer accounting]
+      summary: List dealer product sale prices
+      operationId: listDealerPrices
+      responses:
+        "200":
+          description: Dealer prices
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeDealerPriceList" }
+    put:
+      tags: [Dealer accounting]
+      summary: Set a dealer product sale price
+      operationId: setDealerPrice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DealerPriceRequest" }
+      responses:
+        "200":
+          description: Dealer price
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeDealerPrice" }
+
+  /v1/product-sales:
+    post:
+      tags: [Dealer accounting]
+      summary: Create a quick product sale
+      operationId: createProductSale
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProductSaleRequest" }
+      responses:
+        "201":
+          description: Product sale
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeProductSale" }
+
+  /v1/product-sales/{uuid}/void:
+    post:
+      tags: [Dealer accounting]
+      summary: Void a same-day product sale
+      operationId: voidProductSale
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VoidRequest" }
+      responses:
+        "200":
+          description: Voided product sale
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeProductSale" }
+
+  /v1/suppliers:
+    get:
+      tags: [Dealer accounting]
+      summary: List suppliers
+      operationId: listSuppliers
+      responses:
+        "200":
+          description: Suppliers
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeSupplierList" }
+    post:
+      tags: [Dealer accounting]
+      summary: Create a supplier
+      operationId: createSupplier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SupplierRequest" }
+      responses:
+        "201":
+          description: Supplier
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeSupplier" }
+
+  /v1/suppliers/{uuid}:
+    patch:
+      tags: [Dealer accounting]
+      summary: Update a supplier
+      operationId: updateSupplier
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SupplierRequest" }
+      responses:
+        "200":
+          description: Supplier
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeSupplier" }
+
+  /v1/purchases:
+    post:
+      tags: [Dealer accounting]
+      summary: Create an external purchase expense
+      operationId: createPurchase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PurchaseRequest" }
+      responses:
+        "201":
+          description: Purchase
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePurchase" }
+
   /v1/accounting/categories:
     get:
       tags: [Accounting]
@@ -29385,6 +29511,191 @@ components:
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     # TEC-273: Glorian admin API.
+    DealerPrice:
+      type: object
+      required: [product_uuid, sale_price, currency, updated_at]
+      properties:
+        product_uuid: { type: string, format: uuid }
+        sale_price: { type: string, example: "1200.00" }
+        currency: { type: string, minLength: 3, maxLength: 3, example: TRY }
+        recommended_sale_price: { type: [string, "null"], example: "1500.00" }
+        updated_at: { type: string, format: date-time }
+
+    DealerPriceRequest:
+      type: object
+      additionalProperties: false
+      required: [product_uuid, sale_price]
+      properties:
+        product_uuid: { type: string, format: uuid }
+        sale_price: { type: string, example: "1200.00" }
+
+    ProductSaleLineRequest:
+      type: object
+      additionalProperties: false
+      required: [unit_price]
+      properties:
+        product_uuid: { type: [string, "null"], format: uuid }
+        barcode: { type: string, maxLength: 64 }
+        quantity: { type: integer, minimum: 1, default: 1 }
+        unit_price: { type: string, example: "1200.00" }
+
+    ProductSaleRequest:
+      type: object
+      additionalProperties: false
+      required: [payment_method, lines]
+      properties:
+        customer_uuid: { type: [string, "null"], format: uuid }
+        payment_method: { type: string, enum: [cash, card, cari] }
+        note: { type: string, maxLength: 5000 }
+        lines:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/ProductSaleLineRequest" }
+
+    ProductSaleLine:
+      type: object
+      required: [product_uuid, quantity, unit_price, line_total]
+      properties:
+        product_uuid: { type: string, format: uuid }
+        unit_uuid: { type: [string, "null"], format: uuid }
+        barcode: { type: [string, "null"] }
+        quantity: { type: string, example: "1.00" }
+        unit_price: { type: string, example: "1200.00" }
+        line_total: { type: string, example: "1200.00" }
+        purchase_unit_cost: { type: [string, "null"], example: "800.00" }
+        profit: { type: [string, "null"], example: "400.00" }
+
+    ProductSale:
+      type: object
+      required: [uuid, payment_method, currency, total, profit, sold_at, voided, lines]
+      properties:
+        uuid: { type: string, format: uuid }
+        customer_uuid: { type: [string, "null"], format: uuid }
+        payment_method: { type: string, enum: [cash, card, cari] }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        total: { type: string, example: "1200.00" }
+        profit: { type: string, example: "400.00" }
+        sold_at: { type: string, format: date-time }
+        voided: { type: boolean }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/ProductSaleLine" }
+
+    Supplier:
+      type: object
+      required: [uuid, name, note, active, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        tax_no: { type: [string, "null"] }
+        phone_e164: { type: [string, "null"] }
+        email: { type: [string, "null"], format: email }
+        note: { type: string }
+        active: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    SupplierRequest:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 200 }
+        tax_no: { type: [string, "null"], maxLength: 32 }
+        phone_e164: { type: [string, "null"], maxLength: 16 }
+        email: { type: [string, "null"], format: email }
+        note: { type: string, maxLength: 5000 }
+        active: { type: [boolean, "null"] }
+
+    PurchaseRequest:
+      type: object
+      additionalProperties: false
+      required: [supplier_uuid, amount, payment_method]
+      properties:
+        supplier_uuid: { type: string, format: uuid }
+        amount: { type: string, example: "250.00" }
+        payment_method: { type: string, enum: [cash, card, bank_transfer, cari] }
+        note: { type: string, maxLength: 5000 }
+        description: { type: string, maxLength: 1000 }
+
+    Purchase:
+      type: object
+      required: [uuid, supplier_uuid, amount, currency, payment_method, purchased_on, note]
+      properties:
+        uuid: { type: string, format: uuid }
+        supplier_uuid: { type: string, format: uuid }
+        amount: { type: string, example: "250.00" }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        payment_method: { type: string, enum: [cash, card, bank_transfer, cari] }
+        purchased_on: { type: string, format: date }
+        note: { type: string }
+
+    VoidRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason: { type: string, maxLength: 500 }
+
+    EnvelopeDealerPrice:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/DealerPrice" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeDealerPriceList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/DealerPrice" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeProductSale:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ProductSale" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeSupplier:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Supplier" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeSupplierList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/Supplier" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePurchase:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Purchase" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
     GlorianConnection:
       type: object
       description: The API key is never returned; `api_key_set` and `api_key_masked` stand in for it.

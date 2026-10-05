@@ -75,6 +75,7 @@ var eodGroupOf = map[string]string{
 	"order_cancel_restore":    EODGroupOrder,
 	"consumption":             EODGroupConsumption,
 	"partial_consumption":     EODGroupConsumption,
+	"sale":                    EODGroupConsumption,
 	"return":                  EODGroupReturn,
 	"count_adjustment":        EODGroupAdjustment,
 	"reclassification":        EODGroupAdjustment,

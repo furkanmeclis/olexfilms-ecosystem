@@ -35,6 +35,7 @@ const (
 	TypeConsumption           MovementType = "consumption"
 	TypePartialConsumption    MovementType = "partial_consumption"
 	TypeReturn                MovementType = "return"
+	TypeSale                  MovementType = "sale"
 	TypeCountAdjustment       MovementType = "count_adjustment"
 	TypeVoid                  MovementType = "void"
 	TypeExternalOutbound      MovementType = "external_outbound"
@@ -45,7 +46,7 @@ const (
 var PostableTypes = []MovementType{
 	TypeEntry, TypePlacement, TypeTransferOut, TypeTransferIn, TypeTransferCancelRestore,
 	TypeOrderOut, TypeReceived, TypeOrderCancelRestore, TypeConsumption,
-	TypePartialConsumption, TypeReturn, TypeCountAdjustment, TypeVoid, TypeExternalOutbound,
+	TypePartialConsumption, TypeReturn, TypeSale, TypeCountAdjustment, TypeVoid, TypeExternalOutbound,
 }
 
 // OwnerType is the polymorphic owner kind.

@@ -36,7 +36,8 @@ type envelope struct {
 	Success bool            `json:"success"`
 	Data    json.RawMessage `json:"data"`
 	Error   *struct {
-		Code string `json:"code"`
+		Code    string `json:"code"`
+		Message string `json:"message"`
 	} `json:"error"`
 }
 
