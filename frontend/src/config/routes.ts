@@ -259,6 +259,11 @@ export const routes = {
     serviceCatalog: {
       root: "/platform/service-catalog",
     },
+    /** TEC-290: contract template editor (Lexical, 13 languages). */
+    contractTemplates: {
+      root: "/platform/contract-templates",
+      edit: (uuid: string) => `/platform/contract-templates/${uuid}`,
+    },
     /** TEC-222: system settings hub (TEC-215 key/value store + topic links). */
     systemSettings: {
       root: "/platform/system-settings",

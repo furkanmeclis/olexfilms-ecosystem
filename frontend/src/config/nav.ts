@@ -11,6 +11,7 @@ import {
   Boxes,
   Coins,
   Download,
+  FileSignature,
   FileText,
   Flame,
   FolderTree,
@@ -185,6 +186,15 @@ export const platformNav = defineNav({
           href: routes.platform.serviceCatalog.root,
           icon: ClipboardList,
           permission: permissions.serviceCatalog.manage,
+        },
+        {
+          // TEC-290: contract templates (intake_contracts module; the API
+          // answers 403 FEATURE_DISABLED while the module is off).
+          id: "contract-templates",
+          titleKey: "layout.nav_contract_templates",
+          href: routes.platform.contractTemplates.root,
+          icon: FileSignature,
+          permission: permissions.contractTemplates.manage,
         },
         {
           // TEC-222: system settings hub (platform.settings.read).

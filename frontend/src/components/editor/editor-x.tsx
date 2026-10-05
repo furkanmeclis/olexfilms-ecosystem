@@ -33,6 +33,7 @@ import {
   $getRoot,
   $insertNodes,
   configExtension,
+  type AnyLexicalExtensionArgument,
   defineExtension,
   type EditorState,
   type LexicalEditor,
@@ -144,6 +145,8 @@ type EditorXProps = {
   onHtmlChange?: (html: string, stateJson: string) => void;
   /** Extra toolbar items, rendered inside the editor context. */
   toolbarExtra?: ReactNode;
+  /** Extra Lexical extensions (custom nodes / transforms), read on mount. */
+  extensions?: AnyLexicalExtensionArgument[];
 };
 
 function HtmlChangePlugin({
@@ -231,6 +234,7 @@ export function EditorX({
   initialHtml,
   onHtmlChange,
   toolbarExtra,
+  extensions,
 }: EditorXProps) {
   const { t } = useLocale();
   const resolvedPlaceholder = placeholder ?? t("editor.placeholder");
@@ -266,6 +270,7 @@ export function EditorX({
           CheckListExtension,
           HorizontalRuleExtension,
           DateTimeExtension,
+          ...(extensions ?? []),
         ],
         name: "@shadcn-editor",
         namespace: "Knowledge",
