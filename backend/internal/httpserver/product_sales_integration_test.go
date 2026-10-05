@@ -142,10 +142,20 @@ func TestIntegrationProductSalesAndPurchases(t *testing.T) {
 		t.Fatalf("next day void = %d %s, want 422 VOID_WINDOW_EXPIRED", code, errCode(env))
 	}
 
+	if code, env := it.do("POST", "/v1/suppliers", hostOlex, ownerTok, map[string]any{
+		"name": "Hatalı Tedarikçi " + it.suffix, "phone_e164": "555",
+	}); code != http.StatusBadRequest || errCode(env) != "VALIDATION_ERROR" {
+		t.Fatalf("invalid supplier phone = %d %s, want 400 VALIDATION_ERROR", code, errCode(env))
+	}
 	supplier := decodeData[supplierResp](t, mustDo(t, it, "POST", "/v1/suppliers", ownerTok, map[string]any{
 		"name": "Dış Tedarikçi " + it.suffix,
 	}, http.StatusCreated))
 	stockBeforePurchase := orgProductQty(t, it, dealer.ID, product.ID)
+	if code, env := it.do("POST", "/v1/purchases", hostOlex, ownerTok, map[string]any{
+		"supplier_uuid": supplier.UUID, "amount": "0", "payment_method": "cash", "description": "Sıfır tutar",
+	}); code != http.StatusBadRequest || errCode(env) != "VALIDATION_ERROR" {
+		t.Fatalf("zero purchase amount = %d %s, want 400 VALIDATION_ERROR", code, errCode(env))
+	}
 	purchase := decodeData[struct {
 		UUID   string `json:"uuid"`
 		Amount string `json:"amount"`

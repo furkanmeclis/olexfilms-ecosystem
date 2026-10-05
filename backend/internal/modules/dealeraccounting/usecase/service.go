@@ -240,6 +240,9 @@ func (s *Service) CreateSupplier(ctx context.Context, c Caller, in SupplierInput
 	if err != nil {
 		return SupplierView{}, err
 	}
+	if err := validateSupplierContacts(in); err != nil {
+		return SupplierView{}, err
+	}
 	row, err := s.q.CreateSupplier(ctx, db.CreateSupplierParams{
 		OrganizationID: o.ID, BrandID: o.BrandID, Name: name,
 		TaxNo: textPtr(in.TaxNo), PhoneE164: textPtr(in.PhoneE164), Email: textPtr(in.Email), Note: strings.TrimSpace(in.Note),
@@ -264,6 +267,9 @@ func (s *Service) UpdateSupplier(ctx context.Context, c Caller, id uuid.UUID, in
 	}
 	name, err := requiredText("name", in.Name, 200)
 	if err != nil {
+		return SupplierView{}, err
+	}
+	if err := validateSupplierContacts(in); err != nil {
 		return SupplierView{}, err
 	}
 	active := cur.Active
@@ -427,10 +433,12 @@ func (s *Service) CreateProductSale(ctx context.Context, c Caller, in ProductSal
 		}); err != nil {
 			return ProductSaleView{}, fmt.Errorf("dealer accounting: create sale line: %w", err)
 		}
-		_, _ = q.UpsertDealerProductPrice(ctx, db.UpsertDealerProductPriceParams{
+		if _, err := q.UpsertDealerProductPrice(ctx, db.UpsertDealerProductPriceParams{
 			OrganizationID: o.ID, BrandID: o.BrandID, ProductID: p.ProductID,
 			SalePrice: mustNumeric(p.UnitPrice), Currency: o.Currency, UpdatedByUserID: i8p(c.actor()),
-		})
+		}); err != nil {
+			return ProductSaleView{}, fmt.Errorf("dealer accounting: remember sale price: %w", err)
+		}
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return ProductSaleView{}, err
@@ -639,7 +647,7 @@ func (s *Service) CreatePurchase(ctx context.Context, c Caller, in PurchaseInput
 	if pm != PaymentCash && pm != PaymentCard && pm != PaymentBankTransfer && pm != PaymentCari {
 		return PurchaseView{}, invalid("payment_method", "must be cash, card, bank_transfer or cari")
 	}
-	amount, err := normalizeMoney("amount", in.Amount)
+	amount, err := normalizePositiveMoney("amount", in.Amount)
 	if err != nil {
 		return PurchaseView{}, err
 	}
@@ -803,6 +811,8 @@ func mapPostingErr(err error) error {
 }
 
 var moneyRe = regexp.MustCompile(`^[0-9]{1,16}(\.[0-9]{1,2})?$`)
+var emailRe = regexp.MustCompile(`^[^@\s]+@[^@\s]+$`)
+var phoneE164Re = regexp.MustCompile(`^\+[1-9][0-9]{7,14}$`)
 
 func normalizeMoney(field, raw string) (string, error) {
 	s := strings.TrimSpace(raw)
@@ -814,6 +824,35 @@ func normalizeMoney(field, raw string) (string, error) {
 		return "", invalid(field, "must be a non-negative decimal")
 	}
 	return r.FloatString(2), nil
+}
+
+func normalizePositiveMoney(field, raw string) (string, error) {
+	s, err := normalizeMoney(field, raw)
+	if err != nil {
+		return "", err
+	}
+	r, ok := new(big.Rat).SetString(s)
+	if !ok || r.Sign() <= 0 {
+		return "", invalid(field, "must be greater than zero")
+	}
+	return s, nil
+}
+
+func validateSupplierContacts(in SupplierInput) error {
+	if v := strings.TrimSpace(ptrString(in.PhoneE164)); v != "" && !phoneE164Re.MatchString(v) {
+		return invalid("phone_e164", "must be E.164")
+	}
+	if v := strings.TrimSpace(ptrString(in.Email)); v != "" && !emailRe.MatchString(v) {
+		return invalid("email", "must be an email address")
+	}
+	return nil
+}
+
+func ptrString(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }
 
 func numeric(s string) (pgtype.Numeric, error) {
