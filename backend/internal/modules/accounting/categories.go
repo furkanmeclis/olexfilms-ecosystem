@@ -37,6 +37,8 @@ const (
 	CategorySale          = "sale"
 	CategoryPurchase      = "purchase"
 	CategoryServiceIncome = "service_income"
+	CategoryStaffAdvance  = "staff_advance"
+	CategoryStaffBonus    = "staff_bonus"
 	CategoryCollection    = "collection"
 	CategoryPayment       = "payment"
 	// CategoryCariTransfer: keep in sync with posting.CategoryCariTransfer.
@@ -58,6 +60,8 @@ var categories = []Category{
 	cat(CategoryPurchase, DirectionExpense, false),
 	cat("rent", DirectionExpense, true),
 	cat("salary", DirectionExpense, true),
+	cat(CategoryStaffAdvance, DirectionExpense, false),
+	cat(CategoryStaffBonus, DirectionExpense, false),
 	cat("utilities", DirectionExpense, true),
 	cat("tax", DirectionExpense, true),
 	cat("shipping", DirectionExpense, true),

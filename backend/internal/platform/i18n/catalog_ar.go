@@ -279,6 +279,8 @@ var arCatalog = map[string]string{
 	"accounting.category.purchase":        "المشتريات",
 	"accounting.category.rent":            "الإيجار",
 	"accounting.category.salary":          "الرواتب",
+	"accounting.category.staff_advance":   "سلف الموظفين",
+	"accounting.category.staff_bonus":     "مكافآت الموظفين",
 	"accounting.category.utilities":       "المرافق",
 	"accounting.category.tax":             "الضرائب",
 	"accounting.category.shipping":        "الشحن",

@@ -279,6 +279,8 @@ var esCatalog = map[string]string{
 	"accounting.category.purchase":        "Compras",
 	"accounting.category.rent":            "Alquiler",
 	"accounting.category.salary":          "Salarios",
+	"accounting.category.staff_advance":   "Anticipos al personal",
+	"accounting.category.staff_bonus":     "Bonos del personal",
 	"accounting.category.utilities":       "Suministros",
 	"accounting.category.tax":             "Impuestos",
 	"accounting.category.shipping":        "Envíos",

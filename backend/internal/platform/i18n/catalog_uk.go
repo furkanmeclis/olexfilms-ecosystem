@@ -279,6 +279,8 @@ var ukCatalog = map[string]string{
 	"accounting.category.purchase":        "Закупівлі",
 	"accounting.category.rent":            "Оренда",
 	"accounting.category.salary":          "Заробітна плата",
+	"accounting.category.staff_advance":   "Аванси персоналу",
+	"accounting.category.staff_bonus":     "Премії персоналу",
 	"accounting.category.utilities":       "Комунальні послуги",
 	"accounting.category.tax":             "Податки",
 	"accounting.category.shipping":        "Доставка",

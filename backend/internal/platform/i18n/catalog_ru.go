@@ -279,6 +279,8 @@ var ruCatalog = map[string]string{
 	"accounting.category.purchase":        "Закупки",
 	"accounting.category.rent":            "Аренда",
 	"accounting.category.salary":          "Заработная плата",
+	"accounting.category.staff_advance":   "Авансы персоналу",
+	"accounting.category.staff_bonus":     "Премии персоналу",
 	"accounting.category.utilities":       "Коммунальные услуги",
 	"accounting.category.tax":             "Налоги",
 	"accounting.category.shipping":        "Доставка",

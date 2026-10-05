@@ -292,7 +292,7 @@ func (p *Poster) post(ctx context.Context, tx pgx.Tx, direction string, e Entry)
 	if !roleRe.MatchString(e.Role) || e.Revision < 1 || !categoryRe.MatchString(e.Category) {
 		return Result{}, fmt.Errorf("%w: role %q, revision %d, category %q", ErrInvalid, e.Role, e.Revision, e.Category)
 	}
-	if e.AccountID == 0 && !e.hasCari() {
+	if e.AccountID == 0 && !e.hasCari() && !e.AllowNoTarget {
 		return Result{}, fmt.Errorf("%w: an entry needs an account or a counterparty", ErrInvalid)
 	}
 	if e.CounterpartyOrgID != 0 && e.CariID != 0 {

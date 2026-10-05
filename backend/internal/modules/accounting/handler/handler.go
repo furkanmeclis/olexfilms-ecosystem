@@ -27,6 +27,7 @@ const (
 	CodeRateNotFound       = response.CodeRateNotFound
 	CodeCounterpartyAbsent = "COUNTERPARTY_NOT_FOUND"
 	CodeOpeningExists      = "OPENING_BALANCE_EXISTS"
+	CodeSalaryExists       = "STAFF_SALARY_EXISTS"
 )
 
 // Handler serves accounting endpoints.
@@ -61,6 +62,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.NotFound(w, r, "Cari account not found")
 	case errors.Is(err, acc.ErrEntryNotFound):
 		response.NotFound(w, r, "Entry not found")
+	case errors.Is(err, acc.ErrStaffNotFound):
+		response.NotFound(w, r, "Staff profile not found")
 	case errors.Is(err, acc.ErrCounterparty):
 		response.Error(w, r, http.StatusNotFound, CodeCounterpartyAbsent,
 			"Counterparty must be the parent or a direct child organization of the same brand")
@@ -72,6 +75,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Conflict(w, r, CodeIdempotencyReused, "The idempotency key was used for a different entry")
 	case errors.Is(err, acc.ErrRateNotFound):
 		response.Error(w, r, http.StatusUnprocessableEntity, CodeRateNotFound, "No exchange rate for this currency")
+	case errors.Is(err, acc.ErrStaffSalaryExists):
+		response.Conflict(w, r, CodeSalaryExists, "Salary already exists for this staff period")
 	default:
 		response.InternalErr(w, r, err, "accounting request failed")
 	}
