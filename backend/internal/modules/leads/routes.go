@@ -50,6 +50,8 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/leads/{uuid}/task", route(h.CreateTask, write))
 	mux.Handle("POST /v1/leads/{uuid}/quotes", route(h.CreateQuote, quoteWrite))
 	mux.Handle("GET /v1/quotes/{uuid}", quoteRoute(h.GetQuote))
+	mux.Handle("POST /v1/quotes/{uuid}/send", quoteRoute(h.SendQuote, quoteWrite))
+	mux.Handle("POST /v1/quotes/{uuid}/remind", quoteRoute(h.RemindQuote, quoteWrite))
 	mux.Handle("PATCH /v1/quotes/{uuid}", quoteRoute(h.PatchQuote, quoteWrite))
 	mux.Handle("PUT /v1/quotes/{uuid}/lines", quoteRoute(h.ReplaceQuoteLines, quoteWrite))
 	mux.Handle("POST /v1/quotes/{uuid}/accept", quoteRoute(h.AcceptQuote, quoteWrite))
@@ -64,4 +66,6 @@ func RegisterRoutes(
 func RegisterPublicRoutes(mux *http.ServeMux, h *handler.Public) {
 	mux.HandleFunc("GET /v1/public/dealer-applications/config", h.Config)
 	mux.HandleFunc("POST /v1/public/dealer-applications", h.Submit)
+	mux.HandleFunc("GET /v1/public/quotes/{token}", h.Quote)
+	mux.HandleFunc("GET /v1/public/quotes/{token}/pdf", h.QuotePDF)
 }
