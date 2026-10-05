@@ -237,8 +237,14 @@ func TestStaffPayments_PayrollIdempotentForActiveStaff(t *testing.T) {
 	if again.Created != 0 || again.Skipped != 2 || len(again.Items) != 0 {
 		t.Fatalf("payroll second = %+v", again)
 	}
+	cash, err := svc.CreateAccount(e.ctx, caller(e.dealer, rbac.PermAccountingWrite), acc.CreateAccountInput{
+		Type: acc.AccountCash, Name: "Kasa " + e.suffix,
+	})
+	if err != nil {
+		t.Fatalf("account: %v", err)
+	}
 	if _, err := svc.CreateStaffPayment(e.ctx, caller(e.dealer, rbac.PermStaffPaymentsWrite), s1.UUID, acc.StaffPaymentInput{
-		Type: acc.StaffPaymentSalary, Period: "2026-10", Amount: strPtr("1000"),
+		Type: acc.StaffPaymentSalary, Period: "2026-10", Amount: strPtr("1000"), AccountUUID: &cash.UUID,
 	}); !errors.Is(err, acc.ErrStaffSalaryExists) {
 		t.Fatalf("duplicate salary err = %v, want ErrStaffSalaryExists", err)
 	}
@@ -312,6 +318,28 @@ func TestStaffPayments_AdvanceAndSalarySamePeriod(t *testing.T) {
 		WHERE organization_id = $1 AND source_type = 'staff_payment'
 		  AND direction = 'expense' AND category IN ('salary', 'staff_advance')`, e.dealer.ID); total != "2300.00" {
 		t.Fatalf("expense total = %s", total)
+	}
+}
+
+func TestStaffPayments_ManualPaymentRequiresAccount(t *testing.T) {
+	e := newDisputeEnv(t)
+	svc := dealerService(e, &moduleSwitch{dealerAccounting: true})
+	staff, err := svc.CreateStaffProfile(e.ctx, caller(e.dealer, rbac.PermStaffManage), acc.CreateStaffProfileInput{
+		Name: "Hesapsız " + e.suffix, MonthlySalary: strPtr("1000"), Active: true,
+	})
+	if err != nil {
+		t.Fatalf("staff: %v", err)
+	}
+	_, err = svc.CreateStaffPayment(e.ctx, caller(e.dealer, rbac.PermStaffPaymentsWrite), staff.UUID, acc.StaffPaymentInput{
+		Type: acc.StaffPaymentAdvance, Period: "2027-01", Amount: strPtr("100"),
+	})
+	var ve *acc.ValidationError
+	if !errors.As(err, &ve) || ve.Field != "account_uuid" {
+		t.Fatalf("manual payment without account err = %v, want account_uuid validation", err)
+	}
+	if n := e.count(t, `SELECT COUNT(*) FROM staff_payments WHERE staff_id = (
+		SELECT id FROM staff_profiles WHERE uuid = $1)`, staff.UUID); n != 0 {
+		t.Fatalf("staff payments after rejected manual payment = %d", n)
 	}
 }
 

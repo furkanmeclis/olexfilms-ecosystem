@@ -298,7 +298,7 @@ func (s *Service) CreateStaffPayment(ctx context.Context, c Caller, staffUUID uu
 	if err != nil {
 		return StaffPayment{}, err
 	}
-	return s.createStaffPayment(ctx, c, book, staff, in)
+	return s.createStaffPayment(ctx, c, book, staff, in, false)
 }
 
 func (s *Service) RunPayroll(ctx context.Context, c Caller, period string) (PayrollResult, error) {
@@ -329,7 +329,7 @@ func (s *Service) RunPayroll(ctx context.Context, c Caller, period string) (Payr
 			Type:   StaffPaymentSalary,
 			Period: period,
 			Amount: &amount,
-		})
+		}, true)
 		switch {
 		case err == nil:
 			out.Created++
@@ -349,6 +349,7 @@ func (s *Service) createStaffPayment(
 	book db.Organization,
 	staff db.StaffProfile,
 	in StaffPaymentInput,
+	allowTargetless bool,
 ) (StaffPayment, error) {
 	paymentType, category, err := staffPaymentType(in.Type)
 	if err != nil {
@@ -392,6 +393,8 @@ func (s *Service) createStaffPayment(
 			return StaffPayment{}, invalid("account_uuid", "the account is inactive")
 		}
 		accountID = a.ID
+	} else if !allowTargetless {
+		return StaffPayment{}, invalid("account_uuid", "is required")
 	}
 	paidOn := time.Now().UTC()
 	if in.PaidOn != nil {
@@ -424,6 +427,7 @@ func (s *Service) createStaffPayment(
 			Amount:         posting.FormatNumeric(payment.Amount),
 			Currency:       payment.Currency,
 			AccountID:      accountID,
+			AllowNoTarget:  allowTargetless && accountID == 0,
 			Description:    desc,
 			ActorUserID:    c.actor(),
 		})
