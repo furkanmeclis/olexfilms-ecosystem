@@ -38,6 +38,11 @@ FOR UPDATE;
 SELECT * FROM warranty_claims
 WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id);
 
+-- name: GetWarrantyClaimByIDForUpdate :one
+SELECT * FROM warranty_claims
+WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id)
+FOR UPDATE;
+
 -- name: GetLiveWarrantyClaimByWarranty :one
 -- The live (not rejected / closed) claim of a warranty, if any.
 SELECT * FROM warranty_claims
@@ -125,6 +130,24 @@ WHERE id = sqlc.arg(id)
   AND status = 'approved'
 RETURNING *;
 
+-- name: ClearWarrantyClaimReapplyService :one
+-- A cancelled re-application service releases the claim for a new attempt.
+UPDATE warranty_claims
+SET reapply_service_id = NULL,
+    status             = 'approved',
+    updated_by_user_id = sqlc.narg(actor_user_id)::bigint
+WHERE id = sqlc.arg(id)
+  AND brand_id = sqlc.arg(brand_id)
+  AND reapply_service_id = sqlc.arg(reapply_service_id)
+  AND status = 'reapplied'
+RETURNING *;
+
+-- name: GetWarrantyClaimReapplyService :one
+SELECT * FROM services
+WHERE id = sqlc.arg(reapply_service_id)
+  AND brand_id = sqlc.arg(brand_id)
+  AND warranty_claim_id = sqlc.arg(claim_id);
+
 -- name: SetServiceWarrantyClaim :one
 UPDATE services
 SET warranty_claim_id = sqlc.arg(warranty_claim_id)
@@ -144,6 +167,16 @@ RETURNING *;
 SELECT * FROM warranty_claim_parts
 WHERE claim_id = sqlc.arg(claim_id)
 ORDER BY id;
+
+-- name: ListWarrantyClaimReapplyItems :many
+SELECT DISTINCT ON (p.part_key)
+       p.part_key, si.product_id, si.unit_id, si.kind, si.quantity, si.meters
+FROM warranty_claim_parts p
+JOIN service_items si ON si.id = p.service_item_id
+WHERE p.claim_id = sqlc.arg(claim_id)
+  AND p.product_id IS NOT NULL
+  AND p.unit_id IS NOT NULL
+ORDER BY p.part_key, p.id;
 
 -- name: DeleteWarrantyClaimPart :execrows
 DELETE FROM warranty_claim_parts

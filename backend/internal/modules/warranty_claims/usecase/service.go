@@ -94,13 +94,17 @@ type Store interface {
 	WarrantyClaimPartsReport(ctx context.Context, arg db.WarrantyClaimPartsReportParams) ([]db.WarrantyClaimPartsReportRow, error)
 }
 
+type txBeginner interface {
+	Begin(ctx context.Context) (pgx.Tx, error)
+}
+
 type Storage interface {
 	Upload(ctx context.Context, file platstorage.File, path string) error
 }
 
 type txStore struct {
 	*db.Queries
-	pool *pgxpool.Pool
+	pool txBeginner
 }
 
 func (s txStore) Begin(ctx context.Context) (pgx.Tx, error) {

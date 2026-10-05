@@ -40,6 +40,11 @@ func RegisterRoutes(
 		middleware.RequireAnyPermission(rbac.PermWarrantyClaimsWrite, rbac.PermWarrantyClaimsReview, rbac.PermWarrantyClaimsDecide),
 		middleware.RequireScope(q, rbac.PermWarrantyClaimsRead),
 	))
+	mux.Handle("POST /v1/warranty-claims/{uuid}/reapply-service", middleware.Chain(
+		http.HandlerFunc(h.ReapplyService), authn, org, module,
+		middleware.RequireScope(q, rbac.PermWarrantyClaimsWrite),
+		middleware.RequireScope(q, rbac.PermWarrantyClaimsRead),
+	))
 	mux.Handle("GET /v1/portal/warranty-claims", middleware.Chain(
 		http.HandlerFunc(h.PortalList), authn, middleware.RequirePermission(rbac.PermWarrantiesRead),
 	))
