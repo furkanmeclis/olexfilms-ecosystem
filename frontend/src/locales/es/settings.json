@@ -114,5 +114,22 @@
   "coordinates.errors.latitude": "La latitud debe ser un número entre -90 y 90.",
   "coordinates.errors.longitude": "La longitud debe ser un número entre -180 y 180.",
   "coordinates.errors.pair": "Introduzca latitud y longitud juntas o deje ambas vacías.",
-  "system.hub.glorian": "Conexión con el hub de Glorian, sincronizaciones e informe de discrepancias."
+  "system.hub.glorian": "Conexión con el hub de Glorian, sincronizaciones e informe de discrepancias.",
+  "system.labor.title": "Regla de mano de obra en garantías",
+  "system.labor.description": "Quién asume el coste de mano de obra cuando se vuelve a aplicar una garantía.",
+  "system.labor.rule": "Regla de mano de obra",
+  "system.labor.rules.dealer": "Concesionario",
+  "system.labor.rules.dealer_hint": "La mano de obra la asume el concesionario; la central no paga mano de obra.",
+  "system.labor.rules.center": "Central",
+  "system.labor.rules.center_hint": "La central abona el importe de mano de obra al concesionario (a través del distribuidor).",
+  "system.labor.rules.shared": "Compartida",
+  "system.labor.rules.shared_hint": "La central abona el porcentaje indicado del importe de mano de obra.",
+  "system.labor.amount": "Importe de mano de obra",
+  "system.labor.amount_hint": "Por cada nueva aplicación, en la moneda de la organización.",
+  "system.labor.percent": "Parte de la central (%)",
+  "system.labor.percent_hint": "Entre 0 y 100.",
+  "system.labor.errors.amount_number": "Introduzca un importe válido (hasta 2 decimales).",
+  "system.labor.errors.amount_min": "El importe no puede ser negativo.",
+  "system.labor.errors.percent_integer": "Introduzca un número entero.",
+  "system.labor.errors.percent_range": "El porcentaje debe estar entre 0 y 100."
 }

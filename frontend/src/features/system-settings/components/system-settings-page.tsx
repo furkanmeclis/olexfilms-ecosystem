@@ -45,6 +45,8 @@ import {
   type Draft,
   type DraftError,
 } from "@/features/system-settings/lib/setting-value";
+import { splitLaborSettings } from "@/features/system-settings/lib/labor-rule";
+import { WarrantyLaborRuleCard } from "@/features/system-settings/components/warranty-labor-rule-card";
 import {
   systemSettingsService,
   type SystemSetting,
@@ -210,6 +212,9 @@ export function SystemSettingsPage() {
   });
 
   const links = HUB_LINKS.filter((link) => can(link.permission));
+  // TEC-340: the warranty labor rule keys get their own card (gated on the
+  // catalog shipping them); every other key keeps the generic row.
+  const { labor, rest } = splitLaborSettings(list.data?.items ?? []);
 
   return (
     <div className="space-y-6">
@@ -264,7 +269,15 @@ export function SystemSettingsPage() {
               {t("settings.system.read_only")}
             </p>
           ) : null}
-          {groupSettings(list.data?.items ?? []).map(({ group, settings }) => (
+          {labor ? (
+            <WarrantyLaborRuleCard
+              key={labor.rule.updated_at ?? ""}
+              labor={labor}
+              canWrite={canWrite}
+              queryKey={systemSettingsKeys.all}
+            />
+          ) : null}
+          {groupSettings(rest).map(({ group, settings }) => (
             <Card key={group} data-testid={`group-${group}`}>
               <CardHeader>
                 <CardTitle>

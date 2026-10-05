@@ -78,6 +78,10 @@ export const routes = {
       list: (slug: string) => `/t/${slug}/warranties`,
       detail: (slug: string, uuid: string) => `/t/${slug}/warranties/${uuid}`,
     },
+    /** TEC-340 warranty claim report (failure rate, dealer, parts). */
+    warrantyClaims: {
+      reports: (slug: string) => `/t/${slug}/warranty-claims/reports`,
+    },
     /** TEC-197 stock transfer requests between siblings: list, new, detail. */
     transfers: {
       list: (slug: string) => `/t/${slug}/transfers`,

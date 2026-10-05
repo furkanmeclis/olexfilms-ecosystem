@@ -141,6 +141,7 @@ export const Permission = {
   AnnouncementsWrite: "announcements.write",
   /** TEC-290: contract template editor (brand scoped, intake_contracts). */
   ContractsTemplatesManage: "contracts.templates.manage",
+  WarrantyClaimsRead: "warranty_claims.read",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];
@@ -437,5 +438,8 @@ export const permissions = {
   },
   contractTemplates: {
     manage: Permission.ContractsTemplatesManage,
+  },
+  warrantyClaims: {
+    read: Permission.WarrantyClaimsRead,
   },
 } as const;

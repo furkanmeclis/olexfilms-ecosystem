@@ -44,6 +44,7 @@ import {
   Barcode,
   ClipboardCheck,
   Sunset,
+  ChartColumn,
 } from "lucide-react";
 
 import { appleNavIcon } from "@/components/icons/apple-icon";
@@ -427,6 +428,7 @@ export function tenantNav(slug: string) {
           permissions.services.read,
           permissions.services.write,
           permissions.warranties.read,
+          permissions.warrantyClaims.read,
         ],
         feature: "services",
         items: [
@@ -453,6 +455,16 @@ export function tenantNav(slug: string) {
             icon: ShieldCheck,
             permission: permissions.warranties.read,
             feature: "services",
+          },
+          {
+            // TEC-340: center / distributor warranty claim report.
+            id: "warranty-claim-reports",
+            titleKey: "warranty.claim_reports.nav",
+            href: routes.tenant.warrantyClaims.reports(slug),
+            icon: ChartColumn,
+            permission: permissions.warrantyClaims.read,
+            orgTypes: ["center", "distributor"],
+            feature: "warranty_claims",
           },
         ],
       },
