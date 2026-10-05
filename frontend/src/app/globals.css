@@ -41,7 +41,7 @@
      overscroll area match the dark hero. The wrapper keeps its own background. */
   html:has([data-landing]),
   html:has([data-landing]) body {
-    background-color: #1a1412;
+    background-color: #00140c;
   }
 
   body[data-scroll-locked] {
