@@ -43,3 +43,18 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/appointments/{uuid}/status", route(h.SetStatus, write))
 	mux.Handle("POST /v1/appointments/{uuid}/start-intake", route(h.StartIntake, write))
 }
+
+func RegisterPortalRoutes(mux *http.ServeMux, h *handler.Handler, tokens *jwt.Manager, loader middleware.IdentityLoader) {
+	authn := middleware.Authenticate(tokens, loader)
+	read := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, authn)
+	}
+	write := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, authn, middleware.DenyPortalReadOnly)
+	}
+
+	mux.Handle("GET /v1/portal/dealers/{uuid}/availability", read(h.PortalAvailability))
+	mux.Handle("GET /v1/portal/appointments", read(h.PortalList))
+	mux.Handle("POST /v1/portal/appointments", write(h.PortalCreate))
+	mux.Handle("POST /v1/portal/appointments/{uuid}/cancel", write(h.PortalCancel))
+}

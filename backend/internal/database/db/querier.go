@@ -20,6 +20,7 @@ type Querier interface {
 	AddLeadEvent(ctx context.Context, arg AddLeadEventParams) (LeadEvent, error)
 	// Signed deltas; the CHECK rejects negative stock.
 	AddOrganizationProductStock(ctx context.Context, arg AddOrganizationProductStockParams) (OrganizationProductStock, error)
+	AddQuoteViewedEventIfMissing(ctx context.Context, arg AddQuoteViewedEventIfMissingParams) (LeadEvent, error)
 	AddServiceCatalogModule(ctx context.Context, arg AddServiceCatalogModuleParams) error
 	AddWarrantyClaimEvent(ctx context.Context, arg AddWarrantyClaimEventParams) (WarrantyClaimEvent, error)
 	AddWarrantyClaimPart(ctx context.Context, arg AddWarrantyClaimPartParams) (WarrantyClaimPart, error)
@@ -85,6 +86,7 @@ type Querier interface {
 	ClearDefaultContractTemplate(ctx context.Context, arg ClearDefaultContractTemplateParams) error
 	ClearDefaultLabelTemplate(ctx context.Context, arg ClearDefaultLabelTemplateParams) error
 	ClearOrganizationLogo(ctx context.Context, argUuid uuid.UUID) (Organization, error)
+	ClearServiceIncome(ctx context.Context, arg ClearServiceIncomeParams) (Service, error)
 	// Closes the source account. phone_e164/email are the values it keeps (the
 	// caller clears the ones handed to the target; the e-mail is a placeholder
 	// when nothing is left, chk_users_email_or_phone). Runs before the target
@@ -171,6 +173,7 @@ type Querier interface {
 	CountPermissions(ctx context.Context, q_ pgtype.Text) (int64, error)
 	CountPhoneOTPsSince(ctx context.Context, arg CountPhoneOTPsSinceParams) (int64, error)
 	CountPlatformNotifications(ctx context.Context, arg CountPlatformNotificationsParams) (int64, error)
+	CountPortalAppointments(ctx context.Context, arg CountPortalAppointmentsParams) (int64, error)
 	CountPortalContracts(ctx context.Context, arg CountPortalContractsParams) (int64, error)
 	CountPortalServices(ctx context.Context, arg CountPortalServicesParams) (int64, error)
 	CountPortalVehicles(ctx context.Context, arg CountPortalVehiclesParams) (int64, error)
@@ -316,6 +319,7 @@ type Querier interface {
 	CreateQuoteDelivery(ctx context.Context, arg CreateQuoteDeliveryParams) (QuoteDelivery, error)
 	CreateQuoteLine(ctx context.Context, arg CreateQuoteLineParams) (QuoteLine, error)
 	CreateQuoteReminder(ctx context.Context, arg CreateQuoteReminderParams) (QuoteReminder, error)
+	CreateQuoteReminderIfMissing(ctx context.Context, arg CreateQuoteReminderIfMissingParams) (QuoteReminder, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
 	CreateReviewQuestion(ctx context.Context, arg CreateReviewQuestionParams) (ReviewQuestion, error)
 	CreateRole(ctx context.Context, arg CreateRoleParams) (Role, error)
@@ -533,6 +537,7 @@ type Querier interface {
 	// check the proposed row and reject every negative delta.
 	EnsureFixedBarcodeHolding(ctx context.Context, arg EnsureFixedBarcodeHoldingParams) error
 	EnsureOrganizationProductStock(ctx context.Context, arg EnsureOrganizationProductStockParams) error
+	EnsureQuoteSent(ctx context.Context, arg EnsureQuoteSentParams) (Quote, error)
 	ExecuteContractInstance(ctx context.Context, arg ExecuteContractInstanceParams) (ContractInstance, error)
 	ExpireDueQuotes(ctx context.Context, today pgtype.Date) ([]Quote, error)
 	ExpireDueVehicleTransfers(ctx context.Context, now pgtype.Timestamptz) ([]VehicleTransfer, error)
@@ -755,6 +760,10 @@ type Querier interface {
 	GetPendingVehicleTransfer(ctx context.Context, vehicleID int64) (VehicleTransfer, error)
 	GetPermissionBySlug(ctx context.Context, slug string) (Permission, error)
 	GetPlateFormatByCountry(ctx context.Context, iso2 string) (GetPlateFormatByCountryRow, error)
+	GetPortalAppointmentByUUID(ctx context.Context, arg GetPortalAppointmentByUUIDParams) (Appointment, error)
+	// Portal booking accepts only active dealers of the request brand whose
+	// appointment settings explicitly allow portal bookings.
+	GetPortalAppointmentDealer(ctx context.Context, arg GetPortalAppointmentDealerParams) (GetPortalAppointmentDealerRow, error)
 	GetPortalContractPDF(ctx context.Context, arg GetPortalContractPDFParams) (ContractInstance, error)
 	GetPortalVehicle(ctx context.Context, arg GetPortalVehicleParams) (GetPortalVehicleRow, error)
 	// Service summary of one vehicle across every organization of the brand.
@@ -804,6 +813,9 @@ type Querier interface {
 	GetQRLoginChallengeByCode(ctx context.Context, code string) (QrLoginChallenge, error)
 	GetQuoteByPublicToken(ctx context.Context, publicToken uuid.UUID) (Quote, error)
 	GetQuoteByUUID(ctx context.Context, arg GetQuoteByUUIDParams) (Quote, error)
+	GetQuotePublicViewByToken(ctx context.Context, arg GetQuotePublicViewByTokenParams) (GetQuotePublicViewByTokenRow, error)
+	GetQuoteRecipient(ctx context.Context, arg GetQuoteRecipientParams) (GetQuoteRecipientRow, error)
+	GetQuoteReminderByID(ctx context.Context, id int64) (QuoteReminder, error)
 	GetRecommendedProductPrice(ctx context.Context, arg GetRecommendedProductPriceParams) (pgtype.Numeric, error)
 	GetRefreshTokenByHashAny(ctx context.Context, tokenHash string) (RefreshToken, error)
 	GetRefreshTokenByUUID(ctx context.Context, argUuid uuid.UUID) (RefreshToken, error)
@@ -832,6 +844,7 @@ type Querier interface {
 	GetServiceCatalogItem(ctx context.Context, arg GetServiceCatalogItemParams) (ServiceCatalogItem, error)
 	GetServiceCatalogItemByID(ctx context.Context, id int64) (ServiceCatalogItem, error)
 	GetServiceCatalogItemByUUID(ctx context.Context, arg GetServiceCatalogItemByUUIDParams) (ServiceCatalogItem, error)
+	GetServiceConsumedPurchaseCost(ctx context.Context, arg GetServiceConsumedPurchaseCostParams) (pgtype.Numeric, error)
 	GetServiceContractSummary(ctx context.Context, id int64) (GetServiceContractSummaryRow, error)
 	GetServiceForContractByID(ctx context.Context, id int64) (GetServiceForContractByIDRow, error)
 	GetServiceForContractByUUID(ctx context.Context, arg GetServiceForContractByUUIDParams) (GetServiceForContractByUUIDRow, error)
@@ -1390,6 +1403,7 @@ type Querier interface {
 	ListPlateFormats(ctx context.Context, activeOnly bool) ([]ListPlateFormatsRow, error)
 	ListPlatformNotifications(ctx context.Context, arg ListPlatformNotificationsParams) ([]Notification, error)
 	ListPlatformNotificationsForExport(ctx context.Context, arg ListPlatformNotificationsForExportParams) ([]Notification, error)
+	ListPortalAppointments(ctx context.Context, arg ListPortalAppointmentsParams) ([]Appointment, error)
 	// TEC-288 (F3-01d): the user's executed vehicle intake contracts. The
 	// ownership rule stays identical to portal services: the service customer or
 	// warranty holder sees it, within the domain brand, excluding Glorian.
@@ -2204,6 +2218,9 @@ type Querier interface {
 	SetRoomSortOrder(ctx context.Context, arg SetRoomSortOrderParams) (int64, error)
 	// Links (or unlinks with NULL) a contract of the service's organization.
 	SetServiceContract(ctx context.Context, arg SetServiceContractParams) (int64, error)
+	// ---------------------------------------------------------------------------
+	// TEC-343: completed-service income and profit.
+	SetServiceIncome(ctx context.Context, arg SetServiceIncomeParams) (Service, error)
 	// ---------------------------------------------------------------------------
 	// Per-service income.
 	SetServiceIncomeEntry(ctx context.Context, arg SetServiceIncomeEntryParams) (Service, error)

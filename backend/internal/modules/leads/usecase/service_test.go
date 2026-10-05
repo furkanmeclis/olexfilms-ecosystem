@@ -16,6 +16,7 @@ import (
 	docusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/usecase"
 	orguc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
 	serviceuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/usecase"
+	shorturlsuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/shorturls/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
@@ -25,6 +26,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/google/uuid"
+	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -150,6 +152,13 @@ func (f *fixture) quoteCaller(org db.Organization, scope rbac.Scope) Caller {
 	c := f.caller(org, scope)
 	c.Filter.Permission = rbac.PermQuotesRead
 	return c
+}
+
+type fakeQuoteQueue struct{ tasks []*asynq.Task }
+
+func (q *fakeQuoteQueue) Enqueue(task *asynq.Task, _ ...asynq.Option) (*asynq.TaskInfo, error) {
+	q.tasks = append(q.tasks, task)
+	return &asynq.TaskInfo{}, nil
 }
 
 func num(s string) pgtype.Numeric {
@@ -427,6 +436,179 @@ func TestQuoteLinesLockedAfterSent(t *testing.T) {
 	_, err = f.svc.ReplaceQuoteLines(f.ctx, c, q.UUID, []QuoteLineInput{{LineType: QuoteLineCatalogService, ServiceCatalogItemUUID: &item.Uuid, Quantity: "2"}})
 	if !errors.Is(err, ErrQuoteConflict) {
 		t.Fatalf("ReplaceQuoteLines err = %v, want ErrQuoteConflict", err)
+	}
+}
+
+func TestQuoteSendWritesOutboxDeliveryAndKeepsTokenOnResend(t *testing.T) {
+	f := newFixture(t)
+	out, fq := &fakeOutbox{}, &fakeQuoteQueue{}
+	f.svc.SetQuoteSenders(out, shorturlsuc.NewLinker(shorturlsuc.New(f.q), "https://olexfilms.app"), fq)
+	dist := f.orgTyped("quote-send", "distributor", f.center.ID)
+	c := f.quoteCaller(dist, rbac.ScopeManaged)
+	phone := fmt.Sprintf("+90555%07d", time.Now().UnixNano()%10_000_000)
+	lead, err := f.q.CreateLead(f.ctx, db.CreateLeadParams{
+		OrganizationID: dist.ID, BrandID: f.brand, TargetType: "customer", Source: "walk_in",
+		Temperature: "warm", Status: StatusNew, CandidatePhoneE164: pgtype.Text{String: phone, Valid: true}, Notes: "",
+	})
+	if err != nil {
+		t.Fatalf("lead: %v", err)
+	}
+	item := f.catalogItem("Sendable", "100.00")
+	q, err := f.svc.CreateQuote(f.ctx, c, lead.Uuid, QuoteInput{Lines: []QuoteLineInput{
+		{LineType: QuoteLineCatalogService, ServiceCatalogItemUUID: &item.Uuid, Quantity: "1"},
+	}})
+	if err != nil {
+		t.Fatalf("CreateQuote: %v", err)
+	}
+	before, err := f.q.GetQuoteByUUID(f.ctx, db.GetQuoteByUUIDParams{Uuid: q.UUID, BrandID: f.brand})
+	if err != nil {
+		t.Fatalf("quote row: %v", err)
+	}
+	first, err := f.svc.SendQuote(f.ctx, c, q.UUID)
+	if err != nil {
+		t.Fatalf("SendQuote first: %v", err)
+	}
+	second, err := f.svc.SendQuote(f.ctx, c, q.UUID)
+	if err != nil {
+		t.Fatalf("SendQuote second: %v", err)
+	}
+	after, _ := f.q.GetQuoteByUUID(f.ctx, db.GetQuoteByUUIDParams{Uuid: q.UUID, BrandID: f.brand})
+	if after.PublicToken != before.PublicToken {
+		t.Fatalf("public token changed: %s -> %s", before.PublicToken, after.PublicToken)
+	}
+	if first.Quote.Status != QuoteStatusSent || second.Quote.Status != QuoteStatusSent || !strings.Contains(first.PublicURL, "/s/") {
+		t.Fatalf("send results = %+v / %+v", first, second)
+	}
+	if len(out.events) != 2 {
+		t.Fatalf("outbox events = %d, want 2", len(out.events))
+	}
+	if got := f.count(`SELECT count(*) FROM quote_deliveries WHERE quote_id = $1`, before.ID); got != 2 {
+		t.Fatalf("deliveries = %d, want 2", got)
+	}
+	if len(fq.tasks) != 1 {
+		t.Fatalf("reminder tasks = %d, want 1", len(fq.tasks))
+	}
+	gotLead, _ := f.q.GetLeadByID(f.ctx, db.GetLeadByIDParams{ID: lead.ID, BrandID: f.brand})
+	if gotLead.Status != StatusQuoted || !hasKind(f.eventKinds(c, lead.Uuid), "quote_sent") {
+		t.Fatalf("lead status/events = %s %v", gotLead.Status, f.eventKinds(c, lead.Uuid))
+	}
+}
+
+func TestQuoteSendWithoutRecipientReturnsNamedRule(t *testing.T) {
+	f := newFixture(t)
+	f.svc.SetQuoteSenders(&fakeOutbox{}, nil, &fakeQuoteQueue{})
+	dist := f.orgTyped("quote-no-recipient", "distributor", f.center.ID)
+	c := f.quoteCaller(dist, rbac.ScopeManaged)
+	lead := f.lead(dist, StatusNew, nil)
+	item := f.catalogItem("No recipient", "10.00")
+	q, err := f.svc.CreateQuote(f.ctx, c, lead.Uuid, QuoteInput{Lines: []QuoteLineInput{
+		{LineType: QuoteLineCatalogService, ServiceCatalogItemUUID: &item.Uuid, Quantity: "1"},
+	}})
+	if err != nil {
+		t.Fatalf("CreateQuote: %v", err)
+	}
+	if _, err := f.svc.SendQuote(f.ctx, c, q.UUID); !errors.Is(err, ErrQuoteNoRecipient) {
+		t.Fatalf("SendQuote err = %v, want ErrQuoteNoRecipient", err)
+	}
+}
+
+func TestQuoteReminderAcceptedQuoteSendsNothing(t *testing.T) {
+	f := newFixture(t)
+	out, fq := &fakeOutbox{}, &fakeQuoteQueue{}
+	f.svc.SetQuoteSenders(out, nil, fq)
+	dist := f.orgTyped("quote-reminder", "distributor", f.center.ID)
+	c := f.quoteCaller(dist, rbac.ScopeManaged)
+	phone := fmt.Sprintf("+90556%07d", time.Now().UnixNano()%10_000_000)
+	lead, err := f.q.CreateLead(f.ctx, db.CreateLeadParams{
+		OrganizationID: dist.ID, BrandID: f.brand, TargetType: "customer", Source: "walk_in",
+		Temperature: "warm", Status: StatusNew, CandidatePhoneE164: pgtype.Text{String: phone, Valid: true}, Notes: "",
+	})
+	if err != nil {
+		t.Fatalf("lead: %v", err)
+	}
+	item := f.catalogItem("Reminder", "20.00")
+	q, err := f.svc.CreateQuote(f.ctx, c, lead.Uuid, QuoteInput{Lines: []QuoteLineInput{
+		{LineType: QuoteLineCatalogService, ServiceCatalogItemUUID: &item.Uuid, Quantity: "1"},
+	}})
+	if err != nil {
+		t.Fatalf("CreateQuote: %v", err)
+	}
+	if _, err := f.svc.SendQuote(f.ctx, c, q.UUID); err != nil {
+		t.Fatalf("SendQuote: %v", err)
+	}
+	row, _ := f.q.GetQuoteByUUID(f.ctx, db.GetQuoteByUUIDParams{Uuid: q.UUID, BrandID: f.brand})
+	var reminderID int64
+	if err := f.tx.QueryRow(f.ctx, `SELECT id FROM quote_reminders WHERE quote_id = $1`, row.ID).Scan(&reminderID); err != nil {
+		t.Fatalf("reminder id: %v", err)
+	}
+	if _, err := f.svc.DecideQuote(f.ctx, c, q.UUID, QuoteStatusAccepted, QuoteDecisionInput{}); err != nil {
+		t.Fatalf("accept: %v", err)
+	}
+	if err := f.svc.QuoteReminderTask(f.ctx, reminderID); err != nil {
+		t.Fatalf("QuoteReminderTask: %v", err)
+	}
+	if len(out.events) != 1 {
+		t.Fatalf("outbox events after accepted reminder = %d, want only initial send", len(out.events))
+	}
+	if got := f.count(`SELECT count(*) FROM quote_deliveries WHERE quote_id = $1`, row.ID); got != 1 {
+		t.Fatalf("deliveries = %d, want 1", got)
+	}
+	if len(fq.tasks) != 1 {
+		t.Fatalf("scheduled tasks = %d, want 1", len(fq.tasks))
+	}
+}
+
+func TestPublicQuoteValidAndExpired(t *testing.T) {
+	f := newFixture(t)
+	f.svc.SetQuoteSenders(&fakeOutbox{}, nil, &fakeQuoteQueue{})
+	dist := f.orgTyped("quote-public", "distributor", f.center.ID)
+	c := f.quoteCaller(dist, rbac.ScopeManaged)
+	phone := fmt.Sprintf("+90557%07d", time.Now().UnixNano()%10_000_000)
+	lead, err := f.q.CreateLead(f.ctx, db.CreateLeadParams{
+		OrganizationID: dist.ID, BrandID: f.brand, TargetType: "customer", Source: "walk_in",
+		Temperature: "warm", Status: StatusNew, CandidatePhoneE164: pgtype.Text{String: phone, Valid: true},
+		CandidateEmail: pgtype.Text{String: "secret@example.test", Valid: true}, Notes: "",
+	})
+	if err != nil {
+		t.Fatalf("lead: %v", err)
+	}
+	item := f.catalogItem("Public", "30.00")
+	future := time.Date(2026, 10, 10, 0, 0, 0, 0, time.UTC)
+	q, err := f.svc.CreateQuote(f.ctx, c, lead.Uuid, QuoteInput{ValidUntil: &future, Lines: []QuoteLineInput{
+		{LineType: QuoteLineCatalogService, ServiceCatalogItemUUID: &item.Uuid, Quantity: "2"},
+	}})
+	if err != nil {
+		t.Fatalf("CreateQuote: %v", err)
+	}
+	if _, err := f.svc.SendQuote(f.ctx, c, q.UUID); err != nil {
+		t.Fatalf("SendQuote: %v", err)
+	}
+	row, _ := f.q.GetQuoteByUUID(f.ctx, db.GetQuoteByUUIDParams{Uuid: q.UUID, BrandID: f.brand})
+	pub, err := f.svc.PublicQuote(f.ctx, f.brand, row.PublicToken, "/v1/public/quotes/"+row.PublicToken.String()+"/pdf")
+	if err != nil {
+		t.Fatalf("PublicQuote: %v", err)
+	}
+	if pub.OrganizationName == "" || pub.GrandTotal != "60.00" || len(pub.Lines) != 1 || pub.PDF.URL == "" {
+		t.Fatalf("public quote = %+v", pub)
+	}
+	body := fmt.Sprintf("%+v", pub)
+	if strings.Contains(body, phone) || strings.Contains(body, "secret@example.test") {
+		t.Fatalf("public quote leaked PII: %+v", pub)
+	}
+	if !hasKind(f.eventKinds(c, lead.Uuid), "quote_viewed") {
+		t.Fatalf("quote_viewed event missing: %v", f.eventKinds(c, lead.Uuid))
+	}
+	past := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+	expired, err := f.svc.CreateQuote(f.ctx, c, lead.Uuid, QuoteInput{ValidUntil: &past, Lines: []QuoteLineInput{
+		{LineType: QuoteLineCatalogService, ServiceCatalogItemUUID: &item.Uuid, Quantity: "1"},
+	}})
+	if err != nil {
+		t.Fatalf("expired quote: %v", err)
+	}
+	f.markSent(expired.UUID)
+	expiredRow, _ := f.q.GetQuoteByUUID(f.ctx, db.GetQuoteByUUIDParams{Uuid: expired.UUID, BrandID: f.brand})
+	if _, err := f.svc.PublicQuote(f.ctx, f.brand, expiredRow.PublicToken, ""); !errors.Is(err, ErrQuoteNotFound) {
+		t.Fatalf("expired public err = %v, want ErrQuoteNotFound", err)
 	}
 }
 

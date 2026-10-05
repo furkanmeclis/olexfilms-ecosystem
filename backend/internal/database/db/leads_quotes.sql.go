@@ -54,6 +54,52 @@ func (q *Queries) AddLeadEvent(ctx context.Context, arg AddLeadEventParams) (Lea
 	return i, err
 }
 
+const addQuoteViewedEventIfMissing = `-- name: AddQuoteViewedEventIfMissing :one
+INSERT INTO lead_events (lead_id, organization_id, brand_id, event_type, payload)
+SELECT
+    $1, $2, $3, 'message',
+    $4
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM lead_events
+    WHERE lead_id = $1
+      AND payload->>'kind' = 'quote_viewed'
+      AND payload->>'quote_uuid' = $5::text
+)
+RETURNING id, uuid, lead_id, organization_id, brand_id, event_type, payload, actor_user_id, created_at
+`
+
+type AddQuoteViewedEventIfMissingParams struct {
+	LeadID         int64  `json:"lead_id"`
+	OrganizationID int64  `json:"organization_id"`
+	BrandID        int64  `json:"brand_id"`
+	Payload        []byte `json:"payload"`
+	QuoteUuid      string `json:"quote_uuid"`
+}
+
+func (q *Queries) AddQuoteViewedEventIfMissing(ctx context.Context, arg AddQuoteViewedEventIfMissingParams) (LeadEvent, error) {
+	row := q.db.QueryRow(ctx, addQuoteViewedEventIfMissing,
+		arg.LeadID,
+		arg.OrganizationID,
+		arg.BrandID,
+		arg.Payload,
+		arg.QuoteUuid,
+	)
+	var i LeadEvent
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.LeadID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.EventType,
+		&i.Payload,
+		&i.ActorUserID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const assignLead = `-- name: AssignLead :one
 UPDATE leads
 SET assignee_user_id = $1
@@ -504,6 +550,42 @@ func (q *Queries) CreateQuoteReminder(ctx context.Context, arg CreateQuoteRemind
 	return i, err
 }
 
+const createQuoteReminderIfMissing = `-- name: CreateQuoteReminderIfMissing :one
+INSERT INTO quote_reminders (quote_id, organization_id, brand_id, scheduled_at)
+SELECT $1, $2, $3, $4
+WHERE NOT EXISTS (
+    SELECT 1 FROM quote_reminders WHERE quote_id = $1
+)
+RETURNING id, quote_id, organization_id, brand_id, scheduled_at, sent_at, created_at
+`
+
+type CreateQuoteReminderIfMissingParams struct {
+	QuoteID        int64              `json:"quote_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	ScheduledAt    pgtype.Timestamptz `json:"scheduled_at"`
+}
+
+func (q *Queries) CreateQuoteReminderIfMissing(ctx context.Context, arg CreateQuoteReminderIfMissingParams) (QuoteReminder, error) {
+	row := q.db.QueryRow(ctx, createQuoteReminderIfMissing,
+		arg.QuoteID,
+		arg.OrganizationID,
+		arg.BrandID,
+		arg.ScheduledAt,
+	)
+	var i QuoteReminder
+	err := row.Scan(
+		&i.ID,
+		&i.QuoteID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ScheduledAt,
+		&i.SentAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const deleteQuoteLines = `-- name: DeleteQuoteLines :execrows
 DELETE FROM quote_lines
 WHERE quote_id = $1
@@ -515,6 +597,52 @@ func (q *Queries) DeleteQuoteLines(ctx context.Context, quoteID int64) (int64, e
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const ensureQuoteSent = `-- name: EnsureQuoteSent :one
+UPDATE quotes
+SET status = 'sent',
+    sent_at = COALESCE(sent_at, NOW())
+WHERE id = $1
+  AND organization_id = $2
+  AND status IN ('draft', 'sent')
+  AND deleted_at IS NULL
+RETURNING id, uuid, organization_id, brand_id, lead_id, quote_no, currency, subtotal, discount_total, tax_total, grand_total, valid_until, status, public_token, created_by_user_id, sent_at, accepted_at, rejected_at, expired_at, created_at, updated_at, deleted_at
+`
+
+type EnsureQuoteSentParams struct {
+	ID             int64 `json:"id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) EnsureQuoteSent(ctx context.Context, arg EnsureQuoteSentParams) (Quote, error) {
+	row := q.db.QueryRow(ctx, ensureQuoteSent, arg.ID, arg.OrganizationID)
+	var i Quote
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.LeadID,
+		&i.QuoteNo,
+		&i.Currency,
+		&i.Subtotal,
+		&i.DiscountTotal,
+		&i.TaxTotal,
+		&i.GrandTotal,
+		&i.ValidUntil,
+		&i.Status,
+		&i.PublicToken,
+		&i.CreatedByUserID,
+		&i.SentAt,
+		&i.AcceptedAt,
+		&i.RejectedAt,
+		&i.ExpiredAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
 }
 
 const expireDueQuotes = `-- name: ExpireDueQuotes :many
@@ -819,6 +947,138 @@ func (q *Queries) GetQuoteByUUID(ctx context.Context, arg GetQuoteByUUIDParams) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getQuotePublicViewByToken = `-- name: GetQuotePublicViewByToken :one
+SELECT
+    q.id, q.uuid, q.organization_id, q.brand_id, q.lead_id, q.quote_no, q.currency,
+    q.subtotal, q.discount_total, q.tax_total, q.grand_total, q.valid_until,
+    q.status, q.public_token, q.created_at, q.updated_at,
+    o.name AS organization_name
+FROM quotes q
+JOIN organizations o ON o.id = q.organization_id
+WHERE q.public_token = $1
+  AND q.brand_id = $2
+  AND q.status = 'sent'
+  AND q.deleted_at IS NULL
+  AND (q.valid_until IS NULL OR q.valid_until >= $3::date)
+`
+
+type GetQuotePublicViewByTokenParams struct {
+	PublicToken uuid.UUID   `json:"public_token"`
+	BrandID     int64       `json:"brand_id"`
+	Today       pgtype.Date `json:"today"`
+}
+
+type GetQuotePublicViewByTokenRow struct {
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	OrganizationID   int64              `json:"organization_id"`
+	BrandID          int64              `json:"brand_id"`
+	LeadID           int64              `json:"lead_id"`
+	QuoteNo          int64              `json:"quote_no"`
+	Currency         string             `json:"currency"`
+	Subtotal         pgtype.Numeric     `json:"subtotal"`
+	DiscountTotal    pgtype.Numeric     `json:"discount_total"`
+	TaxTotal         pgtype.Numeric     `json:"tax_total"`
+	GrandTotal       pgtype.Numeric     `json:"grand_total"`
+	ValidUntil       pgtype.Date        `json:"valid_until"`
+	Status           string             `json:"status"`
+	PublicToken      uuid.UUID          `json:"public_token"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	OrganizationName string             `json:"organization_name"`
+}
+
+func (q *Queries) GetQuotePublicViewByToken(ctx context.Context, arg GetQuotePublicViewByTokenParams) (GetQuotePublicViewByTokenRow, error) {
+	row := q.db.QueryRow(ctx, getQuotePublicViewByToken, arg.PublicToken, arg.BrandID, arg.Today)
+	var i GetQuotePublicViewByTokenRow
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.LeadID,
+		&i.QuoteNo,
+		&i.Currency,
+		&i.Subtotal,
+		&i.DiscountTotal,
+		&i.TaxTotal,
+		&i.GrandTotal,
+		&i.ValidUntil,
+		&i.Status,
+		&i.PublicToken,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.OrganizationName,
+	)
+	return i, err
+}
+
+const getQuoteRecipient = `-- name: GetQuoteRecipient :one
+SELECT
+    l.candidate_phone_e164,
+    u.id AS customer_user_id,
+    u.phone_e164 AS customer_phone_e164,
+    COALESCE(NULLIF(u.locale, ''), NULLIF(o.locale, ''), NULLIF(c.locale, ''), 'tr')::text AS language,
+    COALESCE(NULLIF(l.candidate_contact_name, ''), NULLIF(l.candidate_company_name, ''), NULLIF(u.name || ' ' || u.surname, ' '), 'Müşteri')::text AS recipient_name,
+    o.name AS organization_name
+FROM quotes q
+JOIN leads l ON l.id = q.lead_id
+JOIN organizations o ON o.id = q.organization_id
+LEFT JOIN organizations c ON c.brand_id = q.brand_id AND c.type = 'center'
+LEFT JOIN users u ON u.id = l.customer_user_id
+WHERE q.id = $1
+  AND q.organization_id = $2
+  AND q.deleted_at IS NULL
+`
+
+type GetQuoteRecipientParams struct {
+	QuoteID        int64 `json:"quote_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+type GetQuoteRecipientRow struct {
+	CandidatePhoneE164 pgtype.Text `json:"candidate_phone_e164"`
+	CustomerUserID     pgtype.Int8 `json:"customer_user_id"`
+	CustomerPhoneE164  pgtype.Text `json:"customer_phone_e164"`
+	Language           string      `json:"language"`
+	RecipientName      string      `json:"recipient_name"`
+	OrganizationName   string      `json:"organization_name"`
+}
+
+func (q *Queries) GetQuoteRecipient(ctx context.Context, arg GetQuoteRecipientParams) (GetQuoteRecipientRow, error) {
+	row := q.db.QueryRow(ctx, getQuoteRecipient, arg.QuoteID, arg.OrganizationID)
+	var i GetQuoteRecipientRow
+	err := row.Scan(
+		&i.CandidatePhoneE164,
+		&i.CustomerUserID,
+		&i.CustomerPhoneE164,
+		&i.Language,
+		&i.RecipientName,
+		&i.OrganizationName,
+	)
+	return i, err
+}
+
+const getQuoteReminderByID = `-- name: GetQuoteReminderByID :one
+SELECT id, quote_id, organization_id, brand_id, scheduled_at, sent_at, created_at FROM quote_reminders
+WHERE id = $1
+`
+
+func (q *Queries) GetQuoteReminderByID(ctx context.Context, id int64) (QuoteReminder, error) {
+	row := q.db.QueryRow(ctx, getQuoteReminderByID, id)
+	var i QuoteReminder
+	err := row.Scan(
+		&i.ID,
+		&i.QuoteID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ScheduledAt,
+		&i.SentAt,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -1377,7 +1637,7 @@ func (q *Queries) LockQuoteNumbering(ctx context.Context, organizationID int64) 
 
 const markQuoteReminderSent = `-- name: MarkQuoteReminderSent :one
 UPDATE quote_reminders
-SET sent_at = NOW()
+SET sent_at = GREATEST(NOW(), scheduled_at)
 WHERE id = $1 AND sent_at IS NULL
 RETURNING id, quote_id, organization_id, brand_id, scheduled_at, sent_at, created_at
 `

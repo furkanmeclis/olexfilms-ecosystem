@@ -43,6 +43,8 @@ func RegisterRoutes(
 		return middleware.Chain(fn, mws...)
 	}
 	write := middleware.RequirePermission(rbac.PermServicesWrite)
+	accountingWrite := middleware.RequirePermission(rbac.PermAccountingWrite)
+	dealerAccounting := middleware.RequireFeatureForOrgType(checker, "dealer", features.ModuleDealerAccounting)
 	act := middleware.RequireAnyPermission(rbac.PermServicesWrite, rbac.PermServicesCancel, rbac.PermServicesComplete)
 	cancelCompleted := middleware.RequirePermission(rbac.PermServicesCancelCompleted)
 	reviewsRead := middleware.RequireScope(q, rbac.PermReviewsRead)
@@ -53,6 +55,9 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/services", route(h.List))
 	mux.Handle("POST /v1/services", create)
 	mux.Handle("GET /v1/services/{uuid}", route(h.Get))
+	mux.Handle("GET /v1/services/{uuid}/profit", route(h.Profit))
+	mux.Handle("POST /v1/services/{uuid}/income", route(h.RecordIncome, dealerAccounting, accountingWrite))
+	mux.Handle("DELETE /v1/services/{uuid}/income", route(h.DeleteIncome, dealerAccounting, accountingWrite))
 	mux.Handle("PATCH /v1/services/{uuid}", route(h.Update, write))
 	mux.Handle("POST /v1/services/{uuid}/items", route(h.AddItem, write))
 	mux.Handle("DELETE /v1/services/{uuid}/items/{item}", route(h.RemoveItem, write))

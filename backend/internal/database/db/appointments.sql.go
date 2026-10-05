@@ -144,6 +144,37 @@ func (q *Queries) CountAppointmentsByOrganizations(ctx context.Context, arg Coun
 	return count, err
 }
 
+const countPortalAppointments = `-- name: CountPortalAppointments :one
+SELECT COUNT(*)::bigint
+FROM appointments a
+WHERE a.customer_user_id = $1::bigint
+  AND a.brand_id = $2::bigint
+  AND a.deleted_at IS NULL
+  AND ($3::boolean = FALSE OR a.starts_at >= $4::timestamptz)
+  AND ($5::boolean = FALSE OR a.starts_at < $4::timestamptz)
+`
+
+type CountPortalAppointmentsParams struct {
+	CustomerUserID int64              `json:"customer_user_id"`
+	BrandID        int64              `json:"brand_id"`
+	Upcoming       bool               `json:"upcoming"`
+	Now            pgtype.Timestamptz `json:"now"`
+	Past           bool               `json:"past"`
+}
+
+func (q *Queries) CountPortalAppointments(ctx context.Context, arg CountPortalAppointmentsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countPortalAppointments,
+		arg.CustomerUserID,
+		arg.BrandID,
+		arg.Upcoming,
+		arg.Now,
+		arg.Past,
+	)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const createAppointment = `-- name: CreateAppointment :one
 INSERT INTO appointments (
     organization_id, brand_id, customer_user_id, vehicle_id, starts_at, ends_at,
@@ -392,6 +423,159 @@ func (q *Queries) GetAppointmentSettings(ctx context.Context, organizationID int
 	return i, err
 }
 
+const getPortalAppointmentByUUID = `-- name: GetPortalAppointmentByUUID :one
+SELECT id, uuid, organization_id, brand_id, customer_user_id, vehicle_id, starts_at, ends_at, estimated_minutes, source, status, cancel_reason, lead_id, service_id, note, created_by_user_id, reminded_24h_at, reminded_2h_at, created_at, updated_at, deleted_at FROM appointments
+WHERE uuid = $1
+  AND customer_user_id = $2::bigint
+  AND brand_id = $3::bigint
+  AND deleted_at IS NULL
+`
+
+type GetPortalAppointmentByUUIDParams struct {
+	Uuid           uuid.UUID `json:"uuid"`
+	CustomerUserID int64     `json:"customer_user_id"`
+	BrandID        int64     `json:"brand_id"`
+}
+
+func (q *Queries) GetPortalAppointmentByUUID(ctx context.Context, arg GetPortalAppointmentByUUIDParams) (Appointment, error) {
+	row := q.db.QueryRow(ctx, getPortalAppointmentByUUID, arg.Uuid, arg.CustomerUserID, arg.BrandID)
+	var i Appointment
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.CustomerUserID,
+		&i.VehicleID,
+		&i.StartsAt,
+		&i.EndsAt,
+		&i.EstimatedMinutes,
+		&i.Source,
+		&i.Status,
+		&i.CancelReason,
+		&i.LeadID,
+		&i.ServiceID,
+		&i.Note,
+		&i.CreatedByUserID,
+		&i.Reminded24hAt,
+		&i.Reminded2hAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getPortalAppointmentDealer = `-- name: GetPortalAppointmentDealer :one
+SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, o.province_id, o.district_id, o.phone_raw, o.google_business_url, o.latitude, o.longitude, s.portal_appointments_enabled
+FROM organizations o
+JOIN appointment_settings s ON s.organization_id = o.id
+WHERE o.uuid = $1
+  AND o.brand_id = $2::bigint
+  AND o.deleted_at IS NULL
+  AND o.status = 'active'
+  AND o.type = 'dealer'
+  AND o.access_starts_at <= NOW()
+  AND (o.access_ends_at IS NULL OR o.access_ends_at > NOW())
+  AND s.portal_appointments_enabled = TRUE
+`
+
+type GetPortalAppointmentDealerParams struct {
+	Uuid    uuid.UUID `json:"uuid"`
+	BrandID int64     `json:"brand_id"`
+}
+
+type GetPortalAppointmentDealerRow struct {
+	ID                        int64              `json:"id"`
+	Uuid                      uuid.UUID          `json:"uuid"`
+	Slug                      string             `json:"slug"`
+	Name                      string             `json:"name"`
+	City                      string             `json:"city"`
+	District                  string             `json:"district"`
+	Phone                     string             `json:"phone"`
+	Address                   string             `json:"address"`
+	LogoObjectKey             pgtype.Text        `json:"logo_object_key"`
+	Status                    string             `json:"status"`
+	PlanCode                  pgtype.Text        `json:"plan_code"`
+	AccessStartsAt            pgtype.Timestamptz `json:"access_starts_at"`
+	AccessEndsAt              pgtype.Timestamptz `json:"access_ends_at"`
+	CreatedAt                 pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                 pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt                 pgtype.Timestamptz `json:"deleted_at"`
+	Email                     string             `json:"email"`
+	Website                   string             `json:"website"`
+	Tagline                   string             `json:"tagline"`
+	FooterText                string             `json:"footer_text"`
+	PaperSize                 string             `json:"paper_size"`
+	PrimaryColor              string             `json:"primary_color"`
+	Type                      string             `json:"type"`
+	ParentID                  pgtype.Int8        `json:"parent_id"`
+	BrandID                   int64              `json:"brand_id"`
+	Currency                  string             `json:"currency"`
+	Locale                    string             `json:"locale"`
+	Timezone                  string             `json:"timezone"`
+	CountryID                 pgtype.Int8        `json:"country_id"`
+	ContractPdfKey            pgtype.Text        `json:"contract_pdf_key"`
+	ContractValidUntil        pgtype.Date        `json:"contract_valid_until"`
+	Settings                  []byte             `json:"settings"`
+	ProvinceID                pgtype.Int8        `json:"province_id"`
+	DistrictID                pgtype.Int8        `json:"district_id"`
+	PhoneRaw                  pgtype.Text        `json:"phone_raw"`
+	GoogleBusinessUrl         pgtype.Text        `json:"google_business_url"`
+	Latitude                  pgtype.Numeric     `json:"latitude"`
+	Longitude                 pgtype.Numeric     `json:"longitude"`
+	PortalAppointmentsEnabled bool               `json:"portal_appointments_enabled"`
+}
+
+// Portal booking accepts only active dealers of the request brand whose
+// appointment settings explicitly allow portal bookings.
+func (q *Queries) GetPortalAppointmentDealer(ctx context.Context, arg GetPortalAppointmentDealerParams) (GetPortalAppointmentDealerRow, error) {
+	row := q.db.QueryRow(ctx, getPortalAppointmentDealer, arg.Uuid, arg.BrandID)
+	var i GetPortalAppointmentDealerRow
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.Slug,
+		&i.Name,
+		&i.City,
+		&i.District,
+		&i.Phone,
+		&i.Address,
+		&i.LogoObjectKey,
+		&i.Status,
+		&i.PlanCode,
+		&i.AccessStartsAt,
+		&i.AccessEndsAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Email,
+		&i.Website,
+		&i.Tagline,
+		&i.FooterText,
+		&i.PaperSize,
+		&i.PrimaryColor,
+		&i.Type,
+		&i.ParentID,
+		&i.BrandID,
+		&i.Currency,
+		&i.Locale,
+		&i.Timezone,
+		&i.CountryID,
+		&i.ContractPdfKey,
+		&i.ContractValidUntil,
+		&i.Settings,
+		&i.ProvinceID,
+		&i.DistrictID,
+		&i.PhoneRaw,
+		&i.GoogleBusinessUrl,
+		&i.Latitude,
+		&i.Longitude,
+		&i.PortalAppointmentsEnabled,
+	)
+	return i, err
+}
+
 const listAppointmentClosures = `-- name: ListAppointmentClosures :many
 SELECT id, uuid, organization_id, brand_id, closed_on, reason, created_at, updated_at FROM appointment_closures
 WHERE organization_id = $1
@@ -502,6 +686,82 @@ func (q *Queries) ListAppointmentsByOrganizations(ctx context.Context, arg ListA
 		arg.FromTime,
 		arg.ToTime,
 		arg.Status,
+		arg.PageOffset,
+		arg.PageLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Appointment{}
+	for rows.Next() {
+		var i Appointment
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.CustomerUserID,
+			&i.VehicleID,
+			&i.StartsAt,
+			&i.EndsAt,
+			&i.EstimatedMinutes,
+			&i.Source,
+			&i.Status,
+			&i.CancelReason,
+			&i.LeadID,
+			&i.ServiceID,
+			&i.Note,
+			&i.CreatedByUserID,
+			&i.Reminded24hAt,
+			&i.Reminded2hAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPortalAppointments = `-- name: ListPortalAppointments :many
+SELECT a.id, a.uuid, a.organization_id, a.brand_id, a.customer_user_id, a.vehicle_id, a.starts_at, a.ends_at, a.estimated_minutes, a.source, a.status, a.cancel_reason, a.lead_id, a.service_id, a.note, a.created_by_user_id, a.reminded_24h_at, a.reminded_2h_at, a.created_at, a.updated_at, a.deleted_at
+FROM appointments a
+JOIN organizations o ON o.id = a.organization_id
+WHERE a.customer_user_id = $1::bigint
+  AND a.brand_id = $2::bigint
+  AND a.deleted_at IS NULL
+  AND ($3::boolean = FALSE OR a.starts_at >= $4::timestamptz)
+  AND ($5::boolean = FALSE OR a.starts_at < $4::timestamptz)
+ORDER BY
+  CASE WHEN $3::boolean THEN a.starts_at END ASC,
+  CASE WHEN $5::boolean THEN a.starts_at END DESC,
+  a.id DESC
+LIMIT $7 OFFSET $6
+`
+
+type ListPortalAppointmentsParams struct {
+	CustomerUserID int64              `json:"customer_user_id"`
+	BrandID        int64              `json:"brand_id"`
+	Upcoming       bool               `json:"upcoming"`
+	Now            pgtype.Timestamptz `json:"now"`
+	Past           bool               `json:"past"`
+	PageOffset     int32              `json:"page_offset"`
+	PageLimit      int32              `json:"page_limit"`
+}
+
+func (q *Queries) ListPortalAppointments(ctx context.Context, arg ListPortalAppointmentsParams) ([]Appointment, error) {
+	rows, err := q.db.Query(ctx, listPortalAppointments,
+		arg.CustomerUserID,
+		arg.BrandID,
+		arg.Upcoming,
+		arg.Now,
+		arg.Past,
 		arg.PageOffset,
 		arg.PageLimit,
 	)

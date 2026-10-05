@@ -9,6 +9,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/appointments/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
@@ -48,6 +49,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Error(w, r, http.StatusUnprocessableEntity, usecase.CodeDayClosed, "The organization is closed on this day")
 	case errors.Is(err, usecase.ErrClosureExists):
 		response.Conflict(w, r, usecase.CodeClosureExists, "A closure already exists for this day")
+	case errors.Is(err, usecase.ErrCancelWindow):
+		response.Error(w, r, http.StatusUnprocessableEntity, usecase.CodeCancelWindow, "Appointment can no longer be cancelled")
 	case errors.Is(err, usecase.ErrIntakeStarted):
 		response.Conflict(w, r, usecase.CodeIntakeStarted, "Appointment intake is already started")
 	case errors.Is(err, usecase.ErrForbidden):
@@ -169,6 +172,74 @@ func (h *Handler) Availability(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	out, err := h.svc.Availability(r.Context(), caller(r), from, to)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
+func portalCaller(r *http.Request) usecase.PortalCaller {
+	c := usecase.PortalCaller{UserID: authctx.MustPrincipal(r.Context()).UserInternal}
+	if b, ok := brandctx.From(r.Context()); ok {
+		c.BrandID = b.ID
+	}
+	return c
+}
+
+func (h *Handler) PortalAvailability(w http.ResponseWriter, r *http.Request) {
+	dealerID, err := uuid.Parse(r.PathValue("uuid"))
+	if err != nil {
+		response.NotFound(w, r, "Dealer not found")
+		return
+	}
+	from, ok := parseTimeParam(w, r, "from")
+	if !ok {
+		return
+	}
+	to, ok := parseTimeParam(w, r, "to")
+	if !ok {
+		return
+	}
+	out, err := h.svc.PortalAvailability(r.Context(), portalCaller(r), dealerID, from, to)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
+func (h *Handler) PortalList(w http.ResponseWriter, r *http.Request) {
+	q := apiquery.Parse(r.URL.Query())
+	items, total, err := h.svc.PortalList(r.Context(), portalCaller(r), usecase.PortalListFilter{
+		Period: r.URL.Query().Get("period"), Limit: q.Limit, Offset: q.Offset,
+	})
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
+}
+
+func (h *Handler) PortalCreate(w http.ResponseWriter, r *http.Request) {
+	var body usecase.PortalCreateInput
+	if !decode(w, r, &body) {
+		return
+	}
+	out, err := h.svc.PortalCreate(r.Context(), portalCaller(r), body)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusCreated, out)
+}
+
+func (h *Handler) PortalCancel(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+	out, err := h.svc.PortalCancel(r.Context(), portalCaller(r), id)
 	if err != nil {
 		writeError(w, r, err)
 		return
