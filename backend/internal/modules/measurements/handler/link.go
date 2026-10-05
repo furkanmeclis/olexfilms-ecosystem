@@ -29,8 +29,10 @@ const (
 // Linker is the use case of the service measurement routes.
 type Linker interface {
 	ServiceMeasurements(ctx context.Context, c usecase.LinkCaller, id uuid.UUID) (usecase.ServiceMeasurementsView, error)
+	ServiceMeasurementDiff(ctx context.Context, c usecase.LinkCaller, id uuid.UUID) (usecase.MeasurementDiff, error)
 	LinkMeasurement(ctx context.Context, c usecase.LinkCaller, id uuid.UUID, in usecase.LinkInput) (usecase.ServiceMeasurementsView, error)
 	UnlinkMeasurement(ctx context.Context, c usecase.LinkCaller, id uuid.UUID, phase string) error
+	MarkMeasurementsChecked(ctx context.Context, c usecase.LinkCaller, id uuid.UUID, in usecase.MarkCheckedInput) error
 }
 
 // LinkHandler serves /v1/services/{uuid}/measurements.
@@ -87,6 +89,20 @@ func (h *LinkHandler) List(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, out)
 }
 
+// Diff is GET /v1/services/{uuid}/measurements/diff.
+func (h *LinkHandler) Diff(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "Service not found")
+	if !ok {
+		return
+	}
+	out, err := h.svc.ServiceMeasurementDiff(r.Context(), linkCaller(r), id)
+	if err != nil {
+		writeLinkError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
 type linkBody struct {
 	MeasurementUUID string `json:"measurement_uuid"`
 	Phase           string `json:"phase"`
@@ -115,6 +131,27 @@ func (h *LinkHandler) Link(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, r, http.StatusOK, out)
+}
+
+type checkedBody struct {
+	Note string `json:"note"`
+}
+
+// Checked is POST /v1/services/{uuid}/measurements/checked.
+func (h *LinkHandler) Checked(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "Service not found")
+	if !ok {
+		return
+	}
+	var b checkedBody
+	if !decode(w, r, &b) {
+		return
+	}
+	if err := h.svc.MarkMeasurementsChecked(r.Context(), linkCaller(r), id, usecase.MarkCheckedInput{Note: b.Note}); err != nil {
+		writeLinkError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // Unlink is DELETE /v1/services/{uuid}/measurements/{phase}.

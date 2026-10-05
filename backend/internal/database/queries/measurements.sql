@@ -232,6 +232,102 @@ SET measurement_check_required = sqlc.arg(measurement_check_required),
     measurement_checked_at = sqlc.narg(measurement_checked_at)
 WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id);
 
+-- TEC-297 (F3-02e): part based before/after micron difference table.
+
+-- name: ListServiceMeasurementDiffParts :many
+WITH links AS (
+    SELECT sm.phase, sm.measurement_result_id
+    FROM service_measurements sm
+    WHERE sm.service_id = sqlc.arg(service_id)
+      AND sm.organization_id = sqlc.arg(organization_id)
+      AND sm.phase IN ('before', 'after')
+),
+readings AS (
+    SELECT
+        l.phase,
+        mv.place_id,
+        mv.part_type,
+        (CASE UPPER(mv.part_type)
+            WHEN 'HOOD' THEN 'body_kaput'
+            WHEN 'ROOF' THEN 'body_tavan'
+            WHEN 'TRUNK' THEN 'body_bagaj'
+            WHEN 'TRUNK_INSIDE' THEN 'body_bagaj'
+            WHEN 'LEFT_FRONT_DOOR' THEN 'body_sol_on_kapi'
+            WHEN 'LEFT_REAR_DOOR' THEN 'body_sol_arka_kapi'
+            WHEN 'RIGHT_FRONT_DOOR' THEN 'body_sag_on_kapi'
+            WHEN 'RIGHT_REAR_DOOR' THEN 'body_sag_arka_kapi'
+            WHEN 'LEFT_FRONT_FENDER' THEN 'body_sol_on_camurluk'
+            WHEN 'LEFT_REAR_FENDER' THEN 'body_sol_arka_camurluk'
+            WHEN 'RIGHT_FRONT_FENDER' THEN 'body_sag_on_camurluk'
+            WHEN 'RIGHT_REAR_FENDER' THEN 'body_sag_arka_camurluk'
+            ELSE lower(mv.part_type)
+        END)::text AS service_part_key,
+        COUNT(mv.value_um)::int AS value_count,
+        AVG(mv.value_um)::numeric(8,2) AS avg_um,
+        MIN(mv.value_um)::numeric(8,2) AS min_um,
+        MAX(mv.value_um)::numeric(8,2) AS max_um
+    FROM links l
+    JOIN measurement_values mv ON mv.result_id = l.measurement_result_id
+       AND mv.organization_id = sqlc.arg(organization_id)
+    WHERE mv.value_um IS NOT NULL
+    GROUP BY l.phase, mv.place_id, mv.part_type
+),
+pairs AS (
+    SELECT
+        COALESCE(b.place_id, a.place_id) AS place_id,
+        COALESCE(b.part_type, a.part_type) AS part_type,
+        COALESCE(b.service_part_key, a.service_part_key) AS service_part_key,
+        b.avg_um AS before_avg_um,
+        b.min_um AS before_min_um,
+        b.max_um AS before_max_um,
+        COALESCE(b.value_count, 0)::int AS before_count,
+        a.avg_um AS after_avg_um,
+        a.min_um AS after_min_um,
+        a.max_um AS after_max_um,
+        COALESCE(a.value_count, 0)::int AS after_count
+    FROM (SELECT * FROM readings WHERE phase = 'before') b
+    FULL OUTER JOIN (SELECT * FROM readings WHERE phase = 'after') a
+      ON a.place_id = b.place_id AND a.part_type = b.part_type
+),
+expected AS (
+    SELECT
+        pairs.*,
+        (
+            SELECT SUM(p.micron_thickness)::numeric(8,2)
+            FROM service_items si
+            JOIN products p ON p.id = si.product_id AND p.brand_id = si.brand_id
+            WHERE si.service_id = sqlc.arg(service_id)
+              AND si.organization_id = sqlc.arg(organization_id)
+              AND si.applied_parts ? pairs.service_part_key
+              AND p.micron_thickness IS NOT NULL
+        ) AS expected_um
+    FROM pairs
+)
+SELECT
+    place_id,
+    part_type,
+    service_part_key,
+    before_avg_um,
+    before_min_um,
+    before_max_um,
+    before_count,
+    after_avg_um,
+    after_min_um,
+    after_max_um,
+    after_count,
+    CASE
+        WHEN before_avg_um IS NULL OR after_avg_um IS NULL THEN NULL
+        ELSE (after_avg_um - before_avg_um)::numeric(8,2)
+    END AS diff_um,
+    expected_um
+FROM expected
+ORDER BY service_part_key, place_id, part_type;
+
+-- name: MarkServiceMeasurementChecked :execrows
+UPDATE services
+SET measurement_checked_at = NOW()
+WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id);
+
 -- TEC-296 (F3-02d): VIN based before/after matching, dealer confirmation
 -- and manual selection.
 

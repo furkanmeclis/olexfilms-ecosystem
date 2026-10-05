@@ -1172,6 +1172,153 @@ func (q *Queries) ListMeasurementValues(ctx context.Context, arg ListMeasurement
 	return items, nil
 }
 
+const listServiceMeasurementDiffParts = `-- name: ListServiceMeasurementDiffParts :many
+
+WITH links AS (
+    SELECT sm.phase, sm.measurement_result_id
+    FROM service_measurements sm
+    WHERE sm.service_id = $1
+      AND sm.organization_id = $2
+      AND sm.phase IN ('before', 'after')
+),
+readings AS (
+    SELECT
+        l.phase,
+        mv.place_id,
+        mv.part_type,
+        (CASE UPPER(mv.part_type)
+            WHEN 'HOOD' THEN 'body_kaput'
+            WHEN 'ROOF' THEN 'body_tavan'
+            WHEN 'TRUNK' THEN 'body_bagaj'
+            WHEN 'TRUNK_INSIDE' THEN 'body_bagaj'
+            WHEN 'LEFT_FRONT_DOOR' THEN 'body_sol_on_kapi'
+            WHEN 'LEFT_REAR_DOOR' THEN 'body_sol_arka_kapi'
+            WHEN 'RIGHT_FRONT_DOOR' THEN 'body_sag_on_kapi'
+            WHEN 'RIGHT_REAR_DOOR' THEN 'body_sag_arka_kapi'
+            WHEN 'LEFT_FRONT_FENDER' THEN 'body_sol_on_camurluk'
+            WHEN 'LEFT_REAR_FENDER' THEN 'body_sol_arka_camurluk'
+            WHEN 'RIGHT_FRONT_FENDER' THEN 'body_sag_on_camurluk'
+            WHEN 'RIGHT_REAR_FENDER' THEN 'body_sag_arka_camurluk'
+            ELSE lower(mv.part_type)
+        END)::text AS service_part_key,
+        COUNT(mv.value_um)::int AS value_count,
+        AVG(mv.value_um)::numeric(8,2) AS avg_um,
+        MIN(mv.value_um)::numeric(8,2) AS min_um,
+        MAX(mv.value_um)::numeric(8,2) AS max_um
+    FROM links l
+    JOIN measurement_values mv ON mv.result_id = l.measurement_result_id
+       AND mv.organization_id = $2
+    WHERE mv.value_um IS NOT NULL
+    GROUP BY l.phase, mv.place_id, mv.part_type
+),
+pairs AS (
+    SELECT
+        COALESCE(b.place_id, a.place_id) AS place_id,
+        COALESCE(b.part_type, a.part_type) AS part_type,
+        COALESCE(b.service_part_key, a.service_part_key) AS service_part_key,
+        b.avg_um AS before_avg_um,
+        b.min_um AS before_min_um,
+        b.max_um AS before_max_um,
+        COALESCE(b.value_count, 0)::int AS before_count,
+        a.avg_um AS after_avg_um,
+        a.min_um AS after_min_um,
+        a.max_um AS after_max_um,
+        COALESCE(a.value_count, 0)::int AS after_count
+    FROM (SELECT phase, place_id, part_type, service_part_key, value_count, avg_um, min_um, max_um FROM readings WHERE phase = 'before') b
+    FULL OUTER JOIN (SELECT phase, place_id, part_type, service_part_key, value_count, avg_um, min_um, max_um FROM readings WHERE phase = 'after') a
+      ON a.place_id = b.place_id AND a.part_type = b.part_type
+),
+expected AS (
+    SELECT
+        pairs.place_id, pairs.part_type, pairs.service_part_key, pairs.before_avg_um, pairs.before_min_um, pairs.before_max_um, pairs.before_count, pairs.after_avg_um, pairs.after_min_um, pairs.after_max_um, pairs.after_count,
+        (
+            SELECT SUM(p.micron_thickness)::numeric(8,2)
+            FROM service_items si
+            JOIN products p ON p.id = si.product_id AND p.brand_id = si.brand_id
+            WHERE si.service_id = $1
+              AND si.organization_id = $2
+              AND si.applied_parts ? pairs.service_part_key
+              AND p.micron_thickness IS NOT NULL
+        ) AS expected_um
+    FROM pairs
+)
+SELECT
+    place_id,
+    part_type,
+    service_part_key,
+    before_avg_um,
+    before_min_um,
+    before_max_um,
+    before_count,
+    after_avg_um,
+    after_min_um,
+    after_max_um,
+    after_count,
+    CASE
+        WHEN before_avg_um IS NULL OR after_avg_um IS NULL THEN NULL
+        ELSE (after_avg_um - before_avg_um)::numeric(8,2)
+    END AS diff_um,
+    expected_um
+FROM expected
+ORDER BY service_part_key, place_id, part_type
+`
+
+type ListServiceMeasurementDiffPartsParams struct {
+	ServiceID      int64 `json:"service_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+type ListServiceMeasurementDiffPartsRow struct {
+	PlaceID        string         `json:"place_id"`
+	PartType       string         `json:"part_type"`
+	ServicePartKey string         `json:"service_part_key"`
+	BeforeAvgUm    pgtype.Numeric `json:"before_avg_um"`
+	BeforeMinUm    pgtype.Numeric `json:"before_min_um"`
+	BeforeMaxUm    pgtype.Numeric `json:"before_max_um"`
+	BeforeCount    int32          `json:"before_count"`
+	AfterAvgUm     pgtype.Numeric `json:"after_avg_um"`
+	AfterMinUm     pgtype.Numeric `json:"after_min_um"`
+	AfterMaxUm     pgtype.Numeric `json:"after_max_um"`
+	AfterCount     int32          `json:"after_count"`
+	DiffUm         pgtype.Numeric `json:"diff_um"`
+	ExpectedUm     pgtype.Numeric `json:"expected_um"`
+}
+
+// TEC-297 (F3-02e): part based before/after micron difference table.
+func (q *Queries) ListServiceMeasurementDiffParts(ctx context.Context, arg ListServiceMeasurementDiffPartsParams) ([]ListServiceMeasurementDiffPartsRow, error) {
+	rows, err := q.db.Query(ctx, listServiceMeasurementDiffParts, arg.ServiceID, arg.OrganizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListServiceMeasurementDiffPartsRow{}
+	for rows.Next() {
+		var i ListServiceMeasurementDiffPartsRow
+		if err := rows.Scan(
+			&i.PlaceID,
+			&i.PartType,
+			&i.ServicePartKey,
+			&i.BeforeAvgUm,
+			&i.BeforeMinUm,
+			&i.BeforeMaxUm,
+			&i.BeforeCount,
+			&i.AfterAvgUm,
+			&i.AfterMinUm,
+			&i.AfterMaxUm,
+			&i.AfterCount,
+			&i.DiffUm,
+			&i.ExpectedUm,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listServiceMeasurementLinks = `-- name: ListServiceMeasurementLinks :many
 SELECT
     sm.phase, sm.link_source, sm.confirmed_at, sm.created_at AS linked_at,
@@ -1423,6 +1570,25 @@ func (q *Queries) MarkMeasurementResultParsed(ctx context.Context, arg MarkMeasu
 		arg.OrganizationID,
 	)
 	return err
+}
+
+const markServiceMeasurementChecked = `-- name: MarkServiceMeasurementChecked :execrows
+UPDATE services
+SET measurement_checked_at = NOW()
+WHERE id = $1 AND organization_id = $2
+`
+
+type MarkServiceMeasurementCheckedParams struct {
+	ID             int64 `json:"id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) MarkServiceMeasurementChecked(ctx context.Context, arg MarkServiceMeasurementCheckedParams) (int64, error) {
+	result, err := q.db.Exec(ctx, markServiceMeasurementChecked, arg.ID, arg.OrganizationID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const replaceServiceMeasurement = `-- name: ReplaceServiceMeasurement :execrows

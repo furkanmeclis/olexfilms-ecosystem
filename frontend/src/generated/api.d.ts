@@ -6700,6 +6700,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/services/{uuid}/measurements/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Measurement micron difference table (TEC-297)
+         * @description Returns before/after micron averages by `place_id` and `part_type`, the expected film thickness from service item products applied to the mapped vehicle part, and whether each part deviates beyond `measurements.tolerance_um` (default 30 µm). Services outside the caller's organization reach answer 404. Requires the measurements module and `measurements.link`.
+         */
+        get: operations["getServiceMeasurementDiff"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/services/{uuid}/measurements/checked": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark measurement diff as checked (TEC-297)
+         * @description Stamps `measurement_checked_at` after a dealer owner reviews a service whose measurement diff was flagged. A non-empty `note` is required and missing note answers 400 `VALIDATION_ERROR`; the note is not persisted yet. Requires the measurements module and `measurements.link`.
+         */
+        post: operations["markServiceMeasurementsChecked"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/services/{uuid}/measurements/{phase}": {
         parameters: {
             query?: never;
@@ -14579,6 +14619,50 @@ export interface components {
             success: true;
             data: components["schemas"]["ServiceMeasurements"];
             meta: components["schemas"]["ResponseMeta"];
+        };
+        MeasurementStats: {
+            /** @description Decimal microns with two fractional digits */
+            average_um: string | null;
+            /** @description Decimal microns with two fractional digits */
+            min_um: string | null;
+            /** @description Decimal microns with two fractional digits */
+            max_um: string | null;
+            /** Format: int32 */
+            count: number;
+        };
+        ServiceMeasurementDiffPart: {
+            place_id: string;
+            part_type: string;
+            /** @description Vehicle part picker key mapped from the NexPTG part */
+            service_part_key: string;
+            before: components["schemas"]["MeasurementStats"];
+            after: components["schemas"]["MeasurementStats"];
+            /** @description after average minus before average */
+            diff_um: string | null;
+            /** @description Sum of micron_thickness of products applied to this part */
+            expected_um: string | null;
+            deviation: boolean;
+            /** @enum {string} */
+            expected_status: "available" | "missing" | "incomplete";
+        };
+        ServiceMeasurementDiff: {
+            /** Format: uuid */
+            service_uuid: string;
+            check_required: boolean;
+            /** Format: date-time */
+            checked_at: string | null;
+            /** @description Decimal microns with two fractional digits */
+            tolerance_um: string;
+            parts: components["schemas"]["ServiceMeasurementDiffPart"][];
+        };
+        EnvelopeServiceMeasurementDiff: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ServiceMeasurementDiff"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        ServiceMeasurementsCheckedRequest: {
+            note: string;
         };
         MobileMeasurementRequest: {
             /** @description Idempotency key in the body (alternative to the Idempotency-Key header) */
@@ -29703,6 +29787,59 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getServiceMeasurementDiff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service measurement diff */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceMeasurementDiff"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    markServiceMeasurementsChecked: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceMeasurementsCheckedRequest"];
+            };
+        };
+        responses: {
+            /** @description Marked as checked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     unlinkServiceMeasurement: {
