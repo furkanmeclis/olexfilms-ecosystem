@@ -4,8 +4,9 @@ import { brand } from "@/config/brand";
 import { cn } from "@/lib/utils";
 
 import {
-  wordmarkAccentEvenoddIndex,
-  wordmarkAccentPaths,
+  artworkTransform,
+  markAccentPaths,
+  markDetailPath,
   wordmarkGlyphPaths,
   wordmarkViewBox,
 } from "./artwork";
@@ -14,7 +15,10 @@ type AppWordmarkProps = SVGProps<SVGSVGElement> & {
   title?: string;
 };
 
-/** Full wordmark lockup — glyph + accent (base artwork, to be replaced). */
+/**
+ * Full Olex lockup — gold crest + "OLEX" letters. The letters use
+ * `--brand-glyph`: white on dark surfaces, deep green on light ones.
+ */
 export function AppWordmark({
   className,
   title = brand.productName,
@@ -31,17 +35,29 @@ export function AppWordmark({
       {...props}
     >
       <title>{title}</title>
-      {wordmarkGlyphPaths.map((d) => (
-        <path key={d.slice(0, 24)} className="fill-brand-glyph" d={d} />
-      ))}
-      {wordmarkAccentPaths.map((d, i) => (
+      <g transform={artworkTransform}>
+        {wordmarkGlyphPaths.map((d) => (
+          <path
+            key={d.slice(0, 24)}
+            className="fill-brand-glyph"
+            fillRule="evenodd"
+            d={d}
+          />
+        ))}
+        {markAccentPaths.map((d) => (
+          <path
+            key={d.slice(0, 24)}
+            className="fill-brand-accent"
+            fillRule="evenodd"
+            d={d}
+          />
+        ))}
         <path
-          key={d.slice(0, 24)}
-          className="fill-brand-accent"
-          fillRule={i === wordmarkAccentEvenoddIndex ? "evenodd" : undefined}
-          d={d}
+          className="fill-brand-detail"
+          fillRule="evenodd"
+          d={markDetailPath}
         />
-      ))}
+      </g>
     </svg>
   );
 }

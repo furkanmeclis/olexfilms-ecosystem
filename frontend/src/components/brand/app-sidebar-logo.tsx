@@ -7,7 +7,7 @@ type AppSidebarLogoProps = {
   className?: string;
 };
 
-/** Sidebar header lockup — OP mark + product name. */
+/** Sidebar header lockup — Olex crest + product name. */
 export function AppSidebarLogo({ className }: AppSidebarLogoProps) {
   return (
     <>
