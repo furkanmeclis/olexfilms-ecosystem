@@ -3,6 +3,7 @@ package queue
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/config"
 	"github.com/hibiken/asynq"
@@ -27,6 +28,8 @@ func wireAll(w *Worker, hits map[string]int, tag string) *Worker {
 		).
 		WithWarrantyRepairScan(func(context.Context) error { hit(TaskWarrantyRepairScan); return nil }).
 		WithVehicleTransferExpire(func(context.Context) error { hit(TaskVehicleTransferExpire); return nil }).
+		WithAppointmentReminder(func(context.Context, int64, time.Time, string) error { hit(TaskAppointmentReminder); return nil }).
+		WithAppointmentNoShowScan(func(context.Context) error { hit(TaskAppointmentNoShowScan); return nil }).
 		WithWarehouseEOD(func(context.Context) error { hit(TaskWarehouseEODReports); return nil }).
 		WithGlorianPull(func(context.Context) error { hit(TaskGlorianPullCatalog); return nil }).
 		WithGlorianPush(
@@ -65,7 +68,7 @@ func TestWorkerSettersAreIdempotent(t *testing.T) {
 		wireAll(w, hits, "second")
 	}()
 
-	for _, typ := range []string{TaskNotificationPurge, TaskWhatsAppStatusPoll, TaskLogPurgeSweep, TaskRatesFetch, TaskWarrantyExpire, TaskWarrantyExpiringScan, TaskWarrantyRepairScan, TaskVehicleTransferExpire, TaskWarehouseEODReports, TaskGlorianPullCatalog, TaskGlorianPushBarcodes, TaskGlorianPatchStockItem, TaskGlorianOrderOutbound, TaskGlorianOrderReplay, TaskGlorianReconcile, TaskGlorianOutboundReplayOne, TaskContractPDF} {
+	for _, typ := range []string{TaskNotificationPurge, TaskWhatsAppStatusPoll, TaskLogPurgeSweep, TaskRatesFetch, TaskWarrantyExpire, TaskWarrantyExpiringScan, TaskWarrantyRepairScan, TaskVehicleTransferExpire, TaskAppointmentNoShowScan, TaskWarehouseEODReports, TaskGlorianPullCatalog, TaskGlorianPushBarcodes, TaskGlorianPatchStockItem, TaskGlorianOrderOutbound, TaskGlorianOrderReplay, TaskGlorianReconcile, TaskGlorianOutboundReplayOne, TaskContractPDF} {
 		if err := w.mux.ProcessTask(context.Background(), asynq.NewTask(typ, []byte("{}"))); err != nil {
 			t.Fatalf("%s: %v", typ, err)
 		}
@@ -78,7 +81,7 @@ func TestWorkerSettersAreIdempotent(t *testing.T) {
 // Unwired periodic tasks are acknowledged, not failed.
 func TestWorkerMissingPeriodicHandlersAreNoops(t *testing.T) {
 	w := NewWorker(config.Config{Redis: config.RedisConfig{Addr: "127.0.0.1:0"}}, nil, nil)
-	for _, typ := range []string{TaskNotificationPurge, TaskWhatsAppStatusPoll, TaskWarrantyExpire, TaskWarrantyExpiringScan, TaskWarehouseEODReports, TaskGlorianPullCatalog, TaskGlorianPushBarcodes, TaskGlorianPatchStockItem, TaskGlorianOrderOutbound, TaskGlorianOrderReplay, TaskGlorianReconcile, TaskGlorianOutboundReplayOne} {
+	for _, typ := range []string{TaskNotificationPurge, TaskWhatsAppStatusPoll, TaskWarrantyExpire, TaskWarrantyExpiringScan, TaskAppointmentNoShowScan, TaskWarehouseEODReports, TaskGlorianPullCatalog, TaskGlorianPushBarcodes, TaskGlorianPatchStockItem, TaskGlorianOrderOutbound, TaskGlorianOrderReplay, TaskGlorianReconcile, TaskGlorianOutboundReplayOne} {
 		if err := w.mux.ProcessTask(context.Background(), asynq.NewTask(typ, []byte("{}"))); err != nil {
 			t.Fatalf("%s: %v", typ, err)
 		}

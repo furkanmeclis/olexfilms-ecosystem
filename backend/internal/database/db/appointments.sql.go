@@ -31,6 +31,174 @@ func (q *Queries) AppointmentClosureExists(ctx context.Context, arg AppointmentC
 	return closed, err
 }
 
+const claimAppointmentReminder24h = `-- name: ClaimAppointmentReminder24h :one
+WITH claimed AS (
+    UPDATE appointments a
+    SET reminded_24h_at = $1::timestamptz
+    FROM users u
+    WHERE a.id = $2
+      AND a.starts_at = $3::timestamptz
+      AND a.status IN ('scheduled', 'confirmed')
+      AND a.deleted_at IS NULL
+      AND a.reminded_24h_at IS NULL
+      AND u.id = a.customer_user_id
+      AND u.status <> 'anonymized'
+      AND u.phone_e164 IS NOT NULL
+    RETURNING a.id, a.uuid, a.organization_id, a.brand_id, a.customer_user_id, a.vehicle_id, a.starts_at, a.ends_at, a.estimated_minutes, a.source, a.status, a.cancel_reason, a.lead_id, a.service_id, a.note, a.created_by_user_id, a.reminded_24h_at, a.reminded_2h_at, a.created_at, a.updated_at, a.deleted_at
+)
+SELECT c.id, c.uuid, c.organization_id, c.brand_id, c.customer_user_id, c.vehicle_id, c.starts_at, c.ends_at, c.estimated_minutes, c.source, c.status, c.cancel_reason, c.lead_id, c.service_id, c.note, c.created_by_user_id, c.reminded_24h_at, c.reminded_2h_at, c.created_at, c.updated_at, c.deleted_at, o.name AS organization_name, COALESCE(v.plate, '')::text AS plate
+FROM claimed c
+JOIN organizations o ON o.id = c.organization_id
+LEFT JOIN vehicles v ON v.id = c.vehicle_id
+`
+
+type ClaimAppointmentReminder24hParams struct {
+	SentAt   pgtype.Timestamptz `json:"sent_at"`
+	ID       int64              `json:"id"`
+	StartsAt pgtype.Timestamptz `json:"starts_at"`
+}
+
+type ClaimAppointmentReminder24hRow struct {
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	OrganizationID   int64              `json:"organization_id"`
+	BrandID          int64              `json:"brand_id"`
+	CustomerUserID   int64              `json:"customer_user_id"`
+	VehicleID        pgtype.Int8        `json:"vehicle_id"`
+	StartsAt         pgtype.Timestamptz `json:"starts_at"`
+	EndsAt           pgtype.Timestamptz `json:"ends_at"`
+	EstimatedMinutes int32              `json:"estimated_minutes"`
+	Source           string             `json:"source"`
+	Status           string             `json:"status"`
+	CancelReason     pgtype.Text        `json:"cancel_reason"`
+	LeadID           pgtype.Int8        `json:"lead_id"`
+	ServiceID        pgtype.Int8        `json:"service_id"`
+	Note             string             `json:"note"`
+	CreatedByUserID  pgtype.Int8        `json:"created_by_user_id"`
+	Reminded24hAt    pgtype.Timestamptz `json:"reminded_24h_at"`
+	Reminded2hAt     pgtype.Timestamptz `json:"reminded_2h_at"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt        pgtype.Timestamptz `json:"deleted_at"`
+	OrganizationName string             `json:"organization_name"`
+	Plate            string             `json:"plate"`
+}
+
+func (q *Queries) ClaimAppointmentReminder24h(ctx context.Context, arg ClaimAppointmentReminder24hParams) (ClaimAppointmentReminder24hRow, error) {
+	row := q.db.QueryRow(ctx, claimAppointmentReminder24h, arg.SentAt, arg.ID, arg.StartsAt)
+	var i ClaimAppointmentReminder24hRow
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.CustomerUserID,
+		&i.VehicleID,
+		&i.StartsAt,
+		&i.EndsAt,
+		&i.EstimatedMinutes,
+		&i.Source,
+		&i.Status,
+		&i.CancelReason,
+		&i.LeadID,
+		&i.ServiceID,
+		&i.Note,
+		&i.CreatedByUserID,
+		&i.Reminded24hAt,
+		&i.Reminded2hAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.OrganizationName,
+		&i.Plate,
+	)
+	return i, err
+}
+
+const claimAppointmentReminder2h = `-- name: ClaimAppointmentReminder2h :one
+WITH claimed AS (
+    UPDATE appointments a
+    SET reminded_2h_at = $1::timestamptz
+    FROM users u
+    WHERE a.id = $2
+      AND a.starts_at = $3::timestamptz
+      AND a.status IN ('scheduled', 'confirmed')
+      AND a.deleted_at IS NULL
+      AND a.reminded_2h_at IS NULL
+      AND u.id = a.customer_user_id
+      AND u.status <> 'anonymized'
+      AND u.phone_e164 IS NOT NULL
+    RETURNING a.id, a.uuid, a.organization_id, a.brand_id, a.customer_user_id, a.vehicle_id, a.starts_at, a.ends_at, a.estimated_minutes, a.source, a.status, a.cancel_reason, a.lead_id, a.service_id, a.note, a.created_by_user_id, a.reminded_24h_at, a.reminded_2h_at, a.created_at, a.updated_at, a.deleted_at
+)
+SELECT c.id, c.uuid, c.organization_id, c.brand_id, c.customer_user_id, c.vehicle_id, c.starts_at, c.ends_at, c.estimated_minutes, c.source, c.status, c.cancel_reason, c.lead_id, c.service_id, c.note, c.created_by_user_id, c.reminded_24h_at, c.reminded_2h_at, c.created_at, c.updated_at, c.deleted_at, o.name AS organization_name, COALESCE(v.plate, '')::text AS plate
+FROM claimed c
+JOIN organizations o ON o.id = c.organization_id
+LEFT JOIN vehicles v ON v.id = c.vehicle_id
+`
+
+type ClaimAppointmentReminder2hParams struct {
+	SentAt   pgtype.Timestamptz `json:"sent_at"`
+	ID       int64              `json:"id"`
+	StartsAt pgtype.Timestamptz `json:"starts_at"`
+}
+
+type ClaimAppointmentReminder2hRow struct {
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	OrganizationID   int64              `json:"organization_id"`
+	BrandID          int64              `json:"brand_id"`
+	CustomerUserID   int64              `json:"customer_user_id"`
+	VehicleID        pgtype.Int8        `json:"vehicle_id"`
+	StartsAt         pgtype.Timestamptz `json:"starts_at"`
+	EndsAt           pgtype.Timestamptz `json:"ends_at"`
+	EstimatedMinutes int32              `json:"estimated_minutes"`
+	Source           string             `json:"source"`
+	Status           string             `json:"status"`
+	CancelReason     pgtype.Text        `json:"cancel_reason"`
+	LeadID           pgtype.Int8        `json:"lead_id"`
+	ServiceID        pgtype.Int8        `json:"service_id"`
+	Note             string             `json:"note"`
+	CreatedByUserID  pgtype.Int8        `json:"created_by_user_id"`
+	Reminded24hAt    pgtype.Timestamptz `json:"reminded_24h_at"`
+	Reminded2hAt     pgtype.Timestamptz `json:"reminded_2h_at"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt        pgtype.Timestamptz `json:"deleted_at"`
+	OrganizationName string             `json:"organization_name"`
+	Plate            string             `json:"plate"`
+}
+
+func (q *Queries) ClaimAppointmentReminder2h(ctx context.Context, arg ClaimAppointmentReminder2hParams) (ClaimAppointmentReminder2hRow, error) {
+	row := q.db.QueryRow(ctx, claimAppointmentReminder2h, arg.SentAt, arg.ID, arg.StartsAt)
+	var i ClaimAppointmentReminder2hRow
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.CustomerUserID,
+		&i.VehicleID,
+		&i.StartsAt,
+		&i.EndsAt,
+		&i.EstimatedMinutes,
+		&i.Source,
+		&i.Status,
+		&i.CancelReason,
+		&i.LeadID,
+		&i.ServiceID,
+		&i.Note,
+		&i.CreatedByUserID,
+		&i.Reminded24hAt,
+		&i.Reminded2hAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.OrganizationName,
+		&i.Plate,
+	)
+	return i, err
+}
+
 const countActiveAppointmentsByOrganization = `-- name: CountActiveAppointmentsByOrganization :many
 SELECT organization_id, COUNT(*)::bigint AS active_count
 FROM appointments
@@ -290,6 +458,60 @@ func (q *Queries) DeleteAppointmentClosureByUUID(ctx context.Context, arg Delete
 	return result.RowsAffected(), nil
 }
 
+const findOpenCustomerLeadForAppointment = `-- name: FindOpenCustomerLeadForAppointment :one
+SELECT id, uuid, organization_id, brand_id, target_type, customer_user_id, vehicle_id, candidate_company_name, candidate_contact_name, candidate_phone_e164, candidate_email, country_id, province_id, district_id, source, temperature, status, lost_reason, follow_up_date, assignee_user_id, notes, won_ref_type, won_ref_id, created_by_user_id, created_at, updated_at, deleted_at
+FROM leads
+WHERE organization_id = $1
+  AND brand_id = $2
+  AND customer_user_id = $3
+  AND target_type = 'customer'
+  AND status IN ('new', 'contacted', 'quoted')
+  AND deleted_at IS NULL
+ORDER BY created_at DESC, id DESC
+LIMIT 1
+`
+
+type FindOpenCustomerLeadForAppointmentParams struct {
+	OrganizationID int64       `json:"organization_id"`
+	BrandID        int64       `json:"brand_id"`
+	CustomerUserID pgtype.Int8 `json:"customer_user_id"`
+}
+
+func (q *Queries) FindOpenCustomerLeadForAppointment(ctx context.Context, arg FindOpenCustomerLeadForAppointmentParams) (Lead, error) {
+	row := q.db.QueryRow(ctx, findOpenCustomerLeadForAppointment, arg.OrganizationID, arg.BrandID, arg.CustomerUserID)
+	var i Lead
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.TargetType,
+		&i.CustomerUserID,
+		&i.VehicleID,
+		&i.CandidateCompanyName,
+		&i.CandidateContactName,
+		&i.CandidatePhoneE164,
+		&i.CandidateEmail,
+		&i.CountryID,
+		&i.ProvinceID,
+		&i.DistrictID,
+		&i.Source,
+		&i.Temperature,
+		&i.Status,
+		&i.LostReason,
+		&i.FollowUpDate,
+		&i.AssigneeUserID,
+		&i.Notes,
+		&i.WonRefType,
+		&i.WonRefID,
+		&i.CreatedByUserID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const getAppointmentByID = `-- name: GetAppointmentByID :one
 SELECT id, uuid, organization_id, brand_id, customer_user_id, vehicle_id, starts_at, ends_at, estimated_minutes, source, status, cancel_reason, lead_id, service_id, note, created_by_user_id, reminded_24h_at, reminded_2h_at, created_at, updated_at, deleted_at FROM appointments
 WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL
@@ -388,6 +610,50 @@ func (q *Queries) GetAppointmentSettings(ctx context.Context, organizationID int
 		&i.PortalAppointmentsEnabled,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const linkAppointmentLead = `-- name: LinkAppointmentLead :one
+UPDATE appointments
+SET lead_id = $1
+WHERE id = $2
+  AND organization_id = $3
+  AND lead_id IS NULL
+RETURNING id, uuid, organization_id, brand_id, customer_user_id, vehicle_id, starts_at, ends_at, estimated_minutes, source, status, cancel_reason, lead_id, service_id, note, created_by_user_id, reminded_24h_at, reminded_2h_at, created_at, updated_at, deleted_at
+`
+
+type LinkAppointmentLeadParams struct {
+	LeadID         pgtype.Int8 `json:"lead_id"`
+	ID             int64       `json:"id"`
+	OrganizationID int64       `json:"organization_id"`
+}
+
+func (q *Queries) LinkAppointmentLead(ctx context.Context, arg LinkAppointmentLeadParams) (Appointment, error) {
+	row := q.db.QueryRow(ctx, linkAppointmentLead, arg.LeadID, arg.ID, arg.OrganizationID)
+	var i Appointment
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.CustomerUserID,
+		&i.VehicleID,
+		&i.StartsAt,
+		&i.EndsAt,
+		&i.EstimatedMinutes,
+		&i.Source,
+		&i.Status,
+		&i.CancelReason,
+		&i.LeadID,
+		&i.ServiceID,
+		&i.Note,
+		&i.CreatedByUserID,
+		&i.Reminded24hAt,
+		&i.Reminded2hAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
@@ -692,6 +958,57 @@ func (q *Queries) MarkAppointmentReminder2h(ctx context.Context, arg MarkAppoint
 		&i.DeletedAt,
 	)
 	return i, err
+}
+
+const markDueNoShowAppointments = `-- name: MarkDueNoShowAppointments :many
+UPDATE appointments
+SET status = 'no_show'
+WHERE status IN ('scheduled', 'confirmed')
+  AND deleted_at IS NULL
+  AND starts_at <= $1::timestamptz
+RETURNING id, uuid, organization_id, brand_id, customer_user_id, vehicle_id, starts_at, ends_at, estimated_minutes, source, status, cancel_reason, lead_id, service_id, note, created_by_user_id, reminded_24h_at, reminded_2h_at, created_at, updated_at, deleted_at
+`
+
+func (q *Queries) MarkDueNoShowAppointments(ctx context.Context, cutoff pgtype.Timestamptz) ([]Appointment, error) {
+	rows, err := q.db.Query(ctx, markDueNoShowAppointments, cutoff)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Appointment{}
+	for rows.Next() {
+		var i Appointment
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.CustomerUserID,
+			&i.VehicleID,
+			&i.StartsAt,
+			&i.EndsAt,
+			&i.EstimatedMinutes,
+			&i.Source,
+			&i.Status,
+			&i.CancelReason,
+			&i.LeadID,
+			&i.ServiceID,
+			&i.Note,
+			&i.CreatedByUserID,
+			&i.Reminded24hAt,
+			&i.Reminded2hAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const setAppointmentStatus = `-- name: SetAppointmentStatus :one

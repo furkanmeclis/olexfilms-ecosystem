@@ -28,6 +28,7 @@ import (
 	announcementsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/usecase"
 	appointmentsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/appointments"
 	appointmentshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/appointments/handler"
+	appointmentreminder "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/appointments/reminder"
 	appointmentsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/appointments/usecase"
 	authmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth"
 	authhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/handler"
@@ -532,6 +533,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		reviewQueue = deps.Queue
 	}
 	servicereview.RegisterEventHandlers(eventBus, reviewQueue, cfg.Services.ReviewRequestDelay, log)
+	// TEC-325: appointment.created/rescheduled schedules 24h and 2h reminders.
+	appointmentreminder.RegisterEventHandlers(eventBus, reviewQueue, log)
 	// TEC-270: glorian stock entries/placements and exits schedule the push.
 	var glorianQueue glorian.Enqueuer
 	if deps.Queue != nil {
@@ -625,6 +628,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 			WithWarrantyRepairScan(warrantymodule.NewRepairScanner(deps.DB, deps.Queries, cfg.Auth.FrontendURL, cfg.Warranty.RepairScanDays, log).Task).
 			WithVehicleTransferExpire(customersSvc.ExpireTransfersTask).
 			WithServiceReviewRequest(servicereview.NewTaskSender(deps.DB, deps.Queries, cfg.Auth.FrontendURL, log).Task).
+			WithAppointmentReminder(appointmentreminder.NewTaskSender(deps.DB, deps.Queries, log).Task).
+			WithAppointmentNoShowScan(appointmentreminder.NewTaskNoShowScanner(deps.DB, deps.Queries, featureSvc, log).Task).
 			WithNotificationPurge(notifSvc.PurgeExpired).
 			WithAnnouncementDispatch(func(ctx context.Context, payload queue.AnnouncementDispatchPayload) error {
 				return announcementsusecase.DispatchBatch(ctx, notifSvc, payload)

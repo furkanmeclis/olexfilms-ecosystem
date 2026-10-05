@@ -142,6 +142,12 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	// TEC-192: the delayed review request goes to the service customer
 	// (WhatsApp); the task writes the event once per service.
 	on(events.ServiceReviewRequested, serviceReviewDispatch)
+	// TEC-325: appointment lifecycle messages go to the customer over
+	// WhatsApp; reschedules reuse the created template.
+	on(events.AppointmentCreated, appointmentDispatcher(catalog.EventAppointmentCreated))
+	on(events.AppointmentRescheduled, appointmentDispatcher(catalog.EventAppointmentCreated))
+	on(events.AppointmentCancelled, appointmentDispatcher(catalog.EventAppointmentCancelled))
+	on(events.AppointmentReminder, appointmentDispatcher(catalog.EventAppointmentReminder))
 	// TEC-164: a new customer gets the WhatsApp welcome with the portal link.
 	on(events.CustomerCreated, customerWelcomeDispatch)
 	// TEC-200: sibling stock transfer events go to the notified sides
@@ -281,6 +287,31 @@ func serviceReviewDispatch(event events.Event) (notifmodel.DispatchInput, bool) 
 		in.BrandID = &brand
 	}
 	return in, true
+}
+
+func appointmentDispatcher(code string) func(events.Event) (notifmodel.DispatchInput, bool) {
+	return func(event events.Event) (notifmodel.DispatchInput, bool) {
+		customer, ok := int64FromPayload(event.Payload, "customer_user_id")
+		if !ok || customer <= 0 {
+			return notifmodel.DispatchInput{}, false
+		}
+		vars := map[string]string{}
+		for _, k := range []string{"organization_name", "starts_at", "plate"} {
+			vars[k] = stringFromPayload(event.Payload, k)
+		}
+		in := notifmodel.DispatchInput{
+			EventCode: code,
+			UserIDs:   []int64{customer},
+			Vars:      vars,
+			Payload: map[string]any{
+				"appointment_uuid": stringFromPayload(event.Payload, "appointment_uuid"),
+			},
+		}
+		if brand, ok := int64FromPayload(event.Payload, "brand_id"); ok && brand > 0 {
+			in.BrandID = &brand
+		}
+		return in, true
+	}
 }
 
 // customerWelcomeDispatch maps customer.created to the welcome message for

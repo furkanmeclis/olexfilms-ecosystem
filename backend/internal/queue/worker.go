@@ -69,6 +69,9 @@ type Worker struct {
 	vehicleTransferExpire VehicleTransferTaskFunc
 	// TEC-192: delayed Google review request of a completed service.
 	serviceReviewRequest ServiceReviewRequestFunc
+	// TEC-325: delayed appointment WhatsApp reminders and no-show scan.
+	appointmentReminder   AppointmentReminderFunc
+	appointmentNoShowScan AppointmentNoShowScanFunc
 	// TEC-221: center task due date reminders.
 	tasksDueScan TasksDueScanFunc
 	// TEC-314: daily quote expiry.
@@ -157,6 +160,8 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskInventoryRebuild, w.handleInventoryRebuild)
 	mux.HandleFunc(TaskVehicleTransferExpire, w.handleVehicleTransferExpire)
 	mux.HandleFunc(TaskServiceReviewRequest, w.handleServiceReviewRequest)
+	mux.HandleFunc(TaskAppointmentReminder, w.handleAppointmentReminder)
+	mux.HandleFunc(TaskAppointmentNoShowScan, w.handleAppointmentNoShowScan)
 	mux.HandleFunc(TaskTasksDueScan, w.handleTasksDueScan)
 	mux.HandleFunc(TaskQuoteExpire, w.handleQuoteExpire)
 	mux.HandleFunc(TaskWarehouseEODReports, w.handleWarehouseEOD)

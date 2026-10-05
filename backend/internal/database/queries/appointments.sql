@@ -162,6 +162,74 @@ SET reminded_2h_at = COALESCE(reminded_2h_at, sqlc.arg(sent_at)::timestamptz)
 WHERE id = sqlc.arg(id) AND reminded_2h_at IS NULL
 RETURNING *;
 
+-- name: ClaimAppointmentReminder24h :one
+WITH claimed AS (
+    UPDATE appointments a
+    SET reminded_24h_at = sqlc.arg(sent_at)::timestamptz
+    FROM users u
+    WHERE a.id = sqlc.arg(id)
+      AND a.starts_at = sqlc.arg(starts_at)::timestamptz
+      AND a.status IN ('scheduled', 'confirmed')
+      AND a.deleted_at IS NULL
+      AND a.reminded_24h_at IS NULL
+      AND u.id = a.customer_user_id
+      AND u.status <> 'anonymized'
+      AND u.phone_e164 IS NOT NULL
+    RETURNING a.*
+)
+SELECT c.*, o.name AS organization_name, COALESCE(v.plate, '')::text AS plate
+FROM claimed c
+JOIN organizations o ON o.id = c.organization_id
+LEFT JOIN vehicles v ON v.id = c.vehicle_id;
+
+-- name: ClaimAppointmentReminder2h :one
+WITH claimed AS (
+    UPDATE appointments a
+    SET reminded_2h_at = sqlc.arg(sent_at)::timestamptz
+    FROM users u
+    WHERE a.id = sqlc.arg(id)
+      AND a.starts_at = sqlc.arg(starts_at)::timestamptz
+      AND a.status IN ('scheduled', 'confirmed')
+      AND a.deleted_at IS NULL
+      AND a.reminded_2h_at IS NULL
+      AND u.id = a.customer_user_id
+      AND u.status <> 'anonymized'
+      AND u.phone_e164 IS NOT NULL
+    RETURNING a.*
+)
+SELECT c.*, o.name AS organization_name, COALESCE(v.plate, '')::text AS plate
+FROM claimed c
+JOIN organizations o ON o.id = c.organization_id
+LEFT JOIN vehicles v ON v.id = c.vehicle_id;
+
+-- name: MarkDueNoShowAppointments :many
+UPDATE appointments
+SET status = 'no_show'
+WHERE status IN ('scheduled', 'confirmed')
+  AND deleted_at IS NULL
+  AND starts_at <= sqlc.arg(cutoff)::timestamptz
+RETURNING *;
+
+-- name: FindOpenCustomerLeadForAppointment :one
+SELECT *
+FROM leads
+WHERE organization_id = sqlc.arg(organization_id)
+  AND brand_id = sqlc.arg(brand_id)
+  AND customer_user_id = sqlc.arg(customer_user_id)
+  AND target_type = 'customer'
+  AND status IN ('new', 'contacted', 'quoted')
+  AND deleted_at IS NULL
+ORDER BY created_at DESC, id DESC
+LIMIT 1;
+
+-- name: LinkAppointmentLead :one
+UPDATE appointments
+SET lead_id = sqlc.arg(lead_id)
+WHERE id = sqlc.arg(id)
+  AND organization_id = sqlc.arg(organization_id)
+  AND lead_id IS NULL
+RETURNING *;
+
 -- name: SoftDeleteAppointment :execrows
 UPDATE appointments
 SET deleted_at = NOW()
