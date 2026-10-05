@@ -40,6 +40,26 @@ JOIN users u ON u.id = sr.customer_user_id
 WHERE sr.brand_id = sqlc.arg(brand_id)::bigint
   AND (sqlc.narg(organization_ids)::bigint[] IS NULL
        OR sr.organization_id = ANY(sqlc.narg(organization_ids)::bigint[]))
+  AND (sqlc.narg(dealer_uuid)::uuid IS NULL
+       OR EXISTS (
+           SELECT 1 FROM organizations ro
+           WHERE ro.id = sr.organization_id AND ro.uuid = sqlc.narg(dealer_uuid)::uuid
+       ))
+  AND (sqlc.narg(product_uuid)::uuid IS NULL
+       OR EXISTS (
+           SELECT 1
+           FROM service_items si
+           JOIN products p ON p.id = si.product_id AND p.brand_id = si.brand_id
+           WHERE si.service_id = sr.service_id AND p.uuid = sqlc.narg(product_uuid)::uuid
+       ))
+  AND (sqlc.narg(min_rating)::smallint IS NULL
+       OR sr.platform_rating >= sqlc.narg(min_rating)::smallint
+       OR sr.product_rating >= sqlc.narg(min_rating)::smallint)
+  AND (sqlc.narg(max_rating)::smallint IS NULL
+       OR sr.platform_rating <= sqlc.narg(max_rating)::smallint
+       OR sr.product_rating <= sqlc.narg(max_rating)::smallint)
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR sr.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_to)::timestamptz IS NULL OR sr.created_at < sqlc.narg(created_to)::timestamptz)
 ORDER BY sr.created_at DESC, sr.id DESC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
@@ -48,4 +68,81 @@ SELECT COUNT(*)
 FROM service_reviews sr
 WHERE sr.brand_id = sqlc.arg(brand_id)::bigint
   AND (sqlc.narg(organization_ids)::bigint[] IS NULL
-       OR sr.organization_id = ANY(sqlc.narg(organization_ids)::bigint[]));
+       OR sr.organization_id = ANY(sqlc.narg(organization_ids)::bigint[]))
+  AND (sqlc.narg(dealer_uuid)::uuid IS NULL
+       OR EXISTS (
+           SELECT 1 FROM organizations ro
+           WHERE ro.id = sr.organization_id AND ro.uuid = sqlc.narg(dealer_uuid)::uuid
+       ))
+  AND (sqlc.narg(product_uuid)::uuid IS NULL
+       OR EXISTS (
+           SELECT 1
+           FROM service_items si
+           JOIN products p ON p.id = si.product_id AND p.brand_id = si.brand_id
+           WHERE si.service_id = sr.service_id AND p.uuid = sqlc.narg(product_uuid)::uuid
+       ))
+  AND (sqlc.narg(min_rating)::smallint IS NULL
+       OR sr.platform_rating >= sqlc.narg(min_rating)::smallint
+       OR sr.product_rating >= sqlc.narg(min_rating)::smallint)
+  AND (sqlc.narg(max_rating)::smallint IS NULL
+       OR sr.platform_rating <= sqlc.narg(max_rating)::smallint
+       OR sr.product_rating <= sqlc.narg(max_rating)::smallint)
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR sr.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_to)::timestamptz IS NULL OR sr.created_at < sqlc.narg(created_to)::timestamptz);
+
+-- name: ReviewDealerStats :many
+WITH scoped AS (
+    SELECT sr.*
+    FROM service_reviews sr
+    WHERE sr.brand_id = sqlc.arg(brand_id)::bigint
+      AND (sqlc.narg(organization_ids)::bigint[] IS NULL
+           OR sr.organization_id = ANY(sqlc.narg(organization_ids)::bigint[]))
+      AND (sqlc.narg(created_from)::timestamptz IS NULL OR sr.created_at >= sqlc.narg(created_from)::timestamptz)
+      AND (sqlc.narg(created_to)::timestamptz IS NULL OR sr.created_at < sqlc.narg(created_to)::timestamptz)
+),
+ratings AS (
+    SELECT organization_id, platform_rating::numeric AS rating FROM scoped
+    UNION ALL
+    SELECT a.organization_id, a.rating::numeric
+    FROM service_review_answers a
+    JOIN review_questions q ON q.id = a.question_id
+    JOIN scoped sr ON sr.id = a.review_id
+    WHERE a.rating IS NOT NULL AND q.target IN ('platform', 'dealer')
+)
+SELECT o.uuid AS dealer_uuid, o.name AS dealer_name,
+       COUNT(DISTINCT sr.id)::bigint AS review_count,
+       ROUND(AVG(r.rating), 2)::numeric AS average_rating
+FROM scoped sr
+JOIN organizations o ON o.id = sr.organization_id
+LEFT JOIN ratings r ON r.organization_id = sr.organization_id
+GROUP BY o.uuid, o.name
+ORDER BY average_rating DESC NULLS LAST, o.name;
+
+-- name: ReviewProductStats :many
+WITH scoped AS (
+    SELECT sr.*
+    FROM service_reviews sr
+    WHERE sr.brand_id = sqlc.arg(brand_id)::bigint
+      AND (sqlc.narg(organization_ids)::bigint[] IS NULL
+           OR sr.organization_id = ANY(sqlc.narg(organization_ids)::bigint[]))
+      AND (sqlc.narg(created_from)::timestamptz IS NULL OR sr.created_at >= sqlc.narg(created_from)::timestamptz)
+      AND (sqlc.narg(created_to)::timestamptz IS NULL OR sr.created_at < sqlc.narg(created_to)::timestamptz)
+),
+ratings AS (
+    SELECT si.product_id, sr.id AS review_id, sr.product_rating::numeric AS rating
+    FROM scoped sr
+    JOIN service_items si ON si.service_id = sr.service_id
+    UNION ALL
+    SELECT a.product_id, a.review_id, a.rating::numeric
+    FROM service_review_answers a
+    JOIN review_questions q ON q.id = a.question_id
+    JOIN scoped sr ON sr.id = a.review_id
+    WHERE a.rating IS NOT NULL AND q.target = 'product' AND a.product_id IS NOT NULL
+)
+SELECT p.uuid AS product_uuid, p.sku, p.name AS product_name,
+       COUNT(DISTINCT r.review_id)::bigint AS review_count,
+       ROUND(AVG(r.rating), 2)::numeric AS average_rating
+FROM ratings r
+JOIN products p ON p.id = r.product_id
+GROUP BY p.uuid, p.sku, p.name
+ORDER BY average_rating DESC NULLS LAST, p.name;

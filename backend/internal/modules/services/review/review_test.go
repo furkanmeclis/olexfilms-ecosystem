@@ -3,12 +3,15 @@ package review
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
 	"github.com/hibiken/asynq"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type fakeQueue struct {
@@ -99,5 +102,32 @@ func TestSchedulerConflictAndErrors(t *testing.T) {
 	q = &fakeQueue{}
 	if err := NewScheduler(q, time.Hour, nil).HandleServiceCompleted(context.Background(), events.New(events.ServiceCompleted)); err != nil || len(q.tasks) != 0 {
 		t.Fatalf("no service: err=%v tasks=%d", err, len(q.tasks))
+	}
+}
+
+func TestLowScoreDescriptionOmitsAnonymousCustomer(t *testing.T) {
+	d := db.GetServiceReviewProcessingDetailsRow{
+		OrganizationName: "Dealer One",
+		ServiceNo:        "DS000001",
+		PlatformRating:   5,
+		ProductRating:    1,
+		MinRating:        1,
+		IsAnonymous:      true,
+		CustomerName:     "Ada",
+		CustomerSurname:  "Lovelace",
+		Comment:          pgtype.Text{String: "too many bubbles", Valid: true},
+	}
+	got := lowScoreDescription(d)
+	if strings.Contains(got, "Ada") || strings.Contains(got, "Lovelace") || strings.Contains(got, "Customer:") {
+		t.Fatalf("anonymous customer leaked into task description:\n%s", got)
+	}
+	if !strings.Contains(got, "DS000001") || !strings.Contains(got, "Product rating: 1") {
+		t.Fatalf("description misses review context:\n%s", got)
+	}
+
+	d.IsAnonymous = false
+	got = lowScoreDescription(d)
+	if !strings.Contains(got, "Customer: Ada Lovelace") {
+		t.Fatalf("non-anonymous customer missing:\n%s", got)
 	}
 }

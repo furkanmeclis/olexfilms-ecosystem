@@ -80,6 +80,21 @@ func TestServiceReviewDispatch(t *testing.T) {
 	}
 }
 
+func TestServiceReviewLowScoreDispatch(t *testing.T) {
+	ev := events.New(events.ServiceReviewLowScore).WithPayload(map[string]any{
+		"brand_id": int64(4), "notify_user_ids": []any{float64(10), float64(11)},
+		"review_uuid": "review-1", "service_uuid": "service-1", "service_no": "DS000001",
+		"organization_name": "Dealer One", "platform_rating": "5", "product_rating": "1", "min_rating": "1",
+	})
+	in, ok := serviceReviewLowScoreDispatch(ev)
+	if !ok || in.EventCode != catalog.EventServiceReviewLowScore || len(in.UserIDs) != 2 {
+		t.Fatalf("dispatch = %+v, %v", in, ok)
+	}
+	if in.BrandID == nil || *in.BrandID != 4 || in.Vars["product_rating"] != "1" || in.Payload["service_no"] != "DS000001" {
+		t.Fatalf("payload = %+v", in)
+	}
+}
+
 // TEC-164: customer.created (as the outbox redelivers it: JSON numbers)
 // becomes the welcome dispatch with the portal link; no phone, no message.
 func TestCustomerWelcomeDispatch(t *testing.T) {

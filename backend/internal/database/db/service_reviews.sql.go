@@ -18,15 +18,50 @@ FROM service_reviews sr
 WHERE sr.brand_id = $1::bigint
   AND ($2::bigint[] IS NULL
        OR sr.organization_id = ANY($2::bigint[]))
+  AND ($3::uuid IS NULL
+       OR EXISTS (
+           SELECT 1 FROM organizations ro
+           WHERE ro.id = sr.organization_id AND ro.uuid = $3::uuid
+       ))
+  AND ($4::uuid IS NULL
+       OR EXISTS (
+           SELECT 1
+           FROM service_items si
+           JOIN products p ON p.id = si.product_id AND p.brand_id = si.brand_id
+           WHERE si.service_id = sr.service_id AND p.uuid = $4::uuid
+       ))
+  AND ($5::smallint IS NULL
+       OR sr.platform_rating >= $5::smallint
+       OR sr.product_rating >= $5::smallint)
+  AND ($6::smallint IS NULL
+       OR sr.platform_rating <= $6::smallint
+       OR sr.product_rating <= $6::smallint)
+  AND ($7::timestamptz IS NULL OR sr.created_at >= $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR sr.created_at < $8::timestamptz)
 `
 
 type CountServiceReviewsInScopeParams struct {
-	BrandID         int64   `json:"brand_id"`
-	OrganizationIds []int64 `json:"organization_ids"`
+	BrandID         int64              `json:"brand_id"`
+	OrganizationIds []int64            `json:"organization_ids"`
+	DealerUuid      pgtype.UUID        `json:"dealer_uuid"`
+	ProductUuid     pgtype.UUID        `json:"product_uuid"`
+	MinRating       pgtype.Int2        `json:"min_rating"`
+	MaxRating       pgtype.Int2        `json:"max_rating"`
+	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
+	CreatedTo       pgtype.Timestamptz `json:"created_to"`
 }
 
 func (q *Queries) CountServiceReviewsInScope(ctx context.Context, arg CountServiceReviewsInScopeParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countServiceReviewsInScope, arg.BrandID, arg.OrganizationIds)
+	row := q.db.QueryRow(ctx, countServiceReviewsInScope,
+		arg.BrandID,
+		arg.OrganizationIds,
+		arg.DealerUuid,
+		arg.ProductUuid,
+		arg.MinRating,
+		arg.MaxRating,
+		arg.CreatedFrom,
+		arg.CreatedTo,
+	)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -173,15 +208,41 @@ JOIN users u ON u.id = sr.customer_user_id
 WHERE sr.brand_id = $1::bigint
   AND ($2::bigint[] IS NULL
        OR sr.organization_id = ANY($2::bigint[]))
+  AND ($3::uuid IS NULL
+       OR EXISTS (
+           SELECT 1 FROM organizations ro
+           WHERE ro.id = sr.organization_id AND ro.uuid = $3::uuid
+       ))
+  AND ($4::uuid IS NULL
+       OR EXISTS (
+           SELECT 1
+           FROM service_items si
+           JOIN products p ON p.id = si.product_id AND p.brand_id = si.brand_id
+           WHERE si.service_id = sr.service_id AND p.uuid = $4::uuid
+       ))
+  AND ($5::smallint IS NULL
+       OR sr.platform_rating >= $5::smallint
+       OR sr.product_rating >= $5::smallint)
+  AND ($6::smallint IS NULL
+       OR sr.platform_rating <= $6::smallint
+       OR sr.product_rating <= $6::smallint)
+  AND ($7::timestamptz IS NULL OR sr.created_at >= $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR sr.created_at < $8::timestamptz)
 ORDER BY sr.created_at DESC, sr.id DESC
-LIMIT $4 OFFSET $3
+LIMIT $10 OFFSET $9
 `
 
 type ListServiceReviewsInScopeParams struct {
-	BrandID         int64   `json:"brand_id"`
-	OrganizationIds []int64 `json:"organization_ids"`
-	RowOffset       int32   `json:"row_offset"`
-	RowLimit        int32   `json:"row_limit"`
+	BrandID         int64              `json:"brand_id"`
+	OrganizationIds []int64            `json:"organization_ids"`
+	DealerUuid      pgtype.UUID        `json:"dealer_uuid"`
+	ProductUuid     pgtype.UUID        `json:"product_uuid"`
+	MinRating       pgtype.Int2        `json:"min_rating"`
+	MaxRating       pgtype.Int2        `json:"max_rating"`
+	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
+	CreatedTo       pgtype.Timestamptz `json:"created_to"`
+	RowOffset       int32              `json:"row_offset"`
+	RowLimit        int32              `json:"row_limit"`
 }
 
 type ListServiceReviewsInScopeRow struct {
@@ -211,6 +272,12 @@ func (q *Queries) ListServiceReviewsInScope(ctx context.Context, arg ListService
 	rows, err := q.db.Query(ctx, listServiceReviewsInScope,
 		arg.BrandID,
 		arg.OrganizationIds,
+		arg.DealerUuid,
+		arg.ProductUuid,
+		arg.MinRating,
+		arg.MaxRating,
+		arg.CreatedFrom,
+		arg.CreatedTo,
 		arg.RowOffset,
 		arg.RowLimit,
 	)
@@ -242,6 +309,155 @@ func (q *Queries) ListServiceReviewsInScope(ctx context.Context, arg ListService
 			&i.CustomerName,
 			&i.CustomerSurname,
 			&i.CustomerPhone,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const reviewDealerStats = `-- name: ReviewDealerStats :many
+WITH scoped AS (
+    SELECT sr.id, sr.uuid, sr.organization_id, sr.brand_id, sr.service_id, sr.customer_user_id, sr.platform_rating, sr.product_rating, sr.comment, sr.created_at, sr.is_anonymous, sr.source, sr.processed_at
+    FROM service_reviews sr
+    WHERE sr.brand_id = $1::bigint
+      AND ($2::bigint[] IS NULL
+           OR sr.organization_id = ANY($2::bigint[]))
+      AND ($3::timestamptz IS NULL OR sr.created_at >= $3::timestamptz)
+      AND ($4::timestamptz IS NULL OR sr.created_at < $4::timestamptz)
+),
+ratings AS (
+    SELECT organization_id, platform_rating::numeric AS rating FROM scoped
+    UNION ALL
+    SELECT a.organization_id, a.rating::numeric
+    FROM service_review_answers a
+    JOIN review_questions q ON q.id = a.question_id
+    JOIN scoped sr ON sr.id = a.review_id
+    WHERE a.rating IS NOT NULL AND q.target IN ('platform', 'dealer')
+)
+SELECT o.uuid AS dealer_uuid, o.name AS dealer_name,
+       COUNT(DISTINCT sr.id)::bigint AS review_count,
+       ROUND(AVG(r.rating), 2)::numeric AS average_rating
+FROM scoped sr
+JOIN organizations o ON o.id = sr.organization_id
+LEFT JOIN ratings r ON r.organization_id = sr.organization_id
+GROUP BY o.uuid, o.name
+ORDER BY average_rating DESC NULLS LAST, o.name
+`
+
+type ReviewDealerStatsParams struct {
+	BrandID         int64              `json:"brand_id"`
+	OrganizationIds []int64            `json:"organization_ids"`
+	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
+	CreatedTo       pgtype.Timestamptz `json:"created_to"`
+}
+
+type ReviewDealerStatsRow struct {
+	DealerUuid    uuid.UUID      `json:"dealer_uuid"`
+	DealerName    string         `json:"dealer_name"`
+	ReviewCount   int64          `json:"review_count"`
+	AverageRating pgtype.Numeric `json:"average_rating"`
+}
+
+func (q *Queries) ReviewDealerStats(ctx context.Context, arg ReviewDealerStatsParams) ([]ReviewDealerStatsRow, error) {
+	rows, err := q.db.Query(ctx, reviewDealerStats,
+		arg.BrandID,
+		arg.OrganizationIds,
+		arg.CreatedFrom,
+		arg.CreatedTo,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ReviewDealerStatsRow{}
+	for rows.Next() {
+		var i ReviewDealerStatsRow
+		if err := rows.Scan(
+			&i.DealerUuid,
+			&i.DealerName,
+			&i.ReviewCount,
+			&i.AverageRating,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const reviewProductStats = `-- name: ReviewProductStats :many
+WITH scoped AS (
+    SELECT sr.id, sr.uuid, sr.organization_id, sr.brand_id, sr.service_id, sr.customer_user_id, sr.platform_rating, sr.product_rating, sr.comment, sr.created_at, sr.is_anonymous, sr.source, sr.processed_at
+    FROM service_reviews sr
+    WHERE sr.brand_id = $1::bigint
+      AND ($2::bigint[] IS NULL
+           OR sr.organization_id = ANY($2::bigint[]))
+      AND ($3::timestamptz IS NULL OR sr.created_at >= $3::timestamptz)
+      AND ($4::timestamptz IS NULL OR sr.created_at < $4::timestamptz)
+),
+ratings AS (
+    SELECT si.product_id, sr.id AS review_id, sr.product_rating::numeric AS rating
+    FROM scoped sr
+    JOIN service_items si ON si.service_id = sr.service_id
+    UNION ALL
+    SELECT a.product_id, a.review_id, a.rating::numeric
+    FROM service_review_answers a
+    JOIN review_questions q ON q.id = a.question_id
+    JOIN scoped sr ON sr.id = a.review_id
+    WHERE a.rating IS NOT NULL AND q.target = 'product' AND a.product_id IS NOT NULL
+)
+SELECT p.uuid AS product_uuid, p.sku, p.name AS product_name,
+       COUNT(DISTINCT r.review_id)::bigint AS review_count,
+       ROUND(AVG(r.rating), 2)::numeric AS average_rating
+FROM ratings r
+JOIN products p ON p.id = r.product_id
+GROUP BY p.uuid, p.sku, p.name
+ORDER BY average_rating DESC NULLS LAST, p.name
+`
+
+type ReviewProductStatsParams struct {
+	BrandID         int64              `json:"brand_id"`
+	OrganizationIds []int64            `json:"organization_ids"`
+	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
+	CreatedTo       pgtype.Timestamptz `json:"created_to"`
+}
+
+type ReviewProductStatsRow struct {
+	ProductUuid   uuid.UUID      `json:"product_uuid"`
+	Sku           string         `json:"sku"`
+	ProductName   string         `json:"product_name"`
+	ReviewCount   int64          `json:"review_count"`
+	AverageRating pgtype.Numeric `json:"average_rating"`
+}
+
+func (q *Queries) ReviewProductStats(ctx context.Context, arg ReviewProductStatsParams) ([]ReviewProductStatsRow, error) {
+	rows, err := q.db.Query(ctx, reviewProductStats,
+		arg.BrandID,
+		arg.OrganizationIds,
+		arg.CreatedFrom,
+		arg.CreatedTo,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ReviewProductStatsRow{}
+	for rows.Next() {
+		var i ReviewProductStatsRow
+		if err := rows.Scan(
+			&i.ProductUuid,
+			&i.Sku,
+			&i.ProductName,
+			&i.ReviewCount,
+			&i.AverageRating,
 		); err != nil {
 			return nil, err
 		}
