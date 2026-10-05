@@ -1027,6 +1027,40 @@ func (q *Queries) GetServiceForContractByUUID(ctx context.Context, arg GetServic
 	return i, err
 }
 
+const getServiceSubscriptionForContractByID = `-- name: GetServiceSubscriptionForContractByID :one
+SELECT id, uuid, organization_id, brand_id, seller_org_id, item_id, assigned_by_org_id, assigned_by_user_id, starts_on, ends_on, recurrence, price, currency, rate_snapshot, cancellation_fee, status, contract_id, cancelled_at, expired_at, created_at, updated_at FROM service_subscriptions
+WHERE id = $1
+`
+
+func (q *Queries) GetServiceSubscriptionForContractByID(ctx context.Context, id int64) (ServiceSubscription, error) {
+	row := q.db.QueryRow(ctx, getServiceSubscriptionForContractByID, id)
+	var i ServiceSubscription
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.SellerOrgID,
+		&i.ItemID,
+		&i.AssignedByOrgID,
+		&i.AssignedByUserID,
+		&i.StartsOn,
+		&i.EndsOn,
+		&i.Recurrence,
+		&i.Price,
+		&i.Currency,
+		&i.RateSnapshot,
+		&i.CancellationFee,
+		&i.Status,
+		&i.ContractID,
+		&i.CancelledAt,
+		&i.ExpiredAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const insertContractMedia = `-- name: InsertContractMedia :one
 
 INSERT INTO contract_media (

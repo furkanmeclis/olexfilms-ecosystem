@@ -25,6 +25,29 @@ func (q *Queries) CountCustomerCariAccounts(ctx context.Context, organizationID 
 	return count, err
 }
 
+const countOpenFinanceEntriesBySource = `-- name: CountOpenFinanceEntriesBySource :one
+SELECT COUNT(*)
+FROM finance_entries e
+WHERE e.source_type = $1::text
+  AND e.source_uuid = $2
+  AND e.reversal_of_id IS NULL
+  AND NOT EXISTS (
+      SELECT 1 FROM finance_entries r WHERE r.reversal_of_id = e.id
+  )
+`
+
+type CountOpenFinanceEntriesBySourceParams struct {
+	SourceType string      `json:"source_type"`
+	SourceUuid pgtype.UUID `json:"source_uuid"`
+}
+
+func (q *Queries) CountOpenFinanceEntriesBySource(ctx context.Context, arg CountOpenFinanceEntriesBySourceParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countOpenFinanceEntriesBySource, arg.SourceType, arg.SourceUuid)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countProductSales = `-- name: CountProductSales :one
 SELECT COUNT(*) FROM product_sales
 WHERE organization_id = $1
@@ -151,8 +174,6 @@ func (q *Queries) CountSuppliers(ctx context.Context, arg CountSuppliersParams) 
 }
 
 const createCariForUserIfMissing = `-- name: CreateCariForUserIfMissing :one
-
-
 INSERT INTO cari_accounts (organization_id, brand_id, counterparty_type, counterparty_user_id, currency)
 VALUES (
     $1, $2, 'user',
@@ -169,11 +190,6 @@ type CreateCariForUserIfMissingParams struct {
 	Currency           string `json:"currency"`
 }
 
-// TEC-341 (F3-07a): dealer accounting schema (migration 000093). Every read
-// and write is bounded by the organization the API layer resolved; ledger
-// rows are written through ledger.Post and only linked here.
-// ---------------------------------------------------------------------------
-// Customer cari.
 // CreateCariForUserIfMissing opens the cari of organization_id with a
 // customer. When it already exists no row is returned (pgx.ErrNoRows) and
 // the caller reads it with GetCariAccountByCounterpartyUser.
@@ -741,6 +757,76 @@ func (q *Queries) GetPurchaseByUUID(ctx context.Context, arg GetPurchaseByUUIDPa
 	return i, err
 }
 
+const getRecommendedProductPrice = `-- name: GetRecommendedProductPrice :one
+SELECT recommended_sale_price
+FROM product_prices
+WHERE brand_id = $1
+  AND product_id = $2
+  AND currency = $3::text
+  AND recommended_sale_price IS NOT NULL
+`
+
+type GetRecommendedProductPriceParams struct {
+	BrandID   int64  `json:"brand_id"`
+	ProductID int64  `json:"product_id"`
+	Currency  string `json:"currency"`
+}
+
+func (q *Queries) GetRecommendedProductPrice(ctx context.Context, arg GetRecommendedProductPriceParams) (pgtype.Numeric, error) {
+	row := q.db.QueryRow(ctx, getRecommendedProductPrice, arg.BrandID, arg.ProductID, arg.Currency)
+	var recommended_sale_price pgtype.Numeric
+	err := row.Scan(&recommended_sale_price)
+	return recommended_sale_price, err
+}
+
+const getServedCustomerByUUID = `-- name: GetServedCustomerByUUID :one
+
+
+SELECT u.id, u.uuid, u.email, u.password_hash, u.name, u.surname, u.status, u.email_verified_at, u.last_login_at, u.locale, u.created_at, u.updated_at, u.deleted_at, u.timezone, u.phone_e164, u.phone_verified_at, u.merged_into_user_id, u.legacy_unverified, u.legacy_phone_raw
+FROM users u
+JOIN customer_organizations co ON co.user_id = u.id
+WHERE u.uuid = $1
+  AND co.organization_id = $2
+  AND u.deleted_at IS NULL
+`
+
+type GetServedCustomerByUUIDParams struct {
+	Uuid           uuid.UUID `json:"uuid"`
+	OrganizationID int64     `json:"organization_id"`
+}
+
+// TEC-341 (F3-07a): dealer accounting schema (migration 000093). Every read
+// and write is bounded by the organization the API layer resolved; ledger
+// rows are written through ledger.Post and only linked here.
+// ---------------------------------------------------------------------------
+// Customer cari.
+func (q *Queries) GetServedCustomerByUUID(ctx context.Context, arg GetServedCustomerByUUIDParams) (User, error) {
+	row := q.db.QueryRow(ctx, getServedCustomerByUUID, arg.Uuid, arg.OrganizationID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Name,
+		&i.Surname,
+		&i.Status,
+		&i.EmailVerifiedAt,
+		&i.LastLoginAt,
+		&i.Locale,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Timezone,
+		&i.PhoneE164,
+		&i.PhoneVerifiedAt,
+		&i.MergedIntoUserID,
+		&i.LegacyUnverified,
+		&i.LegacyPhoneRaw,
+	)
+	return i, err
+}
+
 const getStaffPaymentByUUID = `-- name: GetStaffPaymentByUUID :one
 SELECT id, uuid, organization_id, brand_id, staff_id, type, period, amount, currency, paid_on, description, finance_entry_id, created_by_user_id, voided_at, created_at, updated_at FROM staff_payments
 WHERE uuid = $1 AND organization_id = $2
@@ -1007,6 +1093,91 @@ func (q *Queries) ListProductSaleLinesBySales(ctx context.Context, arg ListProdu
 			&i.StockMovementID,
 			&i.SortOrder,
 			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProductSaleStockCandidates = `-- name: ListProductSaleStockCandidates :many
+WITH stock AS (
+    SELECT s.unit_id, s.owner_type, s.owner_id, s.holder_org_id, 1::int AS quantity_on_hand
+    FROM unit_current_state s
+    WHERE s.holder_org_id = $4
+      AND s.brand_id = $1
+      AND s.status IN ('available', 'placed')
+      AND s.owner_type IN ('organization', 'warehouse_location')
+    UNION ALL
+    SELECT h.unit_id, h.owner_type, h.owner_id, h.holder_org_id, h.quantity_on_hand
+    FROM fixed_barcode_holdings h
+    WHERE h.holder_org_id = $4
+      AND h.brand_id = $1
+      AND h.owner_type IN ('organization', 'warehouse_location')
+      AND h.quantity_on_hand > 0
+)
+SELECT u.id AS unit_id, u.uuid AS unit_uuid, u.product_id, u.barcode, u.unit_kind,
+       u.initial_meters, u.remaining_meters,
+       stock.owner_type, stock.owner_id, stock.holder_org_id, stock.quantity_on_hand
+FROM stock
+JOIN units u ON u.id = stock.unit_id
+WHERE u.brand_id = $1
+  AND ($2::bigint IS NULL OR u.product_id = $2::bigint)
+  AND ($3::text IS NULL OR u.barcode = $3::text)
+ORDER BY CASE WHEN stock.owner_type = 'organization' THEN 0 ELSE 1 END, u.id, stock.owner_id
+`
+
+type ListProductSaleStockCandidatesParams struct {
+	BrandID        int64       `json:"brand_id"`
+	ProductID      pgtype.Int8 `json:"product_id"`
+	Barcode        pgtype.Text `json:"barcode"`
+	OrganizationID int64       `json:"organization_id"`
+}
+
+type ListProductSaleStockCandidatesRow struct {
+	UnitID          int64          `json:"unit_id"`
+	UnitUuid        uuid.UUID      `json:"unit_uuid"`
+	ProductID       int64          `json:"product_id"`
+	Barcode         string         `json:"barcode"`
+	UnitKind        string         `json:"unit_kind"`
+	InitialMeters   pgtype.Numeric `json:"initial_meters"`
+	RemainingMeters pgtype.Numeric `json:"remaining_meters"`
+	OwnerType       string         `json:"owner_type"`
+	OwnerID         int64          `json:"owner_id"`
+	HolderOrgID     int64          `json:"holder_org_id"`
+	QuantityOnHand  int32          `json:"quantity_on_hand"`
+}
+
+func (q *Queries) ListProductSaleStockCandidates(ctx context.Context, arg ListProductSaleStockCandidatesParams) ([]ListProductSaleStockCandidatesRow, error) {
+	rows, err := q.db.Query(ctx, listProductSaleStockCandidates,
+		arg.BrandID,
+		arg.ProductID,
+		arg.Barcode,
+		arg.OrganizationID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListProductSaleStockCandidatesRow{}
+	for rows.Next() {
+		var i ListProductSaleStockCandidatesRow
+		if err := rows.Scan(
+			&i.UnitID,
+			&i.UnitUuid,
+			&i.ProductID,
+			&i.Barcode,
+			&i.UnitKind,
+			&i.InitialMeters,
+			&i.RemainingMeters,
+			&i.OwnerType,
+			&i.OwnerID,
+			&i.HolderOrgID,
+			&i.QuantityOnHand,
 		); err != nil {
 			return nil, err
 		}

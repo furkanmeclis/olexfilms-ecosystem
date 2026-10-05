@@ -5,6 +5,14 @@
 -- ---------------------------------------------------------------------------
 -- Customer cari.
 
+-- name: GetServedCustomerByUUID :one
+SELECT u.*
+FROM users u
+JOIN customer_organizations co ON co.user_id = u.id
+WHERE u.uuid = sqlc.arg(uuid)
+  AND co.organization_id = sqlc.arg(organization_id)
+  AND u.deleted_at IS NULL;
+
 -- CreateCariForUserIfMissing opens the cari of organization_id with a
 -- customer. When it already exists no row is returned (pgx.ErrNoRows) and
 -- the caller reads it with GetCariAccountByCounterpartyUser.
@@ -60,6 +68,14 @@ WHERE organization_id = sqlc.arg(organization_id)
   AND (sqlc.arg(product_ids)::bigint[] IS NULL OR product_id = ANY(sqlc.arg(product_ids)::bigint[]))
 ORDER BY product_id;
 
+-- name: GetRecommendedProductPrice :one
+SELECT recommended_sale_price
+FROM product_prices
+WHERE brand_id = sqlc.arg(brand_id)
+  AND product_id = sqlc.arg(product_id)
+  AND currency = sqlc.arg(currency)::text
+  AND recommended_sale_price IS NOT NULL;
+
 -- name: DeleteDealerProductPrice :execrows
 DELETE FROM dealer_product_prices
 WHERE organization_id = sqlc.arg(organization_id) AND product_id = sqlc.arg(product_id);
@@ -99,6 +115,16 @@ RETURNING *;
 -- name: GetProductSaleByUUID :one
 SELECT * FROM product_sales
 WHERE uuid = sqlc.arg(uuid) AND organization_id = sqlc.arg(organization_id);
+
+-- name: CountOpenFinanceEntriesBySource :one
+SELECT COUNT(*)
+FROM finance_entries e
+WHERE e.source_type = sqlc.arg(source_type)::text
+  AND e.source_uuid = sqlc.arg(source_uuid)
+  AND e.reversal_of_id IS NULL
+  AND NOT EXISTS (
+      SELECT 1 FROM finance_entries r WHERE r.reversal_of_id = e.id
+  );
 
 -- name: ListProductSaleLines :many
 SELECT * FROM product_sale_lines
@@ -145,6 +171,32 @@ WHERE s.organization_id = sqlc.arg(organization_id)
   AND s.sold_at < sqlc.arg(sold_to)::timestamptz
 GROUP BY l.product_id
 ORDER BY l.product_id;
+
+-- name: ListProductSaleStockCandidates :many
+WITH stock AS (
+    SELECT s.unit_id, s.owner_type, s.owner_id, s.holder_org_id, 1::int AS quantity_on_hand
+    FROM unit_current_state s
+    WHERE s.holder_org_id = sqlc.arg(organization_id)
+      AND s.brand_id = sqlc.arg(brand_id)
+      AND s.status IN ('available', 'placed')
+      AND s.owner_type IN ('organization', 'warehouse_location')
+    UNION ALL
+    SELECT h.unit_id, h.owner_type, h.owner_id, h.holder_org_id, h.quantity_on_hand
+    FROM fixed_barcode_holdings h
+    WHERE h.holder_org_id = sqlc.arg(organization_id)
+      AND h.brand_id = sqlc.arg(brand_id)
+      AND h.owner_type IN ('organization', 'warehouse_location')
+      AND h.quantity_on_hand > 0
+)
+SELECT u.id AS unit_id, u.uuid AS unit_uuid, u.product_id, u.barcode, u.unit_kind,
+       u.initial_meters, u.remaining_meters,
+       stock.owner_type, stock.owner_id, stock.holder_org_id, stock.quantity_on_hand
+FROM stock
+JOIN units u ON u.id = stock.unit_id
+WHERE u.brand_id = sqlc.arg(brand_id)
+  AND (sqlc.narg(product_id)::bigint IS NULL OR u.product_id = sqlc.narg(product_id)::bigint)
+  AND (sqlc.narg(barcode)::text IS NULL OR u.barcode = sqlc.narg(barcode)::text)
+ORDER BY CASE WHEN stock.owner_type = 'organization' THEN 0 ELSE 1 END, u.id, stock.owner_id;
 
 -- ---------------------------------------------------------------------------
 -- Suppliers.

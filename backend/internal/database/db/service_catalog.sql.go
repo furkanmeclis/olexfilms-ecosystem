@@ -395,6 +395,43 @@ func (q *Queries) ExpireServiceSubscriptions(ctx context.Context, today pgtype.D
 	return items, nil
 }
 
+const getPrimaryOrganizationOwnerForServiceContract = `-- name: GetPrimaryOrganizationOwnerForServiceContract :one
+SELECT u.id, u.uuid, u.email, u.password_hash, u.name, u.surname, u.status, u.email_verified_at, u.last_login_at, u.locale, u.created_at, u.updated_at, u.deleted_at, u.timezone, u.phone_e164, u.phone_verified_at, u.merged_into_user_id, u.legacy_unverified, u.legacy_phone_raw
+FROM organization_members om
+JOIN users u ON u.id = om.user_id AND u.deleted_at IS NULL
+WHERE om.organization_id = $1
+  AND om.role = 'owner'
+ORDER BY om.user_id
+LIMIT 1
+`
+
+func (q *Queries) GetPrimaryOrganizationOwnerForServiceContract(ctx context.Context, organizationID int64) (User, error) {
+	row := q.db.QueryRow(ctx, getPrimaryOrganizationOwnerForServiceContract, organizationID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Name,
+		&i.Surname,
+		&i.Status,
+		&i.EmailVerifiedAt,
+		&i.LastLoginAt,
+		&i.Locale,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Timezone,
+		&i.PhoneE164,
+		&i.PhoneVerifiedAt,
+		&i.MergedIntoUserID,
+		&i.LegacyUnverified,
+		&i.LegacyPhoneRaw,
+	)
+	return i, err
+}
+
 const getServiceCatalogItem = `-- name: GetServiceCatalogItem :one
 SELECT id, uuid, organization_id, brand_id, name, description, category, default_price, currency, recurrence, cancellation_fee, contract_template_id, is_active, created_at, updated_at FROM service_catalog_items
 WHERE id = $1 AND brand_id = $2
@@ -1057,6 +1094,48 @@ type SetServiceSubscriptionCancelRequestedParams struct {
 
 func (q *Queries) SetServiceSubscriptionCancelRequested(ctx context.Context, arg SetServiceSubscriptionCancelRequestedParams) (ServiceSubscription, error) {
 	row := q.db.QueryRow(ctx, setServiceSubscriptionCancelRequested, arg.ID, arg.BrandID)
+	var i ServiceSubscription
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.SellerOrgID,
+		&i.ItemID,
+		&i.AssignedByOrgID,
+		&i.AssignedByUserID,
+		&i.StartsOn,
+		&i.EndsOn,
+		&i.Recurrence,
+		&i.Price,
+		&i.Currency,
+		&i.RateSnapshot,
+		&i.CancellationFee,
+		&i.Status,
+		&i.ContractID,
+		&i.CancelledAt,
+		&i.ExpiredAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const setServiceSubscriptionContract = `-- name: SetServiceSubscriptionContract :one
+UPDATE service_subscriptions
+SET contract_id = $1
+WHERE id = $2 AND brand_id = $3
+RETURNING id, uuid, organization_id, brand_id, seller_org_id, item_id, assigned_by_org_id, assigned_by_user_id, starts_on, ends_on, recurrence, price, currency, rate_snapshot, cancellation_fee, status, contract_id, cancelled_at, expired_at, created_at, updated_at
+`
+
+type SetServiceSubscriptionContractParams struct {
+	ContractID pgtype.Int8 `json:"contract_id"`
+	ID         int64       `json:"id"`
+	BrandID    int64       `json:"brand_id"`
+}
+
+func (q *Queries) SetServiceSubscriptionContract(ctx context.Context, arg SetServiceSubscriptionContractParams) (ServiceSubscription, error) {
+	row := q.db.QueryRow(ctx, setServiceSubscriptionContract, arg.ContractID, arg.ID, arg.BrandID)
 	var i ServiceSubscription
 	err := row.Scan(
 		&i.ID,

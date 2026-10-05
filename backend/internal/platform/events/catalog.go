@@ -202,6 +202,7 @@ const (
 	StockConsumption           = "stock.consumption"
 	StockPartialConsumption    = "stock.partial_consumption"
 	StockReturn                = "stock.return"
+	StockSale                  = "stock.sale"
 	StockReclassification      = "stock.reclassification"
 	StockCountAdjustment       = "stock.count_adjustment"
 	StockVoid                  = "stock.void"
@@ -569,6 +570,7 @@ func catalogConstants() []string {
 		StockConsumption,
 		StockPartialConsumption,
 		StockReturn,
+		StockSale,
 		StockReclassification,
 		StockCountAdjustment,
 		StockVoid,

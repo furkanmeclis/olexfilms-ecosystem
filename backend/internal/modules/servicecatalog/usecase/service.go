@@ -3,6 +3,8 @@ package usecase
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"regexp"
 	"strings"
@@ -55,8 +57,12 @@ type Store interface {
 	ListServicePriceOverrides(ctx context.Context, arg db.ListServicePriceOverridesParams) ([]db.ServicePriceOverride, error)
 	ListServicePriceOverridesForItems(ctx context.Context, arg db.ListServicePriceOverridesForItemsParams) ([]db.ServicePriceOverride, error)
 	CountServiceSubscriptionsByItem(ctx context.Context, arg db.CountServiceSubscriptionsByItemParams) (int64, error)
+	GetContractTemplateByID(ctx context.Context, id int64) (db.ContractTemplate, error)
+	GetContractTemplateLocale(ctx context.Context, arg db.GetContractTemplateLocaleParams) (db.ContractTemplateLocale, error)
+	GetContractInstanceByID(ctx context.Context, id int64) (db.ContractInstance, error)
 	CountActiveServiceModuleSubscriptions(ctx context.Context, arg db.CountActiveServiceModuleSubscriptionsParams) (int64, error)
 	CreateServiceSubscription(ctx context.Context, arg db.CreateServiceSubscriptionParams) (db.ServiceSubscription, error)
+	SetServiceSubscriptionContract(ctx context.Context, arg db.SetServiceSubscriptionContractParams) (db.ServiceSubscription, error)
 	GetServiceSubscriptionByUUID(ctx context.Context, arg db.GetServiceSubscriptionByUUIDParams) (db.ServiceSubscription, error)
 	ListServiceSubscriptionsByBrand(ctx context.Context, arg db.ListServiceSubscriptionsByBrandParams) ([]db.ServiceSubscription, error)
 	ListServiceSubscriptionsByOrgs(ctx context.Context, arg db.ListServiceSubscriptionsByOrgsParams) ([]db.ServiceSubscription, error)
@@ -67,6 +73,8 @@ type Store interface {
 	DecideServiceSubscriptionCancelRequest(ctx context.Context, arg db.DecideServiceSubscriptionCancelRequestParams) (db.ServiceSubscriptionCancelRequest, error)
 	GetOrganizationByUUID(ctx context.Context, argUuid uuid.UUID) (db.Organization, error)
 	GetOrganizationByID(ctx context.Context, id int64) (db.Organization, error)
+	GetUserByID(ctx context.Context, id int64) (db.User, error)
+	GetPrimaryOrganizationOwnerForServiceContract(ctx context.Context, organizationID int64) (db.User, error)
 	SupplierOf(ctx context.Context, id int64) (db.Organization, error)
 	Descendants(ctx context.Context, id int64) ([]db.Organization, error)
 	ListOrganizationOwnerUserIDs(ctx context.Context, organizationID int64) ([]int64, error)
@@ -161,6 +169,9 @@ func (s *Service) Create(ctx context.Context, org orgctx.Scope, in ItemInput) (I
 	if err != nil {
 		return ItemView{}, err
 	}
+	if err := s.validateContractTemplate(ctx, org.BrandID, p.ContractTemplateID); err != nil {
+		return ItemView{}, err
+	}
 	item, err := s.q.CreateServiceCatalogItem(ctx, p)
 	if err != nil {
 		return ItemView{}, mapDBError(err)
@@ -189,6 +200,9 @@ func (s *Service) Update(ctx context.Context, org orgctx.Scope, id uuid.UUID, in
 	}
 	p, err := buildUpdate(cur, in)
 	if err != nil {
+		return ItemView{}, err
+	}
+	if err := s.validateContractTemplate(ctx, org.BrandID, p.ContractTemplateID); err != nil {
 		return ItemView{}, err
 	}
 	item, err := s.q.UpdateServiceCatalogItem(ctx, p)
@@ -400,6 +414,23 @@ func (s *Service) distributor(ctx context.Context, brandID int64, id uuid.UUID) 
 		return db.Organization{}, ErrNotFound
 	}
 	return org, err
+}
+
+func (s *Service) validateContractTemplate(ctx context.Context, brandID int64, id pgtype.Int8) error {
+	if !id.Valid {
+		return nil
+	}
+	tpl, err := s.q.GetContractTemplateByID(ctx, id.Int64)
+	if errors.Is(err, pgx.ErrNoRows) || tpl.BrandID != brandID {
+		return invalid("contract_template_id", "is invalid")
+	}
+	if err != nil {
+		return err
+	}
+	if tpl.Kind != "service_sale" {
+		return invalid("contract_template_id", "must reference a service_sale template")
+	}
+	return nil
 }
 
 func (s *Service) views(ctx context.Context, items []db.ServiceCatalogItem, buyer *db.Organization, viewer pricing.Viewer) []ItemView {
@@ -676,6 +707,19 @@ func int8Arg(v *int64) pgtype.Int8 {
 }
 
 func strPtr(s string) *string { return &s }
+
+func pgText(s string) pgtype.Text {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return pgtype.Text{}
+	}
+	return pgtype.Text{String: s, Valid: true}
+}
+
+func sha256Hex(body []byte) string {
+	sum := sha256.Sum256(body)
+	return hex.EncodeToString(sum[:])
+}
 
 func overrideView(org uuid.UUID, ov db.ServicePriceOverride) OverrideView {
 	return OverrideView{OrganizationUUID: org, Price: numText(ov.Price), Currency: ov.Currency}

@@ -7575,6 +7575,110 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/dealer-prices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List dealer product sale prices */
+        get: operations["listDealerPrices"];
+        /** Set a dealer product sale price */
+        put: operations["setDealerPrice"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/product-sales": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a quick product sale */
+        post: operations["createProductSale"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/product-sales/{uuid}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Void a same-day product sale */
+        post: operations["voidProductSale"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/suppliers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List suppliers */
+        get: operations["listSuppliers"];
+        put?: never;
+        /** Create a supplier */
+        post: operations["createSupplier"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/suppliers/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update a supplier */
+        patch: operations["updateSupplier"];
+        trace?: never;
+    };
+    "/v1/purchases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create an external purchase expense */
+        post: operations["createPurchase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/accounting/categories": {
         parameters: {
             query?: never;
@@ -14985,8 +15089,15 @@ export interface components {
             starts_on: string;
             /** Format: date */
             ends_on: string;
+        };
+        ServiceSubscriptionContract: {
+            /** Format: uuid */
+            uuid: string;
             /** Format: int64 */
-            contract_id?: number | null;
+            contract_no: number;
+            /** @enum {string} */
+            status: "draft" | "pending" | "executed" | "voided";
+            pdf_ready: boolean;
         };
         ServiceSubscription: {
             /** Format: uuid */
@@ -15009,6 +15120,8 @@ export interface components {
             };
             cancellation_fee: string;
             status: components["schemas"]["ServiceSubscriptionStatus"];
+            /** @description Linked subscription contract summary. Pending means signatures are still expected. */
+            contract?: components["schemas"]["ServiceSubscriptionContract"];
             /** Format: date-time */
             created_at: string;
         };
@@ -17880,6 +17993,166 @@ export interface components {
             data: {
                 archived: boolean;
             };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        DealerPrice: {
+            /** Format: uuid */
+            product_uuid: string;
+            /** @example 1200.00 */
+            sale_price: string;
+            /** @example TRY */
+            currency: string;
+            /** @example 1500.00 */
+            recommended_sale_price?: string | null;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        DealerPriceRequest: {
+            /** Format: uuid */
+            product_uuid: string;
+            /** @example 1200.00 */
+            sale_price: string;
+        };
+        ProductSaleLineRequest: {
+            /** Format: uuid */
+            product_uuid?: string | null;
+            barcode?: string;
+            /** @default 1 */
+            quantity: number;
+            /** @example 1200.00 */
+            unit_price: string;
+        };
+        ProductSaleRequest: {
+            /** Format: uuid */
+            customer_uuid?: string | null;
+            /** @enum {string} */
+            payment_method: "cash" | "card" | "cari";
+            note?: string;
+            lines: components["schemas"]["ProductSaleLineRequest"][];
+        };
+        ProductSaleLine: {
+            /** Format: uuid */
+            product_uuid: string;
+            /** Format: uuid */
+            unit_uuid?: string | null;
+            barcode?: string | null;
+            /** @example 1.00 */
+            quantity: string;
+            /** @example 1200.00 */
+            unit_price: string;
+            /** @example 1200.00 */
+            line_total: string;
+            /** @example 800.00 */
+            purchase_unit_cost?: string | null;
+            /** @example 400.00 */
+            profit?: string | null;
+        };
+        ProductSale: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            customer_uuid?: string | null;
+            /** @enum {string} */
+            payment_method: "cash" | "card" | "cari";
+            currency: string;
+            /** @example 1200.00 */
+            total: string;
+            /** @example 400.00 */
+            profit: string;
+            /** Format: date-time */
+            sold_at: string;
+            voided: boolean;
+            lines: components["schemas"]["ProductSaleLine"][];
+        };
+        Supplier: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            tax_no?: string | null;
+            phone_e164?: string | null;
+            /** Format: email */
+            email?: string | null;
+            note: string;
+            active: boolean;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        SupplierRequest: {
+            name: string;
+            tax_no?: string | null;
+            phone_e164?: string | null;
+            /** Format: email */
+            email?: string | null;
+            note?: string;
+            active?: boolean | null;
+        };
+        PurchaseRequest: {
+            /** Format: uuid */
+            supplier_uuid: string;
+            /** @example 250.00 */
+            amount: string;
+            /** @enum {string} */
+            payment_method: "cash" | "card" | "bank_transfer" | "cari";
+            note?: string;
+            description?: string;
+        };
+        Purchase: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            supplier_uuid: string;
+            /** @example 250.00 */
+            amount: string;
+            currency: string;
+            /** @enum {string} */
+            payment_method: "cash" | "card" | "bank_transfer" | "cari";
+            /** Format: date */
+            purchased_on: string;
+            note: string;
+        };
+        VoidRequest: {
+            reason?: string;
+        };
+        EnvelopeDealerPrice: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["DealerPrice"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeDealerPriceList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["DealerPrice"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeProductSale: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ProductSale"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeSupplier: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Supplier"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeSupplierList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["Supplier"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePurchase: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Purchase"];
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @description The API key is never returned; `api_key_set` and `api_key_masked` stand in for it. */
@@ -31531,6 +31804,196 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    listDealerPrices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dealer prices */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDealerPriceList"];
+                };
+            };
+        };
+    };
+    setDealerPrice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DealerPriceRequest"];
+            };
+        };
+        responses: {
+            /** @description Dealer price */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDealerPrice"];
+                };
+            };
+        };
+    };
+    createProductSale: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductSaleRequest"];
+            };
+        };
+        responses: {
+            /** @description Product sale */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeProductSale"];
+                };
+            };
+        };
+    };
+    voidProductSale: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoidRequest"];
+            };
+        };
+        responses: {
+            /** @description Voided product sale */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeProductSale"];
+                };
+            };
+        };
+    };
+    listSuppliers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Suppliers */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeSupplierList"];
+                };
+            };
+        };
+    };
+    createSupplier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupplierRequest"];
+            };
+        };
+        responses: {
+            /** @description Supplier */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeSupplier"];
+                };
+            };
+        };
+    };
+    updateSupplier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupplierRequest"];
+            };
+        };
+        responses: {
+            /** @description Supplier */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeSupplier"];
+                };
+            };
+        };
+    };
+    createPurchase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PurchaseRequest"];
+            };
+        };
+        responses: {
+            /** @description Purchase */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePurchase"];
+                };
+            };
         };
     };
     listAccountingCategories: {

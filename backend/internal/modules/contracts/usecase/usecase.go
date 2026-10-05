@@ -753,11 +753,24 @@ func (s *Service) scopedInstance(ctx context.Context, c Caller, id uuid.UUID) (d
 		return db.ContractInstance{}, notFound(err)
 	}
 	if f.UserOnly() {
-		svc, err := s.repo.Queries().GetServiceForContractByID(ctx, row.SubjectID)
-		if err != nil {
-			return db.ContractInstance{}, err
-		}
-		if !svc.CreatedByUserID.Valid || svc.CreatedByUserID.Int64 != f.UserID {
+		switch row.SubjectType {
+		case "service":
+			svc, err := s.repo.Queries().GetServiceForContractByID(ctx, row.SubjectID)
+			if err != nil {
+				return db.ContractInstance{}, err
+			}
+			if !svc.CreatedByUserID.Valid || svc.CreatedByUserID.Int64 != f.UserID {
+				return db.ContractInstance{}, ErrNotFound
+			}
+		case "service_subscription":
+			sub, err := s.repo.Queries().GetServiceSubscriptionForContractByID(ctx, row.SubjectID)
+			if err != nil {
+				return db.ContractInstance{}, err
+			}
+			if !sub.AssignedByUserID.Valid || sub.AssignedByUserID.Int64 != f.UserID {
+				return db.ContractInstance{}, ErrNotFound
+			}
+		default:
 			return db.ContractInstance{}, ErrNotFound
 		}
 	}
@@ -1234,7 +1247,11 @@ var variables = []model.Variable{
 	text("vehicle", "vin", "VIN", "VIN"),
 	text("vehicle", "vehicle_label", "Araç", "Vehicle"),
 	text("service", "service_no", "Hizmet no", "Service no"),
+	text("service", "service_name", "Hizmet adı", "Service name"),
 	text("service", "package", "Paket", "Package"),
+	text("service", "start_date", "Başlangıç tarihi", "Start date"),
+	text("service", "end_date", "Bitiş tarihi", "End date"),
+	text("service", "price", "Fiyat", "Price"),
 	text("organization", "org_name", "Organizasyon adı", "Organization name"),
 	text("organization", "org_phone", "Organizasyon telefonu", "Organization phone"),
 	text("organization", "org_email", "Organizasyon e-postası", "Organization e-mail"),
