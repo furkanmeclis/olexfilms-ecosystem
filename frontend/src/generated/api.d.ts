@@ -8214,6 +8214,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/warranty-claims/{uuid}/reapply-service": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a re-application service for an approved warranty claim
+         * @description Opens a draft service linked to the approved claim. If an existing linked re-application service is still open, the request returns 409.
+         */
+        post: operations["createWarrantyClaimReapplyService"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portal/warranty-claims": {
         parameters: {
             query?: never;
@@ -15683,6 +15703,8 @@ export interface components {
             /** @description The caller may add or remove items */
             items_editable: boolean;
             available_transitions: components["schemas"]["ServiceStatus"][];
+            /** @description True when the service was opened from an approved warranty claim. */
+            is_warranty_reapply: boolean;
             items?: components["schemas"]["ServiceItem"][];
             images?: components["schemas"]["ServiceImage"][];
             status_logs?: components["schemas"]["ServiceStatusLog"][];
@@ -15910,6 +15932,12 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        WarrantyClaimReapplyService: {
+            /** Format: uuid */
+            uuid: string;
+            service_no: string;
+            status: components["schemas"]["ServiceStatus"];
+        };
         PortalWarrantyClaimStatus: {
             /** Format: uuid */
             uuid: string;
@@ -15950,6 +15978,12 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["WarrantyClaimPhoto"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWarrantyClaimReapplyService: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WarrantyClaimReapplyService"];
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeWarrantyClaimPage: {
@@ -32630,6 +32664,35 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    createWarrantyClaimReapplyService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created re-application service reference */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarrantyClaimReapplyService"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["UnprocessableEntity"];
         };
     };

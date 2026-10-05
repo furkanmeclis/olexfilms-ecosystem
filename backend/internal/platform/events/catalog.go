@@ -282,6 +282,8 @@ const (
 	AppointmentCreated     = "appointment.created"
 	AppointmentRescheduled = "appointment.rescheduled"
 	AppointmentCancelled   = "appointment.cancelled"
+	AppointmentReminder    = "appointment.reminder"
+	AppointmentNoShow      = "appointment.no_show"
 )
 
 // ServiceReviewRequested is written by the delayed service:review_request
@@ -609,6 +611,8 @@ func catalogConstants() []string {
 		AppointmentCreated,
 		AppointmentRescheduled,
 		AppointmentCancelled,
+		AppointmentReminder,
+		AppointmentNoShow,
 		ServiceReviewRequested,
 		WarrantyCreated,
 		WarrantyExpiringSoon,

@@ -95,6 +95,30 @@ func TestServiceReviewLowScoreDispatch(t *testing.T) {
 	}
 }
 
+func TestAppointmentDispatch(t *testing.T) {
+	ev := events.New(events.AppointmentReminder).WithPayload(map[string]any{
+		"customer_user_id": int64(42), "brand_id": int64(3), "appointment_uuid": "u-1",
+		"organization_name": "Tech Oto", "starts_at": "2026-10-06T09:00:00Z", "plate": "34 ABC 123",
+	})
+	in, ok := appointmentDispatcher(catalog.EventAppointmentReminder)(ev)
+	if !ok {
+		t.Fatal("want a dispatch")
+	}
+	if in.EventCode != catalog.EventAppointmentReminder || len(in.UserIDs) != 1 || in.UserIDs[0] != 42 {
+		t.Fatalf("dispatch = %+v", in)
+	}
+	if in.BrandID == nil || *in.BrandID != 3 {
+		t.Fatalf("brand = %v", in.BrandID)
+	}
+	if in.Vars["organization_name"] != "Tech Oto" || in.Vars["starts_at"] != "2026-10-06T09:00:00Z" ||
+		in.Vars["plate"] != "34 ABC 123" {
+		t.Fatalf("vars = %v", in.Vars)
+	}
+	if _, ok := appointmentDispatcher(catalog.EventAppointmentCreated)(events.New(events.AppointmentCreated)); ok {
+		t.Fatal("no customer: want no dispatch")
+	}
+}
+
 // TEC-164: customer.created (as the outbox redelivers it: JSON numbers)
 // becomes the welcome dispatch with the portal link; no phone, no message.
 func TestCustomerWelcomeDispatch(t *testing.T) {

@@ -157,6 +157,7 @@ type ServiceView struct {
 	Images               []ImageView     `json:"images,omitempty"`
 	StatusLogs           []StatusLogView `json:"status_logs,omitempty"`
 	Warranties           []WarrantyView  `json:"warranties,omitempty"`
+	IsWarrantyReapply    bool            `json:"is_warranty_reapply"`
 }
 
 func tsPtr(t pgtype.Timestamptz) *time.Time {
@@ -208,6 +209,7 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, svc db.S
 		CreatedAt: svc.CreatedAt.Time, UpdatedAt: svc.UpdatedAt.Time,
 		Editable: canWrite, ItemsEditable: canWrite && itemsEditable(svc.Status),
 		AvailableTransitions: availableTransitions(c, svc),
+		IsWarrantyReapply:    svc.WarrantyClaimID.Valid,
 	}
 	if svc.ModelYear.Valid {
 		y := svc.ModelYear.Int16

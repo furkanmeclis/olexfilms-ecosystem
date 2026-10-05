@@ -30,12 +30,17 @@ WHERE sr.brand_id = $1::bigint
            JOIN products p ON p.id = si.product_id AND p.brand_id = si.brand_id
            WHERE si.service_id = sr.service_id AND p.uuid = $4::uuid
        ))
-  AND ($5::smallint IS NULL
-       OR sr.platform_rating >= $5::smallint
-       OR sr.product_rating >= $5::smallint)
-  AND ($6::smallint IS NULL
-       OR sr.platform_rating <= $6::smallint
-       OR sr.product_rating <= $6::smallint)
+  AND (
+      ($5::smallint IS NULL AND $6::smallint IS NULL)
+      OR (
+          ($5::smallint IS NULL OR sr.platform_rating >= $5::smallint)
+          AND ($6::smallint IS NULL OR sr.platform_rating <= $6::smallint)
+      )
+      OR (
+          ($5::smallint IS NULL OR sr.product_rating >= $5::smallint)
+          AND ($6::smallint IS NULL OR sr.product_rating <= $6::smallint)
+      )
+  )
   AND ($7::timestamptz IS NULL OR sr.created_at >= $7::timestamptz)
   AND ($8::timestamptz IS NULL OR sr.created_at < $8::timestamptz)
 `
@@ -220,12 +225,17 @@ WHERE sr.brand_id = $1::bigint
            JOIN products p ON p.id = si.product_id AND p.brand_id = si.brand_id
            WHERE si.service_id = sr.service_id AND p.uuid = $4::uuid
        ))
-  AND ($5::smallint IS NULL
-       OR sr.platform_rating >= $5::smallint
-       OR sr.product_rating >= $5::smallint)
-  AND ($6::smallint IS NULL
-       OR sr.platform_rating <= $6::smallint
-       OR sr.product_rating <= $6::smallint)
+  AND (
+      ($5::smallint IS NULL AND $6::smallint IS NULL)
+      OR (
+          ($5::smallint IS NULL OR sr.platform_rating >= $5::smallint)
+          AND ($6::smallint IS NULL OR sr.platform_rating <= $6::smallint)
+      )
+      OR (
+          ($5::smallint IS NULL OR sr.product_rating >= $5::smallint)
+          AND ($6::smallint IS NULL OR sr.product_rating <= $6::smallint)
+      )
+  )
   AND ($7::timestamptz IS NULL OR sr.created_at >= $7::timestamptz)
   AND ($8::timestamptz IS NULL OR sr.created_at < $8::timestamptz)
 ORDER BY sr.created_at DESC, sr.id DESC

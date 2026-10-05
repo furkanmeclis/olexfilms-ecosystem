@@ -52,12 +52,17 @@ WHERE sr.brand_id = sqlc.arg(brand_id)::bigint
            JOIN products p ON p.id = si.product_id AND p.brand_id = si.brand_id
            WHERE si.service_id = sr.service_id AND p.uuid = sqlc.narg(product_uuid)::uuid
        ))
-  AND (sqlc.narg(min_rating)::smallint IS NULL
-       OR sr.platform_rating >= sqlc.narg(min_rating)::smallint
-       OR sr.product_rating >= sqlc.narg(min_rating)::smallint)
-  AND (sqlc.narg(max_rating)::smallint IS NULL
-       OR sr.platform_rating <= sqlc.narg(max_rating)::smallint
-       OR sr.product_rating <= sqlc.narg(max_rating)::smallint)
+  AND (
+      (sqlc.narg(min_rating)::smallint IS NULL AND sqlc.narg(max_rating)::smallint IS NULL)
+      OR (
+          (sqlc.narg(min_rating)::smallint IS NULL OR sr.platform_rating >= sqlc.narg(min_rating)::smallint)
+          AND (sqlc.narg(max_rating)::smallint IS NULL OR sr.platform_rating <= sqlc.narg(max_rating)::smallint)
+      )
+      OR (
+          (sqlc.narg(min_rating)::smallint IS NULL OR sr.product_rating >= sqlc.narg(min_rating)::smallint)
+          AND (sqlc.narg(max_rating)::smallint IS NULL OR sr.product_rating <= sqlc.narg(max_rating)::smallint)
+      )
+  )
   AND (sqlc.narg(created_from)::timestamptz IS NULL OR sr.created_at >= sqlc.narg(created_from)::timestamptz)
   AND (sqlc.narg(created_to)::timestamptz IS NULL OR sr.created_at < sqlc.narg(created_to)::timestamptz)
 ORDER BY sr.created_at DESC, sr.id DESC
@@ -81,12 +86,17 @@ WHERE sr.brand_id = sqlc.arg(brand_id)::bigint
            JOIN products p ON p.id = si.product_id AND p.brand_id = si.brand_id
            WHERE si.service_id = sr.service_id AND p.uuid = sqlc.narg(product_uuid)::uuid
        ))
-  AND (sqlc.narg(min_rating)::smallint IS NULL
-       OR sr.platform_rating >= sqlc.narg(min_rating)::smallint
-       OR sr.product_rating >= sqlc.narg(min_rating)::smallint)
-  AND (sqlc.narg(max_rating)::smallint IS NULL
-       OR sr.platform_rating <= sqlc.narg(max_rating)::smallint
-       OR sr.product_rating <= sqlc.narg(max_rating)::smallint)
+  AND (
+      (sqlc.narg(min_rating)::smallint IS NULL AND sqlc.narg(max_rating)::smallint IS NULL)
+      OR (
+          (sqlc.narg(min_rating)::smallint IS NULL OR sr.platform_rating >= sqlc.narg(min_rating)::smallint)
+          AND (sqlc.narg(max_rating)::smallint IS NULL OR sr.platform_rating <= sqlc.narg(max_rating)::smallint)
+      )
+      OR (
+          (sqlc.narg(min_rating)::smallint IS NULL OR sr.product_rating >= sqlc.narg(min_rating)::smallint)
+          AND (sqlc.narg(max_rating)::smallint IS NULL OR sr.product_rating <= sqlc.narg(max_rating)::smallint)
+      )
+  )
   AND (sqlc.narg(created_from)::timestamptz IS NULL OR sr.created_at >= sqlc.narg(created_from)::timestamptz)
   AND (sqlc.narg(created_to)::timestamptz IS NULL OR sr.created_at < sqlc.narg(created_to)::timestamptz);
 
