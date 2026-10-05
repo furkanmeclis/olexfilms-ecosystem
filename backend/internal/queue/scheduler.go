@@ -24,6 +24,7 @@ type Periodic struct {
 }
 
 const logPurgeCron = "@every 5m"
+const appointmentNoShowScanCron = "@every 15m"
 
 // Exchange rates (TEC-84): TCMB publishes ~15:30 TR, ECB ~16:00 CET (17:00-18:00
 // TR), so the weekday run is after both; the morning run fills a missed day.
@@ -51,6 +52,8 @@ func Schedules() []Periodic {
 		{Cron: inventoryRebuildCron, Type: TaskInventoryRebuild, Queue: QueueMaintenance, New: newNightlyInventoryRebuildTask},
 		// TEC-221: hourly center task due date reminders (idempotent).
 		{Cron: tasksDueScanCron, Type: TaskTasksDueScan, Queue: QueueMaintenance, Opts: tasksDueScanOpts(), New: NewTasksDueScanTask},
+		// TEC-325: mark appointments that are still open two hours after start.
+		{Cron: appointmentNoShowScanCron, Type: TaskAppointmentNoShowScan, Queue: QueueMaintenance, Opts: appointmentNoShowScanOpts(), New: NewAppointmentNoShowScanTask},
 		// TEC-314: daily quote expiry (idempotent).
 		{Cron: quoteExpireCron, Type: TaskQuoteExpire, Queue: QueueMaintenance, Opts: quoteExpireOpts(), New: NewQuoteExpireTask},
 		// TEC-207: hourly end-of-day warehouse reports (idempotent).
