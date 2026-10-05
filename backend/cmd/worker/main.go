@@ -184,6 +184,11 @@ func main() {
 		// TEC-175: cari statement and balance report exports (read only).
 		accountingusecase.NewStatementAdapter(accountingSvc),
 		accountingusecase.NewBalancesAdapter(accountingSvc),
+		// TEC-346: P&L, margin, cari aging and staff cost report exports.
+		accountingusecase.NewPnlAdapter(accountingSvc),
+		accountingusecase.NewMarginAdapter(accountingSvc),
+		accountingusecase.NewCariAgingAdapter(accountingSvc),
+		accountingusecase.NewStaffCostAdapter(accountingSvc),
 		// TEC-161: personal data export (read only; identity numbers stay
 		// masked, so no PII key is needed here).
 		customersusecase.NewDataExportAdapter(customersExportSvc),

@@ -8284,6 +8284,166 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/accounting/reports/pnl": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Income, expense and net of the own book (TEC-346)
+         * @description Ledger income/expense rows of the active organization in its currency, grouped by UTC month or by category. Reversal rows net out. A center or distributor reads its own book only, never a child's.
+         */
+        get: operations["getAccountingPnlReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/reports/pnl/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a P&L export job (PDF, XLSX or CSV)
+         * @description The job runs on the exports queue and lands in the central export list; poll and download through /v1/accounting/exports/{uuid}. PDF is the generic table on the organization letterhead.
+         */
+        post: operations["exportAccountingPnlReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/reports/margin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Service and product sale margin of the own book (TEC-346)
+         * @description Services whose income was recorded in the period (revenue and the purchase cost of consumed units) and product sales per product (line purchase cost snapshot; voided sales left out). cost, gross_profit, margin_pct and cost_incomplete are null without pricing.purchase.read.
+         */
+        get: operations["getAccountingMarginReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/reports/margin/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a margin report export job (PDF, XLSX or CSV)
+         * @description The job runs on the exports queue and lands in the central export list; poll and download through /v1/accounting/exports/{uuid}. PDF is the generic table on the organization letterhead.
+         */
+        post: operations["exportAccountingMarginReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/reports/cari-aging": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cari aging of the own book (TEC-346)
+         * @description Every customer and organization cari with an open balance as of a day (default today, UTC), split into 0-30 / 31-60 / 61-90 / 90+ day buckets. The open amount is matched to the newest rows that raised it (payments settle the oldest rows first).
+         */
+        get: operations["getAccountingCariAgingReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/reports/cari-aging/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a cari aging export job (PDF, XLSX or CSV)
+         * @description The job runs on the exports queue and lands in the central export list; poll and download through /v1/accounting/exports/{uuid}. PDF is the generic table on the organization letterhead.
+         */
+        post: operations["exportAccountingCariAgingReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/reports/staff-cost": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff cost of the own book (TEC-346)
+         * @description Salary, advance and bonus totals per staff card over the non-void payments whose payment day falls in the period.
+         */
+        get: operations["getAccountingStaffCostReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/reports/staff-cost/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a staff cost export job (PDF, XLSX or CSV)
+         * @description The job runs on the exports queue and lands in the central export list; poll and download through /v1/accounting/exports/{uuid}. PDF is the generic table on the organization letterhead.
+         */
+        post: operations["exportAccountingStaffCostReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/warranties": {
         parameters: {
             query?: never;
@@ -16019,6 +16179,192 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["AccountingBalanceReport"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        AccountingReportExportInput: {
+            /** @enum {string} */
+            format: "pdf" | "xlsx" | "csv";
+            /**
+             * Format: uuid
+             * @description Only the active organization (default); any other is 404
+             */
+            organization_uuid?: string | null;
+            /**
+             * Format: date
+             * @description P&L, margin and staff cost
+             */
+            from?: string;
+            /**
+             * Format: date
+             * @description P&L, margin and staff cost
+             */
+            to?: string;
+            /**
+             * Format: date
+             * @description Cari aging only
+             */
+            as_of?: string;
+            /**
+             * @description P&L only (default month)
+             * @enum {string}
+             */
+            group?: "month" | "category";
+            /**
+             * @description Report language override (default the user language)
+             * @example tr
+             */
+            locale?: string;
+        };
+        AccountingPnlLine: {
+            /** @description YYYY-MM or the category key */
+            key: string;
+            label: string;
+            income: components["schemas"]["AccountingAmount"];
+            expense: components["schemas"]["AccountingAmount"];
+            net: components["schemas"]["AccountingAmount"];
+            /** Format: int64 */
+            entry_count: number;
+        };
+        AccountingPnlReport: {
+            organization: components["schemas"]["AccountingRef"];
+            currency: string;
+            /** Format: date */
+            from: string | null;
+            /** Format: date */
+            to: string | null;
+            /** @enum {string} */
+            group: "month" | "category";
+            lines: components["schemas"]["AccountingPnlLine"][];
+            totals: {
+                income: components["schemas"]["AccountingAmount"];
+                expense: components["schemas"]["AccountingAmount"];
+                net: components["schemas"]["AccountingAmount"];
+            };
+            /** Format: date-time */
+            generated_at: string;
+        };
+        AccountingMarginFigures: {
+            revenue: components["schemas"]["AccountingAmount"];
+            cost: components["schemas"]["AccountingAmount"] | null;
+            gross_profit: components["schemas"]["AccountingAmount"] | null;
+            /**
+             * @description Gross profit as a percent of revenue (2 decimals); null without revenue or cost visibility
+             * @example 40.00
+             */
+            margin_pct: string | null;
+        };
+        AccountingMarginProduct: components["schemas"]["AccountingMarginFigures"] & {
+            /** Format: uuid */
+            product_uuid: string;
+            sku: string;
+            name: string;
+            /** @example 2.00 */
+            quantity: string;
+            /** Format: int64 */
+            sale_count: number;
+            /** @description Some lines had no purchase cost snapshot (counted as zero) */
+            cost_incomplete: boolean | null;
+        };
+        AccountingMarginReport: {
+            organization: components["schemas"]["AccountingRef"];
+            currency: string;
+            /** Format: date */
+            from: string | null;
+            /** Format: date */
+            to: string | null;
+            cost_visible: boolean;
+            services: components["schemas"]["AccountingMarginFigures"] & {
+                /** Format: int64 */
+                service_count: number;
+            };
+            product_sales: components["schemas"]["AccountingMarginFigures"];
+            products: components["schemas"]["AccountingMarginProduct"][];
+            total: components["schemas"]["AccountingMarginFigures"];
+            /** Format: date-time */
+            generated_at: string;
+        };
+        AccountingAgingBuckets: {
+            days_0_30: components["schemas"]["AccountingAmount"];
+            days_31_60: components["schemas"]["AccountingAmount"];
+            days_61_90: components["schemas"]["AccountingAmount"];
+            days_90_plus: components["schemas"]["AccountingAmount"];
+        };
+        AccountingAgingTotal: {
+            balance: components["schemas"]["AccountingAmount"];
+            buckets: components["schemas"]["AccountingAgingBuckets"];
+        };
+        AccountingCariAgingReport: {
+            organization: components["schemas"]["AccountingRef"];
+            currency: string;
+            /** Format: date */
+            as_of: string;
+            lines: {
+                /** Format: uuid */
+                cari_uuid: string;
+                counterparty: components["schemas"]["CariCounterparty"];
+                /** @enum {string} */
+                side: "receivable" | "payable";
+                balance: components["schemas"]["AccountingAmount"];
+                buckets: components["schemas"]["AccountingAgingBuckets"];
+            }[];
+            totals: {
+                receivable: components["schemas"]["AccountingAgingTotal"];
+                payable: components["schemas"]["AccountingAgingTotal"];
+            };
+            /** Format: date-time */
+            generated_at: string;
+        };
+        AccountingStaffCostReport: {
+            organization: components["schemas"]["AccountingRef"];
+            currency: string;
+            /** Format: date */
+            from: string | null;
+            /** Format: date */
+            to: string | null;
+            lines: {
+                /** Format: uuid */
+                staff_uuid: string;
+                name: string;
+                title: string | null;
+                active: boolean;
+                salary: components["schemas"]["AccountingAmount"];
+                advance: components["schemas"]["AccountingAmount"];
+                bonus: components["schemas"]["AccountingAmount"];
+                total: components["schemas"]["AccountingAmount"];
+                /** Format: int64 */
+                payment_count: number;
+            }[];
+            totals: {
+                salary: components["schemas"]["AccountingAmount"];
+                advance: components["schemas"]["AccountingAmount"];
+                bonus: components["schemas"]["AccountingAmount"];
+                total: components["schemas"]["AccountingAmount"];
+            };
+            /** Format: date-time */
+            generated_at: string;
+        };
+        EnvelopeAccountingPnlReport: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AccountingPnlReport"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAccountingMarginReport: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AccountingMarginReport"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAccountingCariAgingReport: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AccountingCariAgingReport"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAccountingStaffCostReport: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AccountingStaffCostReport"];
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
@@ -33533,6 +33879,242 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getAccountingPnlReport: {
+        parameters: {
+            query?: {
+                /** @description Only the active organization (default); any other organization is 404 (no subtree read). */
+                organization_uuid?: string;
+                /** @description First day (UTC, inclusive) */
+                from?: string;
+                /** @description Last day (UTC, inclusive) */
+                to?: string;
+                group?: "month" | "category";
+                /** @description Category label language override */
+                locale?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAccountingPnlReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    exportAccountingPnlReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountingReportExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getAccountingMarginReport: {
+        parameters: {
+            query?: {
+                /** @description Only the active organization (default); any other organization is 404 (no subtree read). */
+                organization_uuid?: string;
+                /** @description First day (UTC, inclusive) */
+                from?: string;
+                /** @description Last day (UTC, inclusive) */
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAccountingMarginReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    exportAccountingMarginReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountingReportExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getAccountingCariAgingReport: {
+        parameters: {
+            query?: {
+                /** @description Only the active organization (default); any other organization is 404 (no subtree read). */
+                organization_uuid?: string;
+                as_of?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAccountingCariAgingReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    exportAccountingCariAgingReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountingReportExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getAccountingStaffCostReport: {
+        parameters: {
+            query?: {
+                /** @description Only the active organization (default); any other organization is 404 (no subtree read). */
+                organization_uuid?: string;
+                /** @description First day (UTC, inclusive) */
+                from?: string;
+                /** @description Last day (UTC, inclusive) */
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAccountingStaffCostReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    exportAccountingStaffCostReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountingReportExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     listWarranties: {

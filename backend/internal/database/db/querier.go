@@ -716,6 +716,11 @@ type Querier interface {
 	// brand when there is no active organization.
 	GetLocaleSources(ctx context.Context, arg GetLocaleSourcesParams) (GetLocaleSourcesRow, error)
 	GetLogPurgeRuleByUUID(ctx context.Context, argUuid uuid.UUID) (LogPurgeRule, error)
+	// GetMarginServiceSummary is the service margin of the book: services whose
+	// income (F3-07c, services.income_amount) was recorded in the period, and
+	// the purchase cost of the units they consumed (same pricing as
+	// GetServiceConsumedPurchaseCost: the last received order line of the unit).
+	GetMarginServiceSummary(ctx context.Context, arg GetMarginServiceSummaryParams) (GetMarginServiceSummaryRow, error)
 	// GetMaxFinanceEntryRevisionBySource is the highest revision written for a
 	// source in one organization (0: none). TEC-177 opens a new revision of an
 	// opening balance once the previous one is reversed.
@@ -1155,6 +1160,10 @@ type Querier interface {
 	ListCarModels(ctx context.Context, arg ListCarModelsParams) ([]ListCarModelsRow, error)
 	ListCariAccounts(ctx context.Context, arg ListCariAccountsParams) ([]CariAccount, error)
 	ListCariAccountsWithBalance(ctx context.Context, arg ListCariAccountsWithBalanceParams) ([]ListCariAccountsWithBalanceRow, error)
+	// ListCariAgingLines is every cari row of the book written before
+	// created_to (NULL = all), newest first per cari, with its signed cari
+	// effect (receivable positive, as in ListCariStatementLines).
+	ListCariAgingLines(ctx context.Context, arg ListCariAgingLinesParams) ([]ListCariAgingLinesRow, error)
 	ListCariBalances(ctx context.Context, organizationID int64) ([]CariAccountBalance, error)
 	// ListCariBalancesAsOf is every cari of the book with its balance over the
 	// rows written before created_to (NULL = all rows).
@@ -1320,6 +1329,11 @@ type Querier interface {
 	ListLocationSubtreeIDs(ctx context.Context, arg ListLocationSubtreeIDsParams) ([]int64, error)
 	ListLocationsByUUIDs(ctx context.Context, arg ListLocationsByUUIDsParams) ([]WarehouseLocation, error)
 	ListLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
+	// ListMarginProductSales is the product sale margin per product: revenue
+	// and the purchase cost snapshot of the lines (F3-07d). A voided sale (its
+	// income row reversed) is left out; lines without a cost snapshot are
+	// counted so the report can flag an incomplete cost.
+	ListMarginProductSales(ctx context.Context, arg ListMarginProductSalesParams) ([]ListMarginProductSalesRow, error)
 	ListMeasurementDevices(ctx context.Context, organizationID int64) ([]MeasurementDevice, error)
 	// Unlinked accepted measurements of the organization with the VIN; the
 	// matching rule (usecase.Match) decides the phase from measured_at (device
@@ -1414,6 +1428,12 @@ type Querier interface {
 	ListPlateFormats(ctx context.Context, activeOnly bool) ([]ListPlateFormatsRow, error)
 	ListPlatformNotifications(ctx context.Context, arg ListPlatformNotificationsParams) ([]Notification, error)
 	ListPlatformNotificationsForExport(ctx context.Context, arg ListPlatformNotificationsForExportParams) ([]Notification, error)
+	// TEC-346 (F3-07f) reports below read one book (the caller's own
+	// organization); periods are half-open UTC ranges.
+	// ListPnlSums is the income/expense total of the book per UTC month,
+	// category and direction. Reversal rows carry negated amounts, so a voided
+	// row nets out.
+	ListPnlSums(ctx context.Context, arg ListPnlSumsParams) ([]ListPnlSumsRow, error)
 	ListPortalAppointments(ctx context.Context, arg ListPortalAppointmentsParams) ([]Appointment, error)
 	// TEC-288 (F3-01d): the user's executed vehicle intake contracts. The
 	// ownership rule stays identical to portal services: the service customer or
@@ -1560,6 +1580,10 @@ type Querier interface {
 	// anonymized customers are not searchable by name).
 	ListServicesInScope(ctx context.Context, arg ListServicesInScopeParams) ([]Service, error)
 	ListSharedKeys(ctx context.Context, keys []string) ([]string, error)
+	// ListStaffCostTotals is the salary/advance/bonus total per staff card of
+	// the book over the non-void payments paid in the period (paid_on, both
+	// days inclusive).
+	ListStaffCostTotals(ctx context.Context, arg ListStaffCostTotalsParams) ([]ListStaffCostTotalsRow, error)
 	ListStaffPayments(ctx context.Context, arg ListStaffPaymentsParams) ([]StaffPayment, error)
 	ListStaffProfiles(ctx context.Context, arg ListStaffProfilesParams) ([]StaffProfile, error)
 	ListStockCountLines(ctx context.Context, countID int64) ([]StockCountLine, error)

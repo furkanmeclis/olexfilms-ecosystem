@@ -48,6 +48,120 @@ func (q *Queries) GetCariStatementOpening(ctx context.Context, arg GetCariStatem
 	return balance, err
 }
 
+const getMarginServiceSummary = `-- name: GetMarginServiceSummary :one
+WITH svc AS (
+    SELECT s.id, s.organization_id, s.income_amount
+    FROM services s
+    JOIN finance_entries fe ON fe.id = s.income_entry_id
+    WHERE s.organization_id = $1
+      AND s.income_entry_id IS NOT NULL
+      AND ($2::timestamptz IS NULL OR fe.created_at >= $2::timestamptz)
+      AND ($3::timestamptz IS NULL OR fe.created_at < $3::timestamptz)
+), consumed AS (
+    SELECT si.service_id, SUM(
+        CASE
+          WHEN si.meters IS NOT NULL THEN si.meters * bought.unit_price
+          WHEN si.quantity IS NOT NULL THEN si.quantity * bought.unit_price
+          WHEN bought.meters IS NOT NULL THEN bought.meters * bought.unit_price
+          WHEN bought.quantity IS NOT NULL THEN bought.quantity * bought.unit_price
+          ELSE 0
+        END) AS cost
+    FROM svc
+    JOIN service_items si ON si.service_id = svc.id
+    LEFT JOIN LATERAL (
+        SELECT oi.unit_price, oiu.quantity, oiu.meters
+        FROM order_item_units oiu
+        JOIN order_items oi ON oi.id = oiu.order_item_id
+        JOIN orders o ON o.id = oi.order_id
+        WHERE oiu.unit_id = si.unit_id
+          AND o.buyer_org_id = svc.organization_id
+          AND o.status = 'received'
+        ORDER BY o.id DESC, oi.id DESC, oiu.id DESC
+        LIMIT 1
+    ) bought ON TRUE
+    GROUP BY si.service_id
+)
+SELECT COUNT(svc.id) AS service_count,
+       COALESCE(SUM(svc.income_amount), 0)::NUMERIC(18,2) AS revenue,
+       COALESCE(SUM(consumed.cost), 0)::NUMERIC(18,2) AS cost
+FROM svc
+LEFT JOIN consumed ON consumed.service_id = svc.id
+`
+
+type GetMarginServiceSummaryParams struct {
+	OrganizationID int64              `json:"organization_id"`
+	CreatedFrom    pgtype.Timestamptz `json:"created_from"`
+	CreatedTo      pgtype.Timestamptz `json:"created_to"`
+}
+
+type GetMarginServiceSummaryRow struct {
+	ServiceCount int64          `json:"service_count"`
+	Revenue      pgtype.Numeric `json:"revenue"`
+	Cost         pgtype.Numeric `json:"cost"`
+}
+
+// GetMarginServiceSummary is the service margin of the book: services whose
+// income (F3-07c, services.income_amount) was recorded in the period, and
+// the purchase cost of the units they consumed (same pricing as
+// GetServiceConsumedPurchaseCost: the last received order line of the unit).
+func (q *Queries) GetMarginServiceSummary(ctx context.Context, arg GetMarginServiceSummaryParams) (GetMarginServiceSummaryRow, error) {
+	row := q.db.QueryRow(ctx, getMarginServiceSummary, arg.OrganizationID, arg.CreatedFrom, arg.CreatedTo)
+	var i GetMarginServiceSummaryRow
+	err := row.Scan(&i.ServiceCount, &i.Revenue, &i.Cost)
+	return i, err
+}
+
+const listCariAgingLines = `-- name: ListCariAgingLines :many
+SELECT c.uuid AS cari_uuid, e.created_at,
+       (CASE e.direction
+            WHEN 'income' THEN e.amount
+            WHEN 'charge' THEN e.amount
+            WHEN 'payment' THEN e.amount
+            WHEN 'expense' THEN -e.amount
+            WHEN 'collection' THEN -e.amount
+        END)::NUMERIC(18,2) AS signed_amount
+FROM finance_entries e
+JOIN cari_accounts c ON c.id = e.cari_id
+WHERE e.organization_id = $1
+  AND c.organization_id = $1
+  AND ($2::timestamptz IS NULL OR e.created_at < $2::timestamptz)
+ORDER BY c.id, e.created_at DESC, e.id DESC
+`
+
+type ListCariAgingLinesParams struct {
+	OrganizationID int64              `json:"organization_id"`
+	CreatedTo      pgtype.Timestamptz `json:"created_to"`
+}
+
+type ListCariAgingLinesRow struct {
+	CariUuid     uuid.UUID          `json:"cari_uuid"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	SignedAmount pgtype.Numeric     `json:"signed_amount"`
+}
+
+// ListCariAgingLines is every cari row of the book written before
+// created_to (NULL = all), newest first per cari, with its signed cari
+// effect (receivable positive, as in ListCariStatementLines).
+func (q *Queries) ListCariAgingLines(ctx context.Context, arg ListCariAgingLinesParams) ([]ListCariAgingLinesRow, error) {
+	rows, err := q.db.Query(ctx, listCariAgingLines, arg.OrganizationID, arg.CreatedTo)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListCariAgingLinesRow{}
+	for rows.Next() {
+		var i ListCariAgingLinesRow
+		if err := rows.Scan(&i.CariUuid, &i.CreatedAt, &i.SignedAmount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listCariBalancesAsOf = `-- name: ListCariBalancesAsOf :many
 SELECT c.uuid, c.counterparty_type, c.currency, c.active,
        o.uuid AS counterparty_org_uuid, o.name AS counterparty_org_name, o.type AS counterparty_org_type,
@@ -266,6 +380,203 @@ func (q *Queries) ListFinanceAccountBalancesAsOf(ctx context.Context, arg ListFi
 			&i.Active,
 			&i.Balance,
 			&i.EntryCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listMarginProductSales = `-- name: ListMarginProductSales :many
+SELECT p.uuid AS product_uuid, p.sku, p.name,
+       SUM(l.quantity)::NUMERIC(18,2) AS quantity,
+       SUM(l.line_total)::NUMERIC(18,2) AS revenue,
+       COALESCE(SUM(l.quantity * l.purchase_unit_cost), 0)::NUMERIC(18,2) AS cost,
+       COUNT(l.id) FILTER (WHERE l.purchase_unit_cost IS NULL) AS lines_without_cost,
+       COUNT(DISTINCT s.id) AS sale_count
+FROM product_sale_lines l
+JOIN product_sales s ON s.id = l.sale_id AND s.organization_id = l.organization_id
+JOIN products p ON p.id = l.product_id
+WHERE s.organization_id = $1
+  AND ($2::timestamptz IS NULL OR s.sold_at >= $2::timestamptz)
+  AND ($3::timestamptz IS NULL OR s.sold_at < $3::timestamptz)
+  AND NOT EXISTS (SELECT 1 FROM finance_entries rv
+                  WHERE s.finance_entry_id IS NOT NULL AND rv.reversal_of_id = s.finance_entry_id)
+GROUP BY p.id
+ORDER BY SUM(l.line_total) DESC, p.name, p.id
+`
+
+type ListMarginProductSalesParams struct {
+	OrganizationID int64              `json:"organization_id"`
+	SoldFrom       pgtype.Timestamptz `json:"sold_from"`
+	SoldTo         pgtype.Timestamptz `json:"sold_to"`
+}
+
+type ListMarginProductSalesRow struct {
+	ProductUuid      uuid.UUID      `json:"product_uuid"`
+	Sku              string         `json:"sku"`
+	Name             string         `json:"name"`
+	Quantity         pgtype.Numeric `json:"quantity"`
+	Revenue          pgtype.Numeric `json:"revenue"`
+	Cost             pgtype.Numeric `json:"cost"`
+	LinesWithoutCost int64          `json:"lines_without_cost"`
+	SaleCount        int64          `json:"sale_count"`
+}
+
+// ListMarginProductSales is the product sale margin per product: revenue
+// and the purchase cost snapshot of the lines (F3-07d). A voided sale (its
+// income row reversed) is left out; lines without a cost snapshot are
+// counted so the report can flag an incomplete cost.
+func (q *Queries) ListMarginProductSales(ctx context.Context, arg ListMarginProductSalesParams) ([]ListMarginProductSalesRow, error) {
+	rows, err := q.db.Query(ctx, listMarginProductSales, arg.OrganizationID, arg.SoldFrom, arg.SoldTo)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListMarginProductSalesRow{}
+	for rows.Next() {
+		var i ListMarginProductSalesRow
+		if err := rows.Scan(
+			&i.ProductUuid,
+			&i.Sku,
+			&i.Name,
+			&i.Quantity,
+			&i.Revenue,
+			&i.Cost,
+			&i.LinesWithoutCost,
+			&i.SaleCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPnlSums = `-- name: ListPnlSums :many
+SELECT to_char(e.created_at AT TIME ZONE 'UTC', 'YYYY-MM')::text AS month,
+       e.category, e.direction,
+       SUM(e.amount)::NUMERIC(18,2) AS total,
+       COUNT(e.id) AS entry_count
+FROM finance_entries e
+WHERE e.organization_id = $1
+  AND e.direction IN ('income', 'expense')
+  AND ($2::timestamptz IS NULL OR e.created_at >= $2::timestamptz)
+  AND ($3::timestamptz IS NULL OR e.created_at < $3::timestamptz)
+GROUP BY 1, e.category, e.direction
+ORDER BY 1, e.direction, e.category
+`
+
+type ListPnlSumsParams struct {
+	OrganizationID int64              `json:"organization_id"`
+	CreatedFrom    pgtype.Timestamptz `json:"created_from"`
+	CreatedTo      pgtype.Timestamptz `json:"created_to"`
+}
+
+type ListPnlSumsRow struct {
+	Month      string         `json:"month"`
+	Category   string         `json:"category"`
+	Direction  string         `json:"direction"`
+	Total      pgtype.Numeric `json:"total"`
+	EntryCount int64          `json:"entry_count"`
+}
+
+// TEC-346 (F3-07f) reports below read one book (the caller's own
+// organization); periods are half-open UTC ranges.
+// ListPnlSums is the income/expense total of the book per UTC month,
+// category and direction. Reversal rows carry negated amounts, so a voided
+// row nets out.
+func (q *Queries) ListPnlSums(ctx context.Context, arg ListPnlSumsParams) ([]ListPnlSumsRow, error) {
+	rows, err := q.db.Query(ctx, listPnlSums, arg.OrganizationID, arg.CreatedFrom, arg.CreatedTo)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPnlSumsRow{}
+	for rows.Next() {
+		var i ListPnlSumsRow
+		if err := rows.Scan(
+			&i.Month,
+			&i.Category,
+			&i.Direction,
+			&i.Total,
+			&i.EntryCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listStaffCostTotals = `-- name: ListStaffCostTotals :many
+SELECT sp.uuid, sp.name, sp.title, sp.active,
+       COALESCE(SUM(p.amount) FILTER (WHERE p.type = 'salary'), 0)::NUMERIC(18,2) AS salary,
+       COALESCE(SUM(p.amount) FILTER (WHERE p.type = 'advance'), 0)::NUMERIC(18,2) AS advance,
+       COALESCE(SUM(p.amount) FILTER (WHERE p.type = 'bonus'), 0)::NUMERIC(18,2) AS bonus,
+       COALESCE(SUM(p.amount), 0)::NUMERIC(18,2) AS total,
+       COUNT(p.id) AS payment_count
+FROM staff_profiles sp
+JOIN staff_payments p ON p.staff_id = sp.id
+                     AND p.organization_id = sp.organization_id
+                     AND p.voided_at IS NULL
+                     AND ($1::date IS NULL OR p.paid_on >= $1::date)
+                     AND ($2::date IS NULL OR p.paid_on <= $2::date)
+WHERE sp.organization_id = $3
+GROUP BY sp.id
+ORDER BY sp.name, sp.id
+`
+
+type ListStaffCostTotalsParams struct {
+	PaidFrom       pgtype.Date `json:"paid_from"`
+	PaidTo         pgtype.Date `json:"paid_to"`
+	OrganizationID int64       `json:"organization_id"`
+}
+
+type ListStaffCostTotalsRow struct {
+	Uuid         uuid.UUID      `json:"uuid"`
+	Name         string         `json:"name"`
+	Title        pgtype.Text    `json:"title"`
+	Active       bool           `json:"active"`
+	Salary       pgtype.Numeric `json:"salary"`
+	Advance      pgtype.Numeric `json:"advance"`
+	Bonus        pgtype.Numeric `json:"bonus"`
+	Total        pgtype.Numeric `json:"total"`
+	PaymentCount int64          `json:"payment_count"`
+}
+
+// ListStaffCostTotals is the salary/advance/bonus total per staff card of
+// the book over the non-void payments paid in the period (paid_on, both
+// days inclusive).
+func (q *Queries) ListStaffCostTotals(ctx context.Context, arg ListStaffCostTotalsParams) ([]ListStaffCostTotalsRow, error) {
+	rows, err := q.db.Query(ctx, listStaffCostTotals, arg.PaidFrom, arg.PaidTo, arg.OrganizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListStaffCostTotalsRow{}
+	for rows.Next() {
+		var i ListStaffCostTotalsRow
+		if err := rows.Scan(
+			&i.Uuid,
+			&i.Name,
+			&i.Title,
+			&i.Active,
+			&i.Salary,
+			&i.Advance,
+			&i.Bonus,
+			&i.Total,
+			&i.PaymentCount,
 		); err != nil {
 			return nil, err
 		}
