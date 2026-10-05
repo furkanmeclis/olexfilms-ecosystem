@@ -1252,6 +1252,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List service reviews inside reviews.read scope */
+        get: operations["listReviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reviews/stats/dealers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dealer review averages */
+        get: operations["reviewDealerStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reviews/stats/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Product review averages */
+        get: operations["reviewProductStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reviews/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Queue a review list export */
+        post: operations["requestReviewsExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/platform/review-questions": {
         parameters: {
             query?: never;
@@ -6694,6 +6762,46 @@ export interface paths {
          * @description The measurement already linked to the phase is confirmed (`confirmed_by`, `confirmed_at`). An unlinked accepted measurement of the service's organization and VIN is linked manually (confirmed by the caller) into an empty phase or in place of an unconfirmed auto link. 409 `MEASUREMENT_PHASE_TAKEN` when the phase already has a confirmed link, 409 `MEASUREMENT_ALREADY_LINKED` when the measurement is linked elsewhere, 409 `SERVICE_NOT_EDITABLE` for a cancelled service; 422 `MEASUREMENT_NOT_EXPECTED` (has_measurement false), `MEASUREMENT_VIN_PENDING` or `MEASUREMENT_VIN_MISMATCH`. Replacing a link of a completed service is center only (403).
          */
         post: operations["linkServiceMeasurement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/services/{uuid}/measurements/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Measurement micron difference table (TEC-297)
+         * @description Returns before/after micron averages by `place_id` and `part_type`, the expected film thickness from service item products applied to the mapped vehicle part, and whether each part deviates beyond `measurements.tolerance_um` (default 30 µm). Services outside the caller's organization reach answer 404. Requires the measurements module and `measurements.link`.
+         */
+        get: operations["getServiceMeasurementDiff"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/services/{uuid}/measurements/checked": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark measurement diff as checked (TEC-297)
+         * @description Stamps `measurement_checked_at` after a dealer owner reviews a service whose measurement diff was flagged. A non-empty `note` is required and missing note answers 400 `VALIDATION_ERROR`; the note is not persisted yet. Requires the measurements module and `measurements.link`.
+         */
+        post: operations["markServiceMeasurementsChecked"];
         delete?: never;
         options?: never;
         head?: never;
@@ -14788,6 +14896,50 @@ export interface components {
             data: components["schemas"]["ServiceMeasurements"];
             meta: components["schemas"]["ResponseMeta"];
         };
+        MeasurementStats: {
+            /** @description Decimal microns with two fractional digits */
+            average_um: string | null;
+            /** @description Decimal microns with two fractional digits */
+            min_um: string | null;
+            /** @description Decimal microns with two fractional digits */
+            max_um: string | null;
+            /** Format: int32 */
+            count: number;
+        };
+        ServiceMeasurementDiffPart: {
+            place_id: string;
+            part_type: string;
+            /** @description Vehicle part picker key mapped from the NexPTG part */
+            service_part_key: string;
+            before: components["schemas"]["MeasurementStats"];
+            after: components["schemas"]["MeasurementStats"];
+            /** @description after average minus before average */
+            diff_um: string | null;
+            /** @description Sum of micron_thickness of products applied to this part */
+            expected_um: string | null;
+            deviation: boolean;
+            /** @enum {string} */
+            expected_status: "available" | "missing" | "incomplete";
+        };
+        ServiceMeasurementDiff: {
+            /** Format: uuid */
+            service_uuid: string;
+            check_required: boolean;
+            /** Format: date-time */
+            checked_at: string | null;
+            /** @description Decimal microns with two fractional digits */
+            tolerance_um: string;
+            parts: components["schemas"]["ServiceMeasurementDiffPart"][];
+        };
+        EnvelopeServiceMeasurementDiff: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ServiceMeasurementDiff"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        ServiceMeasurementsCheckedRequest: {
+            note: string;
+        };
         MobileMeasurementRequest: {
             /** @description Idempotency key in the body (alternative to the Idempotency-Key header) */
             client_measurement_id?: string;
@@ -17677,6 +17829,34 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        ReviewDealerStat: {
+            /** Format: uuid */
+            dealer_uuid: string;
+            dealer_name: string;
+            /** Format: int64 */
+            review_count: number;
+            /** Format: double */
+            average_rating: number;
+        };
+        ReviewProductStat: {
+            /** Format: uuid */
+            product_uuid: string;
+            sku: string;
+            product_name: string;
+            /** Format: int64 */
+            review_count: number;
+            /** Format: double */
+            average_rating: number;
+        };
+        ReviewExportInput: {
+            /** @enum {string} */
+            format: "pdf" | "xlsx" | "csv" | "json";
+            /** @example tr */
+            locale?: string;
+            query?: {
+                [key: string]: string;
+            };
+        };
         EnvelopeReviewQuestion: {
             /** @enum {boolean} */
             success: true;
@@ -17704,6 +17884,22 @@ export interface components {
                 items: components["schemas"]["ServiceReview"][];
                 /** Format: int64 */
                 total: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeReviewDealerStats: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ReviewDealerStat"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeReviewProductStats: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ReviewProductStat"][];
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -20411,6 +20607,116 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeServiceReviewList"];
                 };
             };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listReviews: {
+        parameters: {
+            query?: {
+                dealer_uuid?: string;
+                product_uuid?: string;
+                min_rating?: number;
+                max_rating?: number;
+                created_from?: string;
+                created_to?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reviews */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceReviewList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    reviewDealerStats: {
+        parameters: {
+            query?: {
+                created_from?: string;
+                created_to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dealer stats */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeReviewDealerStats"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    reviewProductStats: {
+        parameters: {
+            query?: {
+                created_from?: string;
+                created_to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Product stats */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeReviewProductStats"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    requestReviewsExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
         };
@@ -30205,6 +30511,59 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getServiceMeasurementDiff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service measurement diff */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceMeasurementDiff"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    markServiceMeasurementsChecked: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceMeasurementsCheckedRequest"];
+            };
+        };
+        responses: {
+            /** @description Marked as checked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     unlinkServiceMeasurement: {

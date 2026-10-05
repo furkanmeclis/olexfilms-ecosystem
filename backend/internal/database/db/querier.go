@@ -875,6 +875,7 @@ type Querier interface {
 	GetServiceRefs(ctx context.Context, id int64) (GetServiceRefsRow, error)
 	// TEC-244 (F2-03h): the portal service review form (one per service).
 	GetServiceReviewByService(ctx context.Context, serviceID int64) (ServiceReview, error)
+	GetServiceReviewProcessingDetails(ctx context.Context, reviewID int64) (GetServiceReviewProcessingDetailsRow, error)
 	GetServiceSubscriptionByUUID(ctx context.Context, arg GetServiceSubscriptionByUUIDParams) (ServiceSubscription, error)
 	GetServiceSubscriptionCancelRequestByUUID(ctx context.Context, arg GetServiceSubscriptionCancelRequestByUUIDParams) (ServiceSubscriptionCancelRequest, error)
 	GetServiceSubscriptionForContractByID(ctx context.Context, id int64) (ServiceSubscription, error)
@@ -1509,6 +1510,8 @@ type Querier interface {
 	ListServiceImages(ctx context.Context, serviceID int64) ([]ServiceImage, error)
 	ListServiceItemCorrections(ctx context.Context, serviceID int64) ([]ListServiceItemCorrectionsRow, error)
 	ListServiceItems(ctx context.Context, serviceID int64) ([]ServiceItem, error)
+	// TEC-297 (F3-02e): part based before/after micron difference table.
+	ListServiceMeasurementDiffParts(ctx context.Context, arg ListServiceMeasurementDiffPartsParams) ([]ListServiceMeasurementDiffPartsRow, error)
 	// The before/after links of a service with the linked measurement and the
 	// confirming user.
 	ListServiceMeasurementLinks(ctx context.Context, arg ListServiceMeasurementLinksParams) ([]ListServiceMeasurementLinksRow, error)
@@ -1851,6 +1854,7 @@ type Querier interface {
 	MarkOutboxRetry(ctx context.Context, arg MarkOutboxRetryParams) error
 	MarkQRLoginChallengeScanned(ctx context.Context, code string) (QrLoginChallenge, error)
 	MarkQuoteReminderSent(ctx context.Context, id int64) (QuoteReminder, error)
+	MarkServiceMeasurementChecked(ctx context.Context, arg MarkServiceMeasurementCheckedParams) (int64, error)
 	// Idempotent: an already processed review returns no row (pgx.ErrNoRows).
 	MarkServiceReviewProcessed(ctx context.Context, id int64) (ServiceReview, error)
 	MarkServiceSubscriptionPeriodPosted(ctx context.Context, id int64) (ServiceSubscriptionPeriod, error)
@@ -2156,6 +2160,8 @@ type Querier interface {
 	ResolveTerritory(ctx context.Context, arg ResolveTerritoryParams) (ResolveTerritoryRow, error)
 	// A failed render is re-queued with a new attempt number (new task id).
 	RetryDocumentRender(ctx context.Context, id int64) (DocumentRender, error)
+	ReviewDealerStats(ctx context.Context, arg ReviewDealerStatsParams) ([]ReviewDealerStatsRow, error)
+	ReviewProductStats(ctx context.Context, arg ReviewProductStatsParams) ([]ReviewProductStatsRow, error)
 	ReviewQuestionHasAnswers(ctx context.Context, questionID int64) (bool, error)
 	RevokeAllDevicePushTokensForUser(ctx context.Context, userID int64) (int64, error)
 	RevokeAllRefreshTokensForUser(ctx context.Context, userID int64) error

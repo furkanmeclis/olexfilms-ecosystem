@@ -122,6 +122,7 @@ func main() {
 	reviewQueue := queue.NewClient(cfg.Redis)
 	defer func() { _ = reviewQueue.Close() }()
 	eventBus := events.NewBus(log)
+	outboxStore := outbox.NewStore(pool, queries)
 	notifmodule.RegisterEventHandlers(eventBus, notifSvc, log,
 		notifmodule.WithAnnouncementFanout(queries, reviewQueue))
 	// TEC-186: service.completed opens one warranty per service item.
@@ -130,6 +131,8 @@ func main() {
 	warrantyclaimsusecase.RegisterEventHandlers(eventBus, pool, queries, outbox.NewStore(pool, queries), log)
 	// TEC-192: service.completed schedules the delayed review request.
 	servicereview.RegisterEventHandlers(eventBus, reviewQueue, cfg.Services.ReviewRequestDelay, log)
+	// TEC-352: service.reviewed opens low-score tasks and dealer notifications.
+	servicereview.RegisterProcessingHandlers(eventBus, servicereview.NewProcessor(pool, queries, outboxStore, log))
 	// TEC-325: appointment.created/rescheduled schedules 24h and 2h reminders.
 	appointmentreminder.RegisterEventHandlers(eventBus, reviewQueue, log)
 	// TEC-270: glorian stock entries/placements and exits schedule the push.
@@ -138,7 +141,6 @@ func main() {
 	contractsmodule.RegisterEventHandlers(eventBus, reviewQueue, log)
 	// TEC-296: service events compute the before/after measurement match.
 	measurementsmodule.RegisterEventHandlers(eventBus, pool, queries, log)
-	outboxStore := outbox.NewStore(pool, queries)
 	outboxPub := outbox.NewPublisher(outboxStore, eventBus, log)
 	outboxStop := outboxPub.StartRun(ctx)
 	defer outboxStop()
@@ -194,6 +196,8 @@ func main() {
 		warrantyusecase.NewPortalCertificateAdapter(warrantyCert),
 		// TEC-196: service PDF (read only).
 		servicesusecase.NewPDFAdapter(servicePDF),
+		// TEC-352: service reviews list export (read only).
+		servicesusecase.NewReviewsExportAdapter(servicesusecase.New(pool, queries, nil)),
 		// TEC-207: end-of-day report PDF (read only).
 		warehouseusecase.NewEODPDFAdapter(warehouseusecase.NewEODPDF(eodSvc, store, log)),
 	)

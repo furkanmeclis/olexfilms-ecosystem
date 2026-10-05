@@ -266,6 +266,11 @@ const (
 	ServiceNoteAdded    = "service.note_added"
 )
 
+// MeasurementDiffCheckRequired (TEC-297) is written when a service's
+// before/after micron difference deviates from the product expectation and
+// the dealer owner should review the measurement table.
+const MeasurementDiffCheckRequired = "measurement.diff_check_required"
+
 // Service subscription events (TEC-307): assignment, early cancellation
 // request and final center decision. Notifications consume all three; the
 // cancellation approval also lets downstream accounting/search consumers see
@@ -295,6 +300,11 @@ const ServiceReviewRequested = "service.review_requested"
 // ServiceReviewed is written when the customer submits the platform review
 // form. Processing and reporting consume this event asynchronously.
 const ServiceReviewed = "service.reviewed"
+
+// ServiceReviewLowScore is written by review processing when a review falls
+// at or below the low-score threshold; notification center sends it to the
+// dealer owner(s).
+const ServiceReviewLowScore = "service.review.low_score"
 
 // Warranty domain events (TEC-98 / TEC-185). warranty.created is written
 // by the service.completed consumer, expiring_soon (payload days: 30 or 7)
@@ -650,6 +660,7 @@ func catalogConstants() []string {
 		QuoteSent,
 		LeadsApplicationReceived,
 		MeasurementMatchSuggested,
+		MeasurementDiffCheckRequired,
 	}
 }
 
