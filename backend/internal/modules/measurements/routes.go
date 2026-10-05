@@ -75,6 +75,8 @@ func RegisterServiceLinkRoutes(
 	link := middleware.RequireScope(q, rbac.PermMeasurementsLink)
 
 	mux.Handle("GET /v1/services/{uuid}/measurements", middleware.Chain(http.HandlerFunc(h.List), authn, org, module, link))
+	mux.Handle("GET /v1/services/{uuid}/measurements/diff", middleware.Chain(http.HandlerFunc(h.Diff), authn, org, module, link))
 	mux.Handle("POST /v1/services/{uuid}/measurements", middleware.Chain(http.HandlerFunc(h.Link), authn, org, module, link))
+	mux.Handle("POST /v1/services/{uuid}/measurements/checked", middleware.Chain(http.HandlerFunc(h.Checked), authn, org, module, link))
 	mux.Handle("DELETE /v1/services/{uuid}/measurements/{phase}", middleware.Chain(http.HandlerFunc(h.Unlink), authn, org, module, link))
 }

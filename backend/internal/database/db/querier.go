@@ -1509,6 +1509,8 @@ type Querier interface {
 	ListServiceImages(ctx context.Context, serviceID int64) ([]ServiceImage, error)
 	ListServiceItemCorrections(ctx context.Context, serviceID int64) ([]ListServiceItemCorrectionsRow, error)
 	ListServiceItems(ctx context.Context, serviceID int64) ([]ServiceItem, error)
+	// TEC-297 (F3-02e): part based before/after micron difference table.
+	ListServiceMeasurementDiffParts(ctx context.Context, arg ListServiceMeasurementDiffPartsParams) ([]ListServiceMeasurementDiffPartsRow, error)
 	// The before/after links of a service with the linked measurement and the
 	// confirming user.
 	ListServiceMeasurementLinks(ctx context.Context, arg ListServiceMeasurementLinksParams) ([]ListServiceMeasurementLinksRow, error)
@@ -1851,6 +1853,7 @@ type Querier interface {
 	MarkOutboxRetry(ctx context.Context, arg MarkOutboxRetryParams) error
 	MarkQRLoginChallengeScanned(ctx context.Context, code string) (QrLoginChallenge, error)
 	MarkQuoteReminderSent(ctx context.Context, id int64) (QuoteReminder, error)
+	MarkServiceMeasurementChecked(ctx context.Context, arg MarkServiceMeasurementCheckedParams) (int64, error)
 	// Idempotent: an already processed review returns no row (pgx.ErrNoRows).
 	MarkServiceReviewProcessed(ctx context.Context, id int64) (ServiceReview, error)
 	MarkServiceSubscriptionPeriodPosted(ctx context.Context, id int64) (ServiceSubscriptionPeriod, error)

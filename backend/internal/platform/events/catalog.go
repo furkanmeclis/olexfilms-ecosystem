@@ -266,6 +266,11 @@ const (
 	ServiceNoteAdded    = "service.note_added"
 )
 
+// MeasurementDiffCheckRequired (TEC-297) is written when a service's
+// before/after micron difference deviates from the product expectation and
+// the dealer owner should review the measurement table.
+const MeasurementDiffCheckRequired = "measurement.diff_check_required"
+
 // Service subscription events (TEC-307): assignment, early cancellation
 // request and final center decision. Notifications consume all three; the
 // cancellation approval also lets downstream accounting/search consumers see
@@ -650,6 +655,7 @@ func catalogConstants() []string {
 		QuoteSent,
 		LeadsApplicationReceived,
 		MeasurementMatchSuggested,
+		MeasurementDiffCheckRequired,
 	}
 }
 

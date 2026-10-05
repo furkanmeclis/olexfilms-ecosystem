@@ -12610,6 +12610,74 @@ paths:
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
+  /v1/services/{uuid}/measurements/diff:
+    get:
+      tags: [Measurements]
+      operationId: getServiceMeasurementDiff
+      summary: Measurement micron difference table (TEC-297)
+      description: >-
+        Returns before/after micron averages by `place_id` and `part_type`,
+        the expected film thickness from service item products applied to the
+        mapped vehicle part, and whether each part deviates beyond
+        `measurements.tolerance_um` (default 30 µm). Services outside the
+        caller's organization reach answer 404. Requires the measurements
+        module and `measurements.link`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Service measurement diff
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeServiceMeasurementDiff"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/services/{uuid}/measurements/checked:
+    post:
+      tags: [Measurements]
+      operationId: markServiceMeasurementsChecked
+      summary: Mark measurement diff as checked (TEC-297)
+      description: >-
+        Stamps `measurement_checked_at` after a dealer owner reviews a service
+        whose measurement diff was flagged. A non-empty `note` is required and
+        missing note answers 400 `VALIDATION_ERROR`; the note is not persisted
+        yet. Requires the measurements module and `measurements.link`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceMeasurementsCheckedRequest"
+      responses:
+        "204":
+          description: Marked as checked
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/services/{uuid}/measurements/{phase}:
     delete:
       tags: [Measurements]
@@ -25741,6 +25809,65 @@ components:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/ServiceMeasurements" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    # TEC-297 (F3-02e): part based micron difference table.
+    MeasurementStats:
+      type: object
+      required: [average_um, min_um, max_um, count]
+      properties:
+        average_um: { type: [string, "null"], description: Decimal microns with two fractional digits }
+        min_um: { type: [string, "null"], description: Decimal microns with two fractional digits }
+        max_um: { type: [string, "null"], description: Decimal microns with two fractional digits }
+        count: { type: integer, format: int32 }
+
+    ServiceMeasurementDiffPart:
+      type: object
+      required:
+        - place_id
+        - part_type
+        - service_part_key
+        - before
+        - after
+        - diff_um
+        - expected_um
+        - deviation
+        - expected_status
+      properties:
+        place_id: { type: string }
+        part_type: { type: string }
+        service_part_key: { type: string, description: Vehicle part picker key mapped from the NexPTG part }
+        before: { $ref: "#/components/schemas/MeasurementStats" }
+        after: { $ref: "#/components/schemas/MeasurementStats" }
+        diff_um: { type: [string, "null"], description: after average minus before average }
+        expected_um: { type: [string, "null"], description: Sum of micron_thickness of products applied to this part }
+        deviation: { type: boolean }
+        expected_status: { type: string, enum: [available, missing, incomplete] }
+
+    ServiceMeasurementDiff:
+      type: object
+      required: [service_uuid, check_required, checked_at, tolerance_um, parts]
+      properties:
+        service_uuid: { type: string, format: uuid }
+        check_required: { type: boolean }
+        checked_at: { type: [string, "null"], format: date-time }
+        tolerance_um: { type: string, description: Decimal microns with two fractional digits }
+        parts:
+          type: array
+          items: { $ref: "#/components/schemas/ServiceMeasurementDiffPart" }
+
+    EnvelopeServiceMeasurementDiff:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ServiceMeasurementDiff" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    ServiceMeasurementsCheckedRequest:
+      type: object
+      required: [note]
+      properties:
+        note: { type: string, minLength: 1, maxLength: 1000 }
 
     # K28 / TEC-233: minimal F2 storage; F3-02 (TEC-113) makes vin
     # mandatory and reads the parts.
