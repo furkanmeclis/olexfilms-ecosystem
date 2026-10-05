@@ -8256,7 +8256,7 @@ export interface paths {
         };
         /**
          * Service revenue, purchase cost and gross profit
-         * @description TEC-343. Revenue is services.income_amount. Purchase cost is derived from consumed service items and the received order line price of the unit in the dealer's purchase order; partial roll consumption is proportional to consumed meters. Without pricing.purchase.read the cost, gross_profit and margin_pct fields are null.
+         * @description TEC-343. Revenue is services.income_amount. Purchase cost is derived from consumed service items and the received order line price of the unit in the dealer's purchase order; partial roll consumption is proportional to consumed meters. Without accounting.read/accounting.write every field is null; without pricing.purchase.read the cost, gross_profit and margin_pct fields are null.
          */
         get: operations["getServiceProfit"];
         put?: never;
@@ -15435,7 +15435,7 @@ export interface components {
             contract_no: number;
         };
         ServiceProfit: {
-            /** @description Recorded service income amount. */
+            /** @description Recorded service income amount; null without accounting.read/accounting.write. */
             revenue: string | null;
             /** @description Consumed purchase cost; null without pricing.purchase.read. */
             cost: string | null;

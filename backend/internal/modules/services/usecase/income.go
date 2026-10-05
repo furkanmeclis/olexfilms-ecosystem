@@ -238,6 +238,9 @@ func (s *Service) Profit(ctx context.Context, c Caller, id uuid.UUID) (ProfitVie
 }
 
 func (s *Service) profit(ctx context.Context, q *db.Queries, c Caller, svc db.Service) (ProfitView, error) {
+	if !canReadIncome(c, svc) {
+		return ProfitView{}, nil
+	}
 	out := ProfitView{Revenue: numericTextPtr(svc.IncomeAmount)}
 	if !canReadPurchase(c, svc) {
 		return out, nil

@@ -15762,8 +15762,9 @@ paths:
         TEC-343. Revenue is services.income_amount. Purchase cost is derived
         from consumed service items and the received order line price of the
         unit in the dealer's purchase order; partial roll consumption is
-        proportional to consumed meters. Without pricing.purchase.read the
-        cost, gross_profit and margin_pct fields are null.
+        proportional to consumed meters. Without accounting.read/accounting.write
+        every field is null; without pricing.purchase.read the cost,
+        gross_profit and margin_pct fields are null.
       security:
         - bearerAuth: []
       responses:
@@ -26486,7 +26487,7 @@ components:
       properties:
         revenue:
           type: [string, "null"]
-          description: Recorded service income amount.
+          description: Recorded service income amount; null without accounting.read/accounting.write.
         cost:
           type: [string, "null"]
           description: Consumed purchase cost; null without pricing.purchase.read.

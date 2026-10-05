@@ -85,7 +85,7 @@ func TestIntegrationServiceIncomeProfit(t *testing.T) {
 	c.it.member(c.dealer, staff, "staff", rbac.RoleDealerStaff)
 	staffTok := c.it.loginOrg(staff, spw, c.dealer)
 	masked := decodeData[serviceProfitView](t, c.it.accDo("GET", "/v1/services/"+c.svcUUID+"/profit", staffTok, nil, http.StatusOK))
-	if masked.Cost != nil || masked.GrossProfit != nil || masked.MarginPct != nil {
+	if masked.Revenue != nil || masked.Cost != nil || masked.GrossProfit != nil || masked.MarginPct != nil {
 		t.Fatalf("masked profit = %+v", masked)
 	}
 
