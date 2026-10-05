@@ -273,7 +273,12 @@ func TestSubscriptionContractSigningExecutesAndEmitsPDFEvent(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("customer sign: %v", err)
 	}
-	got, err := contracts.SignStaff(e.ctx, caller, sub.Contract.UUID, contractuc.SignatureInput{PNGBase64: subscriptionPNGBase64()})
+	ownCaller := caller
+	ownCaller.Filter = scopefilter.Filter{
+		Scope: rbac.ScopeOwn, OrgID: e.dealer.ID, OrgIDs: []int64{e.dealer.ID},
+		BrandID: e.dealer.BrandID, UserID: e.actor.ID,
+	}
+	got, err := contracts.SignStaff(e.ctx, ownCaller, sub.Contract.UUID, contractuc.SignatureInput{PNGBase64: subscriptionPNGBase64()})
 	if err != nil {
 		t.Fatalf("staff sign: %v", err)
 	}

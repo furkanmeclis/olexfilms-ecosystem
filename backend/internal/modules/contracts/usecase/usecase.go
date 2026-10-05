@@ -753,11 +753,24 @@ func (s *Service) scopedInstance(ctx context.Context, c Caller, id uuid.UUID) (d
 		return db.ContractInstance{}, notFound(err)
 	}
 	if f.UserOnly() {
-		svc, err := s.repo.Queries().GetServiceForContractByID(ctx, row.SubjectID)
-		if err != nil {
-			return db.ContractInstance{}, err
-		}
-		if !svc.CreatedByUserID.Valid || svc.CreatedByUserID.Int64 != f.UserID {
+		switch row.SubjectType {
+		case "service":
+			svc, err := s.repo.Queries().GetServiceForContractByID(ctx, row.SubjectID)
+			if err != nil {
+				return db.ContractInstance{}, err
+			}
+			if !svc.CreatedByUserID.Valid || svc.CreatedByUserID.Int64 != f.UserID {
+				return db.ContractInstance{}, ErrNotFound
+			}
+		case "service_subscription":
+			sub, err := s.repo.Queries().GetServiceSubscriptionForContractByID(ctx, row.SubjectID)
+			if err != nil {
+				return db.ContractInstance{}, err
+			}
+			if !sub.AssignedByUserID.Valid || sub.AssignedByUserID.Int64 != f.UserID {
+				return db.ContractInstance{}, ErrNotFound
+			}
+		default:
 			return db.ContractInstance{}, ErrNotFound
 		}
 	}
