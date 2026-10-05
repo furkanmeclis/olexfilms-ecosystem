@@ -14,7 +14,7 @@ type AppLogoProps = {
 };
 
 /**
- * App lockup. `mark` / `icon` → OP glyph; `logo` / `wordmark` → full wordmark.
+ * App lockup. `mark` / `icon` → Olex crest; `logo` / `wordmark` → crest + "OLEX" lockup.
  */
 export function AppLogo({
   variant = "logo",

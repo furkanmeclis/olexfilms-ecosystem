@@ -3,13 +3,18 @@ import type { SVGProps } from "react";
 import { brand } from "@/config/brand";
 import { cn } from "@/lib/utils";
 
-import { markAccentPath, markGlyphPath, markViewBox } from "./artwork";
+import {
+  artworkTransform,
+  markAccentPaths,
+  markDetailPath,
+  markViewBox,
+} from "./artwork";
 
 type AppMarkProps = SVGProps<SVGSVGElement> & {
   title?: string;
 };
 
-/** OP lockup — terracotta P + themed O (white in dark, espresso in light). */
+/** Olex crest — gold mark with deep-green star details (same in both modes). */
 export function AppMark({
   className,
   title = brand.name,
@@ -26,12 +31,21 @@ export function AppMark({
       {...props}
     >
       <title>{title}</title>
-      <path
-        className="fill-brand-accent"
-        fillRule="evenodd"
-        d={markAccentPath}
-      />
-      <path className="fill-brand-glyph" d={markGlyphPath} />
+      <g transform={artworkTransform}>
+        {markAccentPaths.map((d) => (
+          <path
+            key={d.slice(0, 24)}
+            className="fill-brand-accent"
+            fillRule="evenodd"
+            d={d}
+          />
+        ))}
+        <path
+          className="fill-brand-detail"
+          fillRule="evenodd"
+          d={markDetailPath}
+        />
+      </g>
     </svg>
   );
 }
