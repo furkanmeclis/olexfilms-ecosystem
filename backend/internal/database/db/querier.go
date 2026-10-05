@@ -64,6 +64,8 @@ type Querier interface {
 	// Vehicle transfer (decision 6): the active warranties of the vehicle move
 	// to the new owner in the transfer transaction.
 	ChangeWarrantyHolderByVehicle(ctx context.Context, arg ChangeWarrantyHolderByVehicleParams) ([]Warranty, error)
+	ClaimAppointmentReminder24h(ctx context.Context, arg ClaimAppointmentReminder24hParams) (ClaimAppointmentReminder24hRow, error)
+	ClaimAppointmentReminder2h(ctx context.Context, arg ClaimAppointmentReminder2hParams) (ClaimAppointmentReminder2hRow, error)
 	ClaimOutboxEvents(ctx context.Context, arg ClaimOutboxEventsParams) ([]OutboxEvent, error)
 	// TEC-192 (F1-06h): review request 24 hours after a service is completed.
 	// Stamps review_request_sent_at when every send condition holds: the
@@ -559,6 +561,7 @@ type Querier interface {
 	FillCustomerProfileFromSource(ctx context.Context, arg FillCustomerProfileFromSourceParams) (int64, error)
 	// The first upload of a repeated idempotency key or client_measurement_id.
 	FindMeasurementResultByKeys(ctx context.Context, arg FindMeasurementResultByKeysParams) (MeasurementResult, error)
+	FindOpenCustomerLeadForAppointment(ctx context.Context, arg FindOpenCustomerLeadForAppointmentParams) (Lead, error)
 	// Another draft entry (or, for serial units, a confirmed one whose line
 	// was not undone) already holding the unit.
 	FindOpenStockEntryForUnit(ctx context.Context, arg FindOpenStockEntryForUnitParams) (FindOpenStockEntryForUnitRow, error)
@@ -1087,6 +1090,7 @@ type Querier interface {
 	// incremental pull.
 	LastSucceededIntegrationSyncRun(ctx context.Context, arg LastSucceededIntegrationSyncRunParams) (IntegrationSyncRun, error)
 	LatestExchangeRateDate(ctx context.Context, onDate pgtype.Date) (pgtype.Date, error)
+	LinkAppointmentLead(ctx context.Context, arg LinkAppointmentLeadParams) (Appointment, error)
 	// Idempotent link: a second call keeps the row and fills first_service_at
 	// only when it was empty.
 	LinkCustomerOrganization(ctx context.Context, arg LinkCustomerOrganizationParams) (CustomerOrganization, error)
@@ -1811,6 +1815,7 @@ type Querier interface {
 	MarkDocumentRenderFailed(ctx context.Context, arg MarkDocumentRenderFailedParams) error
 	MarkDocumentRenderProcessing(ctx context.Context, id int64) (DocumentRender, error)
 	MarkDocumentRenderReady(ctx context.Context, arg MarkDocumentRenderReadyParams) (DocumentRender, error)
+	MarkDueNoShowAppointments(ctx context.Context, cutoff pgtype.Timestamptz) ([]Appointment, error)
 	MarkExportJobCompleted(ctx context.Context, arg MarkExportJobCompletedParams) (ExportJob, error)
 	MarkExportJobFailed(ctx context.Context, arg MarkExportJobFailedParams) (ExportJob, error)
 	MarkExportJobProcessing(ctx context.Context, id int64) (ExportJob, error)
