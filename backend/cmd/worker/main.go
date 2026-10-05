@@ -12,6 +12,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/errtrack"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/logging"
+	accountingposting "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting/posting"
 	accountingusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting/usecase"
 	announcementsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/usecase"
 	appointmentreminder "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/appointments/reminder"
@@ -129,6 +130,11 @@ func main() {
 	warrantymodule.RegisterEventHandlers(eventBus, pool, queries, cfg.Auth.FrontendURL, log)
 	// TEC-336: approved claims open and track their re-application service.
 	warrantyclaimsusecase.RegisterEventHandlers(eventBus, pool, queries, outbox.NewStore(pool, queries), log)
+	// TEC-337: a completed re-application service books the claim's warranty
+	// cost, product refund and labor (rates from the stored table).
+	warrantyclaimsusecase.RegisterAccountingHandlers(eventBus, pool,
+		accountingposting.New(queries, outboxStore, fxrates.New(queries, nil, log)),
+		sysconfig.New(queries, sysconfig.NoCache{}), log)
 	// TEC-192: service.completed schedules the delayed review request.
 	servicereview.RegisterEventHandlers(eventBus, reviewQueue, cfg.Services.ReviewRequestDelay, log)
 	// TEC-352: service.reviewed opens low-score tasks and dealer notifications.

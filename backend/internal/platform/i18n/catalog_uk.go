@@ -302,6 +302,12 @@ var ukCatalog = map[string]string{
 	"accounting.category.salary":          "Заробітна плата",
 	"accounting.category.staff_advance":   "Аванси персоналу",
 	"accounting.category.staff_bonus":     "Премії персоналу",
+
+	// TEC-337: warranty claim accounting categories.
+	"accounting.category.warranty_cost":         "Гарантійні витрати",
+	"accounting.category.warranty_labor":        "Гарантійні роботи",
+	"accounting.category.warranty_labor_income": "Дохід від гарантійних робіт",
+
 	"accounting.category.utilities":       "Комунальні послуги",
 	"accounting.category.tax":             "Податки",
 	"accounting.category.shipping":        "Доставка",

@@ -100,3 +100,34 @@ func TestMobileAppWithFallback(t *testing.T) {
 		}
 	}
 }
+
+// TEC-337: the warranty labor rule keys validate their values.
+func TestWarrantyLaborSettings(t *testing.T) {
+	cases := []struct {
+		key, raw string
+		ok       bool
+	}{
+		{KeyWarrantyClaimsLaborRule, `"dealer"`, true},
+		{KeyWarrantyClaimsLaborRule, `"center"`, true},
+		{KeyWarrantyClaimsLaborRule, `"shared"`, true},
+		{KeyWarrantyClaimsLaborRule, `"nobody"`, false},
+		{KeyWarrantyClaimsLaborAmount, `"150.00"`, true},
+		{KeyWarrantyClaimsLaborAmount, `"150"`, true},
+		{KeyWarrantyClaimsLaborAmount, `"-1"`, false},
+		{KeyWarrantyClaimsLaborAmount, `"1.234"`, false},
+		{KeyWarrantyClaimsLaborSharePercent, `50`, true},
+		{KeyWarrantyClaimsLaborSharePercent, `101`, false},
+	}
+	for _, c := range cases {
+		d, ok := Lookup(c.key)
+		if !ok {
+			t.Fatalf("%s missing", c.key)
+		}
+		if _, err := d.Validate([]byte(c.raw)); (err == nil) != c.ok {
+			t.Errorf("%s %s: err = %v, want ok=%v", c.key, c.raw, err, c.ok)
+		}
+	}
+	if d, _ := Lookup(KeyWarrantyClaimsLaborRule); d.Default != LaborRuleDealer {
+		t.Errorf("labor rule default = %v, want dealer", d.Default)
+	}
+}

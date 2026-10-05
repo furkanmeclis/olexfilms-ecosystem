@@ -121,6 +121,21 @@ func (h *Handler) ReapplyService(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusCreated, item)
 }
 
+// Get is GET /v1/warranty-claims/{uuid} (TEC-337: detail with the center's
+// cost summary).
+func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	item, err := h.svc.Get(r.Context(), caller(r), id)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, item)
+}
+
 func (h *Handler) PortalList(w http.ResponseWriter, r *http.Request) {
 	p := authctx.MustPrincipal(r.Context())
 	items, err := h.svc.PortalList(r.Context(), portalBrandID(r), p.UserInternal)

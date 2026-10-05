@@ -302,6 +302,12 @@ var azCatalog = map[string]string{
 	"accounting.category.salary":          "Maaşlar",
 	"accounting.category.staff_advance":   "Personal avansları",
 	"accounting.category.staff_bonus":     "Personal bonusları",
+
+	// TEC-337: warranty claim accounting categories.
+	"accounting.category.warranty_cost":         "Zəmanət xərci",
+	"accounting.category.warranty_labor":        "Zəmanət işçiliyi",
+	"accounting.category.warranty_labor_income": "Zəmanət işçilik gəliri",
+
 	"accounting.category.utilities":       "Kommunal xərclər",
 	"accounting.category.tax":             "Vergilər",
 	"accounting.category.shipping":        "Göndərmə",

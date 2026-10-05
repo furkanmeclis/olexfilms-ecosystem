@@ -302,6 +302,12 @@ var arCatalog = map[string]string{
 	"accounting.category.salary":          "الرواتب",
 	"accounting.category.staff_advance":   "سلف الموظفين",
 	"accounting.category.staff_bonus":     "مكافآت الموظفين",
+
+	// TEC-337: warranty claim accounting categories.
+	"accounting.category.warranty_cost":         "تكلفة الضمان",
+	"accounting.category.warranty_labor":        "عمالة الضمان",
+	"accounting.category.warranty_labor_income": "إيرادات عمالة الضمان",
+
 	"accounting.category.utilities":       "المرافق",
 	"accounting.category.tax":             "الضرائب",
 	"accounting.category.shipping":        "الشحن",

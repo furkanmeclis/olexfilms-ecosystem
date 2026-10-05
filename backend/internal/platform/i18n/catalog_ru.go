@@ -302,6 +302,12 @@ var ruCatalog = map[string]string{
 	"accounting.category.salary":          "Заработная плата",
 	"accounting.category.staff_advance":   "Авансы персоналу",
 	"accounting.category.staff_bonus":     "Премии персоналу",
+
+	// TEC-337: warranty claim accounting categories.
+	"accounting.category.warranty_cost":         "Гарантийные затраты",
+	"accounting.category.warranty_labor":        "Гарантийные работы",
+	"accounting.category.warranty_labor_income": "Доход от гарантийных работ",
+
 	"accounting.category.utilities":       "Коммунальные услуги",
 	"accounting.category.tax":             "Налоги",
 	"accounting.category.shipping":        "Доставка",

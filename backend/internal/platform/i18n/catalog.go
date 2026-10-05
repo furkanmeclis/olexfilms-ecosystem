@@ -303,6 +303,12 @@ var trCatalog = map[string]string{
 	"accounting.category.salary":          "Maaş",
 	"accounting.category.staff_advance":   "Personel avansı",
 	"accounting.category.staff_bonus":     "Personel primi",
+
+	// TEC-337: warranty claim accounting categories.
+	"accounting.category.warranty_cost":         "Garanti maliyeti",
+	"accounting.category.warranty_labor":        "Garanti işçiliği",
+	"accounting.category.warranty_labor_income": "Garanti işçilik geliri",
+
 	"accounting.category.utilities":       "Faturalar",
 	"accounting.category.tax":             "Vergi",
 	"accounting.category.shipping":        "Kargo ve nakliye",
@@ -853,6 +859,12 @@ var enCatalog = map[string]string{
 	"accounting.category.salary":          "Salaries",
 	"accounting.category.staff_advance":   "Staff advances",
 	"accounting.category.staff_bonus":     "Staff bonuses",
+
+	// TEC-337: warranty claim accounting categories.
+	"accounting.category.warranty_cost":         "Warranty cost",
+	"accounting.category.warranty_labor":        "Warranty labor",
+	"accounting.category.warranty_labor_income": "Warranty labor income",
+
 	"accounting.category.utilities":       "Utilities",
 	"accounting.category.tax":             "Taxes",
 	"accounting.category.shipping":        "Shipping",

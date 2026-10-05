@@ -92,6 +92,8 @@ type Store interface {
 	WarrantyClaimFailureRateByLot(ctx context.Context, arg db.WarrantyClaimFailureRateByLotParams) ([]db.WarrantyClaimFailureRateByLotRow, error)
 	WarrantyClaimsByDealerReport(ctx context.Context, arg db.WarrantyClaimsByDealerReportParams) ([]db.WarrantyClaimsByDealerReportRow, error)
 	WarrantyClaimPartsReport(ctx context.Context, arg db.WarrantyClaimPartsReportParams) ([]db.WarrantyClaimPartsReportRow, error)
+	GetBrandCenter(ctx context.Context, brandID int64) (db.Organization, error)
+	ListWarrantyClaimCostEntries(ctx context.Context, arg db.ListWarrantyClaimCostEntriesParams) ([]db.ListWarrantyClaimCostEntriesRow, error)
 }
 
 type txBeginner interface {

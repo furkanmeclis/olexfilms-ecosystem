@@ -302,6 +302,12 @@ var bgCatalog = map[string]string{
 	"accounting.category.salary":          "Заплати",
 	"accounting.category.staff_advance":   "Аванси на персонала",
 	"accounting.category.staff_bonus":     "Бонуси на персонала",
+
+	// TEC-337: warranty claim accounting categories.
+	"accounting.category.warranty_cost":         "Гаранционни разходи",
+	"accounting.category.warranty_labor":        "Гаранционен труд",
+	"accounting.category.warranty_labor_income": "Приход от гаранционен труд",
+
 	"accounting.category.utilities":       "Комунални услуги",
 	"accounting.category.tax":             "Данъци",
 	"accounting.category.shipping":        "Доставка",

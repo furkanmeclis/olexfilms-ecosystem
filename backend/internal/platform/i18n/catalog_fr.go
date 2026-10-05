@@ -302,6 +302,12 @@ var frCatalog = map[string]string{
 	"accounting.category.salary":          "Salaires",
 	"accounting.category.staff_advance":   "Avances au personnel",
 	"accounting.category.staff_bonus":     "Primes du personnel",
+
+	// TEC-337: warranty claim accounting categories.
+	"accounting.category.warranty_cost":         "Coût de garantie",
+	"accounting.category.warranty_labor":        "Main-d'œuvre sous garantie",
+	"accounting.category.warranty_labor_income": "Revenus de main-d'œuvre sous garantie",
+
 	"accounting.category.utilities":       "Charges courantes",
 	"accounting.category.tax":             "Impôts et taxes",
 	"accounting.category.shipping":        "Expédition",

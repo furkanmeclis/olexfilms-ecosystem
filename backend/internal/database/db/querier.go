@@ -219,6 +219,7 @@ type Querier interface {
 	CountWarehouseTransferLines(ctx context.Context, transferID int64) (int64, error)
 	CountWarehouseTransfers(ctx context.Context, arg CountWarehouseTransfersParams) (int64, error)
 	CountWarrantiesInScope(ctx context.Context, arg CountWarrantiesInScopeParams) (int64, error)
+	CountWarrantyClaimFinanceEntries(ctx context.Context, sourceUuid uuid.UUID) (int64, error)
 	CountWarrantyClaimPhotos(ctx context.Context, claimID int64) (int64, error)
 	CountWarrantyClaimsInScope(ctx context.Context, arg CountWarrantyClaimsInScopeParams) (int64, error)
 	CountWarrantyRows(ctx context.Context, arg CountWarrantyRowsParams) (int64, error)
@@ -1692,6 +1693,9 @@ type Querier interface {
 	// transferred vehicle's warranties belong to the new holder).
 	ListWarrantyCertificateItems(ctx context.Context, arg ListWarrantyCertificateItemsParams) ([]ListWarrantyCertificateItemsRow, error)
 	ListWarrantyClaimCenterNotifyUsers(ctx context.Context, arg ListWarrantyClaimCenterNotifyUsersParams) ([]int64, error)
+	// Open (unreversed) warranty_claim rows of one organization's book (cost
+	// summary of the claim detail).
+	ListWarrantyClaimCostEntries(ctx context.Context, arg ListWarrantyClaimCostEntriesParams) ([]ListWarrantyClaimCostEntriesRow, error)
 	ListWarrantyClaimEvents(ctx context.Context, claimID int64) ([]WarrantyClaimEvent, error)
 	ListWarrantyClaimNotifyUsersByOrg(ctx context.Context, arg ListWarrantyClaimNotifyUsersByOrgParams) ([]int64, error)
 	ListWarrantyClaimParts(ctx context.Context, claimID int64) ([]WarrantyClaimPart, error)
@@ -1702,6 +1706,11 @@ type Querier interface {
 	// Notification context of the cron events (TEC-187): plate, product and the
 	// organization's name and time zone (end date is shown in the org zone).
 	ListWarrantyNoticeContexts(ctx context.Context, ids []int64) ([]ListWarrantyNoticeContextsRow, error)
+	// TEC-337 (F3-06d): consumed quantity of each item of a completed
+	// re-application service (meters of a cut, pieces, a whole roll, else one
+	// piece) with the price buyer_org_id paid for the unit on its latest received
+	// order (NULL when it has none; the caller falls back to the F1 price chain).
+	ListWarrantyReapplyItemCosts(ctx context.Context, arg ListWarrantyReapplyItemCostsParams) ([]ListWarrantyReapplyItemCostsRow, error)
 	// TEC-194: repair scan. One page of completed services (completed in
 	// [since, until], id > after_service_id, organization_id = 0 for all) that
 	// still have an item without a warranty, with the same eligibility columns

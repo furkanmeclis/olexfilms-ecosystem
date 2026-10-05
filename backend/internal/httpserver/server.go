@@ -537,6 +537,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	warrantymodule.RegisterEventHandlers(eventBus, deps.DB, deps.Queries, cfg.Auth.FrontendURL, log)
 	// TEC-336: approved claims open and track their re-application service.
 	warrantyclaimsusecase.RegisterEventHandlers(eventBus, deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries), log)
+	// TEC-337: a completed re-application service books the claim's warranty
+	// cost, product refund and labor.
+	warrantyclaimsusecase.RegisterAccountingHandlers(eventBus, deps.DB, accountingPoster, sysSvc, log)
 	// TEC-192: service.completed schedules the delayed review request.
 	var reviewQueue servicereview.Enqueuer
 	if deps.Queue != nil {

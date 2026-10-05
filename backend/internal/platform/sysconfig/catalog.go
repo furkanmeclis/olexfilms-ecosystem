@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"math"
 	"net/url"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -41,6 +42,8 @@ const (
 	GroupScanning  Group = "scanning"
 	GroupMobile    Group = "mobile"
 	GroupLeads     Group = "leads"
+	// GroupWarrantyClaims: warranty claim accounting (TEC-337).
+	GroupWarrantyClaims Group = "warranty_claims"
 )
 
 // SchemaVersion is stored with every row; bump it when a key's shape
@@ -95,7 +98,41 @@ const (
 	// form (TEC-317). Conservative default: closed. It can only be switched
 	// on while the leads module is open system wide (guarded at write time).
 	KeyLeadsDealerApplicationEnabled = "leads.dealer_application_enabled"
+
+	// Warranty claim labor rule (TEC-337, F3-06d): who bears the labor of a
+	// re-application. dealer (default, conservative): the labor stays with
+	// the dealer, the center pays none; center: the center credits the
+	// dealer labor_amount down the chain; shared: the center credits
+	// labor_share_percent percent of it. labor_amount is a decimal in the
+	// center's currency.
+	KeyWarrantyClaimsLaborRule         = "warranty_claims.labor_rule"
+	KeyWarrantyClaimsLaborAmount       = "warranty_claims.labor_amount"
+	KeyWarrantyClaimsLaborSharePercent = "warranty_claims.labor_share_percent"
 )
+
+// Values of KeyWarrantyClaimsLaborRule.
+const (
+	LaborRuleDealer = "dealer"
+	LaborRuleCenter = "center"
+	LaborRuleShared = "shared"
+)
+
+func checkLaborRule(s string) string {
+	switch s {
+	case LaborRuleDealer, LaborRuleCenter, LaborRuleShared:
+		return ""
+	}
+	return "must be dealer, center or shared"
+}
+
+var laborAmountRe = regexp.MustCompile(`^[0-9]{1,14}(\.[0-9]{1,2})?$`)
+
+func checkLaborAmount(s string) string {
+	if !laborAmountRe.MatchString(s) {
+		return "must be a non-negative amount with at most 2 decimals, e.g. 150.00"
+	}
+	return ""
+}
 
 // DefaultBulkUndoWindowHours is the catalog default of KeyBulkUndoWindowHours.
 const DefaultBulkUndoWindowHours = 24
@@ -183,6 +220,12 @@ var catalog = []Definition{
 		Description: "While a minimum version is set, also refuse mobile requests whose app version is unknown (no X-App-Version header or app User-Agent token)"},
 	{Key: KeyLeadsDealerApplicationEnabled, Group: GroupLeads, Kind: KindBool, Default: false,
 		Description: "Accept public dealer applications (/bayi-basvuru); only while the leads module is open system wide (TEC-317)"},
+	{Key: KeyWarrantyClaimsLaborRule, Group: GroupWarrantyClaims, Kind: KindString, Default: LaborRuleDealer, MaxLen: 16, check: checkLaborRule,
+		Description: "Who bears the labor of a warranty re-application: dealer (the center pays no labor), center (the center credits labor_amount to the dealer through the chain) or shared (labor_share_percent percent of it) (TEC-337)"},
+	{Key: KeyWarrantyClaimsLaborAmount, Group: GroupWarrantyClaims, Kind: KindString, Default: "0.00", MaxLen: 18, check: checkLaborAmount,
+		Description: "Labor amount of one warranty re-application in the center's currency; 0 = no labor entry (TEC-337)"},
+	{Key: KeyWarrantyClaimsLaborSharePercent, Group: GroupWarrantyClaims, Kind: KindInt, Default: int64(50), Min: i64(0), Max: i64(100),
+		Description: "Percent of the labor amount the center credits under the shared rule (TEC-337)"},
 }
 
 var byKey = func() map[string]Definition {

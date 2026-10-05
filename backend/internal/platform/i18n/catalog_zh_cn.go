@@ -302,6 +302,12 @@ var zhCNCatalog = map[string]string{
 	"accounting.category.salary":          "工资",
 	"accounting.category.staff_advance":   "员工预支",
 	"accounting.category.staff_bonus":     "员工奖金",
+
+	// TEC-337: warranty claim accounting categories.
+	"accounting.category.warranty_cost":         "保修成本",
+	"accounting.category.warranty_labor":        "保修人工",
+	"accounting.category.warranty_labor_income": "保修人工收入",
+
 	"accounting.category.utilities":       "水电费",
 	"accounting.category.tax":             "税费",
 	"accounting.category.shipping":        "运费",
