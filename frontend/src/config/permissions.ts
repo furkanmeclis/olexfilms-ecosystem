@@ -139,6 +139,8 @@ export const Permission = {
   TasksWrite: "tasks.write",
   AnnouncementsRead: "announcements.read",
   AnnouncementsWrite: "announcements.write",
+  /** TEC-290: contract template editor (brand scoped, intake_contracts). */
+  ContractsTemplatesManage: "contracts.templates.manage",
   WarrantyClaimsRead: "warranty_claims.read",
 } as const;
 
@@ -433,6 +435,9 @@ export const permissions = {
   stock: {
     read: Permission.StockRead,
     write: Permission.StockWrite,
+  },
+  contractTemplates: {
+    manage: Permission.ContractsTemplatesManage,
   },
   warrantyClaims: {
     read: Permission.WarrantyClaimsRead,
