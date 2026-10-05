@@ -114,5 +114,22 @@
   "coordinates.errors.latitude": "Широта має бути числом від -90 до 90.",
   "coordinates.errors.longitude": "Довгота має бути числом від -180 до 180.",
   "coordinates.errors.pair": "Введіть широту й довготу разом або залиште обидва поля порожніми.",
-  "system.hub.glorian": "Підключення до хабу Glorian, запуски синхронізації та звіт про розбіжності."
+  "system.hub.glorian": "Підключення до хабу Glorian, запуски синхронізації та звіт про розбіжності.",
+  "system.labor.title": "Правило оплати робіт за гарантійними претензіями",
+  "system.labor.description": "Хто оплачує роботи під час повторного нанесення за гарантійною претензією.",
+  "system.labor.rule": "Правило оплати робіт",
+  "system.labor.rules.dealer": "Дилер",
+  "system.labor.rules.dealer_hint": "Роботи оплачує дилер; центр за роботи не платить.",
+  "system.labor.rules.center": "Центр",
+  "system.labor.rules.center_hint": "Центр зараховує дилеру суму за роботи (через дистриб'ютора).",
+  "system.labor.rules.shared": "Спільно",
+  "system.labor.rules.shared_hint": "Центр зараховує вказаний відсоток суми за роботи.",
+  "system.labor.amount": "Сума за роботи",
+  "system.labor.amount_hint": "За кожне повторне нанесення, у валюті організації.",
+  "system.labor.percent": "Частка центру (%)",
+  "system.labor.percent_hint": "Від 0 до 100.",
+  "system.labor.errors.amount_number": "Введіть коректну суму (до 2 знаків після коми).",
+  "system.labor.errors.amount_min": "Сума не може бути від'ємною.",
+  "system.labor.errors.percent_integer": "Введіть ціле число.",
+  "system.labor.errors.percent_range": "Відсоток має бути від 0 до 100."
 }

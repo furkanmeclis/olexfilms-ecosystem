@@ -114,5 +114,22 @@
   "coordinates.errors.latitude": "يجب أن يكون خط العرض رقمًا بين -90 و90.",
   "coordinates.errors.longitude": "يجب أن يكون خط الطول رقمًا بين -180 و180.",
   "coordinates.errors.pair": "أدخل خط العرض وخط الطول معًا، أو اترك كليهما فارغين.",
-  "system.hub.glorian": "اتصال مركز Glorian وعمليات المزامنة وتقرير الفروقات."
+  "system.hub.glorian": "اتصال مركز Glorian وعمليات المزامنة وتقرير الفروقات.",
+  "system.labor.title": "قاعدة أجور العمل لمطالبات الضمان",
+  "system.labor.description": "من يتحمل تكلفة العمل عند إعادة تطبيق مطالبة الضمان.",
+  "system.labor.rule": "قاعدة العمل",
+  "system.labor.rules.dealer": "الوكيل",
+  "system.labor.rules.dealer_hint": "يبقى العمل على عاتق الوكيل؛ لا يدفع المركز أجور العمل.",
+  "system.labor.rules.center": "المركز",
+  "system.labor.rules.center_hint": "يقيد المركز مبلغ العمل لصالح الوكيل (عبر الموزع).",
+  "system.labor.rules.shared": "مشترك",
+  "system.labor.rules.shared_hint": "يقيد المركز النسبة المحددة من مبلغ العمل.",
+  "system.labor.amount": "مبلغ العمل",
+  "system.labor.amount_hint": "لكل إعادة تطبيق، بعملة المؤسسة.",
+  "system.labor.percent": "حصة المركز (%)",
+  "system.labor.percent_hint": "بين 0 و100.",
+  "system.labor.errors.amount_number": "أدخل مبلغًا صالحًا (حتى منزلتين عشريتين).",
+  "system.labor.errors.amount_min": "لا يمكن أن يكون المبلغ سالبًا.",
+  "system.labor.errors.percent_integer": "أدخل عددًا صحيحًا.",
+  "system.labor.errors.percent_range": "يجب أن تكون النسبة بين 0 و100."
 }

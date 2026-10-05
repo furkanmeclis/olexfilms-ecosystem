@@ -114,5 +114,22 @@
   "coordinates.errors.latitude": "纬度必须是 -90 到 90 之间的数字。",
   "coordinates.errors.longitude": "经度必须是 -180 到 180 之间的数字。",
   "coordinates.errors.pair": "请同时填写纬度和经度，或两者都留空。",
-  "system.hub.glorian": "Glorian 中心连接、同步运行和差异报告。"
+  "system.hub.glorian": "Glorian 中心连接、同步运行和差异报告。",
+  "system.labor.title": "质保索赔工时规则",
+  "system.labor.description": "质保索赔重新施工时由谁承担工时费用。",
+  "system.labor.rule": "工时规则",
+  "system.labor.rules.dealer": "经销商",
+  "system.labor.rules.dealer_hint": "工时由经销商承担,总部不支付工时费。",
+  "system.labor.rules.center": "总部",
+  "system.labor.rules.center_hint": "总部将工时金额记入经销商的应收款(经由分销商)。",
+  "system.labor.rules.shared": "分摊",
+  "system.labor.rules.shared_hint": "总部按指定百分比计入工时金额。",
+  "system.labor.amount": "工时金额",
+  "system.labor.amount_hint": "每次重新施工,以组织的货币计。",
+  "system.labor.percent": "总部分摊比例(%)",
+  "system.labor.percent_hint": "介于 0 到 100 之间。",
+  "system.labor.errors.amount_number": "请输入有效金额(最多 2 位小数)。",
+  "system.labor.errors.amount_min": "金额不能为负数。",
+  "system.labor.errors.percent_integer": "请输入整数。",
+  "system.labor.errors.percent_range": "百分比必须介于 0 到 100 之间。"
 }

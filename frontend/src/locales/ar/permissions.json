@@ -198,5 +198,6 @@
   "labels.library.read": "تصفح مكتبة المستندات",
   "labels.library.manage": "إدارة مكتبة المستندات",
   "groups.announcements": "الإعلانات",
-  "groups.library": "مكتبة المستندات"
+  "groups.library": "مكتبة المستندات",
+  "labels.warranty_claims.read": "عرض مطالبات الضمان"
 }

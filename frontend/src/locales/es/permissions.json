@@ -198,5 +198,6 @@
   "labels.library.read": "Consultar la biblioteca de documentos",
   "labels.library.manage": "Gestionar la biblioteca de documentos",
   "groups.announcements": "Anuncios",
-  "groups.library": "Biblioteca de documentos"
+  "groups.library": "Biblioteca de documentos",
+  "labels.warranty_claims.read": "Ver reclamaciones de garantía"
 }

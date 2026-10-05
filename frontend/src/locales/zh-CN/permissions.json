@@ -198,5 +198,6 @@
   "labels.library.read": "查看文档库",
   "labels.library.manage": "管理文档库",
   "groups.announcements": "公告",
-  "groups.library": "文档库"
+  "groups.library": "文档库",
+  "labels.warranty_claims.read": "查看质保索赔"
 }

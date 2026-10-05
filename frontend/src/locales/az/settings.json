@@ -114,5 +114,22 @@
   "coordinates.errors.latitude": "Enlik -90 ilə 90 arasında rəqəm olmalıdır.",
   "coordinates.errors.longitude": "Uzunluq -180 ilə 180 arasında rəqəm olmalıdır.",
   "coordinates.errors.pair": "Enlik və uzunluğu birlikdə daxil edin və ya hər ikisini boş buraxın.",
-  "system.hub.glorian": "Glorian hub bağlantısı, sinxronizasiya işləri və uyğunsuzluq hesabatı."
+  "system.hub.glorian": "Glorian hub bağlantısı, sinxronizasiya işləri və uyğunsuzluq hesabatı.",
+  "system.labor.title": "Zəmanət tələbi üzrə işçilik qaydası",
+  "system.labor.description": "Zəmanət tələbi yenidən tətbiq edildikdə işçilik xərcini kimin daşıdığı.",
+  "system.labor.rule": "İşçilik qaydası",
+  "system.labor.rules.dealer": "Diler",
+  "system.labor.rules.dealer_hint": "İşçilik dilerdə qalır; mərkəz işçilik ödəmir.",
+  "system.labor.rules.center": "Mərkəz",
+  "system.labor.rules.center_hint": "Mərkəz işçilik məbləğini dilerin hesabına alacaq kimi yazır (distribyutor vasitəsilə).",
+  "system.labor.rules.shared": "Paylaşılan",
+  "system.labor.rules.shared_hint": "Mərkəz işçilik məbləğinin göstərilən faizini yazır.",
+  "system.labor.amount": "İşçilik məbləği",
+  "system.labor.amount_hint": "Hər yenidən tətbiq üçün, təşkilatın valyutasında.",
+  "system.labor.percent": "Mərkəzin payı (%)",
+  "system.labor.percent_hint": "0 ilə 100 arasında.",
+  "system.labor.errors.amount_number": "Düzgün məbləğ daxil edin (ən çox 2 onluq).",
+  "system.labor.errors.amount_min": "Məbləğ mənfi ola bilməz.",
+  "system.labor.errors.percent_integer": "Tam ədəd daxil edin.",
+  "system.labor.errors.percent_range": "Faiz 0 ilə 100 arasında olmalıdır."
 }
