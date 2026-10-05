@@ -664,16 +664,39 @@ INSERT INTO contract_template_locales (template_id, organization_id, brand_id, l
 VALUES ($1, $2, $3, $4, $5, $6)
 ON CONFLICT (template_id, locale) DO UPDATE SET html = EXCLUDED.html`, tpl, a.center, a.brandID, loc, html, a.users["center_staff@demo.olexfilms.app"])
 	}
+	// Catalog items may only link service_sale templates (TEC-309).
+	var saleTpl int64
+	err = tx.QueryRow(ctx, `SELECT id FROM contract_templates WHERE brand_id = $1 AND kind = 'service_sale' AND name = 'Demo Hizmet Satış Sözleşmesi'`, a.brandID).Scan(&saleTpl)
+	if errors.Is(err, pgx.ErrNoRows) {
+		err = tx.QueryRow(ctx, `
+INSERT INTO contract_templates (organization_id, brand_id, name, kind, is_default, is_active, created_by_user_id, updated_by_user_id)
+VALUES ($1, $2, 'Demo Hizmet Satış Sözleşmesi', 'service_sale', false, true, $3, $3)
+RETURNING id`, a.center, a.brandID, a.users["center_staff@demo.olexfilms.app"]).Scan(&saleTpl)
+	}
+	if err != nil {
+		return err
+	}
+	for _, loc := range []string{"tr", "en"} {
+		html := "<p>Demo service sale terms for Olex Films.</p>"
+		if loc == "tr" {
+			html = "<p>Olex Films demo hizmet satış koşulları.</p>"
+		}
+		_, _ = tx.Exec(ctx, `
+INSERT INTO contract_template_locales (template_id, organization_id, brand_id, locale, html, updated_by_user_id)
+VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (template_id, locale) DO UPDATE SET html = EXCLUDED.html`, saleTpl, a.center, a.brandID, loc, html, a.users["center_staff@demo.olexfilms.app"])
+	}
 	var catalogItem int64
 	if err := tx.QueryRow(ctx, `
 INSERT INTO service_catalog_items (uuid, organization_id, brand_id, name, description, category, default_price, currency, recurrence, cancellation_fee, contract_template_id, is_active)
 VALUES ($4, $1, $2, 'Demo Bayi Başlangıç Paketi', 'Eğitim, kurulum ve modül paketi', 'module_bundle', 750.00, 'EUR', 'yearly', 150.00, $3, true)
 ON CONFLICT (uuid) DO NOTHING
-RETURNING id`, a.center, a.brandID, tpl, stableUUID("service-catalog:starter")).Scan(&catalogItem); errors.Is(err, pgx.ErrNoRows) {
+RETURNING id`, a.center, a.brandID, saleTpl, stableUUID("service-catalog:starter")).Scan(&catalogItem); errors.Is(err, pgx.ErrNoRows) {
 		_ = tx.QueryRow(ctx, `SELECT id FROM service_catalog_items WHERE brand_id = $1 AND name = 'Demo Bayi Başlangıç Paketi'`, a.brandID).Scan(&catalogItem)
 	} else if err != nil {
 		return err
 	}
+	_, _ = tx.Exec(ctx, `UPDATE service_catalog_items SET contract_template_id = $2 WHERE id = $1`, catalogItem, saleTpl)
 	_, _ = tx.Exec(ctx, `INSERT INTO service_catalog_modules (item_id, module_key) VALUES ($1, 'dealer_showcase'), ($1, 'reviews') ON CONFLICT DO NOTHING`, catalogItem)
 	_, _ = tx.Exec(ctx, `
 INSERT INTO service_price_overrides (item_id, organization_id, brand_id, price, currency)
