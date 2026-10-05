@@ -1,0 +1,57 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20010904//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg version="1.0" xmlns="http://www.w3.org/2000/svg"
+ width="2048.000000" height="1024.000000" viewBox="0 0 2048 1024"
+ preserveAspectRatio="xMidYMid meet">
+  <g id="TRUNK">
+
+<metadata>
+Created by potrace 1.16, written by Peter Selinger 2001-2019
+</metadata>
+<g transform="translate(0.000000,1024.000000) scale(0.100000,-0.100000)"
+fill="#FFFFFF" stroke="none">
+<path d="M9087 8089 c-28 -16 -132 -151 -172 -223 -29 -52 -95 -213 -95 -231
+0 -3 639 -5 1420 -5 781 0 1420 1 1420 3 0 2 -11 35 -24 73 -44 129 -119 255
+-205 345 l-47 49 -1140 0 c-775 -1 -1145 -4 -1157 -11z"/>
+<path d="M8801 7535 c-6 -45 -11 -217 -11 -420 l0 -345 1451 0 1450 0 -4 393
+c-2 215 -8 404 -12 420 l-7 27 -1428 0 -1428 0 -11 -75z"/>
+<path d="M8790 6670 l0 -70 1450 0 1450 0 0 70 0 70 -1450 0 -1450 0 0 -70z"/>
+<path d="M8786 6338 c-3 -134 -9 -723 -12 -1310 l-7 -1068 349 0 349 0 49 173
+c56 195 65 218 100 241 23 14 85 16 631 16 l607 0 28 -28 c18 -18 36 -54 48
+-98 11 -38 36 -121 54 -184 l33 -115 354 -3 353 -2 -6 107 c-3 60 -8 581 -11
+1158 -3 578 -8 1119 -11 1203 l-6 152 -1448 0 -1447 0 -7 -242z"/>
+</g>
+
+  </g>
+  <g id="TRUNK_points">
+    <g id="TRUNK_point_1" data-count="1">
+      <circle cx="896.6041004999918" cy="384.9517652397415" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="896.6041004999918" y="384.9517652397415" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">1</text>
+    </g>
+    <g id="TRUNK_point_2" data-count="2">
+      <circle cx="894.604083810552" cy="474.9537662121533" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="894.604083810552" y="474.9537662121533" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">2</text>
+    </g>
+    <g id="TRUNK_point_3" data-count="3">
+      <circle cx="894.604083810552" cy="604.9566565056369" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="894.604083810552" y="604.9566565056369" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">3</text>
+    </g>
+    <g id="TRUNK_point_4" data-count="4">
+      <circle cx="1026.605185313579" cy="472.9537217460997" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="1026.605185313579" y="472.9537217460997" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">4</text>
+    </g>
+    <g id="TRUNK_point_5" data-count="5">
+      <circle cx="1148.6062033694072" cy="386.95180970579514" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="1148.6062033694072" y="386.95180970579514" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">5</text>
+    </g>
+    <g id="TRUNK_point_6" data-count="6">
+      <circle cx="1148.6062033694072" cy="474.95376621215325" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="1148.6062033694072" y="474.95376621215325" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">6</text>
+    </g>
+    <g id="TRUNK_point_7" data-count="7">
+      <circle cx="1148.606203369407" cy="606.9567009716906" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="1148.606203369407" y="606.9567009716906" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">7</text>
+    </g>
+  </g>
+</svg>

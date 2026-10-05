@@ -1,0 +1,57 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20010904//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg version="1.0" xmlns="http://www.w3.org/2000/svg"
+ width="2048.000000" height="1024.000000" viewBox="0 0 2048 1024"
+ preserveAspectRatio="xMidYMid meet">
+  <g id="RIGHT_FRONT_DOOR">
+
+<metadata>
+Created by potrace 1.16, written by Peter Selinger 2001-2019
+</metadata>
+<g transform="translate(0.000000,1024.000000) scale(0.100000,-0.100000)"
+fill="#FFFFFF" stroke="none">
+<path d="M9927 8043 c-4 -3 -7 -51 -7 -105 l0 -98 956 0 957 0 151 -60 c447
+-177 895 -445 1282 -767 152 -126 311 -278 330 -314 11 -22 25 -30 68 -39 30
+-6 90 -22 132 -35 43 -13 80 -23 81 -21 2 2 -66 70 -150 153 -488 477 -1046
+869 -1683 1184 l-221 109 -945 0 c-520 0 -948 -3 -951 -7z"/>
+<path d="M9920 4840 l0 -1460 2100 0 2100 0 0 1351 0 1351 -46 -51 c-54 -60
+-107 -93 -185 -116 -53 -15 -75 -14 -334 5 -233 17 -371 20 -862 20 l-585 0
+-267 180 -267 180 -827 0 -827 0 0 -1460z m859 801 c73 -52 90 -166 34 -231
+-49 -58 -58 -60 -344 -60 -248 0 -263 1 -299 21 -88 50 -106 172 -37 248 45
+48 63 51 347 48 262 -2 265 -2 299 -26z"/>
+<path d="M10370 5510 l0 -130 95 0 95 0 0 130 0 130 -95 0 -95 0 0 -130z"/>
+</g>
+
+  </g>
+  <g id="RIGHT_FRONT_DOOR_points">
+    <g id="RIGHT_FRONT_DOOR_point_1" data-count="1">
+      <circle cx="1026.0" cy="652.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="1026.0" y="652.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">1</text>
+    </g>
+    <g id="RIGHT_FRONT_DOOR_point_2" data-count="2">
+      <circle cx="1026.0" cy="564.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="1026.0" y="564.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">2</text>
+    </g>
+    <g id="RIGHT_FRONT_DOOR_point_3" data-count="3">
+      <circle cx="1108.0" cy="470.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="1108.0" y="470.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">3</text>
+    </g>
+    <g id="RIGHT_FRONT_DOOR_point_4" data-count="4">
+      <circle cx="1208.0" cy="564.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="1208.0" y="564.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">4</text>
+    </g>
+    <g id="RIGHT_FRONT_DOOR_point_5" data-count="5">
+      <circle cx="1384.0" cy="652.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="1384.0" y="652.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">5</text>
+    </g>
+    <g id="RIGHT_FRONT_DOOR_point_6" data-count="6">
+      <circle cx="1384.0" cy="564.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="1384.0" y="564.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">6</text>
+    </g>
+    <g id="RIGHT_FRONT_DOOR_point_7" data-count="7">
+      <circle cx="1384.0" cy="466.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="1384.0" y="466.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">7</text>
+    </g>
+  </g>
+</svg>

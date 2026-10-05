@@ -22,6 +22,7 @@ func wireAll(w *Worker, hits map[string]int, tag string) *Worker {
 		WithWhatsAppPoll(func(context.Context) error { hit(TaskWhatsAppStatusPoll); return nil }).
 		WithDocsRender(func(context.Context, int64) error { hit(TaskDocsRender); return nil }).
 		WithContractPDF(func(context.Context, int64) error { hit(TaskContractPDF); return nil }).
+		WithMeasurementPDF(func(context.Context, int64) error { hit(TaskMeasurementPDF); return nil }).
 		WithWarrantyCron(
 			func(context.Context) error { hit(TaskWarrantyExpire); return nil },
 			func(context.Context) error { hit(TaskWarrantyExpiringScan); return nil },
@@ -68,7 +69,7 @@ func TestWorkerSettersAreIdempotent(t *testing.T) {
 		wireAll(w, hits, "second")
 	}()
 
-	for _, typ := range []string{TaskNotificationPurge, TaskWhatsAppStatusPoll, TaskLogPurgeSweep, TaskRatesFetch, TaskWarrantyExpire, TaskWarrantyExpiringScan, TaskWarrantyRepairScan, TaskVehicleTransferExpire, TaskAppointmentNoShowScan, TaskWarehouseEODReports, TaskGlorianPullCatalog, TaskGlorianPushBarcodes, TaskGlorianPatchStockItem, TaskGlorianOrderOutbound, TaskGlorianOrderReplay, TaskGlorianReconcile, TaskGlorianOutboundReplayOne, TaskContractPDF} {
+	for _, typ := range []string{TaskNotificationPurge, TaskWhatsAppStatusPoll, TaskLogPurgeSweep, TaskRatesFetch, TaskWarrantyExpire, TaskWarrantyExpiringScan, TaskWarrantyRepairScan, TaskVehicleTransferExpire, TaskAppointmentNoShowScan, TaskWarehouseEODReports, TaskGlorianPullCatalog, TaskGlorianPushBarcodes, TaskGlorianPatchStockItem, TaskGlorianOrderOutbound, TaskGlorianOrderReplay, TaskGlorianReconcile, TaskGlorianOutboundReplayOne, TaskContractPDF, TaskMeasurementPDF} {
 		if err := w.mux.ProcessTask(context.Background(), asynq.NewTask(typ, []byte("{}"))); err != nil {
 			t.Fatalf("%s: %v", typ, err)
 		}

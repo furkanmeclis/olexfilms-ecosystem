@@ -193,6 +193,14 @@ var specs = map[string]KindSpec{
 		text("measurement", "technician_name", "Ölçen", "Measured by", "Mehmet Demir", "Michael Doe"),
 		block("measurement", "measurements_table", "Ölçüm tablosu", "Measurements table"),
 		text("measurement", "notes", "Notlar", "Notes", "Kaput bölgesinde boya kalınlığı yüksek.", "Hood paint thickness is high."),
+		// TEC-298: timestamped measurement PDF (header, part map, tires).
+		text("measurement", "vin", "Şasi no (VIN)", "VIN", "WVWZZZ1KZAW000001", "WVWZZZ1KZAW000001"),
+		text("measurement", "device_serial", "Cihaz seri no", "Device serial", "18416 Professional", "18416 Professional"),
+		text("measurement", "body_type", "Gövde tipi", "Body type", "Sedan", "Sedan"),
+		text("measurement", "generated_at", "Üretim zamanı", "Generated at", "01.10.2026 14:35 (Europe/Istanbul)", "2026-10-01 14:35 (Europe/Istanbul)"),
+		block("measurement", "measurement_summary_html", "Ölçüm özeti", "Measurement summary"),
+		block("measurement", "part_map_html", "Parça haritası", "Part map"),
+		block("measurement", "tires_table", "Lastik tablosu", "Tires table"),
 	})},
 	KindContract: {Kind: KindContract, Variables: join(companyVars, documentVars, []Variable{
 		text("contract", "contract_title", "Sözleşme başlığı", "Contract title", "Bayilik Sözleşmesi", "Dealership Agreement"),
@@ -297,6 +305,21 @@ var sampleBlocks = map[string]func(tr bool) string{
 			rows = [][]string{{"Hood", "142"}, {"Front left fender", "118"}, {"Roof", "121"}}
 		}
 		return pdfrender.Table(cols, rows)
+	},
+	"measurement_summary_html": func(tr bool) string {
+		if tr {
+			return pdfrender.Table([]pdfrender.Column{{Label: "Alan"}, {Label: "Değer"}}, [][]string{{"Cihaz seri no", "18416 Professional"}, {"Şasi no (VIN)", "WVWZZZ1KZAW000001"}, {"Ölçüm zamanı", "01.10.2026 14:30 (Europe/Istanbul)"}})
+		}
+		return pdfrender.Table([]pdfrender.Column{{Label: "Field"}, {Label: "Value"}}, [][]string{{"Device serial", "18416 Professional"}, {"VIN", "WVWZZZ1KZAW000001"}, {"Measured at", "2026-10-01 14:30 (Europe/Istanbul)"}})
+	},
+	"part_map_html": func(bool) string {
+		return `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="120" viewBox="0 0 240 120"><rect x="10" y="40" width="220" height="50" rx="20" fill="#55d37a" opacity="0.72"/><circle cx="60" cy="65" r="10" fill="#deb50a"/><circle cx="180" cy="65" r="10" fill="#af0025"/></svg>`
+	},
+	"tires_table": func(tr bool) string {
+		if tr {
+			return pdfrender.Table([]pdfrender.Column{{Label: "Konum"}, {Label: "Ebat"}, {Label: "Diş derinliği (mm)", Numeric: true}}, [][]string{{"Sol ön", "225/45 R17", "6,5"}})
+		}
+		return pdfrender.Table([]pdfrender.Column{{Label: "Position"}, {Label: "Size"}, {Label: "Tread depth (mm)", Numeric: true}}, [][]string{{"Front left", "225/45 R17", "6.5"}})
 	},
 	"contract_body_html": func(tr bool) string {
 		if tr {

@@ -1,0 +1,24 @@
+{
+  "name": "sedan",
+  "body_type": "MUvi2UUvtDeNoPrWss2qpL",
+  "parts": ["HOOD", "ROOF", "RIGHT_FRONT_FENDER", "TRUNK", "LEFT_PILLAR"],
+  "measurements": [
+    {"part_type": "HOOD", "position": 1, "interpretation": 0},
+    {"part_type": "HOOD", "position": 2, "interpretation": -1},
+    {"part_type": "HOOD", "position": 3, "interpretation": null},
+    {"part_type": "HOOD", "position": 4, "interpretation": 2},
+    {"part_type": "HOOD", "position": 5, "interpretation": 4},
+    {"part_type": "ROOF", "position": 1, "interpretation": 1},
+    {"part_type": "ROOF", "position": 2, "interpretation": 1},
+    {"part_type": "ROOF", "position": 3, "interpretation": 1},
+    {"part_type": "RIGHT_FRONT_DOOR", "position": 1, "interpretation": 0},
+    {"part_type": "RIGHT_REAR_DOOR", "position": 1, "interpretation": 3},
+    {"part_type": "RIGHT_REAR_DOOR", "position": 2, "interpretation": 4},
+    {"part_type": "RIGHT_REAR_DOOR", "position": 3, "interpretation": 5},
+    {"part_type": "RIGHT_FRONT_FENDER", "position": 1, "interpretation": null},
+    {"part_type": "LEFT_FRONT_DOOR", "position": 1, "interpretation": 1},
+    {"part_type": "LEFT_FRONT_DOOR", "position": 2, "interpretation": 2},
+    {"part_type": "TRUNK", "position": null, "interpretation": 1},
+    {"part_type": "LEFT_REAR_FENDER", "position": 9, "interpretation": 3}
+  ]
+}

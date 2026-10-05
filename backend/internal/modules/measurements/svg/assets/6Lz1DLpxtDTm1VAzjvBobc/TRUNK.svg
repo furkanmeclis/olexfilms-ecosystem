@@ -1,0 +1,60 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20010904//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg version="1.0" xmlns="http://www.w3.org/2000/svg"
+ width="2048.000000" height="1024.000000" viewBox="0 0 2048 1024"
+ preserveAspectRatio="xMidYMid meet">
+  <g id="TRUNK">
+
+<metadata>
+Created by potrace 1.16, written by Peter Selinger 2001-2019
+</metadata>
+<g transform="translate(0.000000,1024.000000) scale(0.100000,-0.100000)"
+fill="#FFFFFF" stroke="none">
+<path d="M9715 6763 c-653 -14 -1462 -63 -2097 -125 l-118 -11 0 -79 c0 -43 3
+-78 6 -78 3 0 65 9 137 20 1495 223 3062 250 4582 79 237 -26 628 -78 723 -95
+l32 -6 0 85 0 84 -62 7 c-935 94 -2212 142 -3203 119z"/>
+<path d="M9530 6619 c-701 -29 -1799 -142 -2130 -220 -161 -37 -445 -144 -550
+-207 l-45 -27 855 -5 c632 -4 862 -8 880 -17 83 -39 136 -107 146 -186 l7 -50
+756 6 c416 4 1113 7 1549 7 726 0 792 1 792 16 0 67 62 159 134 197 l41 22
+855 5 855 5 -35 22 c-91 56 -379 168 -537 208 -222 56 -1136 162 -1713 200
+-542 34 -1348 45 -1860 24z"/>
+<path d="M9860 5870 c-646 -4 -1176 -8 -1177 -8 -2 -1 -9 -17 -16 -35 -30 -71
+-91 -109 -299 -183 l-193 -69 -319 -3 -318 -3 5 -242 c3 -133 9 -254 13 -269
+l6 -28 2678 0 2677 0 9 43 c4 23 8 144 9 269 l0 228 -300 0 -300 0 -210 72
+c-202 70 -212 75 -261 123 -31 31 -54 64 -59 83 l-7 32 -381 -2 c-210 -1 -911
+-5 -1557 -8z"/>
+</g>
+
+  </g>
+  <g id="TRUNK_points">
+    <g id="TRUNK_point_1" data-count="1">
+      <circle cx="809.5999755859375" cy="500.3999938964844" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="809.5999755859375" y="500.3999938964844" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">1</text>
+    </g>
+    <g id="TRUNK_point_2" data-count="2">
+      <circle cx="761.5999755859375" cy="390.3999938964844" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="761.5999755859375" y="390.3999938964844" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">2</text>
+    </g>
+    <g id="TRUNK_point_3" data-count="3">
+      <circle cx="855.5999755859375" cy="358.3999938964844" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="855.5999755859375" y="358.3999938964844" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">3</text>
+    </g>
+    <g id="TRUNK_point_4" data-count="4">
+      <circle cx="1021.5999755859375" cy="408.3999938964844" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="1021.5999755859375" y="408.3999938964844" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">4</text>
+    </g>
+    <g id="TRUNK_point_5" data-count="5">
+      <circle cx="1191.5999755859375" cy="358.3999938964844" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="1191.5999755859375" y="358.3999938964844" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">5</text>
+    </g>
+    <g id="TRUNK_point_6" data-count="6">
+      <circle cx="1287.5999755859375" cy="392.3999938964844" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="1287.5999755859375" y="392.3999938964844" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">6</text>
+    </g>
+    <g id="TRUNK_point_7" data-count="7">
+      <circle cx="1235.5999755859375" cy="500.3999938964844" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="1235.5999755859375" y="500.3999938964844" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">7</text>
+    </g>
+  </g>
+</svg>
