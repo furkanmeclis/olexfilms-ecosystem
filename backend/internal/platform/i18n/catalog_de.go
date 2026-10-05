@@ -279,6 +279,8 @@ var deCatalog = map[string]string{
 	"accounting.category.purchase":        "Einkauf",
 	"accounting.category.rent":            "Miete",
 	"accounting.category.salary":          "Gehälter",
+	"accounting.category.staff_advance":   "Mitarbeitervorschüsse",
+	"accounting.category.staff_bonus":     "Mitarbeiterboni",
 	"accounting.category.utilities":       "Nebenkosten",
 	"accounting.category.tax":             "Steuern",
 	"accounting.category.shipping":        "Versand",

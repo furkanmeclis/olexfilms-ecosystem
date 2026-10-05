@@ -279,6 +279,8 @@ var elCatalog = map[string]string{
 	"accounting.category.purchase":        "Αγορές",
 	"accounting.category.rent":            "Ενοίκιο",
 	"accounting.category.salary":          "Μισθοί",
+	"accounting.category.staff_advance":   "Προκαταβολές προσωπικού",
+	"accounting.category.staff_bonus":     "Μπόνους προσωπικού",
 	"accounting.category.utilities":       "Λογαριασμοί κοινής ωφέλειας",
 	"accounting.category.tax":             "Φόροι",
 	"accounting.category.shipping":        "Αποστολή",

@@ -44,6 +44,12 @@ func RegisterRoutes(
 	write := func(fn http.HandlerFunc) http.Handler {
 		return middleware.Chain(fn, authn, org, module, dealerModule, middleware.RequireScope(q, rbac.PermAccountingWrite))
 	}
+	staffManage := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, authn, org, module, dealerModule, middleware.RequireScope(q, rbac.PermStaffManage))
+	}
+	staffPayments := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, authn, org, module, dealerModule, middleware.RequireScope(q, rbac.PermStaffPaymentsWrite))
+	}
 	sensitive := func(fn http.HandlerFunc) http.Handler {
 		return middleware.Chain(fn, authn, org, module, dealerModule, middleware.RequireScope(q, rbac.PermAccountingWrite),
 			middleware.RequireStepUp(stepUp))
@@ -96,4 +102,12 @@ func RegisterRoutes(
 
 	// TEC-342: open a customer cari (a customer the organization serves).
 	mux.Handle("POST /v1/accounting/cari", write(h.OpenCari))
+
+	// TEC-345: staff cards and salary/advance/bonus payments. These write
+	// sourced expense rows under source_type=staff_payment.
+	mux.Handle("GET /v1/staff-profiles", staffManage(h.ListStaffProfiles))
+	mux.Handle("POST /v1/staff-profiles", staffManage(h.CreateStaffProfile))
+	mux.Handle("PATCH /v1/staff-profiles/{uuid}", staffManage(h.UpdateStaffProfile))
+	mux.Handle("POST /v1/staff-profiles/{uuid}/payments", staffPayments(h.CreateStaffPayment))
+	mux.Handle("POST /v1/staff-payments/payroll", staffPayments(h.RunPayroll))
 }

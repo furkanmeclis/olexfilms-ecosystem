@@ -279,6 +279,8 @@ var itCatalog = map[string]string{
 	"accounting.category.purchase":        "Acquisti",
 	"accounting.category.rent":            "Affitto",
 	"accounting.category.salary":          "Stipendi",
+	"accounting.category.staff_advance":   "Anticipi al personale",
+	"accounting.category.staff_bonus":     "Bonus del personale",
 	"accounting.category.utilities":       "Utenze",
 	"accounting.category.tax":             "Imposte",
 	"accounting.category.shipping":        "Spedizioni",

@@ -85,6 +85,9 @@ type Entry struct {
 	Rate     *fxrates.Snapshot
 	// AccountID is a cash/bank account of the organization (0: none).
 	AccountID int64
+	// AllowNoTarget permits a row without account or cari. Keep this scoped to
+	// source types whose database constraints explicitly allow targetless rows.
+	AllowNoTarget bool
 	// CounterpartyOrgID opens (ensures) the organization's cari with that
 	// organization and books the row on it (0: none).
 	CounterpartyOrgID int64

@@ -279,6 +279,8 @@ var azCatalog = map[string]string{
 	"accounting.category.purchase":        "Alış",
 	"accounting.category.rent":            "İcarə",
 	"accounting.category.salary":          "Maaşlar",
+	"accounting.category.staff_advance":   "Personal avansları",
+	"accounting.category.staff_bonus":     "Personal bonusları",
 	"accounting.category.utilities":       "Kommunal xərclər",
 	"accounting.category.tax":             "Vergilər",
 	"accounting.category.shipping":        "Göndərmə",
