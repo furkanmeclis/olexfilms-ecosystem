@@ -73,8 +73,11 @@ var serialRules = map[MovementType]serialRule{
 	// Meters cut from a roll; the roll stays where it is.
 	TypePartialConsumption: {from: stocked, target: targetKeep, rollOnly: true},
 	// Back from a service into the holder's stock.
-	TypeReturn: {from: []Status{StatusUsed}, fromOwners: []OwnerType{OwnerService}, to: StatusAvailable,
+	TypeReturn: {from: []Status{StatusUsed}, fromOwners: []OwnerType{OwnerService, OwnerTrash}, to: StatusAvailable,
 		target: targetGiven, owners: stockOwners, holder: holderSame},
+	// Quick product sale: leaves the dealer's simple stock without creating
+	// a service row; voiding can return it from the holder trash.
+	TypeSale: {from: stocked, to: StatusUsed, target: targetTrash},
 	// Measured roll length differs from the ledger; a missing piece is a void.
 	TypeCountAdjustment: {from: stocked, target: targetKeep, rollOnly: true},
 	TypeVoid: {from: []Status{StatusReserved, StatusPrinted, StatusAvailable, StatusPlaced},
@@ -135,6 +138,12 @@ func planSerial(m Movement, cur serialCurrent, prev *prevMovement) (serialPlan, 
 	}
 	if rule.fromOwners != nil && !slices.Contains(rule.fromOwners, cur.owner.Type) {
 		return serialPlan{}, fmt.Errorf("%w: %s from owner %s", ErrTransitionNotAllowed, m.Type, cur.owner.Type)
+	}
+	if m.Type == TypeReturn && cur.owner.Type == OwnerTrash {
+		if prev == nil || prev.typ != TypeSale || prev.refType != m.RefType || prev.refID != m.RefID {
+			return serialPlan{}, fmt.Errorf("%w: return from trash needs the sale of reference %s:%d",
+				ErrTransitionNotAllowed, m.RefType, m.RefID)
+		}
 	}
 	if rule.pairedOut != "" {
 		if prev == nil || prev.typ != rule.pairedOut || prev.refType != m.RefType || prev.refID != m.RefID {
@@ -291,6 +300,7 @@ var fixedRules = map[MovementType]fixedRule{
 	TypeOrderCancelRestore:    {sign: 1, pairedOut: TypeOrderOut, restore: true},
 	TypeConsumption:           {sign: -1},
 	TypeReturn:                {sign: 1},
+	TypeSale:                  {sign: -1},
 	TypeCountAdjustment:       {sign: 0},
 	TypeVoid:                  {sign: -1},
 	TypeExternalOutbound:      {sign: -1},

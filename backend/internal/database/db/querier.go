@@ -150,6 +150,7 @@ type Querier interface {
 	CountMigrationMap(ctx context.Context) ([]CountMigrationMapRow, error)
 	CountNotificationDeliveries(ctx context.Context, arg CountNotificationDeliveriesParams) (int64, error)
 	CountNotificationsForUser(ctx context.Context, arg CountNotificationsForUserParams) (int64, error)
+	CountOpenFinanceEntriesBySource(ctx context.Context, arg CountOpenFinanceEntriesBySourceParams) (int64, error)
 	// A unit is on at most one open (requested or approved) request; the
 	// caller holds the unit row lock.
 	CountOpenTransferItemsByUnit(ctx context.Context, arg CountOpenTransferItemsByUnitParams) (int64, error)
@@ -233,11 +234,6 @@ type Querier interface {
 	// counterparty organization. When it already exists no row is returned
 	// (pgx.ErrNoRows) and the caller reads it with GetCariAccountByCounterpartyOrg.
 	CreateCariForOrgIfMissing(ctx context.Context, arg CreateCariForOrgIfMissingParams) (CariAccount, error)
-	// TEC-341 (F3-07a): dealer accounting schema (migration 000093). Every read
-	// and write is bounded by the organization the API layer resolved; ledger
-	// rows are written through ledger.Post and only linked here.
-	// ---------------------------------------------------------------------------
-	// Customer cari.
 	// CreateCariForUserIfMissing opens the cari of organization_id with a
 	// customer. When it already exists no row is returned (pgx.ErrNoRows) and
 	// the caller reads it with GetCariAccountByCounterpartyUser.
@@ -808,6 +804,7 @@ type Querier interface {
 	GetQRLoginChallengeByCode(ctx context.Context, code string) (QrLoginChallenge, error)
 	GetQuoteByPublicToken(ctx context.Context, publicToken uuid.UUID) (Quote, error)
 	GetQuoteByUUID(ctx context.Context, arg GetQuoteByUUIDParams) (Quote, error)
+	GetRecommendedProductPrice(ctx context.Context, arg GetRecommendedProductPriceParams) (pgtype.Numeric, error)
 	GetRefreshTokenByHashAny(ctx context.Context, tokenHash string) (RefreshToken, error)
 	GetRefreshTokenByUUID(ctx context.Context, argUuid uuid.UUID) (RefreshToken, error)
 	// TEC-239: the newest reusable portal job of the actor for one service
@@ -822,6 +819,12 @@ type Querier interface {
 	GetRoleByUUID(ctx context.Context, argUuid uuid.UUID) (Role, error)
 	GetRoomByID(ctx context.Context, arg GetRoomByIDParams) (Room, error)
 	GetRoomByUUID(ctx context.Context, arg GetRoomByUUIDParams) (Room, error)
+	// TEC-341 (F3-07a): dealer accounting schema (migration 000093). Every read
+	// and write is bounded by the organization the API layer resolved; ledger
+	// rows are written through ledger.Post and only linked here.
+	// ---------------------------------------------------------------------------
+	// Customer cari.
+	GetServedCustomerByUUID(ctx context.Context, arg GetServedCustomerByUUIDParams) (User, error)
 	GetService(ctx context.Context, arg GetServiceParams) (Service, error)
 	// Public warranty / PDF lookup by number (unique across brands).
 	GetServiceByNo(ctx context.Context, serviceNo string) (Service, error)
@@ -1415,6 +1418,7 @@ type Querier interface {
 	ListProductPricesForProducts(ctx context.Context, arg ListProductPricesForProductsParams) ([]ListProductPricesForProductsRow, error)
 	ListProductSaleLines(ctx context.Context, arg ListProductSaleLinesParams) ([]ProductSaleLine, error)
 	ListProductSaleLinesBySales(ctx context.Context, arg ListProductSaleLinesBySalesParams) ([]ProductSaleLine, error)
+	ListProductSaleStockCandidates(ctx context.Context, arg ListProductSaleStockCandidatesParams) ([]ListProductSaleStockCandidatesRow, error)
 	ListProductSales(ctx context.Context, arg ListProductSalesParams) ([]ProductSale, error)
 	ListProducts(ctx context.Context, arg ListProductsParams) ([]Product, error)
 	// TEC-211: product refs of the brand for the catalog export price columns.

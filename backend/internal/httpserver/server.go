@@ -49,6 +49,9 @@ import (
 	contractsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/usecase"
 	customershandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/customers/handler"
 	customersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/customers/usecase"
+	dealeraccountingmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/dealeraccounting"
+	dealeraccountinghandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/dealeraccounting/handler"
+	dealeraccountingusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/dealeraccounting/usecase"
 	documentsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents"
 	dochandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/handler"
 	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
@@ -123,6 +126,7 @@ import (
 	shorturlsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/shorturls"
 	stockmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock"
 	stockhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/handler"
+	stockledger "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
 	stockrebuild "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/rebuild"
 	stockusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/usecase"
 	storagemodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/storage"
@@ -485,6 +489,10 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	orgSvc.SetWarehousePresetHook(warehouseusecase.New(deps.DB, deps.Queries))
 	accountingH := accountinghandler.New(accountingSvc)
 	accountinghandler.RegisterRoutes(mux, accountingH, tokens, loader, deps.Queries, stepUpSvc, featureSvc)
+	dealerAccountingSvc := dealeraccountingusecase.New(deps.DB, deps.Queries,
+		stockledger.New(deps.Queries, outbox.NewStore(deps.DB, deps.Queries)), accountingPoster, featureSvc)
+	dealeraccountingmodule.RegisterRoutes(mux, dealeraccountinghandler.New(dealerAccountingSvc),
+		tokens, loader, deps.Queries, featureSvc)
 	// TEC-166: orders (draft, server-side prices, rate frozen at approval).
 	// TEC-169: a received order books seller income / buyer purchase.
 	ordersSvc := ordersusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries), ratesSvc).
