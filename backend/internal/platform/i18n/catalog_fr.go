@@ -364,7 +364,7 @@ var frCatalog = map[string]string{
 	"reviews.export.anonymous":                 "Anonyme",
 	"reviews.export.customer":                  "Client",
 	"reviews.export.comment":                   "Commentaire",
-	"reviews.export.source":                    "Source",
+	"reviews.export.source":                    "Origine",
 	"reviews.export.created_at":                "Créé le",
 	"customers.export.section":                 "Rubrique",
 	"customers.export.item":                    "Enregistrement",
