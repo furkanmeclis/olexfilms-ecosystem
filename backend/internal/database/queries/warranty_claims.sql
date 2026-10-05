@@ -272,3 +272,101 @@ WHERE o.brand_id = sqlc.arg(brand_id)
   AND o.type = 'center'
   AND p.slug = sqlc.arg(permission_slug)::text
 ORDER BY om.user_id;
+
+-- name: WarrantyClaimFailureRateByProduct :many
+WITH warranty_counts AS (
+    SELECT w.product_id, COUNT(*)::bigint AS warranty_count
+    FROM warranties w
+    WHERE w.brand_id = sqlc.arg(brand_id)
+      AND (sqlc.arg(organization_ids)::bigint[] IS NULL OR w.organization_id = ANY(sqlc.arg(organization_ids)::bigint[]))
+      AND (sqlc.narg(from_at)::timestamptz IS NULL OR w.created_at >= sqlc.narg(from_at)::timestamptz)
+      AND (sqlc.narg(to_at)::timestamptz IS NULL OR w.created_at < sqlc.narg(to_at)::timestamptz)
+    GROUP BY w.product_id
+),
+claim_counts AS (
+    SELECT w.product_id,
+           COUNT(DISTINCT c.id)::bigint AS claim_count,
+           COUNT(DISTINCT c.id) FILTER (WHERE c.status IN ('approved', 'reapplied', 'closed'))::bigint AS approved_claim_count
+    FROM warranty_claims c
+    JOIN warranties w ON w.id = c.warranty_id
+    WHERE c.brand_id = sqlc.arg(brand_id)
+      AND (sqlc.arg(organization_ids)::bigint[] IS NULL OR c.organization_id = ANY(sqlc.arg(organization_ids)::bigint[]))
+      AND (sqlc.narg(from_at)::timestamptz IS NULL OR c.created_at >= sqlc.narg(from_at)::timestamptz)
+      AND (sqlc.narg(to_at)::timestamptz IS NULL OR c.created_at < sqlc.narg(to_at)::timestamptz)
+    GROUP BY w.product_id
+)
+SELECT p.id AS product_id, p.uuid AS product_uuid, p.sku AS product_sku, p.name AS product_name,
+       COALESCE(wc.warranty_count, 0)::bigint AS warranty_count,
+       COALESCE(cc.claim_count, 0)::bigint AS claim_count,
+       COALESCE(cc.approved_claim_count, 0)::bigint AS approved_claim_count
+FROM warranty_counts wc
+JOIN products p ON p.id = wc.product_id
+LEFT JOIN claim_counts cc ON cc.product_id = wc.product_id
+ORDER BY approved_claim_count DESC, claim_count DESC, p.name, p.id;
+
+-- name: WarrantyClaimFailureRateByLot :many
+WITH warranty_counts AS (
+    SELECT w.unit_id, COUNT(*)::bigint AS warranty_count
+    FROM warranties w
+    WHERE w.brand_id = sqlc.arg(brand_id)
+      AND (sqlc.arg(organization_ids)::bigint[] IS NULL OR w.organization_id = ANY(sqlc.arg(organization_ids)::bigint[]))
+      AND (sqlc.narg(from_at)::timestamptz IS NULL OR w.created_at >= sqlc.narg(from_at)::timestamptz)
+      AND (sqlc.narg(to_at)::timestamptz IS NULL OR w.created_at < sqlc.narg(to_at)::timestamptz)
+    GROUP BY w.unit_id
+),
+claim_counts AS (
+    SELECT w.unit_id,
+           COUNT(DISTINCT c.id)::bigint AS claim_count,
+           COUNT(DISTINCT c.id) FILTER (WHERE c.status IN ('approved', 'reapplied', 'closed'))::bigint AS approved_claim_count
+    FROM warranty_claims c
+    JOIN warranties w ON w.id = c.warranty_id
+    WHERE c.brand_id = sqlc.arg(brand_id)
+      AND (sqlc.arg(organization_ids)::bigint[] IS NULL OR c.organization_id = ANY(sqlc.arg(organization_ids)::bigint[]))
+      AND (sqlc.narg(from_at)::timestamptz IS NULL OR c.created_at >= sqlc.narg(from_at)::timestamptz)
+      AND (sqlc.narg(to_at)::timestamptz IS NULL OR c.created_at < sqlc.narg(to_at)::timestamptz)
+    GROUP BY w.unit_id
+)
+SELECT u.id AS unit_id, u.uuid AS unit_uuid, u.barcode AS lot_code,
+       p.id AS product_id, p.uuid AS product_uuid, p.sku AS product_sku, p.name AS product_name,
+       COALESCE(wc.warranty_count, 0)::bigint AS warranty_count,
+       COALESCE(cc.claim_count, 0)::bigint AS claim_count,
+       COALESCE(cc.approved_claim_count, 0)::bigint AS approved_claim_count
+FROM warranty_counts wc
+JOIN units u ON u.id = wc.unit_id
+JOIN products p ON p.id = u.product_id
+LEFT JOIN claim_counts cc ON cc.unit_id = wc.unit_id
+ORDER BY approved_claim_count DESC, claim_count DESC, p.name, u.barcode, u.id;
+
+-- name: WarrantyClaimsByDealerReport :many
+SELECT o.id AS organization_id, o.uuid AS organization_uuid, o.name AS organization_name,
+       o.type AS organization_type,
+       COUNT(c.id)::bigint AS claim_count,
+       COUNT(c.id) FILTER (WHERE c.status IN ('approved', 'reapplied', 'closed'))::bigint AS approved_claim_count,
+       COUNT(c.id) FILTER (WHERE c.status = 'rejected')::bigint AS rejected_claim_count
+FROM warranty_claims c
+JOIN organizations o ON o.id = c.organization_id
+WHERE c.brand_id = sqlc.arg(brand_id)
+  AND (sqlc.arg(organization_ids)::bigint[] IS NULL OR c.organization_id = ANY(sqlc.arg(organization_ids)::bigint[]))
+  AND (sqlc.narg(from_at)::timestamptz IS NULL OR c.created_at >= sqlc.narg(from_at)::timestamptz)
+  AND (sqlc.narg(to_at)::timestamptz IS NULL OR c.created_at < sqlc.narg(to_at)::timestamptz)
+GROUP BY o.id, o.uuid, o.name, o.type
+ORDER BY claim_count DESC, approved_claim_count DESC, o.name, o.id;
+
+-- name: WarrantyClaimPartsReport :many
+SELECT cp.part_key,
+       COALESCE(p.id, 0)::bigint AS product_id,
+       p.uuid AS product_uuid,
+       COALESCE(p.sku, '')::text AS product_sku,
+       COALESCE(p.name, '')::text AS product_name,
+       COUNT(cp.id)::bigint AS part_count,
+       COUNT(DISTINCT cp.claim_id)::bigint AS claim_count,
+       COUNT(DISTINCT cp.claim_id) FILTER (WHERE c.status IN ('approved', 'reapplied', 'closed'))::bigint AS approved_claim_count
+FROM warranty_claim_parts cp
+JOIN warranty_claims c ON c.id = cp.claim_id
+LEFT JOIN products p ON p.id = cp.product_id
+WHERE c.brand_id = sqlc.arg(brand_id)
+  AND (sqlc.arg(organization_ids)::bigint[] IS NULL OR c.organization_id = ANY(sqlc.arg(organization_ids)::bigint[]))
+  AND (sqlc.narg(from_at)::timestamptz IS NULL OR c.created_at >= sqlc.narg(from_at)::timestamptz)
+  AND (sqlc.narg(to_at)::timestamptz IS NULL OR c.created_at < sqlc.narg(to_at)::timestamptz)
+GROUP BY cp.part_key, p.id, p.uuid, p.sku, p.name
+ORDER BY part_count DESC, claim_count DESC, cp.part_key, p.name;
