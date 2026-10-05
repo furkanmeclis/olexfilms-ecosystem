@@ -45,9 +45,18 @@ type CompletedCancelPoster interface {
 	VoidBySourceTx(ctx context.Context, tx pgx.Tx, src posting.Source, reason string, actorUserID *int64) (posting.VoidResult, error)
 }
 
+// IncomePoster is the accounting API needed by service income.
+type IncomePoster interface {
+	PostIncome(ctx context.Context, tx pgx.Tx, e posting.Entry) (posting.Result, error)
+	VoidBySourceTx(ctx context.Context, tx pgx.Tx, src posting.Source, reason string, actorUserID *int64) (posting.VoidResult, error)
+}
+
 // WithCompletedCancelAccounting wires the accounting ledger reversal hook.
 func (s *Service) WithCompletedCancelAccounting(p CompletedCancelPoster) *Service {
 	s.poster = p
+	if income, ok := p.(IncomePoster); ok {
+		s.income = income
+	}
 	return s
 }
 

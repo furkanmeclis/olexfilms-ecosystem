@@ -8217,6 +8217,56 @@ export interface paths {
         patch: operations["updateService"];
         trace?: never;
     };
+    "/v1/services/{uuid}/income": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record income for a completed service
+         * @description TEC-343. Needs services.read for visibility and accounting.write for the service organization; dealer organizations additionally need the dealer_accounting module. The service must be completed and may have only one open income record (a second call answers 409 SERVICE_INCOME_ALREADY_RECORDED). cash needs a cash account, card needs a bank account, and cari books the customer's cari. The accounting row is sourced as service_income and categorized as service_income. Services linked to a warranty claim are accepted and return a warning field.
+         */
+        post: operations["recordServiceIncome"];
+        /**
+         * Reverse service income
+         * @description Reverses the open service_income accounting row with append-only reversal entries and clears services.income_entry_id/income_amount. If no income is recorded the response is 409 SERVICE_INCOME_NOT_RECORDED.
+         */
+        delete: operations["deleteServiceIncome"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/services/{uuid}/profit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Service revenue, purchase cost and gross profit
+         * @description TEC-343. Revenue is services.income_amount. Purchase cost is derived from consumed service items and the received order line price of the unit in the dealer's purchase order; partial roll consumption is proportional to consumed meters. Without accounting.read/accounting.write every field is null; without pricing.purchase.read the cost, gross_profit and margin_pct fields are null.
+         */
+        get: operations["getServiceProfit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/services/{uuid}/items": {
         parameters: {
             query?: never;
@@ -8888,6 +8938,67 @@ export interface paths {
         get: operations["requestQuotePdf"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/dealers/{uuid}/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get portal appointment availability for a dealer
+         * @description Customer portal only. Returns 404 unless the dealer belongs to the request brand, the appointments module is enabled and portal booking is enabled for the dealer.
+         */
+        get: operations["getPortalDealerAvailability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/appointments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List my portal appointments */
+        get: operations["listPortalAppointments"];
+        put?: never;
+        /**
+         * Book an appointment from the customer portal
+         * @description The signed-in customer may book only their own vehicle. The source is forced to portal. Capacity and closure checks use the same locked booking path as panel appointments.
+         */
+        post: operations["createPortalAppointment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/appointments/{uuid}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel my portal appointment
+         * @description Customer portal cancellation is allowed until two hours before the appointment starts; later attempts return 422 APPOINTMENT_CANCEL_WINDOW_CLOSED.
+         */
+        post: operations["cancelPortalAppointment"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11778,6 +11889,7 @@ export interface components {
             longitude: number;
             /** @description Haversine distance in km (2 decimals) */
             distance_km: number;
+            accepts_appointments: boolean;
             /** @description E.164 phone */
             whatsapp: string | null;
         };
@@ -15384,6 +15496,16 @@ export interface components {
             /** Format: int64 */
             contract_no: number;
         };
+        ServiceProfit: {
+            /** @description Recorded service income amount; null without accounting.read/accounting.write. */
+            revenue: string | null;
+            /** @description Consumed purchase cost; null without pricing.purchase.read. */
+            cost: string | null;
+            /** @description revenue - cost; null without pricing.purchase.read. */
+            gross_profit: string | null;
+            /** @description gross_profit / revenue * 100; null without pricing.purchase.read. */
+            margin_pct: string | null;
+        };
         Service: {
             /** Format: uuid */
             uuid: string;
@@ -15408,6 +15530,9 @@ export interface components {
             /** @description Linked intake contract summary, if any */
             contract: components["schemas"]["ServiceContractSummary"] | null;
             contract_required: boolean;
+            /** @description Present when the caller may read accounting data. */
+            income_amount?: string | null;
+            profit?: components["schemas"]["ServiceProfit"] | null;
             cancel_reason: string | null;
             /** Format: date-time */
             completed_at: string | null;
@@ -15473,10 +15598,46 @@ export interface components {
         ServiceCancelCompletedInput: {
             reason: string;
         };
+        /** @enum {string} */
+        ServiceIncomePaymentMethod: "cash" | "card" | "cari";
+        ServiceIncomeInput: {
+            amount: string;
+            payment_method: components["schemas"]["ServiceIncomePaymentMethod"];
+            /**
+             * Format: uuid
+             * @description Required for cash/card, omitted for cari.
+             */
+            account_uuid?: string | null;
+            description?: string;
+        };
+        ServiceIncomeDeleteInput: {
+            reason?: string;
+        };
+        ServiceIncomeResult: {
+            service: components["schemas"]["Service"];
+            /** Format: uuid */
+            entry_uuid?: string;
+            reversal_uuids?: string[];
+            /** @enum {string} */
+            warning?: "warranty_claim_service";
+            warning_message?: string;
+        };
         EnvelopeService: {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["Service"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeServiceIncomeResult: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ServiceIncomeResult"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeServiceProfit: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ServiceProfit"];
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeServiceStockUnitList: {
@@ -16390,6 +16551,15 @@ export interface components {
             starts_at: string;
             estimated_minutes?: number | null;
             source?: components["schemas"]["AppointmentSource"];
+            note?: string;
+        };
+        PortalAppointmentInput: {
+            /** Format: uuid */
+            dealer_uuid: string;
+            /** Format: uuid */
+            vehicle_uuid: string;
+            /** Format: date-time */
+            starts_at: string;
             note?: string;
         };
         Appointment: {
@@ -32274,6 +32444,96 @@ export interface operations {
             409: components["responses"]["Conflict"];
         };
     };
+    recordServiceIncome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceIncomeInput"];
+            };
+        };
+        responses: {
+            /** @description Income recorded */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceIncomeResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    deleteServiceIncome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ServiceIncomeDeleteInput"];
+            };
+        };
+        responses: {
+            /** @description Income reversed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceIncomeResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getServiceProfit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service profit */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceProfit"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     addServiceItem: {
         parameters: {
             query?: never;
@@ -33457,6 +33717,116 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getPortalDealerAvailability: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Portal appointment availability */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointmentAvailabilityList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listPortalAppointments: {
+        parameters: {
+            query?: {
+                period?: "upcoming" | "past" | "all";
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Portal appointments */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointmentPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    createPortalAppointment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortalAppointmentInput"];
+            };
+        };
+        responses: {
+            /** @description Portal appointment created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    cancelPortalAppointment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Portal appointment cancelled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointment"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     getAppointmentSettings: {

@@ -34,10 +34,11 @@ type Category struct {
 // System categories written by accounting/posting (keep in sync with
 // posting.CategorySale / posting.CategoryPurchase).
 const (
-	CategorySale       = "sale"
-	CategoryPurchase   = "purchase"
-	CategoryCollection = "collection"
-	CategoryPayment    = "payment"
+	CategorySale          = "sale"
+	CategoryPurchase      = "purchase"
+	CategoryServiceIncome = "service_income"
+	CategoryCollection    = "collection"
+	CategoryPayment       = "payment"
 	// CategoryCariTransfer: keep in sync with posting.CategoryCariTransfer.
 	CategoryCariTransfer = "cari_transfer"
 )
@@ -50,7 +51,7 @@ func cat(key, direction string, manual bool) Category {
 var categories = []Category{
 	// Income.
 	cat(CategorySale, DirectionIncome, false),
-	cat("service_income", DirectionIncome, true),
+	cat(CategoryServiceIncome, DirectionIncome, true),
 	cat("interest_income", DirectionIncome, true),
 	cat("other_income", DirectionIncome, true),
 	// Expense.

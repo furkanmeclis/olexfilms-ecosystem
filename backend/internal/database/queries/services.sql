@@ -425,3 +425,50 @@ FROM service_item_corrections c
 LEFT JOIN units ru ON ru.id = c.replacement_unit_id
 WHERE c.service_id = sqlc.arg(service_id)
 ORDER BY c.id;
+
+-- ---------------------------------------------------------------------------
+-- TEC-343: completed-service income and profit.
+
+-- name: SetServiceIncome :one
+UPDATE services
+SET income_entry_id = sqlc.arg(income_entry_id),
+    income_amount = sqlc.arg(income_amount)
+WHERE id = sqlc.arg(id)
+  AND brand_id = sqlc.arg(brand_id)
+  AND income_entry_id IS NULL
+RETURNING *;
+
+-- name: ClearServiceIncome :one
+UPDATE services
+SET income_entry_id = NULL,
+    income_amount = NULL
+WHERE id = sqlc.arg(id)
+  AND brand_id = sqlc.arg(brand_id)
+  AND income_entry_id IS NOT NULL
+RETURNING *;
+
+-- name: GetServiceConsumedPurchaseCost :one
+SELECT COALESCE(SUM(
+    CASE
+      WHEN si.meters IS NOT NULL THEN si.meters * bought.unit_price
+      WHEN si.quantity IS NOT NULL THEN si.quantity * bought.unit_price
+      WHEN bought.meters IS NOT NULL THEN bought.meters * bought.unit_price
+      WHEN bought.quantity IS NOT NULL THEN bought.quantity * bought.unit_price
+      ELSE 0
+    END
+), 0)::numeric(18,2) AS cost
+FROM services s
+JOIN service_items si ON si.service_id = s.id
+LEFT JOIN LATERAL (
+    SELECT oi.unit_price, oiu.quantity, oiu.meters
+    FROM order_item_units oiu
+    JOIN order_items oi ON oi.id = oiu.order_item_id
+    JOIN orders o ON o.id = oi.order_id
+    WHERE oiu.unit_id = si.unit_id
+      AND o.buyer_org_id = s.organization_id
+      AND o.status = 'received'
+    ORDER BY o.id DESC, oi.id DESC, oiu.id DESC
+    LIMIT 1
+) bought ON TRUE
+WHERE s.id = sqlc.arg(service_id)
+  AND s.brand_id = sqlc.arg(brand_id);

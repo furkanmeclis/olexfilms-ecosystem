@@ -22,6 +22,21 @@ RETURNING *;
 SELECT * FROM appointment_settings
 WHERE organization_id = sqlc.arg(organization_id);
 
+-- name: GetPortalAppointmentDealer :one
+-- Portal booking accepts only active dealers of the request brand whose
+-- appointment settings explicitly allow portal bookings.
+SELECT o.*, s.portal_appointments_enabled
+FROM organizations o
+JOIN appointment_settings s ON s.organization_id = o.id
+WHERE o.uuid = sqlc.arg(uuid)
+  AND o.brand_id = sqlc.arg(brand_id)::bigint
+  AND o.deleted_at IS NULL
+  AND o.status = 'active'
+  AND o.type = 'dealer'
+  AND o.access_starts_at <= NOW()
+  AND (o.access_ends_at IS NULL OR o.access_ends_at > NOW())
+  AND s.portal_appointments_enabled = TRUE;
+
 -- TEC-323: serializes bookings of one organization; the capacity count and
 -- the insert run under this row lock so concurrent bookings cannot overfill.
 -- name: LockAppointmentSettings :one
@@ -78,6 +93,13 @@ RETURNING *;
 SELECT * FROM appointments
 WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id) AND deleted_at IS NULL;
 
+-- name: GetPortalAppointmentByUUID :one
+SELECT * FROM appointments
+WHERE uuid = sqlc.arg(uuid)
+  AND customer_user_id = sqlc.arg(customer_user_id)::bigint
+  AND brand_id = sqlc.arg(brand_id)::bigint
+  AND deleted_at IS NULL;
+
 -- name: LockAppointmentByID :one
 SELECT * FROM appointments
 WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id) AND deleted_at IS NULL
@@ -97,6 +119,30 @@ WHERE (sqlc.narg(organization_ids)::bigint[] IS NULL OR organization_id = ANY(sq
   AND (sqlc.narg(status)::varchar IS NULL OR status = sqlc.narg(status)::varchar)
 ORDER BY starts_at, id
 LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
+
+-- name: ListPortalAppointments :many
+SELECT a.*
+FROM appointments a
+JOIN organizations o ON o.id = a.organization_id
+WHERE a.customer_user_id = sqlc.arg(customer_user_id)::bigint
+  AND a.brand_id = sqlc.arg(brand_id)::bigint
+  AND a.deleted_at IS NULL
+  AND (sqlc.arg(upcoming)::boolean = FALSE OR a.starts_at >= sqlc.arg(now)::timestamptz)
+  AND (sqlc.arg(past)::boolean = FALSE OR a.starts_at < sqlc.arg(now)::timestamptz)
+ORDER BY
+  CASE WHEN sqlc.arg(upcoming)::boolean THEN a.starts_at END ASC,
+  CASE WHEN sqlc.arg(past)::boolean THEN a.starts_at END DESC,
+  a.id DESC
+LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
+
+-- name: CountPortalAppointments :one
+SELECT COUNT(*)::bigint
+FROM appointments a
+WHERE a.customer_user_id = sqlc.arg(customer_user_id)::bigint
+  AND a.brand_id = sqlc.arg(brand_id)::bigint
+  AND a.deleted_at IS NULL
+  AND (sqlc.arg(upcoming)::boolean = FALSE OR a.starts_at >= sqlc.arg(now)::timestamptz)
+  AND (sqlc.arg(past)::boolean = FALSE OR a.starts_at < sqlc.arg(now)::timestamptz);
 
 -- name: CountAppointmentsByOrganizations :one
 SELECT COUNT(*) FROM appointments

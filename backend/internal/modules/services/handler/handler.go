@@ -24,12 +24,14 @@ import (
 
 // Error codes specific to services.
 const (
-	CodeInvalidTransition = "SERVICE_INVALID_TRANSITION"
-	CodeNotEditable       = "SERVICE_NOT_EDITABLE"
-	CodeUnitInUse         = "SERVICE_UNIT_IN_USE"
-	CodeUnitNotAvailable  = "SERVICE_UNIT_NOT_AVAILABLE"
-	CodeTooManyImages     = "SERVICE_TOO_MANY_IMAGES"
-	CodeContractRequired  = "CONTRACT_REQUIRED"
+	CodeInvalidTransition     = "SERVICE_INVALID_TRANSITION"
+	CodeNotEditable           = "SERVICE_NOT_EDITABLE"
+	CodeUnitInUse             = "SERVICE_UNIT_IN_USE"
+	CodeUnitNotAvailable      = "SERVICE_UNIT_NOT_AVAILABLE"
+	CodeTooManyImages         = "SERVICE_TOO_MANY_IMAGES"
+	CodeContractRequired      = "CONTRACT_REQUIRED"
+	CodeIncomeAlreadyRecorded = "SERVICE_INCOME_ALREADY_RECORDED"
+	CodeIncomeNotRecorded     = "SERVICE_INCOME_NOT_RECORDED"
 
 	// TEC-230: consumption correction.
 	CodeCorrectionWindowClosed   = "SERVICE_CORRECTION_WINDOW_CLOSED"
@@ -76,6 +78,10 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Error(w, r, http.StatusUnprocessableEntity, CodeTooManyImages, "The image limit of the service is reached")
 	case errors.Is(err, svcuc.ErrContractRequired):
 		response.Error(w, r, http.StatusUnprocessableEntity, CodeContractRequired, "An executed intake contract is required for this service transition")
+	case errors.Is(err, svcuc.ErrIncomeAlreadyRecorded):
+		response.Conflict(w, r, CodeIncomeAlreadyRecorded, "Income is already recorded for this service")
+	case errors.Is(err, svcuc.ErrIncomeNotRecorded):
+		response.Conflict(w, r, CodeIncomeNotRecorded, "Income is not recorded for this service")
 	case errors.Is(err, svcuc.ErrCorrectionWindowClosed):
 		response.Error(w, r, http.StatusUnprocessableEntity, CodeCorrectionWindowClosed,
 			"The consumption of this service can no longer be corrected")
@@ -142,6 +148,80 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v, err := h.svc.Get(r.Context(), caller(r), id)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, v)
+}
+
+type incomeBody struct {
+	Amount        string  `json:"amount"`
+	PaymentMethod string  `json:"payment_method"`
+	AccountUUID   *string `json:"account_uuid"`
+	Description   string  `json:"description"`
+}
+
+// RecordIncome (POST /v1/services/{uuid}/income): posts service income.
+func (h *Handler) RecordIncome(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	var b incomeBody
+	if !decode(w, r, &b) {
+		return
+	}
+	var account *uuid.UUID
+	if b.AccountUUID != nil {
+		u, err := uuid.Parse(strings.TrimSpace(*b.AccountUUID))
+		if err != nil {
+			response.ValidationError(w, r, []response.Detail{{Field: "account_uuid", Message: "must be a UUID"}})
+			return
+		}
+		account = &u
+	}
+	v, err := h.svc.RecordIncome(r.Context(), caller(r), id, svcuc.IncomeInput{
+		Amount: b.Amount, PaymentMethod: b.PaymentMethod, AccountUUID: account, Description: b.Description,
+	})
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusCreated, v)
+}
+
+type deleteIncomeBody struct {
+	Reason string `json:"reason"`
+}
+
+// DeleteIncome (DELETE /v1/services/{uuid}/income): reverses service income.
+func (h *Handler) DeleteIncome(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	var b deleteIncomeBody
+	if r.Body != nil && r.ContentLength != 0 {
+		if !decode(w, r, &b) {
+			return
+		}
+	}
+	v, err := h.svc.DeleteIncome(r.Context(), caller(r), id, b.Reason)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, v)
+}
+
+// Profit (GET /v1/services/{uuid}/profit): returns revenue, cost and margin.
+func (h *Handler) Profit(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	v, err := h.svc.Profit(r.Context(), caller(r), id)
 	if err != nil {
 		writeError(w, r, err)
 		return
