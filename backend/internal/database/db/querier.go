@@ -85,6 +85,7 @@ type Querier interface {
 	ClearDefaultContractTemplate(ctx context.Context, arg ClearDefaultContractTemplateParams) error
 	ClearDefaultLabelTemplate(ctx context.Context, arg ClearDefaultLabelTemplateParams) error
 	ClearOrganizationLogo(ctx context.Context, argUuid uuid.UUID) (Organization, error)
+	ClearServiceIncome(ctx context.Context, arg ClearServiceIncomeParams) (Service, error)
 	// Closes the source account. phone_e164/email are the values it keeps (the
 	// caller clears the ones handed to the target; the e-mail is a placeholder
 	// when nothing is left, chk_users_email_or_phone). Runs before the target
@@ -834,6 +835,7 @@ type Querier interface {
 	GetServiceCatalogItem(ctx context.Context, arg GetServiceCatalogItemParams) (ServiceCatalogItem, error)
 	GetServiceCatalogItemByID(ctx context.Context, id int64) (ServiceCatalogItem, error)
 	GetServiceCatalogItemByUUID(ctx context.Context, arg GetServiceCatalogItemByUUIDParams) (ServiceCatalogItem, error)
+	GetServiceConsumedPurchaseCost(ctx context.Context, arg GetServiceConsumedPurchaseCostParams) (pgtype.Numeric, error)
 	GetServiceContractSummary(ctx context.Context, id int64) (GetServiceContractSummaryRow, error)
 	GetServiceForContractByID(ctx context.Context, id int64) (GetServiceForContractByIDRow, error)
 	GetServiceForContractByUUID(ctx context.Context, arg GetServiceForContractByUUIDParams) (GetServiceForContractByUUIDRow, error)
@@ -2206,6 +2208,9 @@ type Querier interface {
 	SetRoomSortOrder(ctx context.Context, arg SetRoomSortOrderParams) (int64, error)
 	// Links (or unlinks with NULL) a contract of the service's organization.
 	SetServiceContract(ctx context.Context, arg SetServiceContractParams) (int64, error)
+	// ---------------------------------------------------------------------------
+	// TEC-343: completed-service income and profit.
+	SetServiceIncome(ctx context.Context, arg SetServiceIncomeParams) (Service, error)
 	// ---------------------------------------------------------------------------
 	// Per-service income.
 	SetServiceIncomeEntry(ctx context.Context, arg SetServiceIncomeEntryParams) (Service, error)

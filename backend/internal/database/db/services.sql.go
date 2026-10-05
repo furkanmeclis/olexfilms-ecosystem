@@ -132,6 +132,64 @@ func (q *Queries) CancelService(ctx context.Context, arg CancelServiceParams) (S
 	return i, err
 }
 
+const clearServiceIncome = `-- name: ClearServiceIncome :one
+UPDATE services
+SET income_entry_id = NULL,
+    income_amount = NULL
+WHERE id = $1
+  AND brand_id = $2
+  AND income_entry_id IS NOT NULL
+RETURNING id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at, warranty_claim_id, income_entry_id, income_amount
+`
+
+type ClearServiceIncomeParams struct {
+	ID      int64 `json:"id"`
+	BrandID int64 `json:"brand_id"`
+}
+
+func (q *Queries) ClearServiceIncome(ctx context.Context, arg ClearServiceIncomeParams) (Service, error) {
+	row := q.db.QueryRow(ctx, clearServiceIncome, arg.ID, arg.BrandID)
+	var i Service
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.ServiceNo,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.CustomerUserID,
+		&i.VehicleID,
+		&i.CarBrandID,
+		&i.CarModelID,
+		&i.ModelYear,
+		&i.Plate,
+		&i.PlateCountry,
+		&i.Vin,
+		&i.Km,
+		&i.Package,
+		&i.Notes,
+		&i.HasMeasurement,
+		&i.MeasurementResultID,
+		&i.ContractID,
+		&i.Status,
+		&i.CreatedByUserID,
+		&i.UpdatedByUserID,
+		&i.CompletedByUserID,
+		&i.CancelledByUserID,
+		&i.CancelReason,
+		&i.CompletedAt,
+		&i.CancelledAt,
+		&i.ReviewRequestSentAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.MeasurementCheckRequired,
+		&i.MeasurementCheckedAt,
+		&i.WarrantyClaimID,
+		&i.IncomeEntryID,
+		&i.IncomeAmount,
+	)
+	return i, err
+}
+
 const completeService = `-- name: CompleteService :one
 UPDATE services
 SET status = 'completed',
@@ -751,6 +809,45 @@ func (q *Queries) GetServiceByUUID(ctx context.Context, arg GetServiceByUUIDPara
 		&i.IncomeAmount,
 	)
 	return i, err
+}
+
+const getServiceConsumedPurchaseCost = `-- name: GetServiceConsumedPurchaseCost :one
+SELECT COALESCE(SUM(
+    CASE
+      WHEN si.meters IS NOT NULL THEN si.meters * bought.unit_price
+      WHEN si.quantity IS NOT NULL THEN si.quantity * bought.unit_price
+      WHEN bought.meters IS NOT NULL THEN bought.meters * bought.unit_price
+      WHEN bought.quantity IS NOT NULL THEN bought.quantity * bought.unit_price
+      ELSE 0
+    END
+), 0)::numeric(18,2) AS cost
+FROM services s
+JOIN service_items si ON si.service_id = s.id
+LEFT JOIN LATERAL (
+    SELECT oi.unit_price, oiu.quantity, oiu.meters
+    FROM order_item_units oiu
+    JOIN order_items oi ON oi.id = oiu.order_item_id
+    JOIN orders o ON o.id = oi.order_id
+    WHERE oiu.unit_id = si.unit_id
+      AND o.buyer_org_id = s.organization_id
+      AND o.status = 'received'
+    ORDER BY o.id DESC, oi.id DESC, oiu.id DESC
+    LIMIT 1
+) bought ON TRUE
+WHERE s.id = $1
+  AND s.brand_id = $2
+`
+
+type GetServiceConsumedPurchaseCostParams struct {
+	ServiceID int64 `json:"service_id"`
+	BrandID   int64 `json:"brand_id"`
+}
+
+func (q *Queries) GetServiceConsumedPurchaseCost(ctx context.Context, arg GetServiceConsumedPurchaseCostParams) (pgtype.Numeric, error) {
+	row := q.db.QueryRow(ctx, getServiceConsumedPurchaseCost, arg.ServiceID, arg.BrandID)
+	var cost pgtype.Numeric
+	err := row.Scan(&cost)
+	return cost, err
 }
 
 const getServiceContractSummary = `-- name: GetServiceContractSummary :one
@@ -1744,6 +1841,74 @@ func (q *Queries) ServiceNoExists(ctx context.Context, serviceNo string) (bool, 
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+const setServiceIncome = `-- name: SetServiceIncome :one
+
+UPDATE services
+SET income_entry_id = $1,
+    income_amount = $2
+WHERE id = $3
+  AND brand_id = $4
+  AND income_entry_id IS NULL
+RETURNING id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at, warranty_claim_id, income_entry_id, income_amount
+`
+
+type SetServiceIncomeParams struct {
+	IncomeEntryID pgtype.Int8    `json:"income_entry_id"`
+	IncomeAmount  pgtype.Numeric `json:"income_amount"`
+	ID            int64          `json:"id"`
+	BrandID       int64          `json:"brand_id"`
+}
+
+// ---------------------------------------------------------------------------
+// TEC-343: completed-service income and profit.
+func (q *Queries) SetServiceIncome(ctx context.Context, arg SetServiceIncomeParams) (Service, error) {
+	row := q.db.QueryRow(ctx, setServiceIncome,
+		arg.IncomeEntryID,
+		arg.IncomeAmount,
+		arg.ID,
+		arg.BrandID,
+	)
+	var i Service
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.ServiceNo,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.CustomerUserID,
+		&i.VehicleID,
+		&i.CarBrandID,
+		&i.CarModelID,
+		&i.ModelYear,
+		&i.Plate,
+		&i.PlateCountry,
+		&i.Vin,
+		&i.Km,
+		&i.Package,
+		&i.Notes,
+		&i.HasMeasurement,
+		&i.MeasurementResultID,
+		&i.ContractID,
+		&i.Status,
+		&i.CreatedByUserID,
+		&i.UpdatedByUserID,
+		&i.CompletedByUserID,
+		&i.CancelledByUserID,
+		&i.CancelReason,
+		&i.CompletedAt,
+		&i.CancelledAt,
+		&i.ReviewRequestSentAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.MeasurementCheckRequired,
+		&i.MeasurementCheckedAt,
+		&i.WarrantyClaimID,
+		&i.IncomeEntryID,
+		&i.IncomeAmount,
+	)
+	return i, err
 }
 
 const setServiceItemMovement = `-- name: SetServiceItemMovement :one

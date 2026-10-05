@@ -15685,6 +15685,99 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /v1/services/{uuid}/income:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    post:
+      tags: [Services]
+      operationId: recordServiceIncome
+      summary: Record income for a completed service
+      description: >-
+        TEC-343. Needs services.read for visibility and accounting.write for
+        the service organization; dealer organizations additionally need the
+        dealer_accounting module. The service must be completed and may have
+        only one open income record (a second call answers 409
+        SERVICE_INCOME_ALREADY_RECORDED). cash needs a cash account, card
+        needs a bank account, and cari books the customer's cari. The
+        accounting row is sourced as service_income and categorized as
+        service_income. Services linked to a warranty claim are accepted and
+        return a warning field.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceIncomeInput"
+      responses:
+        "201":
+          description: Income recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeServiceIncomeResult"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    delete:
+      tags: [Services]
+      operationId: deleteServiceIncome
+      summary: Reverse service income
+      description: >-
+        Reverses the open service_income accounting row with append-only
+        reversal entries and clears services.income_entry_id/income_amount.
+        If no income is recorded the response is 409 SERVICE_INCOME_NOT_RECORDED.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceIncomeDeleteInput"
+      responses:
+        "200":
+          description: Income reversed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeServiceIncomeResult"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/services/{uuid}/profit:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    get:
+      tags: [Services]
+      operationId: getServiceProfit
+      summary: Service revenue, purchase cost and gross profit
+      description: >-
+        TEC-343. Revenue is services.income_amount. Purchase cost is derived
+        from consumed service items and the received order line price of the
+        unit in the dealer's purchase order; partial roll consumption is
+        proportional to consumed meters. Without accounting.read/accounting.write
+        every field is null; without pricing.purchase.read the cost,
+        gross_profit and margin_pct fields are null.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Service profit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeServiceProfit"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /v1/services/{uuid}/items:
     parameters:
       - $ref: "#/components/parameters/ResourceUUID"
@@ -26481,6 +26574,23 @@ components:
         status: { $ref: "#/components/schemas/ContractStatus" }
         contract_no: { type: integer, format: int64 }
 
+    ServiceProfit:
+      type: object
+      required: [revenue, cost, gross_profit, margin_pct]
+      properties:
+        revenue:
+          type: [string, "null"]
+          description: Recorded service income amount; null without accounting.read/accounting.write.
+        cost:
+          type: [string, "null"]
+          description: Consumed purchase cost; null without pricing.purchase.read.
+        gross_profit:
+          type: [string, "null"]
+          description: revenue - cost; null without pricing.purchase.read.
+        margin_pct:
+          type: [string, "null"]
+          description: gross_profit / revenue * 100; null without pricing.purchase.read.
+
     Service:
       type: object
       required:
@@ -26535,6 +26645,13 @@ components:
             - $ref: "#/components/schemas/ServiceContractSummary"
             - type: "null"
         contract_required: { type: boolean }
+        income_amount:
+          type: [string, "null"]
+          description: Present when the caller may read accounting data.
+        profit:
+          oneOf:
+            - $ref: "#/components/schemas/ServiceProfit"
+            - type: "null"
         cancel_reason: { type: [string, "null"] }
         completed_at: { type: [string, "null"], format: date-time }
         cancelled_at: { type: [string, "null"], format: date-time }
@@ -26614,12 +26731,74 @@ components:
           minLength: 1
           maxLength: 1000
 
+    ServiceIncomePaymentMethod:
+      type: string
+      enum: [cash, card, cari]
+
+    ServiceIncomeInput:
+      type: object
+      required: [amount, payment_method]
+      properties:
+        amount:
+          type: string
+          pattern: "^[0-9]+(\\.[0-9]{1,2})?$"
+        payment_method:
+          $ref: "#/components/schemas/ServiceIncomePaymentMethod"
+        account_uuid:
+          type: [string, "null"]
+          format: uuid
+          description: Required for cash/card, omitted for cari.
+        description:
+          type: string
+          maxLength: 1000
+
+    ServiceIncomeDeleteInput:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 1000
+
+    ServiceIncomeResult:
+      type: object
+      required: [service]
+      properties:
+        service:
+          $ref: "#/components/schemas/Service"
+        entry_uuid:
+          type: string
+          format: uuid
+        reversal_uuids:
+          type: array
+          items: { type: string, format: uuid }
+        warning:
+          type: string
+          enum: [warranty_claim_service]
+        warning_message:
+          type: string
+
     EnvelopeService:
       type: object
       required: [success, data, meta]
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/Service" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeServiceIncomeResult:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ServiceIncomeResult" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeServiceProfit:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ServiceProfit" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeServiceStockUnitList:
