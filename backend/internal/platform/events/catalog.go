@@ -645,6 +645,7 @@ func catalogConstants() []string {
 		TasksOverdue,
 		OrganizationCreated,
 		OrganizationUpdated,
+		QuoteSent,
 		LeadsApplicationReceived,
 		MeasurementMatchSuggested,
 	}
@@ -663,6 +664,10 @@ const (
 // (territory distributor or brand center) and notify_user_ids its members
 // holding leads.read.
 const LeadsApplicationReceived = "leads.application_received"
+
+// QuoteSent (TEC-315) is written when a quote is sent or reminded over
+// WhatsApp. Payload carries the recipient phone and public quote URL.
+const QuoteSent = "quote.sent"
 
 // MeasurementMatchSuggested (TEC-296): the before/after matching of a
 // service linked a measurement automatically (waiting for the dealer's

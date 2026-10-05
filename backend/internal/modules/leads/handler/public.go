@@ -10,17 +10,22 @@ import (
 	"strings"
 	"time"
 
+	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
+	docusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/leads/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
+	"github.com/google/uuid"
 )
 
 // Limiter buckets of the public dealer application form (TEC-317).
 const (
 	applicationIPAction    = "dealer_application_ip"
 	applicationPhoneAction = "dealer_application_phone"
+	quotePublicAction      = "quote_public"
 	maxApplicationBody     = 32 << 10
 	applicationNotFound    = "Dealer applications are not available"
+	quoteNotFound          = "Quote was not found"
 )
 
 // Limiter is the fixed window limiter (ratelimit.Limiter).
@@ -35,6 +40,12 @@ type Applications interface {
 	Submit(ctx context.Context, brandID int64, app usecase.Application) (usecase.ApplicationResult, error)
 }
 
+// PublicQuotes is the public read-only quote use case.
+type PublicQuotes interface {
+	PublicQuote(ctx context.Context, brandID int64, token uuid.UUID, pdfURL string) (usecase.PublicQuote, error)
+	PublicQuoteOwner(ctx context.Context, brandID int64, token uuid.UUID) (uuid.UUID, int64, int64, error)
+}
+
 // RateLimits caps the form: IPLimit hits per window per client IP (counted
 // before validation) and PhoneLimit stored applications per window per
 // E.164 phone. Zero disables a limit.
@@ -47,6 +58,8 @@ type RateLimits struct {
 // Public serves /v1/public/dealer-applications (no authentication).
 type Public struct {
 	apps    Applications
+	quotes  PublicQuotes
+	docs    DocumentRenderer
 	limiter Limiter
 	limits  RateLimits
 }
@@ -54,6 +67,13 @@ type Public struct {
 // NewPublic builds the handler.
 func NewPublic(apps Applications, limiter Limiter, limits RateLimits) *Public {
 	return &Public{apps: apps, limiter: limiter, limits: limits}
+}
+
+// WithQuotes enables /v1/public/quotes/{token}.
+func (h *Public) WithQuotes(quotes PublicQuotes, docs DocumentRenderer) *Public {
+	h.quotes = quotes
+	h.docs = docs
+	return h
 }
 
 type applicationConfig struct {
@@ -148,6 +168,86 @@ func (h *Public) Submit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, r, http.StatusAccepted, applicationReceived{Received: true})
+}
+
+// Quote answers GET /v1/public/quotes/{token}; it never exposes recipient
+// phone or e-mail.
+func (h *Public) Quote(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("X-Robots-Tag", "noindex, nofollow")
+	if h.quotes == nil {
+		response.NotFound(w, r, quoteNotFound)
+		return
+	}
+	if !h.allow(w, r, quotePublicAction, clientIP(r), h.limits.IPLimit) {
+		return
+	}
+	token, b, ok := h.publicQuoteToken(w, r)
+	if !ok {
+		return
+	}
+	out, err := h.quotes.PublicQuote(r.Context(), b.ID, token, r.URL.Path+"/pdf")
+	if err != nil {
+		if errors.Is(err, usecase.ErrQuoteNotFound) {
+			response.NotFound(w, r, quoteNotFound)
+			return
+		}
+		response.InternalErr(w, r, err, "quote public lookup failed")
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
+// QuotePDF answers GET /v1/public/quotes/{token}/pdf.
+func (h *Public) QuotePDF(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("X-Robots-Tag", "noindex, nofollow")
+	if h.quotes == nil || h.docs == nil {
+		response.NotFound(w, r, quoteNotFound)
+		return
+	}
+	if !h.allow(w, r, quotePublicAction+"_pdf", clientIP(r), h.limits.IPLimit) {
+		return
+	}
+	token, b, ok := h.publicQuoteToken(w, r)
+	if !ok {
+		return
+	}
+	quoteUUID, orgID, brandID, err := h.quotes.PublicQuoteOwner(r.Context(), b.ID, token)
+	if err != nil {
+		if errors.Is(err, usecase.ErrQuoteNotFound) {
+			response.NotFound(w, r, quoteNotFound)
+			return
+		}
+		response.InternalErr(w, r, err, "quote public pdf failed")
+		return
+	}
+	v, ready, err := h.docs.RequestRender(r.Context(), docmodel.Viewer{
+		OrganizationID: orgID, BrandID: brandID, System: true,
+	}, docusecase.RenderInput{Kind: docmodel.KindQuote, SourceID: quoteUUID.String(), Locale: r.URL.Query().Get("locale")})
+	if err != nil {
+		response.InternalErr(w, r, err, "quote public pdf failed")
+		return
+	}
+	status := http.StatusAccepted
+	if ready {
+		status = http.StatusOK
+	}
+	response.JSON(w, r, status, v)
+}
+
+func (h *Public) publicQuoteToken(w http.ResponseWriter, r *http.Request) (uuid.UUID, brandctx.Brand, bool) {
+	b, ok := brandctx.From(r.Context())
+	if !ok {
+		response.NotFound(w, r, quoteNotFound)
+		return uuid.Nil, brandctx.Brand{}, false
+	}
+	token, err := uuid.Parse(r.PathValue("token"))
+	if err != nil {
+		response.NotFound(w, r, quoteNotFound)
+		return uuid.Nil, brandctx.Brand{}, false
+	}
+	return token, b, true
 }
 
 func (h *Public) allow(w http.ResponseWriter, r *http.Request, action, subject string, limit int) bool {

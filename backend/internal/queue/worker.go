@@ -76,6 +76,8 @@ type Worker struct {
 	tasksDueScan TasksDueScanFunc
 	// TEC-314: daily quote expiry.
 	quoteExpire QuoteExpireFunc
+	// TEC-315: delayed quote WhatsApp reminder.
+	quoteReminder QuoteReminderFunc
 	// TEC-207: end-of-day warehouse reports.
 	warehouseEOD WarehouseEODFunc
 	// TEC-268: Glorian catalog and dealer pull.
@@ -164,6 +166,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskAppointmentNoShowScan, w.handleAppointmentNoShowScan)
 	mux.HandleFunc(TaskTasksDueScan, w.handleTasksDueScan)
 	mux.HandleFunc(TaskQuoteExpire, w.handleQuoteExpire)
+	mux.HandleFunc(TaskQuoteReminder, w.handleQuoteReminder)
 	mux.HandleFunc(TaskWarehouseEODReports, w.handleWarehouseEOD)
 	mux.HandleFunc(TaskGlorianPullCatalog, w.handleGlorianPull)
 	mux.HandleFunc(TaskGlorianPushBarcodes, w.handleGlorianPush)

@@ -709,6 +709,11 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		outbox.NewStore(deps.DB, deps.Queries))), tokens, loader, deps.Queries, featureSvc)
 	// TEC-313: leads and follow-up queue.
 	leadsSvc := leadsusecase.New(deps.DB, deps.Queries, tasksSvc)
+	var quoteQueue leadsusecase.TaskEnqueuer
+	if deps.Queue != nil {
+		quoteQueue = deps.Queue
+	}
+	leadsSvc.SetQuoteSenders(outbox.NewStore(deps.DB, deps.Queries), shorturlsmodule.NewLinker(deps.Queries, cfg.Auth.FrontendURL), quoteQueue)
 	leadsSvc.SetConverters(customersSvc, servicesSvc, orgSvc)
 	if listFinder != nil {
 		leadsSvc.SetFinder(listFinder)
@@ -717,7 +722,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		return nil, err
 	}
 	if s.worker != nil {
-		s.worker.WithQuoteExpire(leadsSvc.ExpireDueQuotesTask)
+		s.worker.WithQuoteExpire(leadsSvc.ExpireDueQuotesTask).
+			WithQuoteReminder(leadsSvc.QuoteReminderTask)
 	}
 	leadsmodule.RegisterRoutes(mux, leadshandler.New(leadsSvc).WithDocuments(docSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-323: appointments, capacity, availability and intake start.
@@ -735,7 +741,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	sysSvc.SetGuard(sysconfig.KeyLeadsDealerApplicationEnabled, dealerApps.SettingGuard)
 	leadsmodule.RegisterPublicRoutes(mux, leadshandler.NewPublic(dealerApps, ratelimit.New(deps.Redis, cfg.App.Env),
 		leadshandler.RateLimits{IPLimit: cfg.Leads.ApplicationIPLimit, PhoneLimit: cfg.Leads.ApplicationPhoneLimit,
-			Window: cfg.Leads.ApplicationRateWindow}))
+			Window: cfg.Leads.ApplicationRateWindow}).WithQuotes(leadsSvc, docSvc))
 	bulkSvc.WithUndoWindow(sysSvc.BulkUndoWindowHours)
 	// TEC-206: stock counts (scans through the TEC-203 resolver, approval via the ledger).
 	warehousemodule.RegisterCountRoutes(mux, warehousehandler.NewCounts(warehouseusecase.NewCounts(deps.DB, deps.Queries,
