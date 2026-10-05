@@ -270,6 +270,7 @@ readings AS (
     JOIN measurement_values mv ON mv.result_id = l.measurement_result_id
        AND mv.organization_id = sqlc.arg(organization_id)
     WHERE mv.value_um IS NOT NULL
+      AND NOT mv.is_inside
     GROUP BY l.phase, mv.place_id, mv.part_type
 ),
 pairs AS (

@@ -161,17 +161,22 @@ func (f *diffFixture) measurement(svc db.Service, value string, at time.Time) in
 		f.org.ID, f.org.BrandID, svc.ID, svc.VehicleID, svc.Vin, f.user.ID, at).Scan(&id); err != nil {
 		f.t.Fatalf("measurement: %v", err)
 	}
+	f.measurementValue(id, value, false)
+	return id
+}
+
+func (f *diffFixture) measurementValue(resultID int64, value string, inside bool) {
+	f.t.Helper()
 	n := pgtype.Numeric{}
 	if err := n.Scan(value); err != nil {
 		f.t.Fatalf("value: %v", err)
 	}
 	if _, err := f.q.InsertMeasurementValue(f.ctx, db.InsertMeasurementValueParams{
-		OrganizationID: f.org.ID, BrandID: f.org.BrandID, ResultID: id,
-		PlaceID: "top", PartType: "HOOD", IsInside: false, ValueUm: n,
+		OrganizationID: f.org.ID, BrandID: f.org.BrandID, ResultID: resultID,
+		PlaceID: "top", PartType: "HOOD", IsInside: inside, ValueUm: n,
 	}); err != nil {
 		f.t.Fatalf("measurement value: %v", err)
 	}
-	return id
 }
 
 func (f *diffFixture) checkRequired(id int64) bool {
@@ -211,6 +216,34 @@ func TestMeasurementDiffWithinToleranceDoesNotFlag(t *testing.T) {
 	}
 	if f.checkRequired(svc.ID) {
 		t.Fatal("measurement_check_required = true, want false")
+	}
+}
+
+func TestMeasurementDiffIgnoresInsideReadings(t *testing.T) {
+	f := newDiffFixture(t)
+	svc := f.service(strptr("190"), "100", "290")
+	links, err := f.q.ListServiceMeasurements(f.ctx, db.ListServiceMeasurementsParams{
+		ServiceID: svc.ID, OrganizationID: f.org.ID,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, link := range links {
+		f.measurementValue(link.MeasurementResultID, "300", true)
+	}
+	if err := f.linker.RecalculateServiceDiff(f.ctx, svc.ID); err != nil {
+		t.Fatal(err)
+	}
+	if f.checkRequired(svc.ID) {
+		t.Fatal("measurement_check_required = true, want false")
+	}
+	diff, err := f.linker.ServiceMeasurementDiff(f.ctx, f.linkCaller(), svc.Uuid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diff.Parts) != 1 || diff.Parts[0].Before.Count != 1 || diff.Parts[0].After.Count != 1 ||
+		*diff.Parts[0].DiffUM != "190.00" {
+		t.Fatalf("diff = %+v", diff.Parts)
 	}
 }
 
