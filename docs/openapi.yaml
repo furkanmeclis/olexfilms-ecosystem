@@ -17116,6 +17116,98 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /v1/portal/dealers/{uuid}/availability:
+    get:
+      tags: [Appointments]
+      operationId: getPortalDealerAvailability
+      summary: Get portal appointment availability for a dealer
+      description: >-
+        Customer portal only. Returns 404 unless the dealer belongs to the
+        request brand, the appointments module is enabled and portal booking
+        is enabled for the dealer.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: from, in: query, required: true, schema: { type: string, format: date } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: Portal appointment availability
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAppointmentAvailabilityList" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/portal/appointments:
+    get:
+      tags: [Appointments]
+      operationId: listPortalAppointments
+      summary: List my portal appointments
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: period, in: query, schema: { type: string, enum: [upcoming, past, all], default: upcoming } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 } }
+      responses:
+        "200":
+          description: Portal appointments
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAppointmentPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+    post:
+      tags: [Appointments]
+      operationId: createPortalAppointment
+      summary: Book an appointment from the customer portal
+      description: >-
+        The signed-in customer may book only their own vehicle. The source is
+        forced to portal. Capacity and closure checks use the same locked
+        booking path as panel appointments.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PortalAppointmentInput" }
+      responses:
+        "201":
+          description: Portal appointment created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAppointment" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /v1/portal/appointments/{uuid}/cancel:
+    post:
+      tags: [Appointments]
+      operationId: cancelPortalAppointment
+      summary: Cancel my portal appointment
+      description: >-
+        Customer portal cancellation is allowed until two hours before the
+        appointment starts; later attempts return 422
+        APPOINTMENT_CANCEL_WINDOW_CLOSED.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Portal appointment cancelled
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAppointment" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
   /v1/appointment-settings:
     get:
       tags: [Appointments]
@@ -21719,7 +21811,7 @@ components:
 
     NearbyDealer:
       type: object
-      required: [slug, name, city, district, latitude, longitude, distance_km, whatsapp]
+      required: [slug, name, city, district, latitude, longitude, distance_km, accepts_appointments, whatsapp]
       properties:
         slug: { type: string }
         name: { type: string }
@@ -21728,6 +21820,7 @@ components:
         latitude: { type: number }
         longitude: { type: number }
         distance_km: { type: number, description: Haversine distance in km (2 decimals) }
+        accepts_appointments: { type: boolean }
         whatsapp: { type: [string, "null"], description: E.164 phone }
 
     EnvelopeNearbyDealers:
@@ -27669,6 +27762,15 @@ components:
         starts_at: { type: string, format: date-time }
         estimated_minutes: { type: [integer, "null"], minimum: 1 }
         source: { $ref: "#/components/schemas/AppointmentSource" }
+        note: { type: string, maxLength: 20000 }
+
+    PortalAppointmentInput:
+      type: object
+      required: [dealer_uuid, vehicle_uuid, starts_at]
+      properties:
+        dealer_uuid: { type: string, format: uuid }
+        vehicle_uuid: { type: string, format: uuid }
+        starts_at: { type: string, format: date-time }
         note: { type: string, maxLength: 20000 }
 
     Appointment:

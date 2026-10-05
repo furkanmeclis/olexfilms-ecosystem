@@ -103,6 +103,7 @@ func TestIntegrationPortalContractsPrefsFleet(t *testing.T) {
 		body any
 	}{
 		{vPath, map[string]any{"phone": itPhone()}},
+		{"/v1/portal/appointments", map[string]any{}},
 		{tr + "/verify", map[string]any{"from_code": "123456"}},
 		{tr + "/cancel", nil},
 	} {
