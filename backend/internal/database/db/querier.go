@@ -20,6 +20,7 @@ type Querier interface {
 	AddLeadEvent(ctx context.Context, arg AddLeadEventParams) (LeadEvent, error)
 	// Signed deltas; the CHECK rejects negative stock.
 	AddOrganizationProductStock(ctx context.Context, arg AddOrganizationProductStockParams) (OrganizationProductStock, error)
+	AddQuoteViewedEventIfMissing(ctx context.Context, arg AddQuoteViewedEventIfMissingParams) (LeadEvent, error)
 	AddServiceCatalogModule(ctx context.Context, arg AddServiceCatalogModuleParams) error
 	AddWarrantyClaimEvent(ctx context.Context, arg AddWarrantyClaimEventParams) (WarrantyClaimEvent, error)
 	AddWarrantyClaimPart(ctx context.Context, arg AddWarrantyClaimPartParams) (WarrantyClaimPart, error)
@@ -85,6 +86,7 @@ type Querier interface {
 	ClearDefaultContractTemplate(ctx context.Context, arg ClearDefaultContractTemplateParams) error
 	ClearDefaultLabelTemplate(ctx context.Context, arg ClearDefaultLabelTemplateParams) error
 	ClearOrganizationLogo(ctx context.Context, argUuid uuid.UUID) (Organization, error)
+	ClearServiceIncome(ctx context.Context, arg ClearServiceIncomeParams) (Service, error)
 	// A cancelled re-application service releases the claim for a new attempt.
 	ClearWarrantyClaimReapplyService(ctx context.Context, arg ClearWarrantyClaimReapplyServiceParams) (WarrantyClaim, error)
 	// Closes the source account. phone_e164/email are the values it keeps (the
@@ -323,6 +325,7 @@ type Querier interface {
 	CreateQuoteDelivery(ctx context.Context, arg CreateQuoteDeliveryParams) (QuoteDelivery, error)
 	CreateQuoteLine(ctx context.Context, arg CreateQuoteLineParams) (QuoteLine, error)
 	CreateQuoteReminder(ctx context.Context, arg CreateQuoteReminderParams) (QuoteReminder, error)
+	CreateQuoteReminderIfMissing(ctx context.Context, arg CreateQuoteReminderIfMissingParams) (QuoteReminder, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
 	CreateReviewQuestion(ctx context.Context, arg CreateReviewQuestionParams) (ReviewQuestion, error)
 	CreateRole(ctx context.Context, arg CreateRoleParams) (Role, error)
@@ -540,6 +543,7 @@ type Querier interface {
 	// check the proposed row and reject every negative delta.
 	EnsureFixedBarcodeHolding(ctx context.Context, arg EnsureFixedBarcodeHoldingParams) error
 	EnsureOrganizationProductStock(ctx context.Context, arg EnsureOrganizationProductStockParams) error
+	EnsureQuoteSent(ctx context.Context, arg EnsureQuoteSentParams) (Quote, error)
 	ExecuteContractInstance(ctx context.Context, arg ExecuteContractInstanceParams) (ContractInstance, error)
 	ExpireDueQuotes(ctx context.Context, today pgtype.Date) ([]Quote, error)
 	ExpireDueVehicleTransfers(ctx context.Context, now pgtype.Timestamptz) ([]VehicleTransfer, error)
@@ -815,6 +819,9 @@ type Querier interface {
 	GetQRLoginChallengeByCode(ctx context.Context, code string) (QrLoginChallenge, error)
 	GetQuoteByPublicToken(ctx context.Context, publicToken uuid.UUID) (Quote, error)
 	GetQuoteByUUID(ctx context.Context, arg GetQuoteByUUIDParams) (Quote, error)
+	GetQuotePublicViewByToken(ctx context.Context, arg GetQuotePublicViewByTokenParams) (GetQuotePublicViewByTokenRow, error)
+	GetQuoteRecipient(ctx context.Context, arg GetQuoteRecipientParams) (GetQuoteRecipientRow, error)
+	GetQuoteReminderByID(ctx context.Context, id int64) (QuoteReminder, error)
 	GetRefreshTokenByHashAny(ctx context.Context, tokenHash string) (RefreshToken, error)
 	GetRefreshTokenByUUID(ctx context.Context, argUuid uuid.UUID) (RefreshToken, error)
 	// TEC-239: the newest reusable portal job of the actor for one service
@@ -836,6 +843,7 @@ type Querier interface {
 	GetServiceCatalogItem(ctx context.Context, arg GetServiceCatalogItemParams) (ServiceCatalogItem, error)
 	GetServiceCatalogItemByID(ctx context.Context, id int64) (ServiceCatalogItem, error)
 	GetServiceCatalogItemByUUID(ctx context.Context, arg GetServiceCatalogItemByUUIDParams) (ServiceCatalogItem, error)
+	GetServiceConsumedPurchaseCost(ctx context.Context, arg GetServiceConsumedPurchaseCostParams) (pgtype.Numeric, error)
 	GetServiceContractSummary(ctx context.Context, id int64) (GetServiceContractSummaryRow, error)
 	GetServiceForContractByID(ctx context.Context, id int64) (GetServiceForContractByIDRow, error)
 	GetServiceForContractByUUID(ctx context.Context, arg GetServiceForContractByUUIDParams) (GetServiceForContractByUUIDRow, error)
@@ -2211,6 +2219,9 @@ type Querier interface {
 	SetRoomSortOrder(ctx context.Context, arg SetRoomSortOrderParams) (int64, error)
 	// Links (or unlinks with NULL) a contract of the service's organization.
 	SetServiceContract(ctx context.Context, arg SetServiceContractParams) (int64, error)
+	// ---------------------------------------------------------------------------
+	// TEC-343: completed-service income and profit.
+	SetServiceIncome(ctx context.Context, arg SetServiceIncomeParams) (Service, error)
 	// ---------------------------------------------------------------------------
 	// Per-service income.
 	SetServiceIncomeEntry(ctx context.Context, arg SetServiceIncomeEntryParams) (Service, error)

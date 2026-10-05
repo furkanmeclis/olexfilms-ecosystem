@@ -140,6 +140,8 @@ type ServiceView struct {
 	HasMeasurement   bool             `json:"has_measurement"`
 	Contract         *ContractSummary `json:"contract"`
 	ContractRequired bool             `json:"contract_required"`
+	IncomeAmount     *string          `json:"income_amount,omitempty"`
+	Profit           *ProfitView      `json:"profit,omitempty"`
 	CancelReason     *string          `json:"cancel_reason"`
 	CompletedAt      *time.Time       `json:"completed_at"`
 	CancelledAt      *time.Time       `json:"cancelled_at"`
@@ -216,6 +218,14 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, svc db.S
 	if svc.Km.Valid {
 		k := svc.Km.Int32
 		v.KM = &k
+	}
+	if canReadIncome(c, svc) {
+		v.IncomeAmount = numericTextPtr(svc.IncomeAmount)
+		p, err := s.profit(ctx, q, c, svc)
+		if err != nil {
+			return ServiceView{}, err
+		}
+		v.Profit = &p
 	}
 	if svc.ContractID.Valid {
 		contract, err := q.GetServiceContractSummary(ctx, svc.ID)

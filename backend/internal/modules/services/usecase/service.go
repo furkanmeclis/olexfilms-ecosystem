@@ -60,6 +60,10 @@ var (
 	ErrContractRequired = errors.New("services: contract required")
 	// ErrServiceNoExhausted: no free service number after several tries.
 	ErrServiceNoExhausted = errors.New("services: could not allocate a service number")
+	// ErrIncomeAlreadyRecorded: a completed service may carry one open income.
+	ErrIncomeAlreadyRecorded = errors.New("services: income already recorded")
+	// ErrIncomeNotRecorded: there is no service income to reverse.
+	ErrIncomeNotRecorded = errors.New("services: income not recorded")
 )
 
 // ValidationError is a field-level input error.
@@ -185,6 +189,7 @@ type Service struct {
 	q        *db.Queries
 	out      outbox.Enqueuer
 	poster   CompletedCancelPoster
+	income   IncomePoster
 	finder   searchengine.ListFinder // TEC-209: services index search (nil: SQL only)
 	settings SettingReader
 	features FeatureChecker
@@ -193,6 +198,14 @@ type Service struct {
 // New creates the service.
 func New(pool TxBeginner, q *db.Queries, out outbox.Enqueuer) *Service {
 	return &Service{pool: pool, q: q, out: out}
+}
+
+// WithServiceIncomeAccounting wires the accounting ledger hook for service
+// income. The same posting.Poster is normally shared with completed-service
+// cancellation.
+func (s *Service) WithServiceIncomeAccounting(p IncomePoster) *Service {
+	s.income = p
+	return s
 }
 
 // WithContractRequirement wires the admin setting and feature resolver used

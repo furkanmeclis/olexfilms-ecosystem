@@ -35,6 +35,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/indexsync"
 	servicereview "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/review"
 	servicesusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/usecase"
+	shorturlsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/shorturls"
 	stockrebuild "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/rebuild"
 	stockusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/usecase"
 	tasksusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/tasks/usecase"
@@ -199,6 +200,7 @@ func main() {
 	docSvc := docusecase.New(pool, queries, store, pdfClient, nil, pdfrender.ParseFontMode(cfg.Gotenberg.Fonts), log)
 	// TEC-314: quote PDF source (worker-docs renders) and daily quote expiry.
 	leadsSvc := leadsusecase.New(pool, queries, nil)
+	leadsSvc.SetQuoteSenders(outboxStore, shorturlsmodule.NewLinker(queries, cfg.Auth.FrontendURL), reviewQueue)
 	if err := docSvc.RegisterLoader(docmodel.KindQuote, leadsSvc); err != nil {
 		log.Error("documents_loader_failed", "kind", docmodel.KindQuote, "error", err)
 		os.Exit(1)
@@ -270,6 +272,7 @@ func main() {
 		// TEC-221: hourly center task due date reminders.
 		// TEC-314: daily quote expiry (valid_until passed).
 		WithQuoteExpire(leadsSvc.ExpireDueQuotesTask).
+		WithQuoteReminder(leadsSvc.QuoteReminderTask).
 		WithTasksDueScan(tasksusecase.NewCron(pool, queries, outbox.NewStore(pool, queries)).DueScanTask).
 		// TEC-207: hourly end-of-day warehouse reports (previous local day).
 		WithWarehouseEOD(eodSvc.DailyTask(log)).

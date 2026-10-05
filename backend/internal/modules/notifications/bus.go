@@ -157,6 +157,12 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	// TEC-317: a public dealer application tells the receiving
 	// organization's lead readers (notify_user_ids).
 	on(events.LeadsApplicationReceived, leadApplicationDispatch)
+	bus.Subscribe(events.QuoteSent, func(ctx context.Context, event events.Event) error {
+		if err := quoteSentNotify(ctx, svc, event); err != nil {
+			log.Error("quote_sent_notification_failed", "event_id", event.EventID, "error", err)
+		}
+		return nil
+	})
 	// TEC-307: service subscription assignment and cancellation lifecycle.
 	for name, code := range ServiceSubscriptionEventCodes {
 		on(name, serviceSubscriptionDispatcher(code))
@@ -383,5 +389,13 @@ func stringFromPayload(payload map[string]any, key string) string {
 		return ""
 	}
 	v, _ := payload[key].(string)
+	return v
+}
+
+func boolFromPayload(payload map[string]any, key string) bool {
+	if payload == nil {
+		return false
+	}
+	v, _ := payload[key].(bool)
 	return v
 }

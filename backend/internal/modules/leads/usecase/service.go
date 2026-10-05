@@ -15,13 +15,16 @@ import (
 	customeruc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/customers/usecase"
 	orguc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
 	serviceuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/usecase"
+	shorturlsuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/shorturls/usecase"
 	tasksuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/tasks/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
 	"github.com/google/uuid"
+	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -65,6 +68,11 @@ type TaskCreator interface {
 	Create(ctx context.Context, c tasksuc.Caller, in tasksuc.CreateInput) (tasksuc.Task, error)
 }
 
+// TaskEnqueuer schedules delayed quote tasks.
+type TaskEnqueuer interface {
+	Enqueue(task *asynq.Task, opts ...asynq.Option) (*asynq.TaskInfo, error)
+}
+
 // Caller is the authenticated member in an active organization.
 type Caller struct {
 	Principal authctx.Principal
@@ -85,6 +93,9 @@ type Service struct {
 	services      *serviceuc.Service
 	organizations *orguc.Service
 	finder        searchengine.ListFinder
+	out           outbox.Enqueuer
+	quoteQueue    TaskEnqueuer
+	quoteLinks    *shorturlsuc.Linker
 	nowFunc       func() time.Time
 }
 
@@ -95,6 +106,13 @@ func New(pool TxBeginner, q *db.Queries, tasks TaskCreator) *Service {
 
 // SetFinder enables Meilisearch-backed list search.
 func (s *Service) SetFinder(f searchengine.ListFinder) { s.finder = f }
+
+// SetQuoteSenders enables quote.sent outbox writes, short URLs and delayed reminders.
+func (s *Service) SetQuoteSenders(out outbox.Enqueuer, links *shorturlsuc.Linker, queue TaskEnqueuer) {
+	s.out = out
+	s.quoteLinks = links
+	s.quoteQueue = queue
+}
 
 // SetClock is used by tests.
 func (s *Service) SetClock(fn func() time.Time) {

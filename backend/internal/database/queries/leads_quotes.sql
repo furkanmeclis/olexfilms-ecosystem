@@ -163,6 +163,20 @@ VALUES (
 )
 RETURNING *;
 
+-- name: AddQuoteViewedEventIfMissing :one
+INSERT INTO lead_events (lead_id, organization_id, brand_id, event_type, payload)
+SELECT
+    sqlc.arg(lead_id), sqlc.arg(organization_id), sqlc.arg(brand_id), 'message',
+    sqlc.arg(payload)
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM lead_events
+    WHERE lead_id = sqlc.arg(lead_id)
+      AND payload->>'kind' = 'quote_viewed'
+      AND payload->>'quote_uuid' = sqlc.arg(quote_uuid)::text
+)
+RETURNING *;
+
 -- name: ListLeadEvents :many
 SELECT * FROM lead_events
 WHERE lead_id = sqlc.arg(lead_id)
@@ -192,6 +206,37 @@ WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id) AND deleted_at IS 
 -- name: GetQuoteByPublicToken :one
 SELECT * FROM quotes
 WHERE public_token = sqlc.arg(public_token) AND deleted_at IS NULL;
+
+-- name: GetQuotePublicViewByToken :one
+SELECT
+    q.id, q.uuid, q.organization_id, q.brand_id, q.lead_id, q.quote_no, q.currency,
+    q.subtotal, q.discount_total, q.tax_total, q.grand_total, q.valid_until,
+    q.status, q.public_token, q.created_at, q.updated_at,
+    o.name AS organization_name
+FROM quotes q
+JOIN organizations o ON o.id = q.organization_id
+WHERE q.public_token = sqlc.arg(public_token)
+  AND q.brand_id = sqlc.arg(brand_id)
+  AND q.status = 'sent'
+  AND q.deleted_at IS NULL
+  AND (q.valid_until IS NULL OR q.valid_until >= sqlc.arg(today)::date);
+
+-- name: GetQuoteRecipient :one
+SELECT
+    l.candidate_phone_e164,
+    u.id AS customer_user_id,
+    u.phone_e164 AS customer_phone_e164,
+    COALESCE(NULLIF(u.locale, ''), NULLIF(o.locale, ''), NULLIF(c.locale, ''), 'tr')::text AS language,
+    COALESCE(NULLIF(l.candidate_contact_name, ''), NULLIF(l.candidate_company_name, ''), NULLIF(u.name || ' ' || u.surname, ' '), 'Müşteri')::text AS recipient_name,
+    o.name AS organization_name
+FROM quotes q
+JOIN leads l ON l.id = q.lead_id
+JOIN organizations o ON o.id = q.organization_id
+LEFT JOIN organizations c ON c.brand_id = q.brand_id AND c.type = 'center'
+LEFT JOIN users u ON u.id = l.customer_user_id
+WHERE q.id = sqlc.arg(quote_id)
+  AND q.organization_id = sqlc.arg(organization_id)
+  AND q.deleted_at IS NULL;
 
 -- name: ListQuotesByLead :many
 SELECT * FROM quotes
@@ -226,6 +271,16 @@ SET status = sqlc.arg(status),
     rejected_at = CASE WHEN sqlc.arg(status)::varchar = 'rejected' THEN COALESCE(rejected_at, NOW()) ELSE rejected_at END,
     expired_at = CASE WHEN sqlc.arg(status)::varchar = 'expired' THEN COALESCE(expired_at, NOW()) ELSE expired_at END
 WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id)
+RETURNING *;
+
+-- name: EnsureQuoteSent :one
+UPDATE quotes
+SET status = 'sent',
+    sent_at = COALESCE(sent_at, NOW())
+WHERE id = sqlc.arg(id)
+  AND organization_id = sqlc.arg(organization_id)
+  AND status IN ('draft', 'sent')
+  AND deleted_at IS NULL
 RETURNING *;
 
 -- name: SoftDeleteQuote :execrows
@@ -281,11 +336,23 @@ INSERT INTO quote_reminders (quote_id, organization_id, brand_id, scheduled_at)
 VALUES (sqlc.arg(quote_id), sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.arg(scheduled_at))
 RETURNING *;
 
+-- name: CreateQuoteReminderIfMissing :one
+INSERT INTO quote_reminders (quote_id, organization_id, brand_id, scheduled_at)
+SELECT sqlc.arg(quote_id), sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.arg(scheduled_at)
+WHERE NOT EXISTS (
+    SELECT 1 FROM quote_reminders WHERE quote_id = sqlc.arg(quote_id)
+)
+RETURNING *;
+
 -- name: MarkQuoteReminderSent :one
 UPDATE quote_reminders
-SET sent_at = NOW()
+SET sent_at = GREATEST(NOW(), scheduled_at)
 WHERE id = sqlc.arg(id) AND sent_at IS NULL
 RETURNING *;
+
+-- name: GetQuoteReminderByID :one
+SELECT * FROM quote_reminders
+WHERE id = sqlc.arg(id);
 
 -- name: ListDueQuoteReminders :many
 SELECT * FROM quote_reminders
