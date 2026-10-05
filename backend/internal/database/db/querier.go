@@ -171,6 +171,7 @@ type Querier interface {
 	CountPermissions(ctx context.Context, q_ pgtype.Text) (int64, error)
 	CountPhoneOTPsSince(ctx context.Context, arg CountPhoneOTPsSinceParams) (int64, error)
 	CountPlatformNotifications(ctx context.Context, arg CountPlatformNotificationsParams) (int64, error)
+	CountPortalAppointments(ctx context.Context, arg CountPortalAppointmentsParams) (int64, error)
 	CountPortalContracts(ctx context.Context, arg CountPortalContractsParams) (int64, error)
 	CountPortalServices(ctx context.Context, arg CountPortalServicesParams) (int64, error)
 	CountPortalVehicles(ctx context.Context, arg CountPortalVehiclesParams) (int64, error)
@@ -762,6 +763,10 @@ type Querier interface {
 	GetPendingVehicleTransfer(ctx context.Context, vehicleID int64) (VehicleTransfer, error)
 	GetPermissionBySlug(ctx context.Context, slug string) (Permission, error)
 	GetPlateFormatByCountry(ctx context.Context, iso2 string) (GetPlateFormatByCountryRow, error)
+	GetPortalAppointmentByUUID(ctx context.Context, arg GetPortalAppointmentByUUIDParams) (Appointment, error)
+	// Portal booking accepts only active dealers of the request brand whose
+	// appointment settings explicitly allow portal bookings.
+	GetPortalAppointmentDealer(ctx context.Context, arg GetPortalAppointmentDealerParams) (GetPortalAppointmentDealerRow, error)
 	GetPortalContractPDF(ctx context.Context, arg GetPortalContractPDFParams) (ContractInstance, error)
 	GetPortalVehicle(ctx context.Context, arg GetPortalVehicleParams) (GetPortalVehicleRow, error)
 	// Service summary of one vehicle across every organization of the brand.
@@ -1393,6 +1398,7 @@ type Querier interface {
 	ListPlateFormats(ctx context.Context, activeOnly bool) ([]ListPlateFormatsRow, error)
 	ListPlatformNotifications(ctx context.Context, arg ListPlatformNotificationsParams) ([]Notification, error)
 	ListPlatformNotificationsForExport(ctx context.Context, arg ListPlatformNotificationsForExportParams) ([]Notification, error)
+	ListPortalAppointments(ctx context.Context, arg ListPortalAppointmentsParams) ([]Appointment, error)
 	// TEC-288 (F3-01d): the user's executed vehicle intake contracts. The
 	// ownership rule stays identical to portal services: the service customer or
 	// warranty holder sees it, within the domain brand, excluding Glorian.
