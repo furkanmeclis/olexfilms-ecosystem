@@ -773,6 +773,7 @@ type Querier interface {
 	GetPortalVehicle(ctx context.Context, arg GetPortalVehicleParams) (GetPortalVehicleRow, error)
 	// Service summary of one vehicle across every organization of the brand.
 	GetPortalVehicleServiceSummary(ctx context.Context, arg GetPortalVehicleServiceSummaryParams) (GetPortalVehicleServiceSummaryRow, error)
+	GetPrimaryOrganizationOwnerForServiceContract(ctx context.Context, organizationID int64) (User, error)
 	GetProduct(ctx context.Context, arg GetProductParams) (Product, error)
 	// TEC-268 (F2-02c): Glorian catalog pull. A synced product is found by its
 	// connection + remote id; the pull rewrites only the remote-sourced columns
@@ -876,6 +877,7 @@ type Querier interface {
 	GetServiceReviewByService(ctx context.Context, serviceID int64) (ServiceReview, error)
 	GetServiceSubscriptionByUUID(ctx context.Context, arg GetServiceSubscriptionByUUIDParams) (ServiceSubscription, error)
 	GetServiceSubscriptionCancelRequestByUUID(ctx context.Context, arg GetServiceSubscriptionCancelRequestByUUIDParams) (ServiceSubscriptionCancelRequest, error)
+	GetServiceSubscriptionForContractByID(ctx context.Context, id int64) (ServiceSubscription, error)
 	// Tells an expired token of the brand apart from an unknown one.
 	GetShortURLExpiry(ctx context.Context, arg GetShortURLExpiryParams) (pgtype.Timestamptz, error)
 	GetShortURLStats(ctx context.Context, token string) (GetShortURLStatsRow, error)
@@ -2240,6 +2242,7 @@ type Querier interface {
 	SetServiceReviewFlags(ctx context.Context, arg SetServiceReviewFlagsParams) (ServiceReview, error)
 	SetServiceReviewRequestSent(ctx context.Context, id int64) (Service, error)
 	SetServiceSubscriptionCancelRequested(ctx context.Context, arg SetServiceSubscriptionCancelRequestedParams) (ServiceSubscription, error)
+	SetServiceSubscriptionContract(ctx context.Context, arg SetServiceSubscriptionContractParams) (ServiceSubscription, error)
 	SetServiceSubscriptionStatus(ctx context.Context, arg SetServiceSubscriptionStatusParams) (ServiceSubscription, error)
 	SetServiceWarrantyClaim(ctx context.Context, arg SetServiceWarrantyClaimParams) (SetServiceWarrantyClaimRow, error)
 	SetStaffPaymentFinanceEntry(ctx context.Context, arg SetStaffPaymentFinanceEntryParams) (StaffPayment, error)

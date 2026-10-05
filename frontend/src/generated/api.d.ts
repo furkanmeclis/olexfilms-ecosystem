@@ -15005,8 +15005,15 @@ export interface components {
             starts_on: string;
             /** Format: date */
             ends_on: string;
+        };
+        ServiceSubscriptionContract: {
+            /** Format: uuid */
+            uuid: string;
             /** Format: int64 */
-            contract_id?: number | null;
+            contract_no: number;
+            /** @enum {string} */
+            status: "draft" | "pending" | "executed" | "voided";
+            pdf_ready: boolean;
         };
         ServiceSubscription: {
             /** Format: uuid */
@@ -15029,6 +15036,8 @@ export interface components {
             };
             cancellation_fee: string;
             status: components["schemas"]["ServiceSubscriptionStatus"];
+            /** @description Linked subscription contract summary. Pending means signatures are still expected. */
+            contract?: components["schemas"]["ServiceSubscriptionContract"];
             /** Format: date-time */
             created_at: string;
         };

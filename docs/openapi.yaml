@@ -26009,7 +26009,15 @@ components:
         organization_uuid: { type: string, format: uuid }
         starts_on: { type: string, format: date }
         ends_on: { type: string, format: date }
-        contract_id: { type: [integer, "null"], format: int64 }
+
+    ServiceSubscriptionContract:
+      type: object
+      required: [uuid, contract_no, status, pdf_ready]
+      properties:
+        uuid: { type: string, format: uuid }
+        contract_no: { type: integer, format: int64 }
+        status: { type: string, enum: [draft, pending, executed, voided] }
+        pdf_ready: { type: boolean }
 
     ServiceSubscription:
       type: object
@@ -26027,6 +26035,9 @@ components:
         rate_snapshot: { type: object, additionalProperties: true }
         cancellation_fee: { type: string }
         status: { $ref: "#/components/schemas/ServiceSubscriptionStatus" }
+        contract:
+          description: Linked subscription contract summary. Pending means signatures are still expected.
+          $ref: "#/components/schemas/ServiceSubscriptionContract"
         created_at: { type: string, format: date-time }
 
     ServiceSubscriptionCancelInput:

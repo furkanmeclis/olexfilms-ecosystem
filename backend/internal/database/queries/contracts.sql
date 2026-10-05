@@ -284,6 +284,10 @@ LEFT JOIN car_brands cb ON cb.id = s.car_brand_id
 LEFT JOIN car_models cm ON cm.id = s.car_model_id
 WHERE s.id = sqlc.arg(id);
 
+-- name: GetServiceSubscriptionForContractByID :one
+SELECT * FROM service_subscriptions
+WHERE id = sqlc.arg(id);
+
 -- ---------------------------------------------------------------------------
 -- Signers.
 
