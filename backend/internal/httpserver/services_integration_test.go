@@ -32,7 +32,14 @@ type serviceView struct {
 	} `json:"car_brand"`
 	ItemsEditable        bool     `json:"items_editable"`
 	AvailableTransitions []string `json:"available_transitions"`
-	Items                []struct {
+	IncomeAmount         *string  `json:"income_amount"`
+	Profit               *struct {
+		Revenue     *string `json:"revenue"`
+		Cost        *string `json:"cost"`
+		GrossProfit *string `json:"gross_profit"`
+		MarginPct   *string `json:"margin_pct"`
+	} `json:"profit"`
+	Items []struct {
 		UUID    string `json:"uuid"`
 		Barcode string `json:"barcode"`
 		Kind    string `json:"kind"`
