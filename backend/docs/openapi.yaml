@@ -15522,6 +15522,31 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/UnprocessableEntity" }
 
+  /v1/warranty-claims/{uuid}/reapply-service:
+    post:
+      tags: [Warranties]
+      operationId: createWarrantyClaimReapplyService
+      summary: Create a re-application service for an approved warranty claim
+      description: >-
+        Opens a draft service linked to the approved claim. If an existing
+        linked re-application service is still open, the request returns 409.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "201":
+          description: Created re-application service reference
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeWarrantyClaimReapplyService" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
   /v1/portal/warranty-claims:
     get:
       tags: [Warranties]
@@ -26511,6 +26536,7 @@ components:
         - editable
         - items_editable
         - available_transitions
+        - is_warranty_reapply
       properties:
         uuid: { type: string, format: uuid }
         service_no: { type: string, description: DS + 8 alphanumerics }
@@ -26545,6 +26571,9 @@ components:
         available_transitions:
           type: array
           items: { $ref: "#/components/schemas/ServiceStatus" }
+        is_warranty_reapply:
+          type: boolean
+          description: True when the service was opened from an approved warranty claim.
         items:
           type: array
           items: { $ref: "#/components/schemas/ServiceItem" }
@@ -26811,6 +26840,14 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
 
+    WarrantyClaimReapplyService:
+      type: object
+      required: [uuid, service_no, status]
+      properties:
+        uuid: { type: string, format: uuid }
+        service_no: { type: string }
+        status: { $ref: "#/components/schemas/ServiceStatus" }
+
     PortalWarrantyClaimStatus:
       type: object
       required: [uuid, status, created_at, updated_at]
@@ -26865,6 +26902,14 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/WarrantyClaimPhoto" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeWarrantyClaimReapplyService:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/WarrantyClaimReapplyService" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeWarrantyClaimPage:

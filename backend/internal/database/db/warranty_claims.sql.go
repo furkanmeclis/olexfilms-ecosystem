@@ -159,6 +159,64 @@ func (q *Queries) AddWarrantyClaimPhoto(ctx context.Context, arg AddWarrantyClai
 	return i, err
 }
 
+const clearWarrantyClaimReapplyService = `-- name: ClearWarrantyClaimReapplyService :one
+UPDATE warranty_claims
+SET reapply_service_id = NULL,
+    status             = 'approved',
+    updated_by_user_id = $1::bigint
+WHERE id = $2
+  AND brand_id = $3
+  AND reapply_service_id = $4
+  AND status = 'reapplied'
+RETURNING id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at
+`
+
+type ClearWarrantyClaimReapplyServiceParams struct {
+	ActorUserID      pgtype.Int8 `json:"actor_user_id"`
+	ID               int64       `json:"id"`
+	BrandID          int64       `json:"brand_id"`
+	ReapplyServiceID pgtype.Int8 `json:"reapply_service_id"`
+}
+
+// A cancelled re-application service releases the claim for a new attempt.
+func (q *Queries) ClearWarrantyClaimReapplyService(ctx context.Context, arg ClearWarrantyClaimReapplyServiceParams) (WarrantyClaim, error) {
+	row := q.db.QueryRow(ctx, clearWarrantyClaimReapplyService,
+		arg.ActorUserID,
+		arg.ID,
+		arg.BrandID,
+		arg.ReapplyServiceID,
+	)
+	var i WarrantyClaim
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ClaimNo,
+		&i.WarrantyID,
+		&i.ServiceID,
+		&i.VehicleID,
+		&i.CustomerUserID,
+		&i.Description,
+		&i.Status,
+		&i.RejectionReason,
+		&i.CoverageCheck,
+		&i.AiDamageType,
+		&i.AiSummary,
+		&i.AiConfidence,
+		&i.AiTriagedAt,
+		&i.ReapplyServiceID,
+		&i.DecidedByUserID,
+		&i.DecidedAt,
+		&i.CreatedByUserID,
+		&i.UpdatedByUserID,
+		&i.ClosedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const countWarrantyClaimPhotos = `-- name: CountWarrantyClaimPhotos :one
 SELECT COUNT(*) FROM warranty_claim_photos
 WHERE claim_id = $1
@@ -417,6 +475,50 @@ func (q *Queries) GetWarrantyClaimByID(ctx context.Context, arg GetWarrantyClaim
 	return i, err
 }
 
+const getWarrantyClaimByIDForUpdate = `-- name: GetWarrantyClaimByIDForUpdate :one
+SELECT id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at FROM warranty_claims
+WHERE id = $1 AND brand_id = $2
+FOR UPDATE
+`
+
+type GetWarrantyClaimByIDForUpdateParams struct {
+	ID      int64 `json:"id"`
+	BrandID int64 `json:"brand_id"`
+}
+
+func (q *Queries) GetWarrantyClaimByIDForUpdate(ctx context.Context, arg GetWarrantyClaimByIDForUpdateParams) (WarrantyClaim, error) {
+	row := q.db.QueryRow(ctx, getWarrantyClaimByIDForUpdate, arg.ID, arg.BrandID)
+	var i WarrantyClaim
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ClaimNo,
+		&i.WarrantyID,
+		&i.ServiceID,
+		&i.VehicleID,
+		&i.CustomerUserID,
+		&i.Description,
+		&i.Status,
+		&i.RejectionReason,
+		&i.CoverageCheck,
+		&i.AiDamageType,
+		&i.AiSummary,
+		&i.AiConfidence,
+		&i.AiTriagedAt,
+		&i.ReapplyServiceID,
+		&i.DecidedByUserID,
+		&i.DecidedAt,
+		&i.CreatedByUserID,
+		&i.UpdatedByUserID,
+		&i.ClosedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getWarrantyClaimByUUID = `-- name: GetWarrantyClaimByUUID :one
 SELECT id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at FROM warranty_claims
 WHERE uuid = $1
@@ -630,6 +732,62 @@ func (q *Queries) GetWarrantyClaimOpenContext(ctx context.Context, arg GetWarran
 		&i.OrganizationName,
 		&i.OrganizationParentID,
 		&i.OrganizationParentType,
+	)
+	return i, err
+}
+
+const getWarrantyClaimReapplyService = `-- name: GetWarrantyClaimReapplyService :one
+SELECT id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at, warranty_claim_id, income_entry_id, income_amount FROM services
+WHERE id = $1
+  AND brand_id = $2
+  AND warranty_claim_id = $3
+`
+
+type GetWarrantyClaimReapplyServiceParams struct {
+	ReapplyServiceID int64       `json:"reapply_service_id"`
+	BrandID          int64       `json:"brand_id"`
+	ClaimID          pgtype.Int8 `json:"claim_id"`
+}
+
+func (q *Queries) GetWarrantyClaimReapplyService(ctx context.Context, arg GetWarrantyClaimReapplyServiceParams) (Service, error) {
+	row := q.db.QueryRow(ctx, getWarrantyClaimReapplyService, arg.ReapplyServiceID, arg.BrandID, arg.ClaimID)
+	var i Service
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.ServiceNo,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.CustomerUserID,
+		&i.VehicleID,
+		&i.CarBrandID,
+		&i.CarModelID,
+		&i.ModelYear,
+		&i.Plate,
+		&i.PlateCountry,
+		&i.Vin,
+		&i.Km,
+		&i.Package,
+		&i.Notes,
+		&i.HasMeasurement,
+		&i.MeasurementResultID,
+		&i.ContractID,
+		&i.Status,
+		&i.CreatedByUserID,
+		&i.UpdatedByUserID,
+		&i.CompletedByUserID,
+		&i.CancelledByUserID,
+		&i.CancelReason,
+		&i.CompletedAt,
+		&i.CancelledAt,
+		&i.ReviewRequestSentAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.MeasurementCheckRequired,
+		&i.MeasurementCheckedAt,
+		&i.WarrantyClaimID,
+		&i.IncomeEntryID,
+		&i.IncomeAmount,
 	)
 	return i, err
 }
@@ -872,6 +1030,53 @@ func (q *Queries) ListWarrantyClaimPhotos(ctx context.Context, claimID int64) ([
 			&i.Sha256,
 			&i.UploadedByUserID,
 			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWarrantyClaimReapplyItems = `-- name: ListWarrantyClaimReapplyItems :many
+SELECT DISTINCT ON (p.part_key)
+       p.part_key, si.product_id, si.unit_id, si.kind, si.quantity, si.meters
+FROM warranty_claim_parts p
+JOIN service_items si ON si.id = p.service_item_id
+WHERE p.claim_id = $1
+  AND p.product_id IS NOT NULL
+  AND p.unit_id IS NOT NULL
+ORDER BY p.part_key, p.id
+`
+
+type ListWarrantyClaimReapplyItemsRow struct {
+	PartKey   string         `json:"part_key"`
+	ProductID int64          `json:"product_id"`
+	UnitID    int64          `json:"unit_id"`
+	Kind      string         `json:"kind"`
+	Quantity  pgtype.Int4    `json:"quantity"`
+	Meters    pgtype.Numeric `json:"meters"`
+}
+
+func (q *Queries) ListWarrantyClaimReapplyItems(ctx context.Context, claimID int64) ([]ListWarrantyClaimReapplyItemsRow, error) {
+	rows, err := q.db.Query(ctx, listWarrantyClaimReapplyItems, claimID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListWarrantyClaimReapplyItemsRow{}
+	for rows.Next() {
+		var i ListWarrantyClaimReapplyItemsRow
+		if err := rows.Scan(
+			&i.PartKey,
+			&i.ProductID,
+			&i.UnitID,
+			&i.Kind,
+			&i.Quantity,
+			&i.Meters,
 		); err != nil {
 			return nil, err
 		}

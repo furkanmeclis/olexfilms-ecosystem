@@ -253,7 +253,7 @@ INSERT INTO services (
     service_no, organization_id, brand_id, customer_user_id, vehicle_id,
     car_brand_id, car_model_id, model_year, plate, plate_country, vin, km,
     package, notes, has_measurement, measurement_result_id, contract_id,
-    status, created_by_user_id, updated_by_user_id
+    status, created_by_user_id, updated_by_user_id, warranty_claim_id
 )
 VALUES (
     $1, $2, $3,
@@ -262,7 +262,8 @@ VALUES (
     $9, $10, $11, $12,
     $13, $14, $15,
     $16, $17,
-    $18, $19, $19
+    $18, $19, $19,
+    $20
 )
 RETURNING id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at, warranty_claim_id, income_entry_id, income_amount
 `
@@ -287,6 +288,7 @@ type CreateServiceParams struct {
 	ContractID          pgtype.Int8 `json:"contract_id"`
 	Status              string      `json:"status"`
 	CreatedByUserID     pgtype.Int8 `json:"created_by_user_id"`
+	WarrantyClaimID     pgtype.Int8 `json:"warranty_claim_id"`
 }
 
 // TEC-178 (F1-05a): services, service items, images and status logs
@@ -316,6 +318,7 @@ func (q *Queries) CreateService(ctx context.Context, arg CreateServiceParams) (S
 		arg.ContractID,
 		arg.Status,
 		arg.CreatedByUserID,
+		arg.WarrantyClaimID,
 	)
 	var i Service
 	err := row.Scan(

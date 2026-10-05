@@ -42,6 +42,7 @@ import (
 	warehouseusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warehouse/usecase"
 	warrantymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty"
 	warrantyusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty/usecase"
+	warrantyclaimsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty_claims/usecase"
 	whatsappmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine"
@@ -122,6 +123,8 @@ func main() {
 		notifmodule.WithAnnouncementFanout(queries, reviewQueue))
 	// TEC-186: service.completed opens one warranty per service item.
 	warrantymodule.RegisterEventHandlers(eventBus, pool, queries, cfg.Auth.FrontendURL, log)
+	// TEC-336: approved claims open and track their re-application service.
+	warrantyclaimsusecase.RegisterEventHandlers(eventBus, pool, queries, outbox.NewStore(pool, queries), log)
 	// TEC-192: service.completed schedules the delayed review request.
 	servicereview.RegisterEventHandlers(eventBus, reviewQueue, cfg.Services.ReviewRequestDelay, log)
 	// TEC-270: glorian stock entries/placements and exits schedule the push.
