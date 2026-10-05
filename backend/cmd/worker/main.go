@@ -14,6 +14,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/logging"
 	accountingusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting/usecase"
 	announcementsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/usecase"
+	appointmentreminder "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/appointments/reminder"
 	bulkusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/bulk/usecase"
 	catalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/catalog/usecase"
 	contractsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts"
@@ -49,6 +50,7 @@ import (
 	bulkadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine/adapters"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/crypto"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/fxrates"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	ioadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine/adapters"
@@ -125,6 +127,8 @@ func main() {
 	warrantymodule.RegisterEventHandlers(eventBus, pool, queries, cfg.Auth.FrontendURL, log)
 	// TEC-192: service.completed schedules the delayed review request.
 	servicereview.RegisterEventHandlers(eventBus, reviewQueue, cfg.Services.ReviewRequestDelay, log)
+	// TEC-325: appointment.created/rescheduled schedules 24h and 2h reminders.
+	appointmentreminder.RegisterEventHandlers(eventBus, reviewQueue, log)
 	// TEC-270: glorian stock entries/placements and exits schedule the push.
 	glorian.RegisterEventHandlers(eventBus, queries, reviewQueue, log)
 	// TEC-288: contract.executed enqueues the worker-docs contract:pdf task.
@@ -243,6 +247,7 @@ func main() {
 	glorianOrders := glorian.NewOrderOutbounder(queries, secretBox, glorian.HTTPClientFactory(glorian.OptionsFromConfig(cfg.Glorian)), log)
 	waSvc := whatsappmodule.NewService(cfg.Wuzapi, pool, queries, secretBox, notifSvc, log)
 	notifSvc.RegisterProvider(providers.WhatsAppProvider{WA: waSvc.Provider()})
+	featureSvc := features.New(pool, queries, nil, log)
 
 	worker := queue.NewWorkerWithQueues(cfg, log, notifSvc.Deliver, queues).
 		WithWhatsAppPoll(waSvc.PollStatus).
@@ -264,6 +269,9 @@ func main() {
 		WithVehicleTransferExpire(transferExpirer.ExpireTransfersTask).
 		// TEC-192: delayed Google review request of a completed service.
 		WithServiceReviewRequest(servicereview.NewTaskSender(pool, queries, cfg.Auth.FrontendURL, log).Task).
+		// TEC-325: appointment WhatsApp reminders and no-show conversion.
+		WithAppointmentReminder(appointmentreminder.NewTaskSender(pool, queries, log).Task).
+		WithAppointmentNoShowScan(appointmentreminder.NewTaskNoShowScanner(pool, queries, featureSvc, log).Task).
 		// TEC-156: nightly projection drift scan; report only, no repair.
 		WithInventoryRebuild(stockrebuild.New(pool, queries).ScanTask(log)).
 		// TEC-221: hourly center task due date reminders.
