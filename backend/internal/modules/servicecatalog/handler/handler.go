@@ -273,7 +273,6 @@ type subscriptionBody struct {
 	OrganizationUUID string `json:"organization_uuid"`
 	StartsOn         string `json:"starts_on"`
 	EndsOn           string `json:"ends_on"`
-	ContractID       *int64 `json:"contract_id"`
 }
 
 func (h *Handler) AssignSubscription(w http.ResponseWriter, r *http.Request) {
@@ -302,7 +301,7 @@ func (h *Handler) AssignSubscription(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sub, err := h.svc.Assign(r.Context(), caller(r), usecase.SubscriptionInput{
-		ItemUUID: itemID, OrganizationUUID: orgID, StartsOn: starts, EndsOn: ends, ContractID: body.ContractID,
+		ItemUUID: itemID, OrganizationUUID: orgID, StartsOn: starts, EndsOn: ends,
 	})
 	if err != nil {
 		writeError(w, r, err)
