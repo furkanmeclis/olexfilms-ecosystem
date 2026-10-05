@@ -37,7 +37,8 @@ func (h *Handler) WithExports(e Exports) *Handler {
 }
 
 func accountingResource(resource string) bool {
-	return resource == acc.ResourceCariStatement || resource == acc.ResourceBalances
+	return resource == acc.ResourceCariStatement || resource == acc.ResourceBalances ||
+		acc.IsReportResource(resource) // TEC-346
 }
 
 // accountingJob points the download link of an accounting export job at the
@@ -103,6 +104,8 @@ type exportBody struct {
 	To               string     `json:"to"`
 	AsOf             string     `json:"as_of"`
 	Locale           string     `json:"locale"`
+	// Group is the P&L grouping (TEC-346; month or category).
+	Group string `json:"group"`
 }
 
 func bodyDate(field, raw string) (*time.Time, error) {

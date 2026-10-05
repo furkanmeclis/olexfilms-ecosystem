@@ -110,4 +110,15 @@ func RegisterRoutes(
 	mux.Handle("PATCH /v1/staff-profiles/{uuid}", staffManage(h.UpdateStaffProfile))
 	mux.Handle("POST /v1/staff-profiles/{uuid}/payments", staffPayments(h.CreateStaffPayment))
 	mux.Handle("POST /v1/staff-payments/payroll", staffPayments(h.RunPayroll))
+
+	// TEC-346: reports of the active organization's own book (no subtree)
+	// and their export jobs (read scope, like the balance report).
+	mux.Handle("GET /v1/accounting/reports/pnl", read(h.GetPnlReport))
+	mux.Handle("POST /v1/accounting/reports/pnl/export", read(h.ExportPnlReport))
+	mux.Handle("GET /v1/accounting/reports/margin", read(h.GetMarginReport))
+	mux.Handle("POST /v1/accounting/reports/margin/export", read(h.ExportMarginReport))
+	mux.Handle("GET /v1/accounting/reports/cari-aging", read(h.GetCariAgingReport))
+	mux.Handle("POST /v1/accounting/reports/cari-aging/export", read(h.ExportCariAgingReport))
+	mux.Handle("GET /v1/accounting/reports/staff-cost", read(h.GetStaffCostReport))
+	mux.Handle("POST /v1/accounting/reports/staff-cost/export", read(h.ExportStaffCostReport))
 }

@@ -15661,6 +15661,301 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /v1/accounting/reports/pnl:
+    get:
+      tags: [Accounting]
+      operationId: getAccountingPnlReport
+      summary: Income, expense and net of the own book (TEC-346)
+      description: >-
+        Ledger income/expense rows of the active organization in its
+        currency, grouped by UTC month or by category. Reversal rows net out.
+        A center or distributor reads its own book only, never a child's.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: organization_uuid
+          in: query
+          description: Only the active organization (default); any other organization is 404 (no subtree read).
+          schema: { type: string, format: uuid }
+        - name: from
+          in: query
+          description: First day (UTC, inclusive)
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          description: Last day (UTC, inclusive)
+          schema: { type: string, format: date }
+        - name: group
+          in: query
+          schema: { type: string, enum: [month, category], default: month }
+        - name: locale
+          in: query
+          description: Category label language override
+          schema: { type: string }
+      responses:
+        "200":
+          description: Report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAccountingPnlReport"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/accounting/reports/pnl/export:
+    post:
+      tags: [Accounting]
+      operationId: exportAccountingPnlReport
+      summary: Queue a P&L export job (PDF, XLSX or CSV)
+      description: >-
+        The job runs on the exports queue and lands in the central export
+        list; poll and download through /v1/accounting/exports/{uuid}.
+        PDF is the generic table on the organization letterhead.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountingReportExportInput"
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/accounting/reports/margin:
+    get:
+      tags: [Accounting]
+      operationId: getAccountingMarginReport
+      summary: Service and product sale margin of the own book (TEC-346)
+      description: >-
+        Services whose income was recorded in the period (revenue and the
+        purchase cost of consumed units) and product sales per product (line
+        purchase cost snapshot; voided sales left out). cost, gross_profit,
+        margin_pct and cost_incomplete are null without pricing.purchase.read.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: organization_uuid
+          in: query
+          description: Only the active organization (default); any other organization is 404 (no subtree read).
+          schema: { type: string, format: uuid }
+        - name: from
+          in: query
+          description: First day (UTC, inclusive)
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          description: Last day (UTC, inclusive)
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAccountingMarginReport"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/accounting/reports/margin/export:
+    post:
+      tags: [Accounting]
+      operationId: exportAccountingMarginReport
+      summary: Queue a margin report export job (PDF, XLSX or CSV)
+      description: >-
+        The job runs on the exports queue and lands in the central export
+        list; poll and download through /v1/accounting/exports/{uuid}.
+        PDF is the generic table on the organization letterhead.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountingReportExportInput"
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/accounting/reports/cari-aging:
+    get:
+      tags: [Accounting]
+      operationId: getAccountingCariAgingReport
+      summary: Cari aging of the own book (TEC-346)
+      description: >-
+        Every customer and organization cari with an open balance as of a day
+        (default today, UTC), split into 0-30 / 31-60 / 61-90 / 90+ day
+        buckets. The open amount is matched to the newest rows that raised
+        it (payments settle the oldest rows first).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: organization_uuid
+          in: query
+          description: Only the active organization (default); any other organization is 404 (no subtree read).
+          schema: { type: string, format: uuid }
+        - name: as_of
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAccountingCariAgingReport"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/accounting/reports/cari-aging/export:
+    post:
+      tags: [Accounting]
+      operationId: exportAccountingCariAgingReport
+      summary: Queue a cari aging export job (PDF, XLSX or CSV)
+      description: >-
+        The job runs on the exports queue and lands in the central export
+        list; poll and download through /v1/accounting/exports/{uuid}.
+        PDF is the generic table on the organization letterhead.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountingReportExportInput"
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/accounting/reports/staff-cost:
+    get:
+      tags: [Accounting]
+      operationId: getAccountingStaffCostReport
+      summary: Staff cost of the own book (TEC-346)
+      description: >-
+        Salary, advance and bonus totals per staff card over the non-void
+        payments whose payment day falls in the period.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: organization_uuid
+          in: query
+          description: Only the active organization (default); any other organization is 404 (no subtree read).
+          schema: { type: string, format: uuid }
+        - name: from
+          in: query
+          description: First day (UTC, inclusive)
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          description: Last day (UTC, inclusive)
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAccountingStaffCostReport"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/accounting/reports/staff-cost/export:
+    post:
+      tags: [Accounting]
+      operationId: exportAccountingStaffCostReport
+      summary: Queue a staff cost export job (PDF, XLSX or CSV)
+      description: >-
+        The job runs on the exports queue and lands in the central export
+        list; poll and download through /v1/accounting/exports/{uuid}.
+        PDF is the generic table on the organization letterhead.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountingReportExportInput"
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/warranties:
     get:
       tags: [Warranties]
@@ -27366,6 +27661,211 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/AccountingBalanceReport" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    AccountingReportExportInput:
+      type: object
+      required: [format]
+      additionalProperties: false
+      properties:
+        format: { type: string, enum: [pdf, xlsx, csv] }
+        organization_uuid:
+          type: [string, "null"]
+          format: uuid
+          description: Only the active organization (default); any other is 404
+        from: { type: string, format: date, description: "P&L, margin and staff cost" }
+        to: { type: string, format: date, description: "P&L, margin and staff cost" }
+        as_of: { type: string, format: date, description: Cari aging only }
+        group: { type: string, enum: [month, category], description: P&L only (default month) }
+        locale: { type: string, description: Report language override (default the user language), example: tr }
+
+    AccountingPnlLine:
+      type: object
+      required: [key, label, income, expense, net, entry_count]
+      properties:
+        key: { type: string, description: YYYY-MM or the category key }
+        label: { type: string }
+        income: { $ref: "#/components/schemas/AccountingAmount" }
+        expense: { $ref: "#/components/schemas/AccountingAmount" }
+        net: { $ref: "#/components/schemas/AccountingAmount" }
+        entry_count: { type: integer, format: int64 }
+
+    AccountingPnlReport:
+      type: object
+      required: [organization, currency, from, to, group, lines, totals, generated_at]
+      properties:
+        organization: { $ref: "#/components/schemas/AccountingRef" }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        from: { type: [string, "null"], format: date }
+        to: { type: [string, "null"], format: date }
+        group: { type: string, enum: [month, category] }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/AccountingPnlLine" }
+        totals:
+          type: object
+          required: [income, expense, net]
+          properties:
+            income: { $ref: "#/components/schemas/AccountingAmount" }
+            expense: { $ref: "#/components/schemas/AccountingAmount" }
+            net: { $ref: "#/components/schemas/AccountingAmount" }
+        generated_at: { type: string, format: date-time }
+
+    AccountingMarginFigures:
+      type: object
+      required: [revenue, cost, gross_profit, margin_pct]
+      properties:
+        revenue: { $ref: "#/components/schemas/AccountingAmount" }
+        cost: { oneOf: [{ $ref: "#/components/schemas/AccountingAmount" }, { type: "null" }] }
+        gross_profit: { oneOf: [{ $ref: "#/components/schemas/AccountingAmount" }, { type: "null" }] }
+        margin_pct:
+          type: [string, "null"]
+          description: Gross profit as a percent of revenue (2 decimals); null without revenue or cost visibility
+          example: "40.00"
+
+    AccountingMarginProduct:
+      allOf:
+        - $ref: "#/components/schemas/AccountingMarginFigures"
+        - type: object
+          required: [product_uuid, sku, name, quantity, sale_count, cost_incomplete]
+          properties:
+            product_uuid: { type: string, format: uuid }
+            sku: { type: string }
+            name: { type: string }
+            quantity: { type: string, example: "2.00" }
+            sale_count: { type: integer, format: int64 }
+            cost_incomplete:
+              type: [boolean, "null"]
+              description: Some lines had no purchase cost snapshot (counted as zero)
+
+    AccountingMarginReport:
+      type: object
+      required: [organization, currency, from, to, cost_visible, services, product_sales, products, total, generated_at]
+      properties:
+        organization: { $ref: "#/components/schemas/AccountingRef" }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        from: { type: [string, "null"], format: date }
+        to: { type: [string, "null"], format: date }
+        cost_visible: { type: boolean }
+        services:
+          allOf:
+            - $ref: "#/components/schemas/AccountingMarginFigures"
+            - type: object
+              required: [service_count]
+              properties:
+                service_count: { type: integer, format: int64 }
+        product_sales: { $ref: "#/components/schemas/AccountingMarginFigures" }
+        products:
+          type: array
+          items: { $ref: "#/components/schemas/AccountingMarginProduct" }
+        total: { $ref: "#/components/schemas/AccountingMarginFigures" }
+        generated_at: { type: string, format: date-time }
+
+    AccountingAgingBuckets:
+      type: object
+      required: [days_0_30, days_31_60, days_61_90, days_90_plus]
+      properties:
+        days_0_30: { $ref: "#/components/schemas/AccountingAmount" }
+        days_31_60: { $ref: "#/components/schemas/AccountingAmount" }
+        days_61_90: { $ref: "#/components/schemas/AccountingAmount" }
+        days_90_plus: { $ref: "#/components/schemas/AccountingAmount" }
+
+    AccountingAgingTotal:
+      type: object
+      required: [balance, buckets]
+      properties:
+        balance: { $ref: "#/components/schemas/AccountingAmount" }
+        buckets: { $ref: "#/components/schemas/AccountingAgingBuckets" }
+
+    AccountingCariAgingReport:
+      type: object
+      required: [organization, currency, as_of, lines, totals, generated_at]
+      properties:
+        organization: { $ref: "#/components/schemas/AccountingRef" }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        as_of: { type: string, format: date }
+        lines:
+          type: array
+          items:
+            type: object
+            required: [cari_uuid, counterparty, side, balance, buckets]
+            properties:
+              cari_uuid: { type: string, format: uuid }
+              counterparty: { $ref: "#/components/schemas/CariCounterparty" }
+              side: { type: string, enum: [receivable, payable] }
+              balance: { $ref: "#/components/schemas/AccountingAmount" }
+              buckets: { $ref: "#/components/schemas/AccountingAgingBuckets" }
+        totals:
+          type: object
+          required: [receivable, payable]
+          properties:
+            receivable: { $ref: "#/components/schemas/AccountingAgingTotal" }
+            payable: { $ref: "#/components/schemas/AccountingAgingTotal" }
+        generated_at: { type: string, format: date-time }
+
+    AccountingStaffCostReport:
+      type: object
+      required: [organization, currency, from, to, lines, totals, generated_at]
+      properties:
+        organization: { $ref: "#/components/schemas/AccountingRef" }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        from: { type: [string, "null"], format: date }
+        to: { type: [string, "null"], format: date }
+        lines:
+          type: array
+          items:
+            type: object
+            required: [staff_uuid, name, title, active, salary, advance, bonus, total, payment_count]
+            properties:
+              staff_uuid: { type: string, format: uuid }
+              name: { type: string }
+              title: { type: [string, "null"] }
+              active: { type: boolean }
+              salary: { $ref: "#/components/schemas/AccountingAmount" }
+              advance: { $ref: "#/components/schemas/AccountingAmount" }
+              bonus: { $ref: "#/components/schemas/AccountingAmount" }
+              total: { $ref: "#/components/schemas/AccountingAmount" }
+              payment_count: { type: integer, format: int64 }
+        totals:
+          type: object
+          required: [salary, advance, bonus, total]
+          properties:
+            salary: { $ref: "#/components/schemas/AccountingAmount" }
+            advance: { $ref: "#/components/schemas/AccountingAmount" }
+            bonus: { $ref: "#/components/schemas/AccountingAmount" }
+            total: { $ref: "#/components/schemas/AccountingAmount" }
+        generated_at: { type: string, format: date-time }
+
+    EnvelopeAccountingPnlReport:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/AccountingPnlReport" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAccountingMarginReport:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/AccountingMarginReport" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAccountingCariAgingReport:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/AccountingCariAgingReport" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAccountingStaffCostReport:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/AccountingStaffCostReport" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     ServiceStatus:
