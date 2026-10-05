@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
@@ -13,6 +14,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/fxrates"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/google/uuid"
@@ -87,7 +89,6 @@ type SubscriptionInput struct {
 	OrganizationUUID uuid.UUID
 	StartsOn         time.Time
 	EndsOn           time.Time
-	ContractID       *int64
 }
 
 type CancelRequestInput struct {
@@ -111,7 +112,15 @@ type SubscriptionView struct {
 	RateSnapshot     json.RawMessage    `json:"rate_snapshot"`
 	CancellationFee  string             `json:"cancellation_fee"`
 	Status           string             `json:"status"`
+	Contract         *ContractSummary   `json:"contract,omitempty"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+}
+
+type ContractSummary struct {
+	UUID       uuid.UUID `json:"uuid"`
+	ContractNo int64     `json:"contract_no"`
+	Status     string    `json:"status"`
+	PDFReady   bool      `json:"pdf_ready"`
 }
 
 type CancelRequestView struct {
@@ -165,10 +174,16 @@ func (s *Service) Assign(ctx context.Context, c Caller, in SubscriptionInput) (S
 			ItemID: item.ID, AssignedByOrgID: c.Org.InternalID, AssignedByUserID: c.actor(),
 			StartsOn: dateArg(in.StartsOn), EndsOn: dateArg(in.EndsOn), Recurrence: item.Recurrence,
 			Price: priceNum, Currency: price.Currency, RateSnapshot: snap,
-			CancellationFee: item.CancellationFee, ContractID: int8Arg(in.ContractID),
+			CancellationFee: item.CancellationFee,
 		})
 		if err != nil {
 			return mapDBError(err)
+		}
+		if item.ContractTemplateID.Valid {
+			sub, err = s.createSubscriptionContract(ctx, q, c, sub, item, target)
+			if err != nil {
+				return err
+			}
 		}
 		if err := s.openModules(ctx, q, sub, item, c.Principal.UserInternal); err != nil {
 			return err
@@ -502,13 +517,141 @@ func (s *Service) subscriptionView(ctx context.Context, sub db.ServiceSubscripti
 	if err != nil {
 		return SubscriptionView{}, err
 	}
-	return SubscriptionView{
+	view := SubscriptionView{
 		UUID: sub.Uuid, OrganizationUUID: org.Uuid, ItemUUID: item.Uuid, AssignedByOrgID: sub.AssignedByOrgID,
 		StartsOn: sub.StartsOn.Time.Format(time.DateOnly), EndsOn: sub.EndsOn.Time.Format(time.DateOnly),
 		Recurrence: sub.Recurrence, Price: numText(sub.Price), Currency: sub.Currency,
 		RateSnapshot: json.RawMessage(sub.RateSnapshot), CancellationFee: numText(sub.CancellationFee),
 		Status: sub.Status, CreatedAt: sub.CreatedAt,
-	}, nil
+	}
+	if sub.ContractID.Valid {
+		inst, err := s.q.GetContractInstanceByID(ctx, sub.ContractID.Int64)
+		if err != nil {
+			return SubscriptionView{}, err
+		}
+		view.Contract = &ContractSummary{
+			UUID: inst.Uuid, ContractNo: inst.ContractNo, Status: inst.Status, PDFReady: inst.PdfKey.Valid,
+		}
+	}
+	return view, nil
+}
+
+func (s *Service) createSubscriptionContract(
+	ctx context.Context,
+	q *db.Queries,
+	c Caller,
+	sub db.ServiceSubscription,
+	item db.ServiceCatalogItem,
+	target db.Organization,
+) (db.ServiceSubscription, error) {
+	tpl, err := q.GetContractTemplateByID(ctx, item.ContractTemplateID.Int64)
+	if errors.Is(err, pgx.ErrNoRows) || tpl.BrandID != sub.BrandID || tpl.Kind != "service_sale" || !tpl.IsActive {
+		return db.ServiceSubscription{}, invalid("contract_template_id", "must reference an active service_sale template")
+	}
+	if err != nil {
+		return db.ServiceSubscription{}, err
+	}
+	loc, err := subscriptionContractLocale(ctx, q, tpl.ID, target.Locale)
+	if err != nil {
+		return db.ServiceSubscription{}, err
+	}
+	rendered := pdfrender.Fill(pdfrender.SanitizeHTML(loc.Html), subscriptionContractValues(sub, item, target), nil)
+	sum := sha256Hex([]byte(rendered))
+	no, err := q.NextContractNo(ctx, sub.OrganizationID)
+	if err != nil {
+		return db.ServiceSubscription{}, err
+	}
+	inst, err := q.CreateContractInstance(ctx, db.CreateContractInstanceParams{
+		OrganizationID: sub.OrganizationID, BrandID: sub.BrandID, ContractNo: no,
+		SubjectType: "service_subscription", SubjectID: sub.ID, TemplateID: tpl.ID, Kind: tpl.Kind,
+		Locale: loc.Locale, TemplateVersion: loc.Version, OtpRequired: tpl.OtpRequired,
+		SignatureRequired: tpl.SignatureRequired, Status: "pending",
+		RenderedHtml: pgText(rendered), ContentSha256: pgText(sum), CreatedByUserID: c.actor(),
+	})
+	if err != nil {
+		return db.ServiceSubscription{}, err
+	}
+	owner, err := q.GetPrimaryOrganizationOwnerForServiceContract(ctx, sub.OrganizationID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return db.ServiceSubscription{}, invalid("organization_uuid", "owner user is required")
+	}
+	if err != nil {
+		return db.ServiceSubscription{}, err
+	}
+	if _, err := q.UpsertContractSigner(ctx, db.UpsertContractSignerParams{
+		InstanceID: inst.ID, OrganizationID: inst.OrganizationID, BrandID: inst.BrandID,
+		Role: "customer", UserID: pgtype.Int8{Int64: owner.ID, Valid: true},
+		Name: userName(owner, "Customer"), PhoneE164: owner.PhoneE164,
+	}); err != nil {
+		return db.ServiceSubscription{}, err
+	}
+	staffName := "Staff"
+	staffID := c.actor()
+	if staffID.Valid {
+		staff, err := q.GetUserByID(ctx, staffID.Int64)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return db.ServiceSubscription{}, err
+		}
+		if err == nil {
+			staffName = userName(staff, "Staff")
+		}
+	}
+	if _, err := q.UpsertContractSigner(ctx, db.UpsertContractSignerParams{
+		InstanceID: inst.ID, OrganizationID: inst.OrganizationID, BrandID: inst.BrandID,
+		Role: "staff", UserID: staffID, Name: staffName,
+	}); err != nil {
+		return db.ServiceSubscription{}, err
+	}
+	sub, err = q.SetServiceSubscriptionContract(ctx, db.SetServiceSubscriptionContractParams{
+		ID: sub.ID, BrandID: sub.BrandID, ContractID: pgtype.Int8{Int64: inst.ID, Valid: true},
+	})
+	if err != nil {
+		return db.ServiceSubscription{}, err
+	}
+	return sub, nil
+}
+
+func subscriptionContractLocale(ctx context.Context, q *db.Queries, templateID int64, requested string) (db.ContractTemplateLocale, error) {
+	candidates := []string{strings.TrimSpace(requested), "tr", "en"}
+	seen := map[string]bool{}
+	for _, loc := range candidates {
+		if loc == "" || seen[loc] {
+			continue
+		}
+		seen[loc] = true
+		row, err := q.GetContractTemplateLocale(ctx, db.GetContractTemplateLocaleParams{TemplateID: templateID, Locale: loc})
+		if err == nil {
+			return row, nil
+		}
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return db.ContractTemplateLocale{}, err
+		}
+	}
+	return db.ContractTemplateLocale{}, ErrNotFound
+}
+
+func subscriptionContractValues(sub db.ServiceSubscription, item db.ServiceCatalogItem, org db.Organization) map[string]string {
+	return map[string]string{
+		"org_name":      org.Name,
+		"org_phone":     org.Phone,
+		"org_email":     org.Email,
+		"org_address":   org.Address,
+		"service_name":  item.Name,
+		"start_date":    sub.StartsOn.Time.Format(time.DateOnly),
+		"end_date":      sub.EndsOn.Time.Format(time.DateOnly),
+		"price":         numText(sub.Price) + " " + sub.Currency,
+		"plate":         "",
+		"vin":           "",
+		"vehicle_label": "",
+	}
+}
+
+func userName(u db.User, fallback string) string {
+	full := strings.TrimSpace(strings.TrimSpace(u.Name) + " " + strings.TrimSpace(u.Surname))
+	if full == "" {
+		return fallback
+	}
+	return full
 }
 
 func (s *Service) cancelView(_ context.Context, req db.ServiceSubscriptionCancelRequest, subUUID uuid.UUID) CancelRequestView {

@@ -156,6 +156,7 @@ type Querier interface {
 	CountMigrationMap(ctx context.Context) ([]CountMigrationMapRow, error)
 	CountNotificationDeliveries(ctx context.Context, arg CountNotificationDeliveriesParams) (int64, error)
 	CountNotificationsForUser(ctx context.Context, arg CountNotificationsForUserParams) (int64, error)
+	CountOpenFinanceEntriesBySource(ctx context.Context, arg CountOpenFinanceEntriesBySourceParams) (int64, error)
 	// A unit is on at most one open (requested or approved) request; the
 	// caller holds the unit row lock.
 	CountOpenTransferItemsByUnit(ctx context.Context, arg CountOpenTransferItemsByUnitParams) (int64, error)
@@ -240,11 +241,6 @@ type Querier interface {
 	// counterparty organization. When it already exists no row is returned
 	// (pgx.ErrNoRows) and the caller reads it with GetCariAccountByCounterpartyOrg.
 	CreateCariForOrgIfMissing(ctx context.Context, arg CreateCariForOrgIfMissingParams) (CariAccount, error)
-	// TEC-341 (F3-07a): dealer accounting schema (migration 000093). Every read
-	// and write is bounded by the organization the API layer resolved; ledger
-	// rows are written through ledger.Post and only linked here.
-	// ---------------------------------------------------------------------------
-	// Customer cari.
 	// CreateCariForUserIfMissing opens the cari of organization_id with a
 	// customer. When it already exists no row is returned (pgx.ErrNoRows) and
 	// the caller reads it with GetCariAccountByCounterpartyUser.
@@ -777,6 +773,7 @@ type Querier interface {
 	GetPortalVehicle(ctx context.Context, arg GetPortalVehicleParams) (GetPortalVehicleRow, error)
 	// Service summary of one vehicle across every organization of the brand.
 	GetPortalVehicleServiceSummary(ctx context.Context, arg GetPortalVehicleServiceSummaryParams) (GetPortalVehicleServiceSummaryRow, error)
+	GetPrimaryOrganizationOwnerForServiceContract(ctx context.Context, organizationID int64) (User, error)
 	GetProduct(ctx context.Context, arg GetProductParams) (Product, error)
 	// TEC-268 (F2-02c): Glorian catalog pull. A synced product is found by its
 	// connection + remote id; the pull rewrites only the remote-sourced columns
@@ -825,6 +822,7 @@ type Querier interface {
 	GetQuotePublicViewByToken(ctx context.Context, arg GetQuotePublicViewByTokenParams) (GetQuotePublicViewByTokenRow, error)
 	GetQuoteRecipient(ctx context.Context, arg GetQuoteRecipientParams) (GetQuoteRecipientRow, error)
 	GetQuoteReminderByID(ctx context.Context, id int64) (QuoteReminder, error)
+	GetRecommendedProductPrice(ctx context.Context, arg GetRecommendedProductPriceParams) (pgtype.Numeric, error)
 	GetRefreshTokenByHashAny(ctx context.Context, tokenHash string) (RefreshToken, error)
 	GetRefreshTokenByUUID(ctx context.Context, argUuid uuid.UUID) (RefreshToken, error)
 	// TEC-239: the newest reusable portal job of the actor for one service
@@ -839,6 +837,12 @@ type Querier interface {
 	GetRoleByUUID(ctx context.Context, argUuid uuid.UUID) (Role, error)
 	GetRoomByID(ctx context.Context, arg GetRoomByIDParams) (Room, error)
 	GetRoomByUUID(ctx context.Context, arg GetRoomByUUIDParams) (Room, error)
+	// TEC-341 (F3-07a): dealer accounting schema (migration 000093). Every read
+	// and write is bounded by the organization the API layer resolved; ledger
+	// rows are written through ledger.Post and only linked here.
+	// ---------------------------------------------------------------------------
+	// Customer cari.
+	GetServedCustomerByUUID(ctx context.Context, arg GetServedCustomerByUUIDParams) (User, error)
 	GetService(ctx context.Context, arg GetServiceParams) (Service, error)
 	// Public warranty / PDF lookup by number (unique across brands).
 	GetServiceByNo(ctx context.Context, serviceNo string) (Service, error)
@@ -873,6 +877,7 @@ type Querier interface {
 	GetServiceReviewByService(ctx context.Context, serviceID int64) (ServiceReview, error)
 	GetServiceSubscriptionByUUID(ctx context.Context, arg GetServiceSubscriptionByUUIDParams) (ServiceSubscription, error)
 	GetServiceSubscriptionCancelRequestByUUID(ctx context.Context, arg GetServiceSubscriptionCancelRequestByUUIDParams) (ServiceSubscriptionCancelRequest, error)
+	GetServiceSubscriptionForContractByID(ctx context.Context, id int64) (ServiceSubscription, error)
 	// Tells an expired token of the brand apart from an unknown one.
 	GetShortURLExpiry(ctx context.Context, arg GetShortURLExpiryParams) (pgtype.Timestamptz, error)
 	GetShortURLStats(ctx context.Context, token string) (GetShortURLStatsRow, error)
@@ -1437,6 +1442,7 @@ type Querier interface {
 	ListProductPricesForProducts(ctx context.Context, arg ListProductPricesForProductsParams) ([]ListProductPricesForProductsRow, error)
 	ListProductSaleLines(ctx context.Context, arg ListProductSaleLinesParams) ([]ProductSaleLine, error)
 	ListProductSaleLinesBySales(ctx context.Context, arg ListProductSaleLinesBySalesParams) ([]ProductSaleLine, error)
+	ListProductSaleStockCandidates(ctx context.Context, arg ListProductSaleStockCandidatesParams) ([]ListProductSaleStockCandidatesRow, error)
 	ListProductSales(ctx context.Context, arg ListProductSalesParams) ([]ProductSale, error)
 	ListProducts(ctx context.Context, arg ListProductsParams) ([]Product, error)
 	// TEC-211: product refs of the brand for the catalog export price columns.
@@ -2236,6 +2242,7 @@ type Querier interface {
 	SetServiceReviewFlags(ctx context.Context, arg SetServiceReviewFlagsParams) (ServiceReview, error)
 	SetServiceReviewRequestSent(ctx context.Context, id int64) (Service, error)
 	SetServiceSubscriptionCancelRequested(ctx context.Context, arg SetServiceSubscriptionCancelRequestedParams) (ServiceSubscription, error)
+	SetServiceSubscriptionContract(ctx context.Context, arg SetServiceSubscriptionContractParams) (ServiceSubscription, error)
 	SetServiceSubscriptionStatus(ctx context.Context, arg SetServiceSubscriptionStatusParams) (ServiceSubscription, error)
 	SetServiceWarrantyClaim(ctx context.Context, arg SetServiceWarrantyClaimParams) (SetServiceWarrantyClaimRow, error)
 	SetStaffPaymentFinanceEntry(ctx context.Context, arg SetStaffPaymentFinanceEntryParams) (StaffPayment, error)

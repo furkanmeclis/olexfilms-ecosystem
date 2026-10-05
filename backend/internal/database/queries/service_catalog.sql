@@ -105,6 +105,12 @@ VALUES (
 )
 RETURNING *;
 
+-- name: SetServiceSubscriptionContract :one
+UPDATE service_subscriptions
+SET contract_id = sqlc.narg(contract_id)
+WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id)
+RETURNING *;
+
 -- name: GetServiceSubscriptionByUUID :one
 SELECT * FROM service_subscriptions
 WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id);
@@ -174,6 +180,15 @@ RETURNING *;
 SELECT * FROM service_subscription_periods
 WHERE subscription_id = sqlc.arg(subscription_id)
 ORDER BY period_start;
+
+-- name: GetPrimaryOrganizationOwnerForServiceContract :one
+SELECT u.*
+FROM organization_members om
+JOIN users u ON u.id = om.user_id AND u.deleted_at IS NULL
+WHERE om.organization_id = sqlc.arg(organization_id)
+  AND om.role = 'owner'
+ORDER BY om.user_id
+LIMIT 1;
 
 -- name: CreateServiceSubscriptionCancelRequest :one
 INSERT INTO service_subscription_cancel_requests (
