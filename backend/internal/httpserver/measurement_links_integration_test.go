@@ -173,6 +173,7 @@ func TestIntegrationServiceMeasurementMatching(t *testing.T) {
 	}
 	// Another organization does not see the service; its measurement is 404.
 	get(tokB, svc1, http.StatusNotFound)
+	it.accDo("GET", "/v1/services/"+svc1.Uuid.String()+"/measurements/diff", tokB, nil, http.StatusNotFound)
 	post(tokA, svc1, otherOrg, "before", http.StatusNotFound)
 
 	// 2. Two candidates for the same phase: nothing linked, both suggested.
