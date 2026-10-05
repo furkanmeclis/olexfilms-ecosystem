@@ -996,10 +996,15 @@ func (s *Service) emit(ctx context.Context, tx pgx.Tx, name string, a db.Appoint
 		return nil
 	}
 	id, uid := a.ID, a.Uuid
+	var organizationName, plate string
+	_ = tx.QueryRow(ctx, `SELECT name FROM organizations WHERE id = $1`, a.OrganizationID).Scan(&organizationName)
+	if a.VehicleID.Valid {
+		_ = tx.QueryRow(ctx, `SELECT COALESCE(plate, '') FROM vehicles WHERE id = $1`, a.VehicleID.Int64).Scan(&plate)
+	}
 	ev := events.New(name).WithTenant(a.OrganizationID).WithEntity("appointment", &id, &uid).WithPayload(map[string]any{
-		"appointment_uuid": a.Uuid.String(), "organization_id": a.OrganizationID, "brand_id": a.BrandID,
+		"appointment_id": a.ID, "appointment_uuid": a.Uuid.String(), "organization_id": a.OrganizationID, "brand_id": a.BrandID,
 		"status": a.Status, "starts_at": a.StartsAt.Time.UTC().Format(time.RFC3339),
-		"customer_user_id": a.CustomerUserID,
+		"customer_user_id": a.CustomerUserID, "organization_name": organizationName, "plate": plate,
 	})
 	if a.CreatedByUserID.Valid {
 		ev = ev.WithActor(a.CreatedByUserID.Int64)
