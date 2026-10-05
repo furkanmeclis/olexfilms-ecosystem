@@ -33,6 +33,7 @@ var (
 	ErrAccountNotFound = errors.New("accounting: account not found")
 	ErrCariNotFound    = errors.New("accounting: cari account not found")
 	ErrEntryNotFound   = errors.New("accounting: entry not found")
+	ErrStaffNotFound   = errors.New("accounting: staff profile not found")
 	ErrCounterparty    = errors.New("accounting: counterparty not found")
 	// ErrNotVoidable: the entry is sourced by another module, a reversal, or
 	// already reversed.
@@ -41,6 +42,8 @@ var (
 	ErrIdempotencyConflict = errors.New("accounting: idempotency key already used with different values")
 	// ErrRateNotFound: no exchange rate for a foreign-currency entry.
 	ErrRateNotFound = errors.New("accounting: exchange rate not found")
+	// ErrStaffSalaryExists: a non-void salary already exists for that staff period.
+	ErrStaffSalaryExists = errors.New("accounting: staff salary already exists for period")
 )
 
 // ValidationError is a field-level input error.

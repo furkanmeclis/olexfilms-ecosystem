@@ -279,6 +279,8 @@ var zhCNCatalog = map[string]string{
 	"accounting.category.purchase":        "采购",
 	"accounting.category.rent":            "租金",
 	"accounting.category.salary":          "工资",
+	"accounting.category.staff_advance":   "员工预支",
+	"accounting.category.staff_bonus":     "员工奖金",
 	"accounting.category.utilities":       "水电费",
 	"accounting.category.tax":             "税费",
 	"accounting.category.shipping":        "运费",

@@ -7988,6 +7988,90 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/staff-profiles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff cards of the active organization
+         * @description Requires `staff.manage`; in dealer organizations also requires the `dealer_accounting` module. `dealer_staff` has no staff accounting permissions.
+         */
+        get: operations["listStaffProfiles"];
+        put?: never;
+        /**
+         * Create a staff card
+         * @description Requires `staff.manage`. Currency is always the active organization's currency (K7).
+         */
+        post: operations["createStaffProfile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/staff-profiles/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update a staff card
+         * @description Requires `staff.manage`. Nullable fields accept `null` to clear.
+         */
+        patch: operations["updateStaffProfile"];
+        trace?: never;
+    };
+    "/v1/staff-profiles/{uuid}/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record salary, advance or bonus for one staff card
+         * @description Requires `staff_payments.write`. Writes a sourced expense row in the same transaction (`source_type=staff_payment`): `salary`, `staff_advance` or `staff_bonus`. Salary amount defaults to the staff card monthly salary. A second open salary for the same staff period returns 409 `STAFF_SALARY_EXISTS`. Salary responses include the same-period advances total.
+         */
+        post: operations["createStaffPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/staff-payments/payroll": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create salary payments for active staff in a period
+         * @description Requires `staff_payments.write`. Creates salary payments and sourced salary expense rows for active staff with a monthly salary. The operation is idempotent: staff who already have a non-void salary in the period are skipped.
+         */
+        post: operations["runStaffPayroll"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/warranties": {
         parameters: {
             query?: never;
@@ -15244,6 +15328,117 @@ export interface components {
                 limit: number;
                 offset: number;
             };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        StaffPaymentType: "salary" | "advance" | "bonus";
+        StaffProfile: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            user_uuid: string | null;
+            name: string;
+            title: string | null;
+            /** Format: date */
+            hired_on: string | null;
+            monthly_salary: string | null;
+            currency: string;
+            active: boolean;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        StaffProfileCreateInput: {
+            /** Format: uuid */
+            user_uuid?: string | null;
+            name: string;
+            title?: string | null;
+            /** Format: date */
+            hired_on?: string;
+            monthly_salary?: components["schemas"]["AccountingAmountInput"];
+            /** @default true */
+            active: boolean;
+        };
+        StaffProfilePatchInput: {
+            /** Format: uuid */
+            user_uuid?: string | null;
+            name?: string;
+            title?: string | null;
+            /** Format: date */
+            hired_on?: string | null;
+            monthly_salary?: components["schemas"]["AccountingAmountInput"] | null;
+            active?: boolean;
+        };
+        StaffPayment: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            staff_uuid: string;
+            type: components["schemas"]["StaffPaymentType"];
+            period: string;
+            amount: components["schemas"]["AccountingAmount"];
+            currency: string;
+            /** Format: date */
+            paid_on: string;
+            description: string | null;
+            target_note: string | null;
+            /** Format: uuid */
+            finance_entry_uuid: string;
+            period_advances: components["schemas"]["AccountingAmount"];
+            /** Format: date-time */
+            created_at: string;
+        };
+        StaffPaymentCreateInput: {
+            type: components["schemas"]["StaffPaymentType"];
+            /** @example 2026-10 */
+            period: string;
+            /** @description Required for advance/bonus; salary defaults to the staff card salary. */
+            amount?: components["schemas"]["AccountingAmountInput"];
+            /**
+             * Format: uuid
+             * @description Optional cash/bank account for the payment movement.
+             */
+            account_uuid?: string | null;
+            description?: string | null;
+            target_note?: string | null;
+            /** Format: date */
+            paid_on?: string;
+        };
+        StaffPayrollResult: {
+            period: string;
+            created: number;
+            skipped: number;
+            items: components["schemas"]["StaffPayment"][];
+        };
+        EnvelopeStaffProfile: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["StaffProfile"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeStaffProfilePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["StaffProfile"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeStaffPayment: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["StaffPayment"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeStaffPayrollResult: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["StaffPayrollResult"];
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
@@ -32168,6 +32363,148 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    listStaffProfiles: {
+        parameters: {
+            query?: {
+                active?: boolean;
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Staff profile page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStaffProfilePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createStaffProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffProfileCreateInput"];
+            };
+        };
+        responses: {
+            /** @description Staff profile created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStaffProfile"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updateStaffProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffProfilePatchInput"];
+            };
+        };
+        responses: {
+            /** @description Staff profile updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStaffProfile"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createStaffPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffPaymentCreateInput"];
+            };
+        };
+        responses: {
+            /** @description Staff payment created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStaffPayment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    runStaffPayroll: {
+        parameters: {
+            query: {
+                period: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Payroll result */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStaffPayrollResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     listWarranties: {

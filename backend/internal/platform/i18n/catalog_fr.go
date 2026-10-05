@@ -279,6 +279,8 @@ var frCatalog = map[string]string{
 	"accounting.category.purchase":        "Achats",
 	"accounting.category.rent":            "Loyer",
 	"accounting.category.salary":          "Salaires",
+	"accounting.category.staff_advance":   "Avances au personnel",
+	"accounting.category.staff_bonus":     "Primes du personnel",
 	"accounting.category.utilities":       "Charges courantes",
 	"accounting.category.tax":             "Impôts et taxes",
 	"accounting.category.shipping":        "Expédition",
