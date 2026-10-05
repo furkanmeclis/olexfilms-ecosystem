@@ -287,7 +287,7 @@ func (it *itest) contractTemplate(token string) string {
 		"otp_required": truth, "signature_required": truth,
 	}, http.StatusCreated))
 	it.accDo("PUT", "/v1/platform/contract-templates/"+tpl.UUID+"/locales/tr", token, map[string]any{
-		"html": `<p>{{service_no}} {{customer_name}} {{staff_name}} {{vehicle_plate}}</p>`,
+		"html": `<p>{{service_no}} {{customer_name}} {{staff_name}} {{plate}}</p>`,
 	}, http.StatusOK)
 	return tpl.UUID
 }
