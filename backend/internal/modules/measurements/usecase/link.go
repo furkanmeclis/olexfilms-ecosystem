@@ -223,6 +223,13 @@ func (l *Linker) MatchVIN(ctx context.Context, organizationID int64, vin string)
 			if first == nil {
 				first = err
 			}
+			continue
+		}
+		if err := l.RecalculateServiceDiff(ctx, id); err != nil {
+			l.log.Warn("measurement_diff_failed", "service_id", id, "error", err)
+			if first == nil {
+				first = err
+			}
 		}
 	}
 	return first
@@ -237,6 +244,9 @@ func (l *Linker) HandleServiceEvent(ctx context.Context, ev events.Event) error 
 	}
 	if _, err := l.MatchService(ctx, *ev.EntityID); err != nil {
 		return fmt.Errorf("measurements: match service %d: %w", *ev.EntityID, err)
+	}
+	if err := l.RecalculateServiceDiff(ctx, *ev.EntityID); err != nil {
+		return fmt.Errorf("measurements: diff service %d: %w", *ev.EntityID, err)
 	}
 	return nil
 }
@@ -283,6 +293,11 @@ func (l *Linker) autoLink(ctx context.Context, q *db.Queries, tx pgx.Tx, svc mat
 			continue
 		}
 		auto = append(auto, map[string]any{"phase": phase, "measurement_uuid": uuids[c.ID].String()})
+	}
+	if len(auto) > 0 {
+		if err := l.recalculateDiffLocked(ctx, q, tx, svc); err != nil {
+			return MatchPlan{}, err
+		}
 	}
 
 	suggested := map[string]any{}
@@ -475,7 +490,7 @@ func (l *Linker) LinkMeasurement(ctx context.Context, c LinkCaller, id uuid.UUID
 		return ServiceMeasurementsView{}, invalid("measurement_uuid", "is required")
 	}
 	var out ServiceMeasurementsView
-	err := l.inTx(ctx, func(q *db.Queries, _ pgx.Tx) error {
+	err := l.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		svc, err := l.lockService(ctx, q, c, id)
 		if err != nil {
 			return err
@@ -502,6 +517,9 @@ func (l *Linker) LinkMeasurement(ctx context.Context, c LinkCaller, id uuid.UUID
 			return ErrMeasurementVINMismatch
 		}
 		if err := l.applyLink(ctx, q, c, svc, m.ID, in.Phase); err != nil {
+			return err
+		}
+		if err := l.recalculateDiffLocked(ctx, q, tx, svc); err != nil {
 			return err
 		}
 		out, err = l.view(ctx, q, svc)
@@ -581,7 +599,7 @@ func (l *Linker) UnlinkMeasurement(ctx context.Context, c LinkCaller, id uuid.UU
 	if !phaseValid(phase) {
 		return invalid("phase", "must be before or after")
 	}
-	return l.inTx(ctx, func(q *db.Queries, _ pgx.Tx) error {
+	return l.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		svc, err := l.lockService(ctx, q, c, id)
 		if err != nil {
 			return err
@@ -600,6 +618,9 @@ func (l *Linker) UnlinkMeasurement(ctx context.Context, c LinkCaller, id uuid.UU
 		}
 		if n == 0 {
 			return ErrLinkNotFound
+		}
+		if err := l.recalculateDiffLocked(ctx, q, tx, svc); err != nil {
+			return err
 		}
 		return nil
 	})

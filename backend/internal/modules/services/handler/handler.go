@@ -3,6 +3,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -11,9 +12,11 @@ import (
 	"strings"
 	"time"
 
+	exportusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/usecase"
 	svcuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
@@ -45,12 +48,20 @@ const imageField = "image"
 
 // Handler serves service endpoints.
 type Handler struct {
-	svc   *svcuc.Service
-	store storage.Driver
+	svc     *svcuc.Service
+	store   storage.Driver
+	exports ExportRequester
 }
 
 // New creates the handler; store may be nil (images answer 503).
 func New(svc *svcuc.Service, store storage.Driver) *Handler { return &Handler{svc: svc, store: store} }
+
+type ExportRequester interface {
+	RequestExport(ctx context.Context, actorID int64, organizationID *int64, resource string,
+		format ioengine.ExportFormat, query ioengine.ExportQuery, locale string) (exportusecase.ExportJobView, error)
+}
+
+func (h *Handler) WithExports(exports ExportRequester) { h.exports = exports }
 
 func caller(r *http.Request) svcuc.Caller {
 	f, _ := scopefilter.From(r.Context())

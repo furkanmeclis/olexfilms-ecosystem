@@ -142,6 +142,8 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	// TEC-192: the delayed review request goes to the service customer
 	// (WhatsApp); the task writes the event once per service.
 	on(events.ServiceReviewRequested, serviceReviewDispatch)
+	// TEC-352: low review scores notify the dealer owner(s).
+	on(events.ServiceReviewLowScore, serviceReviewLowScoreDispatch)
 	// TEC-325: appointment lifecycle messages go to the customer over
 	// WhatsApp; reschedules reuse the created template.
 	on(events.AppointmentCreated, appointmentDispatcher(catalog.EventAppointmentCreated))
@@ -173,6 +175,9 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	for name, code := range ServiceSubscriptionEventCodes {
 		on(name, serviceSubscriptionDispatcher(code))
 	}
+	// TEC-297: dealer owners review services with micron differences outside
+	// the configured tolerance.
+	on(events.MeasurementDiffCheckRequired, measurementDiffDispatch)
 	bus.Subscribe(events.AnnouncementPublished, func(ctx context.Context, event events.Event) error {
 		err := announcementsusecase.EnqueuePublishedBatches(
 			ctx,
@@ -288,6 +293,29 @@ func serviceReviewDispatch(event events.Event) (notifmodel.DispatchInput, bool) 
 			"service_no":   vars["service_no"],
 		},
 		ActionURL: &formURL,
+	}
+	if brand, ok := int64FromPayload(event.Payload, "brand_id"); ok && brand > 0 {
+		in.BrandID = &brand
+	}
+	return in, true
+}
+
+func serviceReviewLowScoreDispatch(event events.Event) (notifmodel.DispatchInput, bool) {
+	ids := userIDsFromPayload(event.Payload, "notify_user_ids")
+	if len(ids) == 0 {
+		return notifmodel.DispatchInput{}, false
+	}
+	vars := map[string]string{}
+	for _, k := range []string{"organization_name", "service_no", "platform_rating", "product_rating", "min_rating"} {
+		vars[k] = stringFromPayload(event.Payload, k)
+	}
+	in := notifmodel.DispatchInput{
+		EventCode: catalog.EventServiceReviewLowScore, UserIDs: ids, Vars: vars,
+		Payload: map[string]any{
+			"review_uuid":  stringFromPayload(event.Payload, "review_uuid"),
+			"service_uuid": stringFromPayload(event.Payload, "service_uuid"),
+			"service_no":   vars["service_no"],
+		},
 	}
 	if brand, ok := int64FromPayload(event.Payload, "brand_id"); ok && brand > 0 {
 		in.BrandID = &brand

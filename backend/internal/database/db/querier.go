@@ -773,6 +773,7 @@ type Querier interface {
 	GetPortalVehicle(ctx context.Context, arg GetPortalVehicleParams) (GetPortalVehicleRow, error)
 	// Service summary of one vehicle across every organization of the brand.
 	GetPortalVehicleServiceSummary(ctx context.Context, arg GetPortalVehicleServiceSummaryParams) (GetPortalVehicleServiceSummaryRow, error)
+	GetPrimaryOrganizationOwnerForServiceContract(ctx context.Context, organizationID int64) (User, error)
 	GetProduct(ctx context.Context, arg GetProductParams) (Product, error)
 	// TEC-268 (F2-02c): Glorian catalog pull. A synced product is found by its
 	// connection + remote id; the pull rewrites only the remote-sourced columns
@@ -874,8 +875,10 @@ type Querier interface {
 	GetServiceRefs(ctx context.Context, id int64) (GetServiceRefsRow, error)
 	// TEC-244 (F2-03h): the portal service review form (one per service).
 	GetServiceReviewByService(ctx context.Context, serviceID int64) (ServiceReview, error)
+	GetServiceReviewProcessingDetails(ctx context.Context, reviewID int64) (GetServiceReviewProcessingDetailsRow, error)
 	GetServiceSubscriptionByUUID(ctx context.Context, arg GetServiceSubscriptionByUUIDParams) (ServiceSubscription, error)
 	GetServiceSubscriptionCancelRequestByUUID(ctx context.Context, arg GetServiceSubscriptionCancelRequestByUUIDParams) (ServiceSubscriptionCancelRequest, error)
+	GetServiceSubscriptionForContractByID(ctx context.Context, id int64) (ServiceSubscription, error)
 	// Tells an expired token of the brand apart from an unknown one.
 	GetShortURLExpiry(ctx context.Context, arg GetShortURLExpiryParams) (pgtype.Timestamptz, error)
 	GetShortURLStats(ctx context.Context, token string) (GetShortURLStatsRow, error)
@@ -1507,6 +1510,8 @@ type Querier interface {
 	ListServiceImages(ctx context.Context, serviceID int64) ([]ServiceImage, error)
 	ListServiceItemCorrections(ctx context.Context, serviceID int64) ([]ListServiceItemCorrectionsRow, error)
 	ListServiceItems(ctx context.Context, serviceID int64) ([]ServiceItem, error)
+	// TEC-297 (F3-02e): part based before/after micron difference table.
+	ListServiceMeasurementDiffParts(ctx context.Context, arg ListServiceMeasurementDiffPartsParams) ([]ListServiceMeasurementDiffPartsRow, error)
 	// The before/after links of a service with the linked measurement and the
 	// confirming user.
 	ListServiceMeasurementLinks(ctx context.Context, arg ListServiceMeasurementLinksParams) ([]ListServiceMeasurementLinksRow, error)
@@ -1849,6 +1854,7 @@ type Querier interface {
 	MarkOutboxRetry(ctx context.Context, arg MarkOutboxRetryParams) error
 	MarkQRLoginChallengeScanned(ctx context.Context, code string) (QrLoginChallenge, error)
 	MarkQuoteReminderSent(ctx context.Context, id int64) (QuoteReminder, error)
+	MarkServiceMeasurementChecked(ctx context.Context, arg MarkServiceMeasurementCheckedParams) (int64, error)
 	// Idempotent: an already processed review returns no row (pgx.ErrNoRows).
 	MarkServiceReviewProcessed(ctx context.Context, id int64) (ServiceReview, error)
 	MarkServiceSubscriptionPeriodPosted(ctx context.Context, id int64) (ServiceSubscriptionPeriod, error)
@@ -2154,6 +2160,8 @@ type Querier interface {
 	ResolveTerritory(ctx context.Context, arg ResolveTerritoryParams) (ResolveTerritoryRow, error)
 	// A failed render is re-queued with a new attempt number (new task id).
 	RetryDocumentRender(ctx context.Context, id int64) (DocumentRender, error)
+	ReviewDealerStats(ctx context.Context, arg ReviewDealerStatsParams) ([]ReviewDealerStatsRow, error)
+	ReviewProductStats(ctx context.Context, arg ReviewProductStatsParams) ([]ReviewProductStatsRow, error)
 	ReviewQuestionHasAnswers(ctx context.Context, questionID int64) (bool, error)
 	RevokeAllDevicePushTokensForUser(ctx context.Context, userID int64) (int64, error)
 	RevokeAllRefreshTokensForUser(ctx context.Context, userID int64) error
@@ -2240,6 +2248,7 @@ type Querier interface {
 	SetServiceReviewFlags(ctx context.Context, arg SetServiceReviewFlagsParams) (ServiceReview, error)
 	SetServiceReviewRequestSent(ctx context.Context, id int64) (Service, error)
 	SetServiceSubscriptionCancelRequested(ctx context.Context, arg SetServiceSubscriptionCancelRequestedParams) (ServiceSubscription, error)
+	SetServiceSubscriptionContract(ctx context.Context, arg SetServiceSubscriptionContractParams) (ServiceSubscription, error)
 	SetServiceSubscriptionStatus(ctx context.Context, arg SetServiceSubscriptionStatusParams) (ServiceSubscription, error)
 	SetServiceWarrantyClaim(ctx context.Context, arg SetServiceWarrantyClaimParams) (SetServiceWarrantyClaimRow, error)
 	SetStaffPaymentFinanceEntry(ctx context.Context, arg SetStaffPaymentFinanceEntryParams) (StaffPayment, error)

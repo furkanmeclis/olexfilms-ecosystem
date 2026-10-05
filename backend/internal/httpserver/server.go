@@ -598,6 +598,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		warrantyusecase.NewPortalCertificateAdapter(warrantyCert),
 		// TEC-196: service PDF.
 		servicesusecase.NewPDFAdapter(servicePDF),
+		// TEC-352: service reviews list export.
+		servicesusecase.NewReviewsExportAdapter(servicesSvc),
 		// TEC-207: end-of-day report PDF.
 		warehouseusecase.NewEODPDFAdapter(eodPDF),
 		// TEC-239: service PDF requested from the portal.
@@ -605,6 +607,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	)
 	exportSvc := exportusecase.New(deps.Queries, deps.Storage, ioReg, deps.Queue, notifSvc, activityRec, log)
 	exportSvc.SetDocumentPDF(pdfClient)
+	servicesH.WithExports(exportSvc)
 	accountingH.WithExports(exportSvc)
 	customersH.WithExports(exportSvc)
 	warrantymodule.RegisterCertificateRoutes(mux, warrantyhandler.NewCertificate(warrantyCert, exportSvc), tokens, loader, deps.Queries, featureSvc)
