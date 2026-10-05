@@ -7,6 +7,19 @@ ALTER TABLE contract_instances
     ADD CONSTRAINT chk_contract_instances_subject_type
         CHECK (subject_type IN ('service', 'service_subscription'));
 
+-- Catalog items saved before this rule may point at a template that is not
+-- service_sale (e.g. the vehicle_intake default) or at a missing one; such
+-- links never produced a contract, so they are dropped instead of failing.
+UPDATE service_catalog_items i
+SET contract_template_id = NULL
+WHERE i.contract_template_id IS NOT NULL
+  AND NOT EXISTS (
+      SELECT 1 FROM contract_templates ct
+      WHERE ct.id = i.contract_template_id
+        AND ct.brand_id = i.brand_id
+        AND ct.kind = 'service_sale'
+  );
+
 ALTER TABLE service_catalog_items
     ADD CONSTRAINT fk_service_catalog_items_contract_template
         FOREIGN KEY (contract_template_id, brand_id)
