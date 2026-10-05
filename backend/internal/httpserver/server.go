@@ -527,6 +527,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		notifmodule.WithAnnouncementFanout(deps.Queries, deps.Queue))
 	// TEC-186: service.completed opens one warranty per service item.
 	warrantymodule.RegisterEventHandlers(eventBus, deps.DB, deps.Queries, cfg.Auth.FrontendURL, log)
+	// TEC-336: approved claims open and track their re-application service.
+	warrantyclaimsusecase.RegisterEventHandlers(eventBus, deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries), log)
 	// TEC-192: service.completed schedules the delayed review request.
 	var reviewQueue servicereview.Enqueuer
 	if deps.Queue != nil {

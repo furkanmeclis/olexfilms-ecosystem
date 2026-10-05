@@ -94,6 +94,19 @@ func (h *Handler) Transition(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, item)
 }
 
+func (h *Handler) ReapplyService(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	item, err := h.svc.ReapplyService(r.Context(), caller(r), id)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusCreated, item)
+}
+
 func (h *Handler) PortalList(w http.ResponseWriter, r *http.Request) {
 	p := authctx.MustPrincipal(r.Context())
 	items, err := h.svc.PortalList(r.Context(), portalBrandID(r), p.UserInternal)
@@ -207,6 +220,8 @@ func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 		response.Forbidden(w, r, "")
 	case errors.Is(err, usecase.ErrConflict):
 		response.Conflict(w, r, "WARRANTY_CLAIM_EXISTS", "warranty already has a live claim")
+	case errors.Is(err, usecase.ErrReapplyOpen):
+		response.Conflict(w, r, "WARRANTY_CLAIM_REAPPLY_OPEN", "re-application service is still open")
 	case errors.Is(err, usecase.ErrPhotoRequired):
 		response.Error(w, r, http.StatusUnprocessableEntity, usecase.CodePhotoRequired, "at least one photo is required")
 	case errors.Is(err, usecase.ErrUnsupportedFlow):

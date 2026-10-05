@@ -175,6 +175,7 @@ const service = (over: Partial<Service> = {}): Service => ({
   editable: true,
   items_editable: true,
   available_transitions: [],
+  is_warranty_reapply: false,
   ...over,
 });
 
