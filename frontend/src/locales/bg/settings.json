@@ -114,5 +114,22 @@
   "coordinates.errors.latitude": "Географската ширина трябва да е число между -90 и 90.",
   "coordinates.errors.longitude": "Географската дължина трябва да е число между -180 и 180.",
   "coordinates.errors.pair": "Въведете ширина и дължина заедно или оставете и двете празни.",
-  "system.hub.glorian": "Връзка с хъба на Glorian, синхронизации и отчет за разминавания."
+  "system.hub.glorian": "Връзка с хъба на Glorian, синхронизации и отчет за разминавания.",
+  "system.labor.title": "Правило за труда при гаранционни претенции",
+  "system.labor.description": "Кой поема разходите за труд при повторно прилагане по гаранционна претенция.",
+  "system.labor.rule": "Правило за труда",
+  "system.labor.rules.dealer": "Дилър",
+  "system.labor.rules.dealer_hint": "Трудът остава за дилъра; центърът не плаща труд.",
+  "system.labor.rules.center": "Център",
+  "system.labor.rules.center_hint": "Центърът кредитира дилъра със сумата за труд (чрез дистрибутора).",
+  "system.labor.rules.shared": "Споделено",
+  "system.labor.rules.shared_hint": "Центърът кредитира посочения процент от сумата за труд.",
+  "system.labor.amount": "Сума за труд",
+  "system.labor.amount_hint": "За всяко повторно прилагане, във валутата на организацията.",
+  "system.labor.percent": "Дял на центъра (%)",
+  "system.labor.percent_hint": "Между 0 и 100.",
+  "system.labor.errors.amount_number": "Въведете валидна сума (до 2 знака след запетаята).",
+  "system.labor.errors.amount_min": "Сумата не може да е отрицателна.",
+  "system.labor.errors.percent_integer": "Въведете цяло число.",
+  "system.labor.errors.percent_range": "Процентът трябва да е между 0 и 100."
 }

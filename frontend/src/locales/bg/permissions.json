@@ -198,5 +198,6 @@
   "labels.library.read": "Преглед на библиотеката с документи",
   "labels.library.manage": "Управление на библиотеката с документи",
   "groups.announcements": "Съобщения",
-  "groups.library": "Библиотека с документи"
+  "groups.library": "Библиотека с документи",
+  "labels.warranty_claims.read": "Преглед на гаранционни претенции"
 }

@@ -198,5 +198,6 @@
   "labels.library.read": "Doküman kütüphanesini oku",
   "labels.library.manage": "Doküman kütüphanesini yönet",
   "groups.announcements": "Duyurular",
-  "groups.library": "Doküman kütüphanesi"
+  "groups.library": "Doküman kütüphanesi",
+  "labels.warranty_claims.read": "Garanti taleplerini görüntüle"
 }

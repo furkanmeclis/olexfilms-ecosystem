@@ -198,5 +198,6 @@
   "labels.library.read": "Переглядати бібліотеку документів",
   "labels.library.manage": "Керувати бібліотекою документів",
   "groups.announcements": "Оголошення",
-  "groups.library": "Бібліотека документів"
+  "groups.library": "Бібліотека документів",
+  "labels.warranty_claims.read": "Перегляд гарантійних претензій"
 }

@@ -198,5 +198,6 @@
   "labels.library.read": "Ανάγνωση βιβλιοθήκης εγγράφων",
   "labels.library.manage": "Διαχείριση βιβλιοθήκης εγγράφων",
   "groups.announcements": "Ανακοινώσεις",
-  "groups.library": "Βιβλιοθήκη εγγράφων"
+  "groups.library": "Βιβλιοθήκη εγγράφων",
+  "labels.warranty_claims.read": "Προβολή αιτημάτων εγγύησης"
 }

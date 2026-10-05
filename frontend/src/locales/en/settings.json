@@ -114,5 +114,22 @@
   "coordinates.errors.latitude": "Latitude must be a number between -90 and 90.",
   "coordinates.errors.longitude": "Longitude must be a number between -180 and 180.",
   "coordinates.errors.pair": "Enter latitude and longitude together, or leave both empty.",
-  "system.hub.glorian": "Glorian hub connection, sync runs and the drift report."
+  "system.hub.glorian": "Glorian hub connection, sync runs and the drift report.",
+  "system.labor.title": "Warranty claim labor rule",
+  "system.labor.description": "Who carries the labor cost when a warranty claim is re-applied.",
+  "system.labor.rule": "Labor rule",
+  "system.labor.rules.dealer": "Dealer",
+  "system.labor.rules.dealer_hint": "Labor stays with the dealer; the center pays no labor.",
+  "system.labor.rules.center": "Center",
+  "system.labor.rules.center_hint": "The center credits the labor amount to the dealer (through the distributor).",
+  "system.labor.rules.shared": "Shared",
+  "system.labor.rules.shared_hint": "The center credits the given percentage of the labor amount.",
+  "system.labor.amount": "Labor amount",
+  "system.labor.amount_hint": "Per re-application, in the organization's currency.",
+  "system.labor.percent": "Center share (%)",
+  "system.labor.percent_hint": "Between 0 and 100.",
+  "system.labor.errors.amount_number": "Enter a valid amount (up to 2 decimals).",
+  "system.labor.errors.amount_min": "The amount cannot be negative.",
+  "system.labor.errors.percent_integer": "Enter a whole number.",
+  "system.labor.errors.percent_range": "The percentage must be between 0 and 100."
 }

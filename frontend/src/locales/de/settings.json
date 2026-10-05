@@ -114,5 +114,22 @@
   "coordinates.errors.latitude": "Der Breitengrad muss eine Zahl zwischen -90 und 90 sein.",
   "coordinates.errors.longitude": "Der Längengrad muss eine Zahl zwischen -180 und 180 sein.",
   "coordinates.errors.pair": "Geben Sie Breiten- und Längengrad zusammen ein oder lassen Sie beide leer.",
-  "system.hub.glorian": "Glorian-Hub-Verbindung, Synchronisierungsläufe und Abweichungsbericht."
+  "system.hub.glorian": "Glorian-Hub-Verbindung, Synchronisierungsläufe und Abweichungsbericht.",
+  "system.labor.title": "Arbeitskostenregel für Garantieansprüche",
+  "system.labor.description": "Wer die Arbeitskosten trägt, wenn ein Garantieanspruch erneut ausgeführt wird.",
+  "system.labor.rule": "Arbeitskostenregel",
+  "system.labor.rules.dealer": "Händler",
+  "system.labor.rules.dealer_hint": "Die Arbeit bleibt beim Händler; die Zentrale zahlt keine Arbeitskosten.",
+  "system.labor.rules.center": "Zentrale",
+  "system.labor.rules.center_hint": "Die Zentrale schreibt dem Händler die Arbeitskosten gut (über den Distributor).",
+  "system.labor.rules.shared": "Geteilt",
+  "system.labor.rules.shared_hint": "Die Zentrale schreibt den angegebenen Prozentsatz der Arbeitskosten gut.",
+  "system.labor.amount": "Arbeitskostenbetrag",
+  "system.labor.amount_hint": "Pro erneuter Ausführung, in der Währung der Organisation.",
+  "system.labor.percent": "Anteil der Zentrale (%)",
+  "system.labor.percent_hint": "Zwischen 0 und 100.",
+  "system.labor.errors.amount_number": "Geben Sie einen gültigen Betrag ein (bis zu 2 Nachkommastellen).",
+  "system.labor.errors.amount_min": "Der Betrag darf nicht negativ sein.",
+  "system.labor.errors.percent_integer": "Geben Sie eine ganze Zahl ein.",
+  "system.labor.errors.percent_range": "Der Prozentsatz muss zwischen 0 und 100 liegen."
 }

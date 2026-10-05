@@ -114,5 +114,22 @@
   "coordinates.errors.latitude": "La latitude doit être un nombre entre -90 et 90.",
   "coordinates.errors.longitude": "La longitude doit être un nombre entre -180 et 180.",
   "coordinates.errors.pair": "Saisissez la latitude et la longitude ensemble, ou laissez les deux vides.",
-  "system.hub.glorian": "Connexion au hub Glorian, synchronisations et rapport d'écarts."
+  "system.hub.glorian": "Connexion au hub Glorian, synchronisations et rapport d'écarts.",
+  "system.labor.title": "Règle de main-d'œuvre des réclamations de garantie",
+  "system.labor.description": "Qui prend en charge la main-d'œuvre lorsqu'une réclamation de garantie est réappliquée.",
+  "system.labor.rule": "Règle de main-d'œuvre",
+  "system.labor.rules.dealer": "Revendeur",
+  "system.labor.rules.dealer_hint": "La main-d'œuvre reste à la charge du revendeur ; le siège ne la paie pas.",
+  "system.labor.rules.center": "Siège",
+  "system.labor.rules.center_hint": "Le siège crédite le montant de main-d'œuvre au revendeur (via le distributeur).",
+  "system.labor.rules.shared": "Partagée",
+  "system.labor.rules.shared_hint": "Le siège crédite le pourcentage indiqué du montant de main-d'œuvre.",
+  "system.labor.amount": "Montant de main-d'œuvre",
+  "system.labor.amount_hint": "Par réapplication, dans la devise de l'organisation.",
+  "system.labor.percent": "Part du siège (%)",
+  "system.labor.percent_hint": "Entre 0 et 100.",
+  "system.labor.errors.amount_number": "Saisissez un montant valide (2 décimales max.).",
+  "system.labor.errors.amount_min": "Le montant ne peut pas être négatif.",
+  "system.labor.errors.percent_integer": "Saisissez un nombre entier.",
+  "system.labor.errors.percent_range": "Le pourcentage doit être compris entre 0 et 100."
 }

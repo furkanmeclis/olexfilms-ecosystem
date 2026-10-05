@@ -198,5 +198,6 @@
   "labels.library.read": "Просматривать библиотеку документов",
   "labels.library.manage": "Управлять библиотекой документов",
   "groups.announcements": "Объявления",
-  "groups.library": "Библиотека документов"
+  "groups.library": "Библиотека документов",
+  "labels.warranty_claims.read": "Просмотр гарантийных претензий"
 }
