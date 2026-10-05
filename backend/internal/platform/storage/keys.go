@@ -88,3 +88,9 @@ func trimExt(ext string) string {
 	}
 	return ext
 }
+
+// MeasurementPDFObjectKey builds measurements/{org}/{result}/report.pdf
+// (TEC-298: rendered once, the result is immutable).
+func MeasurementPDFObjectKey(orgUUID, resultUUID uuid.UUID) string {
+	return fmt.Sprintf("measurements/%s/%s/report.pdf", orgUUID.String(), resultUUID.String())
+}

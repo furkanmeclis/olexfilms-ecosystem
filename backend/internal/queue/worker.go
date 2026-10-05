@@ -93,6 +93,8 @@ type Worker struct {
 	glorianReplayOne GlorianOutboundReplayOneFunc
 	// TEC-288: executed contract PDF (docs queue).
 	contractPDF ContractPDFFunc
+	// TEC-298: measurement PDF (docs queue).
+	measurementPDF MeasurementPDFFunc
 }
 
 // NewWorker builds a worker that handles known task types on every queue.
@@ -175,6 +177,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskGlorianOrderReplay, w.handleGlorianOrderReplay)
 	mux.HandleFunc(TaskGlorianReconcile, w.handleGlorianReconcile)
 	mux.HandleFunc(TaskGlorianOutboundReplayOne, w.handleGlorianOutboundReplayOne)
+	mux.HandleFunc(TaskMeasurementPDF, w.handleMeasurementPDF)
 	return w
 }
 

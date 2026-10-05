@@ -1,0 +1,848 @@
+{
+  "id": "LQbKbRehSjw8mx981s899y",
+  "name": "MiniVan",
+  "folder": "MiniVan",
+  "bodywork": "MINIVAN",
+  "pointRadius": "22",
+  "checksum": "09bf8778ebe3e502a8a8c5dc6c3fa365",
+  "canvas": {
+    "width": 2048,
+    "height": 1024
+  },
+  "assets": [
+    {
+      "part": "LEFT_SIDE",
+      "place": "left",
+      "kind": "main",
+      "file": "LEFT_SIDE.svg",
+      "modified_svg": "modified_svg/LEFT_SIDE.svg",
+      "pointed_svg": "pointed_svg/LEFT_SIDE.svg",
+      "in_php_enum": true,
+      "body_enum": null,
+      "source": {
+        "png": "628252789f1bd.png",
+        "element_type": "main",
+        "position": null,
+        "id": "LPCLDBmnJthG24HTPttn1P"
+      },
+      "transform": null,
+      "points": []
+    },
+    {
+      "part": "LEFT_FRONT_FENDER",
+      "place": "left",
+      "kind": "element",
+      "file": "LEFT_FRONT_FENDER.svg",
+      "modified_svg": "modified_svg/LEFT_FRONT_FENDER.svg",
+      "pointed_svg": "pointed_svg/LEFT_FRONT_FENDER.svg",
+      "in_php_enum": true,
+      "body_enum": "BODY_SOL_ON_CAMURLUK",
+      "source": {
+        "png": "6282527c99c79.png",
+        "element_type": "element3",
+        "position": 1,
+        "id": "2LGwLJKqbmMmTdii2eTXN8"
+      },
+      "transform": {
+        "positionX": -90,
+        "editorPositionX": -70,
+        "scaleX": 1
+      },
+      "points": [
+        {
+          "id": "LEFT_FRONT_FENDER_point_1",
+          "x": 332,
+          "y": 494.8125,
+          "count": 1
+        },
+        {
+          "id": "LEFT_FRONT_FENDER_point_2",
+          "x": 454,
+          "y": 518.8125,
+          "count": 2
+        },
+        {
+          "id": "LEFT_FRONT_FENDER_point_3",
+          "x": 544,
+          "y": 446.8125,
+          "count": 3
+        },
+        {
+          "id": "LEFT_FRONT_FENDER_point_4",
+          "x": 598,
+          "y": 494.8125,
+          "count": 4
+        },
+        {
+          "id": "LEFT_FRONT_FENDER_point_5",
+          "x": 595.5999755859375,
+          "y": 592.7999877929688,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "part": "LEFT_FRONT_DOOR",
+      "place": "left",
+      "kind": "element",
+      "file": "LEFT_FRONT_DOOR.svg",
+      "modified_svg": "modified_svg/LEFT_FRONT_DOOR.svg",
+      "pointed_svg": "pointed_svg/LEFT_FRONT_DOOR.svg",
+      "in_php_enum": true,
+      "body_enum": "BODY_SOL_ON_KAPI",
+      "source": {
+        "png": "6282528060f2d.png",
+        "element_type": "element4",
+        "position": 2,
+        "id": "KufWoomMqEDGX1F41sk9Xb"
+      },
+      "transform": {
+        "positionX": -512,
+        "editorPositionX": -25,
+        "scaleX": 1
+      },
+      "points": [
+        {
+          "id": "LEFT_FRONT_DOOR_point_1",
+          "x": 654,
+          "y": 472.8125,
+          "count": 1
+        },
+        {
+          "id": "LEFT_FRONT_DOOR_point_2",
+          "x": 646,
+          "y": 604.8125,
+          "count": 2
+        },
+        {
+          "id": "LEFT_FRONT_DOOR_point_3",
+          "x": 654,
+          "y": 724.8125,
+          "count": 3
+        },
+        {
+          "id": "LEFT_FRONT_DOOR_point_4",
+          "x": 814,
+          "y": 604.8125,
+          "count": 4
+        },
+        {
+          "id": "LEFT_FRONT_DOOR_point_5",
+          "x": 982,
+          "y": 464.8125,
+          "count": 5
+        },
+        {
+          "id": "LEFT_FRONT_DOOR_point_6",
+          "x": 978,
+          "y": 604.8125,
+          "count": 6
+        },
+        {
+          "id": "LEFT_FRONT_DOOR_point_7",
+          "x": 978,
+          "y": 722.8125,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "part": "LEFT_REAR_DOOR",
+      "place": "left",
+      "kind": "element",
+      "file": "LEFT_REAR_DOOR.svg",
+      "modified_svg": "modified_svg/LEFT_REAR_DOOR.svg",
+      "pointed_svg": "pointed_svg/LEFT_REAR_DOOR.svg",
+      "in_php_enum": true,
+      "body_enum": "BODY_SOL_ARKA_KAPI",
+      "source": {
+        "png": "62825282bfcd3.png",
+        "element_type": "element5",
+        "position": 3,
+        "id": "QsAhBxSCAtZSoHZH1eo8ce"
+      },
+      "transform": {
+        "positionX": -904,
+        "editorPositionX": 35,
+        "scaleX": 1
+      },
+      "points": [
+        {
+          "id": "LEFT_REAR_DOOR_point_1",
+          "x": 1036,
+          "y": 464.8125,
+          "count": 1
+        },
+        {
+          "id": "LEFT_REAR_DOOR_point_2",
+          "x": 1034,
+          "y": 604.8125,
+          "count": 2
+        },
+        {
+          "id": "LEFT_REAR_DOOR_point_3",
+          "x": 1034,
+          "y": 720.8125,
+          "count": 3
+        },
+        {
+          "id": "LEFT_REAR_DOOR_point_4",
+          "x": 1208,
+          "y": 606.8125,
+          "count": 4
+        },
+        {
+          "id": "LEFT_REAR_DOOR_point_5",
+          "x": 1398,
+          "y": 450.8125,
+          "count": 5
+        },
+        {
+          "id": "LEFT_REAR_DOOR_point_6",
+          "x": 1382,
+          "y": 606.8125,
+          "count": 6
+        },
+        {
+          "id": "LEFT_REAR_DOOR_point_7",
+          "x": 1370,
+          "y": 718.8125,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "part": "LEFT_PILLAR",
+      "place": "left",
+      "kind": "element",
+      "file": "LEFT_PILLAR.svg",
+      "modified_svg": "modified_svg/LEFT_PILLAR.svg",
+      "pointed_svg": "pointed_svg/LEFT_PILLAR.svg",
+      "in_php_enum": true,
+      "body_enum": null,
+      "source": {
+        "png": "62825284e6de9.png",
+        "element_type": "element6",
+        "position": 4,
+        "id": "H6py2xpFQuBqNUw9VZGMPU"
+      },
+      "transform": {
+        "positionX": -218.7999999999996,
+        "editorPositionX": -160,
+        "scaleX": 0.4499999999999996
+      },
+      "points": [
+        {
+          "id": "LEFT_PILLAR_point_1",
+          "x": 624,
+          "y": 396.8125,
+          "count": 1
+        },
+        {
+          "id": "LEFT_PILLAR_point_2",
+          "x": 832,
+          "y": 288.8125,
+          "count": 2
+        },
+        {
+          "id": "LEFT_PILLAR_point_3",
+          "x": 1022,
+          "y": 250.8125,
+          "count": 3
+        },
+        {
+          "id": "LEFT_PILLAR_point_4",
+          "x": 1374,
+          "y": 248.8125,
+          "count": 4
+        },
+        {
+          "id": "LEFT_PILLAR_point_5",
+          "x": 1686,
+          "y": 256.8125,
+          "count": 5
+        },
+        {
+          "id": "LEFT_PILLAR_point_6",
+          "x": 1747.5999755859375,
+          "y": 364.79998779296875,
+          "count": 6
+        }
+      ]
+    },
+    {
+      "part": "LEFT_REAR_FENDER",
+      "place": "left",
+      "kind": "element",
+      "file": "LEFT_REAR_FENDER.svg",
+      "modified_svg": "modified_svg/LEFT_REAR_FENDER.svg",
+      "pointed_svg": "pointed_svg/LEFT_REAR_FENDER.svg",
+      "in_php_enum": true,
+      "body_enum": "BODY_SOL_ARKA_CAMURLUK",
+      "source": {
+        "png": "6282528a477c8.png",
+        "element_type": "element7",
+        "position": 5,
+        "id": "8SvKWStPhmPMAAoapFmHfu"
+      },
+      "transform": {
+        "positionX": -1324,
+        "editorPositionX": -175,
+        "scaleX": 1
+      },
+      "points": [
+        {
+          "id": "LEFT_REAR_FENDER_point_1",
+          "x": 1452,
+          "y": 530.8125,
+          "count": 1
+        },
+        {
+          "id": "LEFT_REAR_FENDER_point_2",
+          "x": 1568,
+          "y": 468.8125,
+          "count": 2
+        },
+        {
+          "id": "LEFT_REAR_FENDER_point_3",
+          "x": 1730,
+          "y": 526.8125,
+          "count": 3
+        },
+        {
+          "id": "LEFT_REAR_FENDER_point_4",
+          "x": 1754,
+          "y": 418.8125,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "part": "TOP_SIDE",
+      "place": "top",
+      "kind": "main",
+      "file": "TOP_SIDE.svg",
+      "modified_svg": "modified_svg/TOP_SIDE.svg",
+      "pointed_svg": "pointed_svg/TOP_SIDE.svg",
+      "in_php_enum": false,
+      "body_enum": null,
+      "source": {
+        "png": "627ba0be9fb90.png",
+        "element_type": "main",
+        "position": null,
+        "id": "2dQXGiYLGuY6LsbXLtiPt9"
+      },
+      "transform": null,
+      "points": []
+    },
+    {
+      "part": "HOOD",
+      "place": "top",
+      "kind": "element",
+      "file": "HOOD.svg",
+      "modified_svg": "modified_svg/HOOD.svg",
+      "pointed_svg": "pointed_svg/HOOD.svg",
+      "in_php_enum": true,
+      "body_enum": "BODY_KAPUT",
+      "source": {
+        "png": "627ba0b419dbb.png",
+        "element_type": "element1",
+        "position": 1,
+        "id": "VLk1LknevJMVgALxq8dLxA"
+      },
+      "transform": {
+        "positionX": -57.59999999999991,
+        "editorPositionX": -105,
+        "scaleX": 0.8999999999999999
+      },
+      "points": [
+        {
+          "id": "HOOD_point_1",
+          "x": 506,
+          "y": 768.8125,
+          "count": 1
+        },
+        {
+          "id": "HOOD_point_2",
+          "x": 282,
+          "y": 744.8125,
+          "count": 2
+        },
+        {
+          "id": "HOOD_point_3",
+          "x": 346,
+          "y": 516.8125,
+          "count": 3
+        },
+        {
+          "id": "HOOD_point_4",
+          "x": 282,
+          "y": 284.8125,
+          "count": 4
+        },
+        {
+          "id": "HOOD_point_5",
+          "x": 504,
+          "y": 260.8125,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "part": "ROOF",
+      "place": "top",
+      "kind": "element",
+      "file": "ROOF.svg",
+      "modified_svg": "modified_svg/ROOF.svg",
+      "pointed_svg": "pointed_svg/ROOF.svg",
+      "in_php_enum": true,
+      "body_enum": "BODY_TAVAN",
+      "source": {
+        "png": "627ba0b6d21ed.png",
+        "element_type": "element2",
+        "position": 2,
+        "id": "Ms1bTJkAQtKPvuT4kJS5tB"
+      },
+      "transform": {
+        "positionX": -452.39999999999964,
+        "editorPositionX": -200,
+        "scaleX": 0.5999999999999996
+      },
+      "points": [
+        {
+          "id": "ROOF_point_1",
+          "x": 860,
+          "y": 332.8125,
+          "count": 1
+        },
+        {
+          "id": "ROOF_point_2",
+          "x": 1272,
+          "y": 514.8125,
+          "count": 2
+        },
+        {
+          "id": "ROOF_point_3",
+          "x": 1696,
+          "y": 362.8125,
+          "count": 3
+        },
+        {
+          "id": "ROOF_point_4",
+          "x": 1696,
+          "y": 668.8125,
+          "count": 4
+        },
+        {
+          "id": "ROOF_point_5",
+          "x": 858,
+          "y": 698.8125,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "part": "BACK_SIDE",
+      "place": "back",
+      "kind": "main",
+      "file": "BACK_SIDE.svg",
+      "modified_svg": "modified_svg/BACK_SIDE.svg",
+      "pointed_svg": "pointed_svg/BACK_SIDE.svg",
+      "in_php_enum": false,
+      "body_enum": null,
+      "source": {
+        "png": "627ba0dc5ecf6.png",
+        "element_type": "main",
+        "position": null,
+        "id": "HUkgD5XEw5UcFzMMSH3FCn"
+      },
+      "transform": null,
+      "points": []
+    },
+    {
+      "part": "TRUNK",
+      "place": "back",
+      "kind": "element",
+      "file": "TRUNK.svg",
+      "modified_svg": "modified_svg/TRUNK.svg",
+      "pointed_svg": "pointed_svg/TRUNK.svg",
+      "in_php_enum": true,
+      "body_enum": "BODY_BAGAJ",
+      "source": {
+        "png": "627ba0de9bda1.png",
+        "element_type": "element8",
+        "position": 1,
+        "id": "Y5d7M771c8FR7UHpqUp5wi"
+      },
+      "transform": {
+        "positionX": -357.5999999999997,
+        "editorPositionX": 385,
+        "scaleX": 0.6499999999999997
+      },
+      "points": [
+        {
+          "id": "TRUNK_point_1",
+          "x": 778,
+          "y": 590.8125,
+          "count": 1
+        },
+        {
+          "id": "TRUNK_point_2",
+          "x": 816,
+          "y": 488.8125,
+          "count": 2
+        },
+        {
+          "id": "TRUNK_point_3",
+          "x": 1004,
+          "y": 536.8125,
+          "count": 3
+        },
+        {
+          "id": "TRUNK_point_4",
+          "x": 1236,
+          "y": 492.8125,
+          "count": 4
+        },
+        {
+          "id": "TRUNK_point_5",
+          "x": 1260,
+          "y": 588.8125,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "part": "RIGHT_SIDE",
+      "place": "right",
+      "kind": "main",
+      "file": "RIGHT_SIDE.svg",
+      "modified_svg": "modified_svg/RIGHT_SIDE.svg",
+      "pointed_svg": "pointed_svg/RIGHT_SIDE.svg",
+      "in_php_enum": true,
+      "body_enum": null,
+      "source": {
+        "png": "0ysp09gyg2c5daveq91knkjx3s.png",
+        "element_type": "main",
+        "position": null,
+        "id": "8GmNQrH9XD8pmgkGgdK1Rh"
+      },
+      "transform": null,
+      "points": []
+    },
+    {
+      "part": "RIGHT_FRONT_FENDER",
+      "place": "right",
+      "kind": "element",
+      "file": "RIGHT_FRONT_FENDER.svg",
+      "modified_svg": "modified_svg/RIGHT_FRONT_FENDER.svg",
+      "pointed_svg": "pointed_svg/RIGHT_FRONT_FENDER.svg",
+      "in_php_enum": true,
+      "body_enum": "BODY_SAG_ON_CAMURLUK",
+      "source": {
+        "png": "0ysp09gff6drs8rqf91knkjx3s.png",
+        "element_type": "element9",
+        "position": 1,
+        "id": "EGhWoEj3QNf26yiG7ActC1"
+      },
+      "transform": {
+        "positionX": -1344,
+        "editorPositionX": -185,
+        "scaleX": 1
+      },
+      "points": [
+        {
+          "id": "RIGHT_FRONT_FENDER_point_1",
+          "x": 1452.4000244140625,
+          "y": 592.7999877929688,
+          "count": 1
+        },
+        {
+          "id": "RIGHT_FRONT_FENDER_point_2",
+          "x": 1450,
+          "y": 494.8125,
+          "count": 2
+        },
+        {
+          "id": "RIGHT_FRONT_FENDER_point_3",
+          "x": 1504,
+          "y": 446.8125,
+          "count": 3
+        },
+        {
+          "id": "RIGHT_FRONT_FENDER_point_4",
+          "x": 1594,
+          "y": 518.8125,
+          "count": 4
+        },
+        {
+          "id": "RIGHT_FRONT_FENDER_point_5",
+          "x": 1716,
+          "y": 494.8125,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "part": "RIGHT_FRONT_DOOR",
+      "place": "right",
+      "kind": "element",
+      "file": "RIGHT_FRONT_DOOR.svg",
+      "modified_svg": "modified_svg/RIGHT_FRONT_DOOR.svg",
+      "pointed_svg": "pointed_svg/RIGHT_FRONT_DOOR.svg",
+      "in_php_enum": true,
+      "body_enum": "BODY_SAG_ON_KAPI",
+      "source": {
+        "png": "0ysp09gkb7cj4a2xq91knkjx3s.png",
+        "element_type": "element10",
+        "position": 2,
+        "id": "98zLYSa8F1nF4Fe7v6ckjt"
+      },
+      "transform": {
+        "positionX": -922,
+        "editorPositionX": -230,
+        "scaleX": 1
+      },
+      "points": [
+        {
+          "id": "RIGHT_FRONT_DOOR_point_1",
+          "x": 1070,
+          "y": 722.8125,
+          "count": 1
+        },
+        {
+          "id": "RIGHT_FRONT_DOOR_point_2",
+          "x": 1070,
+          "y": 604.8125,
+          "count": 2
+        },
+        {
+          "id": "RIGHT_FRONT_DOOR_point_3",
+          "x": 1066,
+          "y": 464.8125,
+          "count": 3
+        },
+        {
+          "id": "RIGHT_FRONT_DOOR_point_4",
+          "x": 1234,
+          "y": 604.8125,
+          "count": 4
+        },
+        {
+          "id": "RIGHT_FRONT_DOOR_point_5",
+          "x": 1394,
+          "y": 724.8125,
+          "count": 5
+        },
+        {
+          "id": "RIGHT_FRONT_DOOR_point_6",
+          "x": 1402,
+          "y": 604.8125,
+          "count": 6
+        },
+        {
+          "id": "RIGHT_FRONT_DOOR_point_7",
+          "x": 1394,
+          "y": 472.8125,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "part": "RIGHT_REAR_DOOR",
+      "place": "right",
+      "kind": "element",
+      "file": "RIGHT_REAR_DOOR.svg",
+      "modified_svg": "modified_svg/RIGHT_REAR_DOOR.svg",
+      "pointed_svg": "pointed_svg/RIGHT_REAR_DOOR.svg",
+      "in_php_enum": true,
+      "body_enum": "BODY_SAG_ARKA_KAPI",
+      "source": {
+        "png": "0ysp09gpmqd5qbb8z91knkjx3s.png",
+        "element_type": "element11",
+        "position": 3,
+        "id": "1dNc68ESxMRZVad2iuznh5"
+      },
+      "transform": {
+        "positionX": -530,
+        "editorPositionX": -290,
+        "scaleX": 1
+      },
+      "points": [
+        {
+          "id": "RIGHT_REAR_DOOR_point_1",
+          "x": 678,
+          "y": 718.8125,
+          "count": 1
+        },
+        {
+          "id": "RIGHT_REAR_DOOR_point_2",
+          "x": 666,
+          "y": 606.8125,
+          "count": 2
+        },
+        {
+          "id": "RIGHT_REAR_DOOR_point_3",
+          "x": 650,
+          "y": 450.8125,
+          "count": 3
+        },
+        {
+          "id": "RIGHT_REAR_DOOR_point_4",
+          "x": 840,
+          "y": 606.8125,
+          "count": 4
+        },
+        {
+          "id": "RIGHT_REAR_DOOR_point_5",
+          "x": 1014,
+          "y": 720.8125,
+          "count": 5
+        },
+        {
+          "id": "RIGHT_REAR_DOOR_point_6",
+          "x": 1014,
+          "y": 604.8125,
+          "count": 6
+        },
+        {
+          "id": "RIGHT_REAR_DOOR_point_7",
+          "x": 1012,
+          "y": 464.8125,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "part": "RIGHT_PILLAR",
+      "place": "right",
+      "kind": "element",
+      "file": "RIGHT_PILLAR.svg",
+      "modified_svg": "modified_svg/RIGHT_PILLAR.svg",
+      "pointed_svg": "pointed_svg/RIGHT_PILLAR.svg",
+      "in_php_enum": true,
+      "body_enum": null,
+      "source": {
+        "png": "0ysp09gsrydna9g1q91knkjx3s.png",
+        "element_type": "element12",
+        "position": 4,
+        "id": "1uDMA4RMKpYNKRBkc6f7mJ"
+      },
+      "transform": {
+        "positionX": -88.79999999999961,
+        "editorPositionX": -95,
+        "scaleX": 0.4499999999999996
+      },
+      "points": [
+        {
+          "id": "RIGHT_PILLAR_point_1",
+          "x": 300.4000244140625,
+          "y": 364.79998779296875,
+          "count": 1
+        },
+        {
+          "id": "RIGHT_PILLAR_point_2",
+          "x": 362,
+          "y": 256.8125,
+          "count": 2
+        },
+        {
+          "id": "RIGHT_PILLAR_point_3",
+          "x": 674,
+          "y": 248.8125,
+          "count": 3
+        },
+        {
+          "id": "RIGHT_PILLAR_point_4",
+          "x": 1026,
+          "y": 250.8125,
+          "count": 4
+        },
+        {
+          "id": "RIGHT_PILLAR_point_5",
+          "x": 1216,
+          "y": 288.8125,
+          "count": 5
+        },
+        {
+          "id": "RIGHT_PILLAR_point_6",
+          "x": 1424,
+          "y": 396.8125,
+          "count": 6
+        }
+      ]
+    },
+    {
+      "part": "RIGHT_REAR_FENDER",
+      "place": "right",
+      "kind": "element",
+      "file": "RIGHT_REAR_FENDER.svg",
+      "modified_svg": "modified_svg/RIGHT_REAR_FENDER.svg",
+      "pointed_svg": "pointed_svg/RIGHT_REAR_FENDER.svg",
+      "in_php_enum": true,
+      "body_enum": "BODY_SAG_ARKA_CAMURLUK",
+      "source": {
+        "png": "0ysp09gx3scyr9bd791knkjx3s.png",
+        "element_type": "element13",
+        "position": 5,
+        "id": "2HWA5bWYPJFZA4Ewy1vWJv"
+      },
+      "transform": {
+        "positionX": -110,
+        "editorPositionX": -80,
+        "scaleX": 1
+      },
+      "points": [
+        {
+          "id": "RIGHT_REAR_FENDER_point_1",
+          "x": 294,
+          "y": 418.8125,
+          "count": 1
+        },
+        {
+          "id": "RIGHT_REAR_FENDER_point_2",
+          "x": 318,
+          "y": 526.8125,
+          "count": 2
+        },
+        {
+          "id": "RIGHT_REAR_FENDER_point_3",
+          "x": 480,
+          "y": 468.8125,
+          "count": 3
+        },
+        {
+          "id": "RIGHT_REAR_FENDER_point_4",
+          "x": 596,
+          "y": 530.8125,
+          "count": 4
+        }
+      ]
+    }
+  ],
+  "parts_present": [
+    "BACK_SIDE",
+    "HOOD",
+    "LEFT_FRONT_DOOR",
+    "LEFT_FRONT_FENDER",
+    "LEFT_PILLAR",
+    "LEFT_REAR_DOOR",
+    "LEFT_REAR_FENDER",
+    "LEFT_SIDE",
+    "RIGHT_FRONT_DOOR",
+    "RIGHT_FRONT_FENDER",
+    "RIGHT_PILLAR",
+    "RIGHT_REAR_DOOR",
+    "RIGHT_REAR_FENDER",
+    "RIGHT_SIDE",
+    "ROOF",
+    "TOP_SIDE",
+    "TRUNK"
+  ],
+  "places_present": [
+    "back",
+    "left",
+    "right",
+    "top"
+  ]
+}

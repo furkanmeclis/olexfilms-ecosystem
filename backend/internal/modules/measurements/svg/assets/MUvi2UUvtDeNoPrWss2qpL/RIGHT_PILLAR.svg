@@ -1,0 +1,47 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20010904//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg version="1.0" xmlns="http://www.w3.org/2000/svg"
+ width="2048.000000" height="1024.000000" viewBox="0 0 2048 1024"
+ preserveAspectRatio="xMidYMid meet">
+  <g id="RIGHT_PILLAR">
+
+<metadata>
+Created by potrace 1.16, written by Peter Selinger 2001-2019
+</metadata>
+<g transform="translate(0.000000,1024.000000) scale(0.100000,-0.100000)"
+fill="#FFFFFF" stroke="none">
+<path d="M8535 7683 c-719 -8 -1453 -44 -1787 -88 -810 -106 -1694 -434 -2575
+-956 -270 -161 -553 -341 -547 -350 3 -5 13 -9 23 -9 32 0 326 -78 467 -124
+78 -26 160 -46 183 -46 41 0 49 5 144 96 196 186 452 376 692 515 271 155 858
+408 1240 532 512 167 708 188 1975 208 578 10 817 10 1070 1 794 -29 1270 -97
+1733 -248 331 -108 489 -182 907 -421 470 -270 773 -457 1212 -750 l277 -184
+126 8 126 8 -143 106 c-201 149 -404 288 -613 421 -99 63 -234 150 -300 193
+-186 121 -521 327 -699 429 -359 206 -493 266 -791 356 -551 166 -948 238
+-1550 280 -139 10 -915 32 -960 27 -11 -1 -105 -3 -210 -4z"/>
+</g>
+
+  </g>
+  <g id="RIGHT_PILLAR_points">
+    <g id="RIGHT_PILLAR_point_1" data-count="1">
+      <circle cx="426.4000244140625" cy="384.3999938964844" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="426.4000244140625" y="384.3999938964844" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">1</text>
+    </g>
+    <g id="RIGHT_PILLAR_point_2" data-count="2">
+      <circle cx="704.4000244140625" cy="270.3999938964844" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="704.4000244140625" y="270.3999938964844" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">2</text>
+    </g>
+    <g id="RIGHT_PILLAR_point_3" data-count="3">
+      <circle cx="902.4000244140625" cy="264.3999938964844" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="902.4000244140625" y="264.3999938964844" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">3</text>
+    </g>
+    <g id="RIGHT_PILLAR_point_4" data-count="4">
+      <circle cx="1186.4000244140625" cy="326.3999938964844" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="1186.4000244140625" y="326.3999938964844" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">4</text>
+    </g>
+    <g id="RIGHT_PILLAR_point_5" data-count="5">
+      <circle cx="1342.4000244140625" cy="414.3999938964844" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="1342.4000244140625" y="414.3999938964844" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">5</text>
+    </g>
+  </g>
+</svg>

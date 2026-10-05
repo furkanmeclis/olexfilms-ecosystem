@@ -1,0 +1,50 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20010904//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg version="1.0" xmlns="http://www.w3.org/2000/svg"
+ width="2048.000000" height="1024.000000" viewBox="0 0 2048 1024"
+ preserveAspectRatio="xMidYMid meet">
+  <g id="HOOD">
+
+<metadata>
+Created by potrace 1.16, written by Peter Selinger 2001-2019
+</metadata>
+<g transform="translate(0.000000,1024.000000) scale(0.100000,-0.100000)"
+fill="#FFFFFF" stroke="none">
+<path d="M3105 7369 c-318 -6 -703 -23 -851 -35 l-72 -6 -133 -127 c-142 -134
+-442 -451 -435 -458 2 -2 21 4 43 15 80 41 335 146 503 207 403 146 755 239
+1190 315 137 24 318 75 339 96 5 5 -129 3 -584 -7z"/>
+<path d="M3260 7224 c-425 -79 -874 -208 -1269 -365 -165 -66 -433 -187 -447
+-202 -21 -22 -87 -476 -114 -782 -38 -439 -38 -1084 0 -1530 26 -307 93 -771
+113 -792 16 -17 258 -126 446 -202 295 -120 683 -241 991 -311 130 -30 449
+-90 475 -90 9 0 -5 53 -42 158 -121 348 -196 748 -248 1332 -22 241 -30 823
+-16 1090 18 340 71 784 127 1072 36 188 121 473 189 641 9 22 18 22 -205 -19z"/>
+<path d="M1610 3462 c0 -11 321 -344 455 -474 l120 -115 135 -7 c74 -4 216
+-11 315 -16 99 -6 376 -12 615 -15 l435 -6 -96 39 c-61 25 -128 43 -185 51
+-504 70 -1216 282 -1701 507 -51 24 -93 40 -93 36z"/>
+</g>
+
+  </g>
+  <g id="HOOD_points">
+    <g id="HOOD_point_1" data-count="1">
+      <circle cx="324.0" cy="708.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="324.0" y="708.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">1</text>
+    </g>
+    <g id="HOOD_point_2" data-count="2">
+      <circle cx="172.0" cy="652.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="172.0" y="652.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">2</text>
+    </g>
+    <g id="HOOD_point_3" data-count="3">
+      <circle cx="250.0" cy="512.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="250.0" y="512.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">3</text>
+    </g>
+    <g id="HOOD_point_4" data-count="4">
+      <circle cx="172.0" cy="372.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="172.0" y="372.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">4</text>
+    </g>
+    <g id="HOOD_point_5" data-count="5">
+      <circle cx="322.0" cy="314.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="322.0" y="314.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">5</text>
+    </g>
+  </g>
+</svg>

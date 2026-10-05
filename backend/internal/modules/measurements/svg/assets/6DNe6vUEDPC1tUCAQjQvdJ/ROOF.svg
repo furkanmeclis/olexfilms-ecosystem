@@ -1,0 +1,44 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20010904//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg version="1.0" xmlns="http://www.w3.org/2000/svg"
+ width="2048.000000" height="1024.000000" viewBox="0 0 2048 1024"
+ preserveAspectRatio="xMidYMid meet">
+  <g id="ROOF">
+
+<metadata>
+Created by potrace 1.16, written by Peter Selinger 2001-2019
+</metadata>
+<g transform="translate(0.000000,1024.000000) scale(0.100000,-0.100000)"
+fill="#FFFFFF" stroke="none">
+<path d="M7937 7141 c-3 -20 -34 -243 -68 -496 l-63 -460 -78 -82 -78 -83 0
+-912 0 -913 77 -77 77 -77 68 -487 c37 -268 70 -490 73 -492 3 -3 112 9 242
+26 839 111 1690 181 2578 212 370 13 1305 13 1673 -1 l294 -10 74 38 74 38 0
+1750 0 1750 -73 38 -73 38 -303 -10 c-380 -14 -1263 -14 -1651 -1 -859 29
+-1636 91 -2460 195 -151 20 -298 39 -326 44 l-52 8 -5 -36z"/>
+</g>
+
+  </g>
+  <g id="ROOF_points">
+    <g id="ROOF_point_1" data-count="1">
+      <circle cx="824.0" cy="344.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="824.0" y="344.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">1</text>
+    </g>
+    <g id="ROOF_point_2" data-count="2">
+      <circle cx="1042.0" cy="510.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="1042.0" y="510.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">2</text>
+    </g>
+    <g id="ROOF_point_3" data-count="3">
+      <circle cx="1252.0" cy="364.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="1252.0" y="364.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">3</text>
+    </g>
+    <g id="ROOF_point_4" data-count="4">
+      <circle cx="1250.0" cy="660.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="1250.0" y="660.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">4</text>
+    </g>
+    <g id="ROOF_point_5" data-count="5">
+      <circle cx="824.0" cy="682.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="824.0" y="682.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">5</text>
+    </g>
+  </g>
+</svg>

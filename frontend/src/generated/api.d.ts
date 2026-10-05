@@ -6744,6 +6744,38 @@ export interface paths {
         patch: operations["completeMeasurementVIN"];
         trace?: never;
     };
+    "/v1/measurements/{uuid}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the timestamped measurement PDF
+         * @description The measurement report PDF: organization letterhead, device serial,
+         *     `measured_at` in the organization timezone, VIN, plate, the reading
+         *     tables per side, the tires, the NexPTG part map (the legacy SVGs
+         *     colored by interpretation) and the generation timestamp, in the
+         *     organization locale. A measurement does not change, so the PDF is
+         *     rendered once on worker-docs and kept (`pdf_key`): the first request
+         *     queues the render and answers 202 `pending` (poll the same URL,
+         *     `Retry-After` seconds); later requests stream the stored PDF.
+         *     Only an accepted (VIN known) and normalized measurement has a PDF
+         *     (else 422 `MEASUREMENT_VIN_PENDING` / `MEASUREMENT_NOT_NORMALIZED`).
+         *     Requires the measurements module and `measurements.read`; a
+         *     measurement outside the reader's scope answers 404. Panel only:
+         *     there is no portal route and a portal session is refused (403).
+         */
+        get: operations["getMeasurementPdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/services/{uuid}/measurements": {
         parameters: {
             query?: never;
@@ -15119,6 +15151,18 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["MeasurementDetail"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        MeasurementPDFPending: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            status: "pending";
+        };
+        EnvelopeMeasurementPDFPending: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["MeasurementPDFPending"];
             meta: components["schemas"]["ResponseMeta"];
         };
         MeasurementVINRequest: {
@@ -31036,6 +31080,51 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getMeasurementPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            /** @description The PDF is being rendered; request the same URL again */
+            202: {
+                headers: {
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeMeasurementPDFPending"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+            /** @description PDF rendering is not configured */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     listServiceMeasurements: {

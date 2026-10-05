@@ -1,0 +1,55 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20010904//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg version="1.0" xmlns="http://www.w3.org/2000/svg"
+ width="2048.000000" height="1024.000000" viewBox="0 0 2048 1024"
+ preserveAspectRatio="xMidYMid meet">
+  <g id="RIGHT_REAR_FENDER">
+
+<metadata>
+Created by potrace 1.16, written by Peter Selinger 2001-2019
+</metadata>
+<g transform="translate(0.000000,1024.000000) scale(0.100000,-0.100000)"
+fill="#FFFFFF" stroke="none">
+<path d="M1186 6178 l-148 -263 6 -295 c9 -493 74 -893 218 -1350 l24 -75
+1061 -3 1061 -2 27 70 c119 311 350 617 618 820 536 405 1205 449 1771 116
+460 -271 781 -723 897 -1266 18 -86 23 -146 27 -327 l4 -223 464 0 464 0 0
+1530 0 1530 -3173 0 -3172 0 -149 -262z"/>
+</g>
+
+  </g>
+  <g id="RIGHT_REAR_FENDER_points">
+    <g id="RIGHT_REAR_FENDER_point_1" data-count="1">
+      <circle cx="158.2857208251953" cy="421.4285583496094" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="158.2857208251953" y="421.4285583496094" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">1</text>
+    </g>
+    <g id="RIGHT_REAR_FENDER_point_2" data-count="2">
+      <circle cx="184.0" cy="572.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="184.0" y="572.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">2</text>
+    </g>
+    <g id="RIGHT_REAR_FENDER_point_3" data-count="3">
+      <circle cx="316.0" cy="574.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="316.0" y="574.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">3</text>
+    </g>
+    <g id="RIGHT_REAR_FENDER_point_4" data-count="4">
+      <circle cx="360.0" cy="476.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="360.0" y="476.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">4</text>
+    </g>
+    <g id="RIGHT_REAR_FENDER_point_5" data-count="5">
+      <circle cx="504.0" cy="440.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="504.0" y="440.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">5</text>
+    </g>
+    <g id="RIGHT_REAR_FENDER_point_6" data-count="6">
+      <circle cx="738.0" cy="652.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="738.0" y="652.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">6</text>
+    </g>
+    <g id="RIGHT_REAR_FENDER_point_7" data-count="7">
+      <circle cx="738.0" cy="538.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="738.0" y="538.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">7</text>
+    </g>
+    <g id="RIGHT_REAR_FENDER_point_8" data-count="8">
+      <circle cx="738.0" cy="420.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="738.0" y="420.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">8</text>
+    </g>
+  </g>
+</svg>

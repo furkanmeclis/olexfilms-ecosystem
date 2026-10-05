@@ -80,3 +80,21 @@ func RegisterServiceLinkRoutes(
 	mux.Handle("POST /v1/services/{uuid}/measurements/checked", middleware.Chain(http.HandlerFunc(h.Checked), authn, org, module, link))
 	mux.Handle("DELETE /v1/services/{uuid}/measurements/{phase}", middleware.Chain(http.HandlerFunc(h.Unlink), authn, org, module, link))
 }
+
+// RegisterPDFRoutes mounts the measurement PDF (TEC-298): panel realm only
+// (no portal route; a portal or mobile token is refused by the realm
+// check), the measurements module flag and measurements.read.
+func RegisterPDFRoutes(
+	mux *http.ServeMux,
+	h *handler.PDF,
+	tokens *jwt.Manager,
+	loader middleware.IdentityLoader,
+	q *db.Queries,
+	checker middleware.FeatureChecker,
+) {
+	authn := middleware.Authenticate(tokens, loader)
+	org := middleware.RequireOrganization(tokens, q)
+	module := middleware.RequireFeature(checker, features.ModuleMeasurements)
+	read := middleware.RequireScope(q, rbac.PermMeasurementsRead)
+	mux.Handle("GET /v1/measurements/{uuid}/pdf", middleware.Chain(http.HandlerFunc(h.Get), authn, org, module, read))
+}

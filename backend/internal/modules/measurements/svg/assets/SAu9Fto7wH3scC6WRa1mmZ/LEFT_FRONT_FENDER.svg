@@ -1,0 +1,32 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20010904//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg version="1.0" xmlns="http://www.w3.org/2000/svg"
+ width="2048.000000" height="1024.000000" viewBox="0 0 2048 1024"
+ preserveAspectRatio="xMidYMid meet">
+  <g id="LEFT_FRONT_FENDER">
+
+<metadata>
+Created by potrace 1.16, written by Peter Selinger 2001-2019
+</metadata>
+<g transform="translate(0.000000,1024.000000) scale(0.100000,-0.100000)"
+fill="#FFFFFF" stroke="none">
+<path d="M4532 5100 c-51 -68 -76 -76 -393 -130 -162 -27 -297 -50 -301 -50
+-5 0 -8 -160 -8 -355 l0 -355 271 0 c177 0 268 -3 264 -10 -4 -6 -107 -10
+-275 -10 l-269 0 -26 -37 -25 -38 290 -3 c392 -3 387 -21 -7 -24 l-298 -3 -3
+-308 c-2 -260 0 -312 13 -337 28 -55 36 -56 444 -52 l373 4 -7 851 c-4 469
+-11 860 -14 870 -6 15 -10 14 -29 -13z"/>
+</g>
+
+  </g>
+  <g id="LEFT_FRONT_FENDER_points">
+    <g id="LEFT_FRONT_FENDER_point_1" data-count="1">
+      <circle cx="420.60012841331826" cy="650.9576792248696" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="420.60012841331826" y="650.9576792248696" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">1</text>
+    </g>
+    <g id="LEFT_FRONT_FENDER_point_2" data-count="2">
+      <circle cx="418.60011172387846" cy="566.9558116506187" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="418.60011172387846" y="566.9558116506187" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">2</text>
+    </g>
+  </g>
+</svg>

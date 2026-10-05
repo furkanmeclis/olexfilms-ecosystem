@@ -696,6 +696,24 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		s.worker.WithContractPDF(contractsSvc.GenerateExecutedPDF)
 	}
 	contractsmodule.RegisterRoutes(mux, contractshandler.New(contractsSvc), tokens, loader, deps.Queries, featureSvc)
+	// TEC-298: timestamped measurement PDF (worker-docs measurement:pdf,
+	// cached in measurement_results.pdf_key) and the measurement document
+	// source.
+	var measurementPDFQueue measurementsusecase.PDFEnqueuer
+	if deps.Queue != nil {
+		measurementPDFQueue = deps.Queue
+	}
+	var measurementPDFTx measurementsusecase.TxBeginner
+	if deps.DB != nil {
+		measurementPDFTx = deps.DB
+	}
+	measurementPDF := measurementsusecase.NewPDF(measurementPDFTx, deps.Queries, deps.Storage, pdfClient,
+		measurementPDFQueue, pdfrender.ParseFontMode(cfg.Gotenberg.Fonts), log)
+	_ = docSvc.RegisterLoader(docmodel.KindMeasurement, measurementPDF.DocumentLoader())
+	if s.worker != nil {
+		s.worker.WithMeasurementPDF(measurementPDF.GeneratePDF)
+	}
+	measurementsmodule.RegisterPDFRoutes(mux, measurementshandler.NewPDF(measurementPDF), tokens, loader, deps.Queries, featureSvc)
 	exportmodule.RegisterRoutes(mux, exporthandler.New(exportSvc), tokens, loader, stepUpSvc, deps.Queries)
 	importmodule.RegisterRoutes(mux, importhandler.New(importSvc), tokens, loader, deps.Queries)
 	bulkmodule.RegisterRoutes(mux, bulkhandler.New(bulkSvc), tokens, loader)

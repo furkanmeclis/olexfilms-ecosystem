@@ -234,6 +234,77 @@ func (q *Queries) GetMeasurementDeviceByUUID(ctx context.Context, arg GetMeasure
 	return i, err
 }
 
+const getMeasurementPDFContext = `-- name: GetMeasurementPDFContext :one
+SELECT
+    md.serial AS registry_device_serial,
+    md.model AS device_model,
+    s.service_no AS service_no,
+    v.plate AS vehicle_plate,
+    v.vin AS vehicle_vin,
+    v.model_year AS vehicle_model_year,
+    cb.name AS car_brand_name,
+    cm.name AS car_model_name,
+    cu.name AS customer_name,
+    cu.surname AS customer_surname,
+    cu.status AS customer_status,
+    up.name AS uploader_name,
+    up.surname AS uploader_surname
+FROM measurement_results mr
+LEFT JOIN measurement_devices md ON md.id = mr.device_id
+LEFT JOIN service_measurements sm ON sm.measurement_result_id = mr.id
+LEFT JOIN services s ON s.id = COALESCE(sm.service_id, mr.service_id)
+LEFT JOIN vehicles v ON v.id = COALESCE(mr.vehicle_id, s.vehicle_id)
+LEFT JOIN car_brands cb ON cb.id = v.car_brand_id
+LEFT JOIN car_models cm ON cm.id = v.car_model_id
+LEFT JOIN users cu ON cu.id = COALESCE(mr.customer_user_id, s.customer_user_id)
+LEFT JOIN users up ON up.id = mr.created_by
+WHERE mr.id = $1 AND mr.organization_id = $2
+`
+
+type GetMeasurementPDFContextParams struct {
+	ID             int64 `json:"id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+type GetMeasurementPDFContextRow struct {
+	RegistryDeviceSerial pgtype.Text `json:"registry_device_serial"`
+	DeviceModel          pgtype.Text `json:"device_model"`
+	ServiceNo            pgtype.Text `json:"service_no"`
+	VehiclePlate         pgtype.Text `json:"vehicle_plate"`
+	VehicleVin           pgtype.Text `json:"vehicle_vin"`
+	VehicleModelYear     pgtype.Int2 `json:"vehicle_model_year"`
+	CarBrandName         pgtype.Text `json:"car_brand_name"`
+	CarModelName         pgtype.Text `json:"car_model_name"`
+	CustomerName         pgtype.Text `json:"customer_name"`
+	CustomerSurname      pgtype.Text `json:"customer_surname"`
+	CustomerStatus       pgtype.Text `json:"customer_status"`
+	UploaderName         pgtype.Text `json:"uploader_name"`
+	UploaderSurname      pgtype.Text `json:"uploader_surname"`
+}
+
+// The PDF header data of a result: the registry device, the vehicle (the
+// result's own, else the linked service's), the customer and the uploader.
+func (q *Queries) GetMeasurementPDFContext(ctx context.Context, arg GetMeasurementPDFContextParams) (GetMeasurementPDFContextRow, error) {
+	row := q.db.QueryRow(ctx, getMeasurementPDFContext, arg.ID, arg.OrganizationID)
+	var i GetMeasurementPDFContextRow
+	err := row.Scan(
+		&i.RegistryDeviceSerial,
+		&i.DeviceModel,
+		&i.ServiceNo,
+		&i.VehiclePlate,
+		&i.VehicleVin,
+		&i.VehicleModelYear,
+		&i.CarBrandName,
+		&i.CarModelName,
+		&i.CustomerName,
+		&i.CustomerSurname,
+		&i.CustomerStatus,
+		&i.UploaderName,
+		&i.UploaderSurname,
+	)
+	return i, err
+}
+
 const getMeasurementResultByUUID = `-- name: GetMeasurementResultByUUID :one
 SELECT id, uuid, organization_id, brand_id, service_id, vehicle_id, vin, status, raw, client_measurement_id, idempotency_key, device_serial, source, created_by, created_at, measured_at, device_id, customer_user_id, body_type, parsed_at, pdf_key FROM measurement_results
 WHERE uuid = $1 AND organization_id = $2
@@ -300,6 +371,44 @@ func (q *Queries) GetMeasurementResultForLink(ctx context.Context, arg GetMeasur
 		&i.OrganizationID,
 		&i.Vin,
 		&i.Status,
+	)
+	return i, err
+}
+
+const getMeasurementResultForPDF = `-- name: GetMeasurementResultForPDF :one
+SELECT id, uuid, organization_id, brand_id, service_id, vehicle_id, vin, status, raw, client_measurement_id, idempotency_key, device_serial, source, created_by, created_at, measured_at, device_id, customer_user_id, body_type, parsed_at, pdf_key FROM measurement_results
+WHERE id = $1
+FOR UPDATE
+`
+
+// TEC-298 (F3-02f): measurement PDF. The worker locks the result while it
+// renders so concurrent deliveries render once (pdf_key is set in the same
+// transaction).
+func (q *Queries) GetMeasurementResultForPDF(ctx context.Context, id int64) (MeasurementResult, error) {
+	row := q.db.QueryRow(ctx, getMeasurementResultForPDF, id)
+	var i MeasurementResult
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ServiceID,
+		&i.VehicleID,
+		&i.Vin,
+		&i.Status,
+		&i.Raw,
+		&i.ClientMeasurementID,
+		&i.IdempotencyKey,
+		&i.DeviceSerial,
+		&i.Source,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.MeasuredAt,
+		&i.DeviceID,
+		&i.CustomerUserID,
+		&i.BodyType,
+		&i.ParsedAt,
+		&i.PdfKey,
 	)
 	return i, err
 }
@@ -1140,6 +1249,51 @@ type ListMeasurementValuesParams struct {
 
 func (q *Queries) ListMeasurementValues(ctx context.Context, arg ListMeasurementValuesParams) ([]MeasurementValue, error) {
 	rows, err := q.db.Query(ctx, listMeasurementValues, arg.ResultID, arg.OrganizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []MeasurementValue{}
+	for rows.Next() {
+		var i MeasurementValue
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.ResultID,
+			&i.PlaceID,
+			&i.PartType,
+			&i.IsInside,
+			&i.Position,
+			&i.ValueUm,
+			&i.Interpretation,
+			&i.SubstrateType,
+			&i.MeasuredAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listMeasurementValuesForPDF = `-- name: ListMeasurementValuesForPDF :many
+SELECT id, organization_id, brand_id, result_id, place_id, part_type, is_inside, position, value_um, interpretation, substrate_type, measured_at, created_at FROM measurement_values
+WHERE result_id = $1 AND organization_id = $2
+ORDER BY id
+`
+
+type ListMeasurementValuesForPDFParams struct {
+	ResultID       int64 `json:"result_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) ListMeasurementValuesForPDF(ctx context.Context, arg ListMeasurementValuesForPDFParams) ([]MeasurementValue, error) {
+	rows, err := q.db.Query(ctx, listMeasurementValuesForPDF, arg.ResultID, arg.OrganizationID)
 	if err != nil {
 		return nil, err
 	}

@@ -1,0 +1,83 @@
+{
+  "source": "olexfilms resources/nexptg-models/index.json (models)",
+  "models": [
+    {
+      "id": "SAu9Fto7wH3scC6WRa1mmZ",
+      "name": "Ciężarowe",
+      "folder": "Ciężarowe",
+      "bodywork": "TRUCK"
+    },
+    {
+      "id": "S4UBfbwG62wjV6vE4LXMKE",
+      "name": "Coupe",
+      "folder": "Coupe",
+      "bodywork": "COUPE"
+    },
+    {
+      "id": "4HKDh4FfsaZtFN72mzos8a",
+      "name": "Hatchback 3d",
+      "folder": "Hatchback 3d",
+      "bodywork": "HATCHBACK 3D"
+    },
+    {
+      "id": "CexVhymW3JTPErUj51DnTE",
+      "name": "Hatchback 5d",
+      "folder": "Hatchback 5d",
+      "bodywork": "HATCHBACK 5D"
+    },
+    {
+      "id": "1pKpv31R7Ti5jbHKQ1qVii",
+      "name": "Kabriolet",
+      "folder": "Kabriolet",
+      "bodywork": "CABRIOLET"
+    },
+    {
+      "id": "8ay5gjdU7zaBH2McBgnFFu",
+      "name": "Kombi",
+      "folder": "Kombi",
+      "bodywork": "ESTATE"
+    },
+    {
+      "id": "6Lz1DLpxtDTm1VAzjvBobc",
+      "name": "Liftback",
+      "folder": "Liftback",
+      "bodywork": "LIFTBACK"
+    },
+    {
+      "id": "ABa58wayZqWyxU6FAKDyRy",
+      "name": "Mercedes Benz Sprinter",
+      "folder": "Mercedes Benz Sprinter",
+      "bodywork": "VAN"
+    },
+    {
+      "id": "LQbKbRehSjw8mx981s899y",
+      "name": "MiniVan",
+      "folder": "MiniVan",
+      "bodywork": "MINIVAN"
+    },
+    {
+      "id": "6DNe6vUEDPC1tUCAQjQvdJ",
+      "name": "Pickup 2d",
+      "folder": "Pickup 2d",
+      "bodywork": "PICKUP 2D"
+    },
+    {
+      "id": "8FtZ3ZqRdTqpmM7MeZns9R",
+      "name": "Pickup 4d",
+      "folder": "Pickup 4d",
+      "bodywork": "PICKUP 4D"
+    },
+    {
+      "id": "9fxJEsSTS3zQHeBmjyxGXC",
+      "name": "SUV",
+      "folder": "SUV",
+      "bodywork": "SUV"
+    },
+    {
+      "id": "MUvi2UUvtDeNoPrWss2qpL",
+      "name": "Sedan",
+      "folder": "Sedan",
+      "bodywork": "SEDAN"
+    }
+  ]
+}

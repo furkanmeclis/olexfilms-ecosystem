@@ -728,8 +728,15 @@ type Querier interface {
 	GetMaxFinanceEntryRevisionBySource(ctx context.Context, arg GetMaxFinanceEntryRevisionBySourceParams) (int32, error)
 	GetMeasurementDeviceBySerial(ctx context.Context, arg GetMeasurementDeviceBySerialParams) (MeasurementDevice, error)
 	GetMeasurementDeviceByUUID(ctx context.Context, arg GetMeasurementDeviceByUUIDParams) (MeasurementDevice, error)
+	// The PDF header data of a result: the registry device, the vehicle (the
+	// result's own, else the linked service's), the customer and the uploader.
+	GetMeasurementPDFContext(ctx context.Context, arg GetMeasurementPDFContextParams) (GetMeasurementPDFContextRow, error)
 	GetMeasurementResultByUUID(ctx context.Context, arg GetMeasurementResultByUUIDParams) (MeasurementResult, error)
 	GetMeasurementResultForLink(ctx context.Context, arg GetMeasurementResultForLinkParams) (GetMeasurementResultForLinkRow, error)
+	// TEC-298 (F3-02f): measurement PDF. The worker locks the result while it
+	// renders so concurrent deliveries render once (pdf_key is set in the same
+	// transaction).
+	GetMeasurementResultForPDF(ctx context.Context, id int64) (MeasurementResult, error)
 	GetMeasurementResultPanel(ctx context.Context, arg GetMeasurementResultPanelParams) (GetMeasurementResultPanelRow, error)
 	// TEC-252: migrator bookkeeping (000074). Written only by cmd/migrator.
 	GetMigrationMap(ctx context.Context, arg GetMigrationMapParams) (MigrationMap, error)
@@ -1345,6 +1352,7 @@ type Querier interface {
 	ListMeasurementResultsPanel(ctx context.Context, arg ListMeasurementResultsPanelParams) ([]ListMeasurementResultsPanelRow, error)
 	ListMeasurementTires(ctx context.Context, arg ListMeasurementTiresParams) ([]MeasurementTire, error)
 	ListMeasurementValues(ctx context.Context, arg ListMeasurementValuesParams) ([]MeasurementValue, error)
+	ListMeasurementValuesForPDF(ctx context.Context, arg ListMeasurementValuesForPDFParams) ([]MeasurementValue, error)
 	// Grants of the user's roles in one organization (active org context).
 	ListMemberGrants(ctx context.Context, arg ListMemberGrantsParams) ([]ListMemberGrantsRow, error)
 	ListMemberRoleSlugs(ctx context.Context, arg ListMemberRoleSlugsParams) ([]string, error)

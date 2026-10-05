@@ -426,3 +426,44 @@ FOR UPDATE;
 UPDATE measurement_results
 SET vin = sqlc.arg(vin), status = 'accepted'
 WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id) AND status = 'vin_pending';
+
+-- TEC-298 (F3-02f): measurement PDF. The worker locks the result while it
+-- renders so concurrent deliveries render once (pdf_key is set in the same
+-- transaction).
+-- name: GetMeasurementResultForPDF :one
+SELECT * FROM measurement_results
+WHERE id = sqlc.arg(id)
+FOR UPDATE;
+
+-- The PDF header data of a result: the registry device, the vehicle (the
+-- result's own, else the linked service's), the customer and the uploader.
+-- name: GetMeasurementPDFContext :one
+SELECT
+    md.serial AS registry_device_serial,
+    md.model AS device_model,
+    s.service_no AS service_no,
+    v.plate AS vehicle_plate,
+    v.vin AS vehicle_vin,
+    v.model_year AS vehicle_model_year,
+    cb.name AS car_brand_name,
+    cm.name AS car_model_name,
+    cu.name AS customer_name,
+    cu.surname AS customer_surname,
+    cu.status AS customer_status,
+    up.name AS uploader_name,
+    up.surname AS uploader_surname
+FROM measurement_results mr
+LEFT JOIN measurement_devices md ON md.id = mr.device_id
+LEFT JOIN service_measurements sm ON sm.measurement_result_id = mr.id
+LEFT JOIN services s ON s.id = COALESCE(sm.service_id, mr.service_id)
+LEFT JOIN vehicles v ON v.id = COALESCE(mr.vehicle_id, s.vehicle_id)
+LEFT JOIN car_brands cb ON cb.id = v.car_brand_id
+LEFT JOIN car_models cm ON cm.id = v.car_model_id
+LEFT JOIN users cu ON cu.id = COALESCE(mr.customer_user_id, s.customer_user_id)
+LEFT JOIN users up ON up.id = mr.created_by
+WHERE mr.id = sqlc.arg(id) AND mr.organization_id = sqlc.arg(organization_id);
+
+-- name: ListMeasurementValuesForPDF :many
+SELECT * FROM measurement_values
+WHERE result_id = sqlc.arg(result_id) AND organization_id = sqlc.arg(organization_id)
+ORDER BY id;

@@ -1,0 +1,62 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20010904//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg version="1.0" xmlns="http://www.w3.org/2000/svg"
+ width="2048.000000" height="1024.000000" viewBox="0 0 2048 1024"
+ preserveAspectRatio="xMidYMid meet">
+  <g id="RIGHT_FRONT_DOOR">
+
+<metadata>
+Created by potrace 1.16, written by Peter Selinger 2001-2019
+</metadata>
+<g transform="translate(0.000000,1024.000000) scale(0.100000,-0.100000)"
+fill="#FFFFFF" stroke="none">
+<path d="M9405 5953 c21 -55 89 -294 110 -388 99 -443 145 -1038 145 -1887 l0
+-418 108 0 c59 0 944 -16 1967 -35 1023 -19 1892 -35 1931 -35 l72 0 11 78
+c74 514 113 1202 93 1628 -12 239 -36 497 -51 544 -5 14 -66 104 -136 200 -70
+96 -128 176 -129 177 -2 3 -3999 153 -4070 153 -51 0 -57 -2 -51 -17z m755
+-434 c85 -5 156 -12 159 -15 3 -2 7 -23 10 -47 6 -41 7 -42 51 -49 25 -3 97
+-7 161 -7 135 -1 129 4 129 -106 0 -88 7 -85 -174 -85 l-128 0 6 -33 c7 -38
+-4 -52 -69 -85 -104 -52 -214 -34 -296 48 -27 27 -49 53 -49 58 0 5 -51 12
+-112 14 -62 3 -125 11 -139 18 -46 21 -61 82 -38 149 l11 31 120 0 120 0 -6
+38 c-4 20 -9 50 -12 65 l-6 29 54 -6 c29 -3 123 -11 208 -17z"/>
+<path d="M9935 5484 c3 -16 8 -39 11 -51 4 -23 6 -23 185 -23 l181 0 -7 33
+c-4 17 -9 35 -11 38 -2 3 -59 9 -126 13 -68 4 -149 9 -181 13 l-58 6 6 -29z"/>
+<path d="M9704 5335 c-5 -30 -3 -41 15 -58 21 -22 24 -22 464 -22 l442 0 3 40
+c1 22 -1 45 -5 51 -6 8 -147 13 -460 18 l-452 8 -7 -37z"/>
+<path d="M10000 5191 c5 -11 27 -33 47 -50 68 -56 155 -66 239 -27 60 28 68
+38 60 72 l-6 24 -176 0 c-169 0 -174 -1 -164 -19z"/>
+</g>
+
+  </g>
+  <g id="RIGHT_FRONT_DOOR_points">
+    <g id="RIGHT_FRONT_DOOR_point_1" data-count="1">
+      <circle cx="996.0" cy="670.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="996.0" y="670.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">1</text>
+    </g>
+    <g id="RIGHT_FRONT_DOOR_point_2" data-count="2">
+      <circle cx="990.0" cy="572.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="990.0" y="572.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">2</text>
+    </g>
+    <g id="RIGHT_FRONT_DOOR_point_3" data-count="3">
+      <circle cx="974.0" cy="452.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="974.0" y="452.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">3</text>
+    </g>
+    <g id="RIGHT_FRONT_DOOR_point_4" data-count="4">
+      <circle cx="1174.0" cy="572.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="1174.0" y="572.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">4</text>
+    </g>
+    <g id="RIGHT_FRONT_DOOR_point_5" data-count="5">
+      <circle cx="1350.0" cy="680.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="1350.0" y="680.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">5</text>
+    </g>
+    <g id="RIGHT_FRONT_DOOR_point_6" data-count="6">
+      <circle cx="1360.0" cy="572.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="1360.0" y="572.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">6</text>
+    </g>
+    <g id="RIGHT_FRONT_DOOR_point_7" data-count="7">
+      <circle cx="1342.0" cy="466.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="1342.0" y="466.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">7</text>
+    </g>
+  </g>
+</svg>

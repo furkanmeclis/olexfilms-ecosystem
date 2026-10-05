@@ -78,3 +78,40 @@ func TestMobileMeasurementRouteGate(t *testing.T) {
 		t.Fatalf("mobile token = %d %s, want loader 401", st, code)
 	}
 }
+
+// TEC-298: the measurement PDF is a panel route only: a portal (customer)
+// or mobile token is refused with 403 REALM_FORBIDDEN, no token is 401.
+func TestMeasurementPDFRouteRefusesPortal(t *testing.T) {
+	tokens, err := jwt.NewManager("test-secret-test-secret-test-secret", time.Minute, time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mux := http.NewServeMux()
+	RegisterPDFRoutes(mux, handler.NewPDF(nil), tokens, noLoader{}, nil, nil)
+	oid := uuid.New()
+	path := "/v1/measurements/" + uuid.NewString() + "/pdf"
+	for _, aud := range []string{jwt.AudiencePortal, jwt.AudienceMobile} {
+		tok, _, err := tokens.IssueAccess(jwt.AccessInput{UserID: uuid.New(), OrganizationID: &oid, Audience: aud})
+		if err != nil {
+			t.Fatal(err)
+		}
+		req := httptest.NewRequest("GET", path, nil)
+		req.Header.Set("Authorization", "Bearer "+tok)
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		var env struct {
+			Error *struct {
+				Code string `json:"code"`
+			} `json:"error"`
+		}
+		_ = json.Unmarshal(rec.Body.Bytes(), &env)
+		if rec.Code != http.StatusForbidden || env.Error == nil || env.Error.Code != "REALM_FORBIDDEN" {
+			t.Fatalf("%s token = %d %s, want 403 REALM_FORBIDDEN", aud, rec.Code, rec.Body.String())
+		}
+	}
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, httptest.NewRequest("GET", path, nil))
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("without token = %d, want 401", rec.Code)
+	}
+}

@@ -12653,6 +12653,65 @@ paths:
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
+  # --- TEC-298: timestamped measurement PDF ---------------------------
+  /v1/measurements/{uuid}/pdf:
+    get:
+      tags: [Measurements]
+      operationId: getMeasurementPdf
+      summary: Download the timestamped measurement PDF
+      description: |
+        The measurement report PDF: organization letterhead, device serial,
+        `measured_at` in the organization timezone, VIN, plate, the reading
+        tables per side, the tires, the NexPTG part map (the legacy SVGs
+        colored by interpretation) and the generation timestamp, in the
+        organization locale. A measurement does not change, so the PDF is
+        rendered once on worker-docs and kept (`pdf_key`): the first request
+        queues the render and answers 202 `pending` (poll the same URL,
+        `Retry-After` seconds); later requests stream the stored PDF.
+        Only an accepted (VIN known) and normalized measurement has a PDF
+        (else 422 `MEASUREMENT_VIN_PENDING` / `MEASUREMENT_NOT_NORMALIZED`).
+        Requires the measurements module and `measurements.read`; a
+        measurement outside the reader's scope answers 404. Panel only:
+        there is no portal route and a portal session is refused (403).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: PDF bytes
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "202":
+          description: The PDF is being rendered; request the same URL again
+          headers:
+            Retry-After:
+              schema: { type: integer }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMeasurementPDFPending"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "503":
+          description: PDF rendering is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /v1/services/{uuid}/measurements:
     get:
       tags: [Measurements]
@@ -26299,6 +26358,22 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/MeasurementDetail" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    # TEC-298: measurement PDF render pending.
+    MeasurementPDFPending:
+      type: object
+      required: [uuid, status]
+      properties:
+        uuid: { type: string, format: uuid }
+        status: { type: string, enum: [pending] }
+
+    EnvelopeMeasurementPDFPending:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/MeasurementPDFPending" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     # TEC-294: VIN completion.

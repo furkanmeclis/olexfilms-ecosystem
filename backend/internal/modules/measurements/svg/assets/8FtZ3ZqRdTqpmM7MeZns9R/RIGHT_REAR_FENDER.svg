@@ -1,0 +1,66 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20010904//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg version="1.0" xmlns="http://www.w3.org/2000/svg"
+ width="2048.000000" height="1024.000000" viewBox="0 0 2048 1024"
+ preserveAspectRatio="xMidYMid meet">
+  <g id="RIGHT_REAR_FENDER">
+
+<metadata>
+Created by potrace 1.16, written by Peter Selinger 2001-2019
+</metadata>
+<g transform="translate(0.000000,1024.000000) scale(0.100000,-0.100000)"
+fill="#FFFFFF" stroke="none">
+<path d="M1066 6098 c4 -7 64 -95 133 -195 l125 -183 496 0 c372 0 499 -3 508
+-12 9 -9 12 -69 12 -207 l0 -196 -44 -98 c-100 -220 -266 -472 -427 -644 l-48
+-53 -226 0 -225 0 0 -180 0 -180 198 -2 197 -3 3 -67 3 -68 783 0 782 0 24 58
+c66 165 195 350 349 502 219 217 496 365 807 432 95 20 136 23 324 23 200 -1
+223 -3 335 -29 214 -50 374 -119 547 -235 300 -201 514 -478 632 -819 l36
+-104 0 -294 0 -294 473 2 472 3 3 1428 2 1427 -3141 0 c-2509 0 -3139 -3
+-3133 -12z"/>
+</g>
+
+  </g>
+  <g id="RIGHT_REAR_FENDER_points">
+    <g id="RIGHT_REAR_FENDER_point_1" data-count="1">
+      <circle cx="258.0" cy="448.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="258.0" y="448.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">1</text>
+    </g>
+    <g id="RIGHT_REAR_FENDER_point_2" data-count="2">
+      <circle cx="240.0" cy="536.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="240.0" y="536.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">2</text>
+    </g>
+    <g id="RIGHT_REAR_FENDER_point_3" data-count="3">
+      <circle cx="200.0" cy="604.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="200.0" y="604.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">3</text>
+    </g>
+    <g id="RIGHT_REAR_FENDER_point_4" data-count="4">
+      <circle cx="302.0" cy="604.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="302.0" y="604.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">4</text>
+    </g>
+    <g id="RIGHT_REAR_FENDER_point_5" data-count="5">
+      <circle cx="490.0" cy="496.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="490.0" y="496.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">5</text>
+    </g>
+    <g id="RIGHT_REAR_FENDER_point_6" data-count="6">
+      <circle cx="488.0" cy="438.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="488.0" y="438.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">6</text>
+    </g>
+    <g id="RIGHT_REAR_FENDER_point_7" data-count="7">
+      <circle cx="658.0" cy="670.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="658.0" y="670.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">7</text>
+    </g>
+    <g id="RIGHT_REAR_FENDER_point_8" data-count="8">
+      <circle cx="716.0" cy="642.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="716.0" y="642.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">8</text>
+    </g>
+    <g id="RIGHT_REAR_FENDER_point_9" data-count="9">
+      <circle cx="716.0" cy="536.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="716.0" y="536.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">9</text>
+    </g>
+    <g id="RIGHT_REAR_FENDER_point_10" data-count="10">
+      <circle cx="718.0" cy="440.8125" r="22.0" fill="none" stroke="#000000" stroke-width="2"/>
+      <text x="718.0" y="440.8125" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#000000">10</text>
+    </g>
+  </g>
+</svg>

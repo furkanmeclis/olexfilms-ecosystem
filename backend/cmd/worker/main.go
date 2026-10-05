@@ -29,6 +29,7 @@ import (
 	leadsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/leads/usecase"
 	logsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/logs/usecase"
 	measurementsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/measurements"
+	measurementsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/measurements/usecase"
 	notifmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/providers"
 	notifusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/usecase"
@@ -235,6 +236,10 @@ func main() {
 		contractsusecase.WithOutbox(outboxStore),
 	)
 	_ = docSvc.RegisterLoader(docmodel.KindContract, contractsSvc.ContractDocumentLoader())
+	// TEC-298: measurement PDF (worker-docs renders, pdf_key caches it).
+	measurementPDF := measurementsusecase.NewPDF(pool, queries, store, pdfClient, reviewQueue,
+		pdfrender.ParseFontMode(cfg.Gotenberg.Fonts), log)
+	_ = docSvc.RegisterLoader(docmodel.KindMeasurement, measurementPDF.DocumentLoader())
 	importSvc := importusecase.New(queries, store, ioReg, nil, notifSvc, activityRec, log)
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(queries),
@@ -285,6 +290,8 @@ func main() {
 		WithDocsRender(docSvc.ProcessRender).
 		// TEC-288: executed contract PDF (docs queue).
 		WithContractPDF(contractsSvc.GenerateExecutedPDF).
+		// TEC-298: measurement PDF (docs queue).
+		WithMeasurementPDF(measurementPDF.GeneratePDF).
 		WithRatesFetch(ratesSvc.FetchTask).
 		WithWarrantyCron(warrantyCron.ExpireTask, warrantyCron.ExpiringScanTask).
 		WithWarrantyRepairScan(warrantymodule.NewRepairScanner(pool, queries, cfg.Auth.FrontendURL, cfg.Warranty.RepairScanDays, log).Task).
