@@ -1234,3 +1234,313 @@ func (q *Queries) SetWarrantyClaimStatus(ctx context.Context, arg SetWarrantyCla
 	)
 	return i, err
 }
+
+const warrantyClaimFailureRateByLot = `-- name: WarrantyClaimFailureRateByLot :many
+WITH warranty_counts AS (
+    SELECT w.unit_id, COUNT(*)::bigint AS warranty_count
+    FROM warranties w
+    WHERE w.brand_id = $1
+      AND ($2::bigint[] IS NULL OR w.organization_id = ANY($2::bigint[]))
+      AND ($3::timestamptz IS NULL OR w.created_at >= $3::timestamptz)
+      AND ($4::timestamptz IS NULL OR w.created_at < $4::timestamptz)
+    GROUP BY w.unit_id
+),
+claim_counts AS (
+    SELECT w.unit_id,
+           COUNT(DISTINCT c.id)::bigint AS claim_count,
+           COUNT(DISTINCT c.id) FILTER (WHERE c.status IN ('approved', 'reapplied', 'closed'))::bigint AS approved_claim_count
+    FROM warranty_claims c
+    JOIN warranties w ON w.id = c.warranty_id
+    WHERE c.brand_id = $1
+      AND ($2::bigint[] IS NULL OR c.organization_id = ANY($2::bigint[]))
+      AND ($3::timestamptz IS NULL OR c.created_at >= $3::timestamptz)
+      AND ($4::timestamptz IS NULL OR c.created_at < $4::timestamptz)
+    GROUP BY w.unit_id
+)
+SELECT u.id AS unit_id, u.uuid AS unit_uuid, u.barcode AS lot_code,
+       p.id AS product_id, p.uuid AS product_uuid, p.sku AS product_sku, p.name AS product_name,
+       COALESCE(wc.warranty_count, 0)::bigint AS warranty_count,
+       COALESCE(cc.claim_count, 0)::bigint AS claim_count,
+       COALESCE(cc.approved_claim_count, 0)::bigint AS approved_claim_count
+FROM warranty_counts wc
+JOIN units u ON u.id = wc.unit_id
+JOIN products p ON p.id = u.product_id
+LEFT JOIN claim_counts cc ON cc.unit_id = wc.unit_id
+ORDER BY approved_claim_count DESC, claim_count DESC, p.name, u.barcode, u.id
+`
+
+type WarrantyClaimFailureRateByLotParams struct {
+	BrandID         int64              `json:"brand_id"`
+	OrganizationIds []int64            `json:"organization_ids"`
+	FromAt          pgtype.Timestamptz `json:"from_at"`
+	ToAt            pgtype.Timestamptz `json:"to_at"`
+}
+
+type WarrantyClaimFailureRateByLotRow struct {
+	UnitID             int64     `json:"unit_id"`
+	UnitUuid           uuid.UUID `json:"unit_uuid"`
+	LotCode            string    `json:"lot_code"`
+	ProductID          int64     `json:"product_id"`
+	ProductUuid        uuid.UUID `json:"product_uuid"`
+	ProductSku         string    `json:"product_sku"`
+	ProductName        string    `json:"product_name"`
+	WarrantyCount      int64     `json:"warranty_count"`
+	ClaimCount         int64     `json:"claim_count"`
+	ApprovedClaimCount int64     `json:"approved_claim_count"`
+}
+
+func (q *Queries) WarrantyClaimFailureRateByLot(ctx context.Context, arg WarrantyClaimFailureRateByLotParams) ([]WarrantyClaimFailureRateByLotRow, error) {
+	rows, err := q.db.Query(ctx, warrantyClaimFailureRateByLot,
+		arg.BrandID,
+		arg.OrganizationIds,
+		arg.FromAt,
+		arg.ToAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []WarrantyClaimFailureRateByLotRow{}
+	for rows.Next() {
+		var i WarrantyClaimFailureRateByLotRow
+		if err := rows.Scan(
+			&i.UnitID,
+			&i.UnitUuid,
+			&i.LotCode,
+			&i.ProductID,
+			&i.ProductUuid,
+			&i.ProductSku,
+			&i.ProductName,
+			&i.WarrantyCount,
+			&i.ClaimCount,
+			&i.ApprovedClaimCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const warrantyClaimFailureRateByProduct = `-- name: WarrantyClaimFailureRateByProduct :many
+WITH warranty_counts AS (
+    SELECT w.product_id, COUNT(*)::bigint AS warranty_count
+    FROM warranties w
+    WHERE w.brand_id = $1
+      AND ($2::bigint[] IS NULL OR w.organization_id = ANY($2::bigint[]))
+      AND ($3::timestamptz IS NULL OR w.created_at >= $3::timestamptz)
+      AND ($4::timestamptz IS NULL OR w.created_at < $4::timestamptz)
+    GROUP BY w.product_id
+),
+claim_counts AS (
+    SELECT w.product_id,
+           COUNT(DISTINCT c.id)::bigint AS claim_count,
+           COUNT(DISTINCT c.id) FILTER (WHERE c.status IN ('approved', 'reapplied', 'closed'))::bigint AS approved_claim_count
+    FROM warranty_claims c
+    JOIN warranties w ON w.id = c.warranty_id
+    WHERE c.brand_id = $1
+      AND ($2::bigint[] IS NULL OR c.organization_id = ANY($2::bigint[]))
+      AND ($3::timestamptz IS NULL OR c.created_at >= $3::timestamptz)
+      AND ($4::timestamptz IS NULL OR c.created_at < $4::timestamptz)
+    GROUP BY w.product_id
+)
+SELECT p.id AS product_id, p.uuid AS product_uuid, p.sku AS product_sku, p.name AS product_name,
+       COALESCE(wc.warranty_count, 0)::bigint AS warranty_count,
+       COALESCE(cc.claim_count, 0)::bigint AS claim_count,
+       COALESCE(cc.approved_claim_count, 0)::bigint AS approved_claim_count
+FROM warranty_counts wc
+JOIN products p ON p.id = wc.product_id
+LEFT JOIN claim_counts cc ON cc.product_id = wc.product_id
+ORDER BY approved_claim_count DESC, claim_count DESC, p.name, p.id
+`
+
+type WarrantyClaimFailureRateByProductParams struct {
+	BrandID         int64              `json:"brand_id"`
+	OrganizationIds []int64            `json:"organization_ids"`
+	FromAt          pgtype.Timestamptz `json:"from_at"`
+	ToAt            pgtype.Timestamptz `json:"to_at"`
+}
+
+type WarrantyClaimFailureRateByProductRow struct {
+	ProductID          int64     `json:"product_id"`
+	ProductUuid        uuid.UUID `json:"product_uuid"`
+	ProductSku         string    `json:"product_sku"`
+	ProductName        string    `json:"product_name"`
+	WarrantyCount      int64     `json:"warranty_count"`
+	ClaimCount         int64     `json:"claim_count"`
+	ApprovedClaimCount int64     `json:"approved_claim_count"`
+}
+
+func (q *Queries) WarrantyClaimFailureRateByProduct(ctx context.Context, arg WarrantyClaimFailureRateByProductParams) ([]WarrantyClaimFailureRateByProductRow, error) {
+	rows, err := q.db.Query(ctx, warrantyClaimFailureRateByProduct,
+		arg.BrandID,
+		arg.OrganizationIds,
+		arg.FromAt,
+		arg.ToAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []WarrantyClaimFailureRateByProductRow{}
+	for rows.Next() {
+		var i WarrantyClaimFailureRateByProductRow
+		if err := rows.Scan(
+			&i.ProductID,
+			&i.ProductUuid,
+			&i.ProductSku,
+			&i.ProductName,
+			&i.WarrantyCount,
+			&i.ClaimCount,
+			&i.ApprovedClaimCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const warrantyClaimPartsReport = `-- name: WarrantyClaimPartsReport :many
+SELECT cp.part_key,
+       COALESCE(p.id, 0)::bigint AS product_id,
+       p.uuid AS product_uuid,
+       COALESCE(p.sku, '')::text AS product_sku,
+       COALESCE(p.name, '')::text AS product_name,
+       COUNT(cp.id)::bigint AS part_count,
+       COUNT(DISTINCT cp.claim_id)::bigint AS claim_count,
+       COUNT(DISTINCT cp.claim_id) FILTER (WHERE c.status IN ('approved', 'reapplied', 'closed'))::bigint AS approved_claim_count
+FROM warranty_claim_parts cp
+JOIN warranty_claims c ON c.id = cp.claim_id
+LEFT JOIN products p ON p.id = cp.product_id
+WHERE c.brand_id = $1
+  AND ($2::bigint[] IS NULL OR c.organization_id = ANY($2::bigint[]))
+  AND ($3::timestamptz IS NULL OR c.created_at >= $3::timestamptz)
+  AND ($4::timestamptz IS NULL OR c.created_at < $4::timestamptz)
+GROUP BY cp.part_key, p.id, p.uuid, p.sku, p.name
+ORDER BY part_count DESC, claim_count DESC, cp.part_key, p.name
+`
+
+type WarrantyClaimPartsReportParams struct {
+	BrandID         int64              `json:"brand_id"`
+	OrganizationIds []int64            `json:"organization_ids"`
+	FromAt          pgtype.Timestamptz `json:"from_at"`
+	ToAt            pgtype.Timestamptz `json:"to_at"`
+}
+
+type WarrantyClaimPartsReportRow struct {
+	PartKey            string      `json:"part_key"`
+	ProductID          int64       `json:"product_id"`
+	ProductUuid        pgtype.UUID `json:"product_uuid"`
+	ProductSku         string      `json:"product_sku"`
+	ProductName        string      `json:"product_name"`
+	PartCount          int64       `json:"part_count"`
+	ClaimCount         int64       `json:"claim_count"`
+	ApprovedClaimCount int64       `json:"approved_claim_count"`
+}
+
+func (q *Queries) WarrantyClaimPartsReport(ctx context.Context, arg WarrantyClaimPartsReportParams) ([]WarrantyClaimPartsReportRow, error) {
+	rows, err := q.db.Query(ctx, warrantyClaimPartsReport,
+		arg.BrandID,
+		arg.OrganizationIds,
+		arg.FromAt,
+		arg.ToAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []WarrantyClaimPartsReportRow{}
+	for rows.Next() {
+		var i WarrantyClaimPartsReportRow
+		if err := rows.Scan(
+			&i.PartKey,
+			&i.ProductID,
+			&i.ProductUuid,
+			&i.ProductSku,
+			&i.ProductName,
+			&i.PartCount,
+			&i.ClaimCount,
+			&i.ApprovedClaimCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const warrantyClaimsByDealerReport = `-- name: WarrantyClaimsByDealerReport :many
+SELECT o.id AS organization_id, o.uuid AS organization_uuid, o.name AS organization_name,
+       o.type AS organization_type,
+       COUNT(c.id)::bigint AS claim_count,
+       COUNT(c.id) FILTER (WHERE c.status IN ('approved', 'reapplied', 'closed'))::bigint AS approved_claim_count,
+       COUNT(c.id) FILTER (WHERE c.status = 'rejected')::bigint AS rejected_claim_count
+FROM warranty_claims c
+JOIN organizations o ON o.id = c.organization_id
+WHERE c.brand_id = $1
+  AND ($2::bigint[] IS NULL OR c.organization_id = ANY($2::bigint[]))
+  AND ($3::timestamptz IS NULL OR c.created_at >= $3::timestamptz)
+  AND ($4::timestamptz IS NULL OR c.created_at < $4::timestamptz)
+GROUP BY o.id, o.uuid, o.name, o.type
+ORDER BY claim_count DESC, approved_claim_count DESC, o.name, o.id
+`
+
+type WarrantyClaimsByDealerReportParams struct {
+	BrandID         int64              `json:"brand_id"`
+	OrganizationIds []int64            `json:"organization_ids"`
+	FromAt          pgtype.Timestamptz `json:"from_at"`
+	ToAt            pgtype.Timestamptz `json:"to_at"`
+}
+
+type WarrantyClaimsByDealerReportRow struct {
+	OrganizationID     int64     `json:"organization_id"`
+	OrganizationUuid   uuid.UUID `json:"organization_uuid"`
+	OrganizationName   string    `json:"organization_name"`
+	OrganizationType   string    `json:"organization_type"`
+	ClaimCount         int64     `json:"claim_count"`
+	ApprovedClaimCount int64     `json:"approved_claim_count"`
+	RejectedClaimCount int64     `json:"rejected_claim_count"`
+}
+
+func (q *Queries) WarrantyClaimsByDealerReport(ctx context.Context, arg WarrantyClaimsByDealerReportParams) ([]WarrantyClaimsByDealerReportRow, error) {
+	rows, err := q.db.Query(ctx, warrantyClaimsByDealerReport,
+		arg.BrandID,
+		arg.OrganizationIds,
+		arg.FromAt,
+		arg.ToAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []WarrantyClaimsByDealerReportRow{}
+	for rows.Next() {
+		var i WarrantyClaimsByDealerReportRow
+		if err := rows.Scan(
+			&i.OrganizationID,
+			&i.OrganizationUuid,
+			&i.OrganizationName,
+			&i.OrganizationType,
+			&i.ClaimCount,
+			&i.ApprovedClaimCount,
+			&i.RejectedClaimCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

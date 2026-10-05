@@ -85,3 +85,56 @@ type PortalClaimView struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
+
+type ReportFilter struct {
+	From  *time.Time
+	To    *time.Time
+	Group string
+}
+
+type FailureRateRow struct {
+	Group              string     `json:"group"`
+	ProductUUID        uuid.UUID  `json:"product_uuid"`
+	ProductSKU         string     `json:"product_sku"`
+	ProductName        string     `json:"product_name"`
+	LotUUID            *uuid.UUID `json:"lot_uuid,omitempty"`
+	LotCode            *string    `json:"lot_code,omitempty"`
+	WarrantyCount      int64      `json:"warranty_count"`
+	ClaimCount         int64      `json:"claim_count"`
+	ApprovedClaimCount int64      `json:"approved_claim_count"`
+	ClaimRate          float64    `json:"claim_rate"`
+	ApprovedRate       float64    `json:"approved_rate"`
+}
+
+type FailureRateReport struct {
+	Group string           `json:"group"`
+	Items []FailureRateRow `json:"items"`
+}
+
+type DealerReportRow struct {
+	OrganizationUUID   uuid.UUID `json:"organization_uuid"`
+	OrganizationName   string    `json:"organization_name"`
+	OrganizationType   string    `json:"organization_type"`
+	ClaimCount         int64     `json:"claim_count"`
+	ApprovedClaimCount int64     `json:"approved_claim_count"`
+	RejectedClaimCount int64     `json:"rejected_claim_count"`
+	ApprovalRate       float64   `json:"approval_rate"`
+}
+
+type DealerReport struct {
+	Items []DealerReportRow `json:"items"`
+}
+
+type PartsReportRow struct {
+	PartKey            string     `json:"part_key"`
+	ProductUUID        *uuid.UUID `json:"product_uuid,omitempty"`
+	ProductSKU         string     `json:"product_sku,omitempty"`
+	ProductName        string     `json:"product_name,omitempty"`
+	PartCount          int64      `json:"part_count"`
+	ClaimCount         int64      `json:"claim_count"`
+	ApprovedClaimCount int64      `json:"approved_claim_count"`
+}
+
+type PartsReport struct {
+	Items []PartsReportRow `json:"items"`
+}

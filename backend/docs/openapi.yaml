@@ -15460,6 +15460,154 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
 
+  /v1/warranty-claims/reports/failure-rate:
+    get:
+      tags: [Warranties]
+      operationId: getWarrantyClaimFailureRateReport
+      summary: Warranty claim failure rate by product or lot
+      description: >-
+        Returns total claims and approved failures (`approved`, `reapplied`,
+        `closed`) divided by warranties issued for the product or lot inside
+        the caller's warranty_claims.read scope.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: from
+          in: query
+          schema: { type: string, description: "YYYY-MM-DD or RFC3339" }
+        - name: to
+          in: query
+          schema: { type: string, description: "YYYY-MM-DD or RFC3339" }
+        - name: group
+          in: query
+          schema: { type: string, enum: [product, lot], default: product }
+      responses:
+        "200":
+          description: Failure rate report
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeWarrantyClaimFailureRateReport" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/warranty-claims/reports/failure-rate/export:
+    post:
+      tags: [Warranties]
+      operationId: exportWarrantyClaimFailureRateReport
+      summary: Queue a warranty claim failure-rate export
+      description: >-
+        Needs `warranty_claims.read`. Creates an organization export job; poll
+        and download it through `/v1/tenant/exports/{uuid}`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarrantyClaimReportExportRequest" }
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeExportJob" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/warranty-claims/reports/by-dealer:
+    get:
+      tags: [Warranties]
+      operationId: getWarrantyClaimsByDealerReport
+      summary: Warranty claims by dealer/distributor organization
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: from
+          in: query
+          schema: { type: string, description: "YYYY-MM-DD or RFC3339" }
+        - name: to
+          in: query
+          schema: { type: string, description: "YYYY-MM-DD or RFC3339" }
+      responses:
+        "200":
+          description: Claims by dealer
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeWarrantyClaimsByDealerReport" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/warranty-claims/reports/by-dealer/export:
+    post:
+      tags: [Warranties]
+      operationId: exportWarrantyClaimsByDealerReport
+      summary: Queue a warranty claims by-dealer export
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarrantyClaimReportExportRequest" }
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeExportJob" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/warranty-claims/reports/parts:
+    get:
+      tags: [Warranties]
+      operationId: getWarrantyClaimPartsReport
+      summary: Warranty claim part distribution
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: from
+          in: query
+          schema: { type: string, description: "YYYY-MM-DD or RFC3339" }
+        - name: to
+          in: query
+          schema: { type: string, description: "YYYY-MM-DD or RFC3339" }
+      responses:
+        "200":
+          description: Part distribution
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeWarrantyClaimPartsReport" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/warranty-claims/reports/parts/export:
+    post:
+      tags: [Warranties]
+      operationId: exportWarrantyClaimPartsReport
+      summary: Queue a warranty claim part distribution export
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarrantyClaimReportExportRequest" }
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeExportJob" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /v1/warranty-claims/{uuid}/photos:
     post:
       tags: [Warranties]
@@ -27085,6 +27233,93 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
 
+    WarrantyClaimFailureRateRow:
+      type: object
+      required:
+        [group, product_uuid, product_sku, product_name, warranty_count, claim_count,
+         approved_claim_count, claim_rate, approved_rate]
+      properties:
+        group: { type: string, enum: [product, lot] }
+        product_uuid: { type: string, format: uuid }
+        product_sku: { type: string }
+        product_name: { type: string }
+        lot_uuid: { type: [string, "null"], format: uuid }
+        lot_code: { type: [string, "null"] }
+        warranty_count: { type: integer, format: int64 }
+        claim_count: { type: integer, format: int64 }
+        approved_claim_count:
+          type: integer
+          format: int64
+          description: Claims in approved, reapplied or closed status.
+        claim_rate: { type: number, format: double }
+        approved_rate: { type: number, format: double }
+
+    WarrantyClaimFailureRateReport:
+      type: object
+      required: [group, items]
+      properties:
+        group: { type: string, enum: [product, lot] }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/WarrantyClaimFailureRateRow" }
+
+    WarrantyClaimsByDealerRow:
+      type: object
+      required:
+        [organization_uuid, organization_name, organization_type, claim_count,
+         approved_claim_count, rejected_claim_count, approval_rate]
+      properties:
+        organization_uuid: { type: string, format: uuid }
+        organization_name: { type: string }
+        organization_type: { type: string, enum: [center, distributor, dealer] }
+        claim_count: { type: integer, format: int64 }
+        approved_claim_count: { type: integer, format: int64 }
+        rejected_claim_count: { type: integer, format: int64 }
+        approval_rate: { type: number, format: double }
+
+    WarrantyClaimsByDealerReport:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/WarrantyClaimsByDealerRow" }
+
+    WarrantyClaimPartsReportRow:
+      type: object
+      required: [part_key, part_count, claim_count, approved_claim_count]
+      properties:
+        part_key: { type: string }
+        product_uuid: { type: [string, "null"], format: uuid }
+        product_sku: { type: string }
+        product_name: { type: string }
+        part_count: { type: integer, format: int64 }
+        claim_count: { type: integer, format: int64 }
+        approved_claim_count: { type: integer, format: int64 }
+
+    WarrantyClaimPartsReport:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/WarrantyClaimPartsReportRow" }
+
+    WarrantyClaimReportExportRequest:
+      type: object
+      additionalProperties: false
+      required: [format]
+      properties:
+        format: { type: string, enum: [csv, xlsx] }
+        locale: { type: string, example: tr }
+        query:
+          type: object
+          additionalProperties: false
+          properties:
+            from: { type: string, description: "YYYY-MM-DD or RFC3339" }
+            to: { type: string, description: "YYYY-MM-DD or RFC3339" }
+            group: { type: string, enum: [product, lot], default: product }
+
     PortalWarrantyClaimStatus:
       type: object
       required: [uuid, status, created_at, updated_at]
@@ -27156,6 +27391,30 @@ components:
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeWarrantyClaimFailureRateReport:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/WarrantyClaimFailureRateReport" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeWarrantyClaimsByDealerReport:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/WarrantyClaimsByDealerReport" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeWarrantyClaimPartsReport:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/WarrantyClaimPartsReport" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopePortalWarrantyClaims:

@@ -554,7 +554,6 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		tokens, loader, featureSvc, stepUpSvc, listFinder)
 	// TEC-335: warranty claims (open, photos, review/decision flow, portal status).
 	warrantyClaimsSvc := warrantyclaimsusecase.New(deps.DB, deps.Queries, deps.Storage, outbox.NewStore(deps.DB, deps.Queries))
-	warrantyclaimsmodule.RegisterRoutes(mux, warrantyclaimshandler.New(warrantyClaimsSvc), tokens, loader, deps.Queries, featureSvc)
 
 	// TEC-145: product catalog (brand scoped, center writes).
 	catalogSvc := catalogusecase.New(deps.Queries, searchIndexer)
@@ -589,11 +588,16 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		warehouseusecase.NewEODPDFAdapter(eodPDF),
 		// TEC-239: service PDF requested from the portal.
 		servicesusecase.NewPortalPDFAdapter(servicePDF),
+		// TEC-338: warranty claim reports and CSV/XLSX exports.
+		warrantyclaimsusecase.NewFailureRateAdapter(warrantyClaimsSvc),
+		warrantyclaimsusecase.NewByDealerAdapter(warrantyClaimsSvc),
+		warrantyclaimsusecase.NewPartsAdapter(warrantyClaimsSvc),
 	)
 	exportSvc := exportusecase.New(deps.Queries, deps.Storage, ioReg, deps.Queue, notifSvc, activityRec, log)
 	exportSvc.SetDocumentPDF(pdfClient)
 	accountingH.WithExports(exportSvc)
 	customersH.WithExports(exportSvc)
+	warrantyclaimsmodule.RegisterRoutes(mux, warrantyclaimshandler.New(warrantyClaimsSvc, exportSvc), tokens, loader, deps.Queries, featureSvc)
 	warrantymodule.RegisterCertificateRoutes(mux, warrantyhandler.NewCertificate(warrantyCert, exportSvc), tokens, loader, deps.Queries, featureSvc)
 	servicesmodule.RegisterPDFRoutes(mux, serviceshandler.NewPDF(servicePDF, exportSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-239: portal service detail and PDF.

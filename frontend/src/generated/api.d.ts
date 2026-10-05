@@ -8109,6 +8109,114 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/warranty-claims/reports/failure-rate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Warranty claim failure rate by product or lot
+         * @description Returns total claims and approved failures (`approved`, `reapplied`, `closed`) divided by warranties issued for the product or lot inside the caller's warranty_claims.read scope.
+         */
+        get: operations["getWarrantyClaimFailureRateReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warranty-claims/reports/failure-rate/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a warranty claim failure-rate export
+         * @description Needs `warranty_claims.read`. Creates an organization export job; poll and download it through `/v1/tenant/exports/{uuid}`.
+         */
+        post: operations["exportWarrantyClaimFailureRateReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warranty-claims/reports/by-dealer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Warranty claims by dealer/distributor organization */
+        get: operations["getWarrantyClaimsByDealerReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warranty-claims/reports/by-dealer/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Queue a warranty claims by-dealer export */
+        post: operations["exportWarrantyClaimsByDealerReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warranty-claims/reports/parts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Warranty claim part distribution */
+        get: operations["getWarrantyClaimPartsReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warranty-claims/reports/parts/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Queue a warranty claim part distribution export */
+        post: operations["exportWarrantyClaimPartsReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/warranty-claims/{uuid}/photos": {
         parameters: {
             query?: never;
@@ -15842,6 +15950,86 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        WarrantyClaimFailureRateRow: {
+            /** @enum {string} */
+            group: "product" | "lot";
+            /** Format: uuid */
+            product_uuid: string;
+            product_sku: string;
+            product_name: string;
+            /** Format: uuid */
+            lot_uuid?: string | null;
+            lot_code?: string | null;
+            /** Format: int64 */
+            warranty_count: number;
+            /** Format: int64 */
+            claim_count: number;
+            /**
+             * Format: int64
+             * @description Claims in approved, reapplied or closed status.
+             */
+            approved_claim_count: number;
+            /** Format: double */
+            claim_rate: number;
+            /** Format: double */
+            approved_rate: number;
+        };
+        WarrantyClaimFailureRateReport: {
+            /** @enum {string} */
+            group: "product" | "lot";
+            items: components["schemas"]["WarrantyClaimFailureRateRow"][];
+        };
+        WarrantyClaimsByDealerRow: {
+            /** Format: uuid */
+            organization_uuid: string;
+            organization_name: string;
+            /** @enum {string} */
+            organization_type: "center" | "distributor" | "dealer";
+            /** Format: int64 */
+            claim_count: number;
+            /** Format: int64 */
+            approved_claim_count: number;
+            /** Format: int64 */
+            rejected_claim_count: number;
+            /** Format: double */
+            approval_rate: number;
+        };
+        WarrantyClaimsByDealerReport: {
+            items: components["schemas"]["WarrantyClaimsByDealerRow"][];
+        };
+        WarrantyClaimPartsReportRow: {
+            part_key: string;
+            /** Format: uuid */
+            product_uuid?: string | null;
+            product_sku?: string;
+            product_name?: string;
+            /** Format: int64 */
+            part_count: number;
+            /** Format: int64 */
+            claim_count: number;
+            /** Format: int64 */
+            approved_claim_count: number;
+        };
+        WarrantyClaimPartsReport: {
+            items: components["schemas"]["WarrantyClaimPartsReportRow"][];
+        };
+        WarrantyClaimReportExportRequest: {
+            /** @enum {string} */
+            format: "csv" | "xlsx";
+            /** @example tr */
+            locale?: string;
+            query?: {
+                /** @description YYYY-MM-DD or RFC3339 */
+                from?: string;
+                /** @description YYYY-MM-DD or RFC3339 */
+                to?: string;
+                /**
+                 * @default product
+                 * @enum {string}
+                 */
+                group: "product" | "lot";
+            };
+        };
         PortalWarrantyClaimStatus: {
             /** Format: uuid */
             uuid: string;
@@ -15894,6 +16082,24 @@ export interface components {
                 limit: number;
                 offset: number;
             };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWarrantyClaimFailureRateReport: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WarrantyClaimFailureRateReport"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWarrantyClaimsByDealerReport: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WarrantyClaimsByDealerReport"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWarrantyClaimPartsReport: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WarrantyClaimPartsReport"];
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopePortalWarrantyClaims: {
@@ -32340,6 +32546,166 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    getWarrantyClaimFailureRateReport: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                group?: "product" | "lot";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Failure rate report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarrantyClaimFailureRateReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    exportWarrantyClaimFailureRateReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarrantyClaimReportExportRequest"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getWarrantyClaimsByDealerReport: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Claims by dealer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarrantyClaimsByDealerReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    exportWarrantyClaimsByDealerReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarrantyClaimReportExportRequest"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getWarrantyClaimPartsReport: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Part distribution */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarrantyClaimPartsReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    exportWarrantyClaimPartsReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarrantyClaimReportExportRequest"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     addWarrantyClaimPhoto: {

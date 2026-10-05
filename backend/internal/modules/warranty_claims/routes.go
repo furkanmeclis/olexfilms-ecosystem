@@ -27,6 +27,12 @@ func RegisterRoutes(
 		return middleware.Chain(fn, authn, org, module, middleware.RequireScope(q, perm))
 	}
 	mux.Handle("GET /v1/warranty-claims", tenant(h.List, rbac.PermWarrantyClaimsRead))
+	mux.Handle("GET /v1/warranty-claims/reports/failure-rate", tenant(h.FailureRateReport, rbac.PermWarrantyClaimsRead))
+	mux.Handle("POST /v1/warranty-claims/reports/failure-rate/export", tenant(h.ExportFailureRateReport, rbac.PermWarrantyClaimsRead))
+	mux.Handle("GET /v1/warranty-claims/reports/by-dealer", tenant(h.ByDealerReport, rbac.PermWarrantyClaimsRead))
+	mux.Handle("POST /v1/warranty-claims/reports/by-dealer/export", tenant(h.ExportByDealerReport, rbac.PermWarrantyClaimsRead))
+	mux.Handle("GET /v1/warranty-claims/reports/parts", tenant(h.PartsReport, rbac.PermWarrantyClaimsRead))
+	mux.Handle("POST /v1/warranty-claims/reports/parts/export", tenant(h.ExportPartsReport, rbac.PermWarrantyClaimsRead))
 	mux.Handle("POST /v1/warranty-claims", tenant(h.Create, rbac.PermWarrantyClaimsWrite))
 	mux.Handle("POST /v1/warranty-claims/{uuid}/photos", tenant(h.AddPhoto, rbac.PermWarrantyClaimsWrite))
 	mux.Handle("POST /v1/warranty-claims/{uuid}/status", middleware.Chain(

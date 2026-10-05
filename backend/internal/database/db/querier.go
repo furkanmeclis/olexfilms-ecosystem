@@ -2474,6 +2474,10 @@ type Querier interface {
 	// expiry stamp is cleared with the status change (the voided_at stamp and
 	// the activity log keep the history).
 	VoidWarrantyWithReason(ctx context.Context, arg VoidWarrantyWithReasonParams) (Warranty, error)
+	WarrantyClaimFailureRateByLot(ctx context.Context, arg WarrantyClaimFailureRateByLotParams) ([]WarrantyClaimFailureRateByLotRow, error)
+	WarrantyClaimFailureRateByProduct(ctx context.Context, arg WarrantyClaimFailureRateByProductParams) ([]WarrantyClaimFailureRateByProductRow, error)
+	WarrantyClaimPartsReport(ctx context.Context, arg WarrantyClaimPartsReportParams) ([]WarrantyClaimPartsReportRow, error)
+	WarrantyClaimsByDealerReport(ctx context.Context, arg WarrantyClaimsByDealerReportParams) ([]WarrantyClaimsByDealerReportRow, error)
 }
 
 var _ Querier = (*Queries)(nil)
