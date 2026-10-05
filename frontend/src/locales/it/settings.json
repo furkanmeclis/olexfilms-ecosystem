@@ -114,5 +114,22 @@
   "coordinates.errors.latitude": "La latitudine deve essere un numero tra -90 e 90.",
   "coordinates.errors.longitude": "La longitudine deve essere un numero tra -180 e 180.",
   "coordinates.errors.pair": "Inserisci latitudine e longitudine insieme oppure lascia vuoti entrambi.",
-  "system.hub.glorian": "Connessione all'hub Glorian, sincronizzazioni e report delle discrepanze."
+  "system.hub.glorian": "Connessione all'hub Glorian, sincronizzazioni e report delle discrepanze.",
+  "system.labor.title": "Regola manodopera per reclami in garanzia",
+  "system.labor.description": "Chi sostiene il costo della manodopera quando un reclamo in garanzia viene riapplicato.",
+  "system.labor.rule": "Regola manodopera",
+  "system.labor.rules.dealer": "Rivenditore",
+  "system.labor.rules.dealer_hint": "La manodopera resta al rivenditore; la sede non la paga.",
+  "system.labor.rules.center": "Sede centrale",
+  "system.labor.rules.center_hint": "La sede accredita l'importo della manodopera al rivenditore (tramite il distributore).",
+  "system.labor.rules.shared": "Condivisa",
+  "system.labor.rules.shared_hint": "La sede accredita la percentuale indicata dell'importo della manodopera.",
+  "system.labor.amount": "Importo manodopera",
+  "system.labor.amount_hint": "Per ogni riapplicazione, nella valuta dell'organizzazione.",
+  "system.labor.percent": "Quota della sede (%)",
+  "system.labor.percent_hint": "Tra 0 e 100.",
+  "system.labor.errors.amount_number": "Inserisci un importo valido (massimo 2 decimali).",
+  "system.labor.errors.amount_min": "L'importo non può essere negativo.",
+  "system.labor.errors.percent_integer": "Inserisci un numero intero.",
+  "system.labor.errors.percent_range": "La percentuale deve essere tra 0 e 100."
 }

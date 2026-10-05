@@ -114,5 +114,22 @@
   "coordinates.errors.latitude": "Το γεωγραφικό πλάτος πρέπει να είναι αριθμός μεταξύ -90 και 90.",
   "coordinates.errors.longitude": "Το γεωγραφικό μήκος πρέπει να είναι αριθμός μεταξύ -180 και 180.",
   "coordinates.errors.pair": "Εισαγάγετε μαζί πλάτος και μήκος ή αφήστε και τα δύο κενά.",
-  "system.hub.glorian": "Σύνδεση με το hub της Glorian, συγχρονισμοί και αναφορά αποκλίσεων."
+  "system.hub.glorian": "Σύνδεση με το hub της Glorian, συγχρονισμοί και αναφορά αποκλίσεων.",
+  "system.labor.title": "Κανόνας εργασίας αιτημάτων εγγύησης",
+  "system.labor.description": "Ποιος επωμίζεται το κόστος εργασίας όταν ένα αίτημα εγγύησης εφαρμόζεται ξανά.",
+  "system.labor.rule": "Κανόνας εργασίας",
+  "system.labor.rules.dealer": "Αντιπρόσωπος",
+  "system.labor.rules.dealer_hint": "Η εργασία παραμένει στον αντιπρόσωπο· το κέντρο δεν πληρώνει εργασία.",
+  "system.labor.rules.center": "Κέντρο",
+  "system.labor.rules.center_hint": "Το κέντρο πιστώνει το ποσό εργασίας στον αντιπρόσωπο (μέσω του διανομέα).",
+  "system.labor.rules.shared": "Κοινή",
+  "system.labor.rules.shared_hint": "Το κέντρο πιστώνει το καθορισμένο ποσοστό του ποσού εργασίας.",
+  "system.labor.amount": "Ποσό εργασίας",
+  "system.labor.amount_hint": "Ανά επανεφαρμογή, στο νόμισμα του οργανισμού.",
+  "system.labor.percent": "Μερίδιο κέντρου (%)",
+  "system.labor.percent_hint": "Μεταξύ 0 και 100.",
+  "system.labor.errors.amount_number": "Εισαγάγετε έγκυρο ποσό (έως 2 δεκαδικά).",
+  "system.labor.errors.amount_min": "Το ποσό δεν μπορεί να είναι αρνητικό.",
+  "system.labor.errors.percent_integer": "Εισαγάγετε ακέραιο αριθμό.",
+  "system.labor.errors.percent_range": "Το ποσοστό πρέπει να είναι μεταξύ 0 και 100."
 }

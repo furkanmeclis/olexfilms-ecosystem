@@ -198,5 +198,6 @@
   "labels.library.read": "Sənəd kitabxanasını oxu",
   "labels.library.manage": "Sənəd kitabxanasını idarə et",
   "groups.announcements": "Elanlar",
-  "groups.library": "Sənəd kitabxanası"
+  "groups.library": "Sənəd kitabxanası",
+  "labels.warranty_claims.read": "Zəmanət tələblərinə baxmaq"
 }

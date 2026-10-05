@@ -114,5 +114,22 @@
   "coordinates.errors.latitude": "Enlem -90 ile 90 arasında bir sayı olmalı.",
   "coordinates.errors.longitude": "Boylam -180 ile 180 arasında bir sayı olmalı.",
   "coordinates.errors.pair": "Enlem ve boylamı birlikte girin ya da ikisini de boş bırakın.",
-  "system.hub.glorian": "Glorian hub bağlantısı, senkron çalışmaları ve sapma raporu."
+  "system.hub.glorian": "Glorian hub bağlantısı, senkron çalışmaları ve sapma raporu.",
+  "system.labor.title": "Garanti talebi işçilik kuralı",
+  "system.labor.description": "Garanti talebi yeniden uygulandığında işçilik maliyetini kimin karşılayacağı.",
+  "system.labor.rule": "İşçilik kuralı",
+  "system.labor.rules.dealer": "Bayi",
+  "system.labor.rules.dealer_hint": "İşçilik bayide kalır; merkez işçilik ödemez.",
+  "system.labor.rules.center": "Merkez",
+  "system.labor.rules.center_hint": "Merkez işçilik tutarını bayiye alacak olarak yansıtır (distribütör üzerinden).",
+  "system.labor.rules.shared": "Paylaşımlı",
+  "system.labor.rules.shared_hint": "Merkez işçilik tutarının belirtilen yüzdesini yansıtır.",
+  "system.labor.amount": "İşçilik tutarı",
+  "system.labor.amount_hint": "Yeniden uygulama başına, organizasyonun para biriminde.",
+  "system.labor.percent": "Merkez payı (%)",
+  "system.labor.percent_hint": "0 ile 100 arasında.",
+  "system.labor.errors.amount_number": "Geçerli bir tutar girin (en fazla 2 ondalık).",
+  "system.labor.errors.amount_min": "Tutar negatif olamaz.",
+  "system.labor.errors.percent_integer": "Tam sayı girin.",
+  "system.labor.errors.percent_range": "Yüzde 0 ile 100 arasında olmalıdır."
 }

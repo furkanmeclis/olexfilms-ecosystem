@@ -198,5 +198,6 @@
   "labels.library.read": "Read the document library",
   "labels.library.manage": "Manage the document library",
   "groups.announcements": "Announcements",
-  "groups.library": "Document library"
+  "groups.library": "Document library",
+  "labels.warranty_claims.read": "Read warranty claims"
 }
