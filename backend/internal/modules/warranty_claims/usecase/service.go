@@ -88,13 +88,17 @@ type Store interface {
 	ListWarrantyClaimCenterNotifyUsers(ctx context.Context, arg db.ListWarrantyClaimCenterNotifyUsersParams) ([]int64, error)
 }
 
+type txBeginner interface {
+	Begin(ctx context.Context) (pgx.Tx, error)
+}
+
 type Storage interface {
 	Upload(ctx context.Context, file platstorage.File, path string) error
 }
 
 type txStore struct {
 	*db.Queries
-	pool *pgxpool.Pool
+	pool txBeginner
 }
 
 func (s txStore) Begin(ctx context.Context) (pgx.Tx, error) {

@@ -89,6 +89,8 @@ type Querier interface {
 	ClearDefaultLabelTemplate(ctx context.Context, arg ClearDefaultLabelTemplateParams) error
 	ClearOrganizationLogo(ctx context.Context, argUuid uuid.UUID) (Organization, error)
 	ClearServiceIncome(ctx context.Context, arg ClearServiceIncomeParams) (Service, error)
+	// A cancelled re-application service releases the claim for a new attempt.
+	ClearWarrantyClaimReapplyService(ctx context.Context, arg ClearWarrantyClaimReapplyServiceParams) (WarrantyClaim, error)
 	// Closes the source account. phone_e164/email are the values it keeps (the
 	// caller clears the ones handed to the target; the e-mail is a placeholder
 	// when nothing is left, chk_users_email_or_phone). Runs before the target
@@ -948,10 +950,12 @@ type Querier interface {
 	GetWarrantyByServiceItem(ctx context.Context, serviceItemID int64) (Warranty, error)
 	GetWarrantyByUUID(ctx context.Context, arg GetWarrantyByUUIDParams) (Warranty, error)
 	GetWarrantyClaimByID(ctx context.Context, arg GetWarrantyClaimByIDParams) (WarrantyClaim, error)
+	GetWarrantyClaimByIDForUpdate(ctx context.Context, arg GetWarrantyClaimByIDForUpdateParams) (WarrantyClaim, error)
 	GetWarrantyClaimByUUID(ctx context.Context, arg GetWarrantyClaimByUUIDParams) (WarrantyClaim, error)
 	GetWarrantyClaimByUUIDForUpdate(ctx context.Context, arg GetWarrantyClaimByUUIDForUpdateParams) (WarrantyClaim, error)
 	GetWarrantyClaimCoverageContext(ctx context.Context, arg GetWarrantyClaimCoverageContextParams) (GetWarrantyClaimCoverageContextRow, error)
 	GetWarrantyClaimOpenContext(ctx context.Context, arg GetWarrantyClaimOpenContextParams) (GetWarrantyClaimOpenContextRow, error)
+	GetWarrantyClaimReapplyService(ctx context.Context, arg GetWarrantyClaimReapplyServiceParams) (Service, error)
 	GetWarrantyForIndex(ctx context.Context, argUuid uuid.UUID) (GetWarrantyForIndexRow, error)
 	// service.completed consumer (TEC-186): the service, its organization's
 	// time zone (end_at is the end of the last day there, decision 4) and its
@@ -1687,6 +1691,7 @@ type Querier interface {
 	ListWarrantyClaimNotifyUsersByOrg(ctx context.Context, arg ListWarrantyClaimNotifyUsersByOrgParams) ([]int64, error)
 	ListWarrantyClaimParts(ctx context.Context, claimID int64) ([]WarrantyClaimPart, error)
 	ListWarrantyClaimPhotos(ctx context.Context, claimID int64) ([]WarrantyClaimPhoto, error)
+	ListWarrantyClaimReapplyItems(ctx context.Context, claimID int64) ([]ListWarrantyClaimReapplyItemsRow, error)
 	ListWarrantyClaimsByWarranty(ctx context.Context, arg ListWarrantyClaimsByWarrantyParams) ([]WarrantyClaim, error)
 	ListWarrantyClaimsInScope(ctx context.Context, arg ListWarrantyClaimsInScopeParams) ([]WarrantyClaim, error)
 	// Notification context of the cron events (TEC-187): plate, product and the
