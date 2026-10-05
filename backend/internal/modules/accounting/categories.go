@@ -43,6 +43,13 @@ const (
 	CategoryPayment       = "payment"
 	// CategoryCariTransfer: keep in sync with posting.CategoryCariTransfer.
 	CategoryCariTransfer = "cari_transfer"
+	// Warranty claim accounting (TEC-337, source_type warranty_claim): the
+	// center's product cost of a re-application, the labor the center pays
+	// down the chain (warranty_labor) and the child's side of it
+	// (warranty_labor_income). System only.
+	CategoryWarrantyCost        = "warranty_cost"
+	CategoryWarrantyLabor       = "warranty_labor"
+	CategoryWarrantyLaborIncome = "warranty_labor_income"
 )
 
 func cat(key, direction string, manual bool) Category {
@@ -56,6 +63,7 @@ var categories = []Category{
 	cat(CategoryServiceIncome, DirectionIncome, true),
 	cat("interest_income", DirectionIncome, true),
 	cat("other_income", DirectionIncome, true),
+	cat(CategoryWarrantyLaborIncome, DirectionIncome, false),
 	// Expense.
 	cat(CategoryPurchase, DirectionExpense, false),
 	cat("rent", DirectionExpense, true),
@@ -68,6 +76,8 @@ var categories = []Category{
 	cat("marketing", DirectionExpense, true),
 	cat("bank_fee", DirectionExpense, true),
 	cat("other_expense", DirectionExpense, true),
+	cat(CategoryWarrantyCost, DirectionExpense, false),
+	cat(CategoryWarrantyLabor, DirectionExpense, false),
 	// Cari charge (non-P&L debit of the counterparty).
 	cat("opening_balance", DirectionCharge, true),
 	cat("adjustment", DirectionCharge, true),

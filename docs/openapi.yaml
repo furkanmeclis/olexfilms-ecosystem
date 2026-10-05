@@ -16352,6 +16352,30 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /v1/warranty-claims/{uuid}:
+    get:
+      tags: [Warranties]
+      operationId: getWarrantyClaim
+      summary: Get a warranty claim with parts and photos
+      description: >-
+        Needs `warranty_claims.read` within the caller's scope (404 outside it).
+        Center callers with `accounting.read` also get `cost_summary` once the
+        claim's re-application service is completed and booked (TEC-337).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Warranty claim detail
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeWarrantyClaim" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /v1/warranty-claims/{uuid}/photos:
     post:
       tags: [Warranties]
@@ -23603,7 +23627,7 @@ components:
       required: [key, group, kind, default, description, value, is_default, schema_version]
       properties:
         key: { type: string, example: contract_grace_days }
-        group: { type: string, enum: [general, contracts, forecast, services, smtp, warehouse, scanning, mobile, leads] }
+        group: { type: string, enum: [general, contracts, forecast, services, smtp, warehouse, scanning, mobile, leads, warranty_claims] }
         kind: { type: string, enum: [int, bool, string] }
         default: { $ref: "#/components/schemas/SystemSettingValue" }
         description: { type: string }
@@ -28433,8 +28457,22 @@ components:
         photos:
           type: array
           items: { $ref: "#/components/schemas/WarrantyClaimPhoto" }
+        cost_summary: { $ref: "#/components/schemas/WarrantyClaimCostSummary" }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
+
+    WarrantyClaimCostSummary:
+      type: object
+      description: >-
+        The center's warranty cost of a booked claim (TEC-337): product cost
+        (category warranty_cost) and the labor the center credited down the
+        chain (category warranty_labor), in the center's currency at the
+        frozen posting rate (K7).
+      required: [product_cost, labor, currency]
+      properties:
+        product_cost: { type: string, example: "1250.00" }
+        labor: { type: string, example: "0.00" }
+        currency: { type: string, example: TRY }
 
     WarrantyClaimFailureRateRow:
       type: object

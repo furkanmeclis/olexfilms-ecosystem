@@ -8673,6 +8673,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/warranty-claims/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a warranty claim with parts and photos
+         * @description Needs `warranty_claims.read` within the caller's scope (404 outside it). Center callers with `accounting.read` also get `cost_summary` once the claim's re-application service is completed and booked (TEC-337).
+         */
+        get: operations["getWarrantyClaim"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/warranty-claims/{uuid}/photos": {
         parameters: {
             query?: never;
@@ -13049,7 +13069,7 @@ export interface components {
             /** @example contract_grace_days */
             key: string;
             /** @enum {string} */
-            group: "general" | "contracts" | "forecast" | "services" | "smtp" | "warehouse" | "scanning" | "mobile" | "leads";
+            group: "general" | "contracts" | "forecast" | "services" | "smtp" | "warehouse" | "scanning" | "mobile" | "leads" | "warranty_claims";
             /** @enum {string} */
             kind: "int" | "bool" | "string";
             default: components["schemas"]["SystemSettingValue"];
@@ -16773,10 +16793,20 @@ export interface components {
             ai_triaged_at?: string | null;
             parts?: components["schemas"]["WarrantyClaimPart"][];
             photos?: components["schemas"]["WarrantyClaimPhoto"][];
+            cost_summary?: components["schemas"]["WarrantyClaimCostSummary"];
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+        };
+        /** @description The center's warranty cost of a booked claim (TEC-337): product cost (category warranty_cost) and the labor the center credited down the chain (category warranty_labor), in the center's currency at the frozen posting rate (K7). */
+        WarrantyClaimCostSummary: {
+            /** @example 1250.00 */
+            product_cost: string;
+            /** @example 0.00 */
+            labor: string;
+            /** @example TRY */
+            currency: string;
         };
         WarrantyClaimFailureRateRow: {
             /** @enum {string} */
@@ -34481,6 +34511,33 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getWarrantyClaim: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Warranty claim detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarrantyClaim"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     addWarrantyClaimPhoto: {

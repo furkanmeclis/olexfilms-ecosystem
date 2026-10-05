@@ -68,8 +68,19 @@ type ClaimView struct {
 	AITriagedAt     *time.Time    `json:"ai_triaged_at,omitempty"`
 	Parts           []PartView    `json:"parts,omitempty"`
 	Photos          []PhotoView   `json:"photos,omitempty"`
+	CostSummary     *CostSummary  `json:"cost_summary,omitempty"`
 	CreatedAt       time.Time     `json:"created_at"`
 	UpdatedAt       time.Time     `json:"updated_at"`
+}
+
+// CostSummary is the center's warranty cost of a claim (TEC-337): the
+// product cost (warranty_cost) and the labor the center credited, in the
+// center's currency. Only on the detail, for center callers with
+// accounting.read, once the claim is booked.
+type CostSummary struct {
+	ProductCost string `json:"product_cost"`
+	Labor       string `json:"labor"`
+	Currency    string `json:"currency"`
 }
 
 type ListView struct {

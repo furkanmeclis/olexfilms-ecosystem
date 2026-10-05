@@ -302,6 +302,12 @@ var deCatalog = map[string]string{
 	"accounting.category.salary":          "Gehälter",
 	"accounting.category.staff_advance":   "Mitarbeitervorschüsse",
 	"accounting.category.staff_bonus":     "Mitarbeiterboni",
+
+	// TEC-337: warranty claim accounting categories.
+	"accounting.category.warranty_cost":         "Garantiekosten",
+	"accounting.category.warranty_labor":        "Garantiearbeitslohn",
+	"accounting.category.warranty_labor_income": "Garantiearbeitserlös",
+
 	"accounting.category.utilities":       "Nebenkosten",
 	"accounting.category.tax":             "Steuern",
 	"accounting.category.shipping":        "Versand",

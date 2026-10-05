@@ -370,3 +370,44 @@ WHERE c.brand_id = sqlc.arg(brand_id)
   AND (sqlc.narg(to_at)::timestamptz IS NULL OR c.created_at < sqlc.narg(to_at)::timestamptz)
 GROUP BY cp.part_key, p.id, p.uuid, p.sku, p.name
 ORDER BY part_count DESC, claim_count DESC, cp.part_key, p.name;
+
+-- TEC-337 (F3-06d): consumed quantity of each item of a completed
+-- re-application service (meters of a cut, pieces, a whole roll, else one
+-- piece) with the price buyer_org_id paid for the unit on its latest received
+-- order (NULL when it has none; the caller falls back to the F1 price chain).
+-- name: ListWarrantyReapplyItemCosts :many
+SELECT si.id, si.product_id, si.unit_id,
+       COALESCE(si.meters, si.quantity::numeric, u.initial_meters, 1)::numeric AS consumed,
+       bought.unit_price::numeric AS order_unit_price,
+       COALESCE(bought.currency, '')::text AS order_currency
+FROM service_items si
+JOIN services s ON s.id = si.service_id
+JOIN units u ON u.id = si.unit_id
+LEFT JOIN LATERAL (
+    SELECT oi.unit_price, o.currency
+    FROM order_item_units oiu
+    JOIN order_items oi ON oi.id = oiu.order_item_id
+    JOIN orders o ON o.id = oi.order_id
+    WHERE oiu.unit_id = si.unit_id
+      AND o.buyer_org_id = sqlc.arg(buyer_org_id)::bigint
+      AND o.status = 'received'
+    ORDER BY o.id DESC, oi.id DESC, oiu.id DESC
+    LIMIT 1
+) bought ON TRUE
+WHERE s.id = sqlc.arg(service_id) AND s.brand_id = sqlc.arg(brand_id)
+ORDER BY si.id;
+
+-- name: CountWarrantyClaimFinanceEntries :one
+SELECT COUNT(*)::bigint FROM finance_entries
+WHERE source_type = 'warranty_claim' AND source_uuid = sqlc.arg(source_uuid)::uuid;
+
+-- Open (unreversed) warranty_claim rows of one organization's book (cost
+-- summary of the claim detail).
+-- name: ListWarrantyClaimCostEntries :many
+SELECT e.role, e.direction, e.category, e.currency, e.amount
+FROM finance_entries e
+WHERE e.organization_id = sqlc.arg(organization_id)
+  AND e.source_type = 'warranty_claim' AND e.source_uuid = sqlc.arg(source_uuid)::uuid
+  AND e.reversal_of_id IS NULL
+  AND NOT EXISTS (SELECT 1 FROM finance_entries r WHERE r.reversal_of_id = e.id)
+ORDER BY e.id;

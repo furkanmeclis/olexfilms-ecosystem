@@ -302,6 +302,12 @@ var elCatalog = map[string]string{
 	"accounting.category.salary":          "Μισθοί",
 	"accounting.category.staff_advance":   "Προκαταβολές προσωπικού",
 	"accounting.category.staff_bonus":     "Μπόνους προσωπικού",
+
+	// TEC-337: warranty claim accounting categories.
+	"accounting.category.warranty_cost":         "Κόστος εγγύησης",
+	"accounting.category.warranty_labor":        "Εργασία εγγύησης",
+	"accounting.category.warranty_labor_income": "Έσοδα εργασίας εγγύησης",
+
 	"accounting.category.utilities":       "Λογαριασμοί κοινής ωφέλειας",
 	"accounting.category.tax":             "Φόροι",
 	"accounting.category.shipping":        "Αποστολή",
