@@ -137,7 +137,7 @@ func (s *Service) SetFinder(f CustomerFinder) { s.finder = f }
 // indexFilter is the Meilisearch filter of the caller's scope: always the
 // domain brand (K20), plus the organizations of an organization relative
 // scope. ok is false when the scope reaches no customer at all.
-func indexFilter(c Caller, status string) (string, bool) {
+func indexFilter(c Caller, statuses []string) (string, bool) {
 	if c.Org.BrandID == 0 {
 		return "", false
 	}
@@ -152,8 +152,16 @@ func indexFilter(c Caller, status string) (string, bool) {
 		}
 		parts = append(parts, "organization_ids IN ["+strings.Join(strs, ", ")+"]")
 	}
-	if status != "" {
-		parts = append(parts, "status = "+strconv.Quote(status))
+	switch len(statuses) {
+	case 0:
+	case 1:
+		parts = append(parts, "status = "+strconv.Quote(statuses[0]))
+	default:
+		quoted := make([]string, len(statuses))
+		for i, st := range statuses {
+			quoted[i] = strconv.Quote(st)
+		}
+		parts = append(parts, "status IN ["+strings.Join(quoted, ", ")+"]")
 	}
 	return strings.Join(parts, " AND "), true
 }
@@ -165,8 +173,8 @@ func (s *Service) indexEnabled() bool {
 
 // searchIndexed answers a q search from the index. handled is false when
 // the caller must fall back to the SQL search (index unavailable).
-func (s *Service) searchIndexed(ctx context.Context, c Caller, status, q string, limit, offset int32) ([]db.ListOrganizationCustomersRow, int64, bool) {
-	filter, ok := indexFilter(c, status)
+func (s *Service) searchIndexed(ctx context.Context, c Caller, statuses []string, q string, limit, offset int32) ([]db.ListOrganizationCustomersRow, int64, bool) {
+	filter, ok := indexFilter(c, statuses)
 	if !ok {
 		return []db.ListOrganizationCustomersRow{}, 0, true
 	}
@@ -188,7 +196,8 @@ func (s *Service) searchIndexed(ctx context.Context, c Caller, status, q string,
 		return []db.ListOrganizationCustomersRow{}, total, true
 	}
 	rows, err := s.q.ListOrganizationCustomers(ctx, db.ListOrganizationCustomersParams{
-		OrgIds: c.orgIDs(), BrandID: c.brand(), Status: text(status), Uuids: uuids,
+		OrgIds: c.orgIDs(), BrandID: c.brand(), Statuses: statuses, Uuids: uuids,
+		SortKey: "linked_at", SortDesc: true,
 		LimitCount: int32(len(uuids)), OffsetCount: 0,
 	})
 	if err != nil {

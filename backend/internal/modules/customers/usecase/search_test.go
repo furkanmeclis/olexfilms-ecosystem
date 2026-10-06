@@ -32,17 +32,19 @@ func TestIndexFilter(t *testing.T) {
 	cases := []struct {
 		name   string
 		c      Caller
-		status string
+		status []string
 		want   string
 		ok     bool
 	}{
-		{"brand", scopedCaller(rbac.ScopeBrand, nil), "", "brand_ids = 2", true},
-		{"all still brand", scopedCaller(rbac.ScopeAll, nil), "", "brand_ids = 2", true},
-		{"subtree", scopedCaller(rbac.ScopeSubtree, []int64{5, 7, 8}), "", "brand_ids = 2 AND organization_ids IN [5, 7, 8]", true},
-		{"managed with status", scopedCaller(rbac.ScopeManaged, []int64{5}), "active",
+		{"brand", scopedCaller(rbac.ScopeBrand, nil), nil, "brand_ids = 2", true},
+		{"all still brand", scopedCaller(rbac.ScopeAll, nil), nil, "brand_ids = 2", true},
+		{"subtree", scopedCaller(rbac.ScopeSubtree, []int64{5, 7, 8}), nil, "brand_ids = 2 AND organization_ids IN [5, 7, 8]", true},
+		{"managed with status", scopedCaller(rbac.ScopeManaged, []int64{5}), []string{"active"},
 			`brand_ids = 2 AND organization_ids IN [5] AND status = "active"`, true},
-		{"customer scope", scopedCaller(rbac.ScopeCustomer, nil), "", "", false},
-		{"no brand", Caller{Filter: scopefilter.Filter{Scope: rbac.ScopeBrand}}, "", "", false},
+		{"several statuses", scopedCaller(rbac.ScopeBrand, nil), []string{"active", "pending"},
+			`brand_ids = 2 AND status IN ["active", "pending"]`, true},
+		{"customer scope", scopedCaller(rbac.ScopeCustomer, nil), nil, "", false},
+		{"no brand", Caller{Filter: scopefilter.Filter{Scope: rbac.ScopeBrand}}, nil, "", false},
 	}
 	for _, tc := range cases {
 		got, ok := indexFilter(tc.c, tc.status)

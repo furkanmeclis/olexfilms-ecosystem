@@ -66,5 +66,15 @@
   "confirm.vehicle_brands.deactivate": "Деактивировать выбранные марки?",
   "actions.vehicle_models.activate": "Активировать",
   "actions.vehicle_models.deactivate": "Деактивировать",
-  "confirm.vehicle_models.deactivate": "Деактивировать выбранные модели?"
+  "confirm.vehicle_models.deactivate": "Деактивировать выбранные модели?",
+  "actions.leads.assign": "Назначить",
+  "actions.leads.set_status": "Изменить статус",
+  "confirm.leads.set_status": "Изменить статус выбранных лидов?",
+  "params.lead_status": "Статус",
+  "params.lead_status.new": "Новый",
+  "params.lead_status.contacted": "Связались",
+  "params.lead_status.quoted": "Предложение отправлено",
+  "params.lead_status.won": "Выигран",
+  "params.lead_status.lost": "Проигран",
+  "params.lost_reason": "Причина проигрыша"
 }

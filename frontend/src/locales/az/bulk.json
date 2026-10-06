@@ -66,5 +66,15 @@
   "confirm.vehicle_brands.deactivate": "Seçilmiş markalar deaktiv edilsin?",
   "actions.vehicle_models.activate": "Aktivləşdir",
   "actions.vehicle_models.deactivate": "Deaktiv et",
-  "confirm.vehicle_models.deactivate": "Seçilmiş modellər deaktiv edilsin?"
+  "confirm.vehicle_models.deactivate": "Seçilmiş modellər deaktiv edilsin?",
+  "actions.leads.assign": "Təyin et",
+  "actions.leads.set_status": "Statusu dəyiş",
+  "confirm.leads.set_status": "Seçilmiş potensial müştərilərin statusu dəyişdirilsin?",
+  "params.lead_status": "Status",
+  "params.lead_status.new": "Yeni",
+  "params.lead_status.contacted": "Əlaqə saxlanıldı",
+  "params.lead_status.quoted": "Təklif verildi",
+  "params.lead_status.won": "Qazanıldı",
+  "params.lead_status.lost": "İtirildi",
+  "params.lost_reason": "İtirmə səbəbi"
 }

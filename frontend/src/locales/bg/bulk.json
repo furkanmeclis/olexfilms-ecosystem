@@ -66,5 +66,15 @@
   "confirm.vehicle_brands.deactivate": "Да се деактивират ли избраните марки?",
   "actions.vehicle_models.activate": "Активирай",
   "actions.vehicle_models.deactivate": "Деактивирай",
-  "confirm.vehicle_models.deactivate": "Да се деактивират ли избраните модели?"
+  "confirm.vehicle_models.deactivate": "Да се деактивират ли избраните модели?",
+  "actions.leads.assign": "Възложи",
+  "actions.leads.set_status": "Промени статуса",
+  "confirm.leads.set_status": "Да се промени ли статусът на избраните потенциални клиенти?",
+  "params.lead_status": "Статус",
+  "params.lead_status.new": "Нов",
+  "params.lead_status.contacted": "Осъществен контакт",
+  "params.lead_status.quoted": "Изпратена оферта",
+  "params.lead_status.won": "Спечелен",
+  "params.lead_status.lost": "Загубен",
+  "params.lost_reason": "Причина за загуба"
 }

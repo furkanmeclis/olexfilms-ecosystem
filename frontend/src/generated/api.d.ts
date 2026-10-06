@@ -5892,7 +5892,7 @@ export interface paths {
         };
         /**
          * Customers linked to the organizations in scope
-         * @description customers.read. A dealer sees the customers linked to its organization (customer_organizations), a distributor its subtree, the center the brand; always the domain brand (K20). Anonymized customers are listed masked (`anonymized: true`, localized name, no contact data). TEC-164: `q` searches the Meilisearch customers index when it is up (filtered on the scope's organizations and the brand, ranked by relevance; the hits are reloaded from Postgres with the same scope) and falls back to the SQL search otherwise. Anonymized customers are never indexed, so `status=anonymized` always uses the SQL search.
+         * @description customers.read. A dealer sees the customers linked to its organization (customer_organizations), a distributor its subtree, the center the brand; always the domain brand (K20). Anonymized customers are listed masked (`anonymized: true`, localized name, no contact data). TEC-164: `q` searches the Meilisearch customers index when it is up (filtered on the scope's organizations and the brand, ranked by relevance; the hits are reloaded from Postgres with the same scope) and falls back to the SQL search otherwise. Anonymized customers are never indexed, so `status=anonymized` always uses the SQL search. TEC-371: sort (`name`, `email`, `status`, `linked_at`, `first_service_at`; default `-linked_at`, `id` tiebreak), `status` / `type` CSV, `linked_from`/`linked_to` (first organization link) and `organization_uuid` CSV (links to those organizations, inside the scope). An explicit sort or any of the TEC-371 filters keeps a `q` search on SQL.
          */
         get: operations["listCustomers"];
         put?: never;
@@ -6022,7 +6022,7 @@ export interface paths {
         put?: never;
         /**
          * Queue a customer list export (CSV, XLSX or PDF)
-         * @description TEC-164. customers.read with the list's scope: the job (worker-docs, exports queue) exports the customers of the scope with the list filters (`q`, `status`), masked like the list (anonymized customers show the anonymized label; identity numbers are not exported). The worker re-authorizes the stored scope against the job organization. The request is written to the activity log (customers.list_exported). Poll and download through /v1/customer-list-exports/{uuid}.
+         * @description TEC-164. customers.read with the list's scope: the job (worker-docs, exports queue) exports the customers of the scope with the list filters and sort (TEC-371: every GET /v1/customers parameter; a bad value is a 400 at request time), masked like the list (anonymized customers show the anonymized label; identity numbers are not exported). The worker re-authorizes the stored scope against the job organization. The request is written to the activity log (customers.list_exported). Poll and download through /v1/customer-list-exports/{uuid}.
          */
         post: operations["requestCustomerListExport"];
         delete?: never;
@@ -6191,7 +6191,7 @@ export interface paths {
         };
         /**
          * Vehicles of customers in scope
-         * @description vehicles.read. Only vehicles whose customer is linked to an organization in scope (domain brand). `customer_uuid` outside the scope answers 404; `plate` is a prefix of the normalized plate. `q` (TEC-209) searches plate and VIN: the vehicles search index when it is up (same scope, hits reloaded from the database), otherwise a prefix of the normalized plate or the VIN.
+         * @description vehicles.read. Only vehicles whose customer is linked to an organization in scope (domain brand). `customer_uuid` outside the scope answers 404; `plate` is a prefix of the normalized plate. `q` (TEC-209) searches plate and VIN: the vehicles search index when it is up (same scope, hits reloaded from the database), otherwise a prefix of the normalized plate or the VIN, and (TEC-371) the car brand / model name. TEC-371: sort (`plate`, `brand`, `model`, `model_year`, `created_at`; default `-created_at`, empty values last, `id` tiebreak); `car_brand_uuid` / `car_model_uuid` / `organization_uuid` CSV filters (organization: the owner is linked to one of them, inside the scope). An explicit sort or these filters keep a `q` search on SQL.
          */
         get: operations["listVehicles"];
         put?: never;
@@ -9897,11 +9897,54 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List leads in the caller scope */
+        /**
+         * List leads in the caller scope
+         * @description TEC-371: sort (`created_at`, `follow_up_date`, `status`, `temperature`, `name`; default `-created_at`, `id` tiebreak; status and temperature sort by pipeline rank, name is the company or contact name, empty values last). `status`, `target_type`, `source`, `temperature` are CSV; `assignee_user_id` is a CSV of user ids, `none` for unassigned; `created_from`/`created_to`. An explicit sort or these filters keep a `q` search on SQL.
+         */
         get: operations["listLeads"];
         put?: never;
         /** Create a lead in the active organization */
         post: operations["createLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/leads/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a lead list export (CSV, XLSX or PDF)
+         * @description TEC-371. leads.read with the list's scope: the job (exports queue) exports the leads of the scope with the filters and sort of GET /v1/leads (a bad value is a 400 at request time). The worker re-authorizes the stored scope against the job organization. Poll and download through /v1/tenant/exports/{uuid}.
+         */
+        post: operations["requestLeadListExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/leads/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run a logged, undoable bulk action on leads (TEC-371)
+         * @description leads.write; the run stays inside the caller's leads.write scope. Actions: `assign` with `target.params.assignee_user_id` (a member of the lead's or the active organization; others fail per item); `set_status` with `target.params.status` (new, contacted, quoted, won, lost) and `target.params.lost_reason` (required for lost); the pipeline rules of POST /v1/leads/{uuid}/status apply per item. Target scope `ids`, or `query` with the GET /v1/leads filters ("select all matching", at most 10000). Undo through `/v1/tenant/bulk-operations/{uuid}/undo`.
+         */
+        post: operations["bulkLeads"];
         delete?: never;
         options?: never;
         head?: never;
@@ -13032,11 +13075,28 @@ export interface components {
         CustomerListExportInput: {
             /** @enum {string} */
             format: "csv" | "xlsx" | "pdf";
-            /** @description List filters (same as GET /v1/customers). */
+            /** @description List filters and sort (same as GET /v1/customers). */
             query?: {
                 q?: string;
-                /** @enum {string} */
-                status?: "active" | "disabled" | "pending" | "anonymized";
+                /** @description CSV of active, disabled, pending, anonymized. */
+                status?: string;
+                /** @description CSV of individual, corporate. */
+                type?: string;
+                linked_from?: string;
+                linked_to?: string;
+                /** @description CSV of organization UUIDs. */
+                organization_uuid?: string;
+                sort?: string;
+            };
+            /** @description Document language (defaults to the request locale). */
+            locale?: string;
+        };
+        LeadListExportInput: {
+            /** @enum {string} */
+            format: "csv" | "xlsx" | "pdf";
+            /** @description List filters and sort (same as GET /v1/leads). */
+            query?: {
+                [key: string]: string;
             };
             /** @description Document language (defaults to the request locale). */
             locale?: string;
@@ -30480,7 +30540,18 @@ export interface operations {
         parameters: {
             query?: {
                 q?: components["parameters"]["Q"];
-                status?: "active" | "disabled" | "pending" | "anonymized";
+                /** @description CSV of active, disabled, pending, anonymized. */
+                status?: string;
+                /** @description CSV of individual, corporate (customer type; no profile counts as individual). */
+                type?: string;
+                /** @description First organization link on or after (YYYY-MM-DD or RFC3339). */
+                linked_from?: string;
+                /** @description First organization link on or before; a date covers the whole day. */
+                linked_to?: string;
+                /** @description CSV of organization UUIDs; customers linked to one of them (inside the scope). */
+                organization_uuid?: string;
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
             };
@@ -30984,6 +31055,14 @@ export interface operations {
                 plate?: string;
                 vin?: string;
                 q?: string;
+                /** @description CSV of car brand UUIDs. */
+                car_brand_uuid?: string;
+                /** @description CSV of car model UUIDs. */
+                car_model_uuid?: string;
+                /** @description CSV of organization UUIDs (owner linked to one of them). */
+                organization_uuid?: string;
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
             };
@@ -37596,10 +37675,24 @@ export interface operations {
     listLeads: {
         parameters: {
             query?: {
-                status?: components["schemas"]["LeadStatus"];
-                target_type?: components["schemas"]["LeadTargetType"];
+                /** @description CSV of new, contacted, quoted, won, lost. */
+                status?: string;
+                /** @description CSV of customer, dealer_candidate, distributor_candidate. */
+                target_type?: string;
+                /** @description CSV of incoming_call, outgoing_call, walk_in, whatsapp, social, referral, website, application_form, other. */
+                source?: string;
+                /** @description CSV of cold, warm, hot. */
+                temperature?: string;
+                /** @description CSV of assignee user ids; `none` matches unassigned leads. */
+                assignee_user_id?: string;
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
                 follow_up?: "overdue" | "today";
                 q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
             };
@@ -37643,6 +37736,69 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeLead"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    requestLeadListExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadListExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    bulkLeads: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkExecuteRequest"];
+            };
+        };
+        responses: {
+            /** @description Sync bulk result with its undoable operation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkSyncResult"];
+                };
+            };
+            /** @description Async bulk job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkJob"];
                 };
             };
             400: components["responses"]["BadRequest"];

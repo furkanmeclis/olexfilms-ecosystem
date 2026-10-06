@@ -23,6 +23,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5"
@@ -169,12 +170,19 @@ type Event struct {
 	CreatedAt   time.Time      `json:"created_at"`
 }
 
-// ListFilter narrows List.
+// ListFilter narrows List (TEC-371: ParseListFilter). Multi-value
+// filters are nil when absent.
 type ListFilter struct {
-	Status, TargetType string
-	FollowUp           string
-	Q                  string
-	Limit, Offset      int32
+	Statuses, TargetTypes []string
+	Sources, Temperatures []string
+	AssigneeIDs           []int64
+	Unassigned            bool
+	Created               apiquery.TimeRange
+	FollowUp              string
+	Q                     string
+	Sort                  apiquery.ResolvedSort
+	SortExplicit          bool
+	Limit, Offset         int32
 }
 
 type leadInput struct {
@@ -364,18 +372,29 @@ func (s *Service) params(c Caller, f ListFilter) (db.ListLeadsInScopeParams, err
 		BrandID: c.Org.BrandID, OrganizationIds: c.Filter.OrgIDsArg(),
 		ActorUserID: c.Principal.UserInternal, PageLimit: f.Limit, PageOffset: f.Offset,
 	}
-	if f.Status != "" {
-		if !validStatus(f.Status) {
+	for _, v := range f.Statuses {
+		if !validStatus(v) {
 			return p, invalid("status", "must be new, contacted, quoted, won or lost")
 		}
-		p.Status = pgtype.Text{String: f.Status, Valid: true}
 	}
-	if f.TargetType != "" {
-		if !validTargetType(f.TargetType) {
+	for _, v := range f.TargetTypes {
+		if !validTargetType(v) {
 			return p, invalid("target_type", "must be customer, dealer_candidate or distributor_candidate")
 		}
-		p.TargetType = pgtype.Text{String: f.TargetType, Valid: true}
 	}
+	p.Statuses, p.TargetTypes, p.Sources, p.Temperatures = f.Statuses, f.TargetTypes, f.Sources, f.Temperatures
+	p.AssigneeIds, p.Unassigned = f.AssigneeIDs, f.Unassigned
+	if f.Created.From != nil {
+		p.CreatedFrom = pgtype.Timestamptz{Time: *f.Created.From, Valid: true}
+	}
+	if f.Created.Before != nil {
+		p.CreatedBefore = pgtype.Timestamptz{Time: *f.Created.Before, Valid: true}
+	}
+	sort := f.Sort
+	if sort.Key == "" {
+		sort, _ = apiquery.ResolveSort(nil, LeadsSortSpec)
+	}
+	p.SortKey, p.SortDesc = sort.Key, sort.Desc
 	if q := strings.TrimSpace(f.Q); q != "" {
 		p.Q = pgtype.Text{String: q, Valid: true}
 	}
@@ -396,6 +415,23 @@ func (s *Service) params(c Caller, f ListFilter) (db.ListLeadsInScopeParams, err
 	return p, nil
 }
 
+// indexable reports whether the index can answer the filters of p (it only
+// carries the status, TEC-371 filters stay on SQL).
+func indexable(p db.ListLeadsInScopeParams) bool {
+	return len(p.Statuses) <= 1 && len(p.TargetTypes) == 0 && len(p.Sources) == 0 && len(p.Temperatures) == 0 &&
+		len(p.AssigneeIds) == 0 && !p.Unassigned && !p.CreatedFrom.Valid && !p.CreatedBefore.Valid
+}
+
+func countParams(p db.ListLeadsInScopeParams) db.CountLeadsInScopeParams {
+	return db.CountLeadsInScopeParams{
+		BrandID: p.BrandID, OrganizationIds: p.OrganizationIds, Statuses: p.Statuses, TargetTypes: p.TargetTypes,
+		Sources: p.Sources, Temperatures: p.Temperatures, AssigneeIds: p.AssigneeIds, Unassigned: p.Unassigned,
+		CreatedFrom: p.CreatedFrom, CreatedBefore: p.CreatedBefore,
+		Q: p.Q, FollowUpOnly: p.FollowUpOnly, ActorUserID: p.ActorUserID,
+		FollowUpFrom: p.FollowUpFrom, FollowUpTo: p.FollowUpTo,
+	}
+}
+
 // List returns leads in the caller's resolved scope.
 func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]Lead, int64, error) {
 	p, err := s.params(c, f)
@@ -403,7 +439,9 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]Lead, int
 		return nil, 0, err
 	}
 	rows, total, indexed := []db.Lead(nil), int64(0), false
-	if p.Q.Valid && !p.FollowUpOnly && s.finder != nil && s.finder.Enabled() {
+	// TEC-371: an explicit sort or a filter the index does not carry stays
+	// on SQL (the index answers in relevance order).
+	if p.Q.Valid && !p.FollowUpOnly && !f.SortExplicit && indexable(p) && s.finder != nil && s.finder.Enabled() {
 		rows, total, indexed = s.searchIndexed(ctx, c, p)
 	}
 	if !indexed {
@@ -411,11 +449,7 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]Lead, int
 		if err != nil {
 			return nil, 0, fmt.Errorf("leads: list: %w", err)
 		}
-		total, err = s.q.CountLeadsInScope(ctx, db.CountLeadsInScopeParams{
-			BrandID: p.BrandID, OrganizationIds: p.OrganizationIds, Status: p.Status, TargetType: p.TargetType,
-			Q: p.Q, FollowUpOnly: p.FollowUpOnly, ActorUserID: p.ActorUserID,
-			FollowUpFrom: p.FollowUpFrom, FollowUpTo: p.FollowUpTo,
-		})
+		total, err = s.q.CountLeadsInScope(ctx, countParams(p))
 		if err != nil {
 			return nil, 0, fmt.Errorf("leads: count: %w", err)
 		}

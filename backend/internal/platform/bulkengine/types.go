@@ -12,9 +12,12 @@ import (
 // BulkActionParam is an extra input collected before a parameterized bulk action.
 type BulkActionParam struct {
 	Key      string `json:"key"`
-	Kind     string `json:"kind"` // percent | number | uuid
+	Kind     string `json:"kind"` // percent | number | uuid | enum | text
 	Required bool   `json:"required"`
 	LabelKey string `json:"label_key"`
+	// Options are the allowed values of an enum param (TEC-371); the label
+	// of a value is LabelKey + "." + value.
+	Options []string `json:"options,omitempty"`
 }
 
 // BulkActionDef describes one bulk action exposed via resource meta.

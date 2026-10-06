@@ -97,6 +97,10 @@ SELECT EXISTS (
 )::boolean AS in_scope;
 
 -- Customers of the organizations in scope; one row per user.
+-- TEC-371: statuses / customer types are CSV filters, linked_at is a date
+-- range on the first link, organization_uuids narrows the links to those
+-- organizations (inside the scope above). Sort: docs/list-contract.md, keys
+-- from customers usecase customersSortSpec.
 -- name: ListOrganizationCustomers :many
 SELECT u.id, u.uuid, u.name, u.surname, u.email, u.phone_e164, u.status, u.locale, u.created_at,
        cp.type AS customer_type, cp.company_name,
@@ -108,7 +112,15 @@ LEFT JOIN customer_profiles cp ON cp.user_id = u.id
 WHERE u.deleted_at IS NULL
   AND (sqlc.narg(org_ids)::bigint[] IS NULL OR co.organization_id = ANY (sqlc.narg(org_ids)::bigint[]))
   AND (sqlc.narg(brand_id)::bigint IS NULL OR co.brand_id = sqlc.narg(brand_id))
-  AND (sqlc.narg(status)::text IS NULL OR u.status = sqlc.narg(status))
+  AND (
+    sqlc.narg(organization_uuids)::uuid[] IS NULL
+    OR co.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY (sqlc.narg(organization_uuids)::uuid[]))
+  )
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR u.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (
+    COALESCE(cardinality(sqlc.narg(customer_types)::text[]), 0) = 0
+    OR COALESCE(cp.type, 'individual') = ANY (sqlc.narg(customer_types)::text[])
+  )
   AND (
     sqlc.narg(q)::text IS NULL
     OR u.name ILIKE '%' || sqlc.narg(q) || '%'
@@ -120,26 +132,55 @@ WHERE u.deleted_at IS NULL
   -- TEC-164: Meilisearch hits; the scope filter above still applies.
   AND (sqlc.narg(uuids)::uuid[] IS NULL OR u.uuid = ANY (sqlc.narg(uuids)::uuid[]))
 GROUP BY u.id, cp.user_id
-ORDER BY linked_at DESC, u.id DESC
+HAVING (sqlc.narg(linked_from)::timestamptz IS NULL OR MIN(co.created_at) >= sqlc.narg(linked_from)::timestamptz)
+   AND (sqlc.narg(linked_before)::timestamptz IS NULL OR MIN(co.created_at) < sqlc.narg(linked_before)::timestamptz)
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'name' THEN lower(u.name || ' ' || u.surname) WHEN 'status' THEN u.status END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'name' THEN lower(u.name || ' ' || u.surname) WHEN 'status' THEN u.status END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'email' THEN lower(u.email) END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'email' THEN lower(u.email) END DESC NULLS LAST,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'linked_at' THEN MIN(co.created_at) END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'linked_at' THEN MIN(co.created_at) END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'first_service_at' THEN MIN(co.first_service_at) END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'first_service_at' THEN MIN(co.first_service_at) END DESC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN u.id END DESC,
+  u.id ASC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
 -- name: CountOrganizationCustomers :one
-SELECT COUNT(DISTINCT u.id)::bigint
-FROM users u
-JOIN customer_organizations co ON co.user_id = u.id
-LEFT JOIN customer_profiles cp ON cp.user_id = u.id
-WHERE u.deleted_at IS NULL
-  AND (sqlc.narg(org_ids)::bigint[] IS NULL OR co.organization_id = ANY (sqlc.narg(org_ids)::bigint[]))
-  AND (sqlc.narg(brand_id)::bigint IS NULL OR co.brand_id = sqlc.narg(brand_id))
-  AND (sqlc.narg(status)::text IS NULL OR u.status = sqlc.narg(status))
-  AND (
-    sqlc.narg(q)::text IS NULL
-    OR u.name ILIKE '%' || sqlc.narg(q) || '%'
-    OR u.surname ILIKE '%' || sqlc.narg(q) || '%'
-    OR u.email ILIKE '%' || sqlc.narg(q) || '%'
-    OR u.phone_e164 LIKE '%' || sqlc.narg(q) || '%'
-    OR cp.company_name ILIKE '%' || sqlc.narg(q) || '%'
-  );
+SELECT COUNT(*)::bigint FROM (
+  SELECT u.id
+  FROM users u
+  JOIN customer_organizations co ON co.user_id = u.id
+  LEFT JOIN customer_profiles cp ON cp.user_id = u.id
+  WHERE u.deleted_at IS NULL
+    AND (sqlc.narg(org_ids)::bigint[] IS NULL OR co.organization_id = ANY (sqlc.narg(org_ids)::bigint[]))
+    AND (sqlc.narg(brand_id)::bigint IS NULL OR co.brand_id = sqlc.narg(brand_id))
+    AND (
+      sqlc.narg(organization_uuids)::uuid[] IS NULL
+      OR co.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY (sqlc.narg(organization_uuids)::uuid[]))
+    )
+    AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR u.status = ANY (sqlc.narg(statuses)::text[]))
+    AND (
+      COALESCE(cardinality(sqlc.narg(customer_types)::text[]), 0) = 0
+      OR COALESCE(cp.type, 'individual') = ANY (sqlc.narg(customer_types)::text[])
+    )
+    AND (
+      sqlc.narg(q)::text IS NULL
+      OR u.name ILIKE '%' || sqlc.narg(q) || '%'
+      OR u.surname ILIKE '%' || sqlc.narg(q) || '%'
+      OR u.email ILIKE '%' || sqlc.narg(q) || '%'
+      OR u.phone_e164 LIKE '%' || sqlc.narg(q) || '%'
+      OR cp.company_name ILIKE '%' || sqlc.narg(q) || '%'
+    )
+  GROUP BY u.id
+  HAVING (sqlc.narg(linked_from)::timestamptz IS NULL OR MIN(co.created_at) >= sqlc.narg(linked_from)::timestamptz)
+     AND (sqlc.narg(linked_before)::timestamptz IS NULL OR MIN(co.created_at) < sqlc.narg(linked_before)::timestamptz)
+) matched;
 
 -- name: CreateVehicle :one
 INSERT INTO vehicles (
@@ -296,7 +337,10 @@ LEFT JOIN organizations o ON o.id = v.organization_id
 WHERE v.uuid = sqlc.arg(uuid) AND v.deleted_at IS NULL;
 
 -- Vehicles of customers linked to the organizations in scope; the brand is
--- always the domain brand (K20).
+-- always the domain brand (K20). TEC-371: q also matches the car brand /
+-- model name (q_name), car_brand_uuids / car_model_uuids / organization_uuids
+-- filters (the organization filter narrows the owner's links inside the
+-- scope). Sort: docs/list-contract.md, keys from vehiclesSortSpec.
 -- name: ListScopedVehicles :many
 SELECT sqlc.embed(v), u.uuid AS customer_uuid,
        cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
@@ -315,17 +359,48 @@ WHERE v.deleted_at IS NULL
     WHERE co.user_id = v.user_id
       AND co.brand_id = sqlc.arg(brand_id)
       AND (sqlc.narg(org_ids)::bigint[] IS NULL OR co.organization_id = ANY (sqlc.narg(org_ids)::bigint[]))
+      AND (
+        sqlc.narg(organization_uuids)::uuid[] IS NULL
+        OR co.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY (sqlc.narg(organization_uuids)::uuid[]))
+      )
   )
   AND (sqlc.narg(plate_normalized)::text IS NULL OR v.plate_normalized LIKE sqlc.narg(plate_normalized) || '%')
   AND (sqlc.narg(vin)::text IS NULL OR v.vin = sqlc.narg(vin))
-  AND (sqlc.narg(q)::text IS NULL OR v.plate_normalized LIKE sqlc.narg(q)::text || '%' OR v.vin LIKE sqlc.narg(q)::text || '%')
+  AND (
+    (sqlc.narg(q)::text IS NULL AND sqlc.narg(q_name)::text IS NULL)
+    OR v.plate_normalized LIKE sqlc.narg(q)::text || '%'
+    OR v.vin LIKE sqlc.narg(q)::text || '%'
+    OR concat_ws(' ', cb.name, cm.name) ILIKE '%' || sqlc.narg(q_name)::text || '%'
+  )
+  AND (
+    sqlc.narg(car_brand_uuids)::uuid[] IS NULL
+    OR v.car_brand_id IN (SELECT fb.id FROM car_brands fb WHERE fb.uuid = ANY (sqlc.narg(car_brand_uuids)::uuid[]))
+  )
+  AND (
+    sqlc.narg(car_model_uuids)::uuid[] IS NULL
+    OR v.car_model_id IN (SELECT fm.id FROM car_models fm WHERE fm.uuid = ANY (sqlc.narg(car_model_uuids)::uuid[]))
+  )
   AND (sqlc.narg(uuids)::uuid[] IS NULL OR v.uuid = ANY (sqlc.narg(uuids)::uuid[]))
-ORDER BY v.created_at DESC, v.id DESC
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'plate' THEN v.plate_normalized END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'plate' THEN v.plate_normalized END DESC NULLS LAST,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'brand' THEN lower(cb.name) END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'brand' THEN lower(cb.name) END DESC NULLS LAST,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'model' THEN lower(cm.name) END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'model' THEN lower(cm.name) END DESC NULLS LAST,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'model_year' THEN v.model_year END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'model_year' THEN v.model_year END DESC NULLS LAST,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'created_at' THEN v.created_at END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'created_at' THEN v.created_at END DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN v.id END DESC,
+  v.id ASC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
 -- name: CountScopedVehicles :one
 SELECT COUNT(*)::bigint
 FROM vehicles v
+LEFT JOIN car_brands cb ON cb.id = v.car_brand_id
+LEFT JOIN car_models cm ON cm.id = v.car_model_id
 WHERE v.deleted_at IS NULL
   AND v.brand_id = sqlc.arg(brand_id)
   AND (sqlc.narg(user_id)::bigint IS NULL OR v.user_id = sqlc.narg(user_id))
@@ -334,10 +409,27 @@ WHERE v.deleted_at IS NULL
     WHERE co.user_id = v.user_id
       AND co.brand_id = sqlc.arg(brand_id)
       AND (sqlc.narg(org_ids)::bigint[] IS NULL OR co.organization_id = ANY (sqlc.narg(org_ids)::bigint[]))
+      AND (
+        sqlc.narg(organization_uuids)::uuid[] IS NULL
+        OR co.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY (sqlc.narg(organization_uuids)::uuid[]))
+      )
   )
   AND (sqlc.narg(plate_normalized)::text IS NULL OR v.plate_normalized LIKE sqlc.narg(plate_normalized) || '%')
   AND (sqlc.narg(vin)::text IS NULL OR v.vin = sqlc.narg(vin))
-  AND (sqlc.narg(q)::text IS NULL OR v.plate_normalized LIKE sqlc.narg(q)::text || '%' OR v.vin LIKE sqlc.narg(q)::text || '%');
+  AND (
+    (sqlc.narg(q)::text IS NULL AND sqlc.narg(q_name)::text IS NULL)
+    OR v.plate_normalized LIKE sqlc.narg(q)::text || '%'
+    OR v.vin LIKE sqlc.narg(q)::text || '%'
+    OR concat_ws(' ', cb.name, cm.name) ILIKE '%' || sqlc.narg(q_name)::text || '%'
+  )
+  AND (
+    sqlc.narg(car_brand_uuids)::uuid[] IS NULL
+    OR v.car_brand_id IN (SELECT fb.id FROM car_brands fb WHERE fb.uuid = ANY (sqlc.narg(car_brand_uuids)::uuid[]))
+  )
+  AND (
+    sqlc.narg(car_model_uuids)::uuid[] IS NULL
+    OR v.car_model_id IN (SELECT fm.id FROM car_models fm WHERE fm.uuid = ANY (sqlc.narg(car_model_uuids)::uuid[]))
+  );
 
 -- TEC-164: Meilisearch customers index. One document per customer linked to
 -- at least one organization; anonymized, merged and deleted users never
