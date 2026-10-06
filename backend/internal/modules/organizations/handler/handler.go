@@ -11,6 +11,7 @@ import (
 
 	authmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/model"
 	authusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/usecase"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/orglist"
 	orgusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
@@ -137,30 +138,10 @@ func (h *Handler) PlatformList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := apiquery.Parse(r.URL.Query())
-	sort, err := apiquery.ResolveSort(q.Sort, apiquery.TenantsSortSpec)
+	filter, err := orglist.Parse(r.URL.Query())
 	if err != nil {
 		writeError(w, r, err)
 		return
-	}
-	statuses, err := apiquery.EnumList(r.URL.Query(), "status", orgusecase.Statuses...)
-	if err != nil {
-		writeError(w, r, err)
-		return
-	}
-	filter := orgusecase.ListFilter{
-		Q:        q.Q,
-		Statuses: statuses,
-		Type:     strings.TrimSpace(r.URL.Query().Get("type")),
-		SortKey:  sort.Key,
-		SortDesc: sort.Desc,
-	}
-	if raw := strings.TrimSpace(r.URL.Query().Get("parent_uuid")); raw != "" {
-		parent, err := uuid.Parse(raw)
-		if err != nil {
-			response.BadRequest(w, r, response.CodeValidationError, "parent_uuid is invalid")
-			return
-		}
-		filter.ParentUUID = &parent
 	}
 	items, total, err := h.svc.List(r.Context(), q.Limit, q.Offset, filter)
 	if err != nil {

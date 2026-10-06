@@ -45,5 +45,13 @@
   "confirm.catalog_products.delete": "Delete {{count}} products?",
   "confirm.catalog_services.deactivate": "Deactivate {{count}} services?",
   "confirm.catalog_services.raise_price": "Update the price of {{count}} services?",
-  "confirm.catalog_services.delete": "Delete {{count}} services?"
+  "confirm.catalog_services.delete": "Delete {{count}} services?",
+  "actions.organizations.activate": "Activate organizations",
+  "actions.organizations.suspend": "Suspend organizations",
+  "actions.organizations.set_read_only": "Set organizations read-only",
+  "actions.organizations.extend_access": "Extend access",
+  "confirm.organizations.suspend": "Suspend {{count}} organizations?",
+  "confirm.organizations.set_read_only": "Set {{count}} organizations to read-only?",
+  "confirm.organizations.extend_access": "Extend access of {{count}} organizations?",
+  "params.days": "Days"
 }

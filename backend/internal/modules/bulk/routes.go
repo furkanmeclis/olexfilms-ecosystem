@@ -39,6 +39,10 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/platform/roles/bulk", middleware.Chain(
 		http.HandlerFunc(h.ExecuteRoles), authn, require(rbac.PermPlatformRolesRead),
 	))
+	// TEC-365: platform organizations (status change, extend access).
+	mux.Handle("POST /v1/platform/organizations/bulk", middleware.Chain(
+		http.HandlerFunc(h.ExecuteOrganizations), authn, require(rbac.PermPlatformOrganizationsRead),
+	))
 	// TEC-212: undo of a platform operation (users / roles).
 	mux.Handle("POST /v1/platform/bulk-operations/{uuid}/undo", middleware.Chain(
 		http.HandlerFunc(h.UndoPlatform), authn, require(rbac.PermPlatformBulkRead),

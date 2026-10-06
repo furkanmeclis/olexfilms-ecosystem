@@ -38,10 +38,16 @@ WHERE (
     OR name ILIKE '%' || $1 || '%'
     OR slug ILIKE '%' || $1 || '%'
 )
+  AND ($2::bool IS NULL OR is_system = $2)
 `
 
-func (q *Queries) CountRoles(ctx context.Context, q_ pgtype.Text) (int64, error) {
-	row := q.db.QueryRow(ctx, countRoles, q_)
+type CountRolesParams struct {
+	Q        pgtype.Text `json:"q"`
+	IsSystem pgtype.Bool `json:"is_system"`
+}
+
+func (q *Queries) CountRoles(ctx context.Context, arg CountRolesParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countRoles, arg.Q, arg.IsSystem)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -642,11 +648,17 @@ WHERE (
     OR name ILIKE '%' || $1 || '%'
     OR slug ILIKE '%' || $1 || '%'
 )
+  AND ($2::bool IS NULL OR is_system = $2)
 ORDER BY is_system DESC, name ASC
 `
 
-func (q *Queries) ListRoleUUIDsForBulk(ctx context.Context, q_ pgtype.Text) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, listRoleUUIDsForBulk, q_)
+type ListRoleUUIDsForBulkParams struct {
+	Q        pgtype.Text `json:"q"`
+	IsSystem pgtype.Bool `json:"is_system"`
+}
+
+func (q *Queries) ListRoleUUIDsForBulk(ctx context.Context, arg ListRoleUUIDsForBulkParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, listRoleUUIDsForBulk, arg.Q, arg.IsSystem)
 	if err != nil {
 		return nil, err
 	}
@@ -673,18 +685,46 @@ WHERE (
     OR name ILIKE '%' || $1 || '%'
     OR slug ILIKE '%' || $1 || '%'
 )
-ORDER BY is_system DESC, name ASC
-LIMIT $3 OFFSET $2
+  AND ($2::bool IS NULL OR is_system = $2)
+ORDER BY
+  CASE WHEN NOT $3::bool THEN
+    CASE $4::text WHEN 'name' THEN name WHEN 'slug' THEN slug END
+  END ASC,
+  CASE WHEN $3::bool THEN
+    CASE $4::text WHEN 'name' THEN name WHEN 'slug' THEN slug END
+  END DESC,
+  CASE WHEN NOT $3::bool THEN
+    CASE $4::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END ASC,
+  CASE WHEN $3::bool THEN
+    CASE $4::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END DESC,
+  CASE WHEN NOT $3::bool AND $4::text = 'is_system' THEN is_system END ASC,
+  CASE WHEN $3::bool AND $4::text = 'is_system' THEN is_system END DESC,
+  CASE WHEN $3::bool THEN id END DESC,
+  id ASC
+LIMIT $6 OFFSET $5
 `
 
 type ListRolesFilteredParams struct {
 	Q           pgtype.Text `json:"q"`
+	IsSystem    pgtype.Bool `json:"is_system"`
+	SortDesc    bool        `json:"sort_desc"`
+	SortKey     string      `json:"sort_key"`
 	OffsetCount int32       `json:"offset_count"`
 	LimitCount  int32       `json:"limit_count"`
 }
 
+// Sort: docs/list-contract.md, keys from auth/model.RolesSortSpec (TEC-365).
 func (q *Queries) ListRolesFiltered(ctx context.Context, arg ListRolesFilteredParams) ([]Role, error) {
-	rows, err := q.db.Query(ctx, listRolesFiltered, arg.Q, arg.OffsetCount, arg.LimitCount)
+	rows, err := q.db.Query(ctx, listRolesFiltered,
+		arg.Q,
+		arg.IsSystem,
+		arg.SortDesc,
+		arg.SortKey,
+		arg.OffsetCount,
+		arg.LimitCount,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -721,11 +761,17 @@ WHERE (
     OR name ILIKE '%' || $1 || '%'
     OR slug ILIKE '%' || $1 || '%'
 )
+  AND ($2::bool IS NULL OR is_system = $2)
 ORDER BY is_system DESC, name ASC
 `
 
-func (q *Queries) ListRolesForExport(ctx context.Context, q_ pgtype.Text) ([]Role, error) {
-	rows, err := q.db.Query(ctx, listRolesForExport, q_)
+type ListRolesForExportParams struct {
+	Q        pgtype.Text `json:"q"`
+	IsSystem pgtype.Bool `json:"is_system"`
+}
+
+func (q *Queries) ListRolesForExport(ctx context.Context, arg ListRolesForExportParams) ([]Role, error) {
+	rows, err := q.db.Query(ctx, listRolesForExport, arg.Q, arg.IsSystem)
 	if err != nil {
 		return nil, err
 	}

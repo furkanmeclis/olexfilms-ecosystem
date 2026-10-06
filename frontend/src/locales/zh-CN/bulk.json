@@ -45,5 +45,13 @@
   "confirm.catalog_products.delete": "确定删除 {{count}} 个产品吗？",
   "confirm.catalog_services.deactivate": "确定停用 {{count}} 项服务吗？",
   "confirm.catalog_services.raise_price": "确定更新 {{count}} 项服务的价格吗？",
-  "confirm.catalog_services.delete": "确定删除 {{count}} 项服务吗？"
+  "confirm.catalog_services.delete": "确定删除 {{count}} 项服务吗？",
+  "actions.organizations.activate": "启用组织",
+  "actions.organizations.suspend": "暂停组织",
+  "actions.organizations.set_read_only": "将组织设为只读",
+  "actions.organizations.extend_access": "延长访问期限",
+  "confirm.organizations.suspend": "暂停 {{count}} 个组织？",
+  "confirm.organizations.set_read_only": "将 {{count}} 个组织设为只读？",
+  "confirm.organizations.extend_access": "延长 {{count}} 个组织的访问期限？",
+  "params.days": "天数"
 }

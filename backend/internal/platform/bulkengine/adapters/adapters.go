@@ -70,9 +70,13 @@ func (a *UsersAdapter) ResolveTargets(ctx context.Context, _ string, target bulk
 	if target.Scope != "query" {
 		return nil, fmt.Errorf("invalid target scope")
 	}
+	createdFrom, createdBefore, err := rangeArgs(target.Query, "created")
+	if err != nil {
+		return nil, err
+	}
 	rows, err := a.q.ListUserUUIDsForBulk(ctx, db.ListUserUUIDsForBulkParams{
 		Q: textArg(target.Query["q"]), Statuses: apiquery.SplitCSV(target.Query["status"]),
-		RoleSlug: textArg(target.Query["role"]),
+		RoleSlugs: apiquery.SplitCSV(target.Query["role"]), CreatedFrom: createdFrom, CreatedBefore: createdBefore,
 	})
 	if err != nil {
 		return nil, err
@@ -242,7 +246,11 @@ func (a *RolesAdapter) ResolveTargets(ctx context.Context, _ string, target bulk
 	if target.Scope != "query" {
 		return nil, fmt.Errorf("invalid target scope")
 	}
-	rows, err := a.q.ListRoleUUIDsForBulk(ctx, textArg(target.Query["q"]))
+	isSystem, err := boolArg(target.Query, "is_system")
+	if err != nil {
+		return nil, err
+	}
+	rows, err := a.q.ListRoleUUIDsForBulk(ctx, db.ListRoleUUIDsForBulkParams{Q: textArg(target.Query["q"]), IsSystem: isSystem})
 	if err != nil {
 		return nil, err
 	}

@@ -71,35 +71,81 @@ SET status = 'rolled_back'
 WHERE id = $1 AND status = 'applied'
 RETURNING *;
 
--- name: ListImportJobsForActor :many
-SELECT * FROM import_jobs
-WHERE actor_id = $1 AND organization_id IS NULL
-ORDER BY created_at DESC
+-- name: ListImportJobsFiltered :many
+-- TEC-365: platform jobs (organization_id NULL; actor_id = own jobs, or NULL
+-- for admins) and tenant jobs (organization_id). Sort:
+-- docs/list-contract.md, keys from imports/usecase.SortSpec.
+SELECT sqlc.embed(i), u.uuid AS actor_uuid, u.name AS actor_name, u.surname AS actor_surname
+FROM import_jobs i
+JOIN users u ON u.id = i.actor_id
+WHERE (
+    (sqlc.narg(organization_id)::bigint IS NULL AND i.organization_id IS NULL)
+    OR i.organization_id = sqlc.narg(organization_id)
+  )
+  AND (sqlc.narg(actor_id)::bigint IS NULL OR i.actor_id = sqlc.narg(actor_id))
+  AND (
+    COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0
+    OR i.status = ANY (sqlc.narg(statuses)::text[])
+  )
+  AND (
+    COALESCE(cardinality(sqlc.narg(resources)::text[]), 0) = 0
+    OR i.resource = ANY (sqlc.narg(resources)::text[])
+  )
+  AND (
+    COALESCE(cardinality(sqlc.narg(formats)::text[]), 0) = 0
+    OR i.format = ANY (sqlc.narg(formats)::text[])
+  )
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR i.created_at >= sqlc.narg(created_from))
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR i.created_at < sqlc.narg(created_before))
+  AND (
+    sqlc.narg(q)::text IS NULL
+    OR i.resource ILIKE '%' || sqlc.narg(q) || '%'
+    OR i.source_filename ILIKE '%' || sqlc.narg(q) || '%'
+  )
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'status' THEN i.status WHEN 'resource' THEN i.resource WHEN 'format' THEN i.format END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'status' THEN i.status WHEN 'resource' THEN i.resource WHEN 'format' THEN i.format END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN i.created_at WHEN 'updated_at' THEN i.updated_at END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN i.created_at WHEN 'updated_at' THEN i.updated_at END
+  END DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN i.id END DESC,
+  i.id ASC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
--- name: CountImportJobsForActor :one
-SELECT COUNT(*)::bigint FROM import_jobs WHERE actor_id = $1 AND organization_id IS NULL;
-
--- name: ListAllImportJobs :many
-SELECT * FROM import_jobs
-WHERE organization_id IS NULL
-ORDER BY created_at DESC
-LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
-
--- name: CountAllImportJobs :one
-SELECT COUNT(*)::bigint FROM import_jobs WHERE organization_id IS NULL;
-
--- name: ListImportJobsForOrganization :many
--- TEC-211: the organization list carries who uploaded each job.
-SELECT sqlc.embed(import_jobs), u.uuid AS actor_uuid, u.name AS actor_name, u.surname AS actor_surname
-FROM import_jobs
-JOIN users u ON u.id = import_jobs.actor_id
-WHERE import_jobs.organization_id = sqlc.arg(organization_id)::bigint
-ORDER BY import_jobs.created_at DESC
-LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
-
--- name: CountImportJobsForOrganization :one
-SELECT COUNT(*)::bigint FROM import_jobs WHERE organization_id = sqlc.arg(organization_id)::bigint;
+-- name: CountImportJobsFiltered :one
+SELECT COUNT(*)::bigint
+FROM import_jobs i
+WHERE (
+    (sqlc.narg(organization_id)::bigint IS NULL AND i.organization_id IS NULL)
+    OR i.organization_id = sqlc.narg(organization_id)
+  )
+  AND (sqlc.narg(actor_id)::bigint IS NULL OR i.actor_id = sqlc.narg(actor_id))
+  AND (
+    COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0
+    OR i.status = ANY (sqlc.narg(statuses)::text[])
+  )
+  AND (
+    COALESCE(cardinality(sqlc.narg(resources)::text[]), 0) = 0
+    OR i.resource = ANY (sqlc.narg(resources)::text[])
+  )
+  AND (
+    COALESCE(cardinality(sqlc.narg(formats)::text[]), 0) = 0
+    OR i.format = ANY (sqlc.narg(formats)::text[])
+  )
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR i.created_at >= sqlc.narg(created_from))
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR i.created_at < sqlc.narg(created_before))
+  AND (
+    sqlc.narg(q)::text IS NULL
+    OR i.resource ILIKE '%' || sqlc.narg(q) || '%'
+    OR i.source_filename ILIKE '%' || sqlc.narg(q) || '%'
+  );
 
 -- name: InsertImportChange :one
 INSERT INTO import_changes (job_id, entity_type, entity_uuid, op, previous_json)

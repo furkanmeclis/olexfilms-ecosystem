@@ -45,5 +45,13 @@
   "confirm.catalog_products.delete": "Да се изтрият ли {{count}} продукта?",
   "confirm.catalog_services.deactivate": "Да се деактивират ли {{count}} услуги?",
   "confirm.catalog_services.raise_price": "Да се обнови ли цената на {{count}} услуги?",
-  "confirm.catalog_services.delete": "Да се изтрият ли {{count}} услуги?"
+  "confirm.catalog_services.delete": "Да се изтрият ли {{count}} услуги?",
+  "actions.organizations.activate": "Активиране на организации",
+  "actions.organizations.suspend": "Спиране на организации",
+  "actions.organizations.set_read_only": "Организации само за четене",
+  "actions.organizations.extend_access": "Удължаване на достъпа",
+  "confirm.organizations.suspend": "Да се спрат ли {{count}} организации?",
+  "confirm.organizations.set_read_only": "Да се направят ли {{count}} организации само за четене?",
+  "confirm.organizations.extend_access": "Да се удължи ли достъпът на {{count}} организации?",
+  "params.days": "Дни"
 }

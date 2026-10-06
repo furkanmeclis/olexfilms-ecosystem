@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -340,10 +341,15 @@ func (h *Handler) ListPlatformUsers(w http.ResponseWriter, r *http.Request) {
 		writeUsecaseError(w, r, err)
 		return
 	}
+	created, err := apiquery.DateRange(r.URL.Query(), "created")
+	if err != nil {
+		writeUsecaseError(w, r, err)
+		return
+	}
 	items, total, err := h.uc.ListPlatformUsers(r.Context(), model.UserListFilter{
 		Limit: q.Limit, Offset: q.Offset, Q: q.Q, Statuses: statuses,
-		RoleSlug: strings.TrimSpace(r.URL.Query().Get("role")),
-		SortKey:  sort.Key, SortDesc: sort.Desc,
+		RoleSlugs: apiquery.CSVValues(r.URL.Query(), "role"), Created: created,
+		SortKey: sort.Key, SortDesc: sort.Desc,
 	})
 	if err != nil {
 		writeUsecaseError(w, r, err)
@@ -459,7 +465,20 @@ func (h *Handler) ListPlatformRoles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := apiquery.Parse(r.URL.Query())
-	items, total, err := h.uc.ListPlatformRoles(r.Context(), q.Limit, q.Offset, q.Q)
+	sort, err := apiquery.ResolveSort(q.Sort, model.RolesSortSpec)
+	if err != nil {
+		writeUsecaseError(w, r, err)
+		return
+	}
+	isSystem, err := apiquery.Bool(r.URL.Query(), "is_system")
+	if err != nil {
+		writeUsecaseError(w, r, err)
+		return
+	}
+	items, total, err := h.uc.ListPlatformRoles(r.Context(), model.RoleListFilter{
+		Limit: q.Limit, Offset: q.Offset, Q: q.Q, IsSystem: isSystem,
+		SortKey: sort.Key, SortDesc: sort.Desc,
+	})
 	if err != nil {
 		writeUsecaseError(w, r, err)
 		return
@@ -545,6 +564,10 @@ func (h *Handler) DeletePlatformRole(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
+// PermissionCatalogMaxLimit is the page ceiling of GET /v1/platform/permissions
+// (TEC-365); the catalog stays well below it.
+const PermissionCatalogMaxLimit = 1000
+
 func (h *Handler) ListPlatformPermissions(w http.ResponseWriter, r *http.Request) {
 	if banned := apiquery.ForbiddenParams(r.URL.Query()); len(banned) > 0 {
 		response.ValidationError(w, r, []response.Detail{{
@@ -553,6 +576,21 @@ func (h *Handler) ListPlatformPermissions(w http.ResponseWriter, r *http.Request
 		return
 	}
 	q := apiquery.Parse(r.URL.Query())
+	// TEC-365: the permission catalog is larger than the generic 100 row
+	// page; this endpoint accepts limit up to PermissionCatalogMaxLimit and
+	// all=true returns the whole catalog in one page.
+	all, err := apiquery.Bool(r.URL.Query(), "all")
+	if err != nil {
+		writeUsecaseError(w, r, err)
+		return
+	}
+	if all != nil && *all {
+		q.Limit, q.Offset = PermissionCatalogMaxLimit, 0
+	} else if raw := strings.TrimSpace(r.URL.Query().Get("limit")); raw != "" {
+		if n, err := strconv.ParseInt(raw, 10, 32); err == nil && n > int64(apiquery.MaxLimit) && n <= PermissionCatalogMaxLimit {
+			q.Limit = int32(n)
+		}
+	}
 	items, total, err := h.uc.ListPlatformPermissions(r.Context(), q.Limit, q.Offset, q.Q)
 	if err != nil {
 		writeUsecaseError(w, r, err)

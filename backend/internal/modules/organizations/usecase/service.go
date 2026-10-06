@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/orglist"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
@@ -452,20 +453,11 @@ func (s *Service) EnsureInBrand(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
-// ListFilter narrows the platform organization list.
-type ListFilter struct {
-	Q string
-	// Statuses is a multi-value status filter (TEC-363); empty means all.
-	Statuses   []string
-	Type       string
-	ParentUUID *uuid.UUID
-	// SortKey/SortDesc come from apiquery.ResolveSort(…, TenantsSortSpec).
-	SortKey  string
-	SortDesc bool
-}
+// ListFilter narrows the platform organization list (TEC-363/TEC-365).
+type ListFilter = orglist.Filter
 
 // Statuses are the organizations.status values (chk_organizations_status).
-var Statuses = []string{"pending", "active", "read_only", "suspended", "expired"}
+var Statuses = orglist.Statuses
 
 // List returns paginated organizations of the request brand for platform admin.
 func (s *Service) List(ctx context.Context, limit, offset int32, f ListFilter) ([]Organization, int64, error) {
@@ -473,37 +465,16 @@ func (s *Service) List(ctx context.Context, limit, offset int32, f ListFilter) (
 	if err != nil {
 		return nil, 0, err
 	}
-	q := f.Q
-	brandArg := pgtype.Int8{Int64: brand.ID, Valid: true}
-	var typeArg pgtype.Text
-	if f.Type != "" {
-		typeArg = pgtype.Text{String: f.Type, Valid: true}
-	}
-	var parentArg pgtype.Int8
-	if f.ParentUUID != nil {
-		parent, err := s.brandOrg(ctx, *f.ParentUUID)
-		if err != nil {
-			if errors.Is(err, ErrNotFound) {
-				return []Organization{}, 0, nil
-			}
-			return nil, 0, err
-		}
-		parentArg = pgtype.Int8{Int64: parent.Organization.ID, Valid: true}
-	}
-	var qArg pgtype.Text
-	if q != "" {
-		qArg = pgtype.Text{String: q, Valid: true}
-	}
-	rows, err := s.q.ListOrganizationsFiltered(ctx, db.ListOrganizationsFilteredParams{
-		Statuses: f.Statuses, BrandID: brandArg, Type: typeArg, ParentID: parentArg,
-		Q: qArg, SortKey: f.SortKey, SortDesc: f.SortDesc, LimitCount: limit, OffsetCount: offset,
-	})
+	params, err := orglist.Params(ctx, s.q, brand.ID, f)
 	if err != nil {
 		return nil, 0, err
 	}
-	total, err := s.q.CountOrganizations(ctx, db.CountOrganizationsParams{
-		Statuses: f.Statuses, BrandID: brandArg, Type: typeArg, ParentID: parentArg, Q: qArg,
-	})
+	params.LimitCount, params.OffsetCount = limit, offset
+	rows, err := s.q.ListOrganizationsFiltered(ctx, params)
+	if err != nil {
+		return nil, 0, err
+	}
+	total, err := s.q.CountOrganizations(ctx, orglist.CountParams(params))
 	if err != nil {
 		return nil, 0, err
 	}

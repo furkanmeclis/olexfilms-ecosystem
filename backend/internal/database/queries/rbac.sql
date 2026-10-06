@@ -11,6 +11,7 @@ SELECT * FROM roles
 WHERE id = $1;
 
 -- name: ListRolesFiltered :many
+-- Sort: docs/list-contract.md, keys from auth/model.RolesSortSpec (TEC-365).
 SELECT *
 FROM roles
 WHERE (
@@ -18,7 +19,24 @@ WHERE (
     OR name ILIKE '%' || sqlc.narg(q) || '%'
     OR slug ILIKE '%' || sqlc.narg(q) || '%'
 )
-ORDER BY is_system DESC, name ASC
+  AND (sqlc.narg(is_system)::bool IS NULL OR is_system = sqlc.narg(is_system))
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'name' THEN name WHEN 'slug' THEN slug END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'name' THEN name WHEN 'slug' THEN slug END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'is_system' THEN is_system END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'is_system' THEN is_system END DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN id END DESC,
+  id ASC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
 -- name: CountRoles :one
@@ -28,7 +46,8 @@ WHERE (
     sqlc.narg(q)::text IS NULL
     OR name ILIKE '%' || sqlc.narg(q) || '%'
     OR slug ILIKE '%' || sqlc.narg(q) || '%'
-);
+)
+  AND (sqlc.narg(is_system)::bool IS NULL OR is_system = sqlc.narg(is_system));
 
 -- name: ListRolesForExport :many
 SELECT *
@@ -38,6 +57,7 @@ WHERE (
     OR name ILIKE '%' || sqlc.narg(q) || '%'
     OR slug ILIKE '%' || sqlc.narg(q) || '%'
 )
+  AND (sqlc.narg(is_system)::bool IS NULL OR is_system = sqlc.narg(is_system))
 ORDER BY is_system DESC, name ASC;
 
 -- name: ListRoleUUIDsForBulk :many
@@ -48,6 +68,7 @@ WHERE (
     OR name ILIKE '%' || sqlc.narg(q) || '%'
     OR slug ILIKE '%' || sqlc.narg(q) || '%'
 )
+  AND (sqlc.narg(is_system)::bool IS NULL OR is_system = sqlc.narg(is_system))
 ORDER BY is_system DESC, name ASC;
 
 -- name: CreateRole :one

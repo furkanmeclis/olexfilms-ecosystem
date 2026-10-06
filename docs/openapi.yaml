@@ -1196,6 +1196,10 @@ paths:
       tags: [Platform]
       operationId: listPlatformPermissions
       summary: Permission catalog with modules and allowed scopes
+      description: |
+        The catalog is larger than the generic 100 row page (TEC-365): this
+        endpoint accepts `limit` up to 1000, and `all=true` returns the whole
+        catalog in one page (limit 1000, offset 0).
       security:
         - bearerAuth: []
       parameters:
@@ -1204,10 +1208,14 @@ paths:
           schema: { type: string }
         - name: limit
           in: query
-          schema: { type: integer }
+          schema: { type: integer, minimum: 1, maximum: 1000, default: 20 }
         - name: offset
           in: query
           schema: { type: integer }
+        - name: all
+          in: query
+          description: "`true` returns the whole catalog in one page."
+          schema: { type: boolean }
       responses:
         "200":
           description: Permissions
@@ -1229,6 +1237,39 @@ paths:
                       limit: { type: integer }
                       offset: { type: integer }
                   meta: { $ref: "#/components/schemas/ResponseMeta" }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/roles:
+    get:
+      tags: [Platform]
+      operationId: listPlatformRoles
+      summary: List roles
+      description: |
+        Sortable (`sort`, one primary field, id tiebreak): name, slug, is_system,
+        created_at, updated_at. Default `name` (TEC-365). Unknown field → 400.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: is_system
+          in: query
+          description: "`true` system roles only, `false` custom roles only."
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Role page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeRoleSummaryPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "403":
@@ -1299,6 +1340,551 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/activity/meta:
+    get:
+      tags: [Platform]
+      operationId: getPlatformActivityMeta
+      summary: Activity list meta
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Meta
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeResourceMeta"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/activity:
+    get:
+      tags: [Platform]
+      operationId: listPlatformActivity
+      summary: List activity (audit) events
+      description: |
+        Sortable (`sort`, one primary field, id tiebreak): created_at, action,
+        resource. Default `-created_at` (TEC-365). Unknown field → 400. The export
+        (`POST /v1/platform/activity/export`) reads the same parameters from its
+        `query`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Sort"
+        - name: q
+          in: query
+          description: Matches action or resource (ILIKE).
+          schema: { type: string }
+        - name: actor
+          in: query
+          description: User uuid of the actor.
+          schema: { type: string, format: uuid }
+        - name: resource
+          in: query
+          description: Comma-separated resources (exact match).
+          schema: { type: string }
+        - name: action
+          in: query
+          description: Comma-separated actions (exact match).
+          schema: { type: string }
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
+      responses:
+        "200":
+          description: Activity page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeActivityEventPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/exports:
+    get:
+      tags: [Platform]
+      operationId: listPlatformExports
+      summary: List export jobs (own jobs; every job for platform admins)
+      description: |
+        Sortable (`sort`, one primary field, id tiebreak): created_at, updated_at,
+        status, resource, format. Default `-created_at` (TEC-365). Unknown field or
+        filter value → 400.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Sort"
+        - name: q
+          in: query
+          description: Matches the resource (ILIKE).
+          schema: { type: string }
+        - name: status
+          in: query
+          description: Comma-separated statuses (queued, processing, completed, failed, expired).
+          schema: { type: string }
+        - name: resource
+          in: query
+          description: Comma-separated resource slugs, e.g. `platform.users,platform.roles`.
+          schema: { type: string }
+        - name: format
+          in: query
+          description: Comma-separated formats (pdf, xlsx, csv, json).
+          schema: { type: string }
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
+      responses:
+        "200":
+          description: Export jobs page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJobPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/imports:
+    get:
+      tags: [Platform]
+      operationId: listPlatformImports
+      summary: List platform import jobs (own jobs; every job for platform admins)
+      description: |
+        Sortable (`sort`, one primary field, id tiebreak): created_at, updated_at,
+        status, resource, format. Default `-created_at` (TEC-365). Unknown field or
+        filter value → 400.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Sort"
+        - name: q
+          in: query
+          description: Matches the resource or the uploaded file name (ILIKE).
+          schema: { type: string }
+        - name: status
+          in: query
+          description: >-
+            Comma-separated statuses (uploaded, mapped, previewed, queued, applying,
+            applied, failed, rolled_back).
+          schema: { type: string }
+        - name: resource
+          in: query
+          description: Comma-separated resource slugs.
+          schema: { type: string }
+        - name: format
+          in: query
+          description: Comma-separated formats (json, xlsx, csv, tsv).
+          schema: { type: string }
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
+      responses:
+        "200":
+          description: Import jobs page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeImportJobPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/logs/meta:
+    get:
+      tags: [Platform]
+      operationId: getPlatformLogsMeta
+      summary: Application log list meta
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Meta
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeResourceMeta"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/logs:
+    get:
+      tags: [Platform]
+      operationId: listPlatformLogs
+      summary: List application logs
+      description: |
+        Needs `platform.logs.read`. Sortable (`sort`, one primary field, id
+        tiebreak): created_at, level (severity), source. Default `-created_at`.
+        Unknown field → 400.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Sort"
+        - name: q
+          in: query
+          description: Matches message, source or request id (ILIKE).
+          schema: { type: string }
+        - name: level
+          in: query
+          description: Comma-separated levels (debug, warn, error).
+          schema: { type: string }
+        - name: source
+          in: query
+          schema: { type: string }
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
+        - name: older_than_hours
+          in: query
+          description: Only logs older than this many hours.
+          schema: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: Log page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAppLogPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/logs/stats:
+    get:
+      tags: [Platform]
+      operationId: getPlatformLogStats
+      summary: Log counts per level
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Counts
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, meta]
+                properties:
+                  success: { type: boolean, enum: [true] }
+                  data: { $ref: "#/components/schemas/AppLogStats" }
+                  meta: { $ref: "#/components/schemas/ResponseMeta" }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/logs/sources:
+    get:
+      tags: [Platform]
+      operationId: getPlatformLogSources
+      summary: Distinct log sources
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Sources
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, meta]
+                properties:
+                  success: { type: boolean, enum: [true] }
+                  data:
+                    type: object
+                    required: [items]
+                    properties:
+                      items:
+                        type: array
+                        items: { type: string }
+                  meta: { $ref: "#/components/schemas/ResponseMeta" }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/logs/purge:
+    post:
+      tags: [Platform]
+      operationId: postPlatformLogsPurge
+      summary: Delete logs by uuid list or criteria
+      description: Needs `platform.logs.write`. `dry_run` only counts.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppLogPurgeRequest"
+      responses:
+        "200":
+          description: Purge result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, meta]
+                properties:
+                  success: { type: boolean, enum: [true] }
+                  data: { $ref: "#/components/schemas/AppLogPurgeResult" }
+                  meta: { $ref: "#/components/schemas/ResponseMeta" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/logs/{uuid}:
+    get:
+      tags: [Platform]
+      operationId: getPlatformLog
+      summary: Get one log entry
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Log entry
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, meta]
+                properties:
+                  success: { type: boolean, enum: [true] }
+                  data: { $ref: "#/components/schemas/AppLog" }
+                  meta: { $ref: "#/components/schemas/ResponseMeta" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Platform]
+      operationId: deletePlatformLog
+      summary: Delete one log entry
+      description: Needs `platform.logs.write`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDeleted"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/platform/log-rules/meta:
+    get:
+      tags: [Platform]
+      operationId: getPlatformLogRulesMeta
+      summary: Log purge rule list meta
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Meta
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeResourceMeta"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/log-rules:
+    get:
+      tags: [Platform]
+      operationId: listPlatformLogRules
+      summary: List log purge rules
+      description: The full (small) rule set in one page; tables sort and search client side.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Rules
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeLogPurgeRulePage"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Platform]
+      operationId: createPlatformLogRule
+      summary: Create a log purge rule
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogPurgeRuleInput"
+      responses:
+        "201":
+          description: Created rule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeLogPurgeRule"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/log-rules/{uuid}:
+    get:
+      tags: [Platform]
+      operationId: getPlatformLogRule
+      summary: Get a log purge rule
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Rule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeLogPurgeRule"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Platform]
+      operationId: patchPlatformLogRule
+      summary: Update a log purge rule
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogPurgeRuleInput"
+      responses:
+        "200":
+          description: Updated rule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeLogPurgeRule"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Platform]
+      operationId: deletePlatformLogRule
+      summary: Delete a log purge rule
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDeleted"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/platform/log-rules/{uuid}/run:
+    post:
+      tags: [Platform]
+      operationId: runPlatformLogRule
+      summary: Run a log purge rule now
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Rule and deleted count
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, meta]
+                properties:
+                  success: { type: boolean, enum: [true] }
+                  data:
+                    type: object
+                    required: [rule, deleted]
+                    properties:
+                      rule: { $ref: "#/components/schemas/LogPurgeRule" }
+                      deleted: { type: integer, format: int64 }
+                  meta: { $ref: "#/components/schemas/ResponseMeta" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /v1/platform/bulk:
     get:
@@ -2629,13 +3215,28 @@ paths:
           schema: { type: string }
         - name: type
           in: query
-          schema:
-            $ref: "#/components/schemas/OrganizationType"
+          description: >-
+            Comma-separated types (center, distributor, dealer). Unknown value → 400.
+          schema: { type: string }
         - name: parent_uuid
           in: query
           schema:
             type: string
             format: uuid
+        - name: plan_code
+          in: query
+          description: Comma-separated plan codes, e.g. `trial,pro` (TEC-365).
+          schema: { type: string }
+        - name: access_ends_from
+          in: query
+          description: Access end on or after (YYYY-MM-DD or RFC3339).
+          schema: { type: string }
+        - name: access_ends_to
+          in: query
+          description: Access end on or before; a date covers the whole day.
+          schema: { type: string }
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
       responses:
         "200":
           description: Organizations of the request domain's brand
@@ -2672,6 +3273,80 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "409":
           $ref: "#/components/responses/Conflict"
+
+  /v1/platform/organizations/bulk:
+    post:
+      tags: [Platform]
+      operationId: postPlatformOrganizationsBulk
+      summary: Run a bulk action on platform organizations
+      description: |
+        TEC-365. Actions (see `/v1/platform/organizations/meta` `bulk_actions`):
+        `activate`, `suspend`, `set_read_only` (status) and `extend_access`
+        (`target.params.days`, 1..3650; extends from the current access end when
+        it is in the future, else from now). All need
+        `platform.organizations.write` and are undoable. The target is the
+        selected uuids or the list query (`scope: query` with the list filters);
+        both stay inside the request brand. The brand center is refused per item.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkExecuteRequest"
+      responses:
+        "200":
+          description: Sync bulk result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkSyncResult"
+        "202":
+          description: Async bulk job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/organizations/export:
+    post:
+      tags: [Platform]
+      operationId: postPlatformOrganizationsExport
+      summary: Export the platform organizations list
+      description: |
+        TEC-365. Queues an export job (`platform.organizations`) over the list
+        of the request brand. `query` takes the list parameters (q, sort,
+        status, type, plan_code, parent_uuid, access_ends_from/_to,
+        created_from/_to); bad values → 400. Needs
+        `platform.organizations.read` and a fresh step-up.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListExportRequest"
+      responses:
+        "202":
+          description: Export job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /v1/platform/organizations/{uuid}:
     get:
@@ -2878,8 +3553,12 @@ paths:
           schema: { type: string }
         - name: role
           in: query
-          description: Role slug
+          description: >-
+            Comma-separated role slugs (users holding any of them), e.g.
+            `super_admin,support` (TEC-365).
           schema: { type: string }
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
         - name: is_super_admin
           in: query
           schema: { type: boolean }
@@ -4369,11 +5048,36 @@ paths:
       tags: [Tenant]
       operationId: listTenantImports
       summary: List organization import jobs
+      description: |
+        Sortable (`sort`, one primary field, id tiebreak): created_at, updated_at,
+        status, resource, format. Default `-created_at` (TEC-365). Unknown field or
+        filter value → 400.
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Sort"
+        - name: q
+          in: query
+          description: Matches the resource or the uploaded file name (ILIKE).
+          schema: { type: string }
+        - name: status
+          in: query
+          description: >-
+            Comma-separated statuses (uploaded, mapped, previewed, queued, applying,
+            applied, failed, rolled_back).
+          schema: { type: string }
+        - name: resource
+          in: query
+          description: Comma-separated resource slugs.
+          schema: { type: string }
+        - name: format
+          in: query
+          description: Comma-separated formats (json, xlsx, csv, tsv).
+          schema: { type: string }
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
       responses:
         "200":
           description: Import jobs page
@@ -4541,11 +5245,34 @@ paths:
       tags: [Tenant]
       operationId: listTenantExports
       summary: List organization export jobs
+      description: |
+        Sortable (`sort`, one primary field, id tiebreak): created_at, updated_at,
+        status, resource, format. Default `-created_at` (TEC-365). Unknown field or
+        filter value → 400.
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Sort"
+        - name: q
+          in: query
+          description: Matches the resource (ILIKE).
+          schema: { type: string }
+        - name: status
+          in: query
+          description: Comma-separated statuses (queued, processing, completed, failed, expired).
+          schema: { type: string }
+        - name: resource
+          in: query
+          description: Comma-separated resource slugs, e.g. `platform.users,platform.roles`.
+          schema: { type: string }
+        - name: format
+          in: query
+          description: Comma-separated formats (pdf, xlsx, csv, json).
+          schema: { type: string }
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
       responses:
         "200":
           description: Export jobs page
@@ -19964,6 +20691,18 @@ components:
       name: q
       in: query
       schema: { type: string }
+    CreatedFrom:
+      name: created_from
+      in: query
+      description: Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339).
+      schema: { type: string }
+    CreatedTo:
+      name: created_to
+      in: query
+      description: >-
+        Created on or before; a date (YYYY-MM-DD) covers the whole day, an
+        RFC3339 value that instant. `created_from` after `created_to` → 400.
+      schema: { type: string }
     Sort:
       name: sort
       in: query
@@ -20777,6 +21516,14 @@ components:
           type: [string, "null"]
           description: The user's own IANA timezone; null inherits from the organization.
           examples: ["Asia/Dubai"]
+        created_at:
+          type: string
+          format: date-time
+          description: Set on the platform users list and detail (TEC-365).
+        updated_at:
+          type: string
+          format: date-time
+          description: Set on the platform users list and detail (TEC-365).
 
     Locale:
       type: string
@@ -21445,6 +22192,8 @@ components:
           type: string
           description: Subject kind of the role; organization roles are granted per membership.
           enum: [platform, center, distributor, dealer, customer, fleet]
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
 
     PermissionScope:
       type: string
@@ -22838,12 +23587,195 @@ components:
           $ref: "#/components/schemas/IoJobActor"
         created_at: { type: string, format: date-time }
 
+    ListExportRequest:
+      type: object
+      description: >-
+        A list export request (TEC-365): `query` carries the list parameters
+        (q, sort, filters) as strings; multi-value filters are comma-separated.
+      required: [format]
+      properties:
+        format: { type: string, enum: [pdf, xlsx, csv, json] }
+        locale: { $ref: "#/components/schemas/Locale" }
+        query:
+          type: object
+          additionalProperties: { type: string }
+
+    EnvelopeRoleSummaryPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/RoleSummary" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    ActivityEvent:
+      type: object
+      required: [uuid, action, resource, payload, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        actor_user_id: { type: integer, format: int64 }
+        action: { type: string }
+        resource: { type: string }
+        resource_uuid: { type: string, format: uuid }
+        payload:
+          type: object
+          additionalProperties: true
+        created_at: { type: string, format: date-time }
+
+    EnvelopeActivityEventPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/ActivityEvent" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    AppLog:
+      type: object
+      required: [uuid, level, message, source, attrs, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        level: { type: string, enum: [debug, warn, error] }
+        message: { type: string }
+        source: { type: string }
+        attrs:
+          type: [object, "null"]
+          additionalProperties: true
+        request_id: { type: string }
+        created_at: { type: string, format: date-time }
+
+    EnvelopeAppLogPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/AppLog" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    AppLogStats:
+      type: object
+      required: [debug, warn, error, total]
+      properties:
+        debug: { type: integer, format: int64 }
+        warn: { type: integer, format: int64 }
+        error: { type: integer, format: int64 }
+        total: { type: integer, format: int64 }
+
+    AppLogPurgeRequest:
+      type: object
+      properties:
+        uuids:
+          type: array
+          items: { type: string, format: uuid }
+        dry_run: { type: boolean }
+        levels:
+          type: array
+          items: { type: string, enum: [debug, warn, error] }
+        source: { type: string }
+        q: { type: string }
+        older_than_hours: { type: [integer, "null"] }
+
+    AppLogPurgeResult:
+      type: object
+      required: [deleted, dry_run]
+      properties:
+        deleted: { type: integer, format: int64 }
+        dry_run: { type: boolean }
+
+    LogPurgeRule:
+      type: object
+      required: [uuid, name, enabled, is_system, levels, older_than_hours, interval_minutes, last_deleted_count, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        enabled: { type: boolean }
+        is_system: { type: boolean }
+        levels:
+          type: array
+          items: { type: string, enum: [debug, warn, error] }
+        source: { type: string }
+        message_contains: { type: string }
+        older_than_hours: { type: integer }
+        interval_minutes:
+          type: integer
+          enum: [5, 15, 30, 60, 180, 360, 720, 1440, 10080]
+        last_run_at: { type: string, format: date-time }
+        last_deleted_count: { type: integer, format: int64 }
+        last_error: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    LogPurgeRuleInput:
+      type: object
+      properties:
+        name: { type: string }
+        enabled: { type: [boolean, "null"] }
+        levels:
+          type: array
+          items: { type: string, enum: [debug, warn, error] }
+        source: { type: [string, "null"] }
+        message_contains: { type: [string, "null"] }
+        older_than_hours: { type: [integer, "null"] }
+        interval_minutes: { type: [integer, "null"] }
+
+    EnvelopeLogPurgeRule:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/LogPurgeRule" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeLogPurgeRulePage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/LogPurgeRule" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
     IoJobActor:
       type: object
       description: >-
         The user who requested an export or uploaded an import (TEC-211).
-        Present on the organization job lists (GET /v1/tenant/exports,
-        GET /v1/tenant/imports).
+        Present on the job lists (GET /v1/tenant/exports, /v1/tenant/imports,
+        and since TEC-365 /v1/platform/exports, /v1/platform/imports).
       required: [uuid, name]
       properties:
         uuid: { type: string, format: uuid }

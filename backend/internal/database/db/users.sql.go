@@ -21,29 +21,39 @@ WHERE u.deleted_at IS NULL
     OR u.status = ANY ($1::text[])
   )
   AND (
-    $2::text IS NULL
+    COALESCE(cardinality($2::text[]), 0) = 0
     OR EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON r.id = ur.role_id
-      WHERE ur.user_id = u.id AND r.slug = $2
+      WHERE ur.user_id = u.id AND r.slug = ANY ($2::text[])
     )
   )
+  AND ($3::timestamptz IS NULL OR u.created_at >= $3)
+  AND ($4::timestamptz IS NULL OR u.created_at < $4)
   AND (
-    $3::text IS NULL
-    OR u.email ILIKE '%' || $3 || '%'
-    OR u.name ILIKE '%' || $3 || '%'
-    OR u.surname ILIKE '%' || $3 || '%'
+    $5::text IS NULL
+    OR u.email ILIKE '%' || $5 || '%'
+    OR u.name ILIKE '%' || $5 || '%'
+    OR u.surname ILIKE '%' || $5 || '%'
   )
 `
 
 type CountUsersParams struct {
-	Statuses []string    `json:"statuses"`
-	RoleSlug pgtype.Text `json:"role_slug"`
-	Q        pgtype.Text `json:"q"`
+	Statuses      []string           `json:"statuses"`
+	RoleSlugs     []string           `json:"role_slugs"`
+	CreatedFrom   pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore pgtype.Timestamptz `json:"created_before"`
+	Q             pgtype.Text        `json:"q"`
 }
 
 func (q *Queries) CountUsers(ctx context.Context, arg CountUsersParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countUsers, arg.Statuses, arg.RoleSlug, arg.Q)
+	row := q.db.QueryRow(ctx, countUsers,
+		arg.Statuses,
+		arg.RoleSlugs,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
+	)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -306,30 +316,40 @@ WHERE u.deleted_at IS NULL
     OR u.status = ANY ($1::text[])
   )
   AND (
-    $2::text IS NULL
+    COALESCE(cardinality($2::text[]), 0) = 0
     OR EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON r.id = ur.role_id
-      WHERE ur.user_id = u.id AND r.slug = $2
+      WHERE ur.user_id = u.id AND r.slug = ANY ($2::text[])
     )
   )
+  AND ($3::timestamptz IS NULL OR u.created_at >= $3)
+  AND ($4::timestamptz IS NULL OR u.created_at < $4)
   AND (
-    $3::text IS NULL
-    OR u.email ILIKE '%' || $3 || '%'
-    OR u.name ILIKE '%' || $3 || '%'
-    OR u.surname ILIKE '%' || $3 || '%'
+    $5::text IS NULL
+    OR u.email ILIKE '%' || $5 || '%'
+    OR u.name ILIKE '%' || $5 || '%'
+    OR u.surname ILIKE '%' || $5 || '%'
   )
 ORDER BY u.created_at DESC, u.id DESC
 `
 
 type ListUserUUIDsForBulkParams struct {
-	Statuses []string    `json:"statuses"`
-	RoleSlug pgtype.Text `json:"role_slug"`
-	Q        pgtype.Text `json:"q"`
+	Statuses      []string           `json:"statuses"`
+	RoleSlugs     []string           `json:"role_slugs"`
+	CreatedFrom   pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore pgtype.Timestamptz `json:"created_before"`
+	Q             pgtype.Text        `json:"q"`
 }
 
 func (q *Queries) ListUserUUIDsForBulk(ctx context.Context, arg ListUserUUIDsForBulkParams) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, listUserUUIDsForBulk, arg.Statuses, arg.RoleSlug, arg.Q)
+	rows, err := q.db.Query(ctx, listUserUUIDsForBulk,
+		arg.Statuses,
+		arg.RoleSlugs,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -357,55 +377,59 @@ WHERE u.deleted_at IS NULL
     OR u.status = ANY ($1::text[])
   )
   AND (
-    $2::text IS NULL
+    COALESCE(cardinality($2::text[]), 0) = 0
     OR EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON r.id = ur.role_id
-      WHERE ur.user_id = u.id AND r.slug = $2
+      WHERE ur.user_id = u.id AND r.slug = ANY ($2::text[])
     )
   )
+  AND ($3::timestamptz IS NULL OR u.created_at >= $3)
+  AND ($4::timestamptz IS NULL OR u.created_at < $4)
   AND (
-    $3::text IS NULL
-    OR u.email ILIKE '%' || $3 || '%'
-    OR u.name ILIKE '%' || $3 || '%'
-    OR u.surname ILIKE '%' || $3 || '%'
+    $5::text IS NULL
+    OR u.email ILIKE '%' || $5 || '%'
+    OR u.name ILIKE '%' || $5 || '%'
+    OR u.surname ILIKE '%' || $5 || '%'
   )
 ORDER BY
-  CASE WHEN NOT $4::bool THEN
-    CASE $5::text
+  CASE WHEN NOT $6::bool THEN
+    CASE $7::text
       WHEN 'email' THEN u.email WHEN 'name' THEN u.name
       WHEN 'surname' THEN u.surname WHEN 'status' THEN u.status
     END
   END ASC NULLS LAST,
-  CASE WHEN $4::bool THEN
-    CASE $5::text
+  CASE WHEN $6::bool THEN
+    CASE $7::text
       WHEN 'email' THEN u.email WHEN 'name' THEN u.name
       WHEN 'surname' THEN u.surname WHEN 'status' THEN u.status
     END
   END DESC NULLS LAST,
-  CASE WHEN NOT $4::bool THEN
-    CASE $5::text
+  CASE WHEN NOT $6::bool THEN
+    CASE $7::text
       WHEN 'created_at' THEN u.created_at WHEN 'updated_at' THEN u.updated_at
     END
   END ASC,
-  CASE WHEN $4::bool THEN
-    CASE $5::text
+  CASE WHEN $6::bool THEN
+    CASE $7::text
       WHEN 'created_at' THEN u.created_at WHEN 'updated_at' THEN u.updated_at
     END
   END DESC,
-  CASE WHEN $4::bool THEN u.id END DESC,
+  CASE WHEN $6::bool THEN u.id END DESC,
   u.id ASC
-LIMIT $7 OFFSET $6
+LIMIT $9 OFFSET $8
 `
 
 type ListUsersFilteredParams struct {
-	Statuses    []string    `json:"statuses"`
-	RoleSlug    pgtype.Text `json:"role_slug"`
-	Q           pgtype.Text `json:"q"`
-	SortDesc    bool        `json:"sort_desc"`
-	SortKey     string      `json:"sort_key"`
-	OffsetCount int32       `json:"offset_count"`
-	LimitCount  int32       `json:"limit_count"`
+	Statuses      []string           `json:"statuses"`
+	RoleSlugs     []string           `json:"role_slugs"`
+	CreatedFrom   pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore pgtype.Timestamptz `json:"created_before"`
+	Q             pgtype.Text        `json:"q"`
+	SortDesc      bool               `json:"sort_desc"`
+	SortKey       string             `json:"sort_key"`
+	OffsetCount   int32              `json:"offset_count"`
+	LimitCount    int32              `json:"limit_count"`
 }
 
 // Platform users list. Sort follows docs/list-contract.md: sort_key is the
@@ -414,7 +438,9 @@ type ListUsersFilteredParams struct {
 func (q *Queries) ListUsersFiltered(ctx context.Context, arg ListUsersFilteredParams) ([]User, error) {
 	rows, err := q.db.Query(ctx, listUsersFiltered,
 		arg.Statuses,
-		arg.RoleSlug,
+		arg.RoleSlugs,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
 		arg.Q,
 		arg.SortDesc,
 		arg.SortKey,
@@ -468,30 +494,40 @@ WHERE u.deleted_at IS NULL
     OR u.status = ANY ($1::text[])
   )
   AND (
-    $2::text IS NULL
+    COALESCE(cardinality($2::text[]), 0) = 0
     OR EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON r.id = ur.role_id
-      WHERE ur.user_id = u.id AND r.slug = $2
+      WHERE ur.user_id = u.id AND r.slug = ANY ($2::text[])
     )
   )
+  AND ($3::timestamptz IS NULL OR u.created_at >= $3)
+  AND ($4::timestamptz IS NULL OR u.created_at < $4)
   AND (
-    $3::text IS NULL
-    OR u.email ILIKE '%' || $3 || '%'
-    OR u.name ILIKE '%' || $3 || '%'
-    OR u.surname ILIKE '%' || $3 || '%'
+    $5::text IS NULL
+    OR u.email ILIKE '%' || $5 || '%'
+    OR u.name ILIKE '%' || $5 || '%'
+    OR u.surname ILIKE '%' || $5 || '%'
   )
 ORDER BY u.created_at DESC, u.id DESC
 `
 
 type ListUsersForExportParams struct {
-	Statuses []string    `json:"statuses"`
-	RoleSlug pgtype.Text `json:"role_slug"`
-	Q        pgtype.Text `json:"q"`
+	Statuses      []string           `json:"statuses"`
+	RoleSlugs     []string           `json:"role_slugs"`
+	CreatedFrom   pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore pgtype.Timestamptz `json:"created_before"`
+	Q             pgtype.Text        `json:"q"`
 }
 
 func (q *Queries) ListUsersForExport(ctx context.Context, arg ListUsersForExportParams) ([]User, error) {
-	rows, err := q.db.Query(ctx, listUsersForExport, arg.Statuses, arg.RoleSlug, arg.Q)
+	rows, err := q.db.Query(ctx, listUsersForExport,
+		arg.Statuses,
+		arg.RoleSlugs,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
+	)
 	if err != nil {
 		return nil, err
 	}

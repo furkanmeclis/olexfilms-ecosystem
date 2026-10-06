@@ -10,7 +10,6 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const (
@@ -109,7 +108,7 @@ func (a *RolesAdapter) Spec() searchengine.Spec {
 }
 
 func (a *RolesAdapter) ListAll(ctx context.Context) ([]searchengine.Document, error) {
-	rows, err := a.q.ListRolesForExport(ctx, pgtype.Text{})
+	rows, err := a.q.ListRolesForExport(ctx, db.ListRolesForExportParams{})
 	if err != nil {
 		return nil, err
 	}

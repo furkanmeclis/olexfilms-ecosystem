@@ -45,5 +45,13 @@
   "confirm.catalog_products.delete": "{{count}} məhsul silinsin?",
   "confirm.catalog_services.deactivate": "{{count}} xidmət deaktiv edilsin?",
   "confirm.catalog_services.raise_price": "{{count}} xidmətin qiyməti yenilənsin?",
-  "confirm.catalog_services.delete": "{{count}} xidmət silinsin?"
+  "confirm.catalog_services.delete": "{{count}} xidmət silinsin?",
+  "actions.organizations.activate": "Təşkilatları aktivləşdir",
+  "actions.organizations.suspend": "Təşkilatları dayandır",
+  "actions.organizations.set_read_only": "Təşkilatları yalnız oxunan et",
+  "actions.organizations.extend_access": "Girişi uzat",
+  "confirm.organizations.suspend": "{{count}} təşkilat dayandırılsın?",
+  "confirm.organizations.set_read_only": "{{count}} təşkilat yalnız oxunan edilsin?",
+  "confirm.organizations.extend_access": "{{count}} təşkilatın girişi uzadılsın?",
+  "params.days": "Gün"
 }

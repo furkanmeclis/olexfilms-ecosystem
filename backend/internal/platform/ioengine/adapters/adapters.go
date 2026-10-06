@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/password"
@@ -48,8 +49,13 @@ func (a *UsersAdapter) ExportColumns() []ioengine.Column {
 }
 
 func (a *UsersAdapter) Export(ctx context.Context, query ioengine.ExportQuery, _ i18n.Locale) (ioengine.Dataset, error) {
+	createdFrom, createdBefore, err := rangeArgs(query, "created")
+	if err != nil {
+		return ioengine.Dataset{}, err
+	}
 	rows, err := a.q.ListUsersForExport(ctx, db.ListUsersForExportParams{
-		Q: textArg(query["q"]), Statuses: apiquery.SplitCSV(query["status"]), RoleSlug: textArg(query["role"]),
+		Q: textArg(query["q"]), Statuses: apiquery.SplitCSV(query["status"]), RoleSlugs: apiquery.SplitCSV(query["role"]),
+		CreatedFrom: createdFrom, CreatedBefore: createdBefore,
 	})
 	if err != nil {
 		return ioengine.Dataset{}, err
@@ -194,7 +200,11 @@ func (a *RolesAdapter) ExportColumns() []ioengine.Column {
 }
 
 func (a *RolesAdapter) Export(ctx context.Context, query ioengine.ExportQuery, _ i18n.Locale) (ioengine.Dataset, error) {
-	rows, err := a.q.ListRolesForExport(ctx, textArg(query["q"]))
+	isSystem, err := boolArg(query, "is_system")
+	if err != nil {
+		return ioengine.Dataset{}, err
+	}
+	rows, err := a.q.ListRolesForExport(ctx, db.ListRolesForExportParams{Q: textArg(query["q"]), IsSystem: isSystem})
 	if err != nil {
 		return ioengine.Dataset{}, err
 	}
@@ -444,9 +454,12 @@ func (a *ActivityAdapter) ExportColumns() []ioengine.Column {
 }
 
 func (a *ActivityAdapter) Export(ctx context.Context, query ioengine.ExportQuery, _ i18n.Locale) (ioengine.Dataset, error) {
-	rows, err := a.q.ListActivityEvents(ctx, db.ListActivityEventsParams{
-		Q: textArg(query["q"]), LimitCount: 10000, OffsetCount: 0,
-	})
+	params, err := activity.ListParams(queryValues(query))
+	if err != nil {
+		return ioengine.Dataset{}, err
+	}
+	params.LimitCount, params.OffsetCount = 10000, 0
+	rows, err := a.q.ListActivityEvents(ctx, params)
 	if err != nil {
 		return ioengine.Dataset{}, err
 	}

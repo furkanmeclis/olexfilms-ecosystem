@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 
 	bulkusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/bulk/usecase"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/orglist"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine/adapters"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
@@ -43,6 +46,27 @@ func (h *Handler) ExecuteUsers(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ExecuteRoles(w http.ResponseWriter, r *http.Request) {
 	h.execute(w, r, adapters.ResourceRoles)
+}
+
+// ExecuteOrganizations runs a platform organizations bulk action
+// (TEC-365). The request brand is stamped on the target query so the job
+// (sync or async) stays inside it.
+func (h *Handler) ExecuteOrganizations(w http.ResponseWriter, r *http.Request) {
+	brand, ok := brandctx.From(r.Context())
+	if !ok {
+		response.NotFound(w, r, "brand not resolved")
+		return
+	}
+	var body bulkRequest
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, "invalid JSON body")
+		return
+	}
+	if body.Target.Query == nil {
+		body.Target.Query = map[string]string{}
+	}
+	body.Target.Query[orglist.QueryBrandID] = strconv.FormatInt(brand.ID, 10)
+	h.executeBody(w, r, adapters.ResourceOrganizations, body)
 }
 
 // ExecuteTenant returns a handler that runs a bulk action on an
