@@ -166,7 +166,7 @@ func (r *memRepo) UpdateUserPlatform(_ context.Context, id uuid.UUID, name, surn
 	return u, nil
 }
 
-func (r *memRepo) ListUsersFiltered(_ context.Context, _, _ int32, _, _, _ string) ([]model.User, int64, error) {
+func (r *memRepo) ListUsersFiltered(_ context.Context, _ model.UserListFilter) ([]model.User, int64, error) {
 	out := make([]model.User, 0, len(r.users))
 	for _, u := range r.users {
 		out = append(out, u)

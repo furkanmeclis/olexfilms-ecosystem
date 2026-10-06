@@ -9,6 +9,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -70,7 +71,7 @@ func (a *UsersAdapter) ResolveTargets(ctx context.Context, _ string, target bulk
 		return nil, fmt.Errorf("invalid target scope")
 	}
 	rows, err := a.q.ListUserUUIDsForBulk(ctx, db.ListUserUUIDsForBulkParams{
-		Q: textArg(target.Query["q"]), Status: textArg(target.Query["status"]),
+		Q: textArg(target.Query["q"]), Statuses: apiquery.SplitCSV(target.Query["status"]),
 		RoleSlug: textArg(target.Query["role"]),
 	})
 	if err != nil {

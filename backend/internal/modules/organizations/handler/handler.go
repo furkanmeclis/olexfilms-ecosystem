@@ -137,14 +137,22 @@ func (h *Handler) PlatformList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := apiquery.Parse(r.URL.Query())
-	if err := apiquery.ValidateSort(q.Sort, apiquery.TenantsSort); err != nil {
+	sort, err := apiquery.ResolveSort(q.Sort, apiquery.TenantsSortSpec)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	statuses, err := apiquery.EnumList(r.URL.Query(), "status", orgusecase.Statuses...)
+	if err != nil {
 		writeError(w, r, err)
 		return
 	}
 	filter := orgusecase.ListFilter{
-		Q:      q.Q,
-		Status: strings.TrimSpace(r.URL.Query().Get("status")),
-		Type:   strings.TrimSpace(r.URL.Query().Get("type")),
+		Q:        q.Q,
+		Statuses: statuses,
+		Type:     strings.TrimSpace(r.URL.Query().Get("type")),
+		SortKey:  sort.Key,
+		SortDesc: sort.Desc,
 	}
 	if raw := strings.TrimSpace(r.URL.Query().Get("parent_uuid")); raw != "" {
 		parent, err := uuid.Parse(raw)
@@ -604,6 +612,15 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
 }
 
 func writeError(w http.ResponseWriter, r *http.Request, err error) {
+	var ve *apiquery.ValidationError
+	if errors.As(err, &ve) {
+		details := make([]response.Detail, 0, len(ve.Details))
+		for _, d := range ve.Details {
+			details = append(details, response.Detail{Field: d.Field, Message: d.Message, Code: d.Code})
+		}
+		response.ValidationError(w, r, details)
+		return
+	}
 	switch {
 	case errors.Is(err, orgusecase.ErrNotFound):
 		response.NotFound(w, r, "Organization was not found")

@@ -454,11 +454,18 @@ func (s *Service) EnsureInBrand(ctx context.Context, id uuid.UUID) error {
 
 // ListFilter narrows the platform organization list.
 type ListFilter struct {
-	Q          string
-	Status     string
+	Q string
+	// Statuses is a multi-value status filter (TEC-363); empty means all.
+	Statuses   []string
 	Type       string
 	ParentUUID *uuid.UUID
+	// SortKey/SortDesc come from apiquery.ResolveSort(…, TenantsSortSpec).
+	SortKey  string
+	SortDesc bool
 }
+
+// Statuses are the organizations.status values (chk_organizations_status).
+var Statuses = []string{"pending", "active", "read_only", "suspended", "expired"}
 
 // List returns paginated organizations of the request brand for platform admin.
 func (s *Service) List(ctx context.Context, limit, offset int32, f ListFilter) ([]Organization, int64, error) {
@@ -466,7 +473,7 @@ func (s *Service) List(ctx context.Context, limit, offset int32, f ListFilter) (
 	if err != nil {
 		return nil, 0, err
 	}
-	q, status := f.Q, f.Status
+	q := f.Q
 	brandArg := pgtype.Int8{Int64: brand.ID, Valid: true}
 	var typeArg pgtype.Text
 	if f.Type != "" {
@@ -483,23 +490,19 @@ func (s *Service) List(ctx context.Context, limit, offset int32, f ListFilter) (
 		}
 		parentArg = pgtype.Int8{Int64: parent.Organization.ID, Valid: true}
 	}
-	var statusArg pgtype.Text
-	if status != "" {
-		statusArg = pgtype.Text{String: status, Valid: true}
-	}
 	var qArg pgtype.Text
 	if q != "" {
 		qArg = pgtype.Text{String: q, Valid: true}
 	}
 	rows, err := s.q.ListOrganizationsFiltered(ctx, db.ListOrganizationsFilteredParams{
-		Status: statusArg, BrandID: brandArg, Type: typeArg, ParentID: parentArg,
-		Q: qArg, LimitCount: limit, OffsetCount: offset,
+		Statuses: f.Statuses, BrandID: brandArg, Type: typeArg, ParentID: parentArg,
+		Q: qArg, SortKey: f.SortKey, SortDesc: f.SortDesc, LimitCount: limit, OffsetCount: offset,
 	})
 	if err != nil {
 		return nil, 0, err
 	}
 	total, err := s.q.CountOrganizations(ctx, db.CountOrganizationsParams{
-		Status: statusArg, BrandID: brandArg, Type: typeArg, ParentID: parentArg, Q: qArg,
+		Statuses: f.Statuses, BrandID: brandArg, Type: typeArg, ParentID: parentArg, Q: qArg,
 	})
 	if err != nil {
 		return nil, 0, err

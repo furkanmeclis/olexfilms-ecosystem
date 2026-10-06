@@ -3,6 +3,7 @@ package resourcemeta
 import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine/adapters"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 )
 
 // ColumnType is the admin DataTable / meta column type contract.
@@ -76,14 +77,14 @@ type ResourceMeta struct {
 func PlatformUsers() ResourceMeta {
 	return ResourceMeta{
 		Resource:      "platform.users",
-		DefaultSort:   "-created_at",
+		DefaultSort:   apiquery.UsersSortSpec.DefaultString(),
 		DefaultFields: []string{"uuid", "email", "name", "surname", "status"},
 		Capabilities: Capabilities{
 			Create: true, Read: true, Update: true, Delete: false,
 			Search: true, Filter: true, Sort: true, Export: true, Import: true, Bulk: true,
 		},
 		SearchableFields: []string{"email", "name", "surname"},
-		SortableFields:   []string{"email", "name", "surname", "status", "created_at", "updated_at"},
+		SortableFields:   apiquery.UsersSortSpec.Fields(),
 		FilterableFields: []string{"status", "role"},
 		Columns: []Column{
 			{Key: "uuid", LabelKey: "users.uuid", Type: ColumnTypeUUID, DefaultVisible: true},
@@ -132,14 +133,14 @@ func PlatformRoles() ResourceMeta {
 func Notifications() ResourceMeta {
 	return ResourceMeta{
 		Resource:      "notifications",
-		DefaultSort:   "-created_at",
+		DefaultSort:   apiquery.NotificationsSortSpec.DefaultString(),
 		DefaultFields: []string{"uuid", "channel", "status", "priority", "title", "created_at", "read_at"},
 		Capabilities: Capabilities{
 			Create: false, Read: true, Update: false, Delete: false,
 			Search: true, Filter: true, Sort: true, Export: false, Import: false, Bulk: false,
 		},
 		SearchableFields: []string{"title", "body", "template_code", "recipient"},
-		SortableFields:   []string{"channel", "status", "priority", "created_at", "updated_at", "sent_at"},
+		SortableFields:   apiquery.NotificationsSortSpec.Fields(),
 		FilterableFields: []string{"status", "channel", "unread"},
 		Columns: []Column{
 			{Key: "uuid", LabelKey: "notifications.uuid", Type: ColumnTypeUUID, DefaultVisible: true},
@@ -220,13 +221,13 @@ func PlatformStorage() ResourceMeta {
 func PlatformLogs() ResourceMeta {
 	return ResourceMeta{
 		Resource:      "platform.logs",
-		DefaultSort:   "-created_at",
+		DefaultSort:   apiquery.LogsSortSpec.DefaultString(),
 		DefaultFields: []string{"level", "message", "source", "created_at"},
 		Capabilities: Capabilities{
 			Read: true, Delete: true, Search: true, Filter: true, Sort: true, Bulk: false,
 		},
 		SearchableFields: []string{"message", "source", "request_id"},
-		SortableFields:   []string{"created_at", "level", "source"},
+		SortableFields:   apiquery.LogsSortSpec.Fields(),
 		FilterableFields: []string{"level", "source", "created_from", "created_to"},
 		Columns: []Column{
 			{Key: "level", LabelKey: "logs.columns.level", Type: ColumnTypeEnum, Sortable: true, Filterable: true, FilterVariant: FilterVariantFaceted, DefaultVisible: true},
@@ -266,14 +267,14 @@ func PlatformLogRules() ResourceMeta {
 func PlatformOrganizations() ResourceMeta {
 	return ResourceMeta{
 		Resource:      "platform.organizations",
-		DefaultSort:   "-created_at",
+		DefaultSort:   apiquery.TenantsSortSpec.DefaultString(),
 		DefaultFields: []string{"uuid", "slug", "name", "city", "phone", "status", "plan_code", "access_ends_at"},
 		Capabilities: Capabilities{
 			Create: true, Read: true, Update: true, Delete: false,
 			Search: true, Filter: true, Sort: true, Export: false, Import: false, Bulk: false,
 		},
 		SearchableFields: []string{"name", "slug", "city", "phone"},
-		SortableFields:   []string{"name", "slug", "city", "status", "created_at", "access_ends_at"},
+		SortableFields:   apiquery.TenantsSortSpec.Fields(),
 		FilterableFields: []string{"status"},
 		Columns: []Column{
 			{Key: "uuid", LabelKey: "organizations.uuid", Type: ColumnTypeUUID, DefaultVisible: true},

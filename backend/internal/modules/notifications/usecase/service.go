@@ -514,9 +514,11 @@ func (s *Service) ListPlatform(
 	ctx context.Context,
 	actor authctx.Principal,
 	q apiquery.Query,
-	status, channel, scope, userUUID string,
+	statuses []string,
+	channel, scope, userUUID string,
 ) (apiquery.Page[model.Notification], error) {
-	if err := apiquery.ValidateSort(q.Sort, apiquery.NotificationsSort); err != nil {
+	sort, err := apiquery.ResolveSort(q.Sort, apiquery.NotificationsSortSpec)
+	if err != nil {
 		return apiquery.Page[model.Notification]{}, err
 	}
 	audience, err := resolvePlatformAudience(actor, scope, userUUID, func(id uuid.UUID) (int64, error) {
@@ -526,15 +528,16 @@ func (s *Service) ListPlatform(
 		return apiquery.Page[model.Notification]{}, err
 	}
 	params := db.ListPlatformNotificationsParams{
-		Status: optionalText(status), Channel: optionalText(channel), Q: optionalText(q.Q),
-		UserID: audience.UserID, LimitCount: q.Limit, OffsetCount: q.Offset,
+		Statuses: statuses, Channel: optionalText(channel), Q: optionalText(q.Q),
+		UserID: audience.UserID, SortKey: sort.Key, SortDesc: sort.Desc,
+		LimitCount: q.Limit, OffsetCount: q.Offset,
 	}
 	rows, err := s.q.ListPlatformNotifications(ctx, params)
 	if err != nil {
 		return apiquery.Page[model.Notification]{}, err
 	}
 	total, err := s.q.CountPlatformNotifications(ctx, db.CountPlatformNotificationsParams{
-		Status: params.Status, Channel: params.Channel, Q: params.Q, UserID: params.UserID,
+		Statuses: params.Statuses, Channel: params.Channel, Q: params.Q, UserID: params.UserID,
 	})
 	if err != nil {
 		return apiquery.Page[model.Notification]{}, err

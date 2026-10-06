@@ -14,6 +14,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/password"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -48,7 +49,7 @@ func (a *UsersAdapter) ExportColumns() []ioengine.Column {
 
 func (a *UsersAdapter) Export(ctx context.Context, query ioengine.ExportQuery, _ i18n.Locale) (ioengine.Dataset, error) {
 	rows, err := a.q.ListUsersForExport(ctx, db.ListUsersForExportParams{
-		Q: textArg(query["q"]), Status: textArg(query["status"]), RoleSlug: textArg(query["role"]),
+		Q: textArg(query["q"]), Statuses: apiquery.SplitCSV(query["status"]), RoleSlug: textArg(query["role"]),
 	})
 	if err != nil {
 		return ioengine.Dataset{}, err
@@ -312,7 +313,7 @@ func (a *NotificationsAdapter) ExportColumns() []ioengine.Column {
 
 func (a *NotificationsAdapter) Export(ctx context.Context, query ioengine.ExportQuery, _ i18n.Locale) (ioengine.Dataset, error) {
 	params := db.ListPlatformNotificationsForExportParams{
-		Status: textArg(query["status"]), Channel: textArg(query["channel"]), Q: textArg(query["q"]),
+		Statuses: apiquery.SplitCSV(query["status"]), Channel: textArg(query["channel"]), Q: textArg(query["q"]),
 	}
 	if raw := strings.TrimSpace(query["user_uuid"]); raw != "" {
 		id, err := uuid.Parse(raw)

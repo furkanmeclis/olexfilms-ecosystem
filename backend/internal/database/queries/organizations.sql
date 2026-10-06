@@ -29,12 +29,16 @@ SELECT EXISTS(
 ) AS exists;
 
 -- name: ListOrganizationsFiltered :many
+-- Sort: docs/list-contract.md, keys from apiquery.TenantsSortSpec.
 SELECT sqlc.embed(o), b.slug AS brand_slug, p.uuid AS parent_uuid, p.name AS parent_name
 FROM organizations o
 JOIN brands b ON b.id = o.brand_id
 LEFT JOIN organizations p ON p.id = o.parent_id
 WHERE o.deleted_at IS NULL
-  AND (sqlc.narg(status)::text IS NULL OR o.status = sqlc.narg(status))
+  AND (
+    COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0
+    OR o.status = ANY (sqlc.narg(statuses)::text[])
+  )
   AND (sqlc.narg(brand_id)::bigint IS NULL OR o.brand_id = sqlc.narg(brand_id))
   AND (sqlc.narg(type)::text IS NULL OR o.type = sqlc.narg(type))
   AND (sqlc.narg(parent_id)::bigint IS NULL OR o.parent_id = sqlc.narg(parent_id))
@@ -45,14 +49,44 @@ WHERE o.deleted_at IS NULL
     OR o.city ILIKE '%' || sqlc.narg(q) || '%'
     OR o.phone ILIKE '%' || sqlc.narg(q) || '%'
   )
-ORDER BY o.created_at DESC
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'name' THEN o.name WHEN 'slug' THEN o.slug
+      WHEN 'city' THEN o.city WHEN 'status' THEN o.status
+    END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'name' THEN o.name WHEN 'slug' THEN o.slug
+      WHEN 'city' THEN o.city WHEN 'status' THEN o.status
+    END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'created_at' THEN o.created_at WHEN 'updated_at' THEN o.updated_at
+    END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'created_at' THEN o.created_at WHEN 'updated_at' THEN o.updated_at
+    END
+  END DESC,
+  -- Nullable column: its own pair so NULLS LAST does not affect the others.
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'access_ends_at' THEN o.access_ends_at END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'access_ends_at' THEN o.access_ends_at END DESC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN o.id END DESC,
+  o.id ASC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
 -- name: CountOrganizations :one
 SELECT COUNT(*)::bigint
 FROM organizations
 WHERE deleted_at IS NULL
-  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status))
+  AND (
+    COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0
+    OR status = ANY (sqlc.narg(statuses)::text[])
+  )
   AND (sqlc.narg(brand_id)::bigint IS NULL OR brand_id = sqlc.narg(brand_id))
   AND (sqlc.narg(type)::text IS NULL OR type = sqlc.narg(type))
   AND (sqlc.narg(parent_id)::bigint IS NULL OR parent_id = sqlc.narg(parent_id))

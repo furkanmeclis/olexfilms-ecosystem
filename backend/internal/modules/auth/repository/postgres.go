@@ -615,19 +615,18 @@ func (r *Postgres) ConsumeOTP(ctx context.Context, id int64) error {
 	return r.q.ConsumeOTP(ctx, id)
 }
 
-func (r *Postgres) ListUsersFiltered(ctx context.Context, limit, offset int32, q, status, roleSlug string) ([]model.User, int64, error) {
-	params := db.ListUsersFilteredParams{LimitCount: limit, OffsetCount: offset}
-	countParams := db.CountUsersParams{}
-	if q != "" {
-		params.Q = pgtype.Text{String: q, Valid: true}
+func (r *Postgres) ListUsersFiltered(ctx context.Context, f model.UserListFilter) ([]model.User, int64, error) {
+	params := db.ListUsersFilteredParams{
+		Statuses: f.Statuses, SortKey: f.SortKey, SortDesc: f.SortDesc,
+		LimitCount: f.Limit, OffsetCount: f.Offset,
+	}
+	countParams := db.CountUsersParams{Statuses: f.Statuses}
+	if f.Q != "" {
+		params.Q = pgtype.Text{String: f.Q, Valid: true}
 		countParams.Q = params.Q
 	}
-	if status != "" {
-		params.Status = pgtype.Text{String: status, Valid: true}
-		countParams.Status = params.Status
-	}
-	if roleSlug != "" {
-		params.RoleSlug = pgtype.Text{String: roleSlug, Valid: true}
+	if f.RoleSlug != "" {
+		params.RoleSlug = pgtype.Text{String: f.RoleSlug, Valid: true}
 		countParams.RoleSlug = params.RoleSlug
 	}
 	rows, err := r.q.ListUsersFiltered(ctx, params)
