@@ -4,7 +4,6 @@ package handler
 import (
 	"errors"
 	"net/http"
-	"slices"
 	"strings"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/model"
@@ -19,7 +18,8 @@ import (
 
 // Handler serves stock read endpoints.
 type Handler struct {
-	svc *stockusecase.Service
+	svc     *stockusecase.Service
+	exports Exports
 }
 
 // New creates the handler.
@@ -31,6 +31,20 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		return
 	}
 	response.InternalErr(w, r, err, "stock request failed")
+}
+
+// writeQueryError answers a list parameter error (400 VALIDATION_ERROR).
+func writeQueryError(w http.ResponseWriter, r *http.Request, err error) {
+	var qe *apiquery.ValidationError
+	if errors.As(err, &qe) {
+		details := make([]response.Detail, 0, len(qe.Details))
+		for _, d := range qe.Details {
+			details = append(details, response.Detail{Field: d.Field, Message: d.Message, Code: d.Code})
+		}
+		response.ValidationError(w, r, details)
+		return
+	}
+	writeError(w, r, err)
 }
 
 func filterFrom(w http.ResponseWriter, r *http.Request) (scopefilter.Filter, bool) {
@@ -78,6 +92,13 @@ func stockFilter(w http.ResponseWriter, r *http.Request) (model.StockFilter, boo
 		response.BadRequest(w, r, response.CodeValidationError, "status must be in_stock or out_of_stock")
 		return f, false
 	}
+	// TEC-373: product, sku, category, quantity, meters, updated_at.
+	sort, err := apiquery.ResolveSort(q.Sort, stockusecase.ProductStockSort)
+	if err != nil {
+		writeQueryError(w, r, err)
+		return f, false
+	}
+	f.Sort = sort
 	return f, true
 }
 
@@ -127,32 +148,15 @@ func (h *Handler) OrganizationUnits(w http.ResponseWriter, r *http.Request) {
 		response.BadRequest(w, r, response.CodeValidationError, "uuid is invalid")
 		return
 	}
-	q := apiquery.Parse(r.URL.Query())
-	in := model.UnitFilter{
-		Q: q.Q, Limit: q.Limit, Offset: q.Offset,
-		Barcode: strings.TrimSpace(r.URL.Query().Get("barcode")),
-		Status:  strings.TrimSpace(r.URL.Query().Get("status")),
-	}
-	if len(in.Barcode) > 64 {
-		response.BadRequest(w, r, response.CodeValidationError, "barcode is too long")
+	in, err := stockusecase.ParseUnitFilter(r.URL.Query())
+	if err != nil {
+		writeQueryError(w, r, err)
 		return
-	}
-	if in.Status != "" && !slices.Contains(model.UnitStatuses, in.Status) {
-		response.BadRequest(w, r, response.CodeValidationError, "status must be one of "+strings.Join(model.UnitStatuses, ", "))
-		return
-	}
-	if raw := strings.TrimSpace(r.URL.Query().Get("product_uuid")); raw != "" {
-		pid, err := uuid.Parse(raw)
-		if err != nil {
-			response.BadRequest(w, r, response.CodeValidationError, "product_uuid is invalid")
-			return
-		}
-		in.ProductUUID = &pid
 	}
 	v := stockusecase.UnitViewer{Principal: p, Org: orgctx.MustScope(r.Context()), Filter: f}
 	items, total, err := h.svc.OrganizationUnits(r.Context(), v, id, in)
 	if err != nil {
-		writeError(w, r, err)
+		writeQueryError(w, r, err)
 		return
 	}
 	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, in.Limit, in.Offset))

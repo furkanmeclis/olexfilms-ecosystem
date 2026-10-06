@@ -219,6 +219,9 @@ func main() {
 		warrantyclaimsusecase.NewFailureRateAdapter(warrantyClaimsSvc),
 		warrantyclaimsusecase.NewByDealerAdapter(warrantyClaimsSvc),
 		warrantyclaimsusecase.NewPartsAdapter(warrantyClaimsSvc),
+		// TEC-373: order list and stock unit list exports (read only).
+		ordersusecase.NewListExportAdapter(ordersusecase.New(pool, queries, nil, nil)),
+		stockusecase.NewUnitsExportAdapter(stockusecase.New(queries)),
 	)
 	exportSvc := exportusecase.New(queries, store, ioReg, nil, notifSvc, activityRec, log)
 	pdfClient := pdfrender.NewWithOptions(cfg.Gotenberg.URL, pdfrender.Options{MaxConnsPerHost: cfg.Queue.Concurrency})

@@ -334,12 +334,16 @@ type stockArgs struct {
 	category pgtype.Int8
 	inStock  pgtype.Bool
 	q        pgtype.Text
+	// sortKey / sortDesc are the resolved sort (TEC-373).
+	sortKey  string
+	sortDesc bool
 }
 
 // resolveFilter turns the UUID filters into ids; ok=false means a filter
 // names nothing, so the list is empty.
 func (s *Service) resolveFilter(ctx context.Context, f scopefilter.Filter, in model.StockFilter) (stockArgs, bool, error) {
 	a := stockArgs{brand: f.BrandIDArg()}
+	a.sortKey, a.sortDesc = resolvedSort(in.Sort, ProductStockSort)
 	if in.ProductUUID != nil {
 		id, err := s.q.GetProductIDByUUID(ctx, *in.ProductUUID)
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -393,7 +397,7 @@ func (s *Service) OrganizationStock(ctx context.Context, f scopefilter.Filter, o
 	}
 	rows, err := s.q.ListOrganizationProductStockRows(ctx, db.ListOrganizationProductStockRowsParams{
 		OrganizationID: o.ID, BrandID: a.brand, ProductID: a.product, CategoryID: a.category, InStock: a.inStock, Q: a.q,
-		LimitCount: in.Limit, OffsetCount: in.Offset,
+		SortKey: a.sortKey, SortDesc: a.sortDesc, LimitCount: in.Limit, OffsetCount: in.Offset,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("stock: organization stock: %w", err)
@@ -435,7 +439,7 @@ func (s *Service) LocationStock(ctx context.Context, f scopefilter.Filter, locUU
 	}
 	binRows, err := s.q.ListBinProductStockRows(ctx, db.ListBinProductStockRowsParams{
 		LocationID: loc.ID, BrandID: a.brand, ProductID: a.product, CategoryID: a.category, InStock: a.inStock, Q: a.q,
-		LimitCount: in.Limit, OffsetCount: in.Offset,
+		SortKey: a.sortKey, SortDesc: a.sortDesc, LimitCount: in.Limit, OffsetCount: in.Offset,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("stock: bin stock: %w", err)

@@ -111,7 +111,22 @@ type orderScope struct {
 	brand  int64
 	orgID  int64   // the active organization (side seller / buyer)
 	orgIDs []int64 // side all: nil = whole brand
-	status pgtype.Text
+	// statuses is any-of (empty: every status).
+	statuses []string
+}
+
+// params is the ListOrdersFiltered scope of sc (side and statuses).
+func (sc orderScope) params() db.ListOrdersFilteredParams {
+	p := db.ListOrdersFilteredParams{BrandID: sc.brand, Statuses: sc.statuses}
+	switch sc.side {
+	case SideSeller:
+		p.SellerOrgID = pgtype.Int8{Int64: sc.orgID, Valid: true}
+	case SideBuyer:
+		p.BuyerOrgID = pgtype.Int8{Int64: sc.orgID, Valid: true}
+	default:
+		p.OrgIds = sc.orgIDs
+	}
+	return p
 }
 
 // indexFilter is the Meilisearch filter of the scope. ok is false when the
@@ -134,8 +149,8 @@ func indexFilter(sc orderScope) (string, bool) {
 			f.In("organization_ids", sc.orgIDs)
 		}
 	}
-	if sc.status.Valid {
-		f.EqString("status", sc.status.String)
+	if len(sc.statuses) > 0 {
+		f.InStrings("status", sc.statuses)
 	}
 	return f.String(), true
 }
@@ -156,22 +171,11 @@ func (s *Service) searchIndexed(ctx context.Context, sc orderScope, q string, li
 	if len(uuids) == 0 {
 		return []db.Order{}, total, true
 	}
-	n := int32(len(uuids))
-	var rows []db.Order
-	switch sc.side {
-	case SideSeller:
-		rows, err = s.q.ListOrdersBySeller(ctx, db.ListOrdersBySellerParams{
-			BrandID: sc.brand, SellerOrgID: sc.orgID, Status: sc.status, Uuids: uuids, RowLimit: n,
-		})
-	case SideBuyer:
-		rows, err = s.q.ListOrdersByBuyer(ctx, db.ListOrdersByBuyerParams{
-			BrandID: sc.brand, BuyerOrgID: sc.orgID, Status: sc.status, Uuids: uuids, RowLimit: n,
-		})
-	default:
-		rows, err = s.q.ListOrdersInScope(ctx, db.ListOrdersInScopeParams{
-			BrandID: sc.brand, OrgIds: sc.orgIDs, Status: sc.status, Uuids: uuids, RowLimit: n,
-		})
-	}
+	p := sc.params()
+	p.Uuids = uuids
+	key, desc := sortArgs(ListFilter{})
+	p.SortKey, p.SortDesc, p.RowLimit = key, desc, int32(len(uuids)) //nolint:gosec // bounded by the page size
+	rows, err := s.q.ListOrdersFiltered(ctx, p)
 	if err != nil {
 		return nil, 0, false
 	}

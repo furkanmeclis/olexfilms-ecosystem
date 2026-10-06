@@ -10,13 +10,11 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // TEC-210: the orders index filter pins the domain brand (K20) and mirrors
 // the side / scope of the SQL list.
 func TestOrdersIndexFilter(t *testing.T) {
-	st := pgtype.Text{String: "shipped", Valid: true}
 	cases := []struct {
 		name string
 		sc   orderScope
@@ -24,7 +22,8 @@ func TestOrdersIndexFilter(t *testing.T) {
 		ok   bool
 	}{
 		{"brand scope", orderScope{brand: 2}, "brand_ids = 2", true},
-		{"subtree", orderScope{brand: 2, orgIDs: []int64{5, 7}, status: st}, `brand_ids = 2 AND organization_ids IN [5, 7] AND status = "shipped"`, true},
+		{"subtree", orderScope{brand: 2, orgIDs: []int64{5, 7}, statuses: []string{"shipped"}}, `brand_ids = 2 AND organization_ids IN [5, 7] AND status IN ["shipped"]`, true},
+		{"statuses", orderScope{brand: 2, statuses: []string{"draft", "shipped"}}, `brand_ids = 2 AND status IN ["draft", "shipped"]`, true},
 		{"seller", orderScope{side: SideSeller, brand: 2, orgID: 5, orgIDs: []int64{5}}, "brand_ids = 2 AND seller_org_id = 5", true},
 		{"buyer", orderScope{side: SideBuyer, brand: 2, orgID: 5}, "brand_ids = 2 AND buyer_org_id = 5", true},
 		{"empty reach", orderScope{brand: 2, orgIDs: []int64{}}, "", false},

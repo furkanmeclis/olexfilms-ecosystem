@@ -8145,13 +8145,17 @@ paths:
         units only (in transit, used and void are not counted). `quantity`
         counts pieces and fixed barcode quantities, `meters` the remaining
         roll meters; `fixed_barcodes` lists the fixed barcode quantities on
-        hand. `q` matches product name or SKU.
+        hand. `q` matches product name or SKU. TEC-373: `sort` is one of
+        product (name, default), sku, category (name), quantity, meters,
+        updated_at (product id tiebreak). A product picker loads the
+        products page by page with `q` (limit is at most 100).
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
         - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
         - $ref: "#/components/parameters/StockProductUUIDFilter"
         - $ref: "#/components/parameters/StockCategoryUUIDFilter"
         - $ref: "#/components/parameters/StockStatusFilter"
@@ -8198,16 +8202,31 @@ paths:
         the viewer's `pricing.purchase.read` does not reach the
         organization (a direct parent sees its child's purchase price
         through its own `pricing.sale.read`), for the center, or when no
-        price is set.
+        price is set. TEC-373 (docs/list-contract.md): `status` is a comma
+        separated any-of filter; `barcode_match=prefix` makes `barcode` a
+        prefix match; `location_uuid` (comma separated) keeps units on
+        those locations (fixed barcodes have no single location and drop
+        out); `updated_from` / `updated_to` bound the holding's last
+        change; `sort` is one of product (default; barcode inside a
+        product), barcode, status (flow rank reserved → void), quantity,
+        meters (remaining, pieces last), updated_at, with an id tiebreak.
+        An explicit sort, a barcode, location or date filter makes `q`
+        search Postgres instead of the index. Labels for selected units:
+        GET /v1/stock/labels/units.pdf with one `barcode` per unit.
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
         - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
         - $ref: "#/components/parameters/StockProductUUIDFilter"
         - $ref: "#/components/parameters/StockUnitStatusFilter"
         - $ref: "#/components/parameters/StockBarcodeFilter"
+        - $ref: "#/components/parameters/StockBarcodeMatch"
+        - $ref: "#/components/parameters/StockLocationUUIDFilter"
+        - $ref: "#/components/parameters/UpdatedFrom"
+        - $ref: "#/components/parameters/UpdatedTo"
       responses:
         "200":
           description: Units of the organization
@@ -8215,6 +8234,46 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeStockUnitPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/stock/organizations/{uuid}/units/export:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    post:
+      tags: [Stock]
+      operationId: requestStockUnitListExport
+      summary: Queue a unit list export of an organization (CSV, XLSX or PDF)
+      description: >-
+        TEC-373. stock.read with the list's scope; the organization must be
+        inside it (404 otherwise). The job (worker-docs, exports queue,
+        resource `stock.units`) exports the units the list shows for
+        `query` (every unit list parameter except limit and offset,
+        including `q` and `sort`; a bad value is 400 at request time; `q`
+        always searches Postgres). The purchase price is not exported. The
+        worker re-authorizes the stored scope against the job organization.
+        Poll and download through /v1/tenant/exports/{uuid}.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StockUnitListExportInput"
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -8234,14 +8293,15 @@ paths:
       description: >-
         Needs `stock.read`; the location's organization must be inside the
         viewer's reach (404 otherwise). Rows come from the
-        `bin_product_stocks` projection; same shape and filters as the
-        organization stock.
+        `bin_product_stocks` projection; same shape, filters and sort as
+        the organization stock.
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
         - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
         - $ref: "#/components/parameters/StockProductUUIDFilter"
         - $ref: "#/components/parameters/StockCategoryUUIDFilter"
         - $ref: "#/components/parameters/StockStatusFilter"
@@ -18434,7 +18494,15 @@ paths:
         when Meilisearch is up (and no created_from / created_to is given)
         the orders index answers it, which also matches the seller and
         buyer names and dealer codes, inside the same scope (hits are
-        reloaded from Postgres).
+        reloaded from Postgres). TEC-373 (docs/list-contract.md): `sort`
+        is one of order_no, status (flow rank draft → cancelled), total,
+        created_at (default `-created_at`, id tiebreak); `status`,
+        `seller_org_uuid` and `buyer_org_uuid` are comma separated any-of
+        filters; `total_min` / `total_max` bound the order total
+        (inclusive, order currency). The party filters only narrow the
+        scoped set, so an organization outside the scope gives an empty
+        list. An explicit sort, a date, party or total filter makes `q`
+        search Postgres instead of the index.
       security:
         - bearerAuth: []
       parameters:
@@ -18442,9 +18510,14 @@ paths:
           in: query
           schema: { type: string, enum: [seller, buyer] }
         - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
         - name: status
           in: query
-          schema: { $ref: "#/components/schemas/OrderStatus" }
+          description: >-
+            Comma separated order statuses (draft, submitted, approved,
+            preparing, ready, processing, shipped, delivered, received,
+            cancelling, cancelled); unknown value → 400.
+          schema: { type: string }
         - name: created_from
           in: query
           description: >-
@@ -18454,9 +18527,26 @@ paths:
         - name: created_to
           in: query
           description: >-
-            Exclusive upper bound of created_at: RFC3339, or a YYYY-MM-DD day
-            in UTC that covers the whole day. Must be after created_from.
+            Upper bound of created_at: a YYYY-MM-DD day in UTC covers the
+            whole day, an RFC3339 value that instant. Must not be before
+            created_from.
           schema: { type: string }
+        - name: seller_org_uuid
+          in: query
+          description: Comma separated seller organization uuids (any of).
+          schema: { type: string }
+        - name: buyer_org_uuid
+          in: query
+          description: Comma separated buyer organization uuids (any of).
+          schema: { type: string }
+        - name: total_min
+          in: query
+          description: Inclusive lower bound of the order total.
+          schema: { type: number }
+        - name: total_max
+          in: query
+          description: Inclusive upper bound of the order total.
+          schema: { type: number }
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
@@ -18511,6 +18601,40 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/orders/export:
+    post:
+      tags: [Orders]
+      operationId: requestOrderListExport
+      summary: Queue an order list export (CSV, XLSX or PDF)
+      description: >-
+        TEC-373. orders.read with the list's scope: the job (worker-docs,
+        exports queue, resource `orders.list`) exports the orders the list
+        shows for `query` (every GET /v1/orders parameter except limit and
+        offset, including `q` and `sort`; a bad value is 400 at request
+        time). The worker re-authorizes the stored scope against the job
+        organization. Poll and download through /v1/tenant/exports/{uuid}.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderListExportInput"
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /v1/orders/{uuid}:
     get:
@@ -18758,19 +18882,39 @@ paths:
         receiver (incoming) or the common parent (approval); direction
         narrows the list. Needs transfers.request or transfers.approve and
         the dealer_transfers module. List rows carry no items. kind narrows
-        to sibling transfers or returns to the parent (TEC-223).
+        to sibling transfers or returns to the parent (TEC-223). TEC-373
+        (docs/list-contract.md): `kind`, `direction` and `status` are comma
+        separated any-of filters; `q` matches the transfer number and the
+        sender / receiver names; `organization_uuid` keeps requests whose
+        sender or receiver is one of the listed organizations; `sort` is
+        one of transfer_no, status (flow rank requested, approved, shipped,
+        received, rejected, cancelled), created_at (default `-created_at`,
+        id tiebreak).
       security:
         - bearerAuth: []
       parameters:
         - name: kind
           in: query
-          schema: { $ref: "#/components/schemas/StockTransferKind" }
+          description: Comma separated kinds (sibling, return).
+          schema: { type: string }
         - name: direction
           in: query
-          schema: { type: string, enum: [outgoing, incoming, approval] }
+          description: Comma separated directions (outgoing, incoming, approval).
+          schema: { type: string }
         - name: status
           in: query
-          schema: { $ref: "#/components/schemas/StockTransferStatus" }
+          description: >-
+            Comma separated statuses (requested, approved, rejected,
+            shipped, received, cancelled).
+          schema: { type: string }
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
+        - name: organization_uuid
+          in: query
+          description: Comma separated sender / receiver organization uuids (any of).
+          schema: { type: string }
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
@@ -21158,13 +21302,38 @@ components:
     StockUnitStatusFilter:
       name: status
       in: query
-      description: One unit status; without it the list holds available and placed units.
-      schema: { $ref: "#/components/schemas/StockUnitStatus" }
+      description: >-
+        Comma separated unit statuses (reserved, printed, available, placed,
+        in_transit, used, void); without it the list holds available and
+        placed units.
+      schema: { type: string }
     StockBarcodeFilter:
       name: barcode
       in: query
-      description: Exact barcode (scanner lookup).
+      description: Barcode; exact (scanner lookup) unless barcode_match=prefix.
       schema: { type: string, maxLength: 64 }
+    StockBarcodeMatch:
+      name: barcode_match
+      in: query
+      description: "`exact` (default) or `prefix` (TEC-373)."
+      schema: { type: string, enum: [exact, prefix] }
+    StockLocationUUIDFilter:
+      name: location_uuid
+      in: query
+      description: Comma separated warehouse location uuids (any of).
+      schema: { type: string }
+    UpdatedFrom:
+      name: updated_from
+      in: query
+      description: Updated on or after (YYYY-MM-DD = UTC midnight, or RFC3339).
+      schema: { type: string }
+    UpdatedTo:
+      name: updated_to
+      in: query
+      description: >-
+        Updated on or before; a date (YYYY-MM-DD) covers the whole day, an
+        RFC3339 value that instant. `updated_from` after `updated_to` → 400.
+      schema: { type: string }
     StockStatusFilter:
       name: status
       in: query
@@ -24104,6 +24273,39 @@ components:
           properties:
             q: { type: string, maxLength: 100 }
             status: { type: string, enum: [active, disabled, pending, anonymized] }
+        locale:
+          type: string
+          description: Document language (defaults to the request locale).
+    OrderListExportInput:
+      type: object
+      required: [format]
+      properties:
+        format:
+          type: string
+          enum: [csv, xlsx, pdf]
+        query:
+          type: object
+          description: >-
+            List parameters of GET /v1/orders as strings (side, status, q,
+            sort, created_from, created_to, seller_org_uuid, buyer_org_uuid,
+            total_min, total_max).
+          additionalProperties: { type: string }
+        locale:
+          type: string
+          description: Document language (defaults to the request locale).
+    StockUnitListExportInput:
+      type: object
+      required: [format]
+      properties:
+        format:
+          type: string
+          enum: [csv, xlsx, pdf]
+        query:
+          type: object
+          description: >-
+            Unit list parameters as strings (q, sort, product_uuid, status,
+            barcode, barcode_match, location_uuid, updated_from, updated_to).
+          additionalProperties: { type: string }
         locale:
           type: string
           description: Document language (defaults to the request locale).
