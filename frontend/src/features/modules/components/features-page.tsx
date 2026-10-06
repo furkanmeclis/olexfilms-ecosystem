@@ -1,15 +1,27 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ColumnDef, RowSelectionState } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 
-import { EmptyState } from "@/components/common/empty-state";
-import { ErrorState } from "@/components/common/error-state";
 import { Loading } from "@/components/common/loading";
+import {
+  CLIENT_SIDE_MANUAL,
+  EntityTable,
+  EntityToolbar,
+  useServerListState,
+} from "@/components/entity";
 import { PageHeader } from "@/components/layout/page-header";
+import { createColumn, createSelectColumnDef } from "@/components/tables";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { permissions } from "@/config/permissions";
@@ -22,8 +34,15 @@ import {
   moduleName,
   moduleSourceLabel,
 } from "@/features/modules/lib/labels";
-import { modulesService } from "@/features/modules/services/modules.service";
-import type { ModuleLevel, ModuleState } from "@/features/modules/types";
+import {
+  modulesService,
+  type ListDealerModulesParams,
+} from "@/features/modules/services/modules.service";
+import type {
+  DealerModuleRow,
+  ModuleLevel,
+  ModuleState,
+} from "@/features/modules/types";
 import { useActiveOrganization } from "@/hooks/use-active-organization";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
@@ -103,107 +122,177 @@ export function FeaturesPage({ slug }: { slug: string }) {
   );
 }
 
+export const OWN_MODULES_PERSIST_KEY = "tenant-own-modules-v1";
+export const DEALER_MODULES_PERSIST_KEY = "tenant-dealer-modules-v1";
+
+/** `GET /v1/tenant/modules/dealers` source filter values (TEC-367). */
+export const DEALER_MODULE_SOURCES = [
+  "core",
+  "system",
+  "default",
+  "upstream",
+  "standard",
+  "admin",
+  "distributor",
+  "service",
+] as const;
+export const DEALER_MODULE_STATES = ["enabled", "disabled"] as const;
+const MODULE_LEVELS: ModuleLevel[] = ["core", "standard", "addon"];
+
 function OwnModules({ slug }: { slug: string }) {
   const { t } = useLocale();
   const { can } = usePermission();
   const canRequest = can(permissions.modules.read);
-  const { data, isLoading, isError, refetch } = useFeatures(slug);
+  const { data, isLoading, isError, isFetching, refetch } = useFeatures(slug);
   const request = useMutation({
     mutationFn: (key: string) => modulesService.request(key),
     onSuccess: () => appToast.success(t("modules.requested")),
     onError: (error) =>
       appToast.error(errorMessage(error, t("modules.request_failed"))),
   });
+  const requestPending = request.isPending;
+  const requestModule = request.mutate;
 
-  if (isLoading) return <Loading label={t("common.loading")} />;
-  if (isError || !data) {
-    return (
-      <ErrorState
-        title={t("modules.error.title")}
-        description={t("modules.error.description")}
-        retryLabel={t("common.retry")}
-        onRetry={() => refetch()}
-      />
-    );
-  }
-  if (!data.items.length) return <EmptyState title={t("modules.empty")} />;
+  const sources = useMemo(
+    () => [...new Set((data?.items ?? []).map((item) => item.source))],
+    [data?.items],
+  );
+
+  const columns = useMemo<ColumnDef<ModuleState, unknown>[]>(
+    () => [
+      createColumn<ModuleState>({
+        id: "module",
+        accessorFn: (row) => moduleName(t, row.key),
+        labelKey: "modules.columns.module",
+        enableSorting: true,
+        gridPrimary: true,
+        cell: ({ row }) => (
+          <span
+            className="font-medium"
+            data-testid={`module-${row.original.key}`}
+          >
+            {moduleName(t, row.original.key)}
+          </span>
+        ),
+      }),
+      createColumn<ModuleState>({
+        accessorKey: "level",
+        labelKey: "modules.columns.level",
+        enableSorting: true,
+        filterVariant: "faceted",
+        filterOptions: MODULE_LEVELS.map((value) => ({
+          value,
+          labelKey: `modules.level.${value}`,
+          label: value,
+        })),
+        cell: ({ row }) => <LevelBadge level={row.original.level} />,
+      }),
+      createColumn<ModuleState>({
+        accessorKey: "enabled",
+        labelKey: "modules.columns.status",
+        enableSorting: true,
+        filterVariant: "boolean",
+        gridSecondary: true,
+        cell: ({ row }) => <StateBadge on={row.original.enabled} />,
+      }),
+      createColumn<ModuleState>({
+        id: "price",
+        accessorFn: (row) =>
+          row.paid && !row.default_enabled ? "paid" : "free",
+        labelKey: "modules.columns.price",
+        enableSorting: true,
+        filterVariant: "faceted",
+        filterOptions: ["paid", "free"].map((value) => ({
+          value,
+          labelKey: `modules.price.${value}`,
+          label: value,
+        })),
+        cell: ({ getValue }) => t(`modules.price.${String(getValue())}`),
+      }),
+      createColumn<ModuleState>({
+        accessorKey: "source",
+        labelKey: "modules.columns.source",
+        enableSorting: true,
+        filterVariant: "faceted",
+        filterOptions: sources.map((value) => ({
+          value,
+          label: moduleSourceLabel(t, value),
+        })),
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">
+            {moduleSourceLabel(t, row.original.source)}
+            {row.original.set_by ? ` · ${row.original.set_by.name}` : null}
+          </span>
+        ),
+      }),
+      createColumn<ModuleState>({
+        id: "actions",
+        labelKey: "common.actions",
+        enableSorting: false,
+        enableHiding: false,
+        enableResizing: false,
+        cell: ({ row }) =>
+          !row.original.enabled && canRequest ? (
+            <div className="text-end">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={requestPending}
+                onClick={() => requestModule(row.original.key)}
+              >
+                {t("modules.request")}
+              </Button>
+            </div>
+          ) : null,
+      }),
+    ],
+    [canRequest, requestModule, requestPending, sources, t],
+  );
 
   return (
-    <div className="overflow-x-auto rounded-lg border">
-      <table className="w-full text-sm">
-        <thead className="bg-muted/50 text-muted-foreground">
-          <tr className="text-start">
-            <th className="px-3 py-2 text-start font-medium">
-              {t("modules.columns.module")}
-            </th>
-            <th className="px-3 py-2 text-start font-medium">
-              {t("modules.columns.level")}
-            </th>
-            <th className="px-3 py-2 text-start font-medium">
-              {t("modules.columns.status")}
-            </th>
-            <th className="px-3 py-2 text-start font-medium">
-              {t("modules.columns.price")}
-            </th>
-            <th className="px-3 py-2 text-start font-medium">
-              {t("modules.columns.source")}
-            </th>
-            <th className="px-3 py-2" />
-          </tr>
-        </thead>
-        <tbody>
-          {data.items.map((item: ModuleState) => (
-            <tr
-              key={item.key}
-              className="border-t"
-              data-testid={`module-${item.key}`}
-            >
-              <td className="px-3 py-2 font-medium">
-                {moduleName(t, item.key)}
-              </td>
-              <td className="px-3 py-2">
-                <LevelBadge level={item.level} />
-              </td>
-              <td className="px-3 py-2">
-                <StateBadge on={item.enabled} />
-              </td>
-              <td className="px-3 py-2">
-                {item.paid && !item.default_enabled
-                  ? t("modules.price.paid")
-                  : t("modules.price.free")}
-              </td>
-              <td className="text-muted-foreground px-3 py-2">
-                {moduleSourceLabel(t, item.source)}
-                {item.set_by ? ` · ${item.set_by.name}` : null}
-              </td>
-              <td className="px-3 py-2 text-end">
-                {!item.enabled && canRequest ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={request.isPending}
-                    onClick={() => request.mutate(item.key)}
-                  >
-                    {t("modules.request")}
-                  </Button>
-                ) : null}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <EntityTable
+      columns={columns}
+      data={data?.items ?? []}
+      getRowId={(row) => row.key}
+      manual={CLIENT_SIDE_MANUAL}
+      isLoading={isLoading}
+      isError={isError}
+      errorTitle={t("modules.error.title")}
+      errorDescription={t("modules.error.description")}
+      onRetry={() => void refetch()}
+      emptyTitle={t("modules.empty")}
+      emptyDescription=""
+      initialState={{ pagination: { pageIndex: 0, pageSize: 50 } }}
+      pageSizeOptions={[20, 50, 100]}
+      features={{
+        persistKey: OWN_MODULES_PERSIST_KEY,
+        rowSelection: false,
+      }}
+      toolbarExtra={
+        <EntityToolbar
+          onRefresh={() => void refetch()}
+          refreshDisabled={isFetching}
+        />
+      }
+    />
   );
 }
 
-function DealerModules({ slug, orgUuid }: { slug: string; orgUuid: string }) {
+/**
+ * Dealer module matrix for one module (server list: q on name/slug, sort
+ * name/slug, paging; state/source filters go with `module`). Bulk
+ * enable/disable/reset uses `POST /v1/tenant/modules/dealers/bulk`.
+ */
+export function DealerModules({
+  slug,
+  orgUuid,
+}: {
+  slug: string;
+  orgUuid: string;
+}) {
   const { t } = useLocale();
   const queryClient = useQueryClient();
   const own = useFeatures(slug);
-  const dealers = useQuery({
-    queryKey: modulesKeys.dealers(orgUuid),
-    queryFn: () => modulesService.dealers(),
-  });
   const switchable = useMemo(
     () => (own.data?.items ?? []).filter((m) => m.level !== "core"),
     [own.data],
@@ -211,13 +300,110 @@ function DealerModules({ slug, orgUuid }: { slug: string; orgUuid: string }) {
   const [key, setKey] = useState<string>("");
   const moduleKey = key || switchable[0]?.key || "";
   const ownState = switchable.find((m) => m.key === moduleKey);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const selectedIds = useMemo(
+    () => Object.keys(rowSelection).filter((id) => rowSelection[id]),
+    [rowSelection],
+  );
+
+  const columns = useMemo<ColumnDef<DealerModuleRow, unknown>[]>(() => {
+    const entry = (row: DealerModuleRow) =>
+      row.modules.find((m) => m.key === moduleKey);
+    return [
+      createSelectColumnDef<DealerModuleRow>(),
+      createColumn<DealerModuleRow>({
+        accessorKey: "name",
+        labelKey: "modules.columns.dealer",
+        enableSorting: true,
+        gridPrimary: true,
+        cell: ({ row }) => (
+          <span className="font-medium">{row.original.name}</span>
+        ),
+      }),
+      createColumn<DealerModuleRow>({
+        accessorKey: "slug",
+        labelKey: "modules.columns.slug",
+        enableSorting: true,
+        defaultHidden: true,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground font-mono text-xs">
+            {row.original.slug}
+          </span>
+        ),
+      }),
+      createColumn<DealerModuleRow>({
+        id: "state",
+        accessorFn: (row) => (entry(row)?.enabled ? "enabled" : "disabled"),
+        labelKey: "modules.columns.status",
+        enableSorting: false,
+        filterVariant: "faceted",
+        param: "state",
+        gridSecondary: true,
+        filterOptions: DEALER_MODULE_STATES.map((value) => ({
+          value,
+          labelKey:
+            value === "enabled" ? "modules.state.on" : "modules.state.off",
+          label: value,
+        })),
+        cell: ({ row }) => (
+          <StateBadge on={Boolean(entry(row.original)?.enabled)} />
+        ),
+      }),
+      createColumn<DealerModuleRow>({
+        id: "source",
+        accessorFn: (row) => entry(row)?.source ?? "",
+        labelKey: "modules.columns.source",
+        enableSorting: false,
+        filterVariant: "faceted",
+        param: "source",
+        filterOptions: DEALER_MODULE_SOURCES.map((value) => ({
+          value,
+          labelKey: `modules.source.${value}`,
+          label: value,
+        })),
+        cell: ({ row }) => {
+          const st = entry(row.original);
+          return (
+            <span className="text-muted-foreground">
+              {st?.admin_override
+                ? t("modules.dealers.admin_override")
+                : st
+                  ? moduleSourceLabel(t, st.source)
+                  : null}
+            </span>
+          );
+        },
+      }),
+    ];
+  }, [moduleKey, t]);
+
+  const listState = useServerListState({
+    columns,
+    initialSort: "name",
+    initialPageSize: 20,
+    persistKey: DEALER_MODULES_PERSIST_KEY,
+  });
+  const listParams = useMemo<ListDealerModulesParams>(() => {
+    const { state, source } = listState.filterParams;
+    // state / source only make sense (and are only accepted) with `module`.
+    return {
+      ...listState.params,
+      ...(moduleKey && (state || source) ? { module: moduleKey } : {}),
+    };
+  }, [listState.filterParams, listState.params, moduleKey]);
+
+  const dealers = useQuery({
+    queryKey: [...modulesKeys.dealers(orgUuid), listParams],
+    queryFn: () => modulesService.dealers(listParams),
+    enabled: Boolean(moduleKey) || !own.isLoading,
+    placeholderData: (previous) => previous,
+  });
 
   const bulk = useMutation({
     mutationFn: (enabled: boolean | null) =>
-      modulesService.bulk([...selected], moduleKey, enabled),
+      modulesService.bulk(selectedIds, moduleKey, enabled),
     onSuccess: async () => {
-      setSelected(new Set());
+      setRowSelection({});
       await queryClient.invalidateQueries({
         queryKey: modulesKeys.dealers(orgUuid),
       });
@@ -227,130 +413,94 @@ function DealerModules({ slug, orgUuid }: { slug: string; orgUuid: string }) {
       appToast.error(errorMessage(error, t("modules.toast.failed"))),
   });
 
-  if (dealers.isLoading || own.isLoading) {
-    return <Loading label={t("common.loading")} />;
-  }
-  const rows = dealers.data?.items ?? [];
-  if (!rows.length) return <EmptyState title={t("modules.dealers.empty")} />;
-
-  const allSelected = rows.every((d) => selected.has(d.uuid));
-  const toggle = (uuid: string, on: boolean) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (on) next.add(uuid);
-      else next.delete(uuid);
-      return next;
-    });
-  };
+  const noSelection = !selectedIds.length || bulk.isPending || !moduleKey;
 
   return (
     <div className="space-y-4">
       <p className="text-muted-foreground text-sm">
         {t("modules.dealers.hint")}
       </p>
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2 text-sm">
-          {t("modules.dealers.module")}
-          <select
-            className="border-input bg-background h-9 rounded-md border px-2 text-sm"
-            value={moduleKey}
-            onChange={(e) => setKey(e.target.value)}
-            data-testid="dealer-module-select"
-          >
-            {switchable.map((m) => (
-              <option key={m.key} value={m.key}>
-                {moduleName(t, m.key)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <span className="text-muted-foreground text-sm">
-          {t("modules.dealers.selected", { count: selected.size })}
-        </span>
-        <Button
-          size="sm"
-          disabled={!selected.size || bulk.isPending || !ownState?.enabled}
-          onClick={() => bulk.mutate(true)}
-        >
-          {t("modules.dealers.enable")}
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={!selected.size || bulk.isPending}
-          onClick={() => bulk.mutate(false)}
-        >
-          {t("modules.dealers.disable")}
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          disabled={!selected.size || bulk.isPending}
-          onClick={() => bulk.mutate(null)}
-        >
-          {t("modules.dealers.reset")}
-        </Button>
-      </div>
       {ownState && !ownState.enabled ? (
         <p className="text-sm text-amber-700 dark:text-amber-300">
           {t("modules.dealers.upstream_off")}
         </p>
       ) : null}
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50 text-muted-foreground">
-            <tr>
-              <th className="w-10 px-3 py-2">
-                <Checkbox
-                  aria-label={t("modules.dealers.select_all")}
-                  checked={allSelected}
-                  onCheckedChange={(v) =>
-                    setSelected(
-                      v === true ? new Set(rows.map((d) => d.uuid)) : new Set(),
-                    )
-                  }
-                />
-              </th>
-              <th className="px-3 py-2 text-start font-medium">
-                {t("modules.columns.dealer")}
-              </th>
-              <th className="px-3 py-2 text-start font-medium">
-                {t("modules.columns.status")}
-              </th>
-              <th className="px-3 py-2 text-start font-medium">
-                {t("modules.columns.source")}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((d) => {
-              const st = d.modules.find((m) => m.key === moduleKey);
-              return (
-                <tr key={d.uuid} className="border-t">
-                  <td className="px-3 py-2">
-                    <Checkbox
-                      aria-label={d.name}
-                      checked={selected.has(d.uuid)}
-                      onCheckedChange={(v) => toggle(d.uuid, v === true)}
-                    />
-                  </td>
-                  <td className="px-3 py-2 font-medium">{d.name}</td>
-                  <td className="px-3 py-2">
-                    <StateBadge on={Boolean(st?.enabled)} />
-                  </td>
-                  <td className="text-muted-foreground px-3 py-2">
-                    {st?.admin_override
-                      ? t("modules.dealers.admin_override")
-                      : st
-                        ? moduleSourceLabel(t, st.source)
-                        : null}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <EntityTable
+        columns={columns}
+        data={dealers.data?.items ?? []}
+        getRowId={(row) => row.uuid}
+        isLoading={dealers.isLoading || own.isLoading}
+        isError={dealers.isError}
+        errorTitle={t("modules.error.title")}
+        errorDescription={t("modules.error.description")}
+        onRetry={() => void dealers.refetch()}
+        emptyTitle={t("modules.dealers.empty")}
+        emptyDescription=""
+        rowCount={dealers.data?.total ?? 0}
+        state={{
+          ...listState.tableState,
+          rowSelection,
+          onRowSelectionChange: setRowSelection,
+        }}
+        features={{
+          persistKey: DEALER_MODULES_PERSIST_KEY,
+          rowSelection: true,
+        }}
+        toolbarExtra={
+          <>
+            <Select value={moduleKey} onValueChange={setKey}>
+              <SelectTrigger
+                className="h-8 w-56"
+                aria-label={t("modules.dealers.module")}
+                data-testid="dealer-module-select"
+              >
+                <SelectValue placeholder={t("modules.dealers.module")} />
+              </SelectTrigger>
+              <SelectContent>
+                {switchable.map((m) => (
+                  <SelectItem key={m.key} value={m.key}>
+                    {moduleName(t, m.key)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedIds.length ? (
+              <>
+                <span className="text-muted-foreground text-sm">
+                  {t("modules.dealers.selected", { count: selectedIds.length })}
+                </span>
+                <Button
+                  size="sm"
+                  disabled={noSelection || !ownState?.enabled}
+                  onClick={() => bulk.mutate(true)}
+                >
+                  {t("modules.dealers.enable")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={noSelection}
+                  onClick={() => bulk.mutate(false)}
+                >
+                  {t("modules.dealers.disable")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={noSelection}
+                  onClick={() => bulk.mutate(null)}
+                >
+                  {t("modules.dealers.reset")}
+                </Button>
+              </>
+            ) : null}
+            <EntityToolbar
+              onRefresh={() => void dealers.refetch()}
+              refreshDisabled={dealers.isFetching}
+            />
+          </>
+        }
+      />
     </div>
   );
 }

@@ -11,6 +11,10 @@ const api = vi.hoisted(() => ({
   putLocale: vi.fn(),
   publish: vi.fn(),
   reads: vi.fn(),
+  readsAll: vi.fn(),
+  manage: vi.fn(),
+  archive: vi.fn(),
+  pin: vi.fn(),
   unreadCount: vi.fn(),
 }));
 const state = vi.hoisted(() => ({
@@ -61,6 +65,7 @@ vi.mock("@/features/announcements/services/announcements.service", () => ({
       locale ?? "",
     ],
     reads: (uuid: string) => ["announcements", "reads", uuid],
+    manage: (params: unknown) => ["announcements", "manage", params],
   },
 }));
 
@@ -72,6 +77,17 @@ import { AnnouncementsPage } from "./announcements-page";
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
+// DataTable reads the mobile breakpoint (jsdom has no matchMedia).
+window.matchMedia ??= ((query: string) => ({
+  matches: false,
+  media: query,
+  onchange: null,
+  addEventListener: () => {},
+  removeEventListener: () => {},
+  addListener: () => {},
+  removeListener: () => {},
+  dispatchEvent: () => false,
+})) as typeof window.matchMedia;
 (
   globalThis as typeof globalThis & { ResizeObserver?: typeof ResizeObserver }
 ).ResizeObserver = class {
@@ -100,11 +116,27 @@ beforeEach(() => {
     offset: 0,
   });
   api.get.mockResolvedValue(announcement({ read_at: "2026-10-04T09:00:00Z" }));
-  api.reads.mockResolvedValue({
+  api.readsAll.mockResolvedValue({
     target_total: 2,
     read_total: 1,
     read_rate: 0.5,
-    items: [],
+    limit: 1,
+    offset: 0,
+    items: [
+      {
+        user_uuid: "u-1",
+        email: "reader@example.com",
+        name: "Ada",
+        surname: "Reader",
+        read_at: "2026-10-04T09:30:00Z",
+      },
+    ],
+  });
+  api.manage.mockResolvedValue({
+    items: [announcement({ uuid: "d-1", status: "draft", title: "Draft" })],
+    total: 1,
+    limit: 20,
+    offset: 0,
   });
   api.create.mockResolvedValue(announcement());
   api.putLocale.mockResolvedValue(announcement());
@@ -186,6 +218,41 @@ async function click(sel: string) {
 }
 
 describe("AnnouncementsPage", () => {
+  it("lists every status for authors through /announcements/manage", async () => {
+    await renderPage();
+    expect(api.manage).toHaveBeenCalledWith({
+      sort: "-created_at",
+      limit: 20,
+      offset: 0,
+    });
+    const manage = container.querySelector(
+      "[data-testid=announcements-manage]",
+    );
+    expect(manage?.textContent).toContain("Draft");
+    expect(manage?.textContent).toContain("announcements.status.draft");
+  });
+
+  it("hides the author list without announcements.write", async () => {
+    state.grants = new Set([Permission.AnnouncementsRead]);
+    await renderPage();
+    expect(api.manage).not.toHaveBeenCalled();
+    expect(
+      container.querySelector("[data-testid=announcements-manage]"),
+    ).toBeNull();
+  });
+
+  it("shows the full read report in a table", async () => {
+    await renderPage();
+    await click("[data-testid=announcement-row]");
+    expect(api.readsAll).toHaveBeenCalledWith("a-1");
+    const report = container.querySelector(
+      "[data-testid=announcement-read-report]",
+    );
+    expect(report?.querySelector("table")).not.toBeNull();
+    expect(report?.textContent).toContain("Ada Reader");
+    expect(report?.textContent).toContain("reader@example.com");
+  });
+
   it("limits distributor audience to sub-dealers", async () => {
     state.orgType = "distributor";
     await renderPage();

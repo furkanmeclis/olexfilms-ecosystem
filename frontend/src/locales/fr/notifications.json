@@ -128,5 +128,7 @@
   "center.statuses.skipped_disabled": "Ignoré (canal désactivé)",
   "center.statuses.skipped_preference": "Ignoré (désactivé par l'utilisateur)",
   "center.statuses.skipped_no_template": "Ignoré (aucun modèle)",
-  "center.statuses.skipped_no_recipient": "Ignoré (aucune adresse)"
+  "center.statuses.skipped_no_recipient": "Ignoré (aucune adresse)",
+  "center.attempts": "Tentatives",
+  "center.delivery_error": "Erreur"
 }

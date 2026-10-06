@@ -66,5 +66,6 @@
   "variable_groups.order": "Заказ",
   "variable_groups.invoice": "Счёт",
   "variable_groups.warranty": "Гарантия",
-  "variable_groups.totals": "Итоги"
+  "variable_groups.totals": "Итоги",
+  "fields.updated_at": "Обновлено"
 }

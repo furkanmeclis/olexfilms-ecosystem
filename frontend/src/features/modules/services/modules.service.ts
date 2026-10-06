@@ -10,6 +10,18 @@ import { platformRequest } from "@/lib/api/platform-request";
 
 const enc = encodeURIComponent;
 
+export type ListDealerModulesParams = {
+  limit?: number;
+  offset?: number;
+  sort?: string;
+  q?: string;
+  module?: string;
+  /** CSV of enabled, disabled */
+  state?: string;
+  /** CSV of module sources */
+  source?: string;
+};
+
 export const modulesService = {
   /** Modules of the active organization (menus, guards, Özellikler page). */
   list() {
@@ -24,11 +36,17 @@ export const modulesService = {
     );
   },
 
-  dealers() {
-    return platformRequest<{ items: DealerModuleRow[] }>(
-      "GET",
-      "/v1/tenant/modules/dealers",
-    );
+  /**
+   * Dealer module matrix. With `limit`/`offset` the result is a page
+   * (`total` counts every match); `state` / `source` (CSV) need `module`.
+   */
+  dealers(params: ListDealerModulesParams = {}) {
+    return platformRequest<{
+      items: DealerModuleRow[];
+      total: number;
+      limit: number;
+      offset: number;
+    }>("GET", "/v1/tenant/modules/dealers", { query: params });
   },
 
   /** enabled null clears the dealers' own values (back to the standard). */

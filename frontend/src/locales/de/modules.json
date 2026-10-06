@@ -94,5 +94,6 @@
   "names.photo_standard": "Fotostandard",
   "names.reviews": "Bewertungen",
   "names.e_invoice": "E-Rechnung (UBL-TR)",
-  "names.short_url": "Kurz-URLs"
+  "names.short_url": "Kurz-URLs",
+  "columns.slug": "Kurzname"
 }

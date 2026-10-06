@@ -94,5 +94,6 @@
   "names.photo_standard": "معيار الصور",
   "names.reviews": "التقييمات",
   "names.e_invoice": "الفاتورة الإلكترونية (UBL-TR)",
-  "names.short_url": "الروابط المختصرة"
+  "names.short_url": "الروابط المختصرة",
+  "columns.slug": "المعرّف"
 }

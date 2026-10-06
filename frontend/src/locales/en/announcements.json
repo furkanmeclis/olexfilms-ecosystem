@@ -44,5 +44,19 @@
   "report.counts": "{{read}} of {{total}} read",
   "dashboard.title": "Latest announcements",
   "dashboard.all": "View all",
-  "dashboard.empty": "No recent announcements."
+  "dashboard.empty": "No recent announcements.",
+  "manage.title": "Manage announcements",
+  "manage.status": "Status",
+  "manage.created_at": "Created",
+  "manage.updated_at": "Updated",
+  "manage.view": "Open",
+  "manage.pin": "Pin",
+  "manage.unpin": "Unpin",
+  "manage.archive": "Archive",
+  "manage.published": "Announcement published.",
+  "manage.archived": "Announcement archived.",
+  "report.empty": "Nobody has read it yet.",
+  "report.reader": "Reader",
+  "report.email": "Email",
+  "report.read_at": "Read at"
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BellRing } from "lucide-react";
 
@@ -28,17 +28,15 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { DeliveriesTable } from "@/features/notification-center/components/deliveries-table";
 import {
   CHANNELS,
-  DELIVERY_STATUSES,
   LANGUAGES,
   ROLES,
-  deliveryStatusVariant,
 } from "@/features/notification-center/lib/options";
 import {
   notificationCenterService,
   type NotificationChannel,
-  type NotificationDeliveryStatus,
   type NotificationEvent,
   type NotificationRendered,
   type NotificationTemplate,
@@ -50,8 +48,6 @@ import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
 
 const KEY = ["platform", "notification-center"] as const;
-const ALL = "__all__";
-const PAGE_SIZE = 25;
 
 function useToastError() {
   const { t } = useLocale();
@@ -450,26 +446,7 @@ function ChannelsPanel() {
 // --- Deliveries ---------------------------------------------------------------
 
 function DeliveriesPanel() {
-  const { t, format } = useLocale();
-  const [status, setStatus] = useState<string>(ALL);
-  const [channel, setChannel] = useState<string>(ALL);
-  const [offset, setOffset] = useState(0);
-  const filter = useMemo(
-    () => ({
-      limit: PAGE_SIZE,
-      offset,
-      status:
-        status === ALL ? undefined : (status as NotificationDeliveryStatus),
-      channel: channel === ALL ? undefined : (channel as NotificationChannel),
-    }),
-    [status, channel, offset],
-  );
-  const page = useQuery({
-    queryKey: [...KEY, "deliveries", filter],
-    queryFn: () => notificationCenterService.deliveries(filter),
-  });
-  const fmt = (v: string) => format.dateTime(v);
-
+  const { t } = useLocale();
   return (
     <Card>
       <CardHeader>
@@ -478,130 +455,8 @@ function DeliveriesPanel() {
           {t("notifications.center.deliveries_hint")}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid max-w-xl gap-3 sm:grid-cols-2">
-          <OptionSelect
-            id="nc-f-status"
-            label={t("notifications.center.status")}
-            value={status}
-            options={[
-              { value: ALL, label: t("notifications.center.all") },
-              ...DELIVERY_STATUSES.map((s) => ({
-                value: s,
-                label: t(`notifications.center.statuses.${s}`),
-              })),
-            ]}
-            onChange={(v) => {
-              setStatus(v);
-              setOffset(0);
-            }}
-          />
-          <OptionSelect
-            id="nc-f-channel"
-            label={t("notifications.center.channel")}
-            value={channel}
-            options={[
-              { value: ALL, label: t("notifications.center.all") },
-              ...CHANNELS.map((c) => ({
-                value: c,
-                label: t(`notifications.center.channels.${c}`),
-              })),
-            ]}
-            onChange={(v) => {
-              setChannel(v);
-              setOffset(0);
-            }}
-          />
-        </div>
-        {page.isLoading ? <Loading label={t("common.loading")} /> : null}
-        {page.isError ? (
-          <ErrorState
-            title={t("notifications.center.error")}
-            retryLabel={t("common.retry")}
-            onRetry={() => page.refetch()}
-          />
-        ) : null}
-        {page.data ? (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-muted-foreground text-start">
-                  <tr>
-                    <th className="p-2 text-start">
-                      {t("notifications.center.created")}
-                    </th>
-                    <th className="p-2 text-start">
-                      {t("notifications.center.event")}
-                    </th>
-                    <th className="p-2 text-start">
-                      {t("notifications.center.recipient")}
-                    </th>
-                    <th className="p-2 text-start">
-                      {t("notifications.center.channel")}
-                    </th>
-                    <th className="p-2 text-start">
-                      {t("notifications.center.language")}
-                    </th>
-                    <th className="p-2 text-start">
-                      {t("notifications.center.status")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {page.data.items.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="text-muted-foreground p-4">
-                        {t("notifications.center.no_deliveries")}
-                      </td>
-                    </tr>
-                  ) : (
-                    page.data.items.map((d) => (
-                      <tr key={d.uuid}>
-                        <td className="p-2 whitespace-nowrap">
-                          {fmt(d.created_at)}
-                        </td>
-                        <td className="p-2">{d.event_code}</td>
-                        <td className="p-2">{d.user_email || d.user_uuid}</td>
-                        <td className="p-2">
-                          {t(`notifications.center.channels.${d.channel}`)}
-                        </td>
-                        <td className="p-2">{d.language || "—"}</td>
-                        <td className="p-2" title={d.error || undefined}>
-                          <Badge variant={deliveryStatusVariant(d.status)}>
-                            {t(`notifications.center.statuses.${d.status}`)}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">
-                {t("notifications.center.total", { count: page.data.total })}
-              </span>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={offset === 0}
-                  onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
-                >
-                  {t("notifications.center.prev")}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={offset + PAGE_SIZE >= page.data.total}
-                  onClick={() => setOffset(offset + PAGE_SIZE)}
-                >
-                  {t("notifications.center.next")}
-                </Button>
-              </div>
-            </div>
-          </>
-        ) : null}
+      <CardContent>
+        <DeliveriesTable />
       </CardContent>
     </Card>
   );

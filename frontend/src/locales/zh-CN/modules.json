@@ -94,5 +94,6 @@
   "names.photo_standard": "照片标准",
   "names.reviews": "评价",
   "names.e_invoice": "电子发票（UBL-TR）",
-  "names.short_url": "短链接"
+  "names.short_url": "短链接",
+  "columns.slug": "短名称"
 }

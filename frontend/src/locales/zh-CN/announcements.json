@@ -44,5 +44,19 @@
   "report.counts": "{{read}} of {{total}} read",
   "dashboard.title": "Latest announcements",
   "dashboard.all": "View all",
-  "dashboard.empty": "No recent announcements."
+  "dashboard.empty": "No recent announcements.",
+  "manage.title": "管理公告",
+  "manage.status": "状态",
+  "manage.created_at": "创建时间",
+  "manage.updated_at": "更新时间",
+  "manage.view": "打开",
+  "manage.pin": "置顶",
+  "manage.unpin": "取消置顶",
+  "manage.archive": "归档",
+  "manage.published": "公告已发布。",
+  "manage.archived": "公告已归档。",
+  "report.empty": "还没有人阅读。",
+  "report.reader": "阅读者",
+  "report.email": "电子邮件",
+  "report.read_at": "阅读时间"
 }

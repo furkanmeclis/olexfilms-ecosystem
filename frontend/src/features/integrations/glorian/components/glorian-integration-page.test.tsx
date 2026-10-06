@@ -9,10 +9,12 @@ const api = vi.hoisted(() => ({
   save: vi.fn(),
   test: vi.fn(),
   listSyncRuns: vi.fn(),
+  syncRunsPage: vi.fn(),
   getSyncRun: vi.fn(),
   triggerSync: vi.fn(),
-  listOutbounds: vi.fn(),
+  outboundsPage: vi.fn(),
   replayOutbound: vi.fn(),
+  replayOutbounds: vi.fn(),
   reconcile: vi.fn(),
 }));
 const state = vi.hoisted(() => ({ grants: new Set<string>() }));
@@ -51,6 +53,18 @@ import { GlorianIntegrationPage } from "./glorian-integration-page";
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
+
+// DataTable reads the mobile breakpoint (jsdom has no matchMedia).
+window.matchMedia ??= ((query: string) => ({
+  matches: false,
+  media: query,
+  onchange: null,
+  addEventListener: () => {},
+  removeEventListener: () => {},
+  addListener: () => {},
+  removeListener: () => {},
+  dispatchEvent: () => false,
+})) as typeof window.matchMedia;
 
 globalThis.ResizeObserver ??= class {
   observe() {}
@@ -128,8 +142,20 @@ beforeEach(() => {
   root = createRoot(container);
   api.get.mockResolvedValue(connection);
   api.listSyncRuns.mockResolvedValue([reconcileRun]);
-  api.listOutbounds.mockResolvedValue([held]);
+  api.syncRunsPage.mockResolvedValue({
+    items: [reconcileRun],
+    total: 1,
+    limit: 20,
+    offset: 0,
+  });
+  api.outboundsPage.mockResolvedValue({
+    items: [held],
+    total: 1,
+    limit: 20,
+    offset: 0,
+  });
   api.replayOutbound.mockResolvedValue(held);
+  api.replayOutbounds.mockResolvedValue({ queued: [held], skipped: [] });
   api.save.mockResolvedValue(connection);
 });
 
@@ -259,10 +285,32 @@ describe("GlorianIntegrationPage (TEC-274)", () => {
   it("replays a held outbound", async () => {
     state.grants = new Set([VIEW, MANAGE]);
     await render();
-    expect(api.listOutbounds).toHaveBeenCalledWith("held");
+    // Opens on held outbounds (state facet), backend default sort.
+    expect(api.outboundsPage).toHaveBeenCalledWith({
+      state: "held",
+      limit: 20,
+      offset: 0,
+    });
+    expect(api.syncRunsPage).toHaveBeenCalledWith({
+      sort: "-started_at",
+      limit: 20,
+      offset: 0,
+    });
     await click(byTestId(`replay-${OUTBOUND}`));
     expect(api.replayOutbound).toHaveBeenCalledTimes(1);
     expect(api.replayOutbound.mock.calls[0][0]).toBe(OUTBOUND);
+  });
+
+  it("replays the selected outbounds in one batch", async () => {
+    state.grants = new Set([VIEW, MANAGE]);
+    await render();
+    const outbounds = byTestId("outbounds")!;
+    const rowCheckbox = outbounds.querySelector<HTMLElement>(
+      "tbody [role='checkbox']",
+    );
+    await click(rowCheckbox);
+    await click(byTestId("replay-selected"));
+    expect(api.replayOutbounds).toHaveBeenCalledWith([OUTBOUND]);
   });
 
   it("hides the write actions for view only", async () => {
@@ -270,6 +318,9 @@ describe("GlorianIntegrationPage (TEC-274)", () => {
     await render();
     expect(byTestId(`outbound-${OUTBOUND}`)).not.toBeNull();
     expect(byTestId(`replay-${OUTBOUND}`)).toBeNull();
+    expect(
+      byTestId("outbounds")?.querySelector("tbody [role='checkbox']"),
+    ).toBeNull();
     expect(byTestId("reconcile-start")).toBeNull();
     expect(byTestId("glorian-test")).toBeNull();
     expect(byTestId("sync-pull")).toBeNull();
@@ -293,7 +344,8 @@ describe("GlorianIntegrationPage (TEC-274)", () => {
     await render();
     expect(byTestId("glorian-not-configured")).not.toBeNull();
     expect(api.listSyncRuns).not.toHaveBeenCalled();
-    expect(api.listOutbounds).not.toHaveBeenCalled();
+    expect(api.syncRunsPage).not.toHaveBeenCalled();
+    expect(api.outboundsPage).not.toHaveBeenCalled();
     expect(input("api_key").placeholder).toBe(
       "integrations.glorian.form.api_key_placeholder",
     );

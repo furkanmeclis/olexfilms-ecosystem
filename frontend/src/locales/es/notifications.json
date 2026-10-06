@@ -128,5 +128,7 @@
   "center.statuses.skipped_disabled": "Omitida (canal desactivado)",
   "center.statuses.skipped_preference": "Omitida (silenciada por el usuario)",
   "center.statuses.skipped_no_template": "Omitida (sin plantilla)",
-  "center.statuses.skipped_no_recipient": "Omitida (sin dirección)"
+  "center.statuses.skipped_no_recipient": "Omitida (sin dirección)",
+  "center.attempts": "Intentos",
+  "center.delivery_error": "Error"
 }

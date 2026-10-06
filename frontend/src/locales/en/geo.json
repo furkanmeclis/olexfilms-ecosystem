@@ -64,5 +64,6 @@
   "plates.validation.color": "Use #RRGGBB",
   "plates.toast.saved": "Plate format saved",
   "plates.toast.deleted": "Plate format deleted",
-  "plates.toast.failed": "The plate format could not be saved"
+  "plates.toast.failed": "The plate format could not be saved",
+  "territories.columns.country": "Country"
 }

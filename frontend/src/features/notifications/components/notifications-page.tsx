@@ -32,49 +32,22 @@ import type {
 } from "@/features/notifications/services/notifications.service";
 import { useLocale } from "@/providers/locale-provider";
 
-function firstString(value: string | string[] | undefined) {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
+export const PLATFORM_NOTIFICATIONS_PERSIST_KEY = "platform-notifications-v4";
+
+/** The page opened on the in-app inbox before the channel facet existed. */
+const DEFAULT_CHANNEL_FILTER = [
+  { id: "channel", value: [NOTIFICATION_INBOX_CHANNEL] },
+];
 
 export function NotificationsPage() {
   const { t } = useLocale();
 
   useNotificationRealtimeInvalidate();
 
-  const listState = useServerListState({
-    initialSort: "-created_at",
-    initialPageSize: 20,
-  });
-
   const [selected, setSelected] = useState<Notification | null>(null);
   const [audience, setAudience] = useState<NotificationAudience>({
     scope: "me",
   });
-
-  const listParams = useMemo<ListPlatformNotificationsParams>(() => {
-    const columnValue = (id: string) =>
-      firstString(
-        listState.columnFilters.find((filter) => filter.id === id)?.value as
-          string | string[] | undefined,
-      );
-
-    const q = listState.params.q || columnValue("title")?.trim() || undefined;
-
-    return {
-      ...listState.params,
-      q,
-      status: columnValue("status"),
-      channel: NOTIFICATION_INBOX_CHANNEL,
-      scope: audience.scope === "all" ? "all" : "me",
-      user_uuid: audience.scope === "user" ? audience.userUuid : undefined,
-    };
-  }, [audience, listState.columnFilters, listState.params]);
-
-  const listEnabled = audience.scope !== "user" || Boolean(audience.userUuid);
-
-  const listQuery = usePlatformNotificationsList(listParams, listEnabled);
-  const metaQuery = usePlatformNotificationsMeta(true);
 
   const openDetail = useCallback((notification: Notification) => {
     setSelected(notification);
@@ -91,11 +64,48 @@ export function NotificationsPage() {
     showUserColumn: audience.scope === "all",
   });
 
-  const pageCount = useMemo(() => {
-    const total = listQuery.data?.total ?? 0;
-    const size = listState.pagination.pageSize || 20;
-    return Math.max(1, Math.ceil(total / size));
-  }, [listQuery.data?.total, listState.pagination.pageSize]);
+  const metaQuery = usePlatformNotificationsMeta(true);
+  const meta = metaQuery.data as ResourceMeta | undefined;
+
+  // Column meta drives the params: status / channel / priority (CSV),
+  // created (created_from / created_to).
+  const listState = useServerListState({
+    columns,
+    initialSort: meta?.default_sort ?? "-created_at",
+    initialPageSize: 20,
+    persistKey: PLATFORM_NOTIFICATIONS_PERSIST_KEY,
+    initialColumnFilters: DEFAULT_CHANNEL_FILTER,
+  });
+
+  const listParams = useMemo<ListPlatformNotificationsParams>(
+    () => ({
+      ...listState.params,
+      scope: audience.scope === "all" ? "all" : "me",
+      user_uuid: audience.scope === "user" ? audience.userUuid : undefined,
+    }),
+    [audience, listState.params],
+  );
+
+  const exportQuery = useMemo(
+    () => ({
+      ...listState.filterParams,
+      q: listParams.q,
+      sort: listParams.sort,
+      scope: listParams.scope,
+      user_uuid: listParams.user_uuid,
+    }),
+    [
+      listState.filterParams,
+      listParams.q,
+      listParams.sort,
+      listParams.scope,
+      listParams.user_uuid,
+    ],
+  );
+
+  const listEnabled = audience.scope !== "user" || Boolean(audience.userUuid);
+
+  const listQuery = usePlatformNotificationsList(listParams, listEnabled);
 
   return (
     <EntityPage
@@ -123,10 +133,11 @@ export function NotificationsPage() {
         onRetry={() => void listQuery.refetch()}
         emptyTitle={t("notifications.empty_title")}
         emptyDescription={t("notifications.empty_description")}
-        pageCount={pageCount}
+        rowCount={listQuery.data?.total ?? 0}
         state={listState.tableState}
         features={{
-          persistKey: "platform-notifications-v3",
+          persistKey: PLATFORM_NOTIFICATIONS_PERSIST_KEY,
+          // No bulk endpoint for notifications.
           rowSelection: false,
         }}
         toolbarExtra={
@@ -137,17 +148,8 @@ export function NotificationsPage() {
             />
             <ResourceIOToolbar
               resource="platform.notifications"
-              query={{
-                q: listParams.q,
-                status: listParams.status,
-                channel: listParams.channel,
-                sort: listParams.sort,
-                scope: listParams.scope,
-                user_uuid: listParams.user_uuid,
-              }}
-              capabilities={
-                (metaQuery.data as ResourceMeta | undefined)?.capabilities
-              }
+              query={exportQuery}
+              capabilities={meta?.capabilities}
             />
             <EntityToolbar
               onRefresh={() => void listQuery.refetch()}

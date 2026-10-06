@@ -64,5 +64,6 @@
   "plates.validation.color": "Χρησιμοποιήστε #RRGGBB",
   "plates.toast.saved": "Η μορφή πινακίδας αποθηκεύτηκε",
   "plates.toast.deleted": "Η μορφή πινακίδας διαγράφηκε",
-  "plates.toast.failed": "Δεν ήταν δυνατή η αποθήκευση της μορφής πινακίδας"
+  "plates.toast.failed": "Δεν ήταν δυνατή η αποθήκευση της μορφής πινακίδας",
+  "territories.columns.country": "Χώρα"
 }

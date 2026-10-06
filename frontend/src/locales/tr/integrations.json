@@ -257,5 +257,8 @@
   "glorian.drift.field.local_owner_id": "Yerel sahip",
   "glorian.drift.field.expected_location": "Beklenen konum",
   "glorian.drift.field.remote_location": "Hub konumu",
-  "glorian.drift.field.remote_dealer_id": "Hub bayisi"
+  "glorian.drift.field.remote_dealer_id": "Hub bayisi",
+  "glorian.outbounds.created": "Oluşturuldu",
+  "glorian.outbounds.replay_selected": "Seçilenleri yeniden gönder ({{count}})",
+  "glorian.outbounds.replay_batch_done": "{{queued}} kayıt yeniden gönderim sırasına alındı, {{skipped}} atlandı"
 }

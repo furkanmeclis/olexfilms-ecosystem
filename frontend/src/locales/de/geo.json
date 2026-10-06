@@ -64,5 +64,6 @@
   "plates.validation.color": "Format #RRGGBB verwenden",
   "plates.toast.saved": "Kennzeichenformat gespeichert",
   "plates.toast.deleted": "Kennzeichenformat gelöscht",
-  "plates.toast.failed": "Das Kennzeichenformat konnte nicht gespeichert werden"
+  "plates.toast.failed": "Das Kennzeichenformat konnte nicht gespeichert werden",
+  "territories.columns.country": "Land"
 }

@@ -128,5 +128,7 @@
   "center.statuses.skipped_disabled": "Παραλείφθηκε (κανάλι ανενεργό)",
   "center.statuses.skipped_preference": "Παραλείφθηκε (σίγαση από χρήστη)",
   "center.statuses.skipped_no_template": "Παραλείφθηκε (χωρίς πρότυπο)",
-  "center.statuses.skipped_no_recipient": "Παραλείφθηκε (χωρίς διεύθυνση)"
+  "center.statuses.skipped_no_recipient": "Παραλείφθηκε (χωρίς διεύθυνση)",
+  "center.attempts": "Προσπάθειες",
+  "center.delivery_error": "Σφάλμα"
 }

@@ -94,5 +94,6 @@
   "names.photo_standard": "Foto standartı",
   "names.reviews": "Rəylər",
   "names.e_invoice": "Elektron faktura (UBL-TR)",
-  "names.short_url": "Qısa linklər"
+  "names.short_url": "Qısa linklər",
+  "columns.slug": "Qısa ad"
 }

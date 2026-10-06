@@ -94,5 +94,6 @@
   "names.photo_standard": "Standard photo",
   "names.reviews": "Avis",
   "names.e_invoice": "Facture électronique (UBL-TR)",
-  "names.short_url": "URL courtes"
+  "names.short_url": "URL courtes",
+  "columns.slug": "Identifiant"
 }

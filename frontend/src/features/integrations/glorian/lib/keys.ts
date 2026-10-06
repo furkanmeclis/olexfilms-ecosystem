@@ -2,9 +2,8 @@
 export const glorianKeys = {
   all: ["platform", "integrations", "glorian"] as const,
   connection: () => [...glorianKeys.all, "connection"] as const,
-  runs: (kind: string, status: string) =>
-    [...glorianKeys.all, "sync-runs", kind, status] as const,
-  outbounds: (state: string) =>
-    [...glorianKeys.all, "outbounds", state] as const,
+  runs: (query: object) => [...glorianKeys.all, "sync-runs", query] as const,
+  outbounds: (query: object) =>
+    [...glorianKeys.all, "outbounds", query] as const,
   reconcile: () => [...glorianKeys.all, "reconcile"] as const,
 };

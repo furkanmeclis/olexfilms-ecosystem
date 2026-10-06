@@ -128,5 +128,7 @@
   "center.statuses.skipped_disabled": "Übersprungen (Kanal aus)",
   "center.statuses.skipped_preference": "Übersprungen (vom Benutzer stummgeschaltet)",
   "center.statuses.skipped_no_template": "Übersprungen (keine Vorlage)",
-  "center.statuses.skipped_no_recipient": "Übersprungen (keine Adresse)"
+  "center.statuses.skipped_no_recipient": "Übersprungen (keine Adresse)",
+  "center.attempts": "Versuche",
+  "center.delivery_error": "Fehler"
 }

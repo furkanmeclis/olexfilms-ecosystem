@@ -66,5 +66,6 @@
   "variable_groups.order": "Поръчка",
   "variable_groups.invoice": "Фактура",
   "variable_groups.warranty": "Гаранция",
-  "variable_groups.totals": "Суми"
+  "variable_groups.totals": "Суми",
+  "fields.updated_at": "Обновено"
 }

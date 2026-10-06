@@ -61,6 +61,11 @@ export type UseServerListStateOptions<TData = unknown> = {
   filterParams?: FilterParamSpecs;
   /** Same key as `features.persistKey`; restores the persisted page size. */
   persistKey?: string;
+  /**
+   * Column filters applied on first render (e.g. a default channel facet);
+   * `resetListState` returns to them.
+   */
+  initialColumnFilters?: ColumnFiltersState;
 };
 
 function isTextSpec(spec: FilterParamSpecs[string]) {
@@ -87,6 +92,7 @@ export function useServerListState<TData = unknown>(
     columns,
     filterParams,
     persistKey,
+    initialColumnFilters,
   } = options;
 
   const defaultSort =
@@ -106,7 +112,9 @@ export function useServerListState<TData = unknown>(
   }));
   // null = the user has not sorted yet → follow `initialSort`.
   const [userSorting, setUserSorting] = useState<SortingState | null>(null);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(
+    () => initialColumnFilters ?? [],
+  );
   const [globalFilter, setGlobalFilter] = useState("");
   const debouncedSearch = useDebounce(globalFilter, searchDebounceMs);
 
@@ -204,9 +212,9 @@ export function useServerListState<TData = unknown>(
   const resetListState = useCallback(() => {
     setPagination({ pageIndex: 0, pageSize: initialPageSize });
     setUserSorting(null);
-    setColumnFilters([]);
+    setColumnFilters(initialColumnFilters ?? []);
     setGlobalFilter("");
-  }, [initialPageSize]);
+  }, [initialColumnFilters, initialPageSize]);
 
   return {
     params,

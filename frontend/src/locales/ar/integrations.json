@@ -257,5 +257,8 @@
   "glorian.drift.field.local_owner_id": "المالك المحلي",
   "glorian.drift.field.expected_location": "الموقع المتوقع",
   "glorian.drift.field.remote_location": "موقع المركز",
-  "glorian.drift.field.remote_dealer_id": "موزع المركز"
+  "glorian.drift.field.remote_dealer_id": "موزع المركز",
+  "glorian.outbounds.created": "تاريخ الإنشاء",
+  "glorian.outbounds.replay_selected": "إعادة إرسال المحدد ({{count}})",
+  "glorian.outbounds.replay_batch_done": "تمت جدولة {{queued}} لإعادة الإرسال، وتم تخطي {{skipped}}"
 }
