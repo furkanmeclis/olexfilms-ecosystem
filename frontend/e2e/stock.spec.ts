@@ -26,12 +26,16 @@ test("my stock: list, consumed tab, barcode filter, widget", async ({
 
   await page.goto(`/t/${STOCK_SLUG}/stock`);
   await expect(page.getByRole("heading", { name: "My stock" })).toBeVisible();
-  const rows = page.getByTestId("stock-row");
+  const rows = page
+    .getByRole("row")
+    .filter({ has: page.getByTestId("stock-row") });
   await expect(rows).toHaveCount(2);
   await expect(rows.first()).toContainText("OLX-ROLL-001");
   await expect(rows.first()).toContainText("37.50 / 50.00 m");
   // No price in the answer: the purchase price column stays hidden.
-  await expect(page.getByTestId("stock-price-header")).toHaveCount(0);
+  await expect(
+    page.getByRole("table").getByText("Purchase price", { exact: true }),
+  ).toHaveCount(0);
   await expect(page.getByTestId("stock-dealer")).toHaveCount(0);
 
   await page.getByTestId("stock-tab-consumed").click();
@@ -45,7 +49,8 @@ test("my stock: list, consumed tab, barcode filter, widget", async ({
   await page.locator("#stock-barcode").fill(KIT.barcode);
   await expect(rows).toHaveCount(1);
   await expect(rows.first()).toContainText("Olex Cleaning Kit");
-  await page.getByTestId("stock-clear-filters").click();
+  await page.getByRole("button", { name: "Clear filter" }).click();
+  await expect(page.locator("#stock-barcode")).toHaveValue("");
   await expect(rows).toHaveCount(2);
 
   await page.goto(`/t/${STOCK_SLUG}`);
@@ -76,11 +81,15 @@ test("my stock: a distributor picks a dealer of its subtree", async ({
   await expect(picker.locator("option")).toHaveCount(2);
 
   await picker.selectOption(DEALER_UUID);
-  const rows = page.getByTestId("stock-row");
+  const rows = page
+    .getByRole("row")
+    .filter({ has: page.getByTestId("stock-row") });
   await expect(rows).toHaveCount(1);
   await expect(rows.first()).toContainText("OLX-ROLL-DEALER");
   // The distributor sees the dealer's purchase price (K8).
-  await expect(page.getByTestId("stock-price-header")).toBeVisible();
+  await expect(
+    page.getByRole("table").getByText("Purchase price", { exact: true }),
+  ).toBeVisible();
   await expect(page.getByTestId("stock-price").first()).toContainText("120");
   await expect(page.getByText("read-only")).toBeVisible();
   expect(

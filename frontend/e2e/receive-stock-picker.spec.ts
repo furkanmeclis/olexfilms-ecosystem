@@ -271,7 +271,7 @@ test("dealer: receive order → my stock → service stock picker", async ({
   // Before receiving, nothing is on hand.
   await page.goto(`/t/${ORDER_SLUG}/stock`);
   await expect(page.getByRole("heading", { name: "My stock" })).toBeVisible();
-  await expect(page.getByTestId("stock-empty")).toBeVisible();
+  await expect(page.getByText("No units in stock")).toBeVisible();
   await expect(page.getByTestId("stock-row")).toHaveCount(0);
 
   // 1. The dealer marks the shipped order as received.
@@ -290,7 +290,9 @@ test("dealer: receive order → my stock → service stock picker", async ({
 
   // 2. The received units are on "My stock".
   await page.goto(`/t/${ORDER_SLUG}/stock`);
-  const rows = page.getByTestId("stock-row");
+  const rows = page
+    .getByRole("row")
+    .filter({ has: page.getByTestId("stock-row") });
   await expect(rows).toHaveCount(1);
   await expect(rows.first()).toContainText(FIXED_BARCODE);
   await expect(rows.first()).toContainText(PRODUCT.name);

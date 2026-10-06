@@ -177,6 +177,8 @@ export function MyStockPage({
         filterVariant: "text",
         param: "barcode",
         paramFormat: barcodeParams,
+        // TEC-213: the palette deep link (?barcode=) fills this input.
+        meta: { filterInputId: "stock-barcode" },
         cell: ({ row }) => (
           <div data-testid="stock-row" data-uuid={row.original.uuid}>
             <span className="font-mono text-xs font-medium" dir="ltr">
