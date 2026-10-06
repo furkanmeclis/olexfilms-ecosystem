@@ -100,13 +100,15 @@ WHERE u.deleted_at IS NULL
     OR u.status = ANY (sqlc.narg(statuses)::text[])
   )
   AND (
-    sqlc.narg(role_slug)::text IS NULL
+    COALESCE(cardinality(sqlc.narg(role_slugs)::text[]), 0) = 0
     OR EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON r.id = ur.role_id
-      WHERE ur.user_id = u.id AND r.slug = sqlc.narg(role_slug)
+      WHERE ur.user_id = u.id AND r.slug = ANY (sqlc.narg(role_slugs)::text[])
     )
   )
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR u.created_at >= sqlc.narg(created_from))
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR u.created_at < sqlc.narg(created_before))
   AND (
     sqlc.narg(q)::text IS NULL
     OR u.email ILIKE '%' || sqlc.narg(q) || '%'
@@ -149,13 +151,15 @@ WHERE u.deleted_at IS NULL
     OR u.status = ANY (sqlc.narg(statuses)::text[])
   )
   AND (
-    sqlc.narg(role_slug)::text IS NULL
+    COALESCE(cardinality(sqlc.narg(role_slugs)::text[]), 0) = 0
     OR EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON r.id = ur.role_id
-      WHERE ur.user_id = u.id AND r.slug = sqlc.narg(role_slug)
+      WHERE ur.user_id = u.id AND r.slug = ANY (sqlc.narg(role_slugs)::text[])
     )
   )
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR u.created_at >= sqlc.narg(created_from))
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR u.created_at < sqlc.narg(created_before))
   AND (
     sqlc.narg(q)::text IS NULL
     OR u.email ILIKE '%' || sqlc.narg(q) || '%'
@@ -181,13 +185,15 @@ WHERE u.deleted_at IS NULL
     OR u.status = ANY (sqlc.narg(statuses)::text[])
   )
   AND (
-    sqlc.narg(role_slug)::text IS NULL
+    COALESCE(cardinality(sqlc.narg(role_slugs)::text[]), 0) = 0
     OR EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON r.id = ur.role_id
-      WHERE ur.user_id = u.id AND r.slug = sqlc.narg(role_slug)
+      WHERE ur.user_id = u.id AND r.slug = ANY (sqlc.narg(role_slugs)::text[])
     )
   )
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR u.created_at >= sqlc.narg(created_from))
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR u.created_at < sqlc.narg(created_before))
   AND (
     sqlc.narg(q)::text IS NULL
     OR u.email ILIKE '%' || sqlc.narg(q) || '%'
@@ -205,13 +211,15 @@ WHERE u.deleted_at IS NULL
     OR u.status = ANY (sqlc.narg(statuses)::text[])
   )
   AND (
-    sqlc.narg(role_slug)::text IS NULL
+    COALESCE(cardinality(sqlc.narg(role_slugs)::text[]), 0) = 0
     OR EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON r.id = ur.role_id
-      WHERE ur.user_id = u.id AND r.slug = sqlc.narg(role_slug)
+      WHERE ur.user_id = u.id AND r.slug = ANY (sqlc.narg(role_slugs)::text[])
     )
   )
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR u.created_at >= sqlc.narg(created_from))
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR u.created_at < sqlc.narg(created_before))
   AND (
     sqlc.narg(q)::text IS NULL
     OR u.email ILIKE '%' || sqlc.narg(q) || '%'

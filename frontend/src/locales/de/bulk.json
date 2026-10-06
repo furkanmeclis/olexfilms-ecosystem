@@ -45,5 +45,13 @@
   "confirm.catalog_products.delete": "{{count}} Produkte löschen?",
   "confirm.catalog_services.deactivate": "{{count}} Leistungen deaktivieren?",
   "confirm.catalog_services.raise_price": "Preis von {{count}} Leistungen aktualisieren?",
-  "confirm.catalog_services.delete": "{{count}} Leistungen löschen?"
+  "confirm.catalog_services.delete": "{{count}} Leistungen löschen?",
+  "actions.organizations.activate": "Organisationen aktivieren",
+  "actions.organizations.suspend": "Organisationen sperren",
+  "actions.organizations.set_read_only": "Organisationen schreibgeschützt setzen",
+  "actions.organizations.extend_access": "Zugang verlängern",
+  "confirm.organizations.suspend": "{{count}} Organisationen sperren?",
+  "confirm.organizations.set_read_only": "{{count}} Organisationen schreibgeschützt setzen?",
+  "confirm.organizations.extend_access": "Zugang von {{count}} Organisationen verlängern?",
+  "params.days": "Tage"
 }

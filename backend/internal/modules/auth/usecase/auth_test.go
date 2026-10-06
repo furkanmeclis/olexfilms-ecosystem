@@ -440,7 +440,7 @@ func (r *memRepo) UpdateUserTOTPRecoveryHashes(context.Context, int64, []string)
 
 func (r *memRepo) DeleteUserTOTP(context.Context, int64) error { return nil }
 
-func (r *memRepo) ListRolesFiltered(context.Context, int32, int32, string) ([]model.RoleSummary, int64, error) {
+func (r *memRepo) ListRolesFiltered(context.Context, model.RoleListFilter) ([]model.RoleSummary, int64, error) {
 	return []model.RoleSummary{{UUID: uuid.New(), Name: "Organization", Slug: rbac.RoleCustomer}}, 1, nil
 }
 

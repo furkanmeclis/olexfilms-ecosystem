@@ -629,8 +629,34 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Permission catalog with modules and allowed scopes */
+        /**
+         * Permission catalog with modules and allowed scopes
+         * @description The catalog is larger than the generic 100 row page (TEC-365): this
+         *     endpoint accepts `limit` up to 1000, and `all=true` returns the whole
+         *     catalog in one page (limit 1000, offset 0).
+         */
         get: operations["listPlatformPermissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List roles
+         * @description Sortable (`sort`, one primary field, id tiebreak): name, slug, is_system,
+         *     created_at, updated_at. Default `name` (TEC-365). Unknown field → 400.
+         */
+        get: operations["listPlatformRoles"];
         put?: never;
         post?: never;
         delete?: never;
@@ -667,6 +693,278 @@ export interface paths {
         put?: never;
         /** Run a bulk action on platform roles */
         post: operations["postPlatformRolesBulk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/activity/meta": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Activity list meta */
+        get: operations["getPlatformActivityMeta"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List activity (audit) events
+         * @description Sortable (`sort`, one primary field, id tiebreak): created_at, action,
+         *     resource. Default `-created_at` (TEC-365). Unknown field → 400. The export
+         *     (`POST /v1/platform/activity/export`) reads the same parameters from its
+         *     `query`.
+         */
+        get: operations["listPlatformActivity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List export jobs (own jobs; every job for platform admins)
+         * @description Sortable (`sort`, one primary field, id tiebreak): created_at, updated_at,
+         *     status, resource, format. Default `-created_at` (TEC-365). Unknown field or
+         *     filter value → 400.
+         */
+        get: operations["listPlatformExports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List platform import jobs (own jobs; every job for platform admins)
+         * @description Sortable (`sort`, one primary field, id tiebreak): created_at, updated_at,
+         *     status, resource, format. Default `-created_at` (TEC-365). Unknown field or
+         *     filter value → 400.
+         */
+        get: operations["listPlatformImports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/logs/meta": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Application log list meta */
+        get: operations["getPlatformLogsMeta"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List application logs
+         * @description Needs `platform.logs.read`. Sortable (`sort`, one primary field, id
+         *     tiebreak): created_at, level (severity), source. Default `-created_at`.
+         *     Unknown field → 400.
+         */
+        get: operations["listPlatformLogs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/logs/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Log counts per level */
+        get: operations["getPlatformLogStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/logs/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Distinct log sources */
+        get: operations["getPlatformLogSources"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/logs/purge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete logs by uuid list or criteria
+         * @description Needs `platform.logs.write`. `dry_run` only counts.
+         */
+        post: operations["postPlatformLogsPurge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/logs/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one log entry */
+        get: operations["getPlatformLog"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete one log entry
+         * @description Needs `platform.logs.write`.
+         */
+        delete: operations["deletePlatformLog"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/log-rules/meta": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Log purge rule list meta */
+        get: operations["getPlatformLogRulesMeta"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/log-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List log purge rules
+         * @description The full (small) rule set in one page; tables sort and search client side.
+         */
+        get: operations["listPlatformLogRules"];
+        put?: never;
+        /** Create a log purge rule */
+        post: operations["createPlatformLogRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/log-rules/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a log purge rule */
+        get: operations["getPlatformLogRule"];
+        put?: never;
+        post?: never;
+        /** Delete a log purge rule */
+        delete: operations["deletePlatformLogRule"];
+        options?: never;
+        head?: never;
+        /** Update a log purge rule */
+        patch: operations["patchPlatformLogRule"];
+        trace?: never;
+    };
+    "/v1/platform/log-rules/{uuid}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run a log purge rule now */
+        post: operations["runPlatformLogRule"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1480,6 +1778,56 @@ export interface paths {
         put?: never;
         /** Create organization */
         post: operations["createPlatformOrganization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/organizations/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run a bulk action on platform organizations
+         * @description TEC-365. Actions (see `/v1/platform/organizations/meta` `bulk_actions`):
+         *     `activate`, `suspend`, `set_read_only` (status) and `extend_access`
+         *     (`target.params.days`, 1..3650; extends from the current access end when
+         *     it is in the future, else from now). All need
+         *     `platform.organizations.write` and are undoable. The target is the
+         *     selected uuids or the list query (`scope: query` with the list filters);
+         *     both stay inside the request brand. The brand center is refused per item.
+         */
+        post: operations["postPlatformOrganizationsBulk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/organizations/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export the platform organizations list
+         * @description TEC-365. Queues an export job (`platform.organizations`) over the list
+         *     of the request brand. `query` takes the list parameters (q, sort,
+         *     status, type, plan_code, parent_uuid, access_ends_from/_to,
+         *     created_from/_to); bad values → 400. Needs
+         *     `platform.organizations.read` and a fresh step-up.
+         */
+        post: operations["postPlatformOrganizationsExport"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2494,7 +2842,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List organization import jobs */
+        /**
+         * List organization import jobs
+         * @description Sortable (`sort`, one primary field, id tiebreak): created_at, updated_at,
+         *     status, resource, format. Default `-created_at` (TEC-365). Unknown field or
+         *     filter value → 400.
+         */
         get: operations["listTenantImports"];
         put?: never;
         post?: never;
@@ -2596,7 +2949,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List organization export jobs */
+        /**
+         * List organization export jobs
+         * @description Sortable (`sort`, one primary field, id tiebreak): created_at, updated_at,
+         *     status, resource, format. Default `-created_at` (TEC-365). Unknown field or
+         *     filter value → 400.
+         */
         get: operations["listTenantExports"];
         put?: never;
         post?: never;
@@ -11010,6 +11368,16 @@ export interface components {
              * @example Asia/Dubai
              */
             timezone?: string | null;
+            /**
+             * Format: date-time
+             * @description Set on the platform users list and detail (TEC-365).
+             */
+            created_at?: string;
+            /**
+             * Format: date-time
+             * @description Set on the platform users list and detail (TEC-365).
+             */
+            updated_at?: string;
         };
         /**
          * @description Canonical locale code (K10). Inputs are normalized: "zh_CN", "zh-cn" and "zh" become zh-CN; a regional code falls back to its language ("tr-TR" -> tr). Unknown codes are rejected with 422.
@@ -11410,6 +11778,10 @@ export interface components {
              * @enum {string}
              */
             org_type?: "platform" | "center" | "distributor" | "dealer" | "customer" | "fleet";
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
         };
         /**
          * @description Reach of a grant. all > brand > subtree > managed > assigned > own; customer only covers itself.
@@ -12455,7 +12827,153 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
-        /** @description The user who requested an export or uploaded an import (TEC-211). Present on the organization job lists (GET /v1/tenant/exports, GET /v1/tenant/imports). */
+        /** @description A list export request (TEC-365): `query` carries the list parameters (q, sort, filters) as strings; multi-value filters are comma-separated. */
+        ListExportRequest: {
+            /** @enum {string} */
+            format: "pdf" | "xlsx" | "csv" | "json";
+            locale?: components["schemas"]["Locale"];
+            query?: {
+                [key: string]: string;
+            };
+        };
+        EnvelopeRoleSummaryPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["RoleSummary"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        ActivityEvent: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: int64 */
+            actor_user_id?: number;
+            action: string;
+            resource: string;
+            /** Format: uuid */
+            resource_uuid?: string;
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            created_at: string;
+        };
+        EnvelopeActivityEventPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ActivityEvent"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        AppLog: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            level: "debug" | "warn" | "error";
+            message: string;
+            source: string;
+            attrs: {
+                [key: string]: unknown;
+            } | null;
+            request_id?: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        EnvelopeAppLogPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["AppLog"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        AppLogStats: {
+            /** Format: int64 */
+            debug: number;
+            /** Format: int64 */
+            warn: number;
+            /** Format: int64 */
+            error: number;
+            /** Format: int64 */
+            total: number;
+        };
+        AppLogPurgeRequest: {
+            uuids?: string[];
+            dry_run?: boolean;
+            levels?: ("debug" | "warn" | "error")[];
+            source?: string;
+            q?: string;
+            older_than_hours?: number | null;
+        };
+        AppLogPurgeResult: {
+            /** Format: int64 */
+            deleted: number;
+            dry_run: boolean;
+        };
+        LogPurgeRule: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            enabled: boolean;
+            is_system: boolean;
+            levels: ("debug" | "warn" | "error")[];
+            source?: string;
+            message_contains?: string;
+            older_than_hours: number;
+            /** @enum {integer} */
+            interval_minutes: 5 | 15 | 30 | 60 | 180 | 360 | 720 | 1440 | 10080;
+            /** Format: date-time */
+            last_run_at?: string;
+            /** Format: int64 */
+            last_deleted_count: number;
+            last_error?: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        LogPurgeRuleInput: {
+            name?: string;
+            enabled?: boolean | null;
+            levels?: ("debug" | "warn" | "error")[];
+            source?: string | null;
+            message_contains?: string | null;
+            older_than_hours?: number | null;
+            interval_minutes?: number | null;
+        };
+        EnvelopeLogPurgeRule: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["LogPurgeRule"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeLogPurgeRulePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["LogPurgeRule"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @description The user who requested an export or uploaded an import (TEC-211). Present on the job lists (GET /v1/tenant/exports, /v1/tenant/imports, and since TEC-365 /v1/platform/exports, /v1/platform/imports). */
         IoJobActor: {
             /** Format: uuid */
             uuid: string;
@@ -19303,6 +19821,10 @@ export interface components {
         Limit: number;
         Offset: number;
         Q: string;
+        /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+        CreatedFrom: string;
+        /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+        CreatedTo: string;
         /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
         Sort: string;
     };
@@ -20324,6 +20846,8 @@ export interface operations {
                 q?: string;
                 limit?: number;
                 offset?: number;
+                /** @description `true` returns the whole catalog in one page. */
+                all?: boolean;
             };
             header?: never;
             path?: never;
@@ -20351,6 +20875,37 @@ export interface operations {
                     };
                 };
             };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listPlatformRoles: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description `true` system roles only, `false` custom roles only. */
+                is_system?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Role page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeRoleSummaryPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
         };
@@ -20419,6 +20974,548 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getPlatformActivityMeta: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Meta */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeResourceMeta"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listPlatformActivity: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Matches action or resource (ILIKE). */
+                q?: string;
+                /** @description User uuid of the actor. */
+                actor?: string;
+                /** @description Comma-separated resources (exact match). */
+                resource?: string;
+                /** @description Comma-separated actions (exact match). */
+                action?: string;
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Activity page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeActivityEventPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listPlatformExports: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Matches the resource (ILIKE). */
+                q?: string;
+                /** @description Comma-separated statuses (queued, processing, completed, failed, expired). */
+                status?: string;
+                /** @description Comma-separated resource slugs, e.g. `platform.users,platform.roles`. */
+                resource?: string;
+                /** @description Comma-separated formats (pdf, xlsx, csv, json). */
+                format?: string;
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Export jobs page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJobPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listPlatformImports: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Matches the resource or the uploaded file name (ILIKE). */
+                q?: string;
+                /** @description Comma-separated statuses (uploaded, mapped, previewed, queued, applying, applied, failed, rolled_back). */
+                status?: string;
+                /** @description Comma-separated resource slugs. */
+                resource?: string;
+                /** @description Comma-separated formats (json, xlsx, csv, tsv). */
+                format?: string;
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Import jobs page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeImportJobPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getPlatformLogsMeta: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Meta */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeResourceMeta"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listPlatformLogs: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Matches message, source or request id (ILIKE). */
+                q?: string;
+                /** @description Comma-separated levels (debug, warn, error). */
+                level?: string;
+                source?: string;
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
+                /** @description Only logs older than this many hours. */
+                older_than_hours?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Log page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppLogPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getPlatformLogStats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Counts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: true;
+                        data: components["schemas"]["AppLogStats"];
+                        meta: components["schemas"]["ResponseMeta"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getPlatformLogSources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sources */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: true;
+                        data: {
+                            items: string[];
+                        };
+                        meta: components["schemas"]["ResponseMeta"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postPlatformLogsPurge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppLogPurgeRequest"];
+            };
+        };
+        responses: {
+            /** @description Purge result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: true;
+                        data: components["schemas"]["AppLogPurgeResult"];
+                        meta: components["schemas"]["ResponseMeta"];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getPlatformLog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Log entry */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: true;
+                        data: components["schemas"]["AppLog"];
+                        meta: components["schemas"]["ResponseMeta"];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deletePlatformLog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDeleted"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getPlatformLogRulesMeta: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Meta */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeResourceMeta"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listPlatformLogRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rules */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLogPurgeRulePage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createPlatformLogRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LogPurgeRuleInput"];
+            };
+        };
+        responses: {
+            /** @description Created rule */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLogPurgeRule"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getPlatformLogRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLogPurgeRule"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deletePlatformLogRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDeleted"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchPlatformLogRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LogPurgeRuleInput"];
+            };
+        };
+        responses: {
+            /** @description Updated rule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLogPurgeRule"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    runPlatformLogRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rule and deleted count */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: true;
+                        data: {
+                            rule: components["schemas"]["LogPurgeRule"];
+                            /** Format: int64 */
+                            deleted: number;
+                        };
+                        meta: components["schemas"]["ResponseMeta"];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     listPlatformBulkJobs: {
@@ -21598,8 +22695,19 @@ export interface operations {
                 sort?: components["parameters"]["Sort"];
                 /** @description Comma-separated statuses (pending, active, read_only, suspended, expired), e.g. `active,suspended`. Unknown value → 400. */
                 status?: string;
-                type?: components["schemas"]["OrganizationType"];
+                /** @description Comma-separated types (center, distributor, dealer). Unknown value → 400. */
+                type?: string;
                 parent_uuid?: string;
+                /** @description Comma-separated plan codes, e.g. `trial,pro` (TEC-365). */
+                plan_code?: string;
+                /** @description Access end on or after (YYYY-MM-DD or RFC3339). */
+                access_ends_from?: string;
+                /** @description Access end on or before; a date covers the whole day. */
+                access_ends_to?: string;
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
             };
             header?: never;
             path?: never;
@@ -21645,6 +22753,69 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    postPlatformOrganizationsBulk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkExecuteRequest"];
+            };
+        };
+        responses: {
+            /** @description Sync bulk result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkSyncResult"];
+                };
+            };
+            /** @description Async bulk job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postPlatformOrganizationsExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ListExportRequest"];
+            };
+        };
+        responses: {
+            /** @description Export job */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getPlatformOrganization: {
@@ -21817,8 +22988,12 @@ export interface operations {
                 sort?: components["parameters"]["Sort"];
                 /** @description Comma-separated statuses (active, disabled, pending, anonymized), e.g. `active,pending`. Unknown value → 400. */
                 status?: string;
-                /** @description Role slug */
+                /** @description Comma-separated role slugs (users holding any of them), e.g. `super_admin,support` (TEC-365). */
                 role?: string;
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
                 is_super_admin?: boolean;
             };
             header?: never;
@@ -23352,6 +24527,20 @@ export interface operations {
             query?: {
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Matches the resource or the uploaded file name (ILIKE). */
+                q?: string;
+                /** @description Comma-separated statuses (uploaded, mapped, previewed, queued, applying, applied, failed, rolled_back). */
+                status?: string;
+                /** @description Comma-separated resource slugs. */
+                resource?: string;
+                /** @description Comma-separated formats (json, xlsx, csv, tsv). */
+                format?: string;
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
             };
             header?: never;
             path?: never;
@@ -23512,6 +24701,20 @@ export interface operations {
             query?: {
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Matches the resource (ILIKE). */
+                q?: string;
+                /** @description Comma-separated statuses (queued, processing, completed, failed, expired). */
+                status?: string;
+                /** @description Comma-separated resource slugs, e.g. `platform.users,platform.roles`. */
+                resource?: string;
+                /** @description Comma-separated formats (pdf, xlsx, csv, json). */
+                format?: string;
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
             };
             header?: never;
             path?: never;

@@ -7,9 +7,7 @@ import (
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
-	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 var ErrNotFound = errors.New("not found")
@@ -35,30 +33,17 @@ type Event struct {
 	CreatedAt    time.Time      `json:"created_at"`
 }
 
-// List returns paginated activity events.
-func (s *Service) List(
-	ctx context.Context,
-	q apiquery.Query,
-	actorID *int64,
-	resource, action, search string,
-) ([]Event, int64, error) {
-	params := db.ListActivityEventsParams{
-		ActorUserID: pgtypeInt8(actorID),
-		Resource:    textNarg(emptyToNil(resource)),
-		Action:      textNarg(emptyToNil(action)),
-		Q:           textNarg(emptyToNil(search)),
-		LimitCount:  q.Limit,
-		OffsetCount: q.Offset,
-	}
+// List returns paginated activity events. params carries the filters and
+// sort parsed by activity.ListParams (TEC-365).
+func (s *Service) List(ctx context.Context, params db.ListActivityEventsParams, limit, offset int32) ([]Event, int64, error) {
+	params.LimitCount, params.OffsetCount = limit, offset
 	rows, err := s.q.ListActivityEvents(ctx, params)
 	if err != nil {
 		return nil, 0, err
 	}
 	total, err := s.q.CountActivityEvents(ctx, db.CountActivityEventsParams{
-		ActorUserID: params.ActorUserID,
-		Resource:    params.Resource,
-		Action:      params.Action,
-		Q:           params.Q,
+		ActorUuid: params.ActorUuid, Resources: params.Resources, Actions: params.Actions,
+		CreatedFrom: params.CreatedFrom, CreatedBefore: params.CreatedBefore, Q: params.Q,
 	})
 	if err != nil {
 		return nil, 0, err
@@ -87,25 +72,4 @@ func mapEvent(row db.ActivityEvent) Event {
 		UUID: row.Uuid, ActorUserID: actor, Action: row.Action, Resource: row.Resource,
 		ResourceUUID: ru, Payload: payload, CreatedAt: row.CreatedAt.Time,
 	}
-}
-
-func pgtypeInt8(id *int64) pgtype.Int8 {
-	if id == nil {
-		return pgtype.Int8{}
-	}
-	return pgtype.Int8{Int64: *id, Valid: true}
-}
-
-func textNarg(s *string) pgtype.Text {
-	if s == nil {
-		return pgtype.Text{}
-	}
-	return pgtype.Text{String: *s, Valid: true}
-}
-
-func emptyToNil(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
 }

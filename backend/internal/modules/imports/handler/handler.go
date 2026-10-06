@@ -29,7 +29,12 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	p := authctx.MustPrincipal(r.Context())
 	q := apiquery.Parse(r.URL.Query())
 	admin := p.HasPermission(rbac.PermPlatformSettingsWrite)
-	items, total, err := h.svc.ListJobs(r.Context(), p.UserInternal, admin, nil, q.Limit, q.Offset)
+	f, err := importusecase.ParseJobListFilter(r.URL.Query())
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	items, total, err := h.svc.ListJobs(r.Context(), p.UserInternal, admin, nil, f, q.Limit, q.Offset)
 	if err != nil {
 		writeErr(w, r, err)
 		return
@@ -191,7 +196,12 @@ func (h *Handler) ListTenant(w http.ResponseWriter, r *http.Request) {
 	scope := orgctx.MustScope(r.Context())
 	q := apiquery.Parse(r.URL.Query())
 	orgID := scope.InternalID
-	items, total, err := h.svc.ListJobs(r.Context(), p.UserInternal, false, &orgID, q.Limit, q.Offset)
+	f, err := importusecase.ParseJobListFilter(r.URL.Query())
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	items, total, err := h.svc.ListJobs(r.Context(), p.UserInternal, false, &orgID, f, q.Limit, q.Offset)
 	if err != nil {
 		writeErr(w, r, err)
 		return
@@ -292,6 +302,9 @@ func (h *Handler) RollbackTenant(w http.ResponseWriter, r *http.Request) {
 }
 
 func writeErr(w http.ResponseWriter, r *http.Request, err error) {
+	if response.QueryValidation(w, r, err) {
+		return
+	}
 	switch {
 	case errors.Is(err, importusecase.ErrNotFound):
 		response.NotFound(w, r, "import job not found")

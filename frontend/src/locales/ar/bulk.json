@@ -45,5 +45,13 @@
   "confirm.catalog_products.delete": "هل تريد حذف {{count}} من المنتجات؟",
   "confirm.catalog_services.deactivate": "هل تريد إيقاف {{count}} من الخدمات؟",
   "confirm.catalog_services.raise_price": "هل تريد تحديث سعر {{count}} من الخدمات؟",
-  "confirm.catalog_services.delete": "هل تريد حذف {{count}} من الخدمات؟"
+  "confirm.catalog_services.delete": "هل تريد حذف {{count}} من الخدمات؟",
+  "actions.organizations.activate": "تفعيل المنظمات",
+  "actions.organizations.suspend": "تعليق المنظمات",
+  "actions.organizations.set_read_only": "جعل المنظمات للقراءة فقط",
+  "actions.organizations.extend_access": "تمديد الوصول",
+  "confirm.organizations.suspend": "تعليق {{count}} منظمة؟",
+  "confirm.organizations.set_read_only": "جعل {{count}} منظمة للقراءة فقط؟",
+  "confirm.organizations.extend_access": "تمديد وصول {{count}} منظمة؟",
+  "params.days": "الأيام"
 }

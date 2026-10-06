@@ -188,6 +188,8 @@ func main() {
 		ioadapters.NewRoles(queries),
 		ioadapters.NewNotifications(queries),
 		ioadapters.NewActivity(queries),
+		// TEC-365: platform organizations list export (read only).
+		orgusecase.NewListExportAdapter(orgusecase.New(pool, queries)),
 		// TEC-175: cari statement and balance report exports (read only).
 		accountingusecase.NewStatementAdapter(accountingSvc),
 		accountingusecase.NewBalancesAdapter(accountingSvc),
@@ -244,6 +246,8 @@ func main() {
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(queries),
 		bulkadapters.NewRoles(queries),
+		// TEC-365: platform organizations (status change, extend access).
+		bulkadapters.NewOrganizations(queries),
 		// TEC-212: tenant resources with undo.
 		bulkadapters.NewCatalogProducts(queries),
 		bulkadapters.NewTasks(queries),

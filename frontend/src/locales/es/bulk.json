@@ -45,5 +45,13 @@
   "confirm.catalog_products.delete": "¿Eliminar {{count}} productos?",
   "confirm.catalog_services.deactivate": "¿Desactivar {{count}} servicios?",
   "confirm.catalog_services.raise_price": "¿Actualizar el precio de {{count}} servicios?",
-  "confirm.catalog_services.delete": "¿Eliminar {{count}} servicios?"
+  "confirm.catalog_services.delete": "¿Eliminar {{count}} servicios?",
+  "actions.organizations.activate": "Activar organizaciones",
+  "actions.organizations.suspend": "Suspender organizaciones",
+  "actions.organizations.set_read_only": "Poner organizaciones en solo lectura",
+  "actions.organizations.extend_access": "Ampliar acceso",
+  "confirm.organizations.suspend": "¿Suspender {{count}} organizaciones?",
+  "confirm.organizations.set_read_only": "¿Poner {{count}} organizaciones en solo lectura?",
+  "confirm.organizations.extend_access": "¿Ampliar el acceso de {{count}} organizaciones?",
+  "params.days": "Días"
 }
