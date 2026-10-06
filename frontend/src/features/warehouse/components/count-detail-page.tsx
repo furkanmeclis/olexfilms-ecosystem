@@ -7,10 +7,9 @@ import {
   FileDown,
   Play,
   ShieldCheck,
-  Trash2,
   XCircle,
 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
@@ -20,9 +19,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import {
+  CountLinesTable,
+  CountScansTable,
+  ExpectedLocationsTable,
+} from "@/features/warehouse/components/count-tables";
 import { countScopeText } from "@/features/warehouse/components/counts-page";
 import { Info } from "@/features/warehouse/components/list-controls";
-import { nativeSelectClass } from "@/features/warehouse/components/native-select-field";
 import { ScanInput } from "@/features/warehouse/components/scan-input";
 import {
   useWarehouseAccess,
@@ -33,7 +36,6 @@ import {
   canCancelCount,
   canStart,
   countStatusTone,
-  defaultResolution,
   linesToResolve,
   needsStartApproval,
   showsQuantity,
@@ -48,8 +50,8 @@ import {
   warehouseKeys,
   warehouseService,
   type StockCount,
-  type StockCountLine,
   type StockCountResolution,
+  type StockCountScan,
   type StockCountScanResult,
 } from "@/features/warehouse/services/warehouse.service";
 import {
@@ -277,7 +279,7 @@ export function CountDetailPage({
 
 /** Guided counts only: what the ledger expects per location. */
 function ExpectedCard({ count }: { count: StockCount }) {
-  const { t, format } = useLocale();
+  const { t } = useLocale();
   const exp = count.expected;
   if (!exp) return null;
   return (
@@ -292,22 +294,7 @@ function ExpectedCard({ count }: { count: StockCount }) {
         </p>
       </CardHeader>
       <CardContent>
-        <ul className="divide-y text-sm">
-          {exp.locations.map((l, i) => (
-            <li
-              key={l.location?.uuid ?? `none-${i}`}
-              className="flex justify-between gap-2 py-1.5"
-            >
-              <span className="font-mono text-xs" dir="ltr">
-                {l.location?.full_code ?? t("warehouse.scan.unplaced")}
-              </span>
-              <span>
-                {format.number(l.serial_units)} ·{" "}
-                {format.number(l.fixed_quantity)}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <ExpectedLocationsTable locations={exp.locations} />
       </CardContent>
     </Card>
   );
@@ -456,7 +443,7 @@ function ScansCard({
   count: StockCount;
   canWrite: boolean;
 }) {
-  const { t, format } = useLocale();
+  const { t } = useLocale();
   const qc = useQueryClient();
   const scans = useQuery({
     queryKey: warehouseKeys.countScans(count.uuid),
@@ -474,8 +461,16 @@ function ScansCard({
     onError: (err) =>
       appToast.error(warehouseErrorMessage(err, t, t("warehouse.form.error"))),
   });
-  const items = (scans.data?.items ?? []).filter((s) => s.kind !== "location");
+  const items = useMemo(
+    () => (scans.data?.items ?? []).filter((s) => s.kind !== "location"),
+    [scans.data?.items],
+  );
   const editable = canWrite && count.status === "in_progress";
+  const removeScan = remove.mutate;
+  const onRemove = useCallback(
+    (scan: StockCountScan) => removeScan(scan.uuid),
+    [removeScan],
+  );
 
   return (
     <Card>
@@ -483,7 +478,7 @@ function ScansCard({
         <CardTitle>{t("warehouse.count.scans_title")}</CardTitle>
       </CardHeader>
       <CardContent>
-        {items.length === 0 ? (
+        {!scans.isLoading && items.length === 0 ? (
           <p
             className="text-muted-foreground text-sm"
             data-testid="count-scans-empty"
@@ -491,61 +486,17 @@ function ScansCard({
             {t("warehouse.count.no_scans")}
           </p>
         ) : (
-          <ul className="divide-y text-sm" data-testid="count-scans">
-            {items
-              .slice()
-              .reverse()
-              .map((s) => (
-                <li
-                  key={s.uuid}
-                  className="flex items-center justify-between gap-2 py-1.5"
-                  data-testid="count-scan-row"
-                >
-                  <div className="min-w-0">
-                    <span className="font-mono text-xs" dir="ltr">
-                      {s.unit?.barcode ?? s.product?.sku ?? s.raw_code}
-                    </span>
-                    <span className="text-muted-foreground ms-2 text-xs">
-                      {s.product?.name}
-                    </span>
-                    <div className="text-muted-foreground text-xs" dir="ltr">
-                      {s.location?.full_code ?? "—"} ·{" "}
-                      {format.number(s.quantity)}
-                      {s.meters ? ` · ${s.meters} m` : ""}
-                    </div>
-                  </div>
-                  {editable ? (
-                    <Button
-                      type="button"
-                      size="icon-sm"
-                      variant="ghost"
-                      aria-label={t("warehouse.count.remove_scan", {
-                        code: s.unit?.barcode ?? s.raw_code,
-                      })}
-                      disabled={remove.isPending}
-                      onClick={() => remove.mutate(s.uuid)}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  ) : null}
-                </li>
-              ))}
-          </ul>
+          <CountScansTable
+            scans={items}
+            isLoading={scans.isLoading}
+            editable={editable}
+            onRemove={onRemove}
+            removing={remove.isPending}
+          />
         )}
       </CardContent>
     </Card>
   );
-}
-
-/** One difference line: what was expected, what was counted, the choice. */
-function lineText(l: StockCountLine): { expected: string; counted: string } {
-  const where = (loc: StockCountLine["expected_location"]) =>
-    loc?.full_code ?? "—";
-  const qty = (n: number, m: string | null) => (m ? `${n} · ${m} m` : `${n}`);
-  return {
-    expected: `${where(l.expected_location)} · ${qty(l.expected_quantity, l.expected_meters)}`,
-    counted: `${where(l.counted_location)} · ${qty(l.counted_quantity, l.counted_meters)}`,
-  };
 }
 
 /**
@@ -572,8 +523,13 @@ export function CountReportCard({
     queryKey: warehouseKeys.countReport(count.uuid),
     queryFn: () => warehouseService.getCountReport(count.uuid),
   });
-  const lines = report.data?.lines ?? [];
-  const pending = linesToResolve(lines);
+  const lines = useMemo(() => report.data?.lines ?? [], [report.data?.lines]);
+  const pending = useMemo(() => linesToResolve(lines), [lines]);
+  const onChoices = useCallback(
+    (next: Record<string, StockCountResolution>) =>
+      setChoices((prev) => ({ ...prev, ...next })),
+    [],
+  );
 
   const approve = useMutation({
     mutationFn: (body: ReturnType<typeof approveBody>["resolutions"]) =>
@@ -685,91 +641,12 @@ export function CountReportCard({
               : t("warehouse.count.no_differences")}
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm" data-testid="count-lines">
-              <thead>
-                <tr className="text-muted-foreground border-b text-xs">
-                  <th className="p-2 text-start font-medium">
-                    {t("warehouse.fields.product")}
-                  </th>
-                  <th className="p-2 text-start font-medium">
-                    {t("warehouse.count.result")}
-                  </th>
-                  <th className="p-2 text-start font-medium">
-                    {t("warehouse.count.expected")}
-                  </th>
-                  <th className="p-2 text-start font-medium">
-                    {t("warehouse.count.counted")}
-                  </th>
-                  <th className="p-2 text-start font-medium">
-                    {t("warehouse.count.resolution")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {pending.map((l) => {
-                  const text = lineText(l);
-                  const value = choices[l.uuid] ?? defaultResolution(l) ?? "";
-                  return (
-                    <tr
-                      key={l.uuid}
-                      className="border-b last:border-0"
-                      data-testid="count-line"
-                      data-result={l.result}
-                    >
-                      <td className="p-2">
-                        {l.product.name}
-                        <div
-                          className="text-muted-foreground font-mono text-xs"
-                          dir="ltr"
-                        >
-                          {l.unit?.barcode ?? l.product.sku}
-                        </div>
-                      </td>
-                      <td className="p-2">
-                        {t(`warehouse.count_result.${l.result}`)}
-                      </td>
-                      <td className="p-2 font-mono text-xs" dir="ltr">
-                        {text.expected}
-                      </td>
-                      <td className="p-2 font-mono text-xs" dir="ltr">
-                        {text.counted}
-                      </td>
-                      <td className="p-2">
-                        {canApprove ? (
-                          <select
-                            className={nativeSelectClass}
-                            value={value}
-                            aria-label={t("warehouse.count.resolution_for", {
-                              code: l.unit?.barcode ?? l.product.sku,
-                            })}
-                            data-testid="count-resolution"
-                            onChange={(e) =>
-                              setChoices((prev) => ({
-                                ...prev,
-                                [l.uuid]: e.target
-                                  .value as StockCountResolution,
-                              }))
-                            }
-                          >
-                            {l.allowed_resolutions.map((r) => (
-                              <option key={r} value={r}>
-                                {t(`warehouse.count_resolution.${r}`)}
-                              </option>
-                            ))}
-                          </select>
-                        ) : l.resolution ? (
-                          t(`warehouse.count_resolution.${l.resolution}`)
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <CountLinesTable
+            lines={pending}
+            canApprove={canApprove}
+            choices={choices}
+            onChoices={onChoices}
+          />
         )}
       </CardContent>
     </Card>

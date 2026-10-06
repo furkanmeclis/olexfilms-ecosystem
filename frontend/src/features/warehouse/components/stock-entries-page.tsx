@@ -1,18 +1,21 @@
 "use client";
 
-import {
-  keepPreviousData,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, PackagePlus, Plus } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ColumnDef } from "@tanstack/react-table";
+import { Eye, PackagePlus, Plus, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
-import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
+import {
+  EntityRowActions,
+  EntityTable,
+  EntityToolbar,
+  useServerListState,
+  type EntityRowAction,
+} from "@/components/entity";
+import { createColumn } from "@/components/tables";
 import { AppForm, AppInput } from "@/components/forms";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,17 +23,19 @@ import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { NativeSelectField } from "@/features/warehouse/components/native-select-field";
 import {
+  enumFilterOptions,
+  useWarehouseFilterOptions,
+} from "@/features/warehouse/components/table-options";
+import {
   useWarehouseAccess,
   WarehouseShell,
 } from "@/features/warehouse/components/warehouse-shell";
 import {
+  ENTRY_MODES,
   entryStatusTone,
   ENTRY_STATUSES,
 } from "@/features/warehouse/lib/entries";
-import {
-  pageCount,
-  warehouseErrorMessage,
-} from "@/features/warehouse/lib/errors";
+import { warehouseErrorMessage } from "@/features/warehouse/lib/errors";
 import {
   entryFormSchema,
   type EntryFormValues,
@@ -39,47 +44,196 @@ import {
 import {
   warehouseKeys,
   warehouseService,
+  type StockEntry,
   type StockEntryListQuery,
-  type StockEntryStatus,
   type Warehouse,
 } from "@/features/warehouse/services/warehouse.service";
-import { cn } from "@/lib/utils";
+import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
+import { appToast } from "@/providers/toast-provider";
 
 export const ENTRY_PAGE_SIZE = 20;
-const ALL = "all";
+export const ENTRIES_PERSIST_KEY = "tenant-warehouse-entries-v1";
 
 /**
- * Warehouse > Stock entries (TEC-204): the entry documents of the active
- * organization and a new draft at one of its warehouses. Only the center
+ * Warehouse > Stock entries (TEC-204, TEC-376): the entry documents of the
+ * active organization over a server DataTable — sort (created, status,
+ * warehouse), search (note, warehouse name / code), status / mode /
+ * warehouse / created filters, row actions (open, cancel a draft) and
+ * mobile cards — and a new draft at one of its warehouses. Only the center
  * reserves new barcodes in an entry (generate_new, K14); a distributor
  * takes in printed labels (with_existing).
  */
 export function StockEntriesPage({ slug }: { slug: string }) {
   const { t, format } = useLocale();
+  const router = useRouter();
+  const qc = useQueryClient();
+  const { confirm } = useDialogs();
   const access = useWarehouseAccess(slug);
   const canWrite = access.can(Permission.WarehouseWrite);
-  const [status, setStatus] = useState<StockEntryStatus | typeof ALL>(ALL);
-  const [page, setPage] = useState(0);
   const [creating, setCreating] = useState(false);
+  const warehouseOptions = useWarehouseFilterOptions(access.allowed);
 
-  const query = useMemo<StockEntryListQuery>(
-    () => ({
-      ...(status === ALL ? {} : { status }),
-      limit: ENTRY_PAGE_SIZE,
-      offset: page * ENTRY_PAGE_SIZE,
-    }),
-    [status, page],
-  );
+  const cancel = useMutation({
+    mutationFn: (uuid: string) => warehouseService.cancel(uuid),
+    onSuccess: async (entry) => {
+      qc.setQueryData(warehouseKeys.entry(entry.uuid), entry);
+      await qc.invalidateQueries({ queryKey: ["warehouse", "entries"] });
+      appToast.success(t("warehouse.entry.cancelled"));
+    },
+    onError: (err) =>
+      appToast.error(warehouseErrorMessage(err, t, t("warehouse.form.error"))),
+  });
+  const runCancel = cancel.mutate;
+  const cancelPending = cancel.isPending;
+
+  const columns = useMemo(() => {
+    const askCancel = async (entry: StockEntry) => {
+      const ok = await confirm({
+        title: t("warehouse.entry.cancel_title"),
+        description: t("warehouse.entry.cancel_description"),
+        confirmLabel: t("warehouse.entry.cancel"),
+        variant: "destructive",
+      });
+      if (ok) runCancel(entry.uuid);
+    };
+    return [
+      createColumn<StockEntry>({
+        id: "warehouse",
+        accessorFn: (e) => e.warehouse?.name ?? "",
+        labelKey: "warehouse.entries.columns.warehouse",
+        enableSorting: true,
+        gridPrimary: true,
+        filterVariant: "faceted",
+        filterOptions: warehouseOptions,
+        enableColumnFilter: warehouseOptions.length > 0,
+        param: "warehouse_uuid",
+        cell: ({ row }) => {
+          const e = row.original;
+          return (
+            <div className="min-w-0">
+              <Link
+                href={routes.tenant.warehouse.entry(slug, e.uuid)}
+                className="font-medium hover:underline"
+                data-testid="entry-row"
+                data-uuid={e.uuid}
+                onClick={(event) => event.stopPropagation()}
+              >
+                {e.warehouse
+                  ? `${e.warehouse.code} · ${e.warehouse.name}`
+                  : t("warehouse.entries.no_warehouse")}
+              </Link>
+              {e.note ? (
+                <div className="text-muted-foreground truncate text-xs">
+                  {e.note}
+                </div>
+              ) : null}
+            </div>
+          );
+        },
+      }),
+      createColumn<StockEntry>({
+        accessorKey: "status",
+        labelKey: "warehouse.entries.columns.status",
+        enableSorting: true,
+        filterVariant: "faceted",
+        filterOptions: enumFilterOptions(
+          ENTRY_STATUSES,
+          "warehouse.entry_status",
+        ),
+        param: "status",
+        cell: ({ row }) => (
+          <StatusChip
+            label={t(`warehouse.entry_status.${row.original.status}`)}
+            tone={entryStatusTone(row.original.status)}
+          />
+        ),
+      }),
+      createColumn<StockEntry>({
+        accessorKey: "mode",
+        labelKey: "warehouse.entries.columns.mode",
+        enableSorting: false,
+        filterVariant: "faceted",
+        filterOptions: enumFilterOptions(ENTRY_MODES, "warehouse.entry_mode"),
+        param: "mode",
+        gridSecondary: true,
+        cell: ({ row }) => t(`warehouse.entry_mode.${row.original.mode}`),
+      }),
+      createColumn<StockEntry>({
+        accessorKey: "line_count",
+        labelKey: "warehouse.entries.columns.lines",
+        enableSorting: false,
+        cell: ({ row }) => format.number(row.original.line_count),
+      }),
+      createColumn<StockEntry>({
+        accessorKey: "created_at",
+        labelKey: "warehouse.entries.columns.created",
+        enableSorting: true,
+        filterVariant: "date-range",
+        param: "created",
+        cell: ({ row }) => (
+          <span className="text-muted-foreground text-xs whitespace-nowrap">
+            {format.dateTime(row.original.created_at)}
+          </span>
+        ),
+      }),
+      createColumn<StockEntry>({
+        id: "actions",
+        labelKey: "common.actions",
+        enableSorting: false,
+        enableHiding: false,
+        enableResizing: false,
+        cell: ({ row }) => {
+          const entry = row.original;
+          const items: EntityRowAction[] = [
+            {
+              id: "view",
+              label: t("common.view"),
+              icon: Eye,
+              onSelect: () =>
+                router.push(routes.tenant.warehouse.entry(slug, entry.uuid)),
+            },
+          ];
+          if (canWrite && entry.status === "draft") {
+            items.push({
+              id: "cancel",
+              label: t("warehouse.entry.cancel"),
+              icon: XCircle,
+              variant: "destructive",
+              disabled: cancelPending,
+              onSelect: () => void askCancel(entry),
+            });
+          }
+          return <EntityRowActions actions={items} />;
+        },
+      }),
+    ] as ColumnDef<StockEntry, unknown>[];
+  }, [
+    canWrite,
+    cancelPending,
+    confirm,
+    format,
+    router,
+    runCancel,
+    slug,
+    t,
+    warehouseOptions,
+  ]);
+
+  // Column meta drives the params: warehouse_uuid / status / mode (CSV),
+  // created (created_from/_to); sort created_at | status | warehouse.
+  const listState = useServerListState({
+    columns,
+    initialSort: "-created_at",
+    initialPageSize: ENTRY_PAGE_SIZE,
+    persistKey: ENTRIES_PERSIST_KEY,
+  });
+  const query: StockEntryListQuery = listState.params;
   const list = useQuery({
     queryKey: warehouseKeys.entries(query),
     queryFn: () => warehouseService.listEntries(query),
     enabled: access.allowed,
-    placeholderData: keepPreviousData,
   });
-  const rows = list.data?.items ?? [];
-  const total = list.data?.total ?? 0;
-  const pages = pageCount(total, ENTRY_PAGE_SIZE);
 
   return (
     <WarehouseShell
@@ -109,156 +263,57 @@ export function StockEntriesPage({ slug }: { slug: string }) {
         />
       ) : null}
 
-      <Card>
-        <CardContent className="space-y-4 pt-6">
-          <div
-            className="flex flex-wrap gap-2"
-            role="group"
-            aria-label={t("warehouse.entries.status_filter")}
-          >
-            {[ALL, ...ENTRY_STATUSES].map((s) => (
-              <Button
-                key={s}
-                type="button"
-                size="sm"
-                variant={status === s ? "secondary" : "ghost"}
-                aria-pressed={status === s}
-                onClick={() => {
-                  setStatus(s as StockEntryStatus | typeof ALL);
-                  setPage(0);
-                }}
-              >
-                {s === ALL
-                  ? t("warehouse.entries.all_statuses")
-                  : t(`warehouse.entry_status.${s}`)}
-              </Button>
-            ))}
-          </div>
-
-          {list.isError ? (
-            <ErrorState
-              title={t("common.error_generic")}
-              onRetry={() => void list.refetch()}
-              retryLabel={t("common.retry")}
-            />
-          ) : list.isLoading ? (
-            <p className="text-muted-foreground text-sm">
-              {t("warehouse.list.loading")}
-            </p>
-          ) : rows.length === 0 ? (
-            <div className="py-8 text-center" data-testid="entries-empty">
-              <p className="font-medium">
-                {t("warehouse.entries.empty_title")}
-              </p>
-              <p className="text-muted-foreground text-sm">
-                {t("warehouse.entries.empty_description")}
-              </p>
+      <EntityTable
+        columns={columns}
+        data={list.data?.items ?? []}
+        getRowId={(row) => row.uuid}
+        onRowClick={(row) =>
+          router.push(routes.tenant.warehouse.entry(slug, row.uuid))
+        }
+        isLoading={list.isLoading}
+        isError={list.isError}
+        onRetry={() => void list.refetch()}
+        emptyTitle={t("warehouse.entries.empty_title")}
+        emptyDescription={t("warehouse.entries.empty_description")}
+        rowCount={list.data?.total ?? 0}
+        state={listState.tableState}
+        features={{
+          persistKey: ENTRIES_PERSIST_KEY,
+          rowSelection: false,
+          viewMode: true,
+        }}
+        renderGridItem={(e) => (
+          <div className="space-y-2">
+            <div className="flex items-start justify-between gap-2">
+              <span className="font-medium">
+                {e.warehouse
+                  ? `${e.warehouse.code} · ${e.warehouse.name}`
+                  : t("warehouse.entries.no_warehouse")}
+              </span>
+              <StatusChip
+                label={t(`warehouse.entry_status.${e.status}`)}
+                tone={entryStatusTone(e.status)}
+              />
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm" data-testid="entries-table">
-                <thead>
-                  <tr className="text-muted-foreground border-b text-xs">
-                    <th className="p-2 text-start font-medium">
-                      {t("warehouse.entries.columns.warehouse")}
-                    </th>
-                    <th className="p-2 text-start font-medium">
-                      {t("warehouse.entries.columns.status")}
-                    </th>
-                    <th className="p-2 text-start font-medium">
-                      {t("warehouse.entries.columns.mode")}
-                    </th>
-                    <th className="p-2 text-start font-medium">
-                      {t("warehouse.entries.columns.lines")}
-                    </th>
-                    <th className="p-2 text-start font-medium">
-                      {t("warehouse.entries.columns.created")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((e) => (
-                    <tr
-                      key={e.uuid}
-                      className="hover:bg-accent/50 border-b last:border-0"
-                      data-testid="entry-row"
-                    >
-                      <td className="p-2">
-                        <Link
-                          href={routes.tenant.warehouse.entry(slug, e.uuid)}
-                          className="font-medium hover:underline"
-                        >
-                          {e.warehouse
-                            ? `${e.warehouse.code} · ${e.warehouse.name}`
-                            : t("warehouse.entries.no_warehouse")}
-                        </Link>
-                        {e.note ? (
-                          <div className="text-muted-foreground truncate text-xs">
-                            {e.note}
-                          </div>
-                        ) : null}
-                      </td>
-                      <td className="p-2">
-                        <StatusChip
-                          label={t(`warehouse.entry_status.${e.status}`)}
-                          tone={entryStatusTone(e.status)}
-                        />
-                      </td>
-                      <td className="p-2">
-                        {t(`warehouse.entry_mode.${e.mode}`)}
-                      </td>
-                      <td className="p-2">
-                        {e.placed_count !== undefined
-                          ? t("warehouse.entries.placed_of", {
-                              placed: e.placed_count,
-                              total: e.line_count,
-                            })
-                          : format.number(e.line_count)}
-                      </td>
-                      <td className="text-muted-foreground p-2 text-xs whitespace-nowrap">
-                        {format.dateTime(e.created_at)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          <div
-            className={cn(
-              "flex flex-wrap items-center justify-between gap-2",
-              rows.length === 0 && page === 0 && "hidden",
-            )}
-          >
-            <p className="text-muted-foreground text-sm">
-              {t("warehouse.list.page", { page: page + 1, pages, total })}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={page === 0 || list.isFetching}
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-              >
-                <ChevronLeft className="size-4 rtl:rotate-180" />
-                {t("warehouse.list.prev")}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={page + 1 >= pages || list.isFetching}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                {t("warehouse.list.next")}
-                <ChevronRight className="size-4 rtl:rotate-180" />
-              </Button>
+            {e.note ? (
+              <p className="text-muted-foreground truncate text-xs">{e.note}</p>
+            ) : null}
+            <div className="text-muted-foreground flex justify-between gap-2 text-xs">
+              <span>
+                {t(`warehouse.entry_mode.${e.mode}`)} ·{" "}
+                {format.number(e.line_count)}
+              </span>
+              <span>{format.dateTime(e.created_at)}</span>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        )}
+        toolbarExtra={
+          <EntityToolbar
+            onRefresh={() => void list.refetch()}
+            refreshDisabled={list.isFetching}
+          />
+        }
+      />
     </WarehouseShell>
   );
 }
