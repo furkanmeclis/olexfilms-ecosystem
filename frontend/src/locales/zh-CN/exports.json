@@ -75,5 +75,7 @@
   "resources.platform.organizations": "组织",
   "resources.orders.list": "订单",
   "resources.stock.units": "库存单元",
-  "resources.leads.list": "线索"
+  "resources.leads.list": "线索",
+  "resources.services.list": "服务",
+  "resources.warranties.list": "质保"
 }

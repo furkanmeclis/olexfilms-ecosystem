@@ -136,11 +136,3 @@ export function dealerFilterOptions(
   }
   return out.sort((a, b) => a.label.localeCompare(b.label));
 }
-
-export function filterDealerRows(
-  rows: readonly ByDealerRow[],
-  dealerUuid: string,
-): ByDealerRow[] {
-  if (!dealerUuid) return [...rows];
-  return rows.filter((r) => r.organization_uuid === dealerUuid);
-}

@@ -75,5 +75,7 @@
   "resources.platform.organizations": "Организации",
   "resources.orders.list": "Поръчки",
   "resources.stock.units": "Складови единици",
-  "resources.leads.list": "Потенциални клиенти"
+  "resources.leads.list": "Потенциални клиенти",
+  "resources.services.list": "Услуги",
+  "resources.warranties.list": "Гаранции"
 }

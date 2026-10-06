@@ -15,6 +15,38 @@ import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
 
 /**
+ * Queues the service PDF, waits for the export job and downloads it; also
+ * the "PDF" row action of the service list (TEC-378). Toasts the result.
+ */
+export async function downloadServicePdf({
+  serviceUuid,
+  serviceNo,
+  locale,
+  waitOptions,
+  client,
+  t,
+}: {
+  serviceUuid: string;
+  serviceNo: string;
+  locale?: string;
+  waitOptions?: WaitOptions;
+  client?: CertificateClient;
+  t: (key: string) => string;
+}): Promise<void> {
+  try {
+    const { file } = await fetchCertificate(
+      client ?? servicePdfClient(serviceUuid),
+      locale,
+      waitOptions,
+    );
+    triggerBrowserDownload(file.blob, file.filename ?? `${serviceNo}.pdf`);
+    appToast.success(t("services.detail.pdf_ready"));
+  } catch {
+    appToast.error(t("services.detail.pdf_failed"));
+  }
+}
+
+/**
  * "PDF" on the service detail (TEC-196): queues the service PDF, waits for
  * the export job and downloads it in the user language. `client` swaps the
  * realm (the portal passes its own, TEC-241); the panel client is default.
@@ -38,15 +70,14 @@ export function ServicePdfButton({
   const onClick = async () => {
     setBusy(true);
     try {
-      const { file } = await fetchCertificate(
-        client ?? servicePdfClient(serviceUuid),
+      await downloadServicePdf({
+        serviceUuid,
+        serviceNo,
         locale,
         waitOptions,
-      );
-      triggerBrowserDownload(file.blob, file.filename ?? `${serviceNo}.pdf`);
-      appToast.success(t("services.detail.pdf_ready"));
-    } catch {
-      appToast.error(t("services.detail.pdf_failed"));
+        client,
+        t,
+      });
     } finally {
       setBusy(false);
     }

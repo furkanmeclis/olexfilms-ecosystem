@@ -9,6 +9,7 @@ import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { routes } from "@/config/routes";
 import { portalApi } from "@/features/portal/lib/portal-client";
 import { WarrantyFilterBar } from "@/features/warranty/components/warranty-filter-bar";
@@ -19,6 +20,8 @@ import {
   EMPTY_WARRANTY_FILTERS,
   hasWarrantyFilters,
   pageCount,
+  PORTAL_WARRANTY_SORTS,
+  type PortalWarrantySort,
   warrantyStatusTone,
   warrantyVehicleTitle,
   type WarrantyListFilters,
@@ -29,28 +32,38 @@ import { useLocale } from "@/providers/locale-provider";
 
 export const PORTAL_WARRANTY_PAGE_SIZE = 10;
 
+const PORTAL_SORT_LABELS: Record<PortalWarrantySort, string> = {
+  expiry: "warranty.portal.sort.expiry",
+  "-start_at": "warranty.portal.sort.desc_start_at",
+  start_at: "warranty.portal.sort.start_at",
+};
+
 /**
  * Portal > My warranties (TEC-191): only the warranties the signed-in
  * customer / fleet user holds (GET /v1/portal/warranties), with days left
- * and the elapsed-period bar.
+ * and the elapsed-period bar. Stays a card list (portal customer cards are
+ * a DataTable exception); TEC-378 adds the sort choice of TEC-377.
  */
 export function PortalWarranties() {
   const { t, format, locale } = useLocale();
   const [filters, setFilters] = useState<WarrantyListFilters>(
     EMPTY_WARRANTY_FILTERS,
   );
+  const [sort, setSort] = useState<PortalWarrantySort>("expiry");
   const [page, setPage] = useState(0);
   const q = useDebounce(filters.q, 300);
   const query = useMemo(
-    () =>
-      buildWarrantyListQuery(
+    () => ({
+      ...buildWarrantyListQuery(
         { ...filters, q, productUuid: "" },
         {
           limit: PORTAL_WARRANTY_PAGE_SIZE,
           offset: page * PORTAL_WARRANTY_PAGE_SIZE,
         },
       ),
-    [filters, q, page],
+      sort,
+    }),
+    [filters, q, page, sort],
   );
   const list = useQuery({
     queryKey: ["portal", "warranties", query],
@@ -86,6 +99,29 @@ export function PortalWarranties() {
             filters={filters}
             onChange={change}
             searchPlaceholder={t("warranty.portal.search_placeholder")}
+            extra={
+              <div className="space-y-1.5">
+                <Label htmlFor="portal-warranty-sort">
+                  {t("warranty.portal.sort.label")}
+                </Label>
+                <select
+                  id="portal-warranty-sort"
+                  data-testid="portal-warranty-sort"
+                  className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
+                  value={sort}
+                  onChange={(e) => {
+                    setSort(e.target.value as PortalWarrantySort);
+                    setPage(0);
+                  }}
+                >
+                  {PORTAL_WARRANTY_SORTS.map((value) => (
+                    <option key={value} value={value}>
+                      {t(PORTAL_SORT_LABELS[value])}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            }
           />
         </CardContent>
       </Card>

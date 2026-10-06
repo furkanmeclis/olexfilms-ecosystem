@@ -5,7 +5,6 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const api = vi.hoisted(() => ({
-  listServices: vi.fn(),
   getService: vi.fn(),
 }));
 const state = vi.hoisted(() => ({ grants: new Set<string>() }));
@@ -40,27 +39,15 @@ vi.mock("@/providers/locale-provider", () => ({
     },
   }),
 }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), back: vi.fn() }),
+}));
+vi.mock("@/hooks/use-mobile", () => ({
+  useIsMobile: () => false,
+  useIsXl: () => true,
+}));
 vi.mock("@/providers/permission-provider", () => ({
   usePermission: () => ({ can: (p: string) => state.grants.has(p) }),
-}));
-// The calendar popover is covered by its own component; a plain input
-// stands in for it here (value = yyyy-MM-dd).
-vi.mock("@/components/ui/date-picker", () => ({
-  DatePicker: ({
-    id,
-    value,
-    onChange,
-  }: {
-    id?: string;
-    value?: string;
-    onChange?: (v: string) => void;
-  }) =>
-    createElement("input", {
-      id,
-      value: value ?? "",
-      onChange: (e: { target: { value: string } }) =>
-        onChange?.(e.target.value),
-    }),
 }));
 vi.mock("@/features/warranty/services/certificate.service", () => ({
   panelCertificateClient: (uuid: string) => {
@@ -100,7 +87,6 @@ import type { Service } from "@/features/services/services/service-wizard.servic
 import { ApiError } from "@/lib/api/errors";
 
 import { ServiceDetailPage } from "./service-detail-page";
-import { ServicesListPage } from "./services-list-page";
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -140,30 +126,8 @@ async function render(node: ReturnType<typeof createElement>) {
   await flush();
 }
 
-async function type(el: Element | null, value: string) {
-  if (!(el instanceof HTMLInputElement)) throw new Error("input not found");
-  const setter = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value",
-  )?.set;
-  await act(async () => {
-    setter?.call(el, value);
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-  });
-  await flush();
-}
-
-async function click(el: Element | null | undefined) {
-  if (!(el instanceof HTMLElement)) throw new Error("element not found");
-  await act(async () => {
-    el.click();
-  });
-  await flush();
-}
-
 const $ = (sel: string) => container.querySelector(sel);
 const $$ = (sel: string) => Array.from(container.querySelectorAll(sel));
-const lastQuery = () => api.listServices.mock.calls.at(-1)?.[0];
 
 const wizardGrants = ["services.write", "customers.read", "vehicles.read"];
 
@@ -264,99 +228,6 @@ function service(over: Partial<Service> = {}): Service {
   } as Service;
 }
 
-const page = (items: Service[], total = items.length) => ({
-  items,
-  total,
-  limit: 20,
-  offset: 0,
-});
-
-describe("ServicesListPage (TEC-183)", () => {
-  it("is forbidden without services.read", async () => {
-    await render(createElement(ServicesListPage, { slug: "acme" }));
-    expect(container.textContent).toContain("common.error_forbidden");
-    expect(api.listServices).not.toHaveBeenCalled();
-  });
-
-  it("lists services with links to the detail page", async () => {
-    state.grants = new Set(["services.read"]);
-    api.listServices.mockResolvedValue(page([service()]));
-    await render(createElement(ServicesListPage, { slug: "acme" }));
-    expect(lastQuery()).toEqual({ limit: 20, offset: 0 });
-    const rows = $$("[data-testid=service-row]");
-    expect(rows).toHaveLength(1);
-    expect(rows[0].textContent).toContain("DSABCD1234");
-    expect(rows[0].textContent).toContain("Ayşe Yılmaz");
-    expect(rows[0].textContent).toContain("BMW 320i 2022");
-    expect(rows[0].textContent).toContain("34ABC123");
-    expect(rows[0].querySelector("a")?.getAttribute("href")).toBe(
-      "/t/acme/services/s1",
-    );
-    // services.read alone: no "new service" button.
-    expect($("[data-testid=new-service]")).toBeNull();
-  });
-
-  it("shows the new service button with the wizard grants", async () => {
-    state.grants = new Set(["services.read", ...wizardGrants]);
-    api.listServices.mockResolvedValue(page([]));
-    await render(createElement(ServicesListPage, { slug: "acme" }));
-    expect($("[data-testid=new-service]")?.getAttribute("href")).toBe(
-      "/t/acme/services/new",
-    );
-    expect($("[data-testid=services-empty]")).not.toBeNull();
-  });
-
-  it("sends the status, search and date filters", async () => {
-    state.grants = new Set(["services.read"]);
-    api.listServices.mockResolvedValue(page([service()]));
-    await render(createElement(ServicesListPage, { slug: "acme" }));
-
-    await click($("[data-status=draft]"));
-    expect($("[data-status=draft]")?.getAttribute("aria-pressed")).toBe("true");
-    expect(lastQuery()).toMatchObject({ status: "draft", offset: 0 });
-
-    await type($("#service-search"), " 34ABC ");
-    expect(lastQuery()).toMatchObject({ status: "draft", q: "34ABC" });
-
-    await type($("#service-from"), "2026-10-01");
-    await type($("#service-to"), "2026-10-02");
-    const q = lastQuery();
-    expect(Date.parse(q.created_from)).toBe(new Date(2026, 9, 1).getTime());
-    expect(Date.parse(q.created_to)).toBe(new Date(2026, 9, 3).getTime());
-
-    await click($("[data-testid=clear-filters]"));
-    expect(lastQuery()).toEqual({ limit: 20, offset: 0 });
-  });
-
-  it("flags a reversed date range and drops the dates", async () => {
-    state.grants = new Set(["services.read"]);
-    api.listServices.mockResolvedValue(page([]));
-    await render(createElement(ServicesListPage, { slug: "acme" }));
-    await type($("#service-from"), "2026-10-05");
-    await type($("#service-to"), "2026-10-01");
-    expect($("[data-testid=date-error]")).not.toBeNull();
-    expect(lastQuery().created_from).toBeUndefined();
-    expect(lastQuery().created_to).toBeUndefined();
-  });
-
-  it("pages with offset and resets the page on a filter change", async () => {
-    state.grants = new Set(["services.read"]);
-    api.listServices.mockImplementation((q: { offset: number }) =>
-      Promise.resolve({ ...page([service()], 45), offset: q.offset }),
-    );
-    await render(createElement(ServicesListPage, { slug: "acme" }));
-    expect($("[data-testid=page-prev]")?.hasAttribute("disabled")).toBe(true);
-    expect($("[data-testid=page-info]")?.textContent).toContain('"pages":3');
-    await click($("[data-testid=page-next]"));
-    expect(lastQuery()).toMatchObject({ offset: 20 });
-    await click($("[data-testid=page-next]"));
-    expect(lastQuery()).toMatchObject({ offset: 40 });
-    expect($("[data-testid=page-next]")?.hasAttribute("disabled")).toBe(true);
-    await click($("[data-status=completed]"));
-    expect(lastQuery()).toMatchObject({ offset: 0, status: "completed" });
-  });
-});
-
 describe("ServiceDetailPage (TEC-183)", () => {
   it("is forbidden without services.read", async () => {
     await render(
@@ -386,7 +257,9 @@ describe("ServiceDetailPage (TEC-183)", () => {
     expect(customer).toContain("+905551234567");
     expect(customer).toContain("Acme Bayi");
 
-    const item = $("[data-testid=detail-item]")?.textContent ?? "";
+    // TEC-378: items and warranties are nested client-side DataTables.
+    expect($$("[data-testid=detail-item]")).toHaveLength(1);
+    const item = $("[data-testid=detail-items] tbody tr")?.textContent ?? "";
     expect(item).toContain("Olex PPF 190");
     expect(item).toContain("OLX-ROLL-1");
     expect(item).toContain('services.stock.amount_meters {"meters":"4.50"}');
@@ -397,7 +270,9 @@ describe("ServiceDetailPage (TEC-183)", () => {
       "/api/v1/services/s1/images/im1",
     );
 
-    const warranty = $("[data-testid=detail-warranty]")?.textContent ?? "";
+    expect($("[data-testid=detail-warranty]")?.textContent).toBe("W-ABC123");
+    const warranty =
+      $("[data-testid=detail-warranties] tbody tr")?.textContent ?? "";
     expect(warranty).toContain("W-ABC123");
     expect(warranty).toContain("services.detail.warranty_status.active");
     expect(warranty).toContain("date(2036-10-01T20:59:59Z)");

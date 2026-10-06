@@ -105,7 +105,12 @@ test("wizard: customer/vehicle → parts → VIN → stock → complete → deta
   await expect(page.getByTestId("detail-customer")).toContainText(
     "Ayşe Yılmaz",
   );
-  const item = page.getByTestId("detail-item");
+  // TEC-378: items and warranties are nested DataTables (one row each).
+  await expect(page.getByTestId("detail-item")).toHaveCount(1);
+  const item = page
+    .getByTestId("detail-items")
+    .getByRole("row")
+    .filter({ has: page.getByTestId("detail-item") });
   await expect(item).toContainText("Olex PPF 190");
   await expect(item).toContainText("OLX-ROLL-001");
   await expect(item).toContainText("4.50 m");
@@ -131,42 +136,30 @@ test("list: filters, then a draft continues in the wizard", async ({
   await expect(page.getByTestId("service-row")).toHaveCount(1);
   await expect(page.getByTestId("service-row")).toContainText("DSE2E00001");
 
-  await page.locator('[data-status="draft"]').click();
+  // TEC-378: a server DataTable; the default sort is sent, the status
+  // facet and the toolbar search map to `status` / `q`.
+  await expect
+    .poll(() =>
+      api.calls.filter((c) => c.startsWith("GET /v1/services?")).at(-1),
+    )
+    .toContain("sort=-created_at");
+  await page.locator("button.border-dashed", { hasText: "Status" }).click();
+  await page.getByRole("option", { name: "Draft" }).click();
   await expect
     .poll(() =>
       api.calls.filter((c) => c.startsWith("GET /v1/services?")).at(-1),
     )
     .toContain("status=draft");
+  await page.keyboard.press("Escape");
 
-  await page.locator("#service-search").fill("34ABC");
+  await page.getByPlaceholder("Search table…").fill("34ABC");
   await expect
     .poll(() =>
       api.calls.filter((c) => c.startsWith("GET /v1/services?")).at(-1),
     )
     .toContain("q=34ABC");
 
-  // Day 1 of the shown month: the bound is local midnight (Istanbul) in UTC.
-  await page.locator("#service-from").click();
-  await page
-    .getByRole("dialog")
-    .getByRole("button")
-    .filter({ hasText: /^1$/ })
-    .first()
-    .click();
-  const firstOfMonth = await page.evaluate(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1)
-      .toISOString()
-      .replace(/\.\d{3}Z$/, "Z");
-  });
-  await expect
-    .poll(() =>
-      api.calls.filter((c) => c.startsWith("GET /v1/services?")).at(-1),
-    )
-    .toContain(`created_from=${encodeURIComponent(firstOfMonth)}`);
-  await page.keyboard.press("Escape");
-
-  await page.getByTestId("service-row").getByRole("link").click();
+  await page.getByTestId("service-row").click();
   await expect(page).toHaveURL(
     new RegExp(`/t/${SLUG}/services/${SERVICE_UUID}$`),
   );

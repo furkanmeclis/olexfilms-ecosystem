@@ -90,6 +90,7 @@ export const EMPTY_WARRANTY_FILTERS: WarrantyListFilters = {
 };
 
 export type WarrantyListQuery = {
+  sort?: string;
   status?: WarrantyStatus;
   q?: string;
   product_uuid?: string;
@@ -97,6 +98,17 @@ export type WarrantyListQuery = {
   limit: number;
   offset: number;
 };
+
+/**
+ * Sort choices of the portal card list (TEC-378 on the TEC-377 sort
+ * whitelist); `expiry` is the API default (active by the soonest end).
+ */
+export const PORTAL_WARRANTY_SORTS = [
+  "expiry",
+  "-start_at",
+  "start_at",
+] as const;
+export type PortalWarrantySort = (typeof PORTAL_WARRANTY_SORTS)[number];
 
 /** True when any filter differs from the empty bar. */
 export function hasWarrantyFilters(f: WarrantyListFilters): boolean {
