@@ -487,6 +487,7 @@ func (s *Service) availabilityForOrg(
 		if err != nil {
 			return nil, invalid("working_hours", err.Error())
 		}
+		av.Timezone = loc.String()
 		out = append(out, av)
 	}
 	return out, nil

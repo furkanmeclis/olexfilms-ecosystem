@@ -342,6 +342,9 @@ func TestAvailabilityBerlinSlotsAndClosedDay(t *testing.T) {
 	if len(days) != 1 || days[0].Date != "2026-10-05" || len(days[0].Slots) == 0 {
 		t.Fatalf("availability = %+v", days)
 	}
+	if days[0].Timezone != "Europe/Berlin" {
+		t.Fatalf("availability timezone = %q, want Europe/Berlin", days[0].Timezone)
+	}
 	if want := time.Date(2026, 10, 5, 7, 0, 0, 0, time.UTC); !days[0].Slots[0].Start.Equal(want) {
 		t.Fatalf("first slot = %s, want %s (09:00 Berlin, CEST)", days[0].Slots[0].Start, want)
 	}

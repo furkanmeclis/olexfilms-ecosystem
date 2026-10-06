@@ -38,6 +38,9 @@ type DayAvailability struct {
 	RemainingCapacity int32  `json:"remaining_capacity"`
 	Closed            bool   `json:"closed"`
 	Slots             []Slot `json:"slots"`
+	// Timezone is the organization's IANA zone the day is bounded in
+	// (TEC-326: the panel calendar renders in it).
+	Timezone string `json:"timezone,omitempty"`
 }
 
 func ParseWorkingHours(raw []byte, weekday time.Weekday) ([]WorkWindow, error) {

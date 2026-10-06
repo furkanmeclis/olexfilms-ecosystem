@@ -18896,6 +18896,8 @@ export interface components {
             remaining_capacity: number;
             closed: boolean;
             slots: components["schemas"]["AppointmentSlot"][];
+            /** @description IANA zone of the organization the day is bounded in (TEC-326) */
+            timezone?: string;
         };
         AppointmentOccupancy: {
             /** Format: int64 */
