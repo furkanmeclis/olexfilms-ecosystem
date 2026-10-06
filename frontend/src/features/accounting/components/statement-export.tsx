@@ -23,28 +23,25 @@ export const EXPORT_POLL_MS = 2000;
 const RUNNING: AccountingExportJob["status"][] = ["queued", "processing"];
 
 /**
- * Statement export (TEC-175): a button per format queues a job on
+ * Accounting export job (TEC-175, TEC-379): `request` queues a job on
  * worker-docs, the job is polled until it completes and the file is then
  * downloaded once through /v1/accounting/exports/{uuid}/download.
  */
-export function StatementExport({
+export function useAccountingExport({
   orgUuid,
-  cariUuid,
-  period,
+  request,
   pollMs = EXPORT_POLL_MS,
 }: {
   orgUuid: string;
-  cariUuid: string;
-  period: StatementPeriod;
+  request: (format: AccountingExportFormat) => Promise<AccountingExportJob>;
   pollMs?: number;
 }) {
-  const { t, locale } = useLocale();
+  const { t } = useLocale();
   const [job, setJob] = useState<AccountingExportJob | null>(null);
   const downloaded = useRef<string | null>(null);
 
   const start = useMutation({
-    mutationFn: (format: AccountingExportFormat) =>
-      accountingService.exportStatement(cariUuid, format, period, locale),
+    mutationFn: request,
     onSuccess: (queued) => {
       downloaded.current = null;
       setJob(queued);
@@ -86,6 +83,29 @@ export function StatementExport({
 
   const busy =
     start.isPending || Boolean(current && RUNNING.includes(current.status));
+
+  return { start, current, busy };
+}
+
+/** Statement export (TEC-175): a button per format, status and re-download. */
+export function StatementExport({
+  orgUuid,
+  cariUuid,
+  period,
+  pollMs = EXPORT_POLL_MS,
+}: {
+  orgUuid: string;
+  cariUuid: string;
+  period: StatementPeriod;
+  pollMs?: number;
+}) {
+  const { t, locale } = useLocale();
+  const { start, current, busy } = useAccountingExport({
+    orgUuid,
+    pollMs,
+    request: (format) =>
+      accountingService.exportStatement(cariUuid, format, period, locale),
+  });
 
   return (
     <div

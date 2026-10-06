@@ -42,10 +42,8 @@ vi.mock("@/components/ui/date-picker", async () => {
 
 import { AccountForm } from "./account-form-dialog";
 import { AccountOpeningForm } from "./account-opening-dialog";
-import { EntryFilters } from "./entry-filters";
 import { SettlementForm } from "./settlement-dialog";
 import { EntryAmount, EntryStatus } from "./shared";
-import { EMPTY_ENTRY_FILTERS } from "@/features/accounting/lib/form";
 import type {
   CariAccount,
   FinanceAccount,
@@ -344,57 +342,6 @@ describe("AccountOpeningForm (TEC-198)", () => {
       opening_date: "2021-03-01",
       description: undefined,
     });
-  });
-});
-
-describe("EntryFilters", () => {
-  it("reports each filter and clears them", async () => {
-    const onChange = vi.fn();
-    await render(
-      createElement(EntryFilters, {
-        value: EMPTY_ENTRY_FILTERS,
-        cariOptions: [{ value: "c1", label: "Bayi A" }],
-        onChange,
-      }),
-    );
-    const clear = $("[data-testid=entry-filters-clear]") as HTMLButtonElement;
-    expect(clear.disabled).toBe(true);
-
-    await choose($("#entry-filter-cari"), "c1");
-    expect(onChange).toHaveBeenLastCalledWith({
-      ...EMPTY_ENTRY_FILTERS,
-      cari_uuid: "c1",
-    });
-    await choose($("#entry-filter-source"), "order");
-    expect(onChange).toHaveBeenLastCalledWith({
-      ...EMPTY_ENTRY_FILTERS,
-      source_type: "order",
-    });
-    await choose($("#entry-filter-direction"), "payment");
-    expect(onChange).toHaveBeenLastCalledWith({
-      ...EMPTY_ENTRY_FILTERS,
-      direction: "payment",
-    });
-    await type($("#entry-filter-from"), "2026-10-01");
-    expect(onChange).toHaveBeenLastCalledWith({
-      ...EMPTY_ENTRY_FILTERS,
-      date_from: "2026-10-01",
-    });
-  });
-
-  it("enables clear when a filter is set", async () => {
-    const onChange = vi.fn();
-    await render(
-      createElement(EntryFilters, {
-        value: { ...EMPTY_ENTRY_FILTERS, source_type: "manual" },
-        cariOptions: [],
-        onChange,
-      }),
-    );
-    const clear = $("[data-testid=entry-filters-clear]") as HTMLButtonElement;
-    expect(clear.disabled).toBe(false);
-    await act(async () => clear.click());
-    expect(onChange).toHaveBeenCalledWith(EMPTY_ENTRY_FILTERS);
   });
 });
 

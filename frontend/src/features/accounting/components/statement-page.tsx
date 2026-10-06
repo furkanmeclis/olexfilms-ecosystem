@@ -1,13 +1,19 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import type { ColumnDef } from "@tanstack/react-table";
 import { Lock } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { StatusChip } from "@/components/common/status-chip";
 import { ErrorState } from "@/components/common/error-state";
 import { Loading } from "@/components/common/loading";
-import { EntityPage } from "@/components/entity";
+import {
+  CLIENT_SIDE_MANUAL,
+  EntityPage,
+  EntityTable,
+} from "@/components/entity";
+import { createColumn } from "@/components/tables";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,10 +38,13 @@ import { isStatementLineDisputable } from "@/features/accounting/lib/disputes";
 import {
   accountingService,
   type CariStatement,
+  type CariStatementLine,
   type StatementPeriod,
 } from "@/features/accounting/services/accounting.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
+
+export const STATEMENT_PERSIST_KEY = "tenant-accounting-statement-v1";
 
 /** A dealer that cannot write its book (no dealer_accounting module). */
 export function ReadOnlyNotice() {
@@ -71,6 +80,133 @@ export function StatementView({
 }: StatementViewProps) {
   const { t, format } = useLocale();
   const s = statement;
+  const columns = useMemo(
+    () =>
+      [
+        createColumn<CariStatementLine>({
+          accessorKey: "date",
+          labelKey: "accounting.fields.date",
+          enableSorting: false,
+          cell: ({ row }) => (
+            <span className="whitespace-nowrap">
+              {format.date(row.original.date)}
+            </span>
+          ),
+        }),
+        createColumn<CariStatementLine>({
+          accessorKey: "description",
+          labelKey: "accounting.fields.description",
+          enableSorting: false,
+          gridPrimary: true,
+          cell: ({ row }) => (
+            <div>
+              <div className="font-medium">{row.original.description}</div>
+              {row.original.description !== row.original.category_label ? (
+                <div className="text-muted-foreground text-xs">
+                  {row.original.category_label}
+                </div>
+              ) : null}
+            </div>
+          ),
+        }),
+        createColumn<CariStatementLine>({
+          accessorKey: "source_label",
+          labelKey: "accounting.fields.source",
+          enableSorting: false,
+          cell: ({ row }) => row.original.source_label || "—",
+        }),
+        createColumn<CariStatementLine>({
+          accessorKey: "debit",
+          labelKey: "accounting.statement.debit",
+          enableSorting: false,
+          cell: ({ row }) => (
+            <div className="text-end">
+              {Number(row.original.debit) ? (
+                <Money amount={row.original.debit} currency={s.currency} />
+              ) : (
+                "—"
+              )}
+            </div>
+          ),
+        }),
+        createColumn<CariStatementLine>({
+          accessorKey: "credit",
+          labelKey: "accounting.statement.credit",
+          enableSorting: false,
+          cell: ({ row }) => (
+            <div className="text-end">
+              {Number(row.original.credit) ? (
+                <Money amount={row.original.credit} currency={s.currency} />
+              ) : (
+                "—"
+              )}
+            </div>
+          ),
+        }),
+        createColumn<CariStatementLine>({
+          accessorKey: "balance",
+          labelKey: "accounting.fields.balance",
+          enableSorting: false,
+          gridSecondary: true,
+          cell: ({ row }) => (
+            <div className="text-end">
+              <Money amount={row.original.balance} currency={s.currency} />
+            </div>
+          ),
+        }),
+        createColumn<CariStatementLine>({
+          id: "status",
+          accessorFn: (row) =>
+            row.reversal_of_uuid ? 2 : row.reversed ? 1 : 0,
+          labelKey: "accounting.fields.status",
+          enableSorting: false,
+          cell: ({ row }) => {
+            const line = row.original;
+            const disputed = openDisputes.has(line.uuid);
+            const disputable =
+              canDispute &&
+              !disputed &&
+              isStatementLineDisputable(line, s.cari, parentUuid);
+            return (
+              <div
+                className="flex flex-wrap items-center gap-1"
+                data-testid="statement-line"
+                data-entry={line.uuid}
+              >
+                {line.reversal_of_uuid ? (
+                  <StatusChip
+                    label={t("accounting.entries.reversal")}
+                    tone="warning"
+                  />
+                ) : null}
+                {line.reversed ? (
+                  <StatusChip
+                    label={t("accounting.entries.voided")}
+                    tone="danger"
+                  />
+                ) : null}
+                {disputed ? (
+                  <span data-testid="statement-line-disputed">
+                    <StatusChip
+                      label={t("accounting.disputes.statuses.open")}
+                      tone="warning"
+                    />
+                  </span>
+                ) : null}
+                {disputable ? (
+                  <DisputeButton
+                    orgUuid={orgUuid}
+                    entryUuid={line.uuid}
+                    summary={`${format.date(line.date)} · ${line.description}`}
+                  />
+                ) : null}
+              </div>
+            );
+          },
+        }),
+      ] as ColumnDef<CariStatementLine, unknown>[],
+    [canDispute, format, openDisputes, orgUuid, parentUuid, s, t],
+  );
   const totals: { key: string; amount: string }[] = [
     { key: "opening", amount: s.opening_balance },
     { key: "total_debit", amount: s.total_debit },
@@ -123,111 +259,22 @@ export function StatementView({
           {t("accounting.statement.empty")}
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-md border">
-          <table className="w-full text-sm" data-testid="statement-lines">
-            <thead className="bg-muted/50 text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 text-start font-medium">
-                  {t("accounting.fields.date")}
-                </th>
-                <th className="px-3 py-2 text-start font-medium">
-                  {t("accounting.fields.description")}
-                </th>
-                <th className="px-3 py-2 text-start font-medium">
-                  {t("accounting.fields.source")}
-                </th>
-                <th className="px-3 py-2 text-end font-medium">
-                  {t("accounting.statement.debit")}
-                </th>
-                <th className="px-3 py-2 text-end font-medium">
-                  {t("accounting.statement.credit")}
-                </th>
-                <th className="px-3 py-2 text-end font-medium">
-                  {t("accounting.fields.balance")}
-                </th>
-                <th className="px-3 py-2 text-start font-medium">
-                  {t("accounting.fields.status")}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {s.lines.map((line) => {
-                const disputed = openDisputes.has(line.uuid);
-                const disputable =
-                  canDispute &&
-                  !disputed &&
-                  isStatementLineDisputable(line, s.cari, parentUuid);
-                return (
-                  <tr
-                    key={line.uuid}
-                    data-testid="statement-line"
-                    data-entry={line.uuid}
-                  >
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      {format.date(line.date)}
-                    </td>
-                    <td className="px-3 py-2">
-                      <div className="font-medium">{line.description}</div>
-                      {line.description !== line.category_label ? (
-                        <div className="text-muted-foreground text-xs">
-                          {line.category_label}
-                        </div>
-                      ) : null}
-                    </td>
-                    <td className="px-3 py-2">{line.source_label || "—"}</td>
-                    <td className="px-3 py-2 text-end">
-                      {Number(line.debit) ? (
-                        <Money amount={line.debit} currency={s.currency} />
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-end">
-                      {Number(line.credit) ? (
-                        <Money amount={line.credit} currency={s.currency} />
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-end">
-                      <Money amount={line.balance} currency={s.currency} />
-                    </td>
-                    <td className="px-3 py-2">
-                      <div className="flex flex-wrap items-center gap-1">
-                        {line.reversal_of_uuid ? (
-                          <StatusChip
-                            label={t("accounting.entries.reversal")}
-                            tone="warning"
-                          />
-                        ) : null}
-                        {line.reversed ? (
-                          <StatusChip
-                            label={t("accounting.entries.voided")}
-                            tone="danger"
-                          />
-                        ) : null}
-                        {disputed ? (
-                          <span data-testid="statement-line-disputed">
-                            <StatusChip
-                              label={t("accounting.disputes.statuses.open")}
-                              tone="warning"
-                            />
-                          </span>
-                        ) : null}
-                        {disputable ? (
-                          <DisputeButton
-                            orgUuid={orgUuid}
-                            entryUuid={line.uuid}
-                            summary={`${format.date(line.date)} · ${line.description}`}
-                          />
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div data-testid="statement-lines">
+          <EntityTable
+            columns={columns}
+            data={s.lines}
+            getRowId={(row) => row.uuid}
+            manual={CLIENT_SIDE_MANUAL}
+            initialState={{ pagination: { pageIndex: 0, pageSize: 50 } }}
+            emptyTitle={t("accounting.statement.empty")}
+            emptyDescription=""
+            features={{
+              persistKey: STATEMENT_PERSIST_KEY,
+              // The running balance keeps the chronological order.
+              sorting: false,
+              rowSelection: false,
+            }}
+          />
         </div>
       )}
     </div>
@@ -242,11 +289,13 @@ export function useOpenDisputeEntries(orgUuid: string, enabled: boolean) {
     queryFn: () => accountingService.listDisputes(params),
     enabled: enabled && Boolean(orgUuid),
   });
-  const set = new Set<string>();
-  for (const d of query.data?.items ?? []) {
-    if (d.status === "open") set.add(d.entry.uuid);
-  }
-  return set;
+  return useMemo(() => {
+    const set = new Set<string>();
+    for (const d of query.data?.items ?? []) {
+      if (d.status === "open") set.add(d.entry.uuid);
+    }
+    return set;
+  }, [query.data]);
 }
 
 /** Tenant > Accounting > Cari > Statement (TEC-175 data, TEC-195 screen). */

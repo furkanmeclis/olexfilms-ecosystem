@@ -1,13 +1,11 @@
 import { z } from "zod";
 
 import type {
-  AccountingDirection,
   AccountType,
   FinanceAccount,
   FinanceAccountCreateInput,
   FinanceAccountUpdateInput,
   FinanceSettlementInput,
-  ListEntriesParams,
 } from "@/features/accounting/services/accounting.service";
 
 type Translate = (
@@ -165,47 +163,4 @@ export function fieldErrors(error: z.ZodError): Record<string, string> {
     if (key && !out[key]) out[key] = issue.message;
   }
   return out;
-}
-
-// --- Entry list filters ------------------------------------------------------
-
-export type EntryFilterValues = {
-  date_from: string;
-  date_to: string;
-  cari_uuid: string;
-  source_type: string;
-  direction: string;
-};
-
-export const EMPTY_ENTRY_FILTERS: EntryFilterValues = {
-  date_from: "",
-  date_to: "",
-  cari_uuid: "",
-  source_type: "",
-  direction: "",
-};
-
-const DATE = /^\d{4}-\d{2}-\d{2}$/;
-
-/** Filter state → query; empty values are dropped, a reversed range swapped. */
-export function entryFilterParams(
-  f: EntryFilterValues,
-  page: { limit: number; offset: number },
-): ListEntriesParams {
-  let from = DATE.test(f.date_from) ? f.date_from : "";
-  let to = DATE.test(f.date_to) ? f.date_to : "";
-  if (from && to && from > to) [from, to] = [to, from];
-  return {
-    limit: page.limit,
-    offset: page.offset,
-    ...(from ? { date_from: from } : {}),
-    ...(to ? { date_to: to } : {}),
-    ...(f.cari_uuid ? { cari_uuid: f.cari_uuid } : {}),
-    ...(f.source_type ? { source_type: f.source_type } : {}),
-    ...(f.direction ? { direction: f.direction as AccountingDirection } : {}),
-  };
-}
-
-export function activeFilterCount(f: EntryFilterValues): number {
-  return Object.values(f).filter(Boolean).length;
 }
