@@ -126,5 +126,9 @@
   "fields.timezone": "Time zone",
   "fields.timezone_hint": "Dates and times are shown in this zone unless a user picks their own.",
   "form.section_regional": "Language and region",
-  "form.section_regional_desc": "Default language and time zone for users, documents and notifications."
+  "form.section_regional_desc": "Default language and time zone for users, documents and notifications.",
+  "columns.created_at": "Created",
+  "columns.email": "Email",
+  "detail.children": "Sub-organizations",
+  "detail.children_empty": "No sub-organizations yet."
 }

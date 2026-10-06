@@ -126,5 +126,9 @@
   "fields.timezone": "المنطقة الزمنية",
   "fields.timezone_hint": "تُعرض التواريخ والأوقات بهذه المنطقة ما لم يختر المستخدم منطقته.",
   "form.section_regional": "اللغة والمنطقة",
-  "form.section_regional_desc": "اللغة والمنطقة الزمنية الافتراضيتان للمستخدمين والمستندات والإشعارات."
+  "form.section_regional_desc": "اللغة والمنطقة الزمنية الافتراضيتان للمستخدمين والمستندات والإشعارات.",
+  "columns.created_at": "تاريخ الإنشاء",
+  "columns.email": "البريد الإلكتروني",
+  "detail.children": "المنشآت التابعة",
+  "detail.children_empty": "لا توجد منشآت تابعة بعد."
 }

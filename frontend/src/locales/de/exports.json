@@ -69,5 +69,8 @@
   "status.failed": "Fehlgeschlagen",
   "toast.queued": "Export eingereiht. Sie werden benachrichtigt, sobald die Datei bereit ist.",
   "toast.failed": "Export konnte nicht gestartet werden. Prüfen Sie Berechtigungen und Filter.",
-  "toast.download_failed": "Die Datei konnte nicht heruntergeladen werden."
+  "toast.download_failed": "Die Datei konnte nicht heruntergeladen werden.",
+  "status.queued": "In Warteschlange",
+  "status.expired": "Abgelaufen",
+  "resources.platform.organizations": "Organisationen"
 }

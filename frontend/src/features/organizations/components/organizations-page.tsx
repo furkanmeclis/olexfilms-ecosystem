@@ -11,8 +11,17 @@ import {
   EntityToolbar,
   useServerListState,
 } from "@/components/entity";
+import { createSelectColumnDef } from "@/components/tables";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import {
+  BulkActionMenu,
+  SelectionBanner,
+  resolveBulkActionsWithIcons,
+  useBulkSelection,
+} from "@/features/bulk-engine";
+import { ResourceIOToolbar } from "@/features/io";
+import type { ResourceMeta } from "@/features/io/types";
 import { useOrganizationsColumns } from "@/features/organizations/components/organizations-columns";
 import type { OrganizationRowActionHandlers } from "@/features/organizations/components/organization-row-actions";
 import {
@@ -25,43 +34,14 @@ import type {
 } from "@/features/organizations/services/organizations.service";
 import { useLocale } from "@/providers/locale-provider";
 
-function firstString(value: string | string[] | undefined) {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
+export const ORGANIZATIONS_PERSIST_KEY = "platform-organizations-v1";
 
 export function OrganizationsPage() {
   const { t } = useLocale();
   const router = useRouter();
 
-  const listState = useServerListState({
-    initialSort: "-created_at",
-    initialPageSize: 20,
-  });
-
-  const listParams = useMemo<ListOrganizationsParams>(() => {
-    const columnValue = (id: string) =>
-      firstString(
-        listState.columnFilters.find((filter) => filter.id === id)?.value as
-          string | string[] | undefined,
-      );
-
-    const q =
-      listState.params.q ||
-      columnValue("name")?.trim() ||
-      columnValue("slug")?.trim() ||
-      columnValue("city")?.trim() ||
-      undefined;
-
-    return {
-      ...listState.params,
-      q,
-      status: columnValue("status"),
-    };
-  }, [listState.columnFilters, listState.params]);
-
-  const listQuery = useOrganizationsList(listParams);
   const metaQuery = useOrganizationsMeta(true);
+  const meta = metaQuery.data as ResourceMeta | undefined;
 
   const openDetail = useCallback(
     (organization: Organization) => {
@@ -85,15 +65,51 @@ export function OrganizationsPage() {
     [openDetail, openEdit],
   );
 
-  const columns = useOrganizationsColumns({ handlers: rowHandlers });
+  const baseColumns = useOrganizationsColumns({ handlers: rowHandlers });
+  const columns = useMemo(
+    () => [createSelectColumnDef<Organization>(), ...baseColumns],
+    [baseColumns],
+  );
 
-  const pageCount = useMemo(() => {
-    const total = listQuery.data?.total ?? 0;
-    const size = listState.pagination.pageSize || 20;
-    return Math.max(1, Math.ceil(total / size));
-  }, [listQuery.data?.total, listState.pagination.pageSize]);
+  // Column meta drives the params: status/type (CSV), plan_code,
+  // access_ends_from/_to and created_from/_to (TEC-365).
+  const listState = useServerListState({
+    columns,
+    initialSort: meta?.default_sort ?? "-created_at",
+    initialPageSize: 20,
+    persistKey: ORGANIZATIONS_PERSIST_KEY,
+  });
+  const listParams: ListOrganizationsParams = listState.params;
 
-  const canCreate = metaQuery.data?.capabilities?.create !== false;
+  const listQuery = useOrganizationsList(listParams);
+  const total = listQuery.data?.total ?? 0;
+
+  // Same filters for "all matching" bulk runs and exports.
+  const bulkQuery = useMemo(
+    () => ({
+      ...listState.filterParams,
+      q: listParams.q,
+      sort: listParams.sort,
+    }),
+    [listState.filterParams, listParams.q, listParams.sort],
+  );
+
+  const bulkSelection = useBulkSelection({
+    listQueryKey: listParams,
+    bulkQuery,
+    total,
+  });
+
+  const bulkActions = useMemo(
+    () =>
+      resolveBulkActionsWithIcons(
+        "platform.organizations",
+        meta?.bulk_actions ?? [],
+      ),
+    [meta?.bulk_actions],
+  );
+
+  const canCreate = meta?.capabilities?.create !== false;
 
   return (
     <EntityPage
@@ -120,6 +136,14 @@ export function OrganizationsPage() {
         ) : null
       }
     >
+      <SelectionBanner
+        selectedCount={bulkSelection.selectedCount}
+        total={total}
+        showSelectAll={bulkSelection.showSelectAllBanner}
+        allMatchingSelected={bulkSelection.scope.mode === "all"}
+        onSelectAllMatching={bulkSelection.selectAllMatching}
+        onClearSelection={bulkSelection.clearSelection}
+      />
       <EntityTable
         columns={columns}
         data={listQuery.data?.items ?? []}
@@ -130,16 +154,35 @@ export function OrganizationsPage() {
         onRetry={() => void listQuery.refetch()}
         emptyTitle={t("organizations.empty_title")}
         emptyDescription={t("organizations.empty_description")}
-        pageCount={pageCount}
-        state={listState.tableState}
+        rowCount={total}
+        state={{
+          ...listState.tableState,
+          rowSelection: bulkSelection.rowSelection,
+          onRowSelectionChange: bulkSelection.onRowSelectionChange,
+        }}
         features={{
-          persistKey: "platform-organizations-v1",
+          persistKey: ORGANIZATIONS_PERSIST_KEY,
+          rowSelection: true,
         }}
         toolbarExtra={
-          <EntityToolbar
-            onRefresh={() => void listQuery.refetch()}
-            refreshDisabled={listQuery.isFetching}
-          />
+          <>
+            <BulkActionMenu
+              resource="platform.organizations"
+              actions={bulkActions}
+              scope={bulkSelection.scope}
+              selectedCount={bulkSelection.selectedCount}
+              onComplete={() => void listQuery.refetch()}
+            />
+            <ResourceIOToolbar
+              resource="platform.organizations"
+              query={bulkQuery}
+              capabilities={meta?.capabilities}
+            />
+            <EntityToolbar
+              onRefresh={() => void listQuery.refetch()}
+              refreshDisabled={listQuery.isFetching}
+            />
+          </>
         }
       />
     </EntityPage>

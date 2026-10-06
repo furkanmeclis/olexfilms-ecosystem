@@ -192,5 +192,7 @@
   "actions.stock.reclassification.cancelled": "重新分类申请已撤回",
   "resources.stock.reclassification": "库存重新分类",
   "actions.stock.split.created": "卷材已分切",
-  "resources.stock.split": "卷材分切"
+  "resources.stock.split": "卷材分切",
+  "filters.actor": "按用户筛选",
+  "resources.platform.organizations": "组织"
 }

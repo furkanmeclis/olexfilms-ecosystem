@@ -55,5 +55,7 @@
   "delete_description": "Rolle „{{name}}“ löschen? Benutzer behalten ihre anderen Rollen; dies kann nicht rückgängig gemacht werden.",
   "toast.created": "Rolle erstellt",
   "toast.updated": "Rolle aktualisiert",
-  "toast.deleted": "Rolle gelöscht"
+  "toast.deleted": "Rolle gelöscht",
+  "labels.custom": "Benutzerdefiniert",
+  "fields.created_at": "Erstellt"
 }

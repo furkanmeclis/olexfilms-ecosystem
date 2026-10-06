@@ -126,5 +126,9 @@
   "fields.timezone": "Zona horaria",
   "fields.timezone_hint": "Las fechas y horas se muestran en esta zona salvo que el usuario elija la suya.",
   "form.section_regional": "Idioma y región",
-  "form.section_regional_desc": "Idioma y zona horaria predeterminados para usuarios, documentos y notificaciones."
+  "form.section_regional_desc": "Idioma y zona horaria predeterminados para usuarios, documentos y notificaciones.",
+  "columns.created_at": "Creada",
+  "columns.email": "Correo electrónico",
+  "detail.children": "Suborganizaciones",
+  "detail.children_empty": "Aún no hay suborganizaciones."
 }

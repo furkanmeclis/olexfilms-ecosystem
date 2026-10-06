@@ -34,7 +34,7 @@ function statusTone(status: string) {
 
 export type UsersColumnsOptions = {
   handlers: UserRowActionHandlers;
-  /** Role filter options (value = role slug, the `role` query param). */
+  /** Role filter options (value = role slug, the CSV `role` query param). */
   roleOptions?: { value: string; label: string }[];
   currentUserUuid?: string;
   canImpersonateSuperAdmin?: boolean;
@@ -96,7 +96,8 @@ export function useUsersColumns({
               .join(", "),
           labelKey: "users.columns.roles",
           enableSorting: false,
-          filterVariant: "select",
+          // Multi-select role filter → `role=a,b` (CSV slugs, TEC-365).
+          filterVariant: "faceted",
           filterOptions: roleOptions ?? [],
           // Without the role catalog (no roles.read) there is nothing to
           // pick; page-local facet values would not be slugs.
@@ -161,6 +162,8 @@ export function useUsersColumns({
           accessorKey: "created_at",
           labelKey: "users.columns.created_at",
           enableSorting: true,
+          filterVariant: "date-range",
+          param: "created",
           cell: ({ row }) =>
             row.original.created_at ? (
               <span className="text-sm tabular-nums">

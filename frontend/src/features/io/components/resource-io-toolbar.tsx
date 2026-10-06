@@ -29,6 +29,7 @@ const EXPORT_PERM: Partial<Record<IoResource, string>> = {
   "platform.roles": permissions.roles.export,
   "platform.notifications": permissions.notifications.export,
   "platform.activity": permissions.activity.read,
+  "platform.organizations": permissions.organizations.read,
 };
 
 const IMPORT_PERM: Partial<Record<IoResource, string>> = {

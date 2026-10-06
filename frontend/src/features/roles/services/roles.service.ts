@@ -9,6 +9,8 @@ export type RoleSummary = {
   description?: string | null;
   is_system?: boolean;
   org_type?: string;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type RoleGrant = {
@@ -53,6 +55,11 @@ export type RoleListResult = {
   offset: number;
 };
 
+/** `GET /v1/platform/roles` params (TEC-365: sort + `is_system`). */
+export type ListRolesParams = ServerListParams & {
+  is_system?: string;
+};
+
 export type PermissionListResult = {
   items: PermissionSummary[];
   total: number;
@@ -61,12 +68,14 @@ export type PermissionListResult = {
 };
 
 export const rolesService = {
-  async list(params: ServerListParams) {
+  async list(params: ListRolesParams) {
     return platformRequest<RoleListResult>("GET", "/v1/platform/roles", {
       query: {
         limit: params.limit,
         offset: params.offset,
+        sort: params.sort,
         q: params.q,
+        is_system: params.is_system,
       },
     });
   },
@@ -112,6 +121,15 @@ export const rolesService = {
     return platformRequest<{ status: string }>(
       "DELETE",
       `/v1/platform/roles/${uuid}`,
+    );
+  },
+
+  /** Whole permission catalog in one page (`all=true`, TEC-365). */
+  async listPermissionCatalog() {
+    return platformRequest<PermissionListResult>(
+      "GET",
+      "/v1/platform/permissions",
+      { query: { all: "true" } },
     );
   },
 

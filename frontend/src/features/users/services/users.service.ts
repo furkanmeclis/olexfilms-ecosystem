@@ -94,6 +94,8 @@ export type UserListResult = {
 export type ListUsersParams = ServerListParams & {
   status?: string;
   role?: string;
+  created_from?: string;
+  created_to?: string;
 };
 
 export type UserStatus = "active" | "pending" | "disabled";
@@ -108,6 +110,8 @@ export const usersService = {
         q: params.q,
         status: params.status,
         role: params.role,
+        created_from: params.created_from,
+        created_to: params.created_to,
       },
     });
   },

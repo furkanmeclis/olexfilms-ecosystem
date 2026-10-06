@@ -69,5 +69,8 @@
   "status.failed": "Ошибка",
   "toast.queued": "Экспорт поставлен в очередь. Вы получите уведомление, когда файл будет готов.",
   "toast.failed": "Не удалось запустить экспорт. Проверьте права и фильтры.",
-  "toast.download_failed": "Не удалось скачать файл."
+  "toast.download_failed": "Не удалось скачать файл.",
+  "status.queued": "В очереди",
+  "status.expired": "Истёк",
+  "resources.platform.organizations": "Организации"
 }

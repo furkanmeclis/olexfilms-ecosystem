@@ -107,7 +107,8 @@ export type IoResource =
   | "platform.roles"
   | "platform.notifications"
   | "platform.activity"
-  | "tenant.catalog.products";
+  | "tenant.catalog.products"
+  | "platform.organizations";
 
 export const EXPORT_PATHS: Record<IoResource, string> = {
   "platform.users": "/v1/platform/users/export",
@@ -115,6 +116,7 @@ export const EXPORT_PATHS: Record<IoResource, string> = {
   "platform.notifications": "/v1/platform/notifications/export",
   "platform.activity": "/v1/platform/activity/export",
   "tenant.catalog.products": "/v1/catalog/products/export",
+  "platform.organizations": "/v1/platform/organizations/export",
 };
 
 export const IMPORT_PATHS: Partial<

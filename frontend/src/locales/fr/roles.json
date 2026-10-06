@@ -55,5 +55,7 @@
   "delete_description": "Supprimer le rôle « {{name}} » ? Les utilisateurs conservent leurs autres rôles ; cette action est irréversible.",
   "toast.created": "Rôle créé",
   "toast.updated": "Rôle mis à jour",
-  "toast.deleted": "Rôle supprimé"
+  "toast.deleted": "Rôle supprimé",
+  "labels.custom": "Personnalisé",
+  "fields.created_at": "Créé le"
 }

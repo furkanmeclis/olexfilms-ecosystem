@@ -69,5 +69,8 @@
   "status.failed": "فشل",
   "toast.queued": "أُضيف التصدير إلى قائمة الانتظار. سنُعلمك عندما يصبح الملف جاهزًا.",
   "toast.failed": "تعذّر بدء التصدير. تحقّق من الصلاحيات وعوامل التصفية.",
-  "toast.download_failed": "تعذّر تنزيل الملف."
+  "toast.download_failed": "تعذّر تنزيل الملف.",
+  "status.queued": "في قائمة الانتظار",
+  "status.expired": "منتهي الصلاحية",
+  "resources.platform.organizations": "المنشآت"
 }

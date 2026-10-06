@@ -192,5 +192,7 @@
   "actions.stock.reclassification.cancelled": "Richiesta di riclassificazione ritirata",
   "resources.stock.reclassification": "Riclassificazione dello stock",
   "actions.stock.split.created": "Rotolo diviso",
-  "resources.stock.split": "Divisione del rotolo"
+  "resources.stock.split": "Divisione del rotolo",
+  "filters.actor": "Filtra per utente",
+  "resources.platform.organizations": "Organizzazioni"
 }

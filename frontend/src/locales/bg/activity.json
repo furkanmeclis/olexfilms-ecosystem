@@ -192,5 +192,7 @@
   "actions.stock.reclassification.cancelled": "Оттеглена заявка за прекласификация",
   "resources.stock.reclassification": "Прекласификация на наличност",
   "actions.stock.split.created": "Ролката е разделена",
-  "resources.stock.split": "Разделяне на ролка"
+  "resources.stock.split": "Разделяне на ролка",
+  "filters.actor": "Филтър по потребител",
+  "resources.platform.organizations": "Организации"
 }
