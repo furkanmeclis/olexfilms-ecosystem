@@ -72,5 +72,6 @@
   "toast.download_failed": "无法下载文件。",
   "status.queued": "排队中",
   "status.expired": "已过期",
-  "resources.platform.organizations": "组织"
+  "resources.platform.organizations": "组织",
+  "resources.leads.list": "线索"
 }

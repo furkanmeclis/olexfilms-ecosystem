@@ -48,3 +48,24 @@ describe("tenant nav: customers (TEC-163)", () => {
     ).toContain("customers-new");
   });
 });
+
+describe("tenant nav: vehicles (TEC-372)", () => {
+  it("links to the vehicle list", () => {
+    const items = tenantNav("acme").groups.flatMap((g) => g.items);
+    expect(items.find((i) => i.id === "vehicles-list")?.href).toBe(
+      routes.tenant.vehicles.list("acme"),
+    );
+  });
+
+  it("needs vehicles.read and the customers module", () => {
+    expect(visibleIds([Permission.CustomersRead])).not.toContain(
+      "vehicles-list",
+    );
+    expect(
+      visibleIds([Permission.CustomersRead, Permission.VehiclesRead], []),
+    ).not.toContain("vehicles-list");
+    expect(
+      visibleIds([Permission.CustomersRead, Permission.VehiclesRead]),
+    ).toContain("vehicles-list");
+  });
+});

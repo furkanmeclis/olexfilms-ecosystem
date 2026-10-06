@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -113,7 +114,10 @@ export function BulkActionMenu({
       if (param.required && !paramValues[param.key]?.trim()) return;
     }
     const action = pending;
-    const params = paramValues;
+    const params: Record<string, string> = {};
+    for (const [key, value] of Object.entries(paramValues)) {
+      if (value.trim()) params[key] = value.trim();
+    }
     setPending(null);
     await runAction(action, params);
   };
@@ -134,19 +138,27 @@ export function BulkActionMenu({
         </DialogHeader>
         <div className="space-y-3">
           {(pending?.params ?? []).map((param) => {
-            const options = paramOptions?.[param.key];
+            const setValue = (value: string) =>
+              setParamValues((prev) => ({ ...prev, [param.key]: value }));
+            const options =
+              paramOptions?.[param.key] ??
+              (param.kind === "enum"
+                ? (param.options ?? []).map((value) => ({
+                    value,
+                    label: t(`${param.label_key}.${value}`),
+                  }))
+                : undefined);
             if (options) {
               return (
-                <div key={param.key} className="flex flex-col gap-1.5 text-sm">
+                <div
+                  key={param.key}
+                  className="flex flex-col gap-1.5 text-sm"
+                  data-param={param.key}
+                >
                   <span className="font-medium">{t(param.label_key)}</span>
                   <Select
                     value={paramValues[param.key] ?? ""}
-                    onValueChange={(value) =>
-                      setParamValues((prev) => ({
-                        ...prev,
-                        [param.key]: value,
-                      }))
-                    }
+                    onValueChange={setValue}
                   >
                     <SelectTrigger aria-label={t(param.label_key)}>
                       <SelectValue placeholder={t(param.label_key)} />
@@ -162,8 +174,28 @@ export function BulkActionMenu({
                 </div>
               );
             }
+            if (param.kind === "text") {
+              return (
+                <label
+                  key={param.key}
+                  className="flex flex-col gap-1.5 text-sm"
+                  data-param={param.key}
+                >
+                  <span className="font-medium">{t(param.label_key)}</span>
+                  <Textarea
+                    rows={3}
+                    value={paramValues[param.key] ?? ""}
+                    onChange={(event) => setValue(event.target.value)}
+                  />
+                </label>
+              );
+            }
             return (
-              <label key={param.key} className="flex flex-col gap-1.5 text-sm">
+              <label
+                key={param.key}
+                className="flex flex-col gap-1.5 text-sm"
+                data-param={param.key}
+              >
                 <span className="font-medium">{t(param.label_key)}</span>
                 <Input
                   type="number"
@@ -172,14 +204,11 @@ export function BulkActionMenu({
                   placeholder={
                     param.kind === "percent"
                       ? t("bulk.params.percent_placeholder")
-                      : t("bulk.params.delta_placeholder")
+                      : param.key.endsWith("_id")
+                        ? undefined
+                        : t("bulk.params.delta_placeholder")
                   }
-                  onChange={(event) =>
-                    setParamValues((prev) => ({
-                      ...prev,
-                      [param.key]: event.target.value,
-                    }))
-                  }
+                  onChange={(event) => setValue(event.target.value)}
                 />
               </label>
             );

@@ -47,7 +47,7 @@ export function AnonymizeDialog({
   onClose,
   onDone,
 }: {
-  customer: CustomerDetail;
+  customer: Pick<CustomerDetail, "uuid">;
   open: boolean;
   onClose: () => void;
   onDone: (result: CustomerAnonymizeResult) => void;
@@ -122,7 +122,7 @@ export function DataExportDialog({
   open,
   onClose,
 }: {
-  customer: CustomerDetail;
+  customer: Pick<CustomerDetail, "uuid">;
   open: boolean;
   onClose: () => void;
 }) {
@@ -235,7 +235,7 @@ export function UpgradeDialog({
   onClose,
   onDone,
 }: {
-  customer: CustomerDetail;
+  customer: Pick<CustomerDetail, "uuid">;
   open: boolean;
   onClose: () => void;
   onDone: (result: CustomerUpgrade) => void;

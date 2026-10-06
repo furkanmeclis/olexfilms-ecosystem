@@ -72,5 +72,6 @@
   "toast.download_failed": "Dosya indirilemedi.",
   "status.queued": "Sırada",
   "status.expired": "Süresi doldu",
-  "resources.platform.organizations": "İşletmeler"
+  "resources.platform.organizations": "İşletmeler",
+  "resources.leads.list": "Lead'ler"
 }

@@ -11,7 +11,7 @@ import {
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
 import { Loading } from "@/components/common/loading";
@@ -28,6 +28,7 @@ import {
   type CustomerActionKind,
 } from "@/features/customers/components/customer-actions";
 import { customerStatusTone } from "@/features/customers/components/customers-list-page";
+import { CustomerVehiclesTable } from "@/features/customers/components/customer-vehicles-table";
 import { VehicleFormDialog } from "@/features/customers/components/vehicle-form-dialog";
 import { resolveCustomerDetailAccess } from "@/features/customers/lib/access";
 import { customerDisplayName } from "@/features/customers/lib/form";
@@ -36,7 +37,6 @@ import {
   customersService,
   type Vehicle,
 } from "@/features/customers/services/customers.service";
-import { VehicleBrandLogo } from "@/features/vehicle-catalog/components/vehicle-brand-logo";
 import { useActiveOrganization } from "@/hooks/use-active-organization";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
@@ -76,6 +76,10 @@ export function CustomerDetailPage({
   const [vehicleDialog, setVehicleDialog] = useState<{
     vehicle: Vehicle | null;
   } | null>(null);
+  const editVehicle = useCallback(
+    (vehicle: Vehicle) => setVehicleDialog({ vehicle }),
+    [],
+  );
 
   const detail = useQuery({
     queryKey: customerKeys.detail(uuid),
@@ -288,69 +292,14 @@ export function CustomerDetailPage({
             ) : null}
           </CardHeader>
           <CardContent>
-            {vehicles.isLoading ? (
-              <p className="text-muted-foreground text-sm">
-                {t("customers.loading")}
-              </p>
-            ) : rows.length === 0 ? (
-              <p
-                className="text-muted-foreground text-sm"
-                data-testid="vehicles-empty"
-              >
-                {t("customers.detail.no_vehicles")}
-              </p>
-            ) : (
-              <ul className="divide-y" data-testid="vehicle-list">
-                {rows.map((v) => (
-                  <li
-                    key={v.uuid}
-                    className="flex flex-wrap items-center gap-3 py-2"
-                    data-testid="vehicle-row"
-                    data-uuid={v.uuid}
-                  >
-                    <VehicleBrandLogo
-                      uuid={v.car_brand?.uuid}
-                      name={v.car_brand?.name}
-                      height={28}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <Link
-                        href={routes.tenant.vehicles.detail(slug, v.uuid)}
-                        className="font-mono font-medium hover:underline"
-                        dir="ltr"
-                      >
-                        {dash(v.plate)}
-                        {v.plate_country ? ` (${v.plate_country})` : ""}
-                      </Link>
-                      <p className="text-muted-foreground text-xs">
-                        {dash(
-                          [v.car_brand?.name, v.car_model?.name, v.model_year]
-                            .filter(Boolean)
-                            .join(" "),
-                        )}
-                        {v.vin ? (
-                          <span className="ms-2 font-mono" dir="ltr">
-                            {v.vin}
-                          </span>
-                        ) : null}
-                      </p>
-                    </div>
-                    {access.canWriteVehicles ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        data-action="edit-vehicle"
-                        onClick={() => setVehicleDialog({ vehicle: v })}
-                      >
-                        <Pencil className="size-4" />
-                        {t("customers.vehicle.edit")}
-                      </Button>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            )}
+            <CustomerVehiclesTable
+              slug={slug}
+              vehicles={rows}
+              isLoading={vehicles.isLoading}
+              canWrite={access.canWriteVehicles}
+              canTransfer={can(permissions.vehicles.transfer)}
+              onEdit={editVehicle}
+            />
           </CardContent>
         </Card>
       ) : null}

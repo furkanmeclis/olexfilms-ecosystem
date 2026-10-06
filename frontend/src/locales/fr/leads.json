@@ -108,5 +108,6 @@
   "timeline.event.assigned": "Assigné",
   "timeline.event.follow_up_set": "Relance définie",
   "timeline.event.converted": "Converti",
-  "timeline.event.task_created": "Tâche créée"
+  "timeline.event.task_created": "Tâche créée",
+  "columns.created_at": "Créé"
 }

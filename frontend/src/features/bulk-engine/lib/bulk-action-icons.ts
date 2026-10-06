@@ -5,6 +5,7 @@ import {
   Lock,
   CircleOff,
   FolderInput,
+  ListChecks,
   Trash2,
   UserCheck,
   UserPlus,
@@ -55,6 +56,10 @@ const bulkActionIconCatalog: Record<
   "vehicle_catalog.models": {
     activate: CircleCheck,
     deactivate: CircleOff,
+  },
+  leads: {
+    assign: UserPlus,
+    set_status: ListChecks,
   },
 };
 
