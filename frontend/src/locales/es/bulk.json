@@ -66,5 +66,15 @@
   "confirm.vehicle_brands.deactivate": "¿Desactivar las marcas seleccionadas?",
   "actions.vehicle_models.activate": "Activar",
   "actions.vehicle_models.deactivate": "Desactivar",
-  "confirm.vehicle_models.deactivate": "¿Desactivar los modelos seleccionados?"
+  "confirm.vehicle_models.deactivate": "¿Desactivar los modelos seleccionados?",
+  "actions.leads.assign": "Asignar",
+  "actions.leads.set_status": "Cambiar estado",
+  "confirm.leads.set_status": "¿Cambiar el estado de los clientes potenciales seleccionados?",
+  "params.lead_status": "Estado",
+  "params.lead_status.new": "Nuevo",
+  "params.lead_status.contacted": "Contactado",
+  "params.lead_status.quoted": "Presupuestado",
+  "params.lead_status.won": "Ganado",
+  "params.lead_status.lost": "Perdido",
+  "params.lost_reason": "Motivo de pérdida"
 }

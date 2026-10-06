@@ -32,7 +32,7 @@ func listExportFormat(raw string) (ioengine.ExportFormat, error) {
 }
 
 // RequestListExport (POST /v1/customers/export, 202): exports the customers
-// of the caller's scope with the list filters (q, status).
+// of the caller's scope with the list filters and sort of GET /v1/customers.
 func (h *Handler) RequestListExport(w http.ResponseWriter, r *http.Request) {
 	if h.exports == nil {
 		response.ServiceUnavailable(w, r, response.CodeInternalError, "exports are not configured")
@@ -53,21 +53,21 @@ func (h *Handler) RequestListExport(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, err)
 		return
 	}
-	query := ioengine.ExportQuery{cu.QueryScope: scope}
-	for _, k := range []string{cu.QueryQ, cu.QueryStatus} {
-		if v := strings.TrimSpace(b.Query[k]); v != "" {
-			query[k] = v
-		}
+	// TEC-371: every list filter and the sort travel with the job; they are
+	// validated here so a bad value is a 400 at request time.
+	values := cu.ListExportValues(b.Query)
+	f, err := cu.ParseListFilter(values)
+	if err != nil {
+		writeError(w, r, err)
+		return
 	}
-	if len(query[cu.QueryQ]) > 100 {
+	if len(f.Q) > 100 {
 		writeError(w, r, &cu.ValidationError{Field: "q", Message: "must be at most 100 characters"})
 		return
 	}
-	switch query[cu.QueryStatus] {
-	case "", "active", "disabled", "pending", cu.StatusAnonymized:
-	default:
-		writeError(w, r, &cu.ValidationError{Field: "status", Message: "must be active, disabled, pending or anonymized"})
-		return
+	query := ioengine.ExportQuery{cu.QueryScope: scope}
+	for k := range values {
+		query[k] = values.Get(k)
 	}
 	orgID := c.Org.InternalID
 	job, err := h.exports.RequestExport(r.Context(), c.UserID, &orgID, cu.ResourceListExport, format, query,

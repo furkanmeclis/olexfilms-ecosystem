@@ -6,6 +6,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/middleware"
 	bulkhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/bulk/handler"
+	leadsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/leads/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine/adapters"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
@@ -84,6 +85,11 @@ func RegisterTenantRoutes(
 		middleware.RequireFeature(checker, features.ModuleCatalog),
 	))
 	mux.Handle("POST /v1/tasks/bulk", route(h.ExecuteTenant(adapters.ResourceTasks), rbac.PermTasksWrite))
+	// TEC-371: leads (assign, set status) inside the caller's leads.write scope.
+	mux.Handle("POST /v1/leads/bulk", route(
+		h.ExecuteTenantScoped(leadsusecase.ResourceBulk), rbac.PermLeadsWrite,
+		middleware.RequireFeature(checker, features.ModuleLeads),
+	))
 
 	// The undo log of the organization; undo itself checks the action's
 	// permission on the operation row.

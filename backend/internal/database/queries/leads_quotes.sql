@@ -53,13 +53,26 @@ WHERE organization_id = ANY(sqlc.arg(organization_ids)::bigint[])
   AND (sqlc.narg(status)::varchar IS NULL OR status = sqlc.narg(status)::varchar)
   AND (sqlc.narg(target_type)::varchar IS NULL OR target_type = sqlc.narg(target_type)::varchar);
 
+-- TEC-371: status / target_type / source / temperature are CSV filters,
+-- assignee_ids (+ unassigned) and created_at range. Sort:
+-- docs/list-contract.md, keys from leads usecase LeadsSortSpec; status and
+-- temperature sort by pipeline rank, name is the company or contact name.
 -- name: ListLeadsInScope :many
 SELECT * FROM leads
 WHERE brand_id = sqlc.arg(brand_id)
   AND deleted_at IS NULL
   AND (sqlc.arg(organization_ids)::bigint[] IS NULL OR organization_id = ANY(sqlc.arg(organization_ids)::bigint[]))
-  AND (sqlc.narg(status)::varchar IS NULL OR status = sqlc.narg(status)::varchar)
-  AND (sqlc.narg(target_type)::varchar IS NULL OR target_type = sqlc.narg(target_type)::varchar)
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR status = ANY(sqlc.narg(statuses)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(target_types)::text[]), 0) = 0 OR target_type = ANY(sqlc.narg(target_types)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(sources)::text[]), 0) = 0 OR source = ANY(sqlc.narg(sources)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(temperatures)::text[]), 0) = 0 OR temperature = ANY(sqlc.narg(temperatures)::text[]))
+  AND (
+    (COALESCE(cardinality(sqlc.narg(assignee_ids)::bigint[]), 0) = 0 AND NOT sqlc.arg(unassigned)::boolean)
+    OR assignee_user_id = ANY(sqlc.narg(assignee_ids)::bigint[])
+    OR (sqlc.arg(unassigned)::boolean AND assignee_user_id IS NULL)
+  )
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR created_at < sqlc.narg(created_before)::timestamptz)
   AND (sqlc.narg(q)::text IS NULL OR (
        candidate_company_name ILIKE '%' || sqlc.narg(q)::text || '%'
        OR candidate_contact_name ILIKE '%' || sqlc.narg(q)::text || '%'
@@ -75,7 +88,31 @@ WHERE brand_id = sqlc.arg(brand_id)
        AND (sqlc.narg(follow_up_from)::timestamptz IS NULL OR follow_up_date >= sqlc.narg(follow_up_from)::timestamptz)
        AND (sqlc.narg(follow_up_to)::timestamptz IS NULL OR follow_up_date < sqlc.narg(follow_up_to)::timestamptz)
   ))
-ORDER BY created_at DESC, id DESC
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'created_at' THEN created_at END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'created_at' THEN created_at END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'follow_up_date' THEN follow_up_date END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'follow_up_date' THEN follow_up_date END DESC NULLS LAST,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'status' THEN CASE status WHEN 'new' THEN 1 WHEN 'contacted' THEN 2 WHEN 'quoted' THEN 3 WHEN 'won' THEN 4 ELSE 5 END
+      WHEN 'temperature' THEN CASE temperature WHEN 'cold' THEN 1 WHEN 'warm' THEN 2 ELSE 3 END
+    END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'status' THEN CASE status WHEN 'new' THEN 1 WHEN 'contacted' THEN 2 WHEN 'quoted' THEN 3 WHEN 'won' THEN 4 ELSE 5 END
+      WHEN 'temperature' THEN CASE temperature WHEN 'cold' THEN 1 WHEN 'warm' THEN 2 ELSE 3 END
+    END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'name' THEN
+    lower(COALESCE(NULLIF(btrim(candidate_company_name), ''), NULLIF(btrim(candidate_contact_name), '')))
+  END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'name' THEN
+    lower(COALESCE(NULLIF(btrim(candidate_company_name), ''), NULLIF(btrim(candidate_contact_name), '')))
+  END DESC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN id END DESC,
+  id ASC
 LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
 
 -- name: CountLeadsInScope :one
@@ -83,8 +120,17 @@ SELECT COUNT(*) FROM leads
 WHERE brand_id = sqlc.arg(brand_id)
   AND deleted_at IS NULL
   AND (sqlc.arg(organization_ids)::bigint[] IS NULL OR organization_id = ANY(sqlc.arg(organization_ids)::bigint[]))
-  AND (sqlc.narg(status)::varchar IS NULL OR status = sqlc.narg(status)::varchar)
-  AND (sqlc.narg(target_type)::varchar IS NULL OR target_type = sqlc.narg(target_type)::varchar)
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR status = ANY(sqlc.narg(statuses)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(target_types)::text[]), 0) = 0 OR target_type = ANY(sqlc.narg(target_types)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(sources)::text[]), 0) = 0 OR source = ANY(sqlc.narg(sources)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(temperatures)::text[]), 0) = 0 OR temperature = ANY(sqlc.narg(temperatures)::text[]))
+  AND (
+    (COALESCE(cardinality(sqlc.narg(assignee_ids)::bigint[]), 0) = 0 AND NOT sqlc.arg(unassigned)::boolean)
+    OR assignee_user_id = ANY(sqlc.narg(assignee_ids)::bigint[])
+    OR (sqlc.arg(unassigned)::boolean AND assignee_user_id IS NULL)
+  )
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR created_at < sqlc.narg(created_before)::timestamptz)
   AND (sqlc.narg(q)::text IS NULL OR (
        candidate_company_name ILIKE '%' || sqlc.narg(q)::text || '%'
        OR candidate_contact_name ILIKE '%' || sqlc.narg(q)::text || '%'

@@ -1332,6 +1332,10 @@ type Querier interface {
 	ListLeadEvents(ctx context.Context, leadID int64) ([]LeadEvent, error)
 	ListLeadsByOrganizations(ctx context.Context, arg ListLeadsByOrganizationsParams) ([]Lead, error)
 	ListLeadsForIndex(ctx context.Context) ([]Lead, error)
+	// TEC-371: status / target_type / source / temperature are CSV filters,
+	// assignee_ids (+ unassigned) and created_at range. Sort:
+	// docs/list-contract.md, keys from leads usecase LeadsSortSpec; status and
+	// temperature sort by pipeline rank, name is the company or contact name.
 	ListLeadsInScope(ctx context.Context, arg ListLeadsInScopeParams) ([]Lead, error)
 	// TEC-263: read-only access to the old hub's message archive
 	// (legacy_messages). No UI; the table is append-only and only the K19
@@ -1415,6 +1419,10 @@ type Querier interface {
 	ListOrdersInScope(ctx context.Context, arg ListOrdersInScopeParams) ([]Order, error)
 	ListOrganizationChildren(ctx context.Context, parentID pgtype.Int8) ([]ListOrganizationChildrenRow, error)
 	// Customers of the organizations in scope; one row per user.
+	// TEC-371: statuses / customer types are CSV filters, linked_at is a date
+	// range on the first link, organization_uuids narrows the links to those
+	// organizations (inside the scope above). Sort: docs/list-contract.md, keys
+	// from customers usecase customersSortSpec.
 	ListOrganizationCustomers(ctx context.Context, arg ListOrganizationCustomersParams) ([]ListOrganizationCustomersRow, error)
 	ListOrganizationMemberOptions(ctx context.Context, organizationID int64) ([]ListOrganizationMemberOptionsRow, error)
 	ListOrganizationMembers(ctx context.Context, organizationID int64) ([]ListOrganizationMembersRow, error)
@@ -1554,7 +1562,10 @@ type Querier interface {
 	ListRooms(ctx context.Context, arg ListRoomsParams) ([]Room, error)
 	ListRoomsByUUIDs(ctx context.Context, arg ListRoomsByUUIDsParams) ([]Room, error)
 	// Vehicles of customers linked to the organizations in scope; the brand is
-	// always the domain brand (K20).
+	// always the domain brand (K20). TEC-371: q also matches the car brand /
+	// model name (q_name), car_brand_uuids / car_model_uuids / organization_uuids
+	// filters (the organization filter narrows the owner's links inside the
+	// scope). Sort: docs/list-contract.md, keys from vehiclesSortSpec.
 	ListScopedVehicles(ctx context.Context, arg ListScopedVehiclesParams) ([]ListScopedVehiclesRow, error)
 	// Records of one customer: refreshed after anonymization (the documents
 	// lose the personal data) and after an ownership transfer.

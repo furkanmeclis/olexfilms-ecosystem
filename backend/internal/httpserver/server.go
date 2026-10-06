@@ -617,6 +617,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		warrantyclaimsusecase.NewFailureRateAdapter(warrantyClaimsSvc),
 		warrantyclaimsusecase.NewByDealerAdapter(warrantyClaimsSvc),
 		warrantyclaimsusecase.NewPartsAdapter(warrantyClaimsSvc),
+		// TEC-371: lead list export (read only, SQL search).
+		leadsusecase.NewListExportAdapter(leadsusecase.New(deps.DB, deps.Queries, nil)),
 	)
 	exportSvc := exportusecase.New(deps.Queries, deps.Storage, ioReg, deps.Queue, notifSvc, activityRec, log)
 	exportSvc.SetDocumentPDF(pdfClient)
@@ -647,6 +649,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		bulkadapters.NewCatalogCategories(deps.Queries),
 		bulkadapters.NewVehicleBrands(deps.Queries),
 		bulkadapters.NewVehicleModels(deps.Queries),
+		// TEC-371: leads (assign, set status).
+		leadsusecase.NewBulkAdapter(deps.Queries),
 	)
 	bulkSvc := bulkusecase.New(deps.Queries, bulkReg, deps.Queue, notifSvc, activityRec, cfg.Bulk, log).WithPool(deps.DB)
 	logsSvc := logsusecase.New(deps.Queries)
@@ -776,7 +780,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		s.worker.WithQuoteExpire(leadsSvc.ExpireDueQuotesTask).
 			WithQuoteReminder(leadsSvc.QuoteReminderTask)
 	}
-	leadsmodule.RegisterRoutes(mux, leadshandler.New(leadsSvc).WithDocuments(docSvc), tokens, loader, deps.Queries, featureSvc)
+	leadsmodule.RegisterRoutes(mux, leadshandler.New(leadsSvc).WithDocuments(docSvc).WithExports(exportSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-323: appointments, capacity, availability and intake start.
 	appointmentsSvc := appointmentsusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries), servicesSvc)
 	appointmentsSvc.SetFeatureChecker(featureSvc)

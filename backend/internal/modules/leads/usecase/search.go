@@ -112,11 +112,12 @@ func leadIndexFilter(c Caller, p db.ListLeadsInScopeParams) (string, bool) {
 		}
 		f.In("organization_ids", ids)
 	}
-	if p.Status.Valid {
-		f.EqString("status", p.Status.String)
+	if len(p.Statuses) == 1 {
+		f.EqString("status", p.Statuses[0])
 	}
-	if p.TargetType.Valid {
-		// target_type is not filterable in the index; fall back to SQL.
+	if len(p.Statuses) > 1 || len(p.TargetTypes) > 0 {
+		// several statuses and target_type are not filterable in the
+		// index; fall back to SQL.
 		return "", false
 	}
 	if c.Filter.UserOnly() {

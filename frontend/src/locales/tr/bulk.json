@@ -66,5 +66,15 @@
   "confirm.vehicle_brands.deactivate": "Seçili markalar pasifleştirilsin mi?",
   "actions.vehicle_models.activate": "Aktifleştir",
   "actions.vehicle_models.deactivate": "Pasifleştir",
-  "confirm.vehicle_models.deactivate": "Seçili modeller pasifleştirilsin mi?"
+  "confirm.vehicle_models.deactivate": "Seçili modeller pasifleştirilsin mi?",
+  "actions.leads.assign": "Ata",
+  "actions.leads.set_status": "Durumu değiştir",
+  "confirm.leads.set_status": "Seçili lead'lerin durumu değiştirilsin mi?",
+  "params.lead_status": "Durum",
+  "params.lead_status.new": "Yeni",
+  "params.lead_status.contacted": "İletişime geçildi",
+  "params.lead_status.quoted": "Teklif verildi",
+  "params.lead_status.won": "Kazanıldı",
+  "params.lead_status.lost": "Kaybedildi",
+  "params.lost_reason": "Kayıp nedeni"
 }
