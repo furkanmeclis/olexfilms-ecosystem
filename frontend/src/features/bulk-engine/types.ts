@@ -3,9 +3,14 @@ import type { LucideIcon } from "lucide-react";
 /** Extra input collected before a parameterized bulk action. */
 export type BulkActionParam = {
   key: string;
-  kind: "percent" | "number" | "uuid";
+  kind: "percent" | "number" | "uuid" | "enum" | "text";
   required?: boolean;
   label_key: string;
+  /**
+   * Allowed values of an `enum` param (TEC-371); the label of a value is
+   * `label_key + "." + value`.
+   */
+  options?: string[];
 };
 
 /** Bulk action contract from resource meta API (no icon). */
@@ -85,7 +90,8 @@ export type BulkResource =
   | "platform.organizations"
   | "catalog.categories"
   | "vehicle_catalog.brands"
-  | "vehicle_catalog.models";
+  | "vehicle_catalog.models"
+  | "leads";
 
 export const BULK_PATHS: Record<BulkResource, string> = {
   "platform.users": "/v1/platform/users/bulk",
@@ -96,6 +102,7 @@ export const BULK_PATHS: Record<BulkResource, string> = {
   "catalog.categories": "/v1/catalog/categories/bulk",
   "vehicle_catalog.brands": "/v1/platform/vehicle-catalog/brands/bulk",
   "vehicle_catalog.models": "/v1/platform/vehicle-catalog/models/bulk",
+  leads: "/v1/leads/bulk",
 };
 
 /** Platform-scoped resources whose name has no `platform.` prefix. */

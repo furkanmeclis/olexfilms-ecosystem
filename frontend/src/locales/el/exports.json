@@ -72,5 +72,6 @@
   "toast.download_failed": "Δεν ήταν δυνατή η λήψη του αρχείου.",
   "status.queued": "Στην ουρά",
   "status.expired": "Έληξε",
-  "resources.platform.organizations": "Οργανισμοί"
+  "resources.platform.organizations": "Οργανισμοί",
+  "resources.leads.list": "Δυνητικοί πελάτες"
 }

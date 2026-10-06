@@ -27,11 +27,14 @@ import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
 
 type ExportMenuProps = {
-  resource: IoResource;
+  /** Registered resource; or pass `exportPath` for another endpoint. */
+  resource?: IoResource;
   query?: Record<string, string | undefined>;
   disabled?: boolean;
   jobsHref?: string;
   exportPath?: string;
+  /** Formats the endpoint accepts (default: pdf, xlsx, csv, json). */
+  formats?: ExportFormat[];
 };
 
 const FORMATS: ExportFormat[] = ["pdf", "xlsx", "csv", "json"];
@@ -42,6 +45,7 @@ export function ExportMenu({
   disabled,
   jobsHref,
   exportPath,
+  formats = FORMATS,
 }: ExportMenuProps) {
   const { t, locale } = useLocale();
   const [pending, setPending] = useState<ExportFormat | null>(null);
@@ -55,7 +59,9 @@ export function ExportMenu({
           if (value) cleaned[key] = value;
         }
       }
-      await exportsService.request(exportPath ?? EXPORT_PATHS[resource], {
+      const path = exportPath ?? (resource ? EXPORT_PATHS[resource] : null);
+      if (!path) throw new Error("export path missing");
+      await exportsService.request(path, {
         format,
         query: cleaned,
         locale,
@@ -88,7 +94,7 @@ export function ExportMenu({
         <TooltipContent side="bottom">{t("exports.menu_label")}</TooltipContent>
       </Tooltip>
       <DropdownMenuContent align="end">
-        {FORMATS.map((format) => (
+        {formats.map((format) => (
           <DropdownMenuItem
             key={format}
             disabled={pending === format}

@@ -72,5 +72,6 @@
   "toast.download_failed": "تعذّر تنزيل الملف.",
   "status.queued": "في قائمة الانتظار",
   "status.expired": "منتهي الصلاحية",
-  "resources.platform.organizations": "المنشآت"
+  "resources.platform.organizations": "المنشآت",
+  "resources.leads.list": "العملاء المحتملون"
 }

@@ -100,5 +100,12 @@
   "transfer.status.completed": "Tamamlandı",
   "transfer.status.cancelled": "İptal edildi",
   "transfer.status.expired": "Süresi doldu",
-  "columns.created_at": "Oluşturulma"
+  "columns.created_at": "Oluşturulma",
+  "list.nav": "Araçlar",
+  "list.title": "Araçlar",
+  "list.description": "Hizmet verdiğiniz müşterilerin araçları.",
+  "list.forbidden": "Bu sayfayı açmak için araç okuma izni gerekir.",
+  "list.empty_title": "Araç yok",
+  "list.empty_description": "Müşterileriniz için kaydedilen araçlar burada görünür.",
+  "list.open_customer": "Müşteriyi aç"
 }

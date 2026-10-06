@@ -133,5 +133,6 @@
   "actions.upgrade.role_owner": "Propietario del concesionario",
   "actions.upgrade.role_staff": "Empleado del concesionario",
   "actions.upgrade.confirm": "Ascender",
-  "actions.upgrade.success": "El cliente ahora es miembro de {{dealer}}."
+  "actions.upgrade.success": "El cliente ahora es miembro de {{dealer}}.",
+  "fields.organization": "Organización"
 }

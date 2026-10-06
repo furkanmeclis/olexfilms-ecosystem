@@ -100,5 +100,12 @@
   "transfer.status.completed": "Ολοκληρώθηκε",
   "transfer.status.cancelled": "Ακυρώθηκε",
   "transfer.status.expired": "Έληξε",
-  "columns.created_at": "Δημιουργία"
+  "columns.created_at": "Δημιουργία",
+  "list.nav": "Οχήματα",
+  "list.title": "Οχήματα",
+  "list.description": "Τα οχήματα των πελατών που εξυπηρετείτε.",
+  "list.forbidden": "Χρειάζεστε δικαίωμα ανάγνωσης οχημάτων για να ανοίξετε αυτή τη σελίδα.",
+  "list.empty_title": "Δεν υπάρχουν οχήματα",
+  "list.empty_description": "Εδώ εμφανίζονται τα οχήματα που έχουν καταχωριστεί για τους πελάτες σας.",
+  "list.open_customer": "Άνοιγμα πελάτη"
 }
