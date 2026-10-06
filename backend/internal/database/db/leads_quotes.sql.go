@@ -181,29 +181,44 @@ SELECT COUNT(*) FROM leads
 WHERE brand_id = $1
   AND deleted_at IS NULL
   AND ($2::bigint[] IS NULL OR organization_id = ANY($2::bigint[]))
-  AND ($3::varchar IS NULL OR status = $3::varchar)
-  AND ($4::varchar IS NULL OR target_type = $4::varchar)
-  AND ($5::text IS NULL OR (
-       candidate_company_name ILIKE '%' || $5::text || '%'
-       OR candidate_contact_name ILIKE '%' || $5::text || '%'
-       OR candidate_phone_e164 ILIKE '%' || $5::text || '%'
-       OR candidate_email ILIKE '%' || $5::text || '%'
-       OR notes ILIKE '%' || $5::text || '%'
+  AND (COALESCE(cardinality($3::text[]), 0) = 0 OR status = ANY($3::text[]))
+  AND (COALESCE(cardinality($4::text[]), 0) = 0 OR target_type = ANY($4::text[]))
+  AND (COALESCE(cardinality($5::text[]), 0) = 0 OR source = ANY($5::text[]))
+  AND (COALESCE(cardinality($6::text[]), 0) = 0 OR temperature = ANY($6::text[]))
+  AND (
+    (COALESCE(cardinality($7::bigint[]), 0) = 0 AND NOT $8::boolean)
+    OR assignee_user_id = ANY($7::bigint[])
+    OR ($8::boolean AND assignee_user_id IS NULL)
+  )
+  AND ($9::timestamptz IS NULL OR created_at >= $9::timestamptz)
+  AND ($10::timestamptz IS NULL OR created_at < $10::timestamptz)
+  AND ($11::text IS NULL OR (
+       candidate_company_name ILIKE '%' || $11::text || '%'
+       OR candidate_contact_name ILIKE '%' || $11::text || '%'
+       OR candidate_phone_e164 ILIKE '%' || $11::text || '%'
+       OR candidate_email ILIKE '%' || $11::text || '%'
+       OR notes ILIKE '%' || $11::text || '%'
   ))
-  AND (NOT $6::boolean OR (
+  AND (NOT $12::boolean OR (
        status IN ('new', 'contacted', 'quoted')
        AND follow_up_date IS NOT NULL
-       AND (assignee_user_id IS NULL OR assignee_user_id = $7::bigint)
-       AND ($8::timestamptz IS NULL OR follow_up_date >= $8::timestamptz)
-       AND ($9::timestamptz IS NULL OR follow_up_date < $9::timestamptz)
+       AND (assignee_user_id IS NULL OR assignee_user_id = $13::bigint)
+       AND ($14::timestamptz IS NULL OR follow_up_date >= $14::timestamptz)
+       AND ($15::timestamptz IS NULL OR follow_up_date < $15::timestamptz)
   ))
 `
 
 type CountLeadsInScopeParams struct {
 	BrandID         int64              `json:"brand_id"`
 	OrganizationIds []int64            `json:"organization_ids"`
-	Status          pgtype.Text        `json:"status"`
-	TargetType      pgtype.Text        `json:"target_type"`
+	Statuses        []string           `json:"statuses"`
+	TargetTypes     []string           `json:"target_types"`
+	Sources         []string           `json:"sources"`
+	Temperatures    []string           `json:"temperatures"`
+	AssigneeIds     []int64            `json:"assignee_ids"`
+	Unassigned      bool               `json:"unassigned"`
+	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore   pgtype.Timestamptz `json:"created_before"`
 	Q               pgtype.Text        `json:"q"`
 	FollowUpOnly    bool               `json:"follow_up_only"`
 	ActorUserID     int64              `json:"actor_user_id"`
@@ -215,8 +230,14 @@ func (q *Queries) CountLeadsInScope(ctx context.Context, arg CountLeadsInScopePa
 	row := q.db.QueryRow(ctx, countLeadsInScope,
 		arg.BrandID,
 		arg.OrganizationIds,
-		arg.Status,
-		arg.TargetType,
+		arg.Statuses,
+		arg.TargetTypes,
+		arg.Sources,
+		arg.Temperatures,
+		arg.AssigneeIds,
+		arg.Unassigned,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
 		arg.Q,
 		arg.FollowUpOnly,
 		arg.ActorUserID,
@@ -1292,54 +1313,107 @@ SELECT id, uuid, organization_id, brand_id, target_type, customer_user_id, vehic
 WHERE brand_id = $1
   AND deleted_at IS NULL
   AND ($2::bigint[] IS NULL OR organization_id = ANY($2::bigint[]))
-  AND ($3::varchar IS NULL OR status = $3::varchar)
-  AND ($4::varchar IS NULL OR target_type = $4::varchar)
-  AND ($5::text IS NULL OR (
-       candidate_company_name ILIKE '%' || $5::text || '%'
-       OR candidate_contact_name ILIKE '%' || $5::text || '%'
-       OR candidate_phone_e164 ILIKE '%' || $5::text || '%'
-       OR candidate_email ILIKE '%' || $5::text || '%'
-       OR notes ILIKE '%' || $5::text || '%'
+  AND (COALESCE(cardinality($3::text[]), 0) = 0 OR status = ANY($3::text[]))
+  AND (COALESCE(cardinality($4::text[]), 0) = 0 OR target_type = ANY($4::text[]))
+  AND (COALESCE(cardinality($5::text[]), 0) = 0 OR source = ANY($5::text[]))
+  AND (COALESCE(cardinality($6::text[]), 0) = 0 OR temperature = ANY($6::text[]))
+  AND (
+    (COALESCE(cardinality($7::bigint[]), 0) = 0 AND NOT $8::boolean)
+    OR assignee_user_id = ANY($7::bigint[])
+    OR ($8::boolean AND assignee_user_id IS NULL)
+  )
+  AND ($9::timestamptz IS NULL OR created_at >= $9::timestamptz)
+  AND ($10::timestamptz IS NULL OR created_at < $10::timestamptz)
+  AND ($11::text IS NULL OR (
+       candidate_company_name ILIKE '%' || $11::text || '%'
+       OR candidate_contact_name ILIKE '%' || $11::text || '%'
+       OR candidate_phone_e164 ILIKE '%' || $11::text || '%'
+       OR candidate_email ILIKE '%' || $11::text || '%'
+       OR notes ILIKE '%' || $11::text || '%'
   ))
-  AND ($6::uuid[] IS NULL OR uuid = ANY($6::uuid[]))
-  AND (NOT $7::boolean OR (
+  AND ($12::uuid[] IS NULL OR uuid = ANY($12::uuid[]))
+  AND (NOT $13::boolean OR (
        status IN ('new', 'contacted', 'quoted')
        AND follow_up_date IS NOT NULL
-       AND (assignee_user_id IS NULL OR assignee_user_id = $8::bigint)
-       AND ($9::timestamptz IS NULL OR follow_up_date >= $9::timestamptz)
-       AND ($10::timestamptz IS NULL OR follow_up_date < $10::timestamptz)
+       AND (assignee_user_id IS NULL OR assignee_user_id = $14::bigint)
+       AND ($15::timestamptz IS NULL OR follow_up_date >= $15::timestamptz)
+       AND ($16::timestamptz IS NULL OR follow_up_date < $16::timestamptz)
   ))
-ORDER BY created_at DESC, id DESC
-LIMIT $12 OFFSET $11
+ORDER BY
+  CASE WHEN NOT $17::bool AND $18::text = 'created_at' THEN created_at END ASC,
+  CASE WHEN $17::bool AND $18::text = 'created_at' THEN created_at END DESC,
+  CASE WHEN NOT $17::bool AND $18::text = 'follow_up_date' THEN follow_up_date END ASC NULLS LAST,
+  CASE WHEN $17::bool AND $18::text = 'follow_up_date' THEN follow_up_date END DESC NULLS LAST,
+  CASE WHEN NOT $17::bool THEN
+    CASE $18::text
+      WHEN 'status' THEN CASE status WHEN 'new' THEN 1 WHEN 'contacted' THEN 2 WHEN 'quoted' THEN 3 WHEN 'won' THEN 4 ELSE 5 END
+      WHEN 'temperature' THEN CASE temperature WHEN 'cold' THEN 1 WHEN 'warm' THEN 2 ELSE 3 END
+    END
+  END ASC,
+  CASE WHEN $17::bool THEN
+    CASE $18::text
+      WHEN 'status' THEN CASE status WHEN 'new' THEN 1 WHEN 'contacted' THEN 2 WHEN 'quoted' THEN 3 WHEN 'won' THEN 4 ELSE 5 END
+      WHEN 'temperature' THEN CASE temperature WHEN 'cold' THEN 1 WHEN 'warm' THEN 2 ELSE 3 END
+    END
+  END DESC,
+  CASE WHEN NOT $17::bool AND $18::text = 'name' THEN
+    lower(COALESCE(NULLIF(btrim(candidate_company_name), ''), NULLIF(btrim(candidate_contact_name), '')))
+  END ASC NULLS LAST,
+  CASE WHEN $17::bool AND $18::text = 'name' THEN
+    lower(COALESCE(NULLIF(btrim(candidate_company_name), ''), NULLIF(btrim(candidate_contact_name), '')))
+  END DESC NULLS LAST,
+  CASE WHEN $17::bool THEN id END DESC,
+  id ASC
+LIMIT $20 OFFSET $19
 `
 
 type ListLeadsInScopeParams struct {
 	BrandID         int64              `json:"brand_id"`
 	OrganizationIds []int64            `json:"organization_ids"`
-	Status          pgtype.Text        `json:"status"`
-	TargetType      pgtype.Text        `json:"target_type"`
+	Statuses        []string           `json:"statuses"`
+	TargetTypes     []string           `json:"target_types"`
+	Sources         []string           `json:"sources"`
+	Temperatures    []string           `json:"temperatures"`
+	AssigneeIds     []int64            `json:"assignee_ids"`
+	Unassigned      bool               `json:"unassigned"`
+	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore   pgtype.Timestamptz `json:"created_before"`
 	Q               pgtype.Text        `json:"q"`
 	Uuids           []uuid.UUID        `json:"uuids"`
 	FollowUpOnly    bool               `json:"follow_up_only"`
 	ActorUserID     int64              `json:"actor_user_id"`
 	FollowUpFrom    pgtype.Timestamptz `json:"follow_up_from"`
 	FollowUpTo      pgtype.Timestamptz `json:"follow_up_to"`
+	SortDesc        bool               `json:"sort_desc"`
+	SortKey         string             `json:"sort_key"`
 	PageOffset      int32              `json:"page_offset"`
 	PageLimit       int32              `json:"page_limit"`
 }
 
+// TEC-371: status / target_type / source / temperature are CSV filters,
+// assignee_ids (+ unassigned) and created_at range. Sort:
+// docs/list-contract.md, keys from leads usecase LeadsSortSpec; status and
+// temperature sort by pipeline rank, name is the company or contact name.
 func (q *Queries) ListLeadsInScope(ctx context.Context, arg ListLeadsInScopeParams) ([]Lead, error) {
 	rows, err := q.db.Query(ctx, listLeadsInScope,
 		arg.BrandID,
 		arg.OrganizationIds,
-		arg.Status,
-		arg.TargetType,
+		arg.Statuses,
+		arg.TargetTypes,
+		arg.Sources,
+		arg.Temperatures,
+		arg.AssigneeIds,
+		arg.Unassigned,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
 		arg.Q,
 		arg.Uuids,
 		arg.FollowUpOnly,
 		arg.ActorUserID,
 		arg.FollowUpFrom,
 		arg.FollowUpTo,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.PageOffset,
 		arg.PageLimit,
 	)

@@ -88,6 +88,7 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Conflict(w, r, CodeAlreadyMember, "The customer is already a member of this organization")
 	case errors.Is(err, cu.ErrPIIUnavailable):
 		response.ServiceUnavailable(w, r, CodePIIUnavailable, "Identity numbers cannot be stored: encryption is not configured")
+	case response.QueryValidation(w, r, err):
 	default:
 		response.InternalErr(w, r, err, "customer request failed")
 	}
@@ -127,12 +128,17 @@ func decode(w http.ResponseWriter, r *http.Request, dst any) bool {
 
 // --- Customers ---------------------------------------------------------------
 
-// ListCustomers (GET /v1/customers?q&status&limit&offset).
+// ListCustomers (GET /v1/customers?q&status&type&linked_from&linked_to&
+// organization_uuid&sort&limit&offset).
 func (h *Handler) ListCustomers(w http.ResponseWriter, r *http.Request) {
 	q := apiquery.Parse(r.URL.Query())
-	items, total, err := h.svc.ListCustomers(r.Context(), caller(r), cu.ListFilter{
-		Q: q.Q, Status: r.URL.Query().Get("status"), Limit: q.Limit, Offset: q.Offset,
-	})
+	f, err := cu.ParseListFilter(r.URL.Query())
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	f.Limit, f.Offset = q.Limit, q.Offset
+	items, total, err := h.svc.ListCustomers(r.Context(), caller(r), f)
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -218,18 +224,24 @@ func (h *Handler) UpgradeToDealer(w http.ResponseWriter, r *http.Request) {
 
 // --- Vehicles ----------------------------------------------------------------
 
-// ListVehicles (GET /v1/vehicles?customer_uuid&plate&vin&limit&offset).
+// ListVehicles (GET /v1/vehicles?customer_uuid&plate&vin&q&car_brand_uuid&
+// car_model_uuid&organization_uuid&sort&limit&offset).
 func (h *Handler) ListVehicles(w http.ResponseWriter, r *http.Request) {
 	customer, ok := queryUUID(w, r, "customer_uuid")
 	if !ok {
 		return
 	}
 	q := apiquery.Parse(r.URL.Query())
-	items, total, err := h.svc.ListVehicles(r.Context(), caller(r), cu.VehicleFilter{
+	f := cu.VehicleFilter{
 		CustomerUUID: customer, Plate: r.URL.Query().Get("plate"), VIN: r.URL.Query().Get("vin"),
 		Q:     r.URL.Query().Get("q"),
 		Limit: q.Limit, Offset: q.Offset,
-	})
+	}
+	if err := cu.ParseVehicleFilter(r.URL.Query(), &f); err != nil {
+		writeError(w, r, err)
+		return
+	}
+	items, total, err := h.svc.ListVehicles(r.Context(), caller(r), f)
 	if err != nil {
 		writeError(w, r, err)
 		return

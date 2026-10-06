@@ -10945,14 +10945,38 @@ paths:
         on the scope's organizations and the brand, ranked by relevance; the
         hits are reloaded from Postgres with the same scope) and falls back to
         the SQL search otherwise. Anonymized customers are never indexed, so
-        `status=anonymized` always uses the SQL search.
+        `status=anonymized` always uses the SQL search. TEC-371: sort
+        (`name`, `email`, `status`, `linked_at`, `first_service_at`;
+        default `-linked_at`, `id` tiebreak), `status` / `type` CSV,
+        `linked_from`/`linked_to` (first organization link) and
+        `organization_uuid` CSV (links to those organizations, inside the
+        scope). An explicit sort or any of the TEC-371 filters keeps a `q`
+        search on SQL.
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/Q"
         - name: status
           in: query
-          schema: { type: string, enum: [active, disabled, pending, anonymized] }
+          description: "CSV of active, disabled, pending, anonymized."
+          schema: { type: string }
+        - name: type
+          in: query
+          description: "CSV of individual, corporate (customer type; no profile counts as individual)."
+          schema: { type: string }
+        - name: linked_from
+          in: query
+          description: First organization link on or after (YYYY-MM-DD or RFC3339).
+          schema: { type: string }
+        - name: linked_to
+          in: query
+          description: First organization link on or before; a date covers the whole day.
+          schema: { type: string }
+        - name: organization_uuid
+          in: query
+          description: CSV of organization UUIDs; customers linked to one of them (inside the scope).
+          schema: { type: string }
+        - $ref: "#/components/parameters/Sort"
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
       responses:
@@ -11253,7 +11277,8 @@ paths:
       description: >-
         TEC-164. customers.read with the list's scope: the job (worker-docs,
         exports queue) exports the customers of the scope with the list
-        filters (`q`, `status`), masked like the list (anonymized customers
+        filters and sort (TEC-371: every GET /v1/customers parameter; a bad
+        value is a 400 at request time), masked like the list (anonymized customers
         show the anonymized label; identity numbers are not exported). The
         worker re-authorizes the stored scope against the job organization.
         The request is written to the activity log (customers.list_exported).
@@ -11505,7 +11530,13 @@ paths:
         scope answers 404; `plate` is a prefix of the normalized plate.
         `q` (TEC-209) searches plate and VIN: the vehicles search index
         when it is up (same scope, hits reloaded from the database),
-        otherwise a prefix of the normalized plate or the VIN.
+        otherwise a prefix of the normalized plate or the VIN, and (TEC-371)
+        the car brand / model name. TEC-371: sort (`plate`, `brand`,
+        `model`, `model_year`, `created_at`; default `-created_at`, empty
+        values last, `id` tiebreak); `car_brand_uuid` / `car_model_uuid` /
+        `organization_uuid` CSV filters (organization: the owner is linked
+        to one of them, inside the scope). An explicit sort or these
+        filters keep a `q` search on SQL.
       security:
         - bearerAuth: []
       parameters:
@@ -11521,6 +11552,19 @@ paths:
         - name: q
           in: query
           schema: { type: string, maxLength: 100 }
+        - name: car_brand_uuid
+          in: query
+          description: CSV of car brand UUIDs.
+          schema: { type: string }
+        - name: car_model_uuid
+          in: query
+          description: CSV of car model UUIDs.
+          schema: { type: string }
+        - name: organization_uuid
+          in: query
+          description: CSV of organization UUIDs (owner linked to one of them).
+          schema: { type: string }
+        - $ref: "#/components/parameters/Sort"
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
       responses:
@@ -18634,21 +18678,46 @@ paths:
       tags: [Leads]
       operationId: listLeads
       summary: List leads in the caller scope
+      description: >-
+        TEC-371: sort (`created_at`, `follow_up_date`, `status`,
+        `temperature`, `name`; default `-created_at`, `id` tiebreak; status
+        and temperature sort by pipeline rank, name is the company or
+        contact name, empty values last). `status`, `target_type`, `source`,
+        `temperature` are CSV; `assignee_user_id` is a CSV of user ids,
+        `none` for unassigned; `created_from`/`created_to`. An explicit sort
+        or these filters keep a `q` search on SQL.
       security:
         - bearerAuth: []
       parameters:
         - name: status
           in: query
-          schema: { $ref: "#/components/schemas/LeadStatus" }
+          description: "CSV of new, contacted, quoted, won, lost."
+          schema: { type: string }
         - name: target_type
           in: query
-          schema: { $ref: "#/components/schemas/LeadTargetType" }
+          description: "CSV of customer, dealer_candidate, distributor_candidate."
+          schema: { type: string }
+        - name: source
+          in: query
+          description: "CSV of incoming_call, outgoing_call, walk_in, whatsapp, social, referral, website, application_form, other."
+          schema: { type: string }
+        - name: temperature
+          in: query
+          description: "CSV of cold, warm, hot."
+          schema: { type: string }
+        - name: assignee_user_id
+          in: query
+          description: CSV of assignee user ids; `none` matches unassigned leads.
+          schema: { type: string }
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
         - name: follow_up
           in: query
           schema:
             type: string
             enum: [overdue, today]
         - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
       responses:
@@ -18680,6 +18749,77 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/leads/export:
+    post:
+      tags: [Leads]
+      operationId: requestLeadListExport
+      summary: Queue a lead list export (CSV, XLSX or PDF)
+      description: >-
+        TEC-371. leads.read with the list's scope: the job (exports queue)
+        exports the leads of the scope with the filters and sort of GET
+        /v1/leads (a bad value is a 400 at request time). The worker
+        re-authorizes the stored scope against the job organization. Poll
+        and download through /v1/tenant/exports/{uuid}.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LeadListExportInput" }
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeExportJob" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/leads/bulk:
+    post:
+      tags: [Leads]
+      operationId: bulkLeads
+      summary: Run a logged, undoable bulk action on leads (TEC-371)
+      description: >-
+        leads.write; the run stays inside the caller's leads.write scope.
+        Actions: `assign` with `target.params.assignee_user_id` (a member of
+        the lead's or the active organization; others fail per item);
+        `set_status` with `target.params.status` (new, contacted, quoted,
+        won, lost) and `target.params.lost_reason` (required for lost); the
+        pipeline rules of POST /v1/leads/{uuid}/status apply per item.
+        Target scope `ids`, or `query` with the GET /v1/leads filters
+        ("select all matching", at most 10000). Undo through
+        `/v1/tenant/bulk-operations/{uuid}/undo`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkExecuteRequest"
+      responses:
+        "200":
+          description: Sync bulk result with its undoable operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkSyncResult"
+        "202":
+          description: Async bulk job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /v1/leads/follow-up-count:
     get:
@@ -23778,10 +23918,30 @@ components:
           enum: [csv, xlsx, pdf]
         query:
           type: object
-          description: List filters (same as GET /v1/customers).
+          description: List filters and sort (same as GET /v1/customers).
           properties:
             q: { type: string, maxLength: 100 }
-            status: { type: string, enum: [active, disabled, pending, anonymized] }
+            status: { type: string, description: "CSV of active, disabled, pending, anonymized." }
+            type: { type: string, description: "CSV of individual, corporate." }
+            linked_from: { type: string }
+            linked_to: { type: string }
+            organization_uuid: { type: string, description: CSV of organization UUIDs. }
+            sort: { type: string }
+        locale:
+          type: string
+          description: Document language (defaults to the request locale).
+    LeadListExportInput:
+      type: object
+      required: [format]
+      additionalProperties: false
+      properties:
+        format:
+          type: string
+          enum: [csv, xlsx, pdf]
+        query:
+          type: object
+          description: List filters and sort (same as GET /v1/leads).
+          additionalProperties: { type: string }
         locale:
           type: string
           description: Document language (defaults to the request locale).

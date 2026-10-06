@@ -11,6 +11,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/geo"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -80,9 +81,16 @@ type VehicleFilter struct {
 	VIN          string
 	// Q (TEC-209) searches plate / VIN: the vehicles index when it is up,
 	// otherwise a prefix of the normalized plate or the VIN.
-	Q      string
-	Limit  int32
-	Offset int32
+	Q string
+	// TEC-371: car brand / model and organization (owner link) filters and
+	// the sort (ParseVehicleFilter). SortExplicit keeps a q search on SQL.
+	CarBrandUUIDs     []uuid.UUID
+	CarModelUUIDs     []uuid.UUID
+	OrganizationUUIDs []uuid.UUID
+	Sort              apiquery.ResolvedSort
+	SortExplicit      bool
+	Limit             int32
+	Offset            int32
 }
 
 // ListVehicles lists the vehicles of customers in scope.
@@ -116,9 +124,14 @@ func (s *Service) ListVehicles(ctx context.Context, c Caller, f VehicleFilter) (
 	// SQL fallback: the compact form is a prefix of the normalized plate or
 	// of the VIN (both upper case, no separators); LIKE wildcards dropped.
 	qNorm := strings.NewReplacer("%", "", `\`, "").Replace(geo.NormalizePlate(rawQ))
+	// TEC-371: q also matches the car brand / model name ("BMW 3").
+	qName := strings.NewReplacer("%", "", `\`, "").Replace(rawQ)
+	sort := sortKey(f.Sort, VehiclesSortSpec)
 	p := db.ListScopedVehiclesParams{
-		BrandID: c.Org.BrandID, UserID: userID, OrgIds: c.orgIDs(),
-		PlateNormalized: text(plate), Vin: text(vin), Q: text(qNorm), LimitCount: f.Limit, OffsetCount: f.Offset,
+		BrandID: c.Org.BrandID, UserID: userID, OrgIds: c.orgIDs(), OrganizationUuids: f.OrganizationUUIDs,
+		PlateNormalized: text(plate), Vin: text(vin), Q: text(qNorm), QName: text(strings.TrimSpace(qName)),
+		CarBrandUuids: f.CarBrandUUIDs, CarModelUuids: f.CarModelUUIDs,
+		SortKey: sort.Key, SortDesc: sort.Desc, LimitCount: f.Limit, OffsetCount: f.Offset,
 	}
 	var (
 		rows    []db.ListScopedVehiclesRow
@@ -127,7 +140,10 @@ func (s *Service) ListVehicles(ctx context.Context, c Caller, f VehicleFilter) (
 	)
 	// TEC-209: a q search goes to the vehicles index when it is up; the
 	// exact plate / VIN filters stay on SQL.
-	if p.Q.Valid && !p.PlateNormalized.Valid && !p.Vin.Valid && s.indexEnabled() {
+	// TEC-371: an explicit sort or a brand / model / organization filter
+	// stays on SQL (the index answers in relevance order).
+	if p.Q.Valid && !p.PlateNormalized.Valid && !p.Vin.Valid && !f.SortExplicit && len(f.CarBrandUUIDs) == 0 &&
+		len(f.CarModelUUIDs) == 0 && len(f.OrganizationUUIDs) == 0 && s.indexEnabled() {
 		rows, total, indexed = s.searchVehiclesIndexed(ctx, c, p, rawQ)
 	}
 	if !indexed {
@@ -137,8 +153,9 @@ func (s *Service) ListVehicles(ctx context.Context, c Caller, f VehicleFilter) (
 			return nil, 0, fmt.Errorf("customers: list vehicles: %w", err)
 		}
 		total, err = s.q.CountScopedVehicles(ctx, db.CountScopedVehiclesParams{
-			BrandID: c.Org.BrandID, UserID: userID, OrgIds: c.orgIDs(),
-			PlateNormalized: text(plate), Vin: text(vin), Q: p.Q,
+			BrandID: c.Org.BrandID, UserID: userID, OrgIds: c.orgIDs(), OrganizationUuids: p.OrganizationUuids,
+			PlateNormalized: text(plate), Vin: text(vin), Q: p.Q, QName: p.QName,
+			CarBrandUuids: p.CarBrandUuids, CarModelUuids: p.CarModelUuids,
 		})
 		if err != nil {
 			return nil, 0, fmt.Errorf("customers: count vehicles: %w", err)

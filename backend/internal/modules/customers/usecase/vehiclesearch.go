@@ -155,7 +155,7 @@ func (s *Service) searchVehiclesIndexed(ctx context.Context, c Caller, p db.List
 	if len(uuids) == 0 {
 		return []db.ListScopedVehiclesRow{}, total, true
 	}
-	p.Q = pgtype.Text{}
+	p.Q, p.QName = pgtype.Text{}, pgtype.Text{}
 	p.Uuids = uuids
 	p.LimitCount, p.OffsetCount = int32(len(uuids)), 0
 	rows, err := s.q.ListScopedVehicles(ctx, p)

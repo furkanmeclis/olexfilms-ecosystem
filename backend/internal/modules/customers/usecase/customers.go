@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/password"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/phone"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -106,12 +108,22 @@ type UpdateCustomerInput struct {
 	NotificationPrefs Optional[map[string]bool] `json:"notification_prefs"`
 }
 
-// ListFilter filters GET /v1/customers.
+// ListFilter filters GET /v1/customers (TEC-371: ParseListFilter).
 type ListFilter struct {
-	Q      string
-	Status string
-	Limit  int32
-	Offset int32
+	Q string
+	// Statuses / Types are multi-value filters (nil: no filter).
+	Statuses []string
+	Types    []string
+	// Linked is the range of the first organization link (linked_at).
+	Linked apiquery.TimeRange
+	// OrganizationUUIDs narrows the organization links (inside the scope).
+	OrganizationUUIDs []uuid.UUID
+	Sort              apiquery.ResolvedSort
+	// SortExplicit: the request named a sort, so the relevance ordered
+	// index search is not used.
+	SortExplicit bool
+	Limit        int32
+	Offset       int32
 }
 
 // profilePatch is a normalized profile change ("" clears a text field).
@@ -586,16 +598,16 @@ func jsonEqual(a, b []byte) bool {
 
 // ListCustomers lists the customers linked to the organizations in scope.
 func (s *Service) ListCustomers(ctx context.Context, c Caller, f ListFilter) ([]CustomerSummary, int64, error) {
-	status := strings.TrimSpace(f.Status)
-	switch status {
-	case "", "active", "disabled", "pending", StatusAnonymized:
-	default:
-		return nil, 0, invalid("status", "must be active, disabled, pending or anonymized")
+	for _, st := range f.Statuses {
+		if !slices.Contains(CustomerStatuses, st) {
+			return nil, 0, invalid("status", "must be active, disabled, pending or anonymized")
+		}
 	}
 	q := strings.TrimSpace(f.Q)
 	if len(q) > 100 {
 		return nil, 0, invalid("q", "must be at most 100 characters")
 	}
+	sort := sortKey(f.Sort, CustomersSortSpec)
 	var (
 		rows    []db.ListOrganizationCustomersRow
 		total   int64
@@ -603,20 +615,28 @@ func (s *Service) ListCustomers(ctx context.Context, c Caller, f ListFilter) ([]
 	)
 	// TEC-164: a text search goes to the customers index when it is up
 	// (anonymized customers are not indexed, so that status stays on SQL).
-	if q != "" && status != StatusAnonymized && s.indexEnabled() {
-		rows, total, indexed = s.searchIndexed(ctx, c, status, q, f.Limit, f.Offset)
+	// TEC-371: an explicit sort or a filter the index does not carry (type,
+	// linked_at, organization) stays on SQL as well.
+	if q != "" && !slices.Contains(f.Statuses, StatusAnonymized) && !f.SortExplicit && len(f.Types) == 0 &&
+		f.Linked.From == nil && f.Linked.Before == nil && len(f.OrganizationUUIDs) == 0 && s.indexEnabled() {
+		rows, total, indexed = s.searchIndexed(ctx, c, f.Statuses, q, f.Limit, f.Offset)
 	}
 	if !indexed {
 		var err error
 		rows, err = s.q.ListOrganizationCustomers(ctx, db.ListOrganizationCustomersParams{
-			OrgIds: c.orgIDs(), BrandID: c.brand(), Status: text(status), Q: text(q),
+			OrgIds: c.orgIDs(), BrandID: c.brand(), Statuses: f.Statuses, CustomerTypes: f.Types,
+			OrganizationUuids: f.OrganizationUUIDs, Q: text(q),
+			LinkedFrom: tsArg(&f.Linked, true), LinkedBefore: tsArg(&f.Linked, false),
+			SortKey: sort.Key, SortDesc: sort.Desc,
 			LimitCount: f.Limit, OffsetCount: f.Offset,
 		})
 		if err != nil {
 			return nil, 0, fmt.Errorf("customers: list: %w", err)
 		}
 		total, err = s.q.CountOrganizationCustomers(ctx, db.CountOrganizationCustomersParams{
-			OrgIds: c.orgIDs(), BrandID: c.brand(), Status: text(status), Q: text(q),
+			OrgIds: c.orgIDs(), BrandID: c.brand(), Statuses: f.Statuses, CustomerTypes: f.Types,
+			OrganizationUuids: f.OrganizationUUIDs, Q: text(q),
+			LinkedFrom: tsArg(&f.Linked, true), LinkedBefore: tsArg(&f.Linked, false),
 		})
 		if err != nil {
 			return nil, 0, fmt.Errorf("customers: count: %w", err)

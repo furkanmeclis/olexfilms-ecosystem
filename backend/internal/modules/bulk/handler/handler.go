@@ -15,6 +15,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine/adapters"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
 	"github.com/google/uuid"
@@ -251,5 +252,42 @@ func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 		response.BadRequest(w, r, response.CodeValidationError, err.Error())
 	default:
 		response.InternalErr(w, r, err, "unexpected error")
+	}
+}
+
+// ExecuteTenantScoped is ExecuteTenant for a resource whose reach is the
+// caller's permission scope (TEC-371, leads): besides the active
+// organization it stamps the scope resolved by RequireScope and the
+// requesting user (bulkengine.QueryScope / QueryActorUserID) on the target
+// query, overwriting anything the client sent under those keys.
+func (h *Handler) ExecuteTenantScoped(resource string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		scope, ok := orgctx.ScopeFrom(r.Context())
+		if !ok {
+			response.Forbidden(w, r, "Organization context required")
+			return
+		}
+		filter, ok := scopefilter.From(r.Context())
+		if !ok {
+			response.Forbidden(w, r, "Permission scope required")
+			return
+		}
+		encoded, ok := bulkengine.EncodeScope(filter)
+		if !ok {
+			response.Forbidden(w, r, "The permission scope reaches no organization")
+			return
+		}
+		var body bulkRequest
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			response.BadRequest(w, r, response.CodeValidationError, "invalid JSON body")
+			return
+		}
+		if body.Target.Query == nil {
+			body.Target.Query = map[string]string{}
+		}
+		body.Target.Query["organization_uuid"] = scope.UUID.String()
+		body.Target.Query[bulkengine.QueryScope] = encoded
+		body.Target.Query[bulkengine.QueryActorUserID] = strconv.FormatInt(authctx.MustPrincipal(r.Context()).UserInternal, 10)
+		h.executeBody(w, r, resource, body)
 	}
 }

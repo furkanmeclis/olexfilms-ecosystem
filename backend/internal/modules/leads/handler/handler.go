@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strings"
 	"time"
 
 	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
@@ -22,8 +21,9 @@ import (
 
 // Handler serves lead endpoints.
 type Handler struct {
-	svc  *usecase.Service
-	docs DocumentRenderer
+	svc     *usecase.Service
+	docs    DocumentRenderer
+	exports Exports // TEC-371: list export
 }
 
 // DocumentRenderer renders business documents.
@@ -69,6 +69,7 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.NotFound(w, r, "Quote not found")
 	case errors.Is(err, usecase.ErrNotFound):
 		response.NotFound(w, r, "Lead not found")
+	case response.QueryValidation(w, r, err):
 	default:
 		response.InternalErr(w, r, err, "lead request failed")
 	}
@@ -354,10 +355,13 @@ func (b leadBody) input() usecase.CreateInput {
 // List (GET /v1/leads).
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	q := apiquery.Parse(r.URL.Query())
-	items, total, err := h.svc.List(r.Context(), caller(r), usecase.ListFilter{
-		Status: strings.TrimSpace(r.URL.Query().Get("status")), TargetType: strings.TrimSpace(r.URL.Query().Get("target_type")),
-		FollowUp: strings.TrimSpace(r.URL.Query().Get("follow_up")), Q: q.Q, Limit: q.Limit, Offset: q.Offset,
-	})
+	f, err := usecase.ParseListFilter(r.URL.Query())
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	f.Limit, f.Offset = q.Limit, q.Offset
+	items, total, err := h.svc.List(r.Context(), caller(r), f)
 	if err != nil {
 		writeError(w, r, err)
 		return
