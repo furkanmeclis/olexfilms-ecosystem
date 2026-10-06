@@ -1,5 +1,5 @@
 export { DataTable } from "./data-table";
-export { useDataTable } from "./use-data-table";
+export { useDataTable, readPersistedTableState } from "./use-data-table";
 export { createColumn } from "./create-column";
 export { createSelectColumnDef } from "./select-column";
 export { createReorderColumnDef, REORDER_COLUMN_ID } from "./reorder-column";
@@ -28,5 +28,6 @@ export type {
   TableViewMode,
   ColumnFilterVariant,
   ColumnEditVariant,
+  ColumnParamFormat,
   UseDataTableOptions,
 } from "./types";

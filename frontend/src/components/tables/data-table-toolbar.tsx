@@ -73,6 +73,11 @@ type DataTableToolbarProps<TData> = {
       ) => DataTableBulkAction<TData>[] | ReactNode);
   onExport?: () => void;
   forceMobileCards?: boolean;
+  /**
+   * Hide faceted option counts (server mode: counts would only reflect the
+   * current page).
+   */
+  hideFacetCounts?: boolean;
   reorderMode?: boolean;
   onReorderModeChange?: (next: boolean) => void;
 };
@@ -89,6 +94,7 @@ export function DataTableToolbar<TData>({
   bulkActions,
   onExport,
   forceMobileCards,
+  hideFacetCounts,
   reorderMode,
   onReorderModeChange,
 }: DataTableToolbarProps<TData>) {
@@ -175,6 +181,7 @@ export function DataTableToolbar<TData>({
                   column={column}
                   title={title}
                   options={options}
+                  showCounts={!hideFacetCounts}
                 />
               );
             })}

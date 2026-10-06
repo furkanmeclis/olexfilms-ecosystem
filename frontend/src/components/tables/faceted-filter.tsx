@@ -34,6 +34,8 @@ type DataTableFacetedFilterProps<TData, TValue> = {
   column: Column<TData, TValue>;
   title: string;
   options: FacetedFilterOption[];
+  /** Show per-option counts from the loaded rows. Default: true */
+  showCounts?: boolean;
 };
 
 /**
@@ -44,9 +46,12 @@ export function DataTableFacetedFilter<TData, TValue>({
   column,
   title,
   options,
+  showCounts = true,
 }: DataTableFacetedFilterProps<TData, TValue>) {
   const { t } = useLocale();
-  const facets = column.getFacetedUniqueValues();
+  const facets = showCounts
+    ? column.getFacetedUniqueValues()
+    : new Map<unknown, number>();
   const selectedValues = new Set(
     (column.getFilterValue() as string[] | undefined) ?? [],
   );

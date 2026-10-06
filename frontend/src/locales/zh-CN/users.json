@@ -20,6 +20,7 @@
   "columns.role": "角色",
   "role": "角色",
   "columns.uuid": "UUID",
+  "columns.created_at": "创建时间",
   "columns.actions": "操作",
   "fields.name": "名",
   "fields.surname": "姓",

@@ -19,6 +19,7 @@ export type PublicUser = {
   email_verified: boolean;
   roles?: RoleSummary[];
   auth_methods?: UserAuthMethod[];
+  created_at?: string;
 };
 
 export type PlatformUserDetail = PublicUser & {

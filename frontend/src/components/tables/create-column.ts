@@ -3,6 +3,7 @@ import type { ColumnDef, RowData } from "@tanstack/react-table";
 import type {
   ColumnEditVariant,
   ColumnFilterVariant,
+  ColumnParamFormat,
   DataTableColumnMeta,
 } from "@/components/tables/types";
 
@@ -22,6 +23,12 @@ type CreateColumnOptions<TData extends RowData, TValue = unknown> = ColumnDef<
   gridPrimary?: boolean;
   gridSecondary?: boolean;
   defaultHidden?: boolean;
+  /** Server query param for this column's filter (server mode) */
+  param?: string;
+  /** Filter → param format override (default derived from filterVariant) */
+  paramFormat?: ColumnParamFormat;
+  /** Backend sort field when it differs from the column id */
+  sortParam?: string;
 };
 
 /**
@@ -41,6 +48,9 @@ export function createColumn<TData extends RowData, TValue = unknown>(
     gridPrimary,
     gridSecondary,
     defaultHidden,
+    param,
+    paramFormat,
+    sortParam,
     meta,
     enableHiding,
     header,
@@ -83,6 +93,9 @@ export function createColumn<TData extends RowData, TValue = unknown>(
       gridPrimary,
       gridSecondary,
       defaultHidden,
+      ...(param !== undefined ? { param } : {}),
+      ...(paramFormat !== undefined ? { paramFormat } : {}),
+      ...(sortParam !== undefined ? { sortParam } : {}),
       enableHiding: meta?.enableHiding ?? enableHiding ?? true,
     },
   } as ColumnDef<TData, TValue>;

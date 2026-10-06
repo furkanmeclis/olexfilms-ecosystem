@@ -20,6 +20,7 @@
   "columns.role": "Rôles",
   "role": "Rôle",
   "columns.uuid": "UUID",
+  "columns.created_at": "Date de création",
   "columns.actions": "Actions",
   "fields.name": "Prénom",
   "fields.surname": "Nom",
