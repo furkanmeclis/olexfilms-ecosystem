@@ -667,19 +667,41 @@ func (q *Queries) InsertServiceSubscriptionPeriod(ctx context.Context, arg Inser
 const listServiceCatalogItems = `-- name: ListServiceCatalogItems :many
 SELECT id, uuid, organization_id, brand_id, name, description, category, default_price, currency, recurrence, cancellation_fee, contract_template_id, is_active, created_at, updated_at FROM service_catalog_items
 WHERE brand_id = $1
-  AND ($2::text IS NULL OR category = $2::text)
-  AND ($3::boolean IS NULL OR is_active = $3::boolean)
+  AND (
+    COALESCE(cardinality($2::text[]), 0) = 0
+    OR category = ANY ($2::text[])
+  )
+  AND (
+    COALESCE(cardinality($3::text[]), 0) = 0
+    OR recurrence = ANY ($3::text[])
+  )
+  AND ($4::boolean IS NULL OR is_active = $4::boolean)
+  AND (
+    $5::text IS NULL
+    OR name ILIKE '%' || $5::text || '%'
+    OR description ILIKE '%' || $5::text || '%'
+  )
 ORDER BY name, id
 `
 
 type ListServiceCatalogItemsParams struct {
-	BrandID  int64       `json:"brand_id"`
-	Category pgtype.Text `json:"category"`
-	IsActive pgtype.Bool `json:"is_active"`
+	BrandID     int64       `json:"brand_id"`
+	Categories  []string    `json:"categories"`
+	Recurrences []string    `json:"recurrences"`
+	IsActive    pgtype.Bool `json:"is_active"`
+	Q           pgtype.Text `json:"q"`
 }
 
+// TEC-369: category / recurrence are CSV multi-value filters; q matches
+// name and description. Full array (small brand list, client-side table).
 func (q *Queries) ListServiceCatalogItems(ctx context.Context, arg ListServiceCatalogItemsParams) ([]ServiceCatalogItem, error) {
-	rows, err := q.db.Query(ctx, listServiceCatalogItems, arg.BrandID, arg.Category, arg.IsActive)
+	rows, err := q.db.Query(ctx, listServiceCatalogItems,
+		arg.BrandID,
+		arg.Categories,
+		arg.Recurrences,
+		arg.IsActive,
+		arg.Q,
+	)
 	if err != nil {
 		return nil, err
 	}

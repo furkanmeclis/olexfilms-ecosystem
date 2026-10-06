@@ -3179,7 +3179,7 @@ export interface paths {
         };
         /**
          * List contract templates for the active brand
-         * @description Requires the active organization, intake_contracts feature, and contracts.templates.manage.
+         * @description Requires the active organization, intake_contracts feature, and contracts.templates.manage. Full array (small list, client-side table). TEC-369: `active` and `is_default` filter on true / false and list everything when omitted; `kind` is CSV. Bad values → 400.
          */
         get: operations["listContractTemplates"];
         put?: never;
@@ -3963,7 +3963,7 @@ export interface paths {
         };
         /**
          * Product categories of the active brand
-         * @description Needs `catalog.read`. Filtered by the brand of the active organization (K1/K20); a category of another brand is never listed.
+         * @description Needs `catalog.read`. Filtered by the brand of the active organization (K1/K20); a category of another brand is never listed. `q` matches the name. Sortable (`sort`, one primary field, id tiebreak): name, sort, active, created_at, updated_at. Default `sort` (TEC-369). Unknown field → 400.
          */
         get: operations["listCatalogCategories"];
         put?: never;
@@ -3972,6 +3972,46 @@ export interface paths {
          * @description Needs `catalog.write` and the brand center as active organization (K4); distributors and dealers get 403.
          */
         post: operations["createCatalogCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/catalog/categories/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set the display order of product categories (TEC-369, center only)
+         * @description Needs `catalog.write` and the brand center as active organization (K4). `uuids` are categories of the brand in their new order (drag and drop). A subset keeps the positions it occupies among all categories and is rearranged inside them; every category is then renumbered (`sort` 10, 20, …). Empty, duplicate or unknown uuids → 400. Returns the full list in the new order. Sort is a local field, so brands whose categories come from an integration may reorder too.
+         */
+        put: operations["reorderCatalogCategories"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/catalog/categories/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run a logged bulk action on product categories (TEC-369)
+         * @description Center only, `catalog.write`, target scope `ids`. Actions `activate` / `deactivate` (undoable through `/v1/tenant/bulk-operations/{uuid}/undo`) and `delete` (not undoable; a category that still has products fails per item with `in use`). A brand whose categories come from an integration connection fails every item (`locked`).
+         */
+        post: operations["bulkCatalogCategories"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4015,7 +4055,7 @@ export interface paths {
         };
         /**
          * Products of the active brand
-         * @description Needs `catalog.read`. Filtered by the brand of the active organization (K1/K20): an Olex organization never lists a Glorian product. `q` matches name or SKU.
+         * @description Needs `catalog.read`. Filtered by the brand of the active organization (K1/K20): an Olex organization never lists a Glorian product. `q` matches name or SKU. Sortable (`sort`, one primary field, id tiebreak): sku, name, category (category name), unit_type, warranty_duration_months, micron_thickness (empty values last), active, created_at, updated_at. Default `name` (TEC-369). Unknown field or a bad filter value → 400.
          */
         get: operations["listCatalogProducts"];
         put?: never;
@@ -4061,7 +4101,7 @@ export interface paths {
         put?: never;
         /**
          * Run a logged, undoable bulk action on products (TEC-212)
-         * @description Actions `activate` / `deactivate` (center only, catalog.write) on target scope `ids`. The run is logged as a bulk operation; undo it through `/v1/tenant/bulk-operations/{uuid}/undo`.
+         * @description Actions `activate` / `deactivate` and (TEC-369) `set_category` (`target.params.category_uuid`, a category of the brand; a product whose category the integration sync owns fails per item with `locked`). Center only, catalog.write, target scope `ids`. The run is logged as a bulk operation; undo it through `/v1/tenant/bulk-operations/{uuid}/undo`. There is no bulk delete: products are referenced by stock, orders and services (RESTRICT) and own storage images.
          */
         post: operations["bulkCatalogProducts"];
         delete?: never;
@@ -5735,7 +5775,7 @@ export interface paths {
         };
         /**
          * Car brands (paged, searchable)
-         * @description Needs `vehicle_catalog.read`. Global reference data, no organization context. Readers without `vehicle_catalog.write` see active brands only and `active` is ignored for them.
+         * @description Needs `vehicle_catalog.read`. Global reference data, no organization context. Readers without `vehicle_catalog.write` see active brands only and `active` is ignored for them. Sortable (`sort`, one primary field, id tiebreak): name, model_count, active, created_at, updated_at. Default `name` (TEC-369). Unknown field → 400.
          */
         get: operations["listVehicleBrands"];
         put?: never;
@@ -5772,9 +5812,29 @@ export interface paths {
         };
         /**
          * Car models (paged; search "brand model" or external id)
-         * @description Needs `vehicle_catalog.read`. `q` matches "brand model" text or the exact external id; `brand_uuid` limits to one brand. Readers without `vehicle_catalog.write` see active models of active brands only.
+         * @description Needs `vehicle_catalog.read`. `q` matches "brand model" text or the exact external id; `brand_uuid` limits to one brand. Readers without `vehicle_catalog.write` see active models of active brands only. Sortable (`sort`, one primary field, id tiebreak): brand, name, year_start, year_stop, body_type, powertrain (empty values last), active, created_at, updated_at. Default `brand` (then model name, TEC-369). Unknown field → 400.
          */
         get: operations["listVehicleModels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/vehicle-catalog/models/facets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Faceted filter options of the model list (TEC-369)
+         * @description Needs `vehicle_catalog.read`. Distinct `body_type` and `powertrain` values with model counts, scoped like the model list (`brand_uuid`, `active`; readers without `vehicle_catalog.write` count active models of active brands only).
+         */
+        get: operations["listVehicleModelFacets"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6249,6 +6309,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/platform/vehicle-catalog/brands/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Activate or deactivate car brands in bulk (TEC-369)
+         * @description Needs `vehicle_catalog.write`. Actions `activate` / `deactivate` on target scope `ids`; logged as a platform bulk operation and undoable through `/v1/platform/bulk-operations/{uuid}/undo`.
+         */
+        post: operations["bulkVehicleBrands"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/platform/vehicle-catalog/brands": {
         parameters: {
             query?: never;
@@ -6330,6 +6410,26 @@ export interface paths {
         post?: never;
         /** Remove a car brand hero image (super_admin) */
         delete: operations["deleteVehicleBrandHero"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/vehicle-catalog/models/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Activate or deactivate car models in bulk (TEC-369)
+         * @description Needs `vehicle_catalog.write`. Actions `activate` / `deactivate` on target scope `ids`; logged as a platform bulk operation and undoable through `/v1/platform/bulk-operations/{uuid}/undo`.
+         */
+        post: operations["bulkVehicleModels"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -7914,7 +8014,7 @@ export interface paths {
         };
         /**
          * Center lists distributor-specific prices of the brand
-         * @description Center organizations with pricing.sale.read (brand scope).
+         * @description Center organizations with pricing.sale.read (brand scope). `q` matches the product SKU / name and the distributor name. Sortable (`sort`, one primary field, id tiebreak): product (SKU), distributor, currency, price, updated_at. Default `product` (then distributor and currency, TEC-369). Unknown field → 400.
          */
         get: operations["listTenantDistributorPrices"];
         put?: never;
@@ -7974,7 +8074,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Center lists service catalog items */
+        /**
+         * Center lists service catalog items
+         * @description Full array (small brand catalog; the panel table sorts client-side). TEC-369: `category` and `recurrence` are CSV (any of), `q` matches name and description; a bad enum or boolean → 400.
+         */
         get: operations["listPlatformServiceCatalog"];
         put?: never;
         /** Center creates a service catalog item */
@@ -8049,7 +8152,7 @@ export interface paths {
         };
         /**
          * Effective service catalog for the active organization
-         * @description Needs service_catalog.read and the service_catalog feature. A distributor sees its own override or the default price; a dealer sees its parent distributor's override or the default price. Prices are omitted when the caller lacks the relevant pricing.* read permission.
+         * @description Needs service_catalog.read and the service_catalog feature. A distributor sees its own override or the default price; a dealer sees its parent distributor's override or the default price. Prices are omitted when the caller lacks the relevant pricing.* read permission. Active items only (full array). TEC-369: `q`, `category` and `recurrence` (CSV) filter like the platform list.
          */
         get: operations["listServiceCatalog"];
         put?: never;
@@ -14272,6 +14375,32 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["CatalogCategory"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        CatalogCategoryOrderRequest: {
+            uuids: string[];
+        };
+        EnvelopeCatalogCategoryList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["CatalogCategory"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        VehicleModelFacetValue: {
+            value: string;
+            /** Format: int64 */
+            count: number;
+        };
+        VehicleModelFacets: {
+            body_type: components["schemas"]["VehicleModelFacetValue"][];
+            powertrain: components["schemas"]["VehicleModelFacetValue"][];
+        };
+        EnvelopeVehicleModelFacets: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["VehicleModelFacets"];
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeCatalogCategoryPage: {
@@ -25281,8 +25410,10 @@ export interface operations {
     listContractTemplates: {
         parameters: {
             query?: {
-                kind?: components["schemas"]["ContractTemplateKind"];
+                /** @description CSV of vehicle_intake, service_sale. */
+                kind?: string;
                 active?: boolean;
+                is_default?: boolean;
             };
             header?: never;
             path?: never;
@@ -26894,6 +27025,9 @@ export interface operations {
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
                 q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description `true` / `false`; any other value → 400. */
                 active?: boolean;
             };
             header?: never;
@@ -26943,6 +27077,69 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    reorderCatalogCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CatalogCategoryOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Reordered categories */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCatalogCategoryList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    bulkCatalogCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkExecuteRequest"];
+            };
+        };
+        responses: {
+            /** @description Sync bulk result with its operation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkSyncResult"];
+                };
+            };
+            /** @description Async bulk job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getCatalogCategory: {
@@ -27037,9 +27234,22 @@ export interface operations {
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
                 q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
                 active?: boolean;
+                /** @description One or more category uuids (CSV); any of. Unknown categories match nothing. */
                 category_uuid?: string;
-                unit_type?: components["schemas"]["CatalogUnitType"];
+                /** @description CSV of `piece`, `roll_meter`. */
+                unit_type?: string;
+                uses_fixed_barcode?: boolean;
+                warranty_duration_months_min?: number;
+                warranty_duration_months_max?: number;
+                micron_thickness_min?: number;
+                micron_thickness_max?: number;
+                /** @description YYYY-MM-DD or RFC3339 (inclusive). */
+                created_from?: string;
+                /** @description YYYY-MM-DD (whole day) or RFC3339 (inclusive). */
+                created_to?: string;
             };
             header?: never;
             path?: never;
@@ -27171,14 +27381,24 @@ export interface operations {
                     format: "pdf" | "xlsx" | "csv" | "json";
                     /** @example tr */
                     locale?: string;
-                    /** @description Optional filters */
+                    /** @description Optional list parameters (TEC-369: the same filters, q and sort as `GET /v1/catalog/products`; bad values → 400). */
                     query?: {
                         q?: string;
+                        sort?: string;
                         /** @enum {string} */
                         active?: "true" | "false";
-                        /** Format: uuid */
+                        /** @description CSV of category uuids */
                         category_uuid?: string;
-                        unit_type?: components["schemas"]["CatalogUnitType"];
+                        /** @description CSV of piece, roll_meter */
+                        unit_type?: string;
+                        /** @enum {string} */
+                        uses_fixed_barcode?: "true" | "false";
+                        warranty_duration_months_min?: string;
+                        warranty_duration_months_max?: string;
+                        micron_thickness_min?: string;
+                        micron_thickness_max?: string;
+                        created_from?: string;
+                        created_to?: string;
                     };
                 };
             };
@@ -30056,7 +30276,11 @@ export interface operations {
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
                 q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
                 active?: boolean;
+                /** @description `true` brands with an uploaded logo, `false` without. */
+                has_logo?: boolean;
             };
             header?: never;
             path?: never;
@@ -30112,6 +30336,15 @@ export interface operations {
                 q?: components["parameters"]["Q"];
                 brand_uuid?: string;
                 active?: boolean;
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description CSV of exact body_type values (options from `/v1/vehicle-catalog/models/facets`). */
+                body_type?: string;
+                /** @description CSV of exact powertrain values (options from `/v1/vehicle-catalog/models/facets`). */
+                powertrain?: string;
+                /** @description Production span [year_start, year_stop] overlaps [year_min, year_max]; open ends match. 1900..2100. */
+                year_min?: number;
+                year_max?: number;
             };
             header?: never;
             path?: never;
@@ -30126,6 +30359,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeVehicleModelPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listVehicleModelFacets: {
+        parameters: {
+            query?: {
+                brand_uuid?: string;
+                active?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Facet values */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeVehicleModelFacets"];
                 };
             };
             400: components["responses"]["BadRequest"];
@@ -30975,6 +31235,9 @@ export interface operations {
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
                 q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                has_logo?: boolean;
             };
             header?: never;
             path?: never;
@@ -31002,6 +31265,15 @@ export interface operations {
                 offset?: components["parameters"]["Offset"];
                 q?: components["parameters"]["Q"];
                 brand_uuid?: string;
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description CSV of exact body_type values (options from `/v1/vehicle-catalog/models/facets`). */
+                body_type?: string;
+                /** @description CSV of exact powertrain values (options from `/v1/vehicle-catalog/models/facets`). */
+                powertrain?: string;
+                /** @description Production span [year_start, year_stop] overlaps [year_min, year_max]; open ends match. 1900..2100. */
+                year_min?: number;
+                year_max?: number;
             };
             header?: never;
             path?: never;
@@ -31022,6 +31294,42 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    bulkVehicleBrands: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkExecuteRequest"];
+            };
+        };
+        responses: {
+            /** @description Sync bulk result with its operation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkSyncResult"];
+                };
+            };
+            /** @description Async bulk job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     createVehicleBrand: {
@@ -31217,6 +31525,42 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    bulkVehicleModels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkExecuteRequest"];
+            };
+        };
+        responses: {
+            /** @description Sync bulk result with its operation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkSyncResult"];
+                };
+            };
+            /** @description Async bulk job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     createVehicleModel: {
@@ -33781,6 +34125,11 @@ export interface operations {
             query?: {
                 product_uuid?: string;
                 distributor_uuid?: string;
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description CSV of ISO-4217 codes (any of); a malformed code → 400. */
+                currency?: string;
                 limit?: number;
                 offset?: number;
             };
@@ -33930,7 +34279,11 @@ export interface operations {
     listPlatformServiceCatalog: {
         parameters: {
             query?: {
-                category?: components["schemas"]["ServiceCatalogCategory"];
+                q?: components["parameters"]["Q"];
+                /** @description CSV of advertising, training, setup, software, module_bundle, other. */
+                category?: string;
+                /** @description CSV of one_time, monthly, yearly. */
+                recurrence?: string;
                 active?: boolean;
             };
             header?: never;
@@ -33948,6 +34301,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeServiceCatalogList"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
         };
@@ -34175,7 +34529,13 @@ export interface operations {
     };
     listServiceCatalog: {
         parameters: {
-            query?: never;
+            query?: {
+                q?: components["parameters"]["Q"];
+                /** @description CSV of advertising, training, setup, software, module_bundle, other. */
+                category?: string;
+                /** @description CSV of one_time, monthly, yearly. */
+                recurrence?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -34191,6 +34551,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeServiceCatalogList"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
         };

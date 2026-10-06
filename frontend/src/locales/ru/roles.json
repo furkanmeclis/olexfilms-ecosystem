@@ -55,5 +55,7 @@
   "delete_description": "Удалить роль «{{name}}»? Другие роли пользователей сохранятся; действие необратимо.",
   "toast.created": "Роль создана",
   "toast.updated": "Роль обновлена",
-  "toast.deleted": "Роль удалена"
+  "toast.deleted": "Роль удалена",
+  "labels.custom": "Пользовательская",
+  "fields.created_at": "Создана"
 }

@@ -8,6 +8,7 @@ import {
   platformFormRequest,
 } from "@/lib/api/platform-form-request";
 import { platformRequest } from "@/lib/api/platform-request";
+import type { ListJobsParams } from "@/features/io/services/exports.service";
 
 export type ListJobsResult = {
   items: ImportJob[];
@@ -69,12 +70,23 @@ export const importsService = {
     );
   },
 
-  async list(
-    params: { limit?: number; offset?: number },
-    scope: ExportJobScope = "platform",
-  ) {
+  /**
+   * Job list: `sort`, `q`, CSV `status` / `resource` / `format`,
+   * `created_from` / `created_to` (TEC-365).
+   */
+  async list(params: ListJobsParams, scope: ExportJobScope = "platform") {
     return platformRequest<ListJobsResult>("GET", importsBase(scope), {
-      query: params,
+      query: {
+        limit: params.limit,
+        offset: params.offset,
+        sort: params.sort,
+        q: params.q,
+        status: params.status,
+        resource: params.resource,
+        format: params.format,
+        created_from: params.created_from,
+        created_to: params.created_to,
+      },
     });
   },
 

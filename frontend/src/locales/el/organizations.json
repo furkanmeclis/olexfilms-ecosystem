@@ -126,5 +126,9 @@
   "fields.timezone": "Ζώνη ώρας",
   "fields.timezone_hint": "Οι ημερομηνίες και οι ώρες εμφανίζονται σε αυτή τη ζώνη, εκτός αν ο χρήστης επιλέξει δική του.",
   "form.section_regional": "Γλώσσα και περιοχή",
-  "form.section_regional_desc": "Προεπιλεγμένη γλώσσα και ζώνη ώρας για χρήστες, έγγραφα και ειδοποιήσεις."
+  "form.section_regional_desc": "Προεπιλεγμένη γλώσσα και ζώνη ώρας για χρήστες, έγγραφα και ειδοποιήσεις.",
+  "columns.created_at": "Δημιουργήθηκε",
+  "columns.email": "Email",
+  "detail.children": "Υποοργανισμοί",
+  "detail.children_empty": "Δεν υπάρχουν ακόμη υποοργανισμοί."
 }

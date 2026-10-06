@@ -192,5 +192,7 @@
   "actions.stock.reclassification.cancelled": "Αποσύρθηκε αίτημα επαναταξινόμησης",
   "resources.stock.reclassification": "Επαναταξινόμηση αποθέματος",
   "actions.stock.split.created": "Το ρολό χωρίστηκε",
-  "resources.stock.split": "Χωρισμός ρολού"
+  "resources.stock.split": "Χωρισμός ρολού",
+  "filters.actor": "Φιλτράρισμα κατά χρήστη",
+  "resources.platform.organizations": "Οργανισμοί"
 }

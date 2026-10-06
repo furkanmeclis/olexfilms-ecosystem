@@ -140,6 +140,7 @@ type Querier interface {
 	CountContractInstances(ctx context.Context, arg CountContractInstancesParams) (int64, error)
 	CountCustomerCariAccounts(ctx context.Context, organizationID int64) (int64, error)
 	CountCustomerOrganizationLinks(ctx context.Context, arg CountCustomerOrganizationLinksParams) (CountCustomerOrganizationLinksRow, error)
+	CountDistributorOverrideDetails(ctx context.Context, arg CountDistributorOverrideDetailsParams) (int64, error)
 	CountDistributorPriceOverrides(ctx context.Context, arg CountDistributorPriceOverridesParams) (int64, error)
 	CountDocumentTemplates(ctx context.Context, arg CountDocumentTemplatesParams) (int64, error)
 	CountEODReports(ctx context.Context, arg CountEODReportsParams) (int64, error)
@@ -520,6 +521,9 @@ type Querier interface {
 	DeleteTerritory(ctx context.Context, arg DeleteTerritoryParams) (int64, error)
 	DeleteTypedLocation(ctx context.Context, arg DeleteTypedLocationParams) (int64, error)
 	DeleteUnitCurrentStateForRepair(ctx context.Context, unitID int64) error
+	// Bulk delete: no row while products still use the category (the bulk run
+	// shares one transaction, so a foreign key error must not happen).
+	DeleteUnusedProductCategory(ctx context.Context, arg DeleteUnusedProductCategoryParams) (int64, error)
 	DeleteUserTOTP(ctx context.Context, userID int64) error
 	DeleteWarehouse(ctx context.Context, arg DeleteWarehouseParams) (int64, error)
 	DeleteWarehouseTransferLine(ctx context.Context, arg DeleteWarehouseTransferLineParams) (int64, error)
@@ -1163,8 +1167,14 @@ type Querier interface {
 	ListBulkChangesForJob(ctx context.Context, jobID int64) ([]BulkChange, error)
 	ListBulkJobsForActor(ctx context.Context, arg ListBulkJobsForActorParams) ([]BulkJob, error)
 	ListBulkOperationsForOrganization(ctx context.Context, arg ListBulkOperationsForOrganizationParams) ([]BulkOperation, error)
+	// TEC-369: sort keys from model.BrandSort (docs/list-contract.md); default name.
 	ListCarBrands(ctx context.Context, arg ListCarBrandsParams) ([]ListCarBrandsRow, error)
+	// TEC-369: faceted filter options of the model list (distinct free-text
+	// values with counts), scoped like the list.
+	ListCarModelBodyTypeFacets(ctx context.Context, arg ListCarModelBodyTypeFacetsParams) ([]ListCarModelBodyTypeFacetsRow, error)
+	ListCarModelPowertrainFacets(ctx context.Context, arg ListCarModelPowertrainFacetsParams) ([]ListCarModelPowertrainFacetsRow, error)
 	// Search matches the model name, "brand model" and the external id.
+	// TEC-369: sort keys from model.ModelSort (docs/list-contract.md); default brand.
 	ListCarModels(ctx context.Context, arg ListCarModelsParams) ([]ListCarModelsRow, error)
 	ListCariAccounts(ctx context.Context, arg ListCariAccountsParams) ([]CariAccount, error)
 	ListCariAccountsWithBalance(ctx context.Context, arg ListCariAccountsWithBalanceParams) ([]ListCariAccountsWithBalanceRow, error)
@@ -1227,7 +1237,8 @@ type Querier interface {
 	ListDealerPricesForProducts(ctx context.Context, arg ListDealerPricesForProductsParams) ([]ListDealerPricesForProductsRow, error)
 	ListDealerProductPrices(ctx context.Context, arg ListDealerProductPricesParams) ([]DealerProductPrice, error)
 	// Center view of the distributor-specific prices with product and
-	// distributor identities.
+	// distributor identities. TEC-369: sort keys from
+	// usecase.DistributorPriceSort (docs/list-contract.md); default product.
 	ListDistributorOverrideDetails(ctx context.Context, arg ListDistributorOverrideDetailsParams) ([]ListDistributorOverrideDetailsRow, error)
 	ListDistributorOverridesForProducts(ctx context.Context, arg ListDistributorOverridesForProductsParams) ([]ListDistributorOverridesForProductsRow, error)
 	ListDistributorPriceOverrides(ctx context.Context, arg ListDistributorPriceOverridesParams) ([]ListDistributorPriceOverridesRow, error)
@@ -1483,13 +1494,19 @@ type Querier interface {
 	// dealer prices (000041).
 	// Products of the brand for the price list view.
 	ListPricedProducts(ctx context.Context, arg ListPricedProductsParams) ([]ListPricedProductsRow, error)
+	// Sort keys from model.CategorySort (docs/list-contract.md); default sort.
 	ListProductCategories(ctx context.Context, arg ListProductCategoriesParams) ([]ProductCategory, error)
+	// TEC-369: category order and bulk actions.
+	// Every category of the brand in display order (reorder input).
+	ListProductCategoryOrder(ctx context.Context, brandID int64) ([]ListProductCategoryOrderRow, error)
 	ListProductPrices(ctx context.Context, arg ListProductPricesParams) ([]ProductPrice, error)
 	ListProductPricesForProducts(ctx context.Context, arg ListProductPricesForProductsParams) ([]ListProductPricesForProductsRow, error)
 	ListProductSaleLines(ctx context.Context, arg ListProductSaleLinesParams) ([]ProductSaleLine, error)
 	ListProductSaleLinesBySales(ctx context.Context, arg ListProductSaleLinesBySalesParams) ([]ProductSaleLine, error)
 	ListProductSaleStockCandidates(ctx context.Context, arg ListProductSaleStockCandidatesParams) ([]ListProductSaleStockCandidatesRow, error)
 	ListProductSales(ctx context.Context, arg ListProductSalesParams) ([]ProductSale, error)
+	// TEC-369: sort keys from model.ProductSort (docs/list-contract.md);
+	// default name. category sorts by the category name.
 	ListProducts(ctx context.Context, arg ListProductsParams) ([]Product, error)
 	// TEC-211: product refs of the brand for the catalog export price columns.
 	ListProductsByUUIDs(ctx context.Context, arg ListProductsByUUIDsParams) ([]ListProductsByUUIDsRow, error)
@@ -1554,6 +1571,8 @@ type Querier interface {
 	// lose the personal data) and after an ownership transfer.
 	ListSearchUuidsByCustomer(ctx context.Context, argUuid uuid.UUID) (ListSearchUuidsByCustomerRow, error)
 	ListSearchUuidsByUserID(ctx context.Context, userID int64) (ListSearchUuidsByUserIDRow, error)
+	// TEC-369: category / recurrence are CSV multi-value filters; q matches
+	// name and description. Full array (small brand list, client-side table).
 	ListServiceCatalogItems(ctx context.Context, arg ListServiceCatalogItemsParams) ([]ServiceCatalogItem, error)
 	ListServiceCatalogModules(ctx context.Context, itemID int64) ([]string, error)
 	ListServiceImages(ctx context.Context, serviceID int64) ([]ServiceImage, error)
@@ -2249,8 +2268,11 @@ type Querier interface {
 	SetAppSettingsLogo(ctx context.Context, logoObjectKey pgtype.Text) (AppSetting, error)
 	SetAppointmentStatus(ctx context.Context, arg SetAppointmentStatusParams) (Appointment, error)
 	SetBarcodeCounter(ctx context.Context, arg SetBarcodeCounterParams) error
+	// TEC-369 bulk activate/deactivate.
+	SetCarBrandActiveByUUID(ctx context.Context, arg SetCarBrandActiveByUUIDParams) (CarBrand, error)
 	SetCarBrandHero(ctx context.Context, arg SetCarBrandHeroParams) (CarBrand, error)
 	SetCarBrandLogo(ctx context.Context, arg SetCarBrandLogoParams) (CarBrand, error)
+	SetCarModelActiveByUUID(ctx context.Context, arg SetCarModelActiveByUUIDParams) (CarModel, error)
 	SetCarModelHero(ctx context.Context, arg SetCarModelHeroParams) (CarModel, error)
 	SetCariAccountActive(ctx context.Context, arg SetCariAccountActiveParams) (CariAccount, error)
 	SetContractInstancePDFKey(ctx context.Context, arg SetContractInstancePDFKeyParams) (ContractInstance, error)
@@ -2292,6 +2314,12 @@ type Querier interface {
 	SetPlateFormatSortOrder(ctx context.Context, arg SetPlateFormatSortOrderParams) error
 	// TEC-212: bulk engine adapter (one product, logged + undoable).
 	SetProductActiveByUUID(ctx context.Context, arg SetProductActiveByUUIDParams) (Product, error)
+	SetProductCategoryActiveByUUID(ctx context.Context, arg SetProductCategoryActiveByUUIDParams) (ProductCategory, error)
+	// Bulk set_category of one product.
+	SetProductCategoryByUUID(ctx context.Context, arg SetProductCategoryByUUIDParams) (Product, error)
+	// Renumbers the categories in the given id order (10, 20, ...) in one
+	// statement; rows whose value does not change are skipped.
+	SetProductCategorySorts(ctx context.Context, arg SetProductCategorySortsParams) (int64, error)
 	SetProductSaleFinanceEntry(ctx context.Context, arg SetProductSaleFinanceEntryParams) (ProductSale, error)
 	// Bulk activate/deactivate within one brand.
 	SetProductsActive(ctx context.Context, arg SetProductsActiveParams) (int64, error)

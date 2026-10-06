@@ -66,6 +66,7 @@ var ukCatalog = map[string]string{
 	"export.document":                                  "Експорт",
 	"export.generated_at":                              "Сформовано",
 	"export.title.platform.users":                      "Експорт користувачів",
+	"export.title.platform.organizations":              "Експорт організацій",
 	"export.title.platform.roles":                      "Експорт ролей",
 	"export.title.platform.notifications":              "Експорт сповіщень",
 	"export.title.platform.activity":                   "Експорт журналу дій",

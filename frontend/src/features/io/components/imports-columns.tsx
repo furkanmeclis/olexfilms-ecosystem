@@ -15,7 +15,12 @@ import {
   resourceLabelKey,
   rollbackWindowOpen,
 } from "@/features/io/lib/display";
-import type { ImportJob } from "@/features/io/types";
+import {
+  IMPORT_FORMAT_VALUES,
+  IMPORT_STATUS_VALUES,
+  ioResourceOptions,
+} from "@/features/io/lib/filter-options";
+import type { ExportJobScope, ImportJob } from "@/features/io/types";
 import { useLocale } from "@/providers/locale-provider";
 
 function statusVariant(status: string) {
@@ -29,12 +34,14 @@ type UseImportsColumnsOptions = {
   onRollback: (uuid: string) => void;
   rollbackPending: boolean;
   detailHref?: (uuid: string) => string;
+  scope?: ExportJobScope;
 };
 
 export function useImportsColumns({
   onRollback,
   rollbackPending,
   detailHref,
+  scope = "platform",
 }: UseImportsColumnsOptions) {
   const { t, format } = useLocale();
   const [nowMs] = useState(() => Date.now());
@@ -45,7 +52,11 @@ export function useImportsColumns({
         id: "resource",
         accessorKey: "resource",
         labelKey: "imports.columns.resource",
-        enableColumnFilter: false,
+        enableSorting: true,
+        filterVariant: "faceted",
+        param: "resource",
+        filterOptions: ioResourceOptions("imports", scope),
+        gridPrimary: true,
         cell: ({ row }) => {
           const key = resourceLabelKey(row.original.resource);
           return key ? t(`imports.${key}`) : row.original.resource;
@@ -55,14 +66,28 @@ export function useImportsColumns({
         id: "format",
         accessorKey: "format",
         labelKey: "imports.columns.format",
-        enableColumnFilter: false,
+        enableSorting: true,
+        filterVariant: "faceted",
+        param: "format",
+        filterOptions: IMPORT_FORMAT_VALUES.map((value) => ({
+          value,
+          labelKey: `imports.formats.${value}`,
+          label: value.toUpperCase(),
+        })),
         cell: ({ row }) => formatImportFormat(t, row.original.format),
       }),
       createColumn<ImportJob>({
         id: "status",
         accessorKey: "status",
         labelKey: "imports.columns.status",
-        enableColumnFilter: false,
+        enableSorting: true,
+        filterVariant: "faceted",
+        param: "status",
+        filterOptions: IMPORT_STATUS_VALUES.map((value) => ({
+          value,
+          labelKey: `imports.status.${value}`,
+          label: value,
+        })),
         cell: ({ row }) => (
           <Badge variant={statusVariant(row.original.status)}>
             {formatImportStatus(t, row.original.status)}
@@ -93,7 +118,9 @@ export function useImportsColumns({
         id: "created_at",
         accessorKey: "created_at",
         labelKey: "imports.columns.created_at",
-        enableColumnFilter: false,
+        enableSorting: true,
+        filterVariant: "date-range",
+        param: "created",
         cell: ({ row }) => format.dateTime(row.original.created_at),
       }),
       createColumn<ImportJob>({
@@ -136,6 +163,6 @@ export function useImportsColumns({
         },
       }),
     ],
-    [nowMs, onRollback, rollbackPending, detailHref, t, format],
+    [nowMs, onRollback, rollbackPending, detailHref, scope, t, format],
   );
 }

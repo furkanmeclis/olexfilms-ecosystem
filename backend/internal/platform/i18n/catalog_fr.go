@@ -66,6 +66,7 @@ var frCatalog = map[string]string{
 	"export.document":                                  "Exportation",
 	"export.generated_at":                              "Généré le",
 	"export.title.platform.users":                      "Export des utilisateurs",
+	"export.title.platform.organizations":              "Export des organisations",
 	"export.title.platform.roles":                      "Export des rôles",
 	"export.title.platform.notifications":              "Export des notifications",
 	"export.title.platform.activity":                   "Export du journal d'activité",

@@ -66,6 +66,7 @@ var bgCatalog = map[string]string{
 	"export.document":                                  "Експорт",
 	"export.generated_at":                              "Генерирано",
 	"export.title.platform.users":                      "Експорт на потребители",
+	"export.title.platform.organizations":              "Експорт на организации",
 	"export.title.platform.roles":                      "Експорт на роли",
 	"export.title.platform.notifications":              "Експорт на известия",
 	"export.title.platform.activity":                   "Експорт на дневника на активността",

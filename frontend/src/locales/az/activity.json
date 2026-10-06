@@ -192,5 +192,7 @@
   "actions.stock.reclassification.cancelled": "Yenidən təsnifat sorğusu geri çəkildi",
   "resources.stock.reclassification": "Anbar yenidən təsnifatı",
   "actions.stock.split.created": "Rulon bölündü",
-  "resources.stock.split": "Rulon bölmə"
+  "resources.stock.split": "Rulon bölmə",
+  "filters.actor": "İstifadəçiyə görə süz",
+  "resources.platform.organizations": "Təşkilatlar"
 }

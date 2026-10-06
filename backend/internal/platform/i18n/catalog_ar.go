@@ -66,6 +66,7 @@ var arCatalog = map[string]string{
 	"export.document":                                  "تصدير",
 	"export.generated_at":                              "تاريخ الإنشاء",
 	"export.title.platform.users":                      "تصدير المستخدمين",
+	"export.title.platform.organizations":              "تصدير المؤسسات",
 	"export.title.platform.roles":                      "تصدير الأدوار",
 	"export.title.platform.notifications":              "تصدير الإشعارات",
 	"export.title.platform.activity":                   "تصدير سجل النشاط",

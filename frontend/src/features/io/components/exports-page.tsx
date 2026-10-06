@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { useCallback } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
 import {
@@ -14,10 +15,12 @@ import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { useExportsColumns } from "@/features/io/components/exports-columns";
 import { ioKeys } from "@/features/io/hooks/query-keys";
-import { exportsService } from "@/features/io/services/exports.service";
+import {
+  exportsService,
+  type ListJobsParams,
+} from "@/features/io/services/exports.service";
 import type { ExportJobScope } from "@/features/io/types";
 import { useLocale } from "@/providers/locale-provider";
-import { useMemo } from "react";
 
 type ExportsPageProps = {
   scope?: ExportJobScope;
@@ -27,40 +30,37 @@ type ExportsPageProps = {
 export function ExportsPage({ scope = "platform", slug }: ExportsPageProps) {
   const { t } = useLocale();
   const router = useRouter();
-  const listState = useServerListState({ initialPageSize: 20 });
   const tenant = scope === "tenant";
-  const columns = useExportsColumns({
-    scope,
-    detailHref: (uuid) =>
-      tenant && slug
-        ? routes.tenant.exports.detail(slug, uuid)
-        : routes.platform.exports.detail(uuid),
-  });
-
-  const listQuery = useQuery({
-    queryKey: ioKeys.exports.list(listState.params, scope),
-    queryFn: () =>
-      exportsService.list(
-        {
-          limit: listState.params.limit,
-          offset: listState.params.offset,
-        },
-        scope,
-      ),
-  });
-
-  const pageCount = useMemo(() => {
-    const total = listQuery.data?.total ?? 0;
-    const size = listState.pagination.pageSize || 20;
-    return Math.max(1, Math.ceil(total / size));
-  }, [listQuery.data?.total, listState.pagination.pageSize]);
-
-  const homeHref =
-    tenant && slug ? routes.tenant.home(slug) : routes.platform.home;
   const persistKey = tenant
     ? `tenant-exports-v1-${slug}`
     : "platform-exports-v1";
+  const detailHref = useCallback(
+    (uuid: string) =>
+      tenant && slug
+        ? routes.tenant.exports.detail(slug, uuid)
+        : routes.platform.exports.detail(uuid),
+    [slug, tenant],
+  );
+  const columns = useExportsColumns({ scope, detailHref });
 
+  // Column meta drives the params: status/resource/format (CSV) and
+  // created_from/_to; sort on created_at/status/resource/format.
+  const listState = useServerListState({
+    columns,
+    initialSort: "-created_at",
+    initialPageSize: 20,
+    persistKey,
+  });
+  const listParams: ListJobsParams = listState.params;
+
+  const listQuery = useQuery({
+    queryKey: ioKeys.exports.list(listParams, scope),
+    queryFn: () => exportsService.list(listParams, scope),
+    placeholderData: (previous) => previous,
+  });
+
+  const homeHref =
+    tenant && slug ? routes.tenant.home(slug) : routes.platform.home;
   return (
     <EntityPage
       title={t("exports.title")}
@@ -101,13 +101,11 @@ export function ExportsPage({ scope = "platform", slug }: ExportsPageProps) {
             ? t("exports.tenant_empty_description")
             : t("exports.empty_description")
         }
-        pageCount={pageCount}
+        rowCount={listQuery.data?.total ?? 0}
         state={listState.tableState}
         features={{
           persistKey,
           rowSelection: false,
-          columnFilters: false,
-          globalFilter: false,
         }}
         toolbarExtra={
           <EntityToolbar

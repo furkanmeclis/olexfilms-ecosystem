@@ -70,6 +70,12 @@ func (h *Handler) ExecuteOrganizations(w http.ResponseWriter, r *http.Request) {
 	h.executeBody(w, r, adapters.ResourceOrganizations, body)
 }
 
+// ExecutePlatform returns a handler that runs a bulk action on a global
+// (organization-less) platform resource (TEC-369: vehicle catalog).
+func (h *Handler) ExecutePlatform(resource string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) { h.execute(w, r, resource) }
+}
+
 // ExecuteTenant returns a handler that runs a bulk action on an
 // organization-scoped resource. Tenant modules mount it on their own routes.
 func (h *Handler) ExecuteTenant(resource string) http.HandlerFunc {

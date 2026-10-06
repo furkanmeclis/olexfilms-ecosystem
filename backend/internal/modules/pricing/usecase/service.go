@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -53,6 +54,7 @@ type Querier interface {
 	DeleteDistributorPriceOverride(ctx context.Context, arg db.DeleteDistributorPriceOverrideParams) (int64, error)
 	ListDistributorOverrideDetails(ctx context.Context, arg db.ListDistributorOverrideDetailsParams) ([]db.ListDistributorOverrideDetailsRow, error)
 	CountDistributorPriceOverrides(ctx context.Context, arg db.CountDistributorPriceOverridesParams) (int64, error)
+	CountDistributorOverrideDetails(ctx context.Context, arg db.CountDistributorOverrideDetailsParams) (int64, error)
 
 	UpsertDistributorDealerPrice(ctx context.Context, arg db.UpsertDistributorDealerPriceParams) (db.UpsertDistributorDealerPriceRow, error)
 	DeleteDistributorDealerPrice(ctx context.Context, arg db.DeleteDistributorDealerPriceParams) (int64, error)
@@ -618,10 +620,25 @@ func (s *Service) DeleteDistributorOverride(ctx context.Context, v Viewer, produ
 	return nil
 }
 
-// OverrideFilter narrows the distributor-specific price list.
+// DistributorPriceSort is the sort contract of GET
+// /v1/tenant/pricing/distributor-prices (TEC-369, docs/list-contract.md).
+// Default: product (sku), then distributor name and currency.
+var DistributorPriceSort = apiquery.SortSpec{
+	Columns: apiquery.SortColumns{
+		"product": "product", "distributor": "distributor", "currency": "currency",
+		"price": "price", "updated_at": "updated_at",
+	},
+	Default: apiquery.SortField{Field: "product"},
+}
+
+// OverrideFilter narrows the distributor-specific price list. Q matches the
+// product sku / name and the distributor name; Currencies is any of.
 type OverrideFilter struct {
 	ProductUUID     *uuid.UUID
 	DistributorUUID *uuid.UUID
+	Q               string
+	Currencies      []string
+	Sort            apiquery.ResolvedSort
 	Limit           int32
 	Offset          int32
 }
@@ -647,15 +664,24 @@ func (s *Service) ListDistributorOverrides(ctx context.Context, v Viewer, f Over
 		}
 		distributorID = pgtype.Int8{Int64: d.ID, Valid: true}
 	}
+	if f.Sort.Key == "" {
+		f.Sort = apiquery.ResolvedSort{Key: DistributorPriceSort.Default.Field}
+	}
+	var q pgtype.Text
+	if t := strings.TrimSpace(f.Q); t != "" {
+		q = pgtype.Text{String: t, Valid: true}
+	}
 	rows, err := s.q.ListDistributorOverrideDetails(ctx, db.ListDistributorOverrideDetailsParams{
 		BrandID: v.BrandID, ProductID: productID, DistributorOrgID: distributorID,
+		Currencies: f.Currencies, Q: q, SortKey: f.Sort.Key, SortDesc: f.Sort.Desc,
 		LimitCount: f.Limit, OffsetCount: f.Offset,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("list overrides: %w", err)
 	}
-	total, err := s.q.CountDistributorPriceOverrides(ctx, db.CountDistributorPriceOverridesParams{
+	total, err := s.q.CountDistributorOverrideDetails(ctx, db.CountDistributorOverrideDetailsParams{
 		BrandID: v.BrandID, ProductID: productID, DistributorOrgID: distributorID,
+		Currencies: f.Currencies, Q: q,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("count overrides: %w", err)

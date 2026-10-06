@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -98,8 +99,15 @@ func (a *IOAdapter) ExportColumns() []ioengine.Column {
 	}
 }
 
-// Export implements ioengine.ResourceAdapter. Query keys: q, active,
-// category_uuid, unit_type.
+// ProductListKeys are the product list parameters the export carries
+// (TEC-369: the same filters, q and sort as GET /v1/catalog/products).
+var ProductListKeys = []string{
+	"q", "sort", "active", "category_uuid", "unit_type", "uses_fixed_barcode",
+	"warranty_duration_months_min", "warranty_duration_months_max",
+	"micron_thickness_min", "micron_thickness_max", "created_from", "created_to",
+}
+
+// Export implements ioengine.ResourceAdapter. Query keys: ProductListKeys.
 func (a *IOAdapter) Export(ctx context.Context, query ioengine.ExportQuery, _ i18n.Locale) (ioengine.Dataset, error) {
 	orgID, err := strconv.ParseInt(query[ioengine.QueryOrganizationID], 10, 64)
 	if err != nil || orgID <= 0 {
@@ -110,13 +118,17 @@ func (a *IOAdapter) Export(ctx context.Context, query ioengine.ExportQuery, _ i1
 		return ioengine.Dataset{}, err
 	}
 	scope := orgctx.Scope{InternalID: org.ID, BrandID: org.BrandID, OrgType: org.Type}
-	f := model.ProductFilter{Q: query["q"], UnitType: query["unit_type"], Limit: exportPage}
-	if v, err := strconv.ParseBool(strings.TrimSpace(query["active"])); err == nil {
-		f.Active = &v
+	values := url.Values{}
+	for _, k := range ProductListKeys {
+		if v := strings.TrimSpace(query[k]); v != "" {
+			values.Set(k, v)
+		}
 	}
-	if v, err := uuid.Parse(strings.TrimSpace(query["category_uuid"])); err == nil {
-		f.CategoryUUID = &v
+	f, err := ParseProductFilter(values)
+	if err != nil {
+		return ioengine.Dataset{}, err
 	}
+	f.Limit, f.Offset = exportPage, 0
 	rows := []map[string]any{}
 	viewer := pricingusecase.Viewer{
 		OrgID: org.ID, OrgType: org.Type, BrandID: org.BrandID,

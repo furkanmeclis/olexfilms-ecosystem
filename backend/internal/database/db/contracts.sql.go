@@ -1545,15 +1545,21 @@ const listContractTemplates = `-- name: ListContractTemplates :many
 
 SELECT id, uuid, organization_id, brand_id, name, kind, is_default, otp_required, signature_required, is_active, created_by_user_id, updated_by_user_id, created_at, updated_at FROM contract_templates
 WHERE brand_id = $1
-  AND ($2::text IS NULL OR kind = $2::text)
-  AND (NOT $3::bool OR is_active)
+  AND (
+    COALESCE(cardinality($2::text[]), 0) = 0
+    OR kind = ANY ($2::text[])
+  )
+  -- TEC-369: active / is_default are true|false|omitted filters.
+  AND ($3::bool IS NULL OR is_active = $3::bool)
+  AND ($4::bool IS NULL OR is_default = $4::bool)
 ORDER BY kind, is_default DESC, name, id
 `
 
 type ListContractTemplatesParams struct {
-	BrandID    int64       `json:"brand_id"`
-	Kind       pgtype.Text `json:"kind"`
-	ActiveOnly bool        `json:"active_only"`
+	BrandID   int64       `json:"brand_id"`
+	Kinds     []string    `json:"kinds"`
+	IsActive  pgtype.Bool `json:"is_active"`
+	IsDefault pgtype.Bool `json:"is_default"`
 }
 
 // TEC-285 (F3-01a): contract templates, instances, signers, signatures and
@@ -1561,7 +1567,12 @@ type ListContractTemplatesParams struct {
 // ---------------------------------------------------------------------------
 // Templates.
 func (q *Queries) ListContractTemplates(ctx context.Context, arg ListContractTemplatesParams) ([]ContractTemplate, error) {
-	rows, err := q.db.Query(ctx, listContractTemplates, arg.BrandID, arg.Kind, arg.ActiveOnly)
+	rows, err := q.db.Query(ctx, listContractTemplates,
+		arg.BrandID,
+		arg.Kinds,
+		arg.IsActive,
+		arg.IsDefault,
+	)
 	if err != nil {
 		return nil, err
 	}

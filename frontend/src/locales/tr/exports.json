@@ -69,5 +69,8 @@
   "status.failed": "Başarısız",
   "toast.queued": "Dışa aktarma kuyruğa alındı. Hazır olunca bildirim alacaksınız.",
   "toast.failed": "Dışa aktarma başlatılamadı. Yetkinizi ve filtreleri kontrol edin.",
-  "toast.download_failed": "Dosya indirilemedi."
+  "toast.download_failed": "Dosya indirilemedi.",
+  "status.queued": "Sırada",
+  "status.expired": "Süresi doldu",
+  "resources.platform.organizations": "İşletmeler"
 }

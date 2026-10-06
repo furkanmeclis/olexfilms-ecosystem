@@ -9,9 +9,13 @@ export type ActivityListResult = {
   offset: number;
 };
 
+/** `GET /v1/platform/activity`: resource/action CSV, actor = user uuid. */
 export type ListActivityParams = ServerListParams & {
   resource?: string;
   action?: string;
+  actor?: string;
+  created_from?: string;
+  created_to?: string;
 };
 
 export const activityService = {
@@ -28,6 +32,9 @@ export const activityService = {
         q: params.q,
         resource: params.resource,
         action: params.action,
+        actor: params.actor,
+        created_from: params.created_from,
+        created_to: params.created_to,
       },
     });
   },

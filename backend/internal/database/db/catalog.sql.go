@@ -84,32 +84,59 @@ func (q *Queries) CountProductCategories(ctx context.Context, arg CountProductCa
 }
 
 const countProducts = `-- name: CountProducts :one
-SELECT COUNT(*)::bigint FROM products
-WHERE brand_id = $1
-  AND ($2::bigint IS NULL OR category_id = $2::bigint)
-  AND ($3::bool IS NULL OR active = $3::bool)
-  AND ($4::text IS NULL OR unit_type = $4::text)
+SELECT COUNT(*)::bigint FROM products p
+WHERE p.brand_id = $1
   AND (
-    $5::text IS NULL
-    OR name ILIKE '%' || $5::text || '%'
-    OR sku ILIKE '%' || $5::text || '%'
+    COALESCE(cardinality($2::bigint[]), 0) = 0
+    OR p.category_id = ANY ($2::bigint[])
+  )
+  AND ($3::bool IS NULL OR p.active = $3::bool)
+  AND (
+    COALESCE(cardinality($4::text[]), 0) = 0
+    OR p.unit_type = ANY ($4::text[])
+  )
+  AND ($5::bool IS NULL OR p.uses_fixed_barcode = $5::bool)
+  AND ($6::float8 IS NULL OR p.warranty_duration_months >= $6::float8)
+  AND ($7::float8 IS NULL OR p.warranty_duration_months <= $7::float8)
+  AND ($8::float8 IS NULL OR p.micron_thickness >= $8::float8)
+  AND ($9::float8 IS NULL OR p.micron_thickness <= $9::float8)
+  AND ($10::timestamptz IS NULL OR p.created_at >= $10)
+  AND ($11::timestamptz IS NULL OR p.created_at < $11)
+  AND (
+    $12::text IS NULL
+    OR p.name ILIKE '%' || $12::text || '%'
+    OR p.sku ILIKE '%' || $12::text || '%'
   )
 `
 
 type CountProductsParams struct {
-	BrandID    int64       `json:"brand_id"`
-	CategoryID pgtype.Int8 `json:"category_id"`
-	Active     pgtype.Bool `json:"active"`
-	UnitType   pgtype.Text `json:"unit_type"`
-	Q          pgtype.Text `json:"q"`
+	BrandID          int64              `json:"brand_id"`
+	CategoryIds      []int64            `json:"category_ids"`
+	Active           pgtype.Bool        `json:"active"`
+	UnitTypes        []string           `json:"unit_types"`
+	UsesFixedBarcode pgtype.Bool        `json:"uses_fixed_barcode"`
+	WarrantyMin      pgtype.Float8      `json:"warranty_min"`
+	WarrantyMax      pgtype.Float8      `json:"warranty_max"`
+	MicronMin        pgtype.Float8      `json:"micron_min"`
+	MicronMax        pgtype.Float8      `json:"micron_max"`
+	CreatedFrom      pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore    pgtype.Timestamptz `json:"created_before"`
+	Q                pgtype.Text        `json:"q"`
 }
 
 func (q *Queries) CountProducts(ctx context.Context, arg CountProductsParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countProducts,
 		arg.BrandID,
-		arg.CategoryID,
+		arg.CategoryIds,
 		arg.Active,
-		arg.UnitType,
+		arg.UnitTypes,
+		arg.UsesFixedBarcode,
+		arg.WarrantyMin,
+		arg.WarrantyMax,
+		arg.MicronMin,
+		arg.MicronMax,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
 		arg.Q,
 	)
 	var column_1 int64
@@ -272,6 +299,27 @@ type DeleteProductCategoryParams struct {
 // Fails with a foreign key violation while products still use the category.
 func (q *Queries) DeleteProductCategory(ctx context.Context, arg DeleteProductCategoryParams) (int64, error) {
 	result, err := q.db.Exec(ctx, deleteProductCategory, arg.ID, arg.BrandID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteUnusedProductCategory = `-- name: DeleteUnusedProductCategory :execrows
+DELETE FROM product_categories c
+WHERE c.id = $1 AND c.brand_id = $2
+  AND NOT EXISTS (SELECT 1 FROM products p WHERE p.category_id = c.id)
+`
+
+type DeleteUnusedProductCategoryParams struct {
+	ID      int64 `json:"id"`
+	BrandID int64 `json:"brand_id"`
+}
+
+// Bulk delete: no row while products still use the category (the bulk run
+// shares one transaction, so a foreign key error must not happen).
+func (q *Queries) DeleteUnusedProductCategory(ctx context.Context, arg DeleteUnusedProductCategoryParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteUnusedProductCategory, arg.ID, arg.BrandID)
 	if err != nil {
 		return 0, err
 	}
@@ -528,23 +576,55 @@ SELECT id, uuid, organization_id, brand_id, name, available_parts, sort, active,
 WHERE brand_id = $1
   AND ($2::bool IS NULL OR active = $2::bool)
   AND ($3::text IS NULL OR name ILIKE '%' || $3::text || '%')
-ORDER BY sort ASC, name ASC, id ASC
-LIMIT $5 OFFSET $4
+ORDER BY
+  CASE WHEN NOT $4::bool THEN
+    CASE $5::text WHEN 'name' THEN name::text END
+  END ASC,
+  CASE WHEN $4::bool THEN
+    CASE $5::text WHEN 'name' THEN name::text END
+  END DESC,
+  CASE WHEN NOT $4::bool THEN
+    CASE $5::text WHEN 'sort' THEN sort END
+  END ASC,
+  CASE WHEN $4::bool THEN
+    CASE $5::text WHEN 'sort' THEN sort END
+  END DESC,
+  CASE WHEN NOT $4::bool THEN
+    CASE $5::text WHEN 'active' THEN active END
+  END ASC,
+  CASE WHEN $4::bool THEN
+    CASE $5::text WHEN 'active' THEN active END
+  END DESC,
+  CASE WHEN NOT $4::bool THEN
+    CASE $5::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END ASC,
+  CASE WHEN $4::bool THEN
+    CASE $5::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END DESC,
+  name ASC,
+  CASE WHEN $4::bool THEN id END DESC,
+  id ASC
+LIMIT $7 OFFSET $6
 `
 
 type ListProductCategoriesParams struct {
 	BrandID     int64       `json:"brand_id"`
 	Active      pgtype.Bool `json:"active"`
 	Q           pgtype.Text `json:"q"`
+	SortDesc    bool        `json:"sort_desc"`
+	SortKey     string      `json:"sort_key"`
 	OffsetCount int32       `json:"offset_count"`
 	LimitCount  int32       `json:"limit_count"`
 }
 
+// Sort keys from model.CategorySort (docs/list-contract.md); default sort.
 func (q *Queries) ListProductCategories(ctx context.Context, arg ListProductCategoriesParams) ([]ProductCategory, error) {
 	rows, err := q.db.Query(ctx, listProductCategories,
 		arg.BrandID,
 		arg.Active,
 		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.OffsetCount,
 		arg.LimitCount,
 	)
@@ -577,38 +657,140 @@ func (q *Queries) ListProductCategories(ctx context.Context, arg ListProductCate
 	return items, nil
 }
 
-const listProducts = `-- name: ListProducts :many
-SELECT id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at FROM products
+const listProductCategoryOrder = `-- name: ListProductCategoryOrder :many
+
+SELECT id, uuid, sort FROM product_categories
 WHERE brand_id = $1
-  AND ($2::bigint IS NULL OR category_id = $2::bigint)
-  AND ($3::bool IS NULL OR active = $3::bool)
-  AND ($4::text IS NULL OR unit_type = $4::text)
+ORDER BY sort ASC, name ASC, id ASC
+`
+
+type ListProductCategoryOrderRow struct {
+	ID   int64     `json:"id"`
+	Uuid uuid.UUID `json:"uuid"`
+	Sort int32     `json:"sort"`
+}
+
+// TEC-369: category order and bulk actions.
+// Every category of the brand in display order (reorder input).
+func (q *Queries) ListProductCategoryOrder(ctx context.Context, brandID int64) ([]ListProductCategoryOrderRow, error) {
+	rows, err := q.db.Query(ctx, listProductCategoryOrder, brandID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListProductCategoryOrderRow{}
+	for rows.Next() {
+		var i ListProductCategoryOrderRow
+		if err := rows.Scan(&i.ID, &i.Uuid, &i.Sort); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProducts = `-- name: ListProducts :many
+SELECT p.id, p.uuid, p.organization_id, p.brand_id, p.category_id, p.sku, p.name, p.description_md, p.warranty_duration_months, p.micron_thickness, p.images, p.unit_type, p.uses_fixed_barcode, p.active, p.external_id, p.connection_id, p.locked_fields, p.created_at, p.updated_at FROM products p
+WHERE p.brand_id = $1
   AND (
-    $5::text IS NULL
-    OR name ILIKE '%' || $5::text || '%'
-    OR sku ILIKE '%' || $5::text || '%'
+    COALESCE(cardinality($2::bigint[]), 0) = 0
+    OR p.category_id = ANY ($2::bigint[])
   )
-ORDER BY name ASC, id ASC
-LIMIT $7 OFFSET $6
+  AND ($3::bool IS NULL OR p.active = $3::bool)
+  AND (
+    COALESCE(cardinality($4::text[]), 0) = 0
+    OR p.unit_type = ANY ($4::text[])
+  )
+  AND ($5::bool IS NULL OR p.uses_fixed_barcode = $5::bool)
+  AND ($6::float8 IS NULL OR p.warranty_duration_months >= $6::float8)
+  AND ($7::float8 IS NULL OR p.warranty_duration_months <= $7::float8)
+  AND ($8::float8 IS NULL OR p.micron_thickness >= $8::float8)
+  AND ($9::float8 IS NULL OR p.micron_thickness <= $9::float8)
+  AND ($10::timestamptz IS NULL OR p.created_at >= $10)
+  AND ($11::timestamptz IS NULL OR p.created_at < $11)
+  AND (
+    $12::text IS NULL
+    OR p.name ILIKE '%' || $12::text || '%'
+    OR p.sku ILIKE '%' || $12::text || '%'
+  )
+ORDER BY
+  CASE WHEN NOT $13::bool THEN
+    CASE $14::text
+      WHEN 'sku' THEN p.sku::text
+      WHEN 'name' THEN p.name::text
+      WHEN 'unit_type' THEN p.unit_type::text
+      WHEN 'category' THEN (SELECT c.name::text FROM product_categories c WHERE c.id = p.category_id)
+    END
+  END ASC,
+  CASE WHEN $13::bool THEN
+    CASE $14::text
+      WHEN 'sku' THEN p.sku::text
+      WHEN 'name' THEN p.name::text
+      WHEN 'unit_type' THEN p.unit_type::text
+      WHEN 'category' THEN (SELECT c.name::text FROM product_categories c WHERE c.id = p.category_id)
+    END
+  END DESC,
+  CASE WHEN NOT $13::bool AND $14::text = 'warranty_duration_months' THEN p.warranty_duration_months END ASC NULLS LAST,
+  CASE WHEN $13::bool AND $14::text = 'warranty_duration_months' THEN p.warranty_duration_months END DESC NULLS LAST,
+  CASE WHEN NOT $13::bool AND $14::text = 'micron_thickness' THEN p.micron_thickness END ASC NULLS LAST,
+  CASE WHEN $13::bool AND $14::text = 'micron_thickness' THEN p.micron_thickness END DESC NULLS LAST,
+  CASE WHEN NOT $13::bool THEN
+    CASE $14::text WHEN 'active' THEN p.active END
+  END ASC,
+  CASE WHEN $13::bool THEN
+    CASE $14::text WHEN 'active' THEN p.active END
+  END DESC,
+  CASE WHEN NOT $13::bool THEN
+    CASE $14::text WHEN 'created_at' THEN p.created_at WHEN 'updated_at' THEN p.updated_at END
+  END ASC,
+  CASE WHEN $13::bool THEN
+    CASE $14::text WHEN 'created_at' THEN p.created_at WHEN 'updated_at' THEN p.updated_at END
+  END DESC,
+  CASE WHEN $13::bool THEN p.id END DESC,
+  p.id ASC
+LIMIT $16 OFFSET $15
 `
 
 type ListProductsParams struct {
-	BrandID     int64       `json:"brand_id"`
-	CategoryID  pgtype.Int8 `json:"category_id"`
-	Active      pgtype.Bool `json:"active"`
-	UnitType    pgtype.Text `json:"unit_type"`
-	Q           pgtype.Text `json:"q"`
-	OffsetCount int32       `json:"offset_count"`
-	LimitCount  int32       `json:"limit_count"`
+	BrandID          int64              `json:"brand_id"`
+	CategoryIds      []int64            `json:"category_ids"`
+	Active           pgtype.Bool        `json:"active"`
+	UnitTypes        []string           `json:"unit_types"`
+	UsesFixedBarcode pgtype.Bool        `json:"uses_fixed_barcode"`
+	WarrantyMin      pgtype.Float8      `json:"warranty_min"`
+	WarrantyMax      pgtype.Float8      `json:"warranty_max"`
+	MicronMin        pgtype.Float8      `json:"micron_min"`
+	MicronMax        pgtype.Float8      `json:"micron_max"`
+	CreatedFrom      pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore    pgtype.Timestamptz `json:"created_before"`
+	Q                pgtype.Text        `json:"q"`
+	SortDesc         bool               `json:"sort_desc"`
+	SortKey          string             `json:"sort_key"`
+	OffsetCount      int32              `json:"offset_count"`
+	LimitCount       int32              `json:"limit_count"`
 }
 
+// TEC-369: sort keys from model.ProductSort (docs/list-contract.md);
+// default name. category sorts by the category name.
 func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]Product, error) {
 	rows, err := q.db.Query(ctx, listProducts,
 		arg.BrandID,
-		arg.CategoryID,
+		arg.CategoryIds,
 		arg.Active,
-		arg.UnitType,
+		arg.UnitTypes,
+		arg.UsesFixedBarcode,
+		arg.WarrantyMin,
+		arg.WarrantyMax,
+		arg.MicronMin,
+		arg.MicronMax,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
 		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.OffsetCount,
 		arg.LimitCount,
 	)
@@ -783,6 +965,100 @@ func (q *Queries) SetProductActiveByUUID(ctx context.Context, arg SetProductActi
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const setProductCategoryActiveByUUID = `-- name: SetProductCategoryActiveByUUID :one
+UPDATE product_categories
+SET active = $1
+WHERE uuid = $2 AND brand_id = $3
+RETURNING id, uuid, organization_id, brand_id, name, available_parts, sort, active, created_at, updated_at
+`
+
+type SetProductCategoryActiveByUUIDParams struct {
+	Active  bool      `json:"active"`
+	Uuid    uuid.UUID `json:"uuid"`
+	BrandID int64     `json:"brand_id"`
+}
+
+func (q *Queries) SetProductCategoryActiveByUUID(ctx context.Context, arg SetProductCategoryActiveByUUIDParams) (ProductCategory, error) {
+	row := q.db.QueryRow(ctx, setProductCategoryActiveByUUID, arg.Active, arg.Uuid, arg.BrandID)
+	var i ProductCategory
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.Name,
+		&i.AvailableParts,
+		&i.Sort,
+		&i.Active,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const setProductCategoryByUUID = `-- name: SetProductCategoryByUUID :one
+UPDATE products
+SET category_id = $1
+WHERE uuid = $2 AND brand_id = $3
+RETURNING id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at
+`
+
+type SetProductCategoryByUUIDParams struct {
+	CategoryID int64     `json:"category_id"`
+	Uuid       uuid.UUID `json:"uuid"`
+	BrandID    int64     `json:"brand_id"`
+}
+
+// Bulk set_category of one product.
+func (q *Queries) SetProductCategoryByUUID(ctx context.Context, arg SetProductCategoryByUUIDParams) (Product, error) {
+	row := q.db.QueryRow(ctx, setProductCategoryByUUID, arg.CategoryID, arg.Uuid, arg.BrandID)
+	var i Product
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.CategoryID,
+		&i.Sku,
+		&i.Name,
+		&i.DescriptionMd,
+		&i.WarrantyDurationMonths,
+		&i.MicronThickness,
+		&i.Images,
+		&i.UnitType,
+		&i.UsesFixedBarcode,
+		&i.Active,
+		&i.ExternalID,
+		&i.ConnectionID,
+		&i.LockedFields,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const setProductCategorySorts = `-- name: SetProductCategorySorts :execrows
+UPDATE product_categories c
+SET sort = (v.pos * 10)::int
+FROM unnest($2::bigint[]) WITH ORDINALITY AS v(id, pos)
+WHERE c.id = v.id AND c.brand_id = $1 AND c.sort <> (v.pos * 10)::int
+`
+
+type SetProductCategorySortsParams struct {
+	BrandID int64   `json:"brand_id"`
+	Ids     []int64 `json:"ids"`
+}
+
+// Renumbers the categories in the given id order (10, 20, ...) in one
+// statement; rows whose value does not change are skipped.
+func (q *Queries) SetProductCategorySorts(ctx context.Context, arg SetProductCategorySortsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setProductCategorySorts, arg.BrandID, arg.Ids)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const setProductsActive = `-- name: SetProductsActive :execrows

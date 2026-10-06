@@ -55,5 +55,7 @@
   "delete_description": "¿Eliminar el rol «{{name}}»? Los usuarios conservan sus otros roles; esta acción no se puede deshacer.",
   "toast.created": "Rol creado",
   "toast.updated": "Rol actualizado",
-  "toast.deleted": "Rol eliminado"
+  "toast.deleted": "Rol eliminado",
+  "labels.custom": "Personalizado",
+  "fields.created_at": "Creado"
 }

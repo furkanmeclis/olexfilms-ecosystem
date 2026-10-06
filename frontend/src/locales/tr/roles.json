@@ -55,5 +55,7 @@
   "delete_description": "\"{{name}}\" rolü silinsin mi? Kullanıcıların diğer rolleri kalır; bu işlem geri alınamaz.",
   "toast.created": "Rol oluşturuldu",
   "toast.updated": "Rol güncellendi",
-  "toast.deleted": "Rol silindi"
+  "toast.deleted": "Rol silindi",
+  "labels.custom": "Özel",
+  "fields.created_at": "Oluşturulma"
 }

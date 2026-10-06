@@ -192,5 +192,7 @@
   "actions.stock.reclassification.cancelled": "Запит на перекласифікацію відкликано",
   "resources.stock.reclassification": "Перекласифікація запасів",
   "actions.stock.split.created": "Рулон поділено",
-  "resources.stock.split": "Поділ рулону"
+  "resources.stock.split": "Поділ рулону",
+  "filters.actor": "Фільтр за користувачем",
+  "resources.platform.organizations": "Організації"
 }

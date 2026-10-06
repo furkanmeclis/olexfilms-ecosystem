@@ -126,5 +126,9 @@
   "fields.timezone": "Часова зона",
   "fields.timezone_hint": "Датите и часовете се показват в тази зона, освен ако потребителят не избере своя.",
   "form.section_regional": "Език и регион",
-  "form.section_regional_desc": "Език и часова зона по подразбиране за потребители, документи и известия."
+  "form.section_regional_desc": "Език и часова зона по подразбиране за потребители, документи и известия.",
+  "columns.created_at": "Създадена",
+  "columns.email": "Имейл",
+  "detail.children": "Подорганизации",
+  "detail.children_empty": "Все още няма подорганизации."
 }

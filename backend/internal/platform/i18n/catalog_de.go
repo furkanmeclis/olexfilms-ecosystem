@@ -66,6 +66,7 @@ var deCatalog = map[string]string{
 	"export.document":                                  "Exportdokument",
 	"export.generated_at":                              "Erstellt am",
 	"export.title.platform.users":                      "Export der Benutzer",
+	"export.title.platform.organizations":              "Export der Organisationen",
 	"export.title.platform.roles":                      "Export der Rollen",
 	"export.title.platform.notifications":              "Export der Benachrichtigungen",
 	"export.title.platform.activity":                   "Export des Aktivitätsprotokolls",

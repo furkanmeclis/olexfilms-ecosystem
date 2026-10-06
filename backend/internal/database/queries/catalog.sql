@@ -34,11 +34,39 @@ DELETE FROM product_categories
 WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id);
 
 -- name: ListProductCategories :many
+-- Sort keys from model.CategorySort (docs/list-contract.md); default sort.
 SELECT * FROM product_categories
 WHERE brand_id = sqlc.arg(brand_id)
   AND (sqlc.narg(active)::bool IS NULL OR active = sqlc.narg(active)::bool)
   AND (sqlc.narg(q)::text IS NULL OR name ILIKE '%' || sqlc.narg(q)::text || '%')
-ORDER BY sort ASC, name ASC, id ASC
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'name' THEN name::text END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'name' THEN name::text END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'sort' THEN sort END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'sort' THEN sort END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'active' THEN active END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'active' THEN active END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END DESC,
+  name ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN id END DESC,
+  id ASC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
 -- name: CountProductCategories :one
@@ -102,29 +130,91 @@ DELETE FROM products
 WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id);
 
 -- name: ListProducts :many
-SELECT * FROM products
-WHERE brand_id = sqlc.arg(brand_id)
-  AND (sqlc.narg(category_id)::bigint IS NULL OR category_id = sqlc.narg(category_id)::bigint)
-  AND (sqlc.narg(active)::bool IS NULL OR active = sqlc.narg(active)::bool)
-  AND (sqlc.narg(unit_type)::text IS NULL OR unit_type = sqlc.narg(unit_type)::text)
+-- TEC-369: sort keys from model.ProductSort (docs/list-contract.md);
+-- default name. category sorts by the category name.
+SELECT p.* FROM products p
+WHERE p.brand_id = sqlc.arg(brand_id)
+  AND (
+    COALESCE(cardinality(sqlc.narg(category_ids)::bigint[]), 0) = 0
+    OR p.category_id = ANY (sqlc.narg(category_ids)::bigint[])
+  )
+  AND (sqlc.narg(active)::bool IS NULL OR p.active = sqlc.narg(active)::bool)
+  AND (
+    COALESCE(cardinality(sqlc.narg(unit_types)::text[]), 0) = 0
+    OR p.unit_type = ANY (sqlc.narg(unit_types)::text[])
+  )
+  AND (sqlc.narg(uses_fixed_barcode)::bool IS NULL OR p.uses_fixed_barcode = sqlc.narg(uses_fixed_barcode)::bool)
+  AND (sqlc.narg(warranty_min)::float8 IS NULL OR p.warranty_duration_months >= sqlc.narg(warranty_min)::float8)
+  AND (sqlc.narg(warranty_max)::float8 IS NULL OR p.warranty_duration_months <= sqlc.narg(warranty_max)::float8)
+  AND (sqlc.narg(micron_min)::float8 IS NULL OR p.micron_thickness >= sqlc.narg(micron_min)::float8)
+  AND (sqlc.narg(micron_max)::float8 IS NULL OR p.micron_thickness <= sqlc.narg(micron_max)::float8)
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR p.created_at >= sqlc.narg(created_from))
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR p.created_at < sqlc.narg(created_before))
   AND (
     sqlc.narg(q)::text IS NULL
-    OR name ILIKE '%' || sqlc.narg(q)::text || '%'
-    OR sku ILIKE '%' || sqlc.narg(q)::text || '%'
+    OR p.name ILIKE '%' || sqlc.narg(q)::text || '%'
+    OR p.sku ILIKE '%' || sqlc.narg(q)::text || '%'
   )
-ORDER BY name ASC, id ASC
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'sku' THEN p.sku::text
+      WHEN 'name' THEN p.name::text
+      WHEN 'unit_type' THEN p.unit_type::text
+      WHEN 'category' THEN (SELECT c.name::text FROM product_categories c WHERE c.id = p.category_id)
+    END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'sku' THEN p.sku::text
+      WHEN 'name' THEN p.name::text
+      WHEN 'unit_type' THEN p.unit_type::text
+      WHEN 'category' THEN (SELECT c.name::text FROM product_categories c WHERE c.id = p.category_id)
+    END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'warranty_duration_months' THEN p.warranty_duration_months END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'warranty_duration_months' THEN p.warranty_duration_months END DESC NULLS LAST,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'micron_thickness' THEN p.micron_thickness END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'micron_thickness' THEN p.micron_thickness END DESC NULLS LAST,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'active' THEN p.active END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'active' THEN p.active END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN p.created_at WHEN 'updated_at' THEN p.updated_at END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN p.created_at WHEN 'updated_at' THEN p.updated_at END
+  END DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN p.id END DESC,
+  p.id ASC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
 -- name: CountProducts :one
-SELECT COUNT(*)::bigint FROM products
-WHERE brand_id = sqlc.arg(brand_id)
-  AND (sqlc.narg(category_id)::bigint IS NULL OR category_id = sqlc.narg(category_id)::bigint)
-  AND (sqlc.narg(active)::bool IS NULL OR active = sqlc.narg(active)::bool)
-  AND (sqlc.narg(unit_type)::text IS NULL OR unit_type = sqlc.narg(unit_type)::text)
+SELECT COUNT(*)::bigint FROM products p
+WHERE p.brand_id = sqlc.arg(brand_id)
+  AND (
+    COALESCE(cardinality(sqlc.narg(category_ids)::bigint[]), 0) = 0
+    OR p.category_id = ANY (sqlc.narg(category_ids)::bigint[])
+  )
+  AND (sqlc.narg(active)::bool IS NULL OR p.active = sqlc.narg(active)::bool)
+  AND (
+    COALESCE(cardinality(sqlc.narg(unit_types)::text[]), 0) = 0
+    OR p.unit_type = ANY (sqlc.narg(unit_types)::text[])
+  )
+  AND (sqlc.narg(uses_fixed_barcode)::bool IS NULL OR p.uses_fixed_barcode = sqlc.narg(uses_fixed_barcode)::bool)
+  AND (sqlc.narg(warranty_min)::float8 IS NULL OR p.warranty_duration_months >= sqlc.narg(warranty_min)::float8)
+  AND (sqlc.narg(warranty_max)::float8 IS NULL OR p.warranty_duration_months <= sqlc.narg(warranty_max)::float8)
+  AND (sqlc.narg(micron_min)::float8 IS NULL OR p.micron_thickness >= sqlc.narg(micron_min)::float8)
+  AND (sqlc.narg(micron_max)::float8 IS NULL OR p.micron_thickness <= sqlc.narg(micron_max)::float8)
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR p.created_at >= sqlc.narg(created_from))
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR p.created_at < sqlc.narg(created_before))
   AND (
     sqlc.narg(q)::text IS NULL
-    OR name ILIKE '%' || sqlc.narg(q)::text || '%'
-    OR sku ILIKE '%' || sqlc.narg(q)::text || '%'
+    OR p.name ILIKE '%' || sqlc.narg(q)::text || '%'
+    OR p.sku ILIKE '%' || sqlc.narg(q)::text || '%'
   );
 
 -- TEC-145: catalog API helpers.
@@ -185,5 +275,41 @@ LIMIT 1;
 -- name: SetProductActiveByUUID :one
 UPDATE products
 SET active = sqlc.arg(active)
+WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id)
+RETURNING *;
+
+-- TEC-369: category order and bulk actions.
+
+-- name: ListProductCategoryOrder :many
+-- Every category of the brand in display order (reorder input).
+SELECT id, uuid, sort FROM product_categories
+WHERE brand_id = sqlc.arg(brand_id)
+ORDER BY sort ASC, name ASC, id ASC;
+
+-- name: SetProductCategorySorts :execrows
+-- Renumbers the categories in the given id order (10, 20, ...) in one
+-- statement; rows whose value does not change are skipped.
+UPDATE product_categories c
+SET sort = (v.pos * 10)::int
+FROM unnest(sqlc.arg(ids)::bigint[]) WITH ORDINALITY AS v(id, pos)
+WHERE c.id = v.id AND c.brand_id = sqlc.arg(brand_id) AND c.sort <> (v.pos * 10)::int;
+
+-- name: SetProductCategoryActiveByUUID :one
+UPDATE product_categories
+SET active = sqlc.arg(active)
+WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id)
+RETURNING *;
+
+-- name: DeleteUnusedProductCategory :execrows
+-- Bulk delete: no row while products still use the category (the bulk run
+-- shares one transaction, so a foreign key error must not happen).
+DELETE FROM product_categories c
+WHERE c.id = sqlc.arg(id) AND c.brand_id = sqlc.arg(brand_id)
+  AND NOT EXISTS (SELECT 1 FROM products p WHERE p.category_id = c.id);
+
+-- name: SetProductCategoryByUUID :one
+-- Bulk set_category of one product.
+UPDATE products
+SET category_id = sqlc.arg(category_id)
 WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id)
 RETURNING *;

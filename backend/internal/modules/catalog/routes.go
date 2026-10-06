@@ -36,6 +36,8 @@ func RegisterRoutes(
 
 	mux.Handle("GET /v1/catalog/categories", read(h.ListCategories))
 	mux.Handle("POST /v1/catalog/categories", write(h.CreateCategory))
+	// TEC-369: drag-and-drop display order (center only, K4).
+	mux.Handle("PUT /v1/catalog/categories/order", write(h.ReorderCategories))
 	mux.Handle("GET /v1/catalog/categories/{uuid}", read(h.GetCategory))
 	mux.Handle("PATCH /v1/catalog/categories/{uuid}", write(h.UpdateCategory))
 	mux.Handle("DELETE /v1/catalog/categories/{uuid}", write(h.DeleteCategory))

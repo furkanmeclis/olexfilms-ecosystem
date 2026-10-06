@@ -55,5 +55,7 @@
   "delete_description": "هل تريد حذف الدور «{{name}}»؟ يحتفظ المستخدمون بأدوارهم الأخرى، ولا يمكن التراجع عن ذلك.",
   "toast.created": "أُنشئ الدور",
   "toast.updated": "حُدّث الدور",
-  "toast.deleted": "حُذف الدور"
+  "toast.deleted": "حُذف الدور",
+  "labels.custom": "مخصص",
+  "fields.created_at": "تاريخ الإنشاء"
 }

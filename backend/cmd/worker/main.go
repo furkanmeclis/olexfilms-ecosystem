@@ -253,6 +253,10 @@ func main() {
 		// TEC-212: tenant resources with undo.
 		bulkadapters.NewCatalogProducts(queries),
 		bulkadapters.NewTasks(queries),
+		// TEC-369: catalog categories (tenant) and vehicle catalog (platform).
+		bulkadapters.NewCatalogCategories(queries),
+		bulkadapters.NewVehicleBrands(queries),
+		bulkadapters.NewVehicleModels(queries),
 		// TEC-371: leads (assign, set status).
 		leadsusecase.NewBulkAdapter(queries),
 	)

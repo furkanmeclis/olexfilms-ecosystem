@@ -69,5 +69,8 @@
   "status.failed": "Non riuscito",
   "toast.queued": "Esportazione in coda. Riceverai una notifica quando il file sarà pronto.",
   "toast.failed": "Impossibile avviare l'esportazione. Controlla autorizzazioni e filtri.",
-  "toast.download_failed": "Impossibile scaricare il file."
+  "toast.download_failed": "Impossibile scaricare il file.",
+  "status.queued": "In coda",
+  "status.expired": "Scaduto",
+  "resources.platform.organizations": "Organizzazioni"
 }

@@ -267,9 +267,24 @@ func (h *Handler) ListDistributorOverrides(w http.ResponseWriter, r *http.Reques
 	if !ok {
 		return
 	}
-	items, total, err := h.svc.ListDistributorOverrides(r.Context(), viewer(r), pricing.OverrideFilter{
-		ProductUUID: product, DistributorUUID: dist, Limit: q.Limit, Offset: q.Offset,
-	})
+	f := pricing.OverrideFilter{
+		ProductUUID: product, DistributorUUID: dist, Q: q.Q, Limit: q.Limit, Offset: q.Offset,
+	}
+	// TEC-369: currency (CSV of ISO-4217 codes), q and sort.
+	for _, raw := range apiquery.CSVValues(r.URL.Query(), "currency") {
+		cur, err := pricing.NormalizeCurrency(raw)
+		if err != nil {
+			response.ValidationError(w, r, []response.Detail{{Field: "currency", Message: "must be a list of three-letter ISO-4217 codes", Code: "invalid"}})
+			return
+		}
+		f.Currencies = append(f.Currencies, cur)
+	}
+	sort, err := apiquery.ResolveSort(q.Sort, pricing.DistributorPriceSort)
+	if response.QueryValidation(w, r, err) {
+		return
+	}
+	f.Sort = sort
+	items, total, err := h.svc.ListDistributorOverrides(r.Context(), viewer(r), f)
 	if err != nil {
 		writeError(w, r, err)
 		return

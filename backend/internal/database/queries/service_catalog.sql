@@ -28,9 +28,23 @@ WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id);
 
 -- name: ListServiceCatalogItems :many
 SELECT * FROM service_catalog_items
+-- TEC-369: category / recurrence are CSV multi-value filters; q matches
+-- name and description. Full array (small brand list, client-side table).
 WHERE brand_id = sqlc.arg(brand_id)
-  AND (sqlc.narg(category)::text IS NULL OR category = sqlc.narg(category)::text)
+  AND (
+    COALESCE(cardinality(sqlc.narg(categories)::text[]), 0) = 0
+    OR category = ANY (sqlc.narg(categories)::text[])
+  )
+  AND (
+    COALESCE(cardinality(sqlc.narg(recurrences)::text[]), 0) = 0
+    OR recurrence = ANY (sqlc.narg(recurrences)::text[])
+  )
   AND (sqlc.narg(is_active)::boolean IS NULL OR is_active = sqlc.narg(is_active)::boolean)
+  AND (
+    sqlc.narg(q)::text IS NULL
+    OR name ILIKE '%' || sqlc.narg(q)::text || '%'
+    OR description ILIKE '%' || sqlc.narg(q)::text || '%'
+  )
 ORDER BY name, id;
 
 -- name: UpdateServiceCatalogItem :one
