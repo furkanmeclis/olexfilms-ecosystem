@@ -131,5 +131,7 @@
   "system.labor.errors.amount_number": "أدخل مبلغًا صالحًا (حتى منزلتين عشريتين).",
   "system.labor.errors.amount_min": "لا يمكن أن يكون المبلغ سالبًا.",
   "system.labor.errors.percent_integer": "أدخل عددًا صحيحًا.",
-  "system.labor.errors.percent_range": "يجب أن تكون النسبة بين 0 و100."
+  "system.labor.errors.percent_range": "يجب أن تكون النسبة بين 0 و100.",
+  "system.keys.contracts_intake_required": "عقد استلام المركبة إلزامي",
+  "system.keys.contracts_intake_required_hint": "عند التفعيل (ومع تمكين وحدة عقد الاستلام)، لا يمكن نقل الخدمة إلى المعالجة أو إكمالها قبل توقيع عقد الاستلام الخاص بها."
 }

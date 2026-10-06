@@ -131,5 +131,7 @@
   "system.labor.errors.amount_number": "Εισαγάγετε έγκυρο ποσό (έως 2 δεκαδικά).",
   "system.labor.errors.amount_min": "Το ποσό δεν μπορεί να είναι αρνητικό.",
   "system.labor.errors.percent_integer": "Εισαγάγετε ακέραιο αριθμό.",
-  "system.labor.errors.percent_range": "Το ποσοστό πρέπει να είναι μεταξύ 0 και 100."
+  "system.labor.errors.percent_range": "Το ποσοστό πρέπει να είναι μεταξύ 0 και 100.",
+  "system.keys.contracts_intake_required": "Υποχρεωτική σύμβαση παραλαβής οχήματος",
+  "system.keys.contracts_intake_required_hint": "Όταν είναι ενεργό (και η λειτουργία σύμβασης παραλαβής είναι ενεργοποιημένη), μια υπηρεσία δεν μπορεί να τεθεί σε επεξεργασία ή να ολοκληρωθεί μέχρι να υπογραφεί η σύμβαση παραλαβής της."
 }

@@ -131,5 +131,7 @@
   "system.labor.errors.amount_number": "Geben Sie einen gültigen Betrag ein (bis zu 2 Nachkommastellen).",
   "system.labor.errors.amount_min": "Der Betrag darf nicht negativ sein.",
   "system.labor.errors.percent_integer": "Geben Sie eine ganze Zahl ein.",
-  "system.labor.errors.percent_range": "Der Prozentsatz muss zwischen 0 und 100 liegen."
+  "system.labor.errors.percent_range": "Der Prozentsatz muss zwischen 0 und 100 liegen.",
+  "system.keys.contracts_intake_required": "Fahrzeugannahmevertrag erforderlich",
+  "system.keys.contracts_intake_required_hint": "Wenn aktiviert (und das Modul für Fahrzeugannahmeverträge eingeschaltet ist), kann ein Service erst in Bearbeitung genommen oder abgeschlossen werden, wenn sein Annahmevertrag unterschrieben ist."
 }

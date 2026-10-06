@@ -12,10 +12,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import { ContractStep } from "@/features/services/components/contract-step";
 import { CustomerVehicleStep } from "@/features/services/components/customer-vehicle-step";
 import { MeasurementStep } from "@/features/services/components/measurement-step";
 import { PartsStep } from "@/features/services/components/parts-step";
 import { StockStep } from "@/features/services/components/stock-step";
+import { useFeature } from "@/features/modules/hooks/use-features";
 import { resolveServiceWizardAccess } from "@/features/services/lib/access";
 import { partsFromItems } from "@/features/services/lib/car-parts";
 import {
@@ -23,10 +25,11 @@ import {
   storeParts,
 } from "@/features/services/lib/parts-store";
 import {
-  WIZARD_STEPS,
   canOpenStep,
+  contractBlocksNext,
   nextStep,
   previousStep,
+  wizardSteps,
   type WizardStep,
 } from "@/features/services/lib/wizard";
 import {
@@ -39,22 +42,32 @@ import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 
 function Stepper({
+  steps,
   current,
   hasService,
+  contractLocked,
   onSelect,
 }: {
+  steps: readonly WizardStep[];
   current: WizardStep;
   hasService: boolean;
+  contractLocked: boolean;
   onSelect: (step: WizardStep) => void;
 }) {
   const { t } = useLocale();
-  const currentIndex = WIZARD_STEPS.indexOf(current);
+  const currentIndex = steps.indexOf(current);
   return (
-    <ol className="grid gap-2 sm:grid-cols-4" data-testid="wizard-stepper">
-      {WIZARD_STEPS.map((step, i) => {
+    <ol
+      className={cn(
+        "grid gap-2",
+        steps.length > 4 ? "sm:grid-cols-5" : "sm:grid-cols-4",
+      )}
+      data-testid="wizard-stepper"
+    >
+      {steps.map((step, i) => {
         const active = step === current;
         const done = hasService && i < currentIndex;
-        const open = canOpenStep(step, hasService);
+        const open = canOpenStep(step, hasService, contractLocked, steps);
         return (
           <li key={step}>
             <button
@@ -93,6 +106,9 @@ function Stepper({
  * step 1; with a uuid the draft is loaded and step 1 shows it read-only.
  * Step 2 picks the parts (kept per draft in the browser and applied to the
  * items of step 4), step 4 adds the stock and completes the service.
+ * TEC-291: the intake contract step sits before stock while the
+ * intake_contracts module is on; a required contract keeps stock closed
+ * until it is executed.
  */
 export function ServiceWizardPage({
   slug,
@@ -106,6 +122,7 @@ export function ServiceWizardPage({
   const queryClient = useQueryClient();
   const { can } = usePermission();
   const access = resolveServiceWizardAccess(can);
+  const contracts = useFeature(slug, "intake_contracts");
   const [step, setStep] = useState<WizardStep>(
     uuid ? "parts" : "customer_vehicle",
   );
@@ -175,12 +192,25 @@ export function ServiceWizardPage({
 
   const current = service.data ?? null;
   const hasService = Boolean(current);
+  // The contract step shows with the module, or whenever the service
+  // itself already requires / carries a contract.
+  const steps = wizardSteps(
+    contracts.enabled ||
+      Boolean(current?.contract_required) ||
+      Boolean(current?.contract),
+  );
+  const contractLocked = current ? contractBlocksNext(current) : false;
+  // Only the contract step can be hidden; a locked step shows the contract.
+  let shown: WizardStep = steps.includes(step) ? step : "stock";
+  if (hasService && !canOpenStep(shown, hasService, contractLocked, steps)) {
+    shown = "contract";
+  }
   const goNext = (from: WizardStep) => {
-    const n = nextStep(from);
+    const n = nextStep(from, steps);
     if (n) setStep(n);
   };
   const goBack = (from: WizardStep) => {
-    const p = previousStep(from);
+    const p = previousStep(from, steps);
     if (p) setStep(p);
   };
   const stored = (saved: Service) => {
@@ -193,7 +223,7 @@ export function ServiceWizardPage({
   };
 
   let body;
-  if (step === "customer_vehicle" || !current) {
+  if (shown === "customer_vehicle" || !current) {
     body = (
       <CustomerVehicleStep
         access={access}
@@ -208,7 +238,7 @@ export function ServiceWizardPage({
         }}
       />
     );
-  } else if (step === "measurement") {
+  } else if (shown === "measurement") {
     body = (
       <MeasurementStep
         key={current.updated_at}
@@ -220,7 +250,7 @@ export function ServiceWizardPage({
         }}
       />
     );
-  } else if (step === "parts") {
+  } else if (shown === "parts") {
     body = (
       <PartsStep
         service={current}
@@ -230,7 +260,15 @@ export function ServiceWizardPage({
         onNext={() => goNext("parts")}
       />
     );
-  } else if (step === "stock") {
+  } else if (shown === "contract") {
+    body = (
+      <ContractStep
+        service={current}
+        onBack={() => goBack("contract")}
+        onNext={() => goNext("contract")}
+      />
+    );
+  } else if (shown === "stock") {
     body = (
       <StockStep
         service={current}
@@ -250,8 +288,10 @@ export function ServiceWizardPage({
     <div className="space-y-6">
       {header}
       <Stepper
-        current={hasService ? step : "customer_vehicle"}
+        steps={steps}
+        current={hasService ? shown : "customer_vehicle"}
         hasService={hasService}
+        contractLocked={contractLocked}
         onSelect={setStep}
       />
       <Card>

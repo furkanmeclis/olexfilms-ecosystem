@@ -141,6 +141,9 @@ export const Permission = {
   AnnouncementsWrite: "announcements.write",
   /** TEC-290: contract template editor (brand scoped, intake_contracts). */
   ContractsTemplatesManage: "contracts.templates.manage",
+  /** TEC-291: intake contract signing in the service wizard. */
+  ContractsRead: "contracts.read",
+  ContractsWrite: "contracts.write",
   WarrantyClaimsRead: "warranty_claims.read",
 } as const;
 
@@ -438,6 +441,10 @@ export const permissions = {
   },
   contractTemplates: {
     manage: Permission.ContractsTemplatesManage,
+  },
+  contracts: {
+    read: Permission.ContractsRead,
+    write: Permission.ContractsWrite,
   },
   warrantyClaims: {
     read: Permission.WarrantyClaimsRead,

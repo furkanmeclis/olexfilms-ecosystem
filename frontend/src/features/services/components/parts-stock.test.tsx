@@ -42,6 +42,10 @@ vi.mock(
     serviceWizardService: api,
   }),
 );
+// TEC-291: intake_contracts off, so the flow has no contract step.
+vi.mock("@/features/modules/hooks/use-features", () => ({
+  useFeature: () => ({ enabled: false, isLoading: false, isError: false }),
+}));
 vi.mock("@/features/catalog/services/catalog.service", () => ({
   catalogService: catalog,
 }));

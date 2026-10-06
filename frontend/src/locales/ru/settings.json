@@ -131,5 +131,7 @@
   "system.labor.errors.amount_number": "Введите корректную сумму (до 2 знаков после запятой).",
   "system.labor.errors.amount_min": "Сумма не может быть отрицательной.",
   "system.labor.errors.percent_integer": "Введите целое число.",
-  "system.labor.errors.percent_range": "Процент должен быть от 0 до 100."
+  "system.labor.errors.percent_range": "Процент должен быть от 0 до 100.",
+  "system.keys.contracts_intake_required": "Обязательный договор приёмки автомобиля",
+  "system.keys.contracts_intake_required_hint": "Если включено (и модуль договора приёмки активен), услугу нельзя взять в работу или завершить, пока договор приёмки не подписан."
 }

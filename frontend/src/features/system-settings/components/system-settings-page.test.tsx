@@ -1,4 +1,7 @@
 // @vitest-environment jsdom
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -304,6 +307,52 @@ describe("SystemSettingsPage (TEC-222)", () => {
     await click(sw);
     await click(button("photo_standard_enabled", "settings.system.save"));
     expect(api.put).toHaveBeenCalledWith("photo_standard_enabled", true);
+  });
+
+  it("toggles contracts.intake_required in the contracts group (TEC-291)", async () => {
+    state.grants = new Set(rw);
+    const intake = setting({
+      key: "contracts.intake_required",
+      group: "contracts",
+      kind: "bool",
+      default: false,
+      value: false,
+      min: undefined,
+      max: undefined,
+    });
+    api.list.mockResolvedValue({ items: [...catalog, intake] });
+    api.put.mockResolvedValue({ ...intake, value: true, is_default: false });
+    await render();
+    const group = container.querySelector("[data-testid='group-contracts']");
+    expect(
+      group?.querySelector("[data-testid='setting-contracts.intake_required']"),
+    ).not.toBeNull();
+    const sw = row("contracts.intake_required").querySelector<HTMLElement>(
+      "[role='switch']",
+    )!;
+    await click(sw);
+    await click(button("contracts.intake_required", "settings.system.save"));
+    expect(api.put).toHaveBeenCalledWith("contracts.intake_required", true);
+
+    // Every locale names the key (the page falls back to the raw key).
+    const dir = path.join(process.cwd(), "src/locales");
+    const locales = readdirSync(dir).filter((l) =>
+      existsSync(path.join(dir, l, "settings.json")),
+    );
+    expect(locales).toHaveLength(13);
+    for (const locale of locales) {
+      const messages = JSON.parse(
+        readFileSync(path.join(dir, locale, "settings.json"), "utf8"),
+      ) as Record<string, string>;
+      expect(
+        messages["system.keys.contracts_intake_required"],
+        locale,
+      ).toBeTruthy();
+      expect(
+        messages["system.keys.contracts_intake_required_hint"],
+        locale,
+      ).toBeTruthy();
+    }
   });
 
   it("masks a secret value and keeps it unless retyped", async () => {
