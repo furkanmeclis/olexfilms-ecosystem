@@ -118,6 +118,8 @@ type ContractSummary struct {
 	UUID       uuid.UUID `json:"uuid"`
 	Status     string    `json:"status"`
 	ContractNo int64     `json:"contract_no"`
+	// PDFReady is true once the executed contract PDF is stored (TEC-291).
+	PDFReady bool `json:"pdf_ready"`
 }
 
 // ServiceView is a service as the API returns it.
@@ -236,6 +238,7 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, svc db.S
 		if err == nil {
 			v.Contract = &ContractSummary{
 				UUID: contract.Uuid, Status: contract.Status, ContractNo: contract.ContractNo,
+				PDFReady: contract.PdfReady,
 			}
 		}
 	}

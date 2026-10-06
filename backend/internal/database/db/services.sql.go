@@ -866,7 +866,8 @@ func (q *Queries) GetServiceConsumedPurchaseCost(ctx context.Context, arg GetSer
 }
 
 const getServiceContractSummary = `-- name: GetServiceContractSummary :one
-SELECT ci.uuid, ci.status, ci.contract_no
+SELECT ci.uuid, ci.status, ci.contract_no,
+       (ci.pdf_key IS NOT NULL)::boolean AS pdf_ready
 FROM services s
 JOIN contract_instances ci ON ci.id = s.contract_id
 WHERE s.id = $1
@@ -876,12 +877,18 @@ type GetServiceContractSummaryRow struct {
 	Uuid       uuid.UUID `json:"uuid"`
 	Status     string    `json:"status"`
 	ContractNo int64     `json:"contract_no"`
+	PdfReady   bool      `json:"pdf_ready"`
 }
 
 func (q *Queries) GetServiceContractSummary(ctx context.Context, id int64) (GetServiceContractSummaryRow, error) {
 	row := q.db.QueryRow(ctx, getServiceContractSummary, id)
 	var i GetServiceContractSummaryRow
-	err := row.Scan(&i.Uuid, &i.Status, &i.ContractNo)
+	err := row.Scan(
+		&i.Uuid,
+		&i.Status,
+		&i.ContractNo,
+		&i.PdfReady,
+	)
 	return i, err
 }
 

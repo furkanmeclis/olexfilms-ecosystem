@@ -25849,6 +25849,7 @@ components:
         - otp_required
         - signature_required
         - status
+        - pdf_ready
         - signers
         - media
         - created_at
@@ -25869,6 +25870,7 @@ components:
         executed_at: { type: [string, "null"], format: date-time }
         voided_at: { type: [string, "null"], format: date-time }
         void_reason: { type: [string, "null"] }
+        pdf_ready: { type: boolean, description: "True once the executed PDF is stored; GET /v1/contracts/{uuid}/pdf answers 404 until then (TEC-291)." }
         signers:
           type: array
           items: { $ref: "#/components/schemas/ContractSigner" }
@@ -30635,11 +30637,12 @@ components:
 
     ServiceContractSummary:
       type: object
-      required: [uuid, status, contract_no]
+      required: [uuid, status, contract_no, pdf_ready]
       properties:
         uuid: { type: string, format: uuid }
         status: { $ref: "#/components/schemas/ContractStatus" }
         contract_no: { type: integer, format: int64 }
+        pdf_ready: { type: boolean, description: "True once the executed contract PDF is stored (TEC-291)." }
 
     ServiceProfit:
       type: object

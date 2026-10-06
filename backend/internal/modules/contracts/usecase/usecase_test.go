@@ -221,6 +221,9 @@ func TestExecutedContractPDFGeneratedOnce(t *testing.T) {
 	gotb := documentstest.NewGotenberg(t, 0)
 	f.svc.pdf = pdfrender.New(gotb.URL)
 	executed := f.execute(t)
+	if executed.PDFReady {
+		t.Fatal("pdf_ready = true before the PDF was generated")
+	}
 	row, err := d.q.GetContractInstanceByUUID(d.ctx, executed.UUID)
 	if err != nil {
 		t.Fatal(err)
@@ -228,6 +231,9 @@ func TestExecutedContractPDFGeneratedOnce(t *testing.T) {
 
 	if err := f.svc.GenerateExecutedPDF(d.ctx, row.ID); err != nil {
 		t.Fatalf("generate pdf: %v", err)
+	}
+	if got, err := f.svc.GetContract(d.ctx, f.caller, executed.UUID); err != nil || !got.PDFReady {
+		t.Fatalf("pdf_ready after generation = %v, %v; want true", got.PDFReady, err)
 	}
 	row, err = d.q.GetContractInstanceByUUID(d.ctx, executed.UUID)
 	if err != nil {
