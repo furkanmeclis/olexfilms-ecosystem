@@ -40,8 +40,19 @@ WHERE o.deleted_at IS NULL
     OR o.status = ANY (sqlc.narg(statuses)::text[])
   )
   AND (sqlc.narg(brand_id)::bigint IS NULL OR o.brand_id = sqlc.narg(brand_id))
-  AND (sqlc.narg(type)::text IS NULL OR o.type = sqlc.narg(type))
+  AND (
+    COALESCE(cardinality(sqlc.narg(types)::text[]), 0) = 0
+    OR o.type = ANY (sqlc.narg(types)::text[])
+  )
   AND (sqlc.narg(parent_id)::bigint IS NULL OR o.parent_id = sqlc.narg(parent_id))
+  AND (
+    COALESCE(cardinality(sqlc.narg(plan_codes)::text[]), 0) = 0
+    OR o.plan_code = ANY (sqlc.narg(plan_codes)::text[])
+  )
+  AND (sqlc.narg(access_ends_from)::timestamptz IS NULL OR o.access_ends_at >= sqlc.narg(access_ends_from))
+  AND (sqlc.narg(access_ends_before)::timestamptz IS NULL OR o.access_ends_at < sqlc.narg(access_ends_before))
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR o.created_at >= sqlc.narg(created_from))
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR o.created_at < sqlc.narg(created_before))
   AND (
     sqlc.narg(q)::text IS NULL
     OR o.name ILIKE '%' || sqlc.narg(q) || '%'
@@ -80,22 +91,34 @@ ORDER BY
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
 -- name: CountOrganizations :one
+-- Same filter block as ListOrganizationsFiltered.
 SELECT COUNT(*)::bigint
-FROM organizations
-WHERE deleted_at IS NULL
+FROM organizations o
+WHERE o.deleted_at IS NULL
   AND (
     COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0
-    OR status = ANY (sqlc.narg(statuses)::text[])
+    OR o.status = ANY (sqlc.narg(statuses)::text[])
   )
-  AND (sqlc.narg(brand_id)::bigint IS NULL OR brand_id = sqlc.narg(brand_id))
-  AND (sqlc.narg(type)::text IS NULL OR type = sqlc.narg(type))
-  AND (sqlc.narg(parent_id)::bigint IS NULL OR parent_id = sqlc.narg(parent_id))
+  AND (sqlc.narg(brand_id)::bigint IS NULL OR o.brand_id = sqlc.narg(brand_id))
+  AND (
+    COALESCE(cardinality(sqlc.narg(types)::text[]), 0) = 0
+    OR o.type = ANY (sqlc.narg(types)::text[])
+  )
+  AND (sqlc.narg(parent_id)::bigint IS NULL OR o.parent_id = sqlc.narg(parent_id))
+  AND (
+    COALESCE(cardinality(sqlc.narg(plan_codes)::text[]), 0) = 0
+    OR o.plan_code = ANY (sqlc.narg(plan_codes)::text[])
+  )
+  AND (sqlc.narg(access_ends_from)::timestamptz IS NULL OR o.access_ends_at >= sqlc.narg(access_ends_from))
+  AND (sqlc.narg(access_ends_before)::timestamptz IS NULL OR o.access_ends_at < sqlc.narg(access_ends_before))
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR o.created_at >= sqlc.narg(created_from))
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR o.created_at < sqlc.narg(created_before))
   AND (
     sqlc.narg(q)::text IS NULL
-    OR name ILIKE '%' || sqlc.narg(q) || '%'
-    OR slug ILIKE '%' || sqlc.narg(q) || '%'
-    OR city ILIKE '%' || sqlc.narg(q) || '%'
-    OR phone ILIKE '%' || sqlc.narg(q) || '%'
+    OR o.name ILIKE '%' || sqlc.narg(q) || '%'
+    OR o.slug ILIKE '%' || sqlc.narg(q) || '%'
+    OR o.city ILIKE '%' || sqlc.narg(q) || '%'
+    OR o.phone ILIKE '%' || sqlc.narg(q) || '%'
   );
 
 -- name: UpdateOrganizationPlatform :one
@@ -298,3 +321,13 @@ WHERE o.deleted_at IS NULL
   AND (sqlc.narg(uuids)::uuid[] IS NULL OR o.uuid = ANY (sqlc.narg(uuids)::uuid[]))
 ORDER BY o.type ASC, o.name ASC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
+
+-- name: SetOrganizationBulkState :one
+-- TEC-365: platform bulk actions (status change, extend access) and their
+-- undo. Both columns are written as given; the adapter passes the current
+-- value for the one it does not change.
+UPDATE organizations
+SET status = sqlc.arg(status),
+    access_ends_at = sqlc.narg(access_ends_at)
+WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id) AND deleted_at IS NULL
+RETURNING *;

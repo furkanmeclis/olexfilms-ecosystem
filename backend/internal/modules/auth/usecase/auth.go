@@ -102,7 +102,7 @@ type Repository interface {
 	ConfirmUserTOTP(ctx context.Context, userID int64, recoveryHashes []string) (model.UserTOTP, error)
 	UpdateUserTOTPRecoveryHashes(ctx context.Context, userID int64, recoveryHashes []string) error
 	DeleteUserTOTP(ctx context.Context, userID int64) error
-	ListRolesFiltered(ctx context.Context, limit, offset int32, q string) ([]model.RoleSummary, int64, error)
+	ListRolesFiltered(ctx context.Context, f model.RoleListFilter) ([]model.RoleSummary, int64, error)
 	GetRoleByUUID(ctx context.Context, id uuid.UUID) (model.RoleSummary, error)
 	ListRolePermissionSlugs(ctx context.Context, roleUUID uuid.UUID) ([]string, error)
 	CreateRole(ctx context.Context, name, slug string, description *string) (model.RoleSummary, error)

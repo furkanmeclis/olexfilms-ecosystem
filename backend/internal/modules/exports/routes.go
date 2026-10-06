@@ -54,6 +54,11 @@ func RegisterRoutes(
 		http.HandlerFunc(h.RequestActivityExport), authn, require(rbac.PermPlatformActivityRead), requireStepUp,
 	))
 
+	// TEC-365: platform organizations list export.
+	mux.Handle("POST /v1/platform/organizations/export", middleware.Chain(
+		http.HandlerFunc(h.RequestOrganizationsExport), authn, require(rbac.PermPlatformOrganizationsRead), requireStepUp,
+	))
+
 	// Tenant export jobs: business modules add their own
 	// POST /v1/tenant/<resource>/export routes next to their permissions.
 	requireOrg := middleware.RequireOrganization(tokens, q)

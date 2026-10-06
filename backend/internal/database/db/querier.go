@@ -119,8 +119,6 @@ type Querier interface {
 	CountActiveServiceModuleSubscriptions(ctx context.Context, arg CountActiveServiceModuleSubscriptionsParams) (int64, error)
 	CountActivityEvents(ctx context.Context, arg CountActivityEventsParams) (int64, error)
 	CountAllBulkJobs(ctx context.Context) (int64, error)
-	CountAllExportJobs(ctx context.Context) (int64, error)
-	CountAllImportJobs(ctx context.Context) (int64, error)
 	CountAnnouncementReads(ctx context.Context, announcementID int64) (int64, error)
 	CountAnnouncementsByOrganizations(ctx context.Context, arg CountAnnouncementsByOrganizationsParams) (int64, error)
 	CountAppLogs(ctx context.Context, arg CountAppLogsParams) (int64, error)
@@ -145,12 +143,10 @@ type Querier interface {
 	CountDistributorPriceOverrides(ctx context.Context, arg CountDistributorPriceOverridesParams) (int64, error)
 	CountDocumentTemplates(ctx context.Context, arg CountDocumentTemplatesParams) (int64, error)
 	CountEODReports(ctx context.Context, arg CountEODReportsParams) (int64, error)
-	CountExportJobsForActor(ctx context.Context, actorID int64) (int64, error)
-	CountExportJobsForOrganization(ctx context.Context, organizationID pgtype.Int8) (int64, error)
+	CountExportJobsFiltered(ctx context.Context, arg CountExportJobsFilteredParams) (int64, error)
 	CountGlorianOutbounds(ctx context.Context, arg CountGlorianOutboundsParams) (int64, error)
 	CountGlorianSyncRuns(ctx context.Context, arg CountGlorianSyncRunsParams) (int64, error)
-	CountImportJobsForActor(ctx context.Context, actorID int64) (int64, error)
-	CountImportJobsForOrganization(ctx context.Context, organizationID int64) (int64, error)
+	CountImportJobsFiltered(ctx context.Context, arg CountImportJobsFilteredParams) (int64, error)
 	CountLeadsByOrganizations(ctx context.Context, arg CountLeadsByOrganizationsParams) (int64, error)
 	CountLeadsInScope(ctx context.Context, arg CountLeadsInScopeParams) (int64, error)
 	CountLegacyMessagesByChannel(ctx context.Context, brandID int64) ([]CountLegacyMessagesByChannelRow, error)
@@ -171,6 +167,7 @@ type Querier interface {
 	CountOrganizationMembershipsByUser(ctx context.Context, userID int64) (int64, error)
 	CountOrganizationProductStockRows(ctx context.Context, arg CountOrganizationProductStockRowsParams) (int64, error)
 	CountOrganizationStockUnitRows(ctx context.Context, arg CountOrganizationStockUnitRowsParams) (int64, error)
+	// Same filter block as ListOrganizationsFiltered.
 	CountOrganizations(ctx context.Context, arg CountOrganizationsParams) (int64, error)
 	CountOutboxByStatus(ctx context.Context, status string) (int64, error)
 	// Open (pending) vehicle transfers that involve the user; the transfer's
@@ -188,7 +185,7 @@ type Querier interface {
 	CountProductSales(ctx context.Context, arg CountProductSalesParams) (int64, error)
 	CountProducts(ctx context.Context, arg CountProductsParams) (int64, error)
 	CountPurchases(ctx context.Context, arg CountPurchasesParams) (int64, error)
-	CountRoles(ctx context.Context, q_ pgtype.Text) (int64, error)
+	CountRoles(ctx context.Context, arg CountRolesParams) (int64, error)
 	CountScopedVehicles(ctx context.Context, arg CountScopedVehiclesParams) (int64, error)
 	CountSearchFinanceEntries(ctx context.Context, arg CountSearchFinanceEntriesParams) (int64, error)
 	CountServiceReviewAnswersByQuestion(ctx context.Context, arg CountServiceReviewAnswersByQuestionParams) (int64, error)
@@ -1135,10 +1132,9 @@ type Querier interface {
 	ListActiveReservationsByItem(ctx context.Context, orderItemID int64) ([]StockReservation, error)
 	// Candidates for one event x channel; the usecase picks role/language/brand.
 	ListActiveTemplatesForEvent(ctx context.Context, arg ListActiveTemplatesForEventParams) ([]NotificationTemplate, error)
+	// Sort: docs/list-contract.md, keys from activity/usecase.SortSpec (TEC-365).
 	ListActivityEvents(ctx context.Context, arg ListActivityEventsParams) ([]ActivityEvent, error)
 	ListAllBulkJobs(ctx context.Context, arg ListAllBulkJobsParams) ([]BulkJob, error)
-	ListAllExportJobs(ctx context.Context, arg ListAllExportJobsParams) ([]ExportJob, error)
-	ListAllImportJobs(ctx context.Context, arg ListAllImportJobsParams) ([]ImportJob, error)
 	ListAllPermissionSlugs(ctx context.Context) ([]string, error)
 	ListAllPermissions(ctx context.Context) ([]Permission, error)
 	ListAllRoles(ctx context.Context) ([]Role, error)
@@ -1249,9 +1245,10 @@ type Querier interface {
 	ListEODReports(ctx context.Context, arg ListEODReportsParams) ([]EodReport, error)
 	ListEnabledLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
 	ListExchangeRatesByDate(ctx context.Context, arg ListExchangeRatesByDateParams) ([]ListExchangeRatesByDateRow, error)
-	ListExportJobsForActor(ctx context.Context, arg ListExportJobsForActorParams) ([]ExportJob, error)
-	// TEC-211: the organization list carries who requested each job.
-	ListExportJobsForOrganization(ctx context.Context, arg ListExportJobsForOrganizationParams) ([]ListExportJobsForOrganizationRow, error)
+	// TEC-365: platform (actor_id = own jobs, or NULL for admins) and tenant
+	// (organization_id) export lists. Sort: docs/list-contract.md, keys from
+	// exports/usecase.SortSpec.
+	ListExportJobsFiltered(ctx context.Context, arg ListExportJobsFilteredParams) ([]ListExportJobsFilteredRow, error)
 	ListFinanceAccountBalances(ctx context.Context, organizationID int64) ([]FinanceAccountBalance, error)
 	// ListFinanceAccountBalancesAsOf is every cash/bank account of the book with
 	// its balance over the rows written before created_to (NULL = all rows).
@@ -1305,9 +1302,10 @@ type Querier interface {
 	// id, oldest first.
 	ListHeldOrderOutbounds(ctx context.Context, arg ListHeldOrderOutboundsParams) ([]OrderOutbound, error)
 	ListImportChangesForJob(ctx context.Context, jobID int64) ([]ImportChange, error)
-	ListImportJobsForActor(ctx context.Context, arg ListImportJobsForActorParams) ([]ImportJob, error)
-	// TEC-211: the organization list carries who uploaded each job.
-	ListImportJobsForOrganization(ctx context.Context, arg ListImportJobsForOrganizationParams) ([]ListImportJobsForOrganizationRow, error)
+	// TEC-365: platform jobs (organization_id NULL; actor_id = own jobs, or NULL
+	// for admins) and tenant jobs (organization_id). Sort:
+	// docs/list-contract.md, keys from imports/usecase.SortSpec.
+	ListImportJobsFiltered(ctx context.Context, arg ListImportJobsFilteredParams) ([]ListImportJobsFilteredRow, error)
 	ListIntegrationConnections(ctx context.Context, brandID int64) ([]IntegrationConnection, error)
 	ListIntegrationConnectionsByKey(ctx context.Context, key string) ([]IntegrationConnection, error)
 	ListIntegrationExternalParties(ctx context.Context, connectionID int64) ([]IntegrationExternalParty, error)
@@ -1524,9 +1522,10 @@ type Querier interface {
 	ListRoleGrantsByRoleID(ctx context.Context, roleID int64) ([]ListRoleGrantsByRoleIDRow, error)
 	ListRoleGrantsByRoleUUID(ctx context.Context, argUuid uuid.UUID) ([]ListRoleGrantsByRoleUUIDRow, error)
 	ListRolePermissionSlugsByRoleUUID(ctx context.Context, argUuid uuid.UUID) ([]string, error)
-	ListRoleUUIDsForBulk(ctx context.Context, q_ pgtype.Text) ([]uuid.UUID, error)
+	ListRoleUUIDsForBulk(ctx context.Context, arg ListRoleUUIDsForBulkParams) ([]uuid.UUID, error)
+	// Sort: docs/list-contract.md, keys from auth/model.RolesSortSpec (TEC-365).
 	ListRolesFiltered(ctx context.Context, arg ListRolesFilteredParams) ([]Role, error)
-	ListRolesForExport(ctx context.Context, q_ pgtype.Text) ([]Role, error)
+	ListRolesForExport(ctx context.Context, arg ListRolesForExportParams) ([]Role, error)
 	ListRolesForUserIDs(ctx context.Context, userIds []int64) ([]ListRolesForUserIDsRow, error)
 	// ---------------------------------------------------------------------------
 	// Typed locations (aisle, shelf, bin).
@@ -2270,6 +2269,10 @@ type Querier interface {
 	SetOrderItemUnitMovement(ctx context.Context, arg SetOrderItemUnitMovementParams) (OrderItemUnit, error)
 	SetOrderReceiptDocument(ctx context.Context, arg SetOrderReceiptDocumentParams) (Order, error)
 	SetOrderShipping(ctx context.Context, arg SetOrderShippingParams) (Order, error)
+	// TEC-365: platform bulk actions (status change, extend access) and their
+	// undo. Both columns are written as given; the adapter passes the current
+	// value for the one it does not change.
+	SetOrganizationBulkState(ctx context.Context, arg SetOrganizationBulkStateParams) (Organization, error)
 	// ---------------------------------------------------------------------------
 	// Organization Google Business link (decision 7).
 	SetOrganizationGoogleBusinessURL(ctx context.Context, arg SetOrganizationGoogleBusinessURLParams) (Organization, error)

@@ -585,6 +585,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		ioadapters.NewRoles(deps.Queries),
 		ioadapters.NewNotifications(deps.Queries),
 		ioadapters.NewActivity(deps.Queries),
+		// TEC-365: platform organizations list export (read only).
+		orgusecase.NewListExportAdapter(orgSvc),
 		// TEC-175: cari statement and balance report exports.
 		accountingusecase.NewStatementAdapter(accountingSvc),
 		accountingusecase.NewBalancesAdapter(accountingSvc),
@@ -636,6 +638,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(deps.Queries),
 		bulkadapters.NewRoles(deps.Queries),
+		// TEC-365: platform organizations (status change, extend access).
+		bulkadapters.NewOrganizations(deps.Queries),
 		// TEC-212: tenant resources with undo.
 		bulkadapters.NewCatalogProducts(deps.Queries),
 		bulkadapters.NewTasks(deps.Queries),

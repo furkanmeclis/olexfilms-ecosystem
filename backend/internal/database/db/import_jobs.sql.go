@@ -12,34 +12,57 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const countAllImportJobs = `-- name: CountAllImportJobs :one
-SELECT COUNT(*)::bigint FROM import_jobs WHERE organization_id IS NULL
+const countImportJobsFiltered = `-- name: CountImportJobsFiltered :one
+SELECT COUNT(*)::bigint
+FROM import_jobs i
+WHERE (
+    ($1::bigint IS NULL AND i.organization_id IS NULL)
+    OR i.organization_id = $1
+  )
+  AND ($2::bigint IS NULL OR i.actor_id = $2)
+  AND (
+    COALESCE(cardinality($3::text[]), 0) = 0
+    OR i.status = ANY ($3::text[])
+  )
+  AND (
+    COALESCE(cardinality($4::text[]), 0) = 0
+    OR i.resource = ANY ($4::text[])
+  )
+  AND (
+    COALESCE(cardinality($5::text[]), 0) = 0
+    OR i.format = ANY ($5::text[])
+  )
+  AND ($6::timestamptz IS NULL OR i.created_at >= $6)
+  AND ($7::timestamptz IS NULL OR i.created_at < $7)
+  AND (
+    $8::text IS NULL
+    OR i.resource ILIKE '%' || $8 || '%'
+    OR i.source_filename ILIKE '%' || $8 || '%'
+  )
 `
 
-func (q *Queries) CountAllImportJobs(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countAllImportJobs)
-	var column_1 int64
-	err := row.Scan(&column_1)
-	return column_1, err
+type CountImportJobsFilteredParams struct {
+	OrganizationID pgtype.Int8        `json:"organization_id"`
+	ActorID        pgtype.Int8        `json:"actor_id"`
+	Statuses       []string           `json:"statuses"`
+	Resources      []string           `json:"resources"`
+	Formats        []string           `json:"formats"`
+	CreatedFrom    pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore  pgtype.Timestamptz `json:"created_before"`
+	Q              pgtype.Text        `json:"q"`
 }
 
-const countImportJobsForActor = `-- name: CountImportJobsForActor :one
-SELECT COUNT(*)::bigint FROM import_jobs WHERE actor_id = $1 AND organization_id IS NULL
-`
-
-func (q *Queries) CountImportJobsForActor(ctx context.Context, actorID int64) (int64, error) {
-	row := q.db.QueryRow(ctx, countImportJobsForActor, actorID)
-	var column_1 int64
-	err := row.Scan(&column_1)
-	return column_1, err
-}
-
-const countImportJobsForOrganization = `-- name: CountImportJobsForOrganization :one
-SELECT COUNT(*)::bigint FROM import_jobs WHERE organization_id = $1::bigint
-`
-
-func (q *Queries) CountImportJobsForOrganization(ctx context.Context, organizationID int64) (int64, error) {
-	row := q.db.QueryRow(ctx, countImportJobsForOrganization, organizationID)
+func (q *Queries) CountImportJobsFiltered(ctx context.Context, arg CountImportJobsFilteredParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countImportJobsFiltered,
+		arg.OrganizationID,
+		arg.ActorID,
+		arg.Statuses,
+		arg.Resources,
+		arg.Formats,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
+	)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -191,57 +214,6 @@ func (q *Queries) InsertImportChange(ctx context.Context, arg InsertImportChange
 	return i, err
 }
 
-const listAllImportJobs = `-- name: ListAllImportJobs :many
-SELECT id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id, source_filename FROM import_jobs
-WHERE organization_id IS NULL
-ORDER BY created_at DESC
-LIMIT $2 OFFSET $1
-`
-
-type ListAllImportJobsParams struct {
-	OffsetCount int32 `json:"offset_count"`
-	LimitCount  int32 `json:"limit_count"`
-}
-
-func (q *Queries) ListAllImportJobs(ctx context.Context, arg ListAllImportJobsParams) ([]ImportJob, error) {
-	rows, err := q.db.Query(ctx, listAllImportJobs, arg.OffsetCount, arg.LimitCount)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ImportJob{}
-	for rows.Next() {
-		var i ImportJob
-		if err := rows.Scan(
-			&i.ID,
-			&i.Uuid,
-			&i.Resource,
-			&i.ActorID,
-			&i.Format,
-			&i.Locale,
-			&i.Status,
-			&i.FileKey,
-			&i.MappingJson,
-			&i.DefaultsJson,
-			&i.PreviewJson,
-			&i.Error,
-			&i.RollbackUntil,
-			&i.AppliedAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.OrganizationID,
-			&i.SourceFilename,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listImportChangesForJob = `-- name: ListImportChangesForJob :many
 SELECT id, uuid, job_id, entity_type, entity_uuid, op, previous_json, created_at FROM import_changes
 WHERE job_id = $1
@@ -277,90 +249,99 @@ func (q *Queries) ListImportChangesForJob(ctx context.Context, jobID int64) ([]I
 	return items, nil
 }
 
-const listImportJobsForActor = `-- name: ListImportJobsForActor :many
-SELECT id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, organization_id, source_filename FROM import_jobs
-WHERE actor_id = $1 AND organization_id IS NULL
-ORDER BY created_at DESC
-LIMIT $3 OFFSET $2
+const listImportJobsFiltered = `-- name: ListImportJobsFiltered :many
+SELECT i.id, i.uuid, i.resource, i.actor_id, i.format, i.locale, i.status, i.file_key, i.mapping_json, i.defaults_json, i.preview_json, i.error, i.rollback_until, i.applied_at, i.created_at, i.updated_at, i.organization_id, i.source_filename, u.uuid AS actor_uuid, u.name AS actor_name, u.surname AS actor_surname
+FROM import_jobs i
+JOIN users u ON u.id = i.actor_id
+WHERE (
+    ($1::bigint IS NULL AND i.organization_id IS NULL)
+    OR i.organization_id = $1
+  )
+  AND ($2::bigint IS NULL OR i.actor_id = $2)
+  AND (
+    COALESCE(cardinality($3::text[]), 0) = 0
+    OR i.status = ANY ($3::text[])
+  )
+  AND (
+    COALESCE(cardinality($4::text[]), 0) = 0
+    OR i.resource = ANY ($4::text[])
+  )
+  AND (
+    COALESCE(cardinality($5::text[]), 0) = 0
+    OR i.format = ANY ($5::text[])
+  )
+  AND ($6::timestamptz IS NULL OR i.created_at >= $6)
+  AND ($7::timestamptz IS NULL OR i.created_at < $7)
+  AND (
+    $8::text IS NULL
+    OR i.resource ILIKE '%' || $8 || '%'
+    OR i.source_filename ILIKE '%' || $8 || '%'
+  )
+ORDER BY
+  CASE WHEN NOT $9::bool THEN
+    CASE $10::text WHEN 'status' THEN i.status WHEN 'resource' THEN i.resource WHEN 'format' THEN i.format END
+  END ASC,
+  CASE WHEN $9::bool THEN
+    CASE $10::text WHEN 'status' THEN i.status WHEN 'resource' THEN i.resource WHEN 'format' THEN i.format END
+  END DESC,
+  CASE WHEN NOT $9::bool THEN
+    CASE $10::text WHEN 'created_at' THEN i.created_at WHEN 'updated_at' THEN i.updated_at END
+  END ASC,
+  CASE WHEN $9::bool THEN
+    CASE $10::text WHEN 'created_at' THEN i.created_at WHEN 'updated_at' THEN i.updated_at END
+  END DESC,
+  CASE WHEN $9::bool THEN i.id END DESC,
+  i.id ASC
+LIMIT $12 OFFSET $11
 `
 
-type ListImportJobsForActorParams struct {
-	ActorID     int64 `json:"actor_id"`
-	OffsetCount int32 `json:"offset_count"`
-	LimitCount  int32 `json:"limit_count"`
+type ListImportJobsFilteredParams struct {
+	OrganizationID pgtype.Int8        `json:"organization_id"`
+	ActorID        pgtype.Int8        `json:"actor_id"`
+	Statuses       []string           `json:"statuses"`
+	Resources      []string           `json:"resources"`
+	Formats        []string           `json:"formats"`
+	CreatedFrom    pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore  pgtype.Timestamptz `json:"created_before"`
+	Q              pgtype.Text        `json:"q"`
+	SortDesc       bool               `json:"sort_desc"`
+	SortKey        string             `json:"sort_key"`
+	OffsetCount    int32              `json:"offset_count"`
+	LimitCount     int32              `json:"limit_count"`
 }
 
-func (q *Queries) ListImportJobsForActor(ctx context.Context, arg ListImportJobsForActorParams) ([]ImportJob, error) {
-	rows, err := q.db.Query(ctx, listImportJobsForActor, arg.ActorID, arg.OffsetCount, arg.LimitCount)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ImportJob{}
-	for rows.Next() {
-		var i ImportJob
-		if err := rows.Scan(
-			&i.ID,
-			&i.Uuid,
-			&i.Resource,
-			&i.ActorID,
-			&i.Format,
-			&i.Locale,
-			&i.Status,
-			&i.FileKey,
-			&i.MappingJson,
-			&i.DefaultsJson,
-			&i.PreviewJson,
-			&i.Error,
-			&i.RollbackUntil,
-			&i.AppliedAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.OrganizationID,
-			&i.SourceFilename,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listImportJobsForOrganization = `-- name: ListImportJobsForOrganization :many
-SELECT import_jobs.id, import_jobs.uuid, import_jobs.resource, import_jobs.actor_id, import_jobs.format, import_jobs.locale, import_jobs.status, import_jobs.file_key, import_jobs.mapping_json, import_jobs.defaults_json, import_jobs.preview_json, import_jobs.error, import_jobs.rollback_until, import_jobs.applied_at, import_jobs.created_at, import_jobs.updated_at, import_jobs.organization_id, import_jobs.source_filename, u.uuid AS actor_uuid, u.name AS actor_name, u.surname AS actor_surname
-FROM import_jobs
-JOIN users u ON u.id = import_jobs.actor_id
-WHERE import_jobs.organization_id = $1::bigint
-ORDER BY import_jobs.created_at DESC
-LIMIT $3 OFFSET $2
-`
-
-type ListImportJobsForOrganizationParams struct {
-	OrganizationID int64 `json:"organization_id"`
-	OffsetCount    int32 `json:"offset_count"`
-	LimitCount     int32 `json:"limit_count"`
-}
-
-type ListImportJobsForOrganizationRow struct {
+type ListImportJobsFilteredRow struct {
 	ImportJob    ImportJob `json:"import_job"`
 	ActorUuid    uuid.UUID `json:"actor_uuid"`
 	ActorName    string    `json:"actor_name"`
 	ActorSurname string    `json:"actor_surname"`
 }
 
-// TEC-211: the organization list carries who uploaded each job.
-func (q *Queries) ListImportJobsForOrganization(ctx context.Context, arg ListImportJobsForOrganizationParams) ([]ListImportJobsForOrganizationRow, error) {
-	rows, err := q.db.Query(ctx, listImportJobsForOrganization, arg.OrganizationID, arg.OffsetCount, arg.LimitCount)
+// TEC-365: platform jobs (organization_id NULL; actor_id = own jobs, or NULL
+// for admins) and tenant jobs (organization_id). Sort:
+// docs/list-contract.md, keys from imports/usecase.SortSpec.
+func (q *Queries) ListImportJobsFiltered(ctx context.Context, arg ListImportJobsFilteredParams) ([]ListImportJobsFilteredRow, error) {
+	rows, err := q.db.Query(ctx, listImportJobsFiltered,
+		arg.OrganizationID,
+		arg.ActorID,
+		arg.Statuses,
+		arg.Resources,
+		arg.Formats,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
+		arg.OffsetCount,
+		arg.LimitCount,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ListImportJobsForOrganizationRow{}
+	items := []ListImportJobsFilteredRow{}
 	for rows.Next() {
-		var i ListImportJobsForOrganizationRow
+		var i ListImportJobsFilteredRow
 		if err := rows.Scan(
 			&i.ImportJob.ID,
 			&i.ImportJob.Uuid,

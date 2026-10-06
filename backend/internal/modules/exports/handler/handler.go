@@ -7,10 +7,14 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	exportusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/usecase"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/orglist"
+	orgusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
@@ -32,7 +36,12 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	p := authctx.MustPrincipal(r.Context())
 	q := apiquery.Parse(r.URL.Query())
 	admin := p.HasPermission(rbac.PermPlatformSettingsWrite)
-	items, total, err := h.svc.ListJobs(r.Context(), p.UserInternal, admin, q.Limit, q.Offset)
+	f, err := exportusecase.ParseJobListFilter(r.URL.Query())
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	items, total, err := h.svc.ListJobs(r.Context(), p.UserInternal, admin, f, q.Limit, q.Offset)
 	if err != nil {
 		writeErr(w, r, err)
 		return
@@ -101,6 +110,46 @@ func (h *Handler) RequestActivityExport(w http.ResponseWriter, r *http.Request) 
 	h.requestExport(w, r, "platform.activity", rbac.PermPlatformActivityRead)
 }
 
+// RequestOrganizationsExport queues the platform organizations list export
+// (TEC-365). The body query carries the list filters, q and sort; the
+// request brand is stamped on it so the job lists that brand only.
+func (h *Handler) RequestOrganizationsExport(w http.ResponseWriter, r *http.Request) {
+	brand, ok := brandctx.From(r.Context())
+	if !ok {
+		response.NotFound(w, r, "brand not resolved")
+		return
+	}
+	p := authctx.MustPrincipal(r.Context())
+	var in struct {
+		Format string            `json:"format"`
+		Query  map[string]string `json:"query"`
+		Locale string            `json:"locale"`
+	}
+	if err := decodeJSON(w, r, &in); err != nil {
+		return
+	}
+	query := ioengine.ExportQuery(in.Query)
+	if query == nil {
+		query = ioengine.ExportQuery{}
+	}
+	// Reject bad filters now instead of failing the job later.
+	if _, err := orglist.Parse(orglist.QueryValues(query)); err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	query[orglist.QueryBrandID] = strconv.FormatInt(brand.ID, 10)
+	if in.Locale == "" {
+		in.Locale = "tr"
+	}
+	format := ioengine.ExportFormat(strings.ToLower(strings.TrimSpace(in.Format)))
+	job, err := h.svc.RequestExport(r.Context(), p.UserInternal, nil, orgusecase.ResourcePlatformList, format, query, in.Locale)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusAccepted, job)
+}
+
 func (h *Handler) requestExport(w http.ResponseWriter, r *http.Request, resource, perm string) {
 	p := authctx.MustPrincipal(r.Context())
 	if !p.HasPermission(perm) {
@@ -144,7 +193,12 @@ func (h *Handler) requestExport(w http.ResponseWriter, r *http.Request, resource
 func (h *Handler) ListTenant(w http.ResponseWriter, r *http.Request) {
 	scope := orgctx.MustScope(r.Context())
 	q := apiquery.Parse(r.URL.Query())
-	items, total, err := h.svc.ListOrgJobs(r.Context(), scope.InternalID, q.Limit, q.Offset)
+	f, err := exportusecase.ParseJobListFilter(r.URL.Query())
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	items, total, err := h.svc.ListOrgJobs(r.Context(), scope.InternalID, f, q.Limit, q.Offset)
 	if err != nil {
 		writeErr(w, r, err)
 		return
@@ -186,6 +240,9 @@ func (h *Handler) DownloadTenant(w http.ResponseWriter, r *http.Request) {
 }
 
 func writeErr(w http.ResponseWriter, r *http.Request, err error) {
+	if response.QueryValidation(w, r, err) {
+		return
+	}
 	switch {
 	case errors.Is(err, exportusecase.ErrNotFound):
 		response.NotFound(w, r, "export job not found")

@@ -14,28 +14,43 @@ import (
 
 const countActivityEvents = `-- name: CountActivityEvents :one
 SELECT COUNT(*)::bigint FROM activity_events
-WHERE ($1::bigint IS NULL OR actor_user_id = $1)
-  AND ($2::text IS NULL OR resource = $2)
-  AND ($3::text IS NULL OR action = $3)
+WHERE (
+    $1::uuid IS NULL
+    OR actor_user_id = (SELECT u.id FROM users u WHERE u.uuid = $1)
+  )
   AND (
-    $4::text IS NULL
-    OR action ILIKE '%' || $4 || '%'
-    OR resource ILIKE '%' || $4 || '%'
+    COALESCE(cardinality($2::text[]), 0) = 0
+    OR resource = ANY ($2::text[])
+  )
+  AND (
+    COALESCE(cardinality($3::text[]), 0) = 0
+    OR action = ANY ($3::text[])
+  )
+  AND ($4::timestamptz IS NULL OR created_at >= $4)
+  AND ($5::timestamptz IS NULL OR created_at < $5)
+  AND (
+    $6::text IS NULL
+    OR action ILIKE '%' || $6 || '%'
+    OR resource ILIKE '%' || $6 || '%'
   )
 `
 
 type CountActivityEventsParams struct {
-	ActorUserID pgtype.Int8 `json:"actor_user_id"`
-	Resource    pgtype.Text `json:"resource"`
-	Action      pgtype.Text `json:"action"`
-	Q           pgtype.Text `json:"q"`
+	ActorUuid     pgtype.UUID        `json:"actor_uuid"`
+	Resources     []string           `json:"resources"`
+	Actions       []string           `json:"actions"`
+	CreatedFrom   pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore pgtype.Timestamptz `json:"created_before"`
+	Q             pgtype.Text        `json:"q"`
 }
 
 func (q *Queries) CountActivityEvents(ctx context.Context, arg CountActivityEventsParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countActivityEvents,
-		arg.ActorUserID,
-		arg.Resource,
-		arg.Action,
+		arg.ActorUuid,
+		arg.Resources,
+		arg.Actions,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
 		arg.Q,
 	)
 	var column_1 int64
@@ -87,33 +102,63 @@ func (q *Queries) InsertActivityEvent(ctx context.Context, arg InsertActivityEve
 
 const listActivityEvents = `-- name: ListActivityEvents :many
 SELECT id, uuid, actor_user_id, action, resource, resource_uuid, payload, ip_address, user_agent, created_at FROM activity_events
-WHERE ($1::bigint IS NULL OR actor_user_id = $1)
-  AND ($2::text IS NULL OR resource = $2)
-  AND ($3::text IS NULL OR action = $3)
-  AND (
-    $4::text IS NULL
-    OR action ILIKE '%' || $4 || '%'
-    OR resource ILIKE '%' || $4 || '%'
+WHERE (
+    $1::uuid IS NULL
+    OR actor_user_id = (SELECT u.id FROM users u WHERE u.uuid = $1)
   )
-ORDER BY created_at DESC
-LIMIT $6 OFFSET $5
+  AND (
+    COALESCE(cardinality($2::text[]), 0) = 0
+    OR resource = ANY ($2::text[])
+  )
+  AND (
+    COALESCE(cardinality($3::text[]), 0) = 0
+    OR action = ANY ($3::text[])
+  )
+  AND ($4::timestamptz IS NULL OR created_at >= $4)
+  AND ($5::timestamptz IS NULL OR created_at < $5)
+  AND (
+    $6::text IS NULL
+    OR action ILIKE '%' || $6 || '%'
+    OR resource ILIKE '%' || $6 || '%'
+  )
+ORDER BY
+  CASE WHEN NOT $7::bool THEN
+    CASE $8::text WHEN 'action' THEN action WHEN 'resource' THEN resource END
+  END ASC,
+  CASE WHEN $7::bool THEN
+    CASE $8::text WHEN 'action' THEN action WHEN 'resource' THEN resource END
+  END DESC,
+  CASE WHEN NOT $7::bool AND $8::text = 'created_at' THEN created_at END ASC,
+  CASE WHEN $7::bool AND $8::text = 'created_at' THEN created_at END DESC,
+  CASE WHEN $7::bool THEN id END DESC,
+  id ASC
+LIMIT $10 OFFSET $9
 `
 
 type ListActivityEventsParams struct {
-	ActorUserID pgtype.Int8 `json:"actor_user_id"`
-	Resource    pgtype.Text `json:"resource"`
-	Action      pgtype.Text `json:"action"`
-	Q           pgtype.Text `json:"q"`
-	OffsetCount int32       `json:"offset_count"`
-	LimitCount  int32       `json:"limit_count"`
+	ActorUuid     pgtype.UUID        `json:"actor_uuid"`
+	Resources     []string           `json:"resources"`
+	Actions       []string           `json:"actions"`
+	CreatedFrom   pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore pgtype.Timestamptz `json:"created_before"`
+	Q             pgtype.Text        `json:"q"`
+	SortDesc      bool               `json:"sort_desc"`
+	SortKey       string             `json:"sort_key"`
+	OffsetCount   int32              `json:"offset_count"`
+	LimitCount    int32              `json:"limit_count"`
 }
 
+// Sort: docs/list-contract.md, keys from activity/usecase.SortSpec (TEC-365).
 func (q *Queries) ListActivityEvents(ctx context.Context, arg ListActivityEventsParams) ([]ActivityEvent, error) {
 	rows, err := q.db.Query(ctx, listActivityEvents,
-		arg.ActorUserID,
-		arg.Resource,
-		arg.Action,
+		arg.ActorUuid,
+		arg.Resources,
+		arg.Actions,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
 		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.OffsetCount,
 		arg.LimitCount,
 	)

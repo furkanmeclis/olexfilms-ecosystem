@@ -453,3 +453,20 @@ func (p *Publisher) StartRun(parent context.Context) (stop func()) {
 		p.mu.Unlock()
 	}
 }
+
+// EnqueueQueries inserts a pending outbox row through q, which must be bound
+// to the caller's transaction (db.Queries.WithTx). Bulk adapters get only
+// the bound queries, not the pgx.Tx (TEC-365).
+func EnqueueQueries(ctx context.Context, q *db.Queries, ev events.Event) error {
+	if q == nil {
+		return fmt.Errorf("outbox: queries are nil")
+	}
+	body, err := marshalEvent(ev)
+	if err != nil {
+		return err
+	}
+	if _, err := q.InsertOutboxEvent(ctx, db.InsertOutboxEventParams{EventName: ev.Name, Payload: body}); err != nil {
+		return fmt.Errorf("outbox: insert: %w", err)
+	}
+	return nil
+}

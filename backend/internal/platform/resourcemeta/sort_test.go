@@ -3,6 +3,8 @@ package resourcemeta
 import (
 	"testing"
 
+	authmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/model"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 )
 
@@ -18,6 +20,9 @@ func TestMetaSortMatchesListWhitelist(t *testing.T) {
 		{PlatformOrganizations(), apiquery.TenantsSortSpec},
 		{PlatformNotifications(), apiquery.NotificationsSortSpec},
 		{PlatformLogs(), apiquery.LogsSortSpec},
+		// TEC-365
+		{PlatformRoles(), authmodel.RolesSortSpec},
+		{Activity(), activity.SortSpec},
 	}
 	for _, c := range cases {
 		if _, err := apiquery.ResolveSort(apiquery.ParseSort(c.meta.DefaultSort), c.spec); err != nil {

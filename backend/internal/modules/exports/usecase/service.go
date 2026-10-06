@@ -370,40 +370,37 @@ func (s *Service) GetOrgJob(ctx context.Context, jobUUID uuid.UUID, orgID int64)
 }
 
 // ListJobs lists export jobs for actor or all if admin.
-func (s *Service) ListJobs(ctx context.Context, actorID int64, admin bool, limit, offset int32) ([]ExportJobView, int64, error) {
-	var rows []db.ExportJob
-	var total int64
-	var err error
-	if admin {
-		rows, err = s.q.ListAllExportJobs(ctx, db.ListAllExportJobsParams{LimitCount: limit, OffsetCount: offset})
-		total, _ = s.q.CountAllExportJobs(ctx)
-	} else {
-		rows, err = s.q.ListExportJobsForActor(ctx, db.ListExportJobsForActorParams{
-			ActorID: actorID, LimitCount: limit, OffsetCount: offset,
-		})
-		total, _ = s.q.CountExportJobsForActor(ctx, actorID)
+func (s *Service) ListJobs(ctx context.Context, actorID int64, admin bool, f JobListFilter, limit, offset int32) ([]ExportJobView, int64, error) {
+	var actor pgtype.Int8
+	if !admin {
+		actor = pgtype.Int8{Int64: actorID, Valid: true}
 	}
-	if err != nil {
-		return nil, 0, err
-	}
-	out := make([]ExportJobView, 0, len(rows))
-	for _, r := range rows {
-		out = append(out, mapExportJob(r))
-	}
-	return out, total, nil
+	return s.listJobs(ctx, pgtype.Int8{}, actor, f, limit, offset)
 }
 
 // ListOrgJobs lists export jobs for one organization.
-func (s *Service) ListOrgJobs(ctx context.Context, orgID int64, limit, offset int32) ([]ExportJobView, int64, error) {
-	rows, err := s.q.ListExportJobsForOrganization(ctx, db.ListExportJobsForOrganizationParams{
-		OrganizationID: pgtype.Int8{Int64: orgID, Valid: true},
-		LimitCount:     limit,
-		OffsetCount:    offset,
+func (s *Service) ListOrgJobs(ctx context.Context, orgID int64, f JobListFilter, limit, offset int32) ([]ExportJobView, int64, error) {
+	return s.listJobs(ctx, pgtype.Int8{Int64: orgID, Valid: true}, pgtype.Int8{}, f, limit, offset)
+}
+
+// listJobs runs the filtered job list (TEC-365); every row carries who
+// requested it.
+func (s *Service) listJobs(ctx context.Context, org, actor pgtype.Int8, f JobListFilter, limit, offset int32) ([]ExportJobView, int64, error) {
+	from, before := f.createdArgs()
+	rows, err := s.q.ListExportJobsFiltered(ctx, db.ListExportJobsFilteredParams{
+		OrganizationID: org, ActorID: actor,
+		Statuses: f.Statuses, Resources: f.Resources, Formats: f.Formats,
+		CreatedFrom: from, CreatedBefore: before, Q: f.qArg(),
+		SortKey: f.SortKey, SortDesc: f.SortDesc, LimitCount: limit, OffsetCount: offset,
 	})
 	if err != nil {
 		return nil, 0, err
 	}
-	total, err := s.q.CountExportJobsForOrganization(ctx, pgtype.Int8{Int64: orgID, Valid: true})
+	total, err := s.q.CountExportJobsFiltered(ctx, db.CountExportJobsFilteredParams{
+		OrganizationID: org, ActorID: actor,
+		Statuses: f.Statuses, Resources: f.Resources, Formats: f.Formats,
+		CreatedFrom: from, CreatedBefore: before, Q: f.qArg(),
+	})
 	if err != nil {
 		return nil, 0, err
 	}

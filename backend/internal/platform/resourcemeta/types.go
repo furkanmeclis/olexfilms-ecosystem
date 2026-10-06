@@ -1,6 +1,8 @@
 package resourcemeta
 
 import (
+	authmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/model"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine/adapters"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
@@ -23,8 +25,10 @@ type FilterVariant string
 const (
 	FilterVariantText    FilterVariant = "text"
 	FilterVariantFaceted FilterVariant = "faceted"
-	// FilterVariantDateRange: <key prefix>_from / _to (docs/list-contract.md).
+	// FilterVariantDateRange is a <key>_from / <key>_to pair (TEC-365).
 	FilterVariantDateRange FilterVariant = "date_range"
+	// FilterVariantBoolean is a true|false filter (TEC-365).
+	FilterVariantBoolean FilterVariant = "boolean"
 )
 
 // Capabilities declares which list/resource operations the API actually supports.
@@ -87,7 +91,7 @@ func PlatformUsers() ResourceMeta {
 		},
 		SearchableFields: []string{"email", "name", "surname"},
 		SortableFields:   apiquery.UsersSortSpec.Fields(),
-		FilterableFields: []string{"status", "role"},
+		FilterableFields: []string{"status", "role", "created_at"},
 		Columns: []Column{
 			{Key: "uuid", LabelKey: "users.uuid", Type: ColumnTypeUUID, DefaultVisible: true},
 			{Key: "email", LabelKey: "users.email", Type: ColumnTypeString, Sortable: true, DefaultVisible: true},
@@ -99,6 +103,7 @@ func PlatformUsers() ResourceMeta {
 		Filters: []Filter{
 			{Key: "status", LabelKey: "users.status", Variant: FilterVariantFaceted, EnumLookup: "user_status"},
 			{Key: "role", LabelKey: "users.role", Variant: FilterVariantFaceted, EnumLookup: "role_slug"},
+			{Key: "created", LabelKey: "users.created_at", Variant: FilterVariantDateRange},
 		},
 		Includes:    []string{"roles"},
 		BulkActions: adapters.NewUsers(nil).BulkActions(),
@@ -109,23 +114,25 @@ func PlatformUsers() ResourceMeta {
 func PlatformRoles() ResourceMeta {
 	return ResourceMeta{
 		Resource:      "platform.roles",
-		DefaultSort:   "name",
+		DefaultSort:   authmodel.RolesSortSpec.DefaultString(),
 		DefaultFields: []string{"uuid", "name", "slug", "is_system"},
 		Capabilities: Capabilities{
 			Create: true, Read: true, Update: true, Delete: true,
-			Search: true, Filter: false, Sort: true, Export: true, Import: true, Bulk: true,
+			Search: true, Filter: true, Sort: true, Export: true, Import: true, Bulk: true,
 		},
 		SearchableFields: []string{"name", "slug"},
-		SortableFields:   []string{"name", "slug", "created_at", "updated_at"},
-		FilterableFields: []string{},
+		SortableFields:   authmodel.RolesSortSpec.Fields(),
+		FilterableFields: []string{"is_system"},
 		Columns: []Column{
 			{Key: "uuid", LabelKey: "roles.uuid", Type: ColumnTypeUUID, DefaultVisible: true},
 			{Key: "name", LabelKey: "roles.name", Type: ColumnTypeString, Sortable: true, DefaultVisible: true},
 			{Key: "slug", LabelKey: "roles.slug", Type: ColumnTypeString, Sortable: true, DefaultVisible: true},
-			{Key: "is_system", LabelKey: "roles.is_system", Type: ColumnTypeBoolean, DefaultVisible: true},
+			{Key: "is_system", LabelKey: "roles.is_system", Type: ColumnTypeBoolean, Sortable: true, Filterable: true, FilterVariant: FilterVariantBoolean, DefaultVisible: true},
 			{Key: "created_at", LabelKey: "roles.created_at", Type: ColumnTypeDatetime, Sortable: true, DefaultVisible: false},
 		},
-		Filters:     []Filter{},
+		Filters: []Filter{
+			{Key: "is_system", LabelKey: "roles.is_system", Variant: FilterVariantBoolean},
+		},
 		Includes:    []string{"permission_slugs"},
 		BulkActions: adapters.NewRoles(nil).BulkActions(),
 	}
@@ -195,18 +202,25 @@ func PlatformNotifications() ResourceMeta {
 func Activity() ResourceMeta {
 	return ResourceMeta{
 		Resource:      "platform.activity",
-		DefaultSort:   "-created_at",
+		DefaultSort:   activity.SortSpec.DefaultString(),
 		DefaultFields: []string{"action", "resource", "actor_user_id", "created_at"},
 		Capabilities: Capabilities{
 			Read: true, Search: true, Filter: true, Sort: true, Export: true,
 		},
 		SearchableFields: []string{"action", "resource"},
-		SortableFields:   []string{"created_at", "action", "resource"},
+		SortableFields:   activity.SortSpec.Fields(),
+		FilterableFields: []string{"action", "resource", "actor", "created_at"},
 		Columns: []Column{
-			{Key: "action", LabelKey: "activity.action", Sortable: true, DefaultVisible: true},
-			{Key: "resource", LabelKey: "activity.resource", Sortable: true, DefaultVisible: true},
+			{Key: "action", LabelKey: "activity.action", Sortable: true, Filterable: true, FilterVariant: FilterVariantFaceted, DefaultVisible: true},
+			{Key: "resource", LabelKey: "activity.resource", Sortable: true, Filterable: true, FilterVariant: FilterVariantFaceted, DefaultVisible: true},
 			{Key: "actor_user_id", LabelKey: "activity.actor", DefaultVisible: true},
 			{Key: "created_at", LabelKey: "activity.created_at", Type: ColumnTypeDatetime, Sortable: true, DefaultVisible: true},
+		},
+		Filters: []Filter{
+			{Key: "action", LabelKey: "activity.action", Variant: FilterVariantFaceted},
+			{Key: "resource", LabelKey: "activity.resource", Variant: FilterVariantFaceted},
+			{Key: "actor", LabelKey: "activity.actor", Variant: FilterVariantText},
+			{Key: "created", LabelKey: "activity.created_at", Variant: FilterVariantDateRange},
 		},
 	}
 }
@@ -293,11 +307,11 @@ func PlatformOrganizations() ResourceMeta {
 		DefaultFields: []string{"uuid", "slug", "name", "city", "phone", "status", "plan_code", "access_ends_at"},
 		Capabilities: Capabilities{
 			Create: true, Read: true, Update: true, Delete: false,
-			Search: true, Filter: true, Sort: true, Export: false, Import: false, Bulk: false,
+			Search: true, Filter: true, Sort: true, Export: true, Import: false, Bulk: true,
 		},
 		SearchableFields: []string{"name", "slug", "city", "phone"},
 		SortableFields:   apiquery.TenantsSortSpec.Fields(),
-		FilterableFields: []string{"status"},
+		FilterableFields: []string{"status", "type", "plan_code", "parent_uuid", "access_ends_at", "created_at"},
 		Columns: []Column{
 			{Key: "uuid", LabelKey: "organizations.uuid", Type: ColumnTypeUUID, DefaultVisible: true},
 			{Key: "slug", LabelKey: "organizations.slug", Type: ColumnTypeString, Sortable: true, DefaultVisible: true},
@@ -305,12 +319,17 @@ func PlatformOrganizations() ResourceMeta {
 			{Key: "city", LabelKey: "organizations.city", Type: ColumnTypeString, Sortable: true, DefaultVisible: true},
 			{Key: "phone", LabelKey: "organizations.phone", Type: ColumnTypeString, DefaultVisible: true},
 			{Key: "status", LabelKey: "organizations.status", Type: ColumnTypeEnum, Sortable: true, Filterable: true, FilterVariant: FilterVariantFaceted, DefaultVisible: true},
-			{Key: "plan_code", LabelKey: "organizations.plan_code", Type: ColumnTypeString, DefaultVisible: true},
+			{Key: "plan_code", LabelKey: "organizations.plan_code", Type: ColumnTypeString, Filterable: true, FilterVariant: FilterVariantFaceted, DefaultVisible: true},
 			{Key: "access_ends_at", LabelKey: "organizations.access_ends_at", Type: ColumnTypeDatetime, Sortable: true, DefaultVisible: true},
 			{Key: "created_at", LabelKey: "organizations.created_at", Type: ColumnTypeDatetime, Sortable: true, DefaultVisible: false},
 		},
 		Filters: []Filter{
 			{Key: "status", LabelKey: "organizations.status", Variant: FilterVariantFaceted},
+			{Key: "type", LabelKey: "organizations.type", Variant: FilterVariantFaceted},
+			{Key: "plan_code", LabelKey: "organizations.plan_code", Variant: FilterVariantFaceted},
+			{Key: "access_ends", LabelKey: "organizations.access_ends_at", Variant: FilterVariantDateRange},
+			{Key: "created", LabelKey: "organizations.created_at", Variant: FilterVariantDateRange},
 		},
+		BulkActions: adapters.NewOrganizations(nil).BulkActions(),
 	}
 }

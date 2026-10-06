@@ -12,34 +12,53 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const countAllExportJobs = `-- name: CountAllExportJobs :one
-SELECT COUNT(*)::bigint FROM export_jobs
+const countExportJobsFiltered = `-- name: CountExportJobsFiltered :one
+SELECT COUNT(*)::bigint
+FROM export_jobs e
+WHERE ($1::bigint IS NULL OR e.organization_id = $1)
+  AND ($2::bigint IS NULL OR e.actor_id = $2)
+  AND (
+    COALESCE(cardinality($3::text[]), 0) = 0
+    OR e.status = ANY ($3::text[])
+  )
+  AND (
+    COALESCE(cardinality($4::text[]), 0) = 0
+    OR e.resource = ANY ($4::text[])
+  )
+  AND (
+    COALESCE(cardinality($5::text[]), 0) = 0
+    OR e.format = ANY ($5::text[])
+  )
+  AND ($6::timestamptz IS NULL OR e.created_at >= $6)
+  AND ($7::timestamptz IS NULL OR e.created_at < $7)
+  AND (
+    $8::text IS NULL
+    OR e.resource ILIKE '%' || $8 || '%'
+  )
 `
 
-func (q *Queries) CountAllExportJobs(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countAllExportJobs)
-	var column_1 int64
-	err := row.Scan(&column_1)
-	return column_1, err
+type CountExportJobsFilteredParams struct {
+	OrganizationID pgtype.Int8        `json:"organization_id"`
+	ActorID        pgtype.Int8        `json:"actor_id"`
+	Statuses       []string           `json:"statuses"`
+	Resources      []string           `json:"resources"`
+	Formats        []string           `json:"formats"`
+	CreatedFrom    pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore  pgtype.Timestamptz `json:"created_before"`
+	Q              pgtype.Text        `json:"q"`
 }
 
-const countExportJobsForActor = `-- name: CountExportJobsForActor :one
-SELECT COUNT(*)::bigint FROM export_jobs WHERE actor_id = $1
-`
-
-func (q *Queries) CountExportJobsForActor(ctx context.Context, actorID int64) (int64, error) {
-	row := q.db.QueryRow(ctx, countExportJobsForActor, actorID)
-	var column_1 int64
-	err := row.Scan(&column_1)
-	return column_1, err
-}
-
-const countExportJobsForOrganization = `-- name: CountExportJobsForOrganization :one
-SELECT COUNT(*)::bigint FROM export_jobs WHERE organization_id = $1
-`
-
-func (q *Queries) CountExportJobsForOrganization(ctx context.Context, organizationID pgtype.Int8) (int64, error) {
-	row := q.db.QueryRow(ctx, countExportJobsForOrganization, organizationID)
+func (q *Queries) CountExportJobsFiltered(ctx context.Context, arg CountExportJobsFilteredParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countExportJobsFiltered,
+		arg.OrganizationID,
+		arg.ActorID,
+		arg.Statuses,
+		arg.Resources,
+		arg.Formats,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
+	)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -206,134 +225,95 @@ func (q *Queries) GetReusablePortalServiceJob(ctx context.Context, arg GetReusab
 	return i, err
 }
 
-const listAllExportJobs = `-- name: ListAllExportJobs :many
-SELECT id, uuid, resource, actor_id, format, query_json, locale, status, file_key, row_count, error, expires_at, created_at, updated_at, organization_id FROM export_jobs
-ORDER BY created_at DESC
-LIMIT $2 OFFSET $1
+const listExportJobsFiltered = `-- name: ListExportJobsFiltered :many
+SELECT e.id, e.uuid, e.resource, e.actor_id, e.format, e.query_json, e.locale, e.status, e.file_key, e.row_count, e.error, e.expires_at, e.created_at, e.updated_at, e.organization_id, u.uuid AS actor_uuid, u.name AS actor_name, u.surname AS actor_surname
+FROM export_jobs e
+JOIN users u ON u.id = e.actor_id
+WHERE ($1::bigint IS NULL OR e.organization_id = $1)
+  AND ($2::bigint IS NULL OR e.actor_id = $2)
+  AND (
+    COALESCE(cardinality($3::text[]), 0) = 0
+    OR e.status = ANY ($3::text[])
+  )
+  AND (
+    COALESCE(cardinality($4::text[]), 0) = 0
+    OR e.resource = ANY ($4::text[])
+  )
+  AND (
+    COALESCE(cardinality($5::text[]), 0) = 0
+    OR e.format = ANY ($5::text[])
+  )
+  AND ($6::timestamptz IS NULL OR e.created_at >= $6)
+  AND ($7::timestamptz IS NULL OR e.created_at < $7)
+  AND (
+    $8::text IS NULL
+    OR e.resource ILIKE '%' || $8 || '%'
+  )
+ORDER BY
+  CASE WHEN NOT $9::bool THEN
+    CASE $10::text WHEN 'status' THEN e.status WHEN 'resource' THEN e.resource WHEN 'format' THEN e.format END
+  END ASC,
+  CASE WHEN $9::bool THEN
+    CASE $10::text WHEN 'status' THEN e.status WHEN 'resource' THEN e.resource WHEN 'format' THEN e.format END
+  END DESC,
+  CASE WHEN NOT $9::bool THEN
+    CASE $10::text WHEN 'created_at' THEN e.created_at WHEN 'updated_at' THEN e.updated_at END
+  END ASC,
+  CASE WHEN $9::bool THEN
+    CASE $10::text WHEN 'created_at' THEN e.created_at WHEN 'updated_at' THEN e.updated_at END
+  END DESC,
+  CASE WHEN $9::bool THEN e.id END DESC,
+  e.id ASC
+LIMIT $12 OFFSET $11
 `
 
-type ListAllExportJobsParams struct {
-	OffsetCount int32 `json:"offset_count"`
-	LimitCount  int32 `json:"limit_count"`
+type ListExportJobsFilteredParams struct {
+	OrganizationID pgtype.Int8        `json:"organization_id"`
+	ActorID        pgtype.Int8        `json:"actor_id"`
+	Statuses       []string           `json:"statuses"`
+	Resources      []string           `json:"resources"`
+	Formats        []string           `json:"formats"`
+	CreatedFrom    pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore  pgtype.Timestamptz `json:"created_before"`
+	Q              pgtype.Text        `json:"q"`
+	SortDesc       bool               `json:"sort_desc"`
+	SortKey        string             `json:"sort_key"`
+	OffsetCount    int32              `json:"offset_count"`
+	LimitCount     int32              `json:"limit_count"`
 }
 
-func (q *Queries) ListAllExportJobs(ctx context.Context, arg ListAllExportJobsParams) ([]ExportJob, error) {
-	rows, err := q.db.Query(ctx, listAllExportJobs, arg.OffsetCount, arg.LimitCount)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ExportJob{}
-	for rows.Next() {
-		var i ExportJob
-		if err := rows.Scan(
-			&i.ID,
-			&i.Uuid,
-			&i.Resource,
-			&i.ActorID,
-			&i.Format,
-			&i.QueryJson,
-			&i.Locale,
-			&i.Status,
-			&i.FileKey,
-			&i.RowCount,
-			&i.Error,
-			&i.ExpiresAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.OrganizationID,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listExportJobsForActor = `-- name: ListExportJobsForActor :many
-SELECT id, uuid, resource, actor_id, format, query_json, locale, status, file_key, row_count, error, expires_at, created_at, updated_at, organization_id FROM export_jobs
-WHERE actor_id = $1
-ORDER BY created_at DESC
-LIMIT $3 OFFSET $2
-`
-
-type ListExportJobsForActorParams struct {
-	ActorID     int64 `json:"actor_id"`
-	OffsetCount int32 `json:"offset_count"`
-	LimitCount  int32 `json:"limit_count"`
-}
-
-func (q *Queries) ListExportJobsForActor(ctx context.Context, arg ListExportJobsForActorParams) ([]ExportJob, error) {
-	rows, err := q.db.Query(ctx, listExportJobsForActor, arg.ActorID, arg.OffsetCount, arg.LimitCount)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ExportJob{}
-	for rows.Next() {
-		var i ExportJob
-		if err := rows.Scan(
-			&i.ID,
-			&i.Uuid,
-			&i.Resource,
-			&i.ActorID,
-			&i.Format,
-			&i.QueryJson,
-			&i.Locale,
-			&i.Status,
-			&i.FileKey,
-			&i.RowCount,
-			&i.Error,
-			&i.ExpiresAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.OrganizationID,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listExportJobsForOrganization = `-- name: ListExportJobsForOrganization :many
-SELECT export_jobs.id, export_jobs.uuid, export_jobs.resource, export_jobs.actor_id, export_jobs.format, export_jobs.query_json, export_jobs.locale, export_jobs.status, export_jobs.file_key, export_jobs.row_count, export_jobs.error, export_jobs.expires_at, export_jobs.created_at, export_jobs.updated_at, export_jobs.organization_id, u.uuid AS actor_uuid, u.name AS actor_name, u.surname AS actor_surname
-FROM export_jobs
-JOIN users u ON u.id = export_jobs.actor_id
-WHERE export_jobs.organization_id = $1
-ORDER BY export_jobs.created_at DESC
-LIMIT $3 OFFSET $2
-`
-
-type ListExportJobsForOrganizationParams struct {
-	OrganizationID pgtype.Int8 `json:"organization_id"`
-	OffsetCount    int32       `json:"offset_count"`
-	LimitCount     int32       `json:"limit_count"`
-}
-
-type ListExportJobsForOrganizationRow struct {
+type ListExportJobsFilteredRow struct {
 	ExportJob    ExportJob `json:"export_job"`
 	ActorUuid    uuid.UUID `json:"actor_uuid"`
 	ActorName    string    `json:"actor_name"`
 	ActorSurname string    `json:"actor_surname"`
 }
 
-// TEC-211: the organization list carries who requested each job.
-func (q *Queries) ListExportJobsForOrganization(ctx context.Context, arg ListExportJobsForOrganizationParams) ([]ListExportJobsForOrganizationRow, error) {
-	rows, err := q.db.Query(ctx, listExportJobsForOrganization, arg.OrganizationID, arg.OffsetCount, arg.LimitCount)
+// TEC-365: platform (actor_id = own jobs, or NULL for admins) and tenant
+// (organization_id) export lists. Sort: docs/list-contract.md, keys from
+// exports/usecase.SortSpec.
+func (q *Queries) ListExportJobsFiltered(ctx context.Context, arg ListExportJobsFilteredParams) ([]ListExportJobsFilteredRow, error) {
+	rows, err := q.db.Query(ctx, listExportJobsFiltered,
+		arg.OrganizationID,
+		arg.ActorID,
+		arg.Statuses,
+		arg.Resources,
+		arg.Formats,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
+		arg.OffsetCount,
+		arg.LimitCount,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ListExportJobsForOrganizationRow{}
+	items := []ListExportJobsFilteredRow{}
 	for rows.Next() {
-		var i ListExportJobsForOrganizationRow
+		var i ListExportJobsFilteredRow
 		if err := rows.Scan(
 			&i.ExportJob.ID,
 			&i.ExportJob.Uuid,

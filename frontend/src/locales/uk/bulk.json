@@ -45,5 +45,13 @@
   "confirm.catalog_products.delete": "Видалити товари ({{count}})?",
   "confirm.catalog_services.deactivate": "Деактивувати послуги ({{count}})?",
   "confirm.catalog_services.raise_price": "Оновити ціну послуг ({{count}})?",
-  "confirm.catalog_services.delete": "Видалити послуги ({{count}})?"
+  "confirm.catalog_services.delete": "Видалити послуги ({{count}})?",
+  "actions.organizations.activate": "Активувати організації",
+  "actions.organizations.suspend": "Призупинити організації",
+  "actions.organizations.set_read_only": "Зробити організації лише для читання",
+  "actions.organizations.extend_access": "Продовжити доступ",
+  "confirm.organizations.suspend": "Призупинити {{count}} організацій?",
+  "confirm.organizations.set_read_only": "Зробити {{count}} організацій лише для читання?",
+  "confirm.organizations.extend_access": "Продовжити доступ для {{count}} організацій?",
+  "params.days": "Дні"
 }

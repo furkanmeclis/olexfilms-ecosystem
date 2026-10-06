@@ -85,38 +85,60 @@ func (q *Queries) ClearOrganizationLogo(ctx context.Context, argUuid uuid.UUID) 
 
 const countOrganizations = `-- name: CountOrganizations :one
 SELECT COUNT(*)::bigint
-FROM organizations
-WHERE deleted_at IS NULL
+FROM organizations o
+WHERE o.deleted_at IS NULL
   AND (
     COALESCE(cardinality($1::text[]), 0) = 0
-    OR status = ANY ($1::text[])
+    OR o.status = ANY ($1::text[])
   )
-  AND ($2::bigint IS NULL OR brand_id = $2)
-  AND ($3::text IS NULL OR type = $3)
-  AND ($4::bigint IS NULL OR parent_id = $4)
+  AND ($2::bigint IS NULL OR o.brand_id = $2)
   AND (
-    $5::text IS NULL
-    OR name ILIKE '%' || $5 || '%'
-    OR slug ILIKE '%' || $5 || '%'
-    OR city ILIKE '%' || $5 || '%'
-    OR phone ILIKE '%' || $5 || '%'
+    COALESCE(cardinality($3::text[]), 0) = 0
+    OR o.type = ANY ($3::text[])
+  )
+  AND ($4::bigint IS NULL OR o.parent_id = $4)
+  AND (
+    COALESCE(cardinality($5::text[]), 0) = 0
+    OR o.plan_code = ANY ($5::text[])
+  )
+  AND ($6::timestamptz IS NULL OR o.access_ends_at >= $6)
+  AND ($7::timestamptz IS NULL OR o.access_ends_at < $7)
+  AND ($8::timestamptz IS NULL OR o.created_at >= $8)
+  AND ($9::timestamptz IS NULL OR o.created_at < $9)
+  AND (
+    $10::text IS NULL
+    OR o.name ILIKE '%' || $10 || '%'
+    OR o.slug ILIKE '%' || $10 || '%'
+    OR o.city ILIKE '%' || $10 || '%'
+    OR o.phone ILIKE '%' || $10 || '%'
   )
 `
 
 type CountOrganizationsParams struct {
-	Statuses []string    `json:"statuses"`
-	BrandID  pgtype.Int8 `json:"brand_id"`
-	Type     pgtype.Text `json:"type"`
-	ParentID pgtype.Int8 `json:"parent_id"`
-	Q        pgtype.Text `json:"q"`
+	Statuses         []string           `json:"statuses"`
+	BrandID          pgtype.Int8        `json:"brand_id"`
+	Types            []string           `json:"types"`
+	ParentID         pgtype.Int8        `json:"parent_id"`
+	PlanCodes        []string           `json:"plan_codes"`
+	AccessEndsFrom   pgtype.Timestamptz `json:"access_ends_from"`
+	AccessEndsBefore pgtype.Timestamptz `json:"access_ends_before"`
+	CreatedFrom      pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore    pgtype.Timestamptz `json:"created_before"`
+	Q                pgtype.Text        `json:"q"`
 }
 
+// Same filter block as ListOrganizationsFiltered.
 func (q *Queries) CountOrganizations(ctx context.Context, arg CountOrganizationsParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countOrganizations,
 		arg.Statuses,
 		arg.BrandID,
-		arg.Type,
+		arg.Types,
 		arg.ParentID,
+		arg.PlanCodes,
+		arg.AccessEndsFrom,
+		arg.AccessEndsBefore,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
 		arg.Q,
 	)
 	var column_1 int64
@@ -1068,56 +1090,72 @@ WHERE o.deleted_at IS NULL
     OR o.status = ANY ($1::text[])
   )
   AND ($2::bigint IS NULL OR o.brand_id = $2)
-  AND ($3::text IS NULL OR o.type = $3)
+  AND (
+    COALESCE(cardinality($3::text[]), 0) = 0
+    OR o.type = ANY ($3::text[])
+  )
   AND ($4::bigint IS NULL OR o.parent_id = $4)
   AND (
-    $5::text IS NULL
-    OR o.name ILIKE '%' || $5 || '%'
-    OR o.slug ILIKE '%' || $5 || '%'
-    OR o.city ILIKE '%' || $5 || '%'
-    OR o.phone ILIKE '%' || $5 || '%'
+    COALESCE(cardinality($5::text[]), 0) = 0
+    OR o.plan_code = ANY ($5::text[])
+  )
+  AND ($6::timestamptz IS NULL OR o.access_ends_at >= $6)
+  AND ($7::timestamptz IS NULL OR o.access_ends_at < $7)
+  AND ($8::timestamptz IS NULL OR o.created_at >= $8)
+  AND ($9::timestamptz IS NULL OR o.created_at < $9)
+  AND (
+    $10::text IS NULL
+    OR o.name ILIKE '%' || $10 || '%'
+    OR o.slug ILIKE '%' || $10 || '%'
+    OR o.city ILIKE '%' || $10 || '%'
+    OR o.phone ILIKE '%' || $10 || '%'
   )
 ORDER BY
-  CASE WHEN NOT $6::bool THEN
-    CASE $7::text
+  CASE WHEN NOT $11::bool THEN
+    CASE $12::text
       WHEN 'name' THEN o.name WHEN 'slug' THEN o.slug
       WHEN 'city' THEN o.city WHEN 'status' THEN o.status
     END
   END ASC,
-  CASE WHEN $6::bool THEN
-    CASE $7::text
+  CASE WHEN $11::bool THEN
+    CASE $12::text
       WHEN 'name' THEN o.name WHEN 'slug' THEN o.slug
       WHEN 'city' THEN o.city WHEN 'status' THEN o.status
     END
   END DESC,
-  CASE WHEN NOT $6::bool THEN
-    CASE $7::text
+  CASE WHEN NOT $11::bool THEN
+    CASE $12::text
       WHEN 'created_at' THEN o.created_at WHEN 'updated_at' THEN o.updated_at
     END
   END ASC,
-  CASE WHEN $6::bool THEN
-    CASE $7::text
+  CASE WHEN $11::bool THEN
+    CASE $12::text
       WHEN 'created_at' THEN o.created_at WHEN 'updated_at' THEN o.updated_at
     END
   END DESC,
   -- Nullable column: its own pair so NULLS LAST does not affect the others.
-  CASE WHEN NOT $6::bool AND $7::text = 'access_ends_at' THEN o.access_ends_at END ASC NULLS LAST,
-  CASE WHEN $6::bool AND $7::text = 'access_ends_at' THEN o.access_ends_at END DESC NULLS LAST,
-  CASE WHEN $6::bool THEN o.id END DESC,
+  CASE WHEN NOT $11::bool AND $12::text = 'access_ends_at' THEN o.access_ends_at END ASC NULLS LAST,
+  CASE WHEN $11::bool AND $12::text = 'access_ends_at' THEN o.access_ends_at END DESC NULLS LAST,
+  CASE WHEN $11::bool THEN o.id END DESC,
   o.id ASC
-LIMIT $9 OFFSET $8
+LIMIT $14 OFFSET $13
 `
 
 type ListOrganizationsFilteredParams struct {
-	Statuses    []string    `json:"statuses"`
-	BrandID     pgtype.Int8 `json:"brand_id"`
-	Type        pgtype.Text `json:"type"`
-	ParentID    pgtype.Int8 `json:"parent_id"`
-	Q           pgtype.Text `json:"q"`
-	SortDesc    bool        `json:"sort_desc"`
-	SortKey     string      `json:"sort_key"`
-	OffsetCount int32       `json:"offset_count"`
-	LimitCount  int32       `json:"limit_count"`
+	Statuses         []string           `json:"statuses"`
+	BrandID          pgtype.Int8        `json:"brand_id"`
+	Types            []string           `json:"types"`
+	ParentID         pgtype.Int8        `json:"parent_id"`
+	PlanCodes        []string           `json:"plan_codes"`
+	AccessEndsFrom   pgtype.Timestamptz `json:"access_ends_from"`
+	AccessEndsBefore pgtype.Timestamptz `json:"access_ends_before"`
+	CreatedFrom      pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore    pgtype.Timestamptz `json:"created_before"`
+	Q                pgtype.Text        `json:"q"`
+	SortDesc         bool               `json:"sort_desc"`
+	SortKey          string             `json:"sort_key"`
+	OffsetCount      int32              `json:"offset_count"`
+	LimitCount       int32              `json:"limit_count"`
 }
 
 type ListOrganizationsFilteredRow struct {
@@ -1132,8 +1170,13 @@ func (q *Queries) ListOrganizationsFiltered(ctx context.Context, arg ListOrganiz
 	rows, err := q.db.Query(ctx, listOrganizationsFiltered,
 		arg.Statuses,
 		arg.BrandID,
-		arg.Type,
+		arg.Types,
 		arg.ParentID,
+		arg.PlanCodes,
+		arg.AccessEndsFrom,
+		arg.AccessEndsBefore,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
 		arg.Q,
 		arg.SortDesc,
 		arg.SortKey,
@@ -1302,6 +1345,75 @@ func (q *Queries) ListOrganizationsInScope(ctx context.Context, arg ListOrganiza
 		return nil, err
 	}
 	return items, nil
+}
+
+const setOrganizationBulkState = `-- name: SetOrganizationBulkState :one
+UPDATE organizations
+SET status = $1,
+    access_ends_at = $2
+WHERE uuid = $3 AND brand_id = $4 AND deleted_at IS NULL
+RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude
+`
+
+type SetOrganizationBulkStateParams struct {
+	Status       string             `json:"status"`
+	AccessEndsAt pgtype.Timestamptz `json:"access_ends_at"`
+	Uuid         uuid.UUID          `json:"uuid"`
+	BrandID      int64              `json:"brand_id"`
+}
+
+// TEC-365: platform bulk actions (status change, extend access) and their
+// undo. Both columns are written as given; the adapter passes the current
+// value for the one it does not change.
+func (q *Queries) SetOrganizationBulkState(ctx context.Context, arg SetOrganizationBulkStateParams) (Organization, error) {
+	row := q.db.QueryRow(ctx, setOrganizationBulkState,
+		arg.Status,
+		arg.AccessEndsAt,
+		arg.Uuid,
+		arg.BrandID,
+	)
+	var i Organization
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.Slug,
+		&i.Name,
+		&i.City,
+		&i.District,
+		&i.Phone,
+		&i.Address,
+		&i.LogoObjectKey,
+		&i.Status,
+		&i.PlanCode,
+		&i.AccessStartsAt,
+		&i.AccessEndsAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Email,
+		&i.Website,
+		&i.Tagline,
+		&i.FooterText,
+		&i.PaperSize,
+		&i.PrimaryColor,
+		&i.Type,
+		&i.ParentID,
+		&i.BrandID,
+		&i.Currency,
+		&i.Locale,
+		&i.Timezone,
+		&i.CountryID,
+		&i.ContractPdfKey,
+		&i.ContractValidUntil,
+		&i.Settings,
+		&i.ProvinceID,
+		&i.DistrictID,
+		&i.PhoneRaw,
+		&i.GoogleBusinessUrl,
+		&i.Latitude,
+		&i.Longitude,
+	)
+	return i, err
 }
 
 const setOrganizationLogo = `-- name: SetOrganizationLogo :one

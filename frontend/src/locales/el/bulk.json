@@ -45,5 +45,13 @@
   "confirm.catalog_products.delete": "Διαγραφή {{count}} προϊόντων;",
   "confirm.catalog_services.deactivate": "Απενεργοποίηση {{count}} υπηρεσιών;",
   "confirm.catalog_services.raise_price": "Ενημέρωση της τιμής {{count}} υπηρεσιών;",
-  "confirm.catalog_services.delete": "Διαγραφή {{count}} υπηρεσιών;"
+  "confirm.catalog_services.delete": "Διαγραφή {{count}} υπηρεσιών;",
+  "actions.organizations.activate": "Ενεργοποίηση οργανισμών",
+  "actions.organizations.suspend": "Αναστολή οργανισμών",
+  "actions.organizations.set_read_only": "Οργανισμοί μόνο για ανάγνωση",
+  "actions.organizations.extend_access": "Παράταση πρόσβασης",
+  "confirm.organizations.suspend": "Αναστολή {{count}} οργανισμών;",
+  "confirm.organizations.set_read_only": "Ορισμός {{count}} οργανισμών μόνο για ανάγνωση;",
+  "confirm.organizations.extend_access": "Παράταση πρόσβασης {{count}} οργανισμών;",
+  "params.days": "Ημέρες"
 }

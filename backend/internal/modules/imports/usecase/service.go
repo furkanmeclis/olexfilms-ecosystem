@@ -384,40 +384,37 @@ func (s *Service) Rollback(ctx context.Context, jobUUID uuid.UUID, actorID int64
 	return mapImportJob(row), nil
 }
 
-func (s *Service) ListJobs(ctx context.Context, actorID int64, admin bool, orgID *int64, limit, offset int32) ([]ImportJobView, int64, error) {
-	var rows []db.ImportJob
-	var total int64
-	var err error
-	if orgID != nil {
-		orgRows, err := s.q.ListImportJobsForOrganization(ctx, db.ListImportJobsForOrganizationParams{
-			OrganizationID: *orgID, LimitCount: limit, OffsetCount: offset,
-		})
-		if err != nil {
-			return nil, 0, err
-		}
-		total, _ = s.q.CountImportJobsForOrganization(ctx, *orgID)
-		out := make([]ImportJobView, 0, len(orgRows))
-		for _, r := range orgRows {
-			v := mapImportJob(r.ImportJob)
-			v.Actor = &ActorView{UUID: r.ActorUuid, Name: strings.TrimSpace(r.ActorName + " " + r.ActorSurname)}
-			out = append(out, v)
-		}
-		return out, total, nil
-	} else if admin {
-		rows, err = s.q.ListAllImportJobs(ctx, db.ListAllImportJobsParams{LimitCount: limit, OffsetCount: offset})
-		total, _ = s.q.CountAllImportJobs(ctx)
-	} else {
-		rows, err = s.q.ListImportJobsForActor(ctx, db.ListImportJobsForActorParams{
-			ActorID: actorID, LimitCount: limit, OffsetCount: offset,
-		})
-		total, _ = s.q.CountImportJobsForActor(ctx, actorID)
+func (s *Service) ListJobs(ctx context.Context, actorID int64, admin bool, orgID *int64, f JobListFilter, limit, offset int32) ([]ImportJobView, int64, error) {
+	var org, actor pgtype.Int8
+	switch {
+	case orgID != nil:
+		org = pgtype.Int8{Int64: *orgID, Valid: true}
+	case !admin:
+		actor = pgtype.Int8{Int64: actorID, Valid: true}
 	}
+	from, before := f.createdArgs()
+	rows, err := s.q.ListImportJobsFiltered(ctx, db.ListImportJobsFilteredParams{
+		OrganizationID: org, ActorID: actor,
+		Statuses: f.Statuses, Resources: f.Resources, Formats: f.Formats,
+		CreatedFrom: from, CreatedBefore: before, Q: f.qArg(),
+		SortKey: f.SortKey, SortDesc: f.SortDesc, LimitCount: limit, OffsetCount: offset,
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+	total, err := s.q.CountImportJobsFiltered(ctx, db.CountImportJobsFilteredParams{
+		OrganizationID: org, ActorID: actor,
+		Statuses: f.Statuses, Resources: f.Resources, Formats: f.Formats,
+		CreatedFrom: from, CreatedBefore: before, Q: f.qArg(),
+	})
 	if err != nil {
 		return nil, 0, err
 	}
 	out := make([]ImportJobView, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, mapImportJob(r))
+		v := mapImportJob(r.ImportJob)
+		v.Actor = &ActorView{UUID: r.ActorUuid, Name: strings.TrimSpace(r.ActorName + " " + r.ActorSurname)}
+		out = append(out, v)
 	}
 	return out, total, nil
 }

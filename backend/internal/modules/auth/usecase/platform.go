@@ -326,8 +326,8 @@ func (u *AuthUseCase) SetPlatformUserPassword(ctx context.Context, userUUID uuid
 }
 
 // ListPlatformRoles lists roles.
-func (u *AuthUseCase) ListPlatformRoles(ctx context.Context, limit, offset int32, q string) ([]model.RoleSummary, int64, error) {
-	return u.repo.ListRolesFiltered(ctx, limit, offset, q)
+func (u *AuthUseCase) ListPlatformRoles(ctx context.Context, f model.RoleListFilter) ([]model.RoleSummary, int64, error) {
+	return u.repo.ListRolesFiltered(ctx, f)
 }
 
 // GetPlatformRole returns role detail with permissions.

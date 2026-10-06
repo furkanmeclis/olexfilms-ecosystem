@@ -45,5 +45,13 @@
   "confirm.catalog_products.delete": "Удалить товары ({{count}})?",
   "confirm.catalog_services.deactivate": "Деактивировать услуги ({{count}})?",
   "confirm.catalog_services.raise_price": "Обновить цену услуг ({{count}})?",
-  "confirm.catalog_services.delete": "Удалить услуги ({{count}})?"
+  "confirm.catalog_services.delete": "Удалить услуги ({{count}})?",
+  "actions.organizations.activate": "Активировать организации",
+  "actions.organizations.suspend": "Приостановить организации",
+  "actions.organizations.set_read_only": "Сделать организации только для чтения",
+  "actions.organizations.extend_access": "Продлить доступ",
+  "confirm.organizations.suspend": "Приостановить {{count}} организаций?",
+  "confirm.organizations.set_read_only": "Сделать {{count}} организаций только для чтения?",
+  "confirm.organizations.extend_access": "Продлить доступ для {{count}} организаций?",
+  "params.days": "Дни"
 }

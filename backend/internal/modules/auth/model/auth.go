@@ -3,6 +3,7 @@ package model
 import (
 	"time"
 
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 )
 
@@ -22,6 +23,7 @@ type User struct {
 	Timezone      string
 	EmailVerified bool
 	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // UserAuthMethod is a login option linked to a platform user.
@@ -42,6 +44,9 @@ type RoleSummary struct {
 	// OrgType is platform, center, distributor, dealer, customer or fleet
 	// (empty for custom roles, which are global).
 	OrgType *string `json:"org_type,omitempty"`
+	// CreatedAt / UpdatedAt are set on rows loaded from roles (TEC-365).
+	CreatedAt *time.Time `json:"created_at,omitempty"`
+	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 }
 
 // PermissionSummary is a catalog permission entry.
@@ -182,6 +187,10 @@ type PublicUser struct {
 	Timezone      *string `json:"timezone"`
 	IsSuperAdmin  bool    `json:"is_super_admin"`
 	EmailVerified bool    `json:"email_verified"`
+	// CreatedAt / UpdatedAt are set when the user row was loaded with them
+	// (platform users list and detail, TEC-365).
+	CreatedAt *time.Time `json:"created_at,omitempty"`
+	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 }
 
 // PlatformUserDetail is a platform user with assigned roles and login methods.
@@ -331,7 +340,15 @@ func ToPublicUser(u User, isSuperAdmin bool) PublicUser {
 		UUID: u.UUID, Email: u.Email, Name: u.Name, Surname: u.Surname,
 		Status: u.Status, Locale: optString(u.Locale), Timezone: optString(u.Timezone),
 		IsSuperAdmin: isSuperAdmin, EmailVerified: u.EmailVerified,
+		CreatedAt: optTime(u.CreatedAt), UpdatedAt: optTime(u.UpdatedAt),
 	}
+}
+
+func optTime(t time.Time) *time.Time {
+	if t.IsZero() {
+		return nil
+	}
+	return &t
 }
 
 func optString(v string) *string {
@@ -374,7 +391,10 @@ type UserListFilter struct {
 	Q             string
 	// Statuses is a multi-value status filter; empty means all.
 	Statuses []string
-	RoleSlug string
+	// RoleSlugs is a multi-value role filter (TEC-365); empty means all.
+	RoleSlugs []string
+	// Created is the created_from/created_to range (TEC-365).
+	Created apiquery.TimeRange
 	// SortKey/SortDesc come from apiquery.ResolveSort(…, UsersSortSpec).
 	SortKey  string
 	SortDesc bool
@@ -382,3 +402,23 @@ type UserListFilter struct {
 
 // UserStatuses are the users.status values (chk_users_status).
 var UserStatuses = []string{"active", "disabled", "pending", "anonymized"}
+
+// RolesSortSpec is the platform roles list sort contract (TEC-365).
+var RolesSortSpec = apiquery.SortSpec{
+	Columns: apiquery.SortColumns{
+		"name": "name", "slug": "slug", "is_system": "is_system",
+		"created_at": "created_at", "updated_at": "updated_at",
+	},
+	Default: apiquery.SortField{Field: "name"},
+}
+
+// RoleListFilter narrows and orders the platform roles list (TEC-365).
+type RoleListFilter struct {
+	Limit, Offset int32
+	Q             string
+	// IsSystem filters system / custom roles; nil means both.
+	IsSystem *bool
+	// SortKey/SortDesc come from apiquery.ResolveSort(…, RolesSortSpec).
+	SortKey  string
+	SortDesc bool
+}

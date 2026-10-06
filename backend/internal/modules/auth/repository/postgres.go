@@ -13,6 +13,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -621,14 +622,13 @@ func (r *Postgres) ListUsersFiltered(ctx context.Context, f model.UserListFilter
 		LimitCount: f.Limit, OffsetCount: f.Offset,
 	}
 	countParams := db.CountUsersParams{Statuses: f.Statuses}
+	params.CreatedFrom, params.CreatedBefore = tsRange(f.Created)
+	countParams.CreatedFrom, countParams.CreatedBefore = params.CreatedFrom, params.CreatedBefore
 	if f.Q != "" {
 		params.Q = pgtype.Text{String: f.Q, Valid: true}
 		countParams.Q = params.Q
 	}
-	if f.RoleSlug != "" {
-		params.RoleSlug = pgtype.Text{String: f.RoleSlug, Valid: true}
-		countParams.RoleSlug = params.RoleSlug
-	}
+	params.RoleSlugs, countParams.RoleSlugs = f.RoleSlugs, f.RoleSlugs
 	rows, err := r.q.ListUsersFiltered(ctx, params)
 	if err != nil {
 		return nil, 0, err
@@ -669,16 +669,21 @@ func (r *Postgres) CountUsersWithRole(ctx context.Context, roleSlug string) (int
 	return r.q.CountUsersWithRole(ctx, roleSlug)
 }
 
-func (r *Postgres) ListRolesFiltered(ctx context.Context, limit, offset int32, q string) ([]model.RoleSummary, int64, error) {
-	params := db.ListRolesFilteredParams{LimitCount: limit, OffsetCount: offset}
-	if q != "" {
-		params.Q = pgtype.Text{String: q, Valid: true}
+func (r *Postgres) ListRolesFiltered(ctx context.Context, f model.RoleListFilter) ([]model.RoleSummary, int64, error) {
+	params := db.ListRolesFilteredParams{
+		SortKey: f.SortKey, SortDesc: f.SortDesc, LimitCount: f.Limit, OffsetCount: f.Offset,
+	}
+	if f.Q != "" {
+		params.Q = pgtype.Text{String: f.Q, Valid: true}
+	}
+	if f.IsSystem != nil {
+		params.IsSystem = pgtype.Bool{Bool: *f.IsSystem, Valid: true}
 	}
 	rows, err := r.q.ListRolesFiltered(ctx, params)
 	if err != nil {
 		return nil, 0, err
 	}
-	total, err := r.q.CountRoles(ctx, params.Q)
+	total, err := r.q.CountRoles(ctx, db.CountRolesParams{Q: params.Q, IsSystem: params.IsSystem})
 	if err != nil {
 		return nil, 0, err
 	}
@@ -852,7 +857,7 @@ func mapUser(row db.User) model.User {
 		ID: row.ID, UUID: row.Uuid, Email: row.Email.String, Phone: row.PhoneE164.String, PasswordHash: row.PasswordHash,
 		Name: row.Name, Surname: row.Surname, Status: row.Status,
 		Locale: row.Locale.String, Timezone: row.Timezone.String,
-		EmailVerified: row.EmailVerifiedAt.Valid, CreatedAt: row.CreatedAt.Time,
+		EmailVerified: row.EmailVerifiedAt.Valid, CreatedAt: row.CreatedAt.Time, UpdatedAt: row.UpdatedAt.Time,
 	}
 }
 
@@ -869,8 +874,16 @@ func mapRole(row db.Role) model.RoleSummary {
 	}
 	return model.RoleSummary{
 		UUID: row.Uuid, Name: row.Name, Slug: row.Slug, Description: desc, IsSystem: row.IsSystem,
-		OrgType: orgType,
+		OrgType: orgType, CreatedAt: tsPtr(row.CreatedAt), UpdatedAt: tsPtr(row.UpdatedAt),
 	}
+}
+
+func tsPtr(t pgtype.Timestamptz) *time.Time {
+	if !t.Valid {
+		return nil
+	}
+	v := t.Time
+	return &v
 }
 
 func mapPasskey(row db.WebauthnCredential) model.PasskeyRecord {
@@ -1196,4 +1209,15 @@ func optText(s string) pgtype.Text {
 		return pgtype.Text{}
 	}
 	return pgtype.Text{String: s, Valid: true}
+}
+
+// tsRange maps an apiquery.TimeRange to the from/before query args.
+func tsRange(r apiquery.TimeRange) (from, before pgtype.Timestamptz) {
+	if r.From != nil {
+		from = pgtype.Timestamptz{Time: *r.From, Valid: true}
+	}
+	if r.Before != nil {
+		before = pgtype.Timestamptz{Time: *r.Before, Valid: true}
+	}
+	return from, before
 }

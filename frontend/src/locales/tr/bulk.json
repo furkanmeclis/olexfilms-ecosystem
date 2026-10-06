@@ -45,5 +45,13 @@
   "confirm.catalog_products.delete": "{{count}} ürün silinsin mi?",
   "confirm.catalog_services.deactivate": "{{count}} hizmet pasifleştirilsin mi?",
   "confirm.catalog_services.raise_price": "{{count}} hizmetin fiyatı güncellensin mi?",
-  "confirm.catalog_services.delete": "{{count}} hizmet silinsin mi?"
+  "confirm.catalog_services.delete": "{{count}} hizmet silinsin mi?",
+  "actions.organizations.activate": "Organizasyonları etkinleştir",
+  "actions.organizations.suspend": "Organizasyonları askıya al",
+  "actions.organizations.set_read_only": "Organizasyonları salt okunur yap",
+  "actions.organizations.extend_access": "Erişimi uzat",
+  "confirm.organizations.suspend": "{{count}} organizasyon askıya alınsın mı?",
+  "confirm.organizations.set_read_only": "{{count}} organizasyon salt okunur yapılsın mı?",
+  "confirm.organizations.extend_access": "{{count}} organizasyonun erişimi uzatılsın mı?",
+  "params.days": "Gün"
 }
