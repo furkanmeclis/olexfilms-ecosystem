@@ -24,8 +24,10 @@ test("customer: create → vehicle → search → anonymize", async ({ page }) =
   );
 
   await page.goto(`/t/${CUSTOMER_SLUG}/customers`);
-  await expect(page.getByTestId("customers-empty")).toBeVisible();
-  await page.getByTestId("new-customer").click();
+  // TEC-372: the list is a DataTable; its empty row carries the list title.
+  await expect(page.getByText("No customers", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("customer-row")).toHaveCount(0);
+  await page.getByRole("button", { name: "New customer" }).click();
   await expect(
     page.getByRole("heading", { name: "New customer" }),
   ).toBeVisible();
@@ -67,19 +69,23 @@ test("customer: create → vehicle → search → anonymize", async ({ page }) =
 
   // Search on the list.
   await page.goto(`/t/${CUSTOMER_SLUG}/customers`);
-  await page.locator("#customer-search").fill("ayşe");
+  await page.getByPlaceholder("Search table…").fill("ayşe");
   await expect(page.getByTestId("customer-row")).toHaveCount(1);
   await expect
     .poll(() => api.calls.some((c) => /\/v1\/customers\?.*q=/.test(c)))
     .toBe(true);
 
-  // List export (TEC-199): queued with the current filters, then downloaded.
+  // List export (TEC-199): queued with the current filters and sort
+  // (TEC-372), then downloaded.
   await page.getByTestId("customer-list-export").click();
   await page.locator("#list-export-format").selectOption("csv");
   await page.getByTestId("list-export-confirm").click();
   await expect
     .poll(() => api.bodies["POST /v1/customers/export"]?.[0])
-    .toEqual({ format: "csv", query: { q: "ayşe" } });
+    .toEqual({
+      format: "csv",
+      query: { q: "ayşe", sort: "-linked_at" },
+    });
   const download = page.waitForEvent("download");
   await page.getByTestId("list-export-download").click();
   expect((await download).suggestedFilename()).toBe("customers.csv");
