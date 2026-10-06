@@ -89,5 +89,6 @@
   "params.lead_status.quoted": "Quoted",
   "params.lead_status.won": "Won",
   "params.lead_status.lost": "Lost",
-  "params.lost_reason": "Loss reason"
+  "params.lost_reason": "Loss reason",
+  "actions.warehouse_count_lines.set_resolution": "Set resolution: {{resolution}}"
 }

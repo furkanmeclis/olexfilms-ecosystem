@@ -26,8 +26,8 @@ func TestServicesIndexFilter(t *testing.T) {
 		ok   bool
 	}{
 		{"brand", c, db.ListServicesInScopeParams{}, "brand_ids = 2", true},
-		{"subtree + status", c, db.ListServicesInScopeParams{OrgIds: []int64{5, 7}, Status: pgtype.Text{String: "completed", Valid: true}},
-			`brand_ids = 2 AND organization_ids IN [5, 7] AND status = "completed"`, true},
+		{"subtree + status", c, db.ListServicesInScopeParams{OrgIds: []int64{5, 7}, Statuses: []string{"completed", "ready"}},
+			`brand_ids = 2 AND organization_ids IN [5, 7] AND status IN ["completed", "ready"]`, true},
 		{"own", c, db.ListServicesInScopeParams{OrgIds: []int64{5}, CreatedByUserID: pgtype.Int8{Int64: 9, Valid: true}},
 			"brand_ids = 2 AND organization_ids IN [5] AND created_by_user_id = 9", true},
 		{"customer + vehicle", c, db.ListServicesInScopeParams{CustomerUserID: pgtype.Int8{Int64: 3, Valid: true}, VehicleID: pgtype.Int8{Int64: 4, Valid: true}},

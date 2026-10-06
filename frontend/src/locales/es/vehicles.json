@@ -100,5 +100,12 @@
   "transfer.status.completed": "Completada",
   "transfer.status.cancelled": "Cancelada",
   "transfer.status.expired": "Vencida",
-  "columns.created_at": "Creado"
+  "columns.created_at": "Creado",
+  "list.nav": "Vehículos",
+  "list.title": "Vehículos",
+  "list.description": "Vehículos de los clientes que atiende.",
+  "list.forbidden": "Necesita el permiso de lectura de vehículos para abrir esta página.",
+  "list.empty_title": "No hay vehículos",
+  "list.empty_description": "Aquí aparecen los vehículos registrados para sus clientes.",
+  "list.open_customer": "Abrir cliente"
 }

@@ -89,5 +89,6 @@
   "params.lead_status.quoted": "Devis envoyé",
   "params.lead_status.won": "Gagné",
   "params.lead_status.lost": "Perdu",
-  "params.lost_reason": "Motif de perte"
+  "params.lost_reason": "Motif de perte",
+  "actions.warehouse_count_lines.set_resolution": "Appliquer la résolution : {{resolution}}"
 }

@@ -133,5 +133,6 @@
   "actions.upgrade.role_owner": "Diler sahibi",
   "actions.upgrade.role_staff": "Diler işçisi",
   "actions.upgrade.confirm": "Yüksəlt",
-  "actions.upgrade.success": "Müştəri artıq {{dealer}} üzvüdür."
+  "actions.upgrade.success": "Müştəri artıq {{dealer}} üzvüdür.",
+  "fields.organization": "Təşkilat"
 }

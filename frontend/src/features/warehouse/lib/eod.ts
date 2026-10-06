@@ -1,5 +1,23 @@
 import type { EodReport } from "@/features/warehouse/services/warehouse.service";
 
+/** Movement groups of a report (TEC-207). */
+export const EOD_GROUPS = [
+  "entry",
+  "placement",
+  "transfer",
+  "order",
+  "consumption",
+  "return",
+  "adjustment",
+  "disposal",
+] as const;
+
+/** Scope filter of the report list (`scope`, TEC-207). */
+export const EOD_SCOPES = ["system", "warehouse"] as const;
+
+/** Report sources: the nightly cron (auto) or a manual run. */
+export const EOD_KINDS: EodReport["kind"][] = ["auto", "manual"];
+
 /** Today in the given IANA time zone as YYYY-MM-DD. */
 export function todayIn(timeZone: string, now: Date = new Date()): string {
   try {

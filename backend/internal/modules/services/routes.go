@@ -53,6 +53,7 @@ func RegisterRoutes(
 		middleware.RequireScope(q, rbac.PermServicesWrite))
 
 	mux.Handle("GET /v1/services", route(h.List))
+	mux.Handle("POST /v1/services/export", route(h.RequestListExport)) // TEC-377
 	mux.Handle("POST /v1/services", create)
 	mux.Handle("GET /v1/services/{uuid}", route(h.Get))
 	mux.Handle("GET /v1/services/{uuid}/profit", route(h.Profit))

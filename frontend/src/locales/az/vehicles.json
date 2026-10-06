@@ -100,5 +100,12 @@
   "transfer.status.completed": "Tamamlandı",
   "transfer.status.cancelled": "Ləğv edildi",
   "transfer.status.expired": "Müddəti bitdi",
-  "columns.created_at": "Yaradılma"
+  "columns.created_at": "Yaradılma",
+  "list.nav": "Nəqliyyat vasitələri",
+  "list.title": "Nəqliyyat vasitələri",
+  "list.description": "Xidmət etdiyiniz müştərilərin nəqliyyat vasitələri.",
+  "list.forbidden": "Bu səhifəni açmaq üçün nəqliyyat vasitələrini oxuma icazəsi lazımdır.",
+  "list.empty_title": "Nəqliyyat vasitəsi yoxdur",
+  "list.empty_description": "Müştəriləriniz üçün qeydə alınmış nəqliyyat vasitələri burada görünür.",
+  "list.open_customer": "Müştərini aç"
 }

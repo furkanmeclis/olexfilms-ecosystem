@@ -17626,12 +17626,32 @@ paths:
         (spaces / dashes ignored). days_left_min / days_left_max bound the end
         to (now + min days, now + max days]; with only days_left_max the
         lower bound is now ("ends within N days").
+        TEC-377 (docs/list-contract.md): `sort` is one of expiry (the
+        default: active warranties by the soonest end, then the rest by the
+        latest end; `-expiry` reverses it), end_at, start_at, created_at,
+        public_code, service_no, status (rank active, expired, void),
+        product (name), organization (name); id tiebreak. `status` and
+        `organization_uuid` are comma separated any-of filters; start_from /
+        start_to and end_from / end_to bound start_at and end_at.
+        An explicit sort, an organization filter or a date window makes `q`
+        search Postgres instead of the warranties index.
       security:
         - bearerAuth: []
       parameters:
+        - $ref: "#/components/parameters/Sort"
         - name: status
           in: query
-          schema: { $ref: "#/components/schemas/WarrantyStatus" }
+          description: >-
+            Comma separated warranty statuses (active, expired, void);
+            unknown value → 400.
+          schema: { type: string }
+        - name: organization_uuid
+          in: query
+          description: >-
+            Comma separated organization uuids (any of, TEC-377). It only
+            narrows the scoped set: an organization outside the scope gives
+            an empty list.
+          schema: { type: string }
         - name: q
           in: query
           schema: { type: string, maxLength: 100 }
@@ -17647,6 +17667,30 @@ paths:
         - name: days_left_max
           in: query
           schema: { type: integer, minimum: 0, maximum: 3650 }
+        - name: start_from
+          in: query
+          description: >-
+            Inclusive lower bound of start_at: RFC3339, or a YYYY-MM-DD day in
+            UTC (TEC-377).
+          schema: { type: string }
+        - name: start_to
+          in: query
+          description: >-
+            Upper bound of start_at: a YYYY-MM-DD day in UTC covers the whole
+            day, an RFC3339 value that instant. Must not be before start_from.
+          schema: { type: string }
+        - name: end_from
+          in: query
+          description: >-
+            Inclusive lower bound of end_at: RFC3339, or a YYYY-MM-DD day in
+            UTC (TEC-377).
+          schema: { type: string }
+        - name: end_to
+          in: query
+          description: >-
+            Upper bound of end_at: a YYYY-MM-DD day in UTC covers the whole
+            day, an RFC3339 value that instant. Must not be before end_from.
+          schema: { type: string }
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
@@ -17660,6 +17704,42 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeWarrantyPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/warranties/export:
+    post:
+      tags: [Warranties]
+      operationId: requestWarrantyListExport
+      summary: Queue a warranty list export (CSV, XLSX or PDF)
+      description: >-
+        TEC-377. warranties.read with the list's scope (services module):
+        the job (worker-docs, exports queue, resource `warranties.list`)
+        exports the warranties the list shows for `query` (every GET
+        /v1/warranties parameter except limit and offset, including `q` and
+        `sort`; a bad value is 400 at request time). The job stores the
+        resolved scope (and the service creator of an own / assigned scope)
+        and the worker re-authorizes it against the job organization; a
+        customer scope gets 403. Poll and download through
+        /v1/tenant/exports/{uuid}.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WarrantyListExportInput"
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -17736,13 +17816,31 @@ paths:
       description: >-
         TEC-191. Portal session (aud=portal) with warranties.read: only the
         warranties the signed-in customer / fleet user holds in the domain
-        brand. Same filters as GET /v1/warranties; rows carry no holder.
+        brand. Same filters and sort as GET /v1/warranties (TEC-377); rows
+        carry no holder.
       security:
         - bearerAuth: []
       parameters:
+        - $ref: "#/components/parameters/Sort"
         - name: status
           in: query
-          schema: { $ref: "#/components/schemas/WarrantyStatus" }
+          description: >-
+            Comma separated warranty statuses (active, expired, void);
+            unknown value → 400.
+          schema: { type: string }
+        - name: organization_uuid
+          in: query
+          description: >-
+            Comma separated organization uuids (any of, TEC-377). It only
+            narrows the scoped set: an organization outside the scope gives
+            an empty list.
+          schema: { type: string }
+        - name: product_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - name: vehicle_uuid
+          in: query
+          schema: { type: string, format: uuid }
         - name: q
           in: query
           schema: { type: string, maxLength: 100 }
@@ -17752,6 +17850,30 @@ paths:
         - name: days_left_max
           in: query
           schema: { type: integer, minimum: 0, maximum: 3650 }
+        - name: start_from
+          in: query
+          description: >-
+            Inclusive lower bound of start_at: RFC3339, or a YYYY-MM-DD day in
+            UTC (TEC-377).
+          schema: { type: string }
+        - name: start_to
+          in: query
+          description: >-
+            Upper bound of start_at: a YYYY-MM-DD day in UTC covers the whole
+            day, an RFC3339 value that instant. Must not be before start_from.
+          schema: { type: string }
+        - name: end_from
+          in: query
+          description: >-
+            Inclusive lower bound of end_at: RFC3339, or a YYYY-MM-DD day in
+            UTC (TEC-377).
+          schema: { type: string }
+        - name: end_to
+          in: query
+          description: >-
+            Upper bound of end_at: a YYYY-MM-DD day in UTC covers the whole
+            day, an RFC3339 value that instant. Must not be before end_from.
+          schema: { type: string }
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
@@ -17800,12 +17922,36 @@ paths:
       tags: [Warranties]
       operationId: listWarrantyClaims
       summary: Warranty claims inside warranty_claims.read scope
+      description: >-
+        TEC-377 (docs/list-contract.md): `sort` is one of created_at
+        (default `-created_at`), updated_at, claim_no, status (flow rank
+        open → closed), decided_at (undecided last both ways); id tiebreak.
+        `status` and `organization_uuid` are comma separated any-of filters.
+        `q` matches the description and the service number (LIKE wildcards
+        escaped) or the claim number exactly. limit defaults to 20; a value
+        above 100 falls back to the default.
       security:
         - bearerAuth: []
       parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
         - name: status
           in: query
-          schema: { $ref: "#/components/schemas/WarrantyClaimStatus" }
+          description: >-
+            Comma separated claim statuses (open, dealer_review,
+            center_review, approved, rejected, reapplied, closed); unknown
+            value → 400.
+          schema: { type: string }
+        - name: organization_uuid
+          in: query
+          description: >-
+            Comma separated organization uuids (any of, TEC-377). It only
+            narrows the scoped set: an organization outside the scope gives
+            an empty list.
+          schema: { type: string }
+        - name: service_uuid
+          in: query
+          schema: { type: string, format: uuid }
         - name: warranty_uuid
           in: query
           schema: { type: string, format: uuid }
@@ -17814,13 +17960,19 @@ paths:
           schema: { type: string, format: uuid }
         - name: created_from
           in: query
-          schema: { type: string, format: date-time }
+          description: >-
+            Inclusive lower bound of created_at: RFC3339, or a YYYY-MM-DD day in
+            UTC (TEC-377).
+          schema: { type: string }
         - name: created_to
           in: query
-          schema: { type: string, format: date-time }
+          description: >-
+            Upper bound of created_at: a YYYY-MM-DD day in UTC covers the whole
+            day, an RFC3339 value that instant. Must not be before created_from.
+          schema: { type: string }
         - name: limit
           in: query
-          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
         - name: offset
           in: query
           schema: { type: integer, minimum: 0, default: 0 }
@@ -18144,16 +18296,35 @@ paths:
         Dealer: its own organization (own scope: services it created),
         distributor: its subtree, center: the domain brand (K20). q matches
         the service number, plate, VIN and the customer's name or phone.
-        List rows carry no items, images or status logs.
+        List rows carry no items, images or status logs. TEC-377
+        (docs/list-contract.md): `sort` is one of service_no, status (flow
+        rank draft → cancelled), created_at, updated_at, completed_at,
+        plate (empty values last both ways), organization (name); default
+        `-created_at`, id tiebreak. `status` and `organization_uuid` are
+        comma separated any-of filters; completed_from / completed_to bound
+        completed_at. When Meilisearch is up `q` is answered by the services
+        index unless an explicit sort, a date window or an organization
+        filter is given (then Postgres).
       security:
         - bearerAuth: []
       parameters:
         - name: q
           in: query
           schema: { type: string, maxLength: 100 }
+        - $ref: "#/components/parameters/Sort"
         - name: status
           in: query
-          schema: { $ref: "#/components/schemas/ServiceStatus" }
+          description: >-
+            Comma separated service statuses (draft, pending, processing,
+            ready, completed, cancelled); unknown value → 400.
+          schema: { type: string }
+        - name: organization_uuid
+          in: query
+          description: >-
+            Comma separated organization uuids (any of, TEC-377). It only
+            narrows the scoped set: an organization outside the scope gives
+            an empty list.
+          schema: { type: string }
         - name: customer_uuid
           in: query
           schema: { type: string, format: uuid }
@@ -18171,6 +18342,18 @@ paths:
           description: >-
             Exclusive upper bound of created_at: RFC3339, or a YYYY-MM-DD day
             in UTC that covers the whole day. Must be after created_from.
+          schema: { type: string }
+        - name: completed_from
+          in: query
+          description: >-
+            Inclusive lower bound of completed_at: RFC3339, or a YYYY-MM-DD day in
+            UTC (TEC-377).
+          schema: { type: string }
+        - name: completed_to
+          in: query
+          description: >-
+            Upper bound of completed_at: a YYYY-MM-DD day in UTC covers the whole
+            day, an RFC3339 value that instant. Must not be before completed_from.
           schema: { type: string }
         - name: limit
           in: query
@@ -18226,6 +18409,41 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /v1/services/export:
+    post:
+      tags: [Services]
+      operationId: requestServiceListExport
+      summary: Queue a service list export (CSV, XLSX or PDF)
+      description: >-
+        TEC-377. services.read with the list's scope: the job (worker-docs,
+        exports queue, resource `services.list`) exports the services the
+        list shows for `query` (every GET /v1/services parameter except
+        limit and offset, including `q` and `sort`; a bad value is 400 at
+        request time). The job stores the resolved scope (and the creator of
+        an own / assigned scope) and the worker re-authorizes it against the
+        job organization; a customer scope gets 403. Income and profit are
+        not exported. Poll and download through /v1/tenant/exports/{uuid}.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceListExportInput"
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /v1/services/{uuid}:
     parameters:
       - $ref: "#/components/parameters/ResourceUUID"
@@ -20782,10 +21000,41 @@ paths:
         list, newest first. A service is the user's when the user is its
         customer or holds one of its warranties (TEC-239 rule: a new owner
         with a transferred warranty sees it). Draft services and Glorian
-        rows are not listed. No measurement data.
+        rows are not listed. No measurement data. TEC-377
+        (docs/list-contract.md): `sort` is one of created_at (default
+        `-created_at`), completed_at (open services last both ways),
+        service_no, status (flow rank), organization (name); `status`
+        (pending, processing, ready, completed, cancelled; draft → 400) and
+        `organization_uuid` are comma separated any-of filters; `q` matches
+        the service number and the plate.
       security:
         - bearerAuth: []
       parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: status
+          in: query
+          description: Comma separated service statuses (any of).
+          schema: { type: string }
+        - name: organization_uuid
+          in: query
+          description: >-
+            Comma separated organization uuids (any of, TEC-377). It only
+            narrows the scoped set: an organization outside the scope gives
+            an empty list.
+          schema: { type: string }
+        - name: created_from
+          in: query
+          description: >-
+            Inclusive lower bound of created_at: RFC3339, or a YYYY-MM-DD day in
+            UTC (TEC-377).
+          schema: { type: string }
+        - name: created_to
+          in: query
+          description: >-
+            Upper bound of created_at: a YYYY-MM-DD day in UTC covers the whole
+            day, an RFC3339 value that instant. Must not be before created_from.
+          schema: { type: string }
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
@@ -20799,6 +21048,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopePortalServicePage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "403":
@@ -24743,6 +24994,36 @@ components:
             List parameters of GET /v1/orders as strings (side, status, q,
             sort, created_from, created_to, seller_org_uuid, buyer_org_uuid,
             total_min, total_max).
+          additionalProperties: { type: string }
+        locale:
+          type: string
+          description: Document language (defaults to the request locale).
+    ServiceListExportInput:
+      type: object
+      required: [format]
+      properties:
+        format:
+          type: string
+          enum: [csv, xlsx, pdf]
+        query:
+          type: object
+          description: >-
+            List parameters of GET /v1/services as strings (q, sort, status, organization_uuid, customer_uuid, vehicle_uuid, created_from, created_to, completed_from, completed_to).
+          additionalProperties: { type: string }
+        locale:
+          type: string
+          description: Document language (defaults to the request locale).
+    WarrantyListExportInput:
+      type: object
+      required: [format]
+      properties:
+        format:
+          type: string
+          enum: [csv, xlsx, pdf]
+        query:
+          type: object
+          description: >-
+            List parameters of GET /v1/warranties as strings (q, sort, status, organization_uuid, product_uuid, vehicle_uuid, days_left_min, days_left_max, start_from, start_to, end_from, end_to).
           additionalProperties: { type: string }
         locale:
           type: string

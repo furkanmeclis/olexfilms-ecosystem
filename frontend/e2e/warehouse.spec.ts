@@ -88,8 +88,9 @@ test("warehouse: location → stock entry → transfer", async ({ page }) => {
   await expect(page.getByTestId("scan-result")).toContainText("WH1-R1-A-S1-01");
 
   // --- Stock entry ---
+  // TEC-376: the lists are DataTables (empty state, rows by test id).
   await page.goto(`${base}/entries`);
-  await expect(page.getByTestId("entries-empty")).toBeVisible();
+  await expect(page.getByText("No stock entries")).toBeVisible();
   await page.getByTestId("entry-new").click();
   await page
     .getByTestId("entry-warehouse")
@@ -113,9 +114,14 @@ test("warehouse: location → stock entry → transfer", async ({ page }) => {
 
   await page.getByTestId("entry-barcode-input").fill("OFW:UNIT:OLEX-00000001");
   await page.getByTestId("entry-barcode-input").press("Enter");
-  const line = page.getByTestId("entry-line");
-  await expect(line).toHaveCount(1);
-  await expect(line).toHaveAttribute("data-barcode", "OLEX-00000001");
+  await expect(page.getByTestId("entry-line")).toHaveCount(1);
+  await expect(page.getByTestId("entry-line")).toHaveAttribute(
+    "data-barcode",
+    "OLEX-00000001",
+  );
+  const line = page
+    .getByRole("row")
+    .filter({ has: page.getByTestId("entry-line") });
   await expect(line.getByTestId("entry-line-location")).toContainText(
     "Not placed",
   );
@@ -163,7 +169,7 @@ test("warehouse: location → stock entry → transfer", async ({ page }) => {
 
   // --- Warehouse transfer WH1 → WH2 ---
   await page.goto(`${base}/transfers`);
-  await expect(page.getByTestId("transfers-empty")).toBeVisible();
+  await expect(page.getByText("No transfers")).toBeVisible();
   await page.getByTestId("transfer-new").click();
   const tform = page.getByTestId("transfer-form");
   // Same warehouse on both sides is refused before any request.
@@ -184,8 +190,10 @@ test("warehouse: location → stock entry → transfer", async ({ page }) => {
     .getByTestId("transfer-barcode-input")
     .fill("OFW:UNIT:OLEX-00000001");
   await page.getByTestId("transfer-barcode-input").press("Enter");
-  const tline = page.getByTestId("transfer-line");
-  await expect(tline).toHaveCount(1);
+  await expect(page.getByTestId("transfer-line")).toHaveCount(1);
+  const tline = page
+    .getByRole("row")
+    .filter({ has: page.getByTestId("transfer-line") });
   await expect(tline).toContainText("WH1-R1-A-S1-01");
 
   await page.getByTestId("transfer-ship").click();

@@ -27,13 +27,25 @@ export type ListExportQuery = NonNullable<
   Schemas["CustomerListExportInput"]["query"]
 >;
 
-/** GET /v1/customers filters (TEC-163). */
+/**
+ * GET /v1/customers params (TEC-163, TEC-371): `status` / `type` /
+ * `organization_uuid` are CSV, `linked_from` / `linked_to` dates, `sort`
+ * one of name, email, status, linked_at, first_service_at (`-` desc).
+ */
 export type CustomerListQuery = {
   q?: string;
-  status?: CustomerStatus;
+  status?: string;
+  type?: string;
+  linked_from?: string;
+  linked_to?: string;
+  organization_uuid?: string;
+  sort?: string;
   limit: number;
   offset: number;
 };
+
+/** An organization of the caller's scope (list filter option). */
+export type ScopeOrganization = { uuid: string; name: string; type: string };
 
 export type Page<T> = {
   items: T[];
@@ -107,14 +119,15 @@ export const customersService = {
     );
   },
   /**
-   * Customer list export (TEC-164/TEC-199): queues a CSV / XLSX / PDF job
-   * with the list filters (q, status); paging is not part of the export.
+   * Customer list export (TEC-164/TEC-199, TEC-372): queues a CSV / XLSX /
+   * PDF job with every list filter and the sort; paging is not part of the
+   * export, empty values are dropped.
    */
   requestListExport(format: ListExportFormat, query: ListExportQuery) {
-    const filters: ListExportQuery = {
-      ...(query.q ? { q: query.q } : {}),
-      ...(query.status ? { status: query.status } : {}),
-    };
+    const filters: ListExportQuery = {};
+    for (const [key, value] of Object.entries(query)) {
+      if (value) filters[key as keyof ListExportQuery] = value;
+    }
     return platformRequest<ExportJob>("POST", "/v1/customers/export", {
       body: { format, query: filters },
     });
@@ -143,6 +156,19 @@ export const customersService = {
     });
     return (data.items ?? []).map((o) => ({ uuid: o.uuid, name: o.name }));
   },
+  /** Organizations in the organizations.read scope (list filter options). */
+  async listOrganizations(): Promise<ScopeOrganization[]> {
+    const data = await platformRequest<{ items: ScopeOrganization[] }>(
+      "GET",
+      "/v1/tenant/organizations",
+      { query: { limit: 200 } },
+    );
+    return (data.items ?? []).map((o) => ({
+      uuid: o.uuid,
+      name: o.name,
+      type: o.type,
+    }));
+  },
   listVehicles(customerUuid: string) {
     return platformRequest<Page<Vehicle>>("GET", "/v1/vehicles", {
       query: { customer_uuid: customerUuid, limit: 100, offset: 0 },
@@ -164,5 +190,6 @@ export const customerKeys = {
   detail: (uuid: string) => ["customers", "detail", uuid] as const,
   vehicles: (uuid: string) => ["customers", "vehicles", uuid] as const,
   dealers: ["customers", "dealers"] as const,
+  organizations: ["customers", "organizations"] as const,
   listExport: (uuid: string) => ["customers", "list-export", uuid] as const,
 };

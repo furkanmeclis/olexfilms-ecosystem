@@ -133,5 +133,6 @@
   "actions.upgrade.role_owner": "Ιδιοκτήτης αντιπροσώπου",
   "actions.upgrade.role_staff": "Προσωπικό αντιπροσώπου",
   "actions.upgrade.confirm": "Αναβάθμιση",
-  "actions.upgrade.success": "Ο πελάτης είναι πλέον μέλος του {{dealer}}."
+  "actions.upgrade.success": "Ο πελάτης είναι πλέον μέλος του {{dealer}}.",
+  "fields.organization": "Οργανισμός"
 }

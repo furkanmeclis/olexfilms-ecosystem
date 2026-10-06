@@ -9068,11 +9068,31 @@ export interface paths {
         };
         /**
          * Warranties inside the warranties.read scope
-         * @description TEC-191. Center: the domain brand (K20), distributor: its subtree, dealer: its organization (own / assigned scope: services the caller created). Needs the services module. Active warranties come first by the soonest end, then the rest by the latest end. q matches the warranty public code, service number, product name and the plate (spaces / dashes ignored). days_left_min / days_left_max bound the end to (now + min days, now + max days]; with only days_left_max the lower bound is now ("ends within N days").
+         * @description TEC-191. Center: the domain brand (K20), distributor: its subtree, dealer: its organization (own / assigned scope: services the caller created). Needs the services module. Active warranties come first by the soonest end, then the rest by the latest end. q matches the warranty public code, service number, product name and the plate (spaces / dashes ignored). days_left_min / days_left_max bound the end to (now + min days, now + max days]; with only days_left_max the lower bound is now ("ends within N days"). TEC-377 (docs/list-contract.md): `sort` is one of expiry (the default: active warranties by the soonest end, then the rest by the latest end; `-expiry` reverses it), end_at, start_at, created_at, public_code, service_no, status (rank active, expired, void), product (name), organization (name); id tiebreak. `status` and `organization_uuid` are comma separated any-of filters; start_from / start_to and end_from / end_to bound start_at and end_at. An explicit sort, an organization filter or a date window makes `q` search Postgres instead of the warranties index.
          */
         get: operations["listWarranties"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warranties/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a warranty list export (CSV, XLSX or PDF)
+         * @description TEC-377. warranties.read with the list's scope (services module): the job (worker-docs, exports queue, resource `warranties.list`) exports the warranties the list shows for `query` (every GET /v1/warranties parameter except limit and offset, including `q` and `sort`; a bad value is 400 at request time). The job stores the resolved scope (and the service creator of an own / assigned scope) and the worker re-authorizes it against the job organization; a customer scope gets 403. Poll and download through /v1/tenant/exports/{uuid}.
+         */
+        post: operations["requestWarrantyListExport"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9128,7 +9148,7 @@ export interface paths {
         };
         /**
          * The portal user's warranties
-         * @description TEC-191. Portal session (aud=portal) with warranties.read: only the warranties the signed-in customer / fleet user holds in the domain brand. Same filters as GET /v1/warranties; rows carry no holder.
+         * @description TEC-191. Portal session (aud=portal) with warranties.read: only the warranties the signed-in customer / fleet user holds in the domain brand. Same filters and sort as GET /v1/warranties (TEC-377); rows carry no holder.
          */
         get: operations["listPortalWarranties"];
         put?: never;
@@ -9166,7 +9186,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Warranty claims inside warranty_claims.read scope */
+        /**
+         * Warranty claims inside warranty_claims.read scope
+         * @description TEC-377 (docs/list-contract.md): `sort` is one of created_at (default `-created_at`), updated_at, claim_no, status (flow rank open → closed), decided_at (undecided last both ways); id tiebreak. `status` and `organization_uuid` are comma separated any-of filters. `q` matches the description and the service number (LIKE wildcards escaped) or the claim number exactly. limit defaults to 20; a value above 100 falls back to the default.
+         */
         get: operations["listWarrantyClaims"];
         put?: never;
         /**
@@ -9394,7 +9417,7 @@ export interface paths {
         };
         /**
          * Services inside the services.read scope
-         * @description Dealer: its own organization (own scope: services it created), distributor: its subtree, center: the domain brand (K20). q matches the service number, plate, VIN and the customer's name or phone. List rows carry no items, images or status logs.
+         * @description Dealer: its own organization (own scope: services it created), distributor: its subtree, center: the domain brand (K20). q matches the service number, plate, VIN and the customer's name or phone. List rows carry no items, images or status logs. TEC-377 (docs/list-contract.md): `sort` is one of service_no, status (flow rank draft → cancelled), created_at, updated_at, completed_at, plate (empty values last both ways), organization (name); default `-created_at`, id tiebreak. `status` and `organization_uuid` are comma separated any-of filters; completed_from / completed_to bound completed_at. When Meilisearch is up `q` is answered by the services index unless an explicit sort, a date window or an organization filter is given (then Postgres).
          */
         get: operations["listServices"];
         put?: never;
@@ -9403,6 +9426,26 @@ export interface paths {
          * @description Needs services.write. The customer must be linked to an organization of the services.write scope and the vehicle must belong to the customer (domain brand) and carry a car brand and model; plate, VIN, car brand/model and year are copied into the service (TEC-97 decision 3). The brand is the organization's brand (decision 2) and the number is DS + 8 alphanumerics. has_measurement needs the vehicle VIN. A read-only organization (K23: no contract yet) gets 403 ORGANIZATION_READ_ONLY on every write.
          */
         post: operations["createService"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/services/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a service list export (CSV, XLSX or PDF)
+         * @description TEC-377. services.read with the list's scope: the job (worker-docs, exports queue, resource `services.list`) exports the services the list shows for `query` (every GET /v1/services parameter except limit and offset, including `q` and `sort`; a bad value is 400 at request time). The job stores the resolved scope (and the creator of an own / assigned scope) and the worker re-authorizes it against the job organization; a customer scope gets 403. Income and profit are not exported. Poll and download through /v1/tenant/exports/{uuid}.
+         */
+        post: operations["requestServiceListExport"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10678,7 +10721,7 @@ export interface paths {
         };
         /**
          * The portal user's services across every organization (TEC-238)
-         * @description Portal session (aud=portal) with services.read: the signed-in user's services at every dealer / distributor of the domain brand in one list, newest first. A service is the user's when the user is its customer or holds one of its warranties (TEC-239 rule: a new owner with a transferred warranty sees it). Draft services and Glorian rows are not listed. No measurement data.
+         * @description Portal session (aud=portal) with services.read: the signed-in user's services at every dealer / distributor of the domain brand in one list, newest first. A service is the user's when the user is its customer or holds one of its warranties (TEC-239 rule: a new owner with a transferred warranty sees it). Draft services and Glorian rows are not listed. No measurement data. TEC-377 (docs/list-contract.md): `sort` is one of created_at (default `-created_at`), completed_at (open services last both ways), service_no, status (flow rank), organization (name); `status` (pending, processing, ready, completed, cancelled; draft → 400) and `organization_uuid` are comma separated any-of filters; `q` matches the service number and the plate.
          */
         get: operations["listPortalServices"];
         put?: never;
@@ -13131,6 +13174,26 @@ export interface components {
             /** @enum {string} */
             format: "csv" | "xlsx" | "pdf";
             /** @description List parameters of GET /v1/orders as strings (side, status, q, sort, created_from, created_to, seller_org_uuid, buyer_org_uuid, total_min, total_max). */
+            query?: {
+                [key: string]: string;
+            };
+            /** @description Document language (defaults to the request locale). */
+            locale?: string;
+        };
+        ServiceListExportInput: {
+            /** @enum {string} */
+            format: "csv" | "xlsx" | "pdf";
+            /** @description List parameters of GET /v1/services as strings (q, sort, status, organization_uuid, customer_uuid, vehicle_uuid, created_from, created_to, completed_from, completed_to). */
+            query?: {
+                [key: string]: string;
+            };
+            /** @description Document language (defaults to the request locale). */
+            locale?: string;
+        };
+        WarrantyListExportInput: {
+            /** @enum {string} */
+            format: "csv" | "xlsx" | "pdf";
+            /** @description List parameters of GET /v1/warranties as strings (q, sort, status, organization_uuid, product_uuid, vehicle_uuid, days_left_min, days_left_max, start_from, start_to, end_from, end_to). */
             query?: {
                 [key: string]: string;
             };
@@ -36437,12 +36500,25 @@ export interface operations {
     listWarranties: {
         parameters: {
             query?: {
-                status?: components["schemas"]["WarrantyStatus"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Comma separated warranty statuses (active, expired, void); unknown value → 400. */
+                status?: string;
+                /** @description Comma separated organization uuids (any of, TEC-377). It only narrows the scoped set: an organization outside the scope gives an empty list. */
+                organization_uuid?: string;
                 q?: string;
                 product_uuid?: string;
                 vehicle_uuid?: string;
                 days_left_min?: number;
                 days_left_max?: number;
+                /** @description Inclusive lower bound of start_at: RFC3339, or a YYYY-MM-DD day in UTC (TEC-377). */
+                start_from?: string;
+                /** @description Upper bound of start_at: a YYYY-MM-DD day in UTC covers the whole day, an RFC3339 value that instant. Must not be before start_from. */
+                start_to?: string;
+                /** @description Inclusive lower bound of end_at: RFC3339, or a YYYY-MM-DD day in UTC (TEC-377). */
+                end_from?: string;
+                /** @description Upper bound of end_at: a YYYY-MM-DD day in UTC covers the whole day, an RFC3339 value that instant. Must not be before end_from. */
+                end_to?: string;
                 limit?: number;
                 offset?: number;
             };
@@ -36459,6 +36535,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeWarrantyPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    requestWarrantyListExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarrantyListExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
                 };
             };
             400: components["responses"]["BadRequest"];
@@ -36527,10 +36630,25 @@ export interface operations {
     listPortalWarranties: {
         parameters: {
             query?: {
-                status?: components["schemas"]["WarrantyStatus"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Comma separated warranty statuses (active, expired, void); unknown value → 400. */
+                status?: string;
+                /** @description Comma separated organization uuids (any of, TEC-377). It only narrows the scoped set: an organization outside the scope gives an empty list. */
+                organization_uuid?: string;
+                product_uuid?: string;
+                vehicle_uuid?: string;
                 q?: string;
                 days_left_min?: number;
                 days_left_max?: number;
+                /** @description Inclusive lower bound of start_at: RFC3339, or a YYYY-MM-DD day in UTC (TEC-377). */
+                start_from?: string;
+                /** @description Upper bound of start_at: a YYYY-MM-DD day in UTC covers the whole day, an RFC3339 value that instant. Must not be before start_from. */
+                start_to?: string;
+                /** @description Inclusive lower bound of end_at: RFC3339, or a YYYY-MM-DD day in UTC (TEC-377). */
+                end_from?: string;
+                /** @description Upper bound of end_at: a YYYY-MM-DD day in UTC covers the whole day, an RFC3339 value that instant. Must not be before end_from. */
+                end_to?: string;
                 limit?: number;
                 offset?: number;
             };
@@ -36583,10 +36701,19 @@ export interface operations {
     listWarrantyClaims: {
         parameters: {
             query?: {
-                status?: components["schemas"]["WarrantyClaimStatus"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Comma separated claim statuses (open, dealer_review, center_review, approved, rejected, reapplied, closed); unknown value → 400. */
+                status?: string;
+                /** @description Comma separated organization uuids (any of, TEC-377). It only narrows the scoped set: an organization outside the scope gives an empty list. */
+                organization_uuid?: string;
+                service_uuid?: string;
                 warranty_uuid?: string;
                 vehicle_uuid?: string;
+                /** @description Inclusive lower bound of created_at: RFC3339, or a YYYY-MM-DD day in UTC (TEC-377). */
                 created_from?: string;
+                /** @description Upper bound of created_at: a YYYY-MM-DD day in UTC covers the whole day, an RFC3339 value that instant. Must not be before created_from. */
                 created_to?: string;
                 limit?: number;
                 offset?: number;
@@ -36951,13 +37078,22 @@ export interface operations {
         parameters: {
             query?: {
                 q?: string;
-                status?: components["schemas"]["ServiceStatus"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Comma separated service statuses (draft, pending, processing, ready, completed, cancelled); unknown value → 400. */
+                status?: string;
+                /** @description Comma separated organization uuids (any of, TEC-377). It only narrows the scoped set: an organization outside the scope gives an empty list. */
+                organization_uuid?: string;
                 customer_uuid?: string;
                 vehicle_uuid?: string;
                 /** @description Inclusive lower bound of created_at (TEC-183): RFC3339, or a YYYY-MM-DD day in UTC. */
                 created_from?: string;
                 /** @description Exclusive upper bound of created_at: RFC3339, or a YYYY-MM-DD day in UTC that covers the whole day. Must be after created_from. */
                 created_to?: string;
+                /** @description Inclusive lower bound of completed_at: RFC3339, or a YYYY-MM-DD day in UTC (TEC-377). */
+                completed_from?: string;
+                /** @description Upper bound of completed_at: a YYYY-MM-DD day in UTC covers the whole day, an RFC3339 value that instant. Must not be before completed_from. */
+                completed_to?: string;
                 limit?: number;
                 offset?: number;
             };
@@ -37001,6 +37137,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeService"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    requestServiceListExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceListExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
                 };
             };
             400: components["responses"]["BadRequest"];
@@ -39322,6 +39485,17 @@ export interface operations {
     listPortalServices: {
         parameters: {
             query?: {
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Comma separated service statuses (any of). */
+                status?: string;
+                /** @description Comma separated organization uuids (any of, TEC-377). It only narrows the scoped set: an organization outside the scope gives an empty list. */
+                organization_uuid?: string;
+                /** @description Inclusive lower bound of created_at: RFC3339, or a YYYY-MM-DD day in UTC (TEC-377). */
+                created_from?: string;
+                /** @description Upper bound of created_at: a YYYY-MM-DD day in UTC covers the whole day, an RFC3339 value that instant. Must not be before created_from. */
+                created_to?: string;
                 limit?: number;
                 offset?: number;
             };
@@ -39340,6 +39514,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopePortalServicePage"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
         };

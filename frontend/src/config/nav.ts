@@ -497,6 +497,16 @@ export function tenantNav(slug: string) {
             ],
             feature: "customers",
           },
+          {
+            // TEC-372: tenant vehicle list (GET /v1/vehicles: vehicles.read
+            // and the customers module, like the vehicle detail).
+            id: "vehicles-list",
+            titleKey: "vehicles.list.nav",
+            href: routes.tenant.vehicles.list(slug),
+            icon: Car,
+            permission: permissions.vehicles.read,
+            feature: "customers",
+          },
         ],
       },
       {

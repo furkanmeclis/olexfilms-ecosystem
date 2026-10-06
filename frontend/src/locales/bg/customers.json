@@ -133,5 +133,6 @@
   "actions.upgrade.role_owner": "Собственик на дилър",
   "actions.upgrade.role_staff": "Служител на дилър",
   "actions.upgrade.confirm": "Повишаване",
-  "actions.upgrade.success": "Клиентът вече е член на {{dealer}}."
+  "actions.upgrade.success": "Клиентът вече е член на {{dealer}}.",
+  "fields.organization": "Организация"
 }

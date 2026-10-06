@@ -70,7 +70,14 @@ func caller(r *http.Request) svcuc.Caller {
 
 func writeError(w http.ResponseWriter, r *http.Request, err error) {
 	var ve *svcuc.ValidationError
+	var qe *apiquery.ValidationError
 	switch {
+	case errors.As(err, &qe):
+		details := make([]response.Detail, 0, len(qe.Details))
+		for _, d := range qe.Details {
+			details = append(details, response.Detail{Field: d.Field, Message: d.Message, Code: d.Code})
+		}
+		response.ValidationError(w, r, details)
 	case errors.As(err, &ve):
 		response.ValidationError(w, r, []response.Detail{{Field: ve.Field, Message: ve.Message}})
 	case errors.Is(err, svcuc.ErrNotFound):
@@ -126,30 +133,20 @@ func decode(w http.ResponseWriter, r *http.Request, dst any) bool {
 	return true
 }
 
-// List (GET /v1/services?q&status&customer_uuid&vehicle_uuid&created_from&created_to&limit&offset).
+// List (GET /v1/services?q&status&organization_uuid&customer_uuid&vehicle_uuid&created_from&created_to&completed_from&completed_to&sort&limit&offset).
+// TEC-377: docs/list-contract.md (svcuc.ListSort, CSV status / organization_uuid).
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	q := apiquery.Parse(r.URL.Query())
-	v := r.URL.Query()
-	from, err := ParseCreatedBound(v.Get("created_from"), false)
-	if err != nil {
-		writeError(w, r, &svcuc.ValidationError{Field: "created_from", Message: "invalid date"})
-		return
-	}
-	to, err := ParseCreatedBound(v.Get("created_to"), true)
-	if err != nil {
-		writeError(w, r, &svcuc.ValidationError{Field: "created_to", Message: "invalid date"})
-		return
-	}
-	items, total, err := h.svc.List(r.Context(), caller(r), svcuc.ListFilter{
-		Q: v.Get("q"), Status: v.Get("status"), CustomerUUID: v.Get("customer_uuid"),
-		VehicleUUID: v.Get("vehicle_uuid"), CreatedFrom: from, CreatedTo: to,
-		Limit: q.Limit, Offset: q.Offset,
-	})
+	f, err := svcuc.ParseListFilter(r.URL.Query())
 	if err != nil {
 		writeError(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
+	items, total, err := h.svc.List(r.Context(), caller(r), f)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, f.Limit, f.Offset))
 }
 
 // Get (GET /v1/services/{uuid}).

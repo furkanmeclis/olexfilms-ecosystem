@@ -1,310 +1,485 @@
 "use client";
 
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Flame, Plus } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ColumnDef } from "@tanstack/react-table";
+import { Eye, ListChecks, UserPlus } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
-import { PageHeader } from "@/components/layout/page-header";
+import {
+  EntityCreateButton,
+  EntityPage,
+  EntityRowActions,
+  EntityTable,
+  EntityToolbar,
+  useServerListState,
+  type EntityRowAction,
+} from "@/components/entity";
+import { createColumn, createSelectColumnDef } from "@/components/tables";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
-import { leadInputClass } from "@/features/leads/components/lead-fields";
+import {
+  BulkActionMenu,
+  SelectionBanner,
+  useBulkSelection,
+  type BulkActionDef,
+} from "@/features/bulk-engine";
+import { ExportMenu } from "@/features/io/components/export-menu";
 import {
   LEAD_PAGE_SIZE,
+  LEAD_SOURCES,
   LEAD_STATUSES,
   LEAD_TARGET_TYPES,
+  LEAD_TEMPERATURES,
   leadName,
   leadStatusTone,
   leadTemperatureTone,
-  listQuery,
-  pageCount,
-  type LeadListFilters,
 } from "@/features/leads/lib/leads";
 import {
   leadKeys,
   leadsService,
+  type Lead,
+  type LeadListQuery,
 } from "@/features/leads/services/leads.service";
-import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 
-const ALL = "";
+export const LEADS_PERSIST_KEY = "tenant-leads-v1";
+/** Lead list export (TEC-371, ioengine resource `leads.list`). */
+export const LEADS_EXPORT_PATH = "/v1/leads/export";
+/** `assignee_user_id` filter value for unassigned leads (TEC-371). */
+export const LEAD_ASSIGNEE_NONE = "none";
 
+type FollowUp = "" | "overdue" | "today";
+const FOLLOW_UPS: FollowUp[] = ["", "overdue", "today"];
+
+/**
+ * `POST /v1/leads/bulk` (TEC-371): assign (internal user id) and
+ * set_status (pipeline rules per item; lost needs a reason). Both are
+ * undoable; ids or "select all matching" with the list filters.
+ */
+export const LEAD_BULK_ACTIONS: BulkActionDef[] = [
+  {
+    id: "assign",
+    label_key: "bulk.actions.leads.assign",
+    permission: permissions.leads.write,
+    reversible: true,
+    params: [
+      {
+        key: "assignee_user_id",
+        kind: "number",
+        required: true,
+        label_key: "bulk.params.assignee",
+      },
+    ],
+    icon: UserPlus,
+  },
+  {
+    id: "set_status",
+    label_key: "bulk.actions.leads.set_status",
+    permission: permissions.leads.write,
+    reversible: true,
+    confirm_key: "bulk.confirm.leads.set_status",
+    params: [
+      {
+        key: "status",
+        kind: "enum",
+        required: true,
+        label_key: "bulk.params.lead_status",
+        options: LEAD_STATUSES,
+      },
+      {
+        key: "lost_reason",
+        kind: "text",
+        label_key: "bulk.params.lost_reason",
+      },
+    ],
+    icon: ListChecks,
+  },
+];
+
+function enumOptions(values: readonly string[], prefix: string) {
+  return values.map((value) => ({
+    value,
+    label: value,
+    labelKey: `${prefix}.${value}`,
+  }));
+}
+
+/** Selected values of a faceted column filter. */
+function selectedValues(
+  filters: { id: string; value: unknown }[],
+  id: string,
+): string[] {
+  const value = filters.find((f) => f.id === id)?.value;
+  return Array.isArray(value) ? value.map(String) : [];
+}
+
+/**
+ * Tenant > Leads (TEC-288, TEC-372): server DataTable over GET /v1/leads
+ * with sort, status / target / source / temperature facets, an assignee
+ * filter (including unassigned), created range and `q`; the follow-up
+ * tabs stay in the toolbar. Writers select rows (or every matching lead)
+ * for bulk assign / status; the export uses the same filters and sort.
+ */
 export function LeadsListPage({ slug }: { slug: string }) {
   const { t, format } = useLocale();
   const { can } = usePermission();
+  const router = useRouter();
+  const qc = useQueryClient();
   const canRead = can(permissions.leads.read);
   const canWrite = can(permissions.leads.write);
-  const [filters, setFilters] = useState<LeadListFilters>({
-    status: ALL,
-    target_type: ALL,
-    follow_up: ALL,
-    q: "",
+  const [followUp, setFollowUp] = useState<FollowUp>("");
+  const [items, setItems] = useState<Lead[]>([]);
+
+  // The API has no user directory with internal ids: offer "unassigned"
+  // plus the assignees on the page and the ones already chosen.
+  const [assigneeFilter, setAssigneeFilter] = useState<string[]>([]);
+  const assigneeOptions = useMemo(() => {
+    const ids = new Set<string>();
+    for (const lead of items) {
+      if (lead.assignee_user_id) ids.add(String(lead.assignee_user_id));
+    }
+    for (const id of assigneeFilter) {
+      if (id !== LEAD_ASSIGNEE_NONE) ids.add(id);
+    }
+    return [
+      {
+        value: LEAD_ASSIGNEE_NONE,
+        label: t("leads.form.unassigned"),
+      },
+      ...[...ids]
+        .sort((a, b) => Number(a) - Number(b))
+        .map((id) => ({ value: id, label: `#${id}` })),
+    ];
+  }, [assigneeFilter, items, t]);
+
+  const baseColumns = useMemo(
+    () =>
+      [
+        createColumn<Lead>({
+          accessorKey: "target_type",
+          labelKey: "leads.columns.target_type",
+          enableSorting: false,
+          filterVariant: "faceted",
+          filterOptions: enumOptions(LEAD_TARGET_TYPES, "leads.target_type"),
+          param: "target_type",
+          cell: ({ row }) => t(`leads.target_type.${row.original.target_type}`),
+        }),
+        createColumn<Lead>({
+          id: "name",
+          accessorFn: (row) => leadName(row),
+          labelKey: "leads.columns.name",
+          enableSorting: true,
+          enableHiding: false,
+          gridPrimary: true,
+          cell: ({ row }) => (
+            <Link
+              href={routes.tenant.leads.detail(slug, row.original.uuid)}
+              className="font-medium hover:underline"
+              data-testid="lead-row"
+              onClick={(event) => event.stopPropagation()}
+            >
+              {leadName(row.original)}
+            </Link>
+          ),
+        }),
+        createColumn<Lead>({
+          accessorKey: "source",
+          labelKey: "leads.columns.source",
+          enableSorting: false,
+          filterVariant: "faceted",
+          filterOptions: enumOptions(LEAD_SOURCES, "leads.source"),
+          param: "source",
+          cell: ({ row }) => t(`leads.source.${row.original.source}`),
+        }),
+        createColumn<Lead>({
+          accessorKey: "temperature",
+          labelKey: "leads.columns.temperature",
+          enableSorting: true,
+          filterVariant: "faceted",
+          filterOptions: enumOptions(LEAD_TEMPERATURES, "leads.temperature"),
+          param: "temperature",
+          cell: ({ row }) => (
+            <StatusChip
+              label={t(`leads.temperature.${row.original.temperature}`)}
+              tone={leadTemperatureTone(row.original.temperature)}
+            />
+          ),
+        }),
+        createColumn<Lead>({
+          accessorKey: "status",
+          labelKey: "leads.columns.status",
+          enableSorting: true,
+          filterVariant: "faceted",
+          filterOptions: enumOptions(LEAD_STATUSES, "leads.status"),
+          param: "status",
+          cell: ({ row }) => (
+            <StatusChip
+              label={t(`leads.status.${row.original.status}`)}
+              tone={leadStatusTone(row.original.status)}
+            />
+          ),
+        }),
+        createColumn<Lead>({
+          accessorKey: "follow_up_date",
+          labelKey: "leads.columns.follow_up",
+          enableSorting: true,
+          cell: ({ row }) => (
+            <span className="text-muted-foreground text-xs whitespace-nowrap">
+              {row.original.follow_up_date
+                ? format.dateTime(row.original.follow_up_date)
+                : "—"}
+            </span>
+          ),
+        }),
+        createColumn<Lead>({
+          id: "assignee",
+          accessorFn: (row) =>
+            row.assignee_user_id
+              ? String(row.assignee_user_id)
+              : LEAD_ASSIGNEE_NONE,
+          labelKey: "leads.columns.assignee",
+          enableSorting: false,
+          filterVariant: "faceted",
+          filterOptions: assigneeOptions,
+          param: "assignee_user_id",
+          cell: ({ row }) =>
+            row.original.assignee_user_id
+              ? `#${row.original.assignee_user_id}`
+              : t("leads.form.unassigned"),
+        }),
+        createColumn<Lead>({
+          accessorKey: "created_at",
+          labelKey: "leads.columns.created_at",
+          enableSorting: true,
+          filterVariant: "date-range",
+          param: "created",
+          cell: ({ row }) => (
+            <span className="whitespace-nowrap">
+              {format.dateTime(row.original.created_at)}
+            </span>
+          ),
+        }),
+        createColumn<Lead>({
+          id: "actions",
+          labelKey: "common.actions",
+          enableSorting: false,
+          enableHiding: false,
+          enableResizing: false,
+          cell: ({ row }) => {
+            const actions: EntityRowAction[] = [
+              {
+                id: "open",
+                label: t("common.open"),
+                icon: Eye,
+                onSelect: () =>
+                  router.push(
+                    routes.tenant.leads.detail(slug, row.original.uuid),
+                  ),
+              },
+            ];
+            return <EntityRowActions actions={actions} />;
+          },
+        }),
+      ] as ColumnDef<Lead, unknown>[],
+    [assigneeOptions, format, router, slug, t],
+  );
+  const columns = useMemo(
+    () =>
+      canWrite ? [createSelectColumnDef<Lead>(), ...baseColumns] : baseColumns,
+    [baseColumns, canWrite],
+  );
+
+  // Column meta drives the params: facets (CSV), created (_from / _to).
+  const listState = useServerListState({
+    columns,
+    initialSort: "-created_at",
+    initialPageSize: LEAD_PAGE_SIZE,
+    persistKey: LEADS_PERSIST_KEY,
   });
-  const [page, setPage] = useState(0);
-  const query = useMemo(() => listQuery(filters, page), [filters, page]);
+  const selectedAssignees = selectedValues(listState.columnFilters, "assignee");
+  if (selectedAssignees.join(",") !== assigneeFilter.join(",")) {
+    setAssigneeFilter(selectedAssignees);
+  }
+
+  const params = useMemo<LeadListQuery>(
+    () => ({
+      ...(listState.params as LeadListQuery),
+      ...(followUp ? { follow_up: followUp } : {}),
+    }),
+    [followUp, listState.params],
+  );
+
   const list = useQuery({
-    queryKey: leadKeys.list(query),
-    queryFn: () => leadsService.list(query),
+    queryKey: leadKeys.list(params),
+    queryFn: () => leadsService.list(params),
     enabled: canRead,
-    placeholderData: keepPreviousData,
+  });
+  const total = list.data?.total ?? 0;
+  const pageItems = list.data?.items;
+  if (pageItems && pageItems !== items) setItems(pageItems);
+
+  // Bulk "select all matching" and the export use the list filters,
+  // search, follow-up tab and sort.
+  const listQuery = useMemo(() => {
+    const query: Record<string, string> = {};
+    for (const [key, value] of Object.entries(listState.filterParams)) {
+      if (value) query[key] = String(value);
+    }
+    if (params.q) query.q = params.q;
+    if (params.follow_up) query.follow_up = params.follow_up;
+    if (params.sort) query.sort = params.sort;
+    return query;
+  }, [listState.filterParams, params.follow_up, params.q, params.sort]);
+
+  const bulkSelection = useBulkSelection({
+    listQueryKey: params,
+    bulkQuery: listQuery,
+    total,
   });
 
-  const patch = (p: Partial<LeadListFilters>) => {
-    setFilters((f) => ({ ...f, ...p }));
-    setPage(0);
+  const changeFollowUp = (value: FollowUp) => {
+    setFollowUp(value);
+    listState.setPagination((p) => ({ ...p, pageIndex: 0 }));
   };
 
   const title = t("leads.list.title");
-  const header = (
-    <PageHeader
+  return (
+    <EntityPage
       title={title}
-      icon={<Flame className="size-6" />}
       description={t("leads.list.description")}
+      permission={permissions.leads.read}
+      forbiddenFallback={
+        <ErrorState
+          title={t("common.error_forbidden")}
+          description={t("leads.list.forbidden")}
+        />
+      }
       breadcrumbs={[
         { label: t("layout.breadcrumb_home"), href: routes.tenant.home(slug) },
         { label: title },
       ]}
       actions={
         canWrite ? (
-          <Button asChild>
-            <Link
-              href={routes.tenant.leads.create(slug)}
-              data-testid="lead-new"
-            >
-              <Plus className="size-4" />
-              {t("leads.list.new")}
-            </Link>
-          </Button>
+          <EntityCreateButton
+            label={t("leads.list.new")}
+            onClick={() => router.push(routes.tenant.leads.create(slug))}
+          />
         ) : null
       }
-    />
-  );
-
-  if (!canRead) {
-    return (
-      <div className="space-y-6">
-        {header}
-        <ErrorState
-          title={t("common.error_forbidden")}
-          description={t("leads.list.forbidden")}
-        />
+    >
+      <div
+        className="flex flex-wrap gap-2"
+        role="tablist"
+        aria-label={t("leads.columns.follow_up")}
+      >
+        {FOLLOW_UPS.map((value) => (
+          <Button
+            key={value || "all"}
+            type="button"
+            role="tab"
+            aria-selected={followUp === value}
+            variant={followUp === value ? "default" : "outline"}
+            size="sm"
+            data-testid={`lead-tab-${value || "all"}`}
+            onClick={() => changeFollowUp(value)}
+          >
+            {t(`leads.follow_up.${value || "all"}`)}
+          </Button>
+        ))}
       </div>
-    );
-  }
-
-  const total = list.data?.total ?? 0;
-  const pages = pageCount(total, LEAD_PAGE_SIZE);
-  const rows = list.data?.items ?? [];
-
-  return (
-    <div className="space-y-6">
-      {header}
-      <Card>
-        <CardContent className="space-y-4 pt-6">
-          <div className="flex flex-wrap gap-2" role="tablist">
-            {(["", "overdue", "today"] as const).map((value) => (
-              <Button
-                key={value || "all"}
-                type="button"
-                variant={filters.follow_up === value ? "default" : "outline"}
-                size="sm"
-                data-testid={`lead-tab-${value || "all"}`}
-                onClick={() => patch({ follow_up: value })}
+      {canWrite ? (
+        <SelectionBanner
+          selectedCount={bulkSelection.selectedCount}
+          total={total}
+          showSelectAll={bulkSelection.showSelectAllBanner}
+          allMatchingSelected={bulkSelection.scope.mode === "all"}
+          onSelectAllMatching={bulkSelection.selectAllMatching}
+          onClearSelection={bulkSelection.clearSelection}
+        />
+      ) : null}
+      <EntityTable
+        columns={columns}
+        data={list.data?.items ?? []}
+        getRowId={(row) => row.uuid}
+        onRowClick={(row) =>
+          router.push(routes.tenant.leads.detail(slug, row.uuid))
+        }
+        isLoading={list.isLoading}
+        isError={list.isError}
+        onRetry={() => void list.refetch()}
+        emptyTitle={t("leads.list.empty_title")}
+        emptyDescription={t("leads.list.empty_description")}
+        rowCount={total}
+        state={{
+          ...listState.tableState,
+          rowSelection: bulkSelection.rowSelection,
+          onRowSelectionChange: bulkSelection.onRowSelectionChange,
+        }}
+        features={{
+          persistKey: LEADS_PERSIST_KEY,
+          rowSelection: canWrite,
+        }}
+        renderGridItem={(lead) => (
+          <div className="space-y-2">
+            <div className="flex items-start justify-between gap-2">
+              <Link
+                href={routes.tenant.leads.detail(slug, lead.uuid)}
+                className="font-medium hover:underline"
+                onClick={(event) => event.stopPropagation()}
               >
-                {t(`leads.follow_up.${value || "all"}`)}
-              </Button>
-            ))}
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="lead-search">{t("leads.list.search")}</Label>
-              <input
-                id="lead-search"
-                data-testid="lead-search"
-                className={leadInputClass}
-                value={filters.q}
-                onChange={(e) => patch({ q: e.target.value })}
+                {leadName(lead)}
+              </Link>
+              <StatusChip
+                label={t(`leads.status.${lead.status}`)}
+                tone={leadStatusTone(lead.status)}
               />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="lead-filter-status">
-                {t("leads.columns.status")}
-              </Label>
-              <select
-                id="lead-filter-status"
-                data-testid="lead-filter-status"
-                className={leadInputClass}
-                value={filters.status}
-                onChange={(e) =>
-                  patch({ status: e.target.value as LeadListFilters["status"] })
-                }
-              >
-                <option value={ALL}>{t("leads.list.all")}</option>
-                {LEAD_STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {t(`leads.status.${s}`)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="lead-filter-target">
-                {t("leads.columns.target_type")}
-              </Label>
-              <select
-                id="lead-filter-target"
-                data-testid="lead-filter-target"
-                className={leadInputClass}
-                value={filters.target_type}
-                onChange={(e) =>
-                  patch({
-                    target_type: e.target
-                      .value as LeadListFilters["target_type"],
-                  })
-                }
-              >
-                <option value={ALL}>{t("leads.list.all")}</option>
-                {LEAD_TARGET_TYPES.map((x) => (
-                  <option key={x} value={x}>
-                    {t(`leads.target_type.${x}`)}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <p className="text-muted-foreground text-xs">
+              {t(`leads.target_type.${lead.target_type}`)} ·{" "}
+              {t(`leads.source.${lead.source}`)} ·{" "}
+              {t(`leads.temperature.${lead.temperature}`)}
+            </p>
+            {lead.follow_up_date ? (
+              <p className="text-muted-foreground text-xs">
+                {t("leads.columns.follow_up")}:{" "}
+                {format.dateTime(lead.follow_up_date)}
+              </p>
+            ) : null}
           </div>
-        </CardContent>
-      </Card>
-
-      {list.isError ? (
-        <ErrorState
-          title={t("common.error_generic")}
-          onRetry={() => void list.refetch()}
-          retryLabel={t("common.retry")}
-        />
-      ) : (
-        <Card>
-          <CardContent className="pt-6">
-            {list.isLoading ? (
-              <p className="text-muted-foreground text-sm">
-                {t("leads.list.loading")}
-              </p>
-            ) : rows.length === 0 ? (
-              <div className="py-8 text-center" data-testid="leads-empty">
-                <p className="font-medium">{t("leads.list.empty_title")}</p>
-                <p className="text-muted-foreground text-sm">
-                  {t("leads.list.empty_description")}
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm" data-testid="leads-table">
-                  <thead>
-                    <tr className="text-muted-foreground border-b text-xs">
-                      {[
-                        "target_type",
-                        "name",
-                        "source",
-                        "temperature",
-                        "status",
-                        "follow_up",
-                        "assignee",
-                      ].map((c) => (
-                        <th key={c} className="p-2 text-start font-medium">
-                          {t(`leads.columns.${c}`)}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((lead) => (
-                      <tr
-                        key={lead.uuid}
-                        className="hover:bg-accent/50 border-b align-top last:border-0"
-                        data-testid="lead-row"
-                      >
-                        <td className="p-2">
-                          {t(`leads.target_type.${lead.target_type}`)}
-                        </td>
-                        <td className="p-2">
-                          <Link
-                            href={routes.tenant.leads.detail(slug, lead.uuid)}
-                            className="font-medium hover:underline"
-                          >
-                            {leadName(lead)}
-                          </Link>
-                        </td>
-                        <td className="p-2">
-                          {t(`leads.source.${lead.source}`)}
-                        </td>
-                        <td className="p-2">
-                          <StatusChip
-                            label={t(`leads.temperature.${lead.temperature}`)}
-                            tone={leadTemperatureTone(lead.temperature)}
-                          />
-                        </td>
-                        <td className="p-2">
-                          <StatusChip
-                            label={t(`leads.status.${lead.status}`)}
-                            tone={leadStatusTone(lead.status)}
-                          />
-                        </td>
-                        <td className="text-muted-foreground p-2 text-xs whitespace-nowrap">
-                          {lead.follow_up_date
-                            ? format.dateTime(lead.follow_up_date)
-                            : "—"}
-                        </td>
-                        <td className="p-2">
-                          {lead.assignee_user_id
-                            ? `#${lead.assignee_user_id}`
-                            : t("leads.form.unassigned")}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            <div
-              className={cn(
-                "mt-4 flex flex-wrap items-center justify-between gap-2",
-                rows.length === 0 && page === 0 && "hidden",
-              )}
-            >
-              <p className="text-muted-foreground text-sm">
-                {t("leads.list.page", { page: page + 1, pages, total })}
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={page === 0 || list.isFetching}
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                >
-                  <ChevronLeft className="size-4 rtl:rotate-180" />
-                  {t("leads.list.prev")}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={page + 1 >= pages || list.isFetching}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  {t("leads.list.next")}
-                  <ChevronRight className="size-4 rtl:rotate-180" />
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+        )}
+        toolbarExtra={
+          <>
+            {canWrite ? (
+              <BulkActionMenu
+                resource="leads"
+                actions={LEAD_BULK_ACTIONS}
+                scope={bulkSelection.scope}
+                selectedCount={bulkSelection.selectedCount}
+                onComplete={() => {
+                  bulkSelection.clearSelection();
+                  void qc.invalidateQueries({ queryKey: leadKeys.all });
+                }}
+              />
+            ) : null}
+            <ExportMenu
+              exportPath={LEADS_EXPORT_PATH}
+              query={listQuery}
+              formats={["xlsx", "csv", "pdf"]}
+              jobsHref={routes.tenant.exports.root(slug)}
+            />
+            <EntityToolbar
+              onRefresh={() => void list.refetch()}
+              refreshDisabled={list.isFetching}
+            />
+          </>
+        }
+      />
+    </EntityPage>
   );
 }

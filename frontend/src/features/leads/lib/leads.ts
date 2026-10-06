@@ -1,7 +1,6 @@
 import type {
   Lead,
   LeadCreateInput,
-  LeadListQuery,
   LeadPatchInput,
   LeadSource,
   LeadStatus,
@@ -35,13 +34,6 @@ export const LEAD_STATUSES: LeadStatus[] = [
   "lost",
 ];
 
-export type LeadListFilters = {
-  status: LeadStatus | "";
-  target_type: LeadTargetType | "";
-  follow_up: "overdue" | "today" | "";
-  q: string;
-};
-
 export type LeadFormValues = {
   target_type: LeadTargetType;
   customer_user_id: string;
@@ -59,24 +51,6 @@ export type LeadFormValues = {
   assignee_user_id: string;
   notes: string;
 };
-
-export function listQuery(
-  filters: LeadListFilters,
-  page: number,
-): LeadListQuery {
-  return {
-    status: filters.status || undefined,
-    target_type: filters.target_type || undefined,
-    follow_up: filters.follow_up || undefined,
-    q: filters.q.trim() || undefined,
-    limit: LEAD_PAGE_SIZE,
-    offset: page * LEAD_PAGE_SIZE,
-  };
-}
-
-export function pageCount(total: number, size = LEAD_PAGE_SIZE) {
-  return Math.max(1, Math.ceil(total / size));
-}
 
 export function emptyLeadForm(): LeadFormValues {
   return {

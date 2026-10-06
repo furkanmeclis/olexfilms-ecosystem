@@ -226,6 +226,9 @@ func main() {
 		// TEC-373: order list and stock unit list exports (read only).
 		ordersusecase.NewListExportAdapter(ordersusecase.New(pool, queries, nil, nil)),
 		stockusecase.NewUnitsExportAdapter(stockusecase.New(queries)),
+		// TEC-377: service and warranty list exports (read only).
+		servicesusecase.NewListExportAdapter(servicesusecase.New(pool, queries, nil)),
+		warrantyusecase.NewListExportAdapter(warrantyusecase.NewReader(pool, queries, nil, cfg.Auth.FrontendURL)),
 	)
 	exportSvc := exportusecase.New(queries, store, ioReg, nil, notifSvc, activityRec, log)
 	pdfClient := pdfrender.NewWithOptions(cfg.Gotenberg.URL, pdfrender.Options{MaxConnsPerHost: cfg.Queue.Concurrency})

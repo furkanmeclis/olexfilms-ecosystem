@@ -48,16 +48,40 @@ WHERE (s.customer_user_id = $1::bigint
   AND s.status <> 'draft'
   AND b.slug <> 'glorian'
   AND ($3::bigint IS NULL OR s.vehicle_id = $3::bigint)
+  AND (COALESCE(cardinality($4::text[]), 0) = 0 OR s.status = ANY ($4::text[]))
+  AND (
+    COALESCE(cardinality($5::uuid[]), 0) = 0
+    OR s.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY ($5::uuid[]))
+  )
+  AND ($6::timestamptz IS NULL OR s.created_at >= $6::timestamptz)
+  AND ($7::timestamptz IS NULL OR s.created_at < $7::timestamptz)
+  AND ($8::text IS NULL
+       OR s.service_no ILIKE '%' || $8::text || '%'
+       OR s.plate ILIKE '%' || $8::text || '%')
 `
 
 type CountPortalServicesParams struct {
-	UserID    int64       `json:"user_id"`
-	BrandID   int64       `json:"brand_id"`
-	VehicleID pgtype.Int8 `json:"vehicle_id"`
+	UserID            int64              `json:"user_id"`
+	BrandID           int64              `json:"brand_id"`
+	VehicleID         pgtype.Int8        `json:"vehicle_id"`
+	Statuses          []string           `json:"statuses"`
+	OrganizationUuids []uuid.UUID        `json:"organization_uuids"`
+	CreatedFrom       pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore     pgtype.Timestamptz `json:"created_before"`
+	Q                 pgtype.Text        `json:"q"`
 }
 
 func (q *Queries) CountPortalServices(ctx context.Context, arg CountPortalServicesParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countPortalServices, arg.UserID, arg.BrandID, arg.VehicleID)
+	row := q.db.QueryRow(ctx, countPortalServices,
+		arg.UserID,
+		arg.BrandID,
+		arg.VehicleID,
+		arg.Statuses,
+		arg.OrganizationUuids,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
+	)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -297,16 +321,53 @@ WHERE (s.customer_user_id = $1::bigint
   AND s.status <> 'draft'
   AND b.slug <> 'glorian'
   AND ($3::bigint IS NULL OR s.vehicle_id = $3::bigint)
-ORDER BY s.created_at DESC, s.id DESC
-LIMIT $5::int OFFSET $4::int
+  AND (COALESCE(cardinality($4::text[]), 0) = 0 OR s.status = ANY ($4::text[]))
+  AND (
+    COALESCE(cardinality($5::uuid[]), 0) = 0
+    OR s.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY ($5::uuid[]))
+  )
+  AND ($6::timestamptz IS NULL OR s.created_at >= $6::timestamptz)
+  AND ($7::timestamptz IS NULL OR s.created_at < $7::timestamptz)
+  AND ($8::text IS NULL
+       OR s.service_no ILIKE '%' || $8::text || '%'
+       OR s.plate ILIKE '%' || $8::text || '%')
+ORDER BY
+  CASE WHEN NOT $9::bool THEN
+    CASE $10::text WHEN 'service_no' THEN s.service_no::text WHEN 'organization' THEN o.name::text END
+  END ASC,
+  CASE WHEN $9::bool THEN
+    CASE $10::text WHEN 'service_no' THEN s.service_no::text WHEN 'organization' THEN o.name::text END
+  END DESC,
+  CASE WHEN NOT $9::bool AND $10::text = 'status' THEN
+    CASE s.status WHEN 'draft' THEN 0 WHEN 'pending' THEN 1 WHEN 'processing' THEN 2
+      WHEN 'ready' THEN 3 WHEN 'completed' THEN 4 WHEN 'cancelled' THEN 5 ELSE 6 END
+  END ASC,
+  CASE WHEN $9::bool AND $10::text = 'status' THEN
+    CASE s.status WHEN 'draft' THEN 0 WHEN 'pending' THEN 1 WHEN 'processing' THEN 2
+      WHEN 'ready' THEN 3 WHEN 'completed' THEN 4 WHEN 'cancelled' THEN 5 ELSE 6 END
+  END DESC,
+  CASE WHEN NOT $9::bool AND $10::text = 'created_at' THEN s.created_at END ASC,
+  CASE WHEN $9::bool AND $10::text = 'created_at' THEN s.created_at END DESC,
+  CASE WHEN NOT $9::bool AND $10::text = 'completed_at' THEN s.completed_at END ASC NULLS LAST,
+  CASE WHEN $9::bool AND $10::text = 'completed_at' THEN s.completed_at END DESC NULLS LAST,
+  CASE WHEN $9::bool THEN s.id END DESC,
+  s.id ASC
+LIMIT $12::int OFFSET $11::int
 `
 
 type ListPortalServicesParams struct {
-	UserID    int64       `json:"user_id"`
-	BrandID   int64       `json:"brand_id"`
-	VehicleID pgtype.Int8 `json:"vehicle_id"`
-	RowOffset int32       `json:"row_offset"`
-	RowLimit  int32       `json:"row_limit"`
+	UserID            int64              `json:"user_id"`
+	BrandID           int64              `json:"brand_id"`
+	VehicleID         pgtype.Int8        `json:"vehicle_id"`
+	Statuses          []string           `json:"statuses"`
+	OrganizationUuids []uuid.UUID        `json:"organization_uuids"`
+	CreatedFrom       pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore     pgtype.Timestamptz `json:"created_before"`
+	Q                 pgtype.Text        `json:"q"`
+	SortDesc          bool               `json:"sort_desc"`
+	SortKey           string             `json:"sort_key"`
+	RowOffset         int32              `json:"row_offset"`
+	RowLimit          int32              `json:"row_limit"`
 }
 
 type ListPortalServicesRow struct {
@@ -328,12 +389,22 @@ type ListPortalServicesRow struct {
 }
 
 // Services of the user across every organization of the brand (one list,
-// newest first). vehicle_id narrows to one vehicle (vehicle detail).
+// newest first by default). vehicle_id narrows to one vehicle (vehicle
+// detail). TEC-377 (DT-BE-7): statuses / organization_uuids (multi-value),
+// created window, q (service number or plate; the caller escapes LIKE
+// wildcards) and the sort keys of portalvehicles usecase.ServiceSort.
 func (q *Queries) ListPortalServices(ctx context.Context, arg ListPortalServicesParams) ([]ListPortalServicesRow, error) {
 	rows, err := q.db.Query(ctx, listPortalServices,
 		arg.UserID,
 		arg.BrandID,
 		arg.VehicleID,
+		arg.Statuses,
+		arg.OrganizationUuids,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.RowOffset,
 		arg.RowLimit,
 	)

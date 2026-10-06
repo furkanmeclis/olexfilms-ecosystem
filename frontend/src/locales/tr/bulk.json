@@ -89,5 +89,6 @@
   "params.lead_status.quoted": "Teklif verildi",
   "params.lead_status.won": "Kazanıldı",
   "params.lead_status.lost": "Kaybedildi",
-  "params.lost_reason": "Kayıp nedeni"
+  "params.lost_reason": "Kayıp nedeni",
+  "actions.warehouse_count_lines.set_resolution": "Çözüm uygula: {{resolution}}"
 }

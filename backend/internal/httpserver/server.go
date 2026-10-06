@@ -625,6 +625,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		// TEC-373: order list and stock unit list exports.
 		ordersusecase.NewListExportAdapter(ordersSvc),
 		stockusecase.NewUnitsExportAdapter(stockusecase.New(deps.Queries)),
+		// TEC-377: service and warranty list exports.
+		servicesusecase.NewListExportAdapter(servicesSvc),
+		warrantyusecase.NewListExportAdapter(warrantyReader),
 	)
 	exportSvc := exportusecase.New(deps.Queries, deps.Storage, ioReg, deps.Queue, notifSvc, activityRec, log)
 	exportSvc.SetDocumentPDF(pdfClient)
@@ -632,6 +635,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	accountingH.WithExports(exportSvc)
 	customersH.WithExports(exportSvc)
 	ordersH.WithExports(exportSvc) // TEC-373
+	warrantymodule.RegisterListExportRoutes(mux, deps.Queries, tokens, loader, featureSvc,
+		warrantyhandler.NewListExport(exportSvc)) // TEC-377
 	warrantyclaimsmodule.RegisterRoutes(mux, warrantyclaimshandler.New(warrantyClaimsSvc, exportSvc), tokens, loader, deps.Queries, featureSvc)
 	warrantymodule.RegisterCertificateRoutes(mux, warrantyhandler.NewCertificate(warrantyCert, exportSvc), tokens, loader, deps.Queries, featureSvc)
 	servicesmodule.RegisterPDFRoutes(mux, serviceshandler.NewPDF(servicePDF, exportSvc), tokens, loader, deps.Queries, featureSvc)
