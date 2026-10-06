@@ -161,9 +161,7 @@ type Querier interface {
 	CountOpenTransferItemsByUnit(ctx context.Context, arg CountOpenTransferItemsByUnitParams) (int64, error)
 	// Used by other flows (stock transfer requests) to respect the lock.
 	CountOpenWarehouseTransferLinesByUnit(ctx context.Context, unitID int64) (int64, error)
-	CountOrdersByBuyer(ctx context.Context, arg CountOrdersByBuyerParams) (int64, error)
-	CountOrdersBySeller(ctx context.Context, arg CountOrdersBySellerParams) (int64, error)
-	CountOrdersInScope(ctx context.Context, arg CountOrdersInScopeParams) (int64, error)
+	CountOrdersFiltered(ctx context.Context, arg CountOrdersFilteredParams) (int64, error)
 	CountOrganizationCustomers(ctx context.Context, arg CountOrganizationCustomersParams) (int64, error)
 	CountOrganizationMembershipsByUser(ctx context.Context, userID int64) (int64, error)
 	CountOrganizationProductStockRows(ctx context.Context, arg CountOrganizationProductStockRowsParams) (int64, error)
@@ -208,7 +206,7 @@ type Querier interface {
 	CountTaskComments(ctx context.Context, taskID int64) (int64, error)
 	CountTasks(ctx context.Context, arg CountTasksParams) (int64, error)
 	CountTransferRequestItems(ctx context.Context, requestID int64) (int64, error)
-	CountTransferRequestsForOrg(ctx context.Context, arg CountTransferRequestsForOrgParams) (int64, error)
+	CountTransferRequestsFiltered(ctx context.Context, arg CountTransferRequestsFilteredParams) (int64, error)
 	CountUnreadInappForUser(ctx context.Context, userID pgtype.Int8) (int64, error)
 	// Customer cari accounts are ledgers (append-only spirit): they are not
 	// moved, only reported.
@@ -1409,14 +1407,15 @@ type Querier interface {
 	// Orders an organization sells or buys: their documents carry the
 	// organization's name and dealer code, refreshed when it changes.
 	ListOrderUuidsByOrganization(ctx context.Context, organizationID int64) ([]uuid.UUID, error)
-	// Buyer side: orders the organization buys.
-	ListOrdersByBuyer(ctx context.Context, arg ListOrdersByBuyerParams) ([]Order, error)
-	// Seller side: orders the organization sells.
-	ListOrdersBySeller(ctx context.Context, arg ListOrdersBySellerParams) ([]Order, error)
+	// TEC-373 (DT-BE-5): the order list. One query serves every side:
+	// seller_org_id (side=seller: the active organization sells), buyer_org_id
+	// (side=buyer) or org_ids (side all: any organization of the orders.read
+	// scope sells or buys; NULL = whole brand). statuses, seller_uuids and
+	// buyer_uuids are any-of filters (NULL / empty = no filter); created_before
+	// is exclusive. sort_key: order_no, status (flow rank), total, created_at;
+	// id is the tiebreak (docs/list-contract.md). uuids reloads index hits.
+	ListOrdersFiltered(ctx context.Context, arg ListOrdersFilteredParams) ([]Order, error)
 	ListOrdersForIndex(ctx context.Context) ([]ListOrdersForIndexRow, error)
-	// Scope list: orders where any of org_ids is the seller or the buyer
-	// (org_ids NULL = whole brand, for brand/all scopes).
-	ListOrdersInScope(ctx context.Context, arg ListOrdersInScopeParams) ([]Order, error)
 	ListOrganizationChildren(ctx context.Context, parentID pgtype.Int8) ([]ListOrganizationChildrenRow, error)
 	// Customers of the organizations in scope; one row per user.
 	// TEC-371: statuses / customer types are CSV filters, linked_at is a date
@@ -1429,7 +1428,9 @@ type Querier interface {
 	ListOrganizationMembersByUserID(ctx context.Context, arg ListOrganizationMembersByUserIDParams) ([]ListOrganizationMembersByUserIDRow, error)
 	ListOrganizationOwnerUserIDs(ctx context.Context, organizationID int64) ([]int64, error)
 	// organization_product_stocks with product and category. in_stock: true =
-	// quantity or meters above zero, false = both zero.
+	// quantity or meters above zero, false = both zero. TEC-373: sort_key
+	// product (name), sku, category (name), quantity, meters, updated_at; the
+	// product id is the tiebreak (one row per product).
 	ListOrganizationProductStockRows(ctx context.Context, arg ListOrganizationProductStockRowsParams) ([]ListOrganizationProductStockRowsRow, error)
 	ListOrganizationProductStocks(ctx context.Context, arg ListOrganizationProductStocksParams) ([]OrganizationProductStock, error)
 	ListOrganizationProductStocksForRebuild(ctx context.Context, organizationID pgtype.Int8) ([]OrganizationProductStock, error)
@@ -1438,6 +1439,12 @@ type Querier interface {
 	// per unit); both narrowed on holder_org_id. Without a status filter the
 	// list holds the units counted as stock (available, placed); a status
 	// filter lists exactly that status.
+	// TEC-373 (DT-BE-5): statuses is any-of (empty: available + placed),
+	// barcode exact or barcode_prefix (LIKE, the caller escapes % and _),
+	// location_uuids any-of (fixed barcodes have no single location and drop
+	// out), updated_from / updated_before (exclusive) on the holding's last
+	// change. sort_key: product, barcode, status (unit flow rank), quantity,
+	// meters (remaining, empty last), updated_at; id is the tiebreak.
 	ListOrganizationStockUnitRows(ctx context.Context, arg ListOrganizationStockUnitRowsParams) ([]ListOrganizationStockUnitRowsRow, error)
 	ListOrganizationsByIDs(ctx context.Context, ids []int64) ([]Organization, error)
 	// Sort: docs/list-contract.md, keys from apiquery.TenantsSortSpec.
@@ -1686,10 +1693,13 @@ type Querier interface {
 	// (TEC-200: recipients of the transfers.* notifications).
 	ListTransferNotifyUserIDs(ctx context.Context, arg ListTransferNotifyUserIDsParams) ([]int64, error)
 	ListTransferRequestItems(ctx context.Context, requestID int64) ([]ListTransferRequestItemsRow, error)
-	// Requests where org is the giver, the receiver or the common parent.
-	// direction: '' (all), 'outgoing' (giver), 'incoming' (receiver),
-	// 'approval' (parent).
-	ListTransferRequestsForOrg(ctx context.Context, arg ListTransferRequestsForOrgParams) ([]StockTransferRequest, error)
+	// TEC-373 (DT-BE-5): requests where org is the giver (direction
+	// outgoing), the receiver (incoming) or the common parent (approval);
+	// directions, statuses and kinds are any-of filters (NULL / empty = all).
+	// q matches the transfer number and the sender / receiver names; org_uuids
+	// keeps requests whose sender or receiver is one of them. sort_key:
+	// transfer_no, status (flow rank), created_at; id is the tiebreak.
+	ListTransferRequestsFiltered(ctx context.Context, arg ListTransferRequestsFilteredParams) ([]StockTransferRequest, error)
 	// Active organizations of the same type, brand and parent (K13 siblings).
 	ListTransferSiblings(ctx context.Context, arg ListTransferSiblingsParams) ([]Organization, error)
 	ListUnitCurrentStatesByHolder(ctx context.Context, arg ListUnitCurrentStatesByHolderParams) ([]ListUnitCurrentStatesByHolderRow, error)

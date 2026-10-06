@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
@@ -73,10 +74,21 @@ func (s *Service) OrganizationUnits(ctx context.Context, v UnitViewer, orgUUID u
 		}
 		product = pgtype.Int8{Int64: id, Valid: true}
 	}
-	status, barcode, q := textArg(in.Status), textArg(in.Barcode), textArg(in.Q)
+	for _, st := range in.Statuses {
+		if !slices.Contains(model.UnitStatuses, st) {
+			return nil, 0, invalidParam("status", "unknown unit status")
+		}
+	}
+	barcode, prefix, q := textArg(in.Barcode), pgtype.Text{}, textArg(in.Q)
+	if in.BarcodePrefix && barcode.Valid {
+		barcode, prefix = pgtype.Text{}, pgtype.Text{String: likePrefix(barcode.String), Valid: true}
+	}
 	brand := v.Filter.BrandIDArg()
+	key, desc := resolvedSort(in.Sort, UnitSort)
 	lp := db.ListOrganizationStockUnitRowsParams{
-		OrganizationID: o.ID, BrandID: brand, ProductID: product, Status: status, Barcode: barcode, Q: q,
+		OrganizationID: o.ID, BrandID: brand, ProductID: product, Statuses: in.Statuses, Barcode: barcode,
+		BarcodePrefix: prefix, LocationUuids: in.LocationUUIDs, UpdatedFrom: tsArg(in.UpdatedFrom),
+		UpdatedBefore: tsArg(in.UpdatedBefore), Q: q, SortKey: key, SortDesc: desc,
 		LimitCount: in.Limit, OffsetCount: in.Offset,
 	}
 	var (
@@ -85,13 +97,16 @@ func (s *Service) OrganizationUnits(ctx context.Context, v UnitViewer, orgUUID u
 		indexed bool
 	)
 	// TEC-210: a text search goes to the stock units index when it is up;
-	// the exact barcode filter stays on SQL.
-	if q.Valid && !barcode.Valid && s.indexEnabled() {
+	// the barcode, location and date filters and an explicit sort stay on
+	// SQL (TEC-373).
+	if q.Valid && !unitSQLOnly(in) && s.indexEnabled() {
 		rows, total, indexed = s.searchUnitsIndexed(ctx, lp)
 	}
 	if !indexed {
 		total, err = s.q.CountOrganizationStockUnitRows(ctx, db.CountOrganizationStockUnitRowsParams{
-			OrganizationID: o.ID, BrandID: brand, ProductID: product, Status: status, Barcode: barcode, Q: q,
+			OrganizationID: o.ID, BrandID: brand, ProductID: product, Statuses: lp.Statuses, Barcode: barcode,
+			BarcodePrefix: prefix, LocationUuids: lp.LocationUuids, UpdatedFrom: lp.UpdatedFrom,
+			UpdatedBefore: lp.UpdatedBefore, Q: q,
 		})
 		if err != nil {
 			return nil, 0, fmt.Errorf("stock: count units: %w", err)

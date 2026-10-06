@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strings"
 
 	tr "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/transfers/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
@@ -37,7 +36,14 @@ func caller(r *http.Request) tr.Caller {
 
 func writeError(w http.ResponseWriter, r *http.Request, err error) {
 	var ve *tr.ValidationError
+	var qe *apiquery.ValidationError
 	switch {
+	case errors.As(err, &qe):
+		details := make([]response.Detail, 0, len(qe.Details))
+		for _, d := range qe.Details {
+			details = append(details, response.Detail{Field: d.Field, Message: d.Message, Code: d.Code})
+		}
+		response.ValidationError(w, r, details)
 	case errors.As(err, &ve):
 		response.ValidationError(w, r, []response.Detail{{Field: ve.Field, Message: ve.Message, Code: ve.Code}})
 	case errors.Is(err, tr.ErrNotFound):
@@ -81,20 +87,21 @@ func decode(w http.ResponseWriter, r *http.Request, dst any) bool {
 	return true
 }
 
-// List (GET /v1/stock-transfers?kind&direction&status&limit&offset).
+// List (GET /v1/stock-transfers): kind, direction, status (CSV),
+// created_from / created_to, organization_uuid (CSV), q, sort (transfer_no,
+// status, created_at), limit, offset (TEC-373).
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	q := apiquery.Parse(r.URL.Query())
-	v := r.URL.Query()
-	items, total, err := h.svc.List(r.Context(), caller(r), tr.ListFilter{
-		Kind:      strings.TrimSpace(v.Get("kind")),
-		Direction: strings.TrimSpace(v.Get("direction")), Status: strings.TrimSpace(v.Get("status")),
-		Limit: q.Limit, Offset: q.Offset,
-	})
+	f, err := tr.ParseListFilter(r.URL.Query())
 	if err != nil {
 		writeError(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
+	items, total, err := h.svc.List(r.Context(), caller(r), f)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, f.Limit, f.Offset))
 }
 
 // Targets (GET /v1/stock-transfers/targets?kind): siblings of the active

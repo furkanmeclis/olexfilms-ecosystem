@@ -121,94 +121,75 @@ SET external_reference = sqlc.narg(external_reference)
 WHERE id = sqlc.arg(id)
 RETURNING *;
 
--- Seller side: orders the organization sells.
--- name: ListOrdersBySeller :many
-SELECT * FROM orders
-WHERE brand_id = sqlc.arg(brand_id)
-  AND organization_id = sqlc.arg(seller_org_id)
-  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
-  AND (sqlc.narg(created_from)::timestamptz IS NULL OR created_at >= sqlc.narg(created_from)::timestamptz)
-  AND (sqlc.narg(created_to)::timestamptz IS NULL OR created_at < sqlc.narg(created_to)::timestamptz)
-  AND (sqlc.narg(q)::text IS NULL
-       OR order_no ILIKE '%' || sqlc.narg(q)::text || '%'
-       OR tracking_no ILIKE '%' || sqlc.narg(q)::text || '%'
-       OR external_reference ILIKE '%' || sqlc.narg(q)::text || '%')
-  AND (sqlc.narg(uuids)::uuid[] IS NULL OR uuid = ANY (sqlc.narg(uuids)::uuid[]))
-ORDER BY created_at DESC, id DESC
-LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
-
--- name: CountOrdersBySeller :one
-SELECT COUNT(*) FROM orders
-WHERE brand_id = sqlc.arg(brand_id)
-  AND organization_id = sqlc.arg(seller_org_id)
-  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
-  AND (sqlc.narg(created_from)::timestamptz IS NULL OR created_at >= sqlc.narg(created_from)::timestamptz)
-  AND (sqlc.narg(created_to)::timestamptz IS NULL OR created_at < sqlc.narg(created_to)::timestamptz)
-  AND (sqlc.narg(q)::text IS NULL
-       OR order_no ILIKE '%' || sqlc.narg(q)::text || '%'
-       OR tracking_no ILIKE '%' || sqlc.narg(q)::text || '%'
-       OR external_reference ILIKE '%' || sqlc.narg(q)::text || '%');
-
--- Buyer side: orders the organization buys.
--- name: ListOrdersByBuyer :many
-SELECT * FROM orders
-WHERE brand_id = sqlc.arg(brand_id)
-  AND buyer_org_id = sqlc.arg(buyer_org_id)
-  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
-  AND (sqlc.narg(created_from)::timestamptz IS NULL OR created_at >= sqlc.narg(created_from)::timestamptz)
-  AND (sqlc.narg(created_to)::timestamptz IS NULL OR created_at < sqlc.narg(created_to)::timestamptz)
-  AND (sqlc.narg(q)::text IS NULL
-       OR order_no ILIKE '%' || sqlc.narg(q)::text || '%'
-       OR tracking_no ILIKE '%' || sqlc.narg(q)::text || '%'
-       OR external_reference ILIKE '%' || sqlc.narg(q)::text || '%')
-  AND (sqlc.narg(uuids)::uuid[] IS NULL OR uuid = ANY (sqlc.narg(uuids)::uuid[]))
-ORDER BY created_at DESC, id DESC
-LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
-
--- name: CountOrdersByBuyer :one
-SELECT COUNT(*) FROM orders
-WHERE brand_id = sqlc.arg(brand_id)
-  AND buyer_org_id = sqlc.arg(buyer_org_id)
-  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
-  AND (sqlc.narg(created_from)::timestamptz IS NULL OR created_at >= sqlc.narg(created_from)::timestamptz)
-  AND (sqlc.narg(created_to)::timestamptz IS NULL OR created_at < sqlc.narg(created_to)::timestamptz)
-  AND (sqlc.narg(q)::text IS NULL
-       OR order_no ILIKE '%' || sqlc.narg(q)::text || '%'
-       OR tracking_no ILIKE '%' || sqlc.narg(q)::text || '%'
-       OR external_reference ILIKE '%' || sqlc.narg(q)::text || '%');
-
--- Scope list: orders where any of org_ids is the seller or the buyer
--- (org_ids NULL = whole brand, for brand/all scopes).
--- name: ListOrdersInScope :many
-SELECT * FROM orders
-WHERE brand_id = sqlc.arg(brand_id)
+-- TEC-373 (DT-BE-5): the order list. One query serves every side:
+-- seller_org_id (side=seller: the active organization sells), buyer_org_id
+-- (side=buyer) or org_ids (side all: any organization of the orders.read
+-- scope sells or buys; NULL = whole brand). statuses, seller_uuids and
+-- buyer_uuids are any-of filters (NULL / empty = no filter); created_before
+-- is exclusive. sort_key: order_no, status (flow rank), total, created_at;
+-- id is the tiebreak (docs/list-contract.md). uuids reloads index hits.
+-- name: ListOrdersFiltered :many
+SELECT o.* FROM orders o
+WHERE o.brand_id = sqlc.arg(brand_id)
+  AND (sqlc.narg(seller_org_id)::bigint IS NULL OR o.organization_id = sqlc.narg(seller_org_id)::bigint)
+  AND (sqlc.narg(buyer_org_id)::bigint IS NULL OR o.buyer_org_id = sqlc.narg(buyer_org_id)::bigint)
   AND (sqlc.narg(org_ids)::bigint[] IS NULL
-       OR organization_id = ANY (sqlc.narg(org_ids)::bigint[])
-       OR buyer_org_id = ANY (sqlc.narg(org_ids)::bigint[]))
-  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
-  AND (sqlc.narg(created_from)::timestamptz IS NULL OR created_at >= sqlc.narg(created_from)::timestamptz)
-  AND (sqlc.narg(created_to)::timestamptz IS NULL OR created_at < sqlc.narg(created_to)::timestamptz)
+       OR o.organization_id = ANY (sqlc.narg(org_ids)::bigint[])
+       OR o.buyer_org_id = ANY (sqlc.narg(org_ids)::bigint[]))
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR o.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR o.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR o.created_at < sqlc.narg(created_before)::timestamptz)
   AND (sqlc.narg(q)::text IS NULL
-       OR order_no ILIKE '%' || sqlc.narg(q)::text || '%'
-       OR tracking_no ILIKE '%' || sqlc.narg(q)::text || '%'
-       OR external_reference ILIKE '%' || sqlc.narg(q)::text || '%')
-  AND (sqlc.narg(uuids)::uuid[] IS NULL OR uuid = ANY (sqlc.narg(uuids)::uuid[]))
-ORDER BY created_at DESC, id DESC
+       OR o.order_no ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR o.tracking_no ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR o.external_reference ILIKE '%' || sqlc.narg(q)::text || '%')
+  AND (COALESCE(cardinality(sqlc.narg(seller_uuids)::uuid[]), 0) = 0
+       OR o.organization_id IN (SELECT so.id FROM organizations so WHERE so.uuid = ANY (sqlc.narg(seller_uuids)::uuid[])))
+  AND (COALESCE(cardinality(sqlc.narg(buyer_uuids)::uuid[]), 0) = 0
+       OR o.buyer_org_id IN (SELECT bo.id FROM organizations bo WHERE bo.uuid = ANY (sqlc.narg(buyer_uuids)::uuid[])))
+  AND (sqlc.narg(total_min)::numeric IS NULL OR o.total >= sqlc.narg(total_min)::numeric)
+  AND (sqlc.narg(total_max)::numeric IS NULL OR o.total <= sqlc.narg(total_max)::numeric)
+  AND (sqlc.narg(uuids)::uuid[] IS NULL OR o.uuid = ANY (sqlc.narg(uuids)::uuid[]))
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'order_no' THEN o.order_no END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'order_no' THEN o.order_no END END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'status' THEN
+    CASE o.status WHEN 'draft' THEN 1 WHEN 'submitted' THEN 2 WHEN 'approved' THEN 3 WHEN 'preparing' THEN 4
+                 WHEN 'ready' THEN 5 WHEN 'processing' THEN 6 WHEN 'shipped' THEN 7 WHEN 'delivered' THEN 8
+                 WHEN 'received' THEN 9 WHEN 'cancelling' THEN 10 ELSE 11 END END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'status' THEN
+    CASE o.status WHEN 'draft' THEN 1 WHEN 'submitted' THEN 2 WHEN 'approved' THEN 3 WHEN 'preparing' THEN 4
+                 WHEN 'ready' THEN 5 WHEN 'processing' THEN 6 WHEN 'shipped' THEN 7 WHEN 'delivered' THEN 8
+                 WHEN 'received' THEN 9 WHEN 'cancelling' THEN 10 ELSE 11 END END END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'total' THEN o.total END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'total' THEN o.total END END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN o.created_at END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN o.created_at END END DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN o.id END DESC,
+  o.id ASC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
--- name: CountOrdersInScope :one
-SELECT COUNT(*) FROM orders
-WHERE brand_id = sqlc.arg(brand_id)
+-- name: CountOrdersFiltered :one
+SELECT COUNT(*) FROM orders o
+WHERE o.brand_id = sqlc.arg(brand_id)
+  AND (sqlc.narg(seller_org_id)::bigint IS NULL OR o.organization_id = sqlc.narg(seller_org_id)::bigint)
+  AND (sqlc.narg(buyer_org_id)::bigint IS NULL OR o.buyer_org_id = sqlc.narg(buyer_org_id)::bigint)
   AND (sqlc.narg(org_ids)::bigint[] IS NULL
-       OR organization_id = ANY (sqlc.narg(org_ids)::bigint[])
-       OR buyer_org_id = ANY (sqlc.narg(org_ids)::bigint[]))
-  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
-  AND (sqlc.narg(created_from)::timestamptz IS NULL OR created_at >= sqlc.narg(created_from)::timestamptz)
-  AND (sqlc.narg(created_to)::timestamptz IS NULL OR created_at < sqlc.narg(created_to)::timestamptz)
+       OR o.organization_id = ANY (sqlc.narg(org_ids)::bigint[])
+       OR o.buyer_org_id = ANY (sqlc.narg(org_ids)::bigint[]))
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR o.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR o.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR o.created_at < sqlc.narg(created_before)::timestamptz)
   AND (sqlc.narg(q)::text IS NULL
-       OR order_no ILIKE '%' || sqlc.narg(q)::text || '%'
-       OR tracking_no ILIKE '%' || sqlc.narg(q)::text || '%'
-       OR external_reference ILIKE '%' || sqlc.narg(q)::text || '%');
+       OR o.order_no ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR o.tracking_no ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR o.external_reference ILIKE '%' || sqlc.narg(q)::text || '%')
+  AND (COALESCE(cardinality(sqlc.narg(seller_uuids)::uuid[]), 0) = 0
+       OR o.organization_id IN (SELECT so.id FROM organizations so WHERE so.uuid = ANY (sqlc.narg(seller_uuids)::uuid[])))
+  AND (COALESCE(cardinality(sqlc.narg(buyer_uuids)::uuid[]), 0) = 0
+       OR o.buyer_org_id IN (SELECT bo.id FROM organizations bo WHERE bo.uuid = ANY (sqlc.narg(buyer_uuids)::uuid[])))
+  AND (sqlc.narg(total_min)::numeric IS NULL OR o.total >= sqlc.narg(total_min)::numeric)
+  AND (sqlc.narg(total_max)::numeric IS NULL OR o.total <= sqlc.narg(total_max)::numeric);
 
 -- ---------------------------------------------------------------------------
 -- Order lines.
