@@ -277,7 +277,7 @@ func TestStockEntryGenerateNewConfirm(t *testing.T) {
 	if _, err := e.entries.AddLines(e.ctx, c, other.UUID, wh.EntryLinesInput{Barcodes: []string{rows[0].barcode}}); !errors.Is(err, wh.ErrEntryUnitNotEnterable) {
 		t.Fatalf("link stocked unit: %v", err)
 	}
-	list, total, err := e.entries.List(e.ctx, c, wh.EntryStatusConfirmed, 50, 0)
+	list, total, err := e.entries.List(e.ctx, c, wh.EntryListFilter{Statuses: []string{wh.EntryStatusConfirmed}, Limit: 50})
 	if err != nil || total < 1 || len(list) < 1 || list[0].Lines != nil {
 		t.Fatalf("list = %d %v", total, err)
 	}

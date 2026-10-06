@@ -108,5 +108,6 @@
   "timeline.event.assigned": "Asignado",
   "timeline.event.follow_up_set": "Seguimiento definido",
   "timeline.event.converted": "Convertido",
-  "timeline.event.task_created": "Tarea creada"
+  "timeline.event.task_created": "Tarea creada",
+  "columns.created_at": "Creado"
 }

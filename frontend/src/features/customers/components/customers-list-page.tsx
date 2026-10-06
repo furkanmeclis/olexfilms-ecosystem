@@ -1,39 +1,59 @@
 "use client";
 
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Plus, Search, Users } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ColumnDef } from "@tanstack/react-table";
+import { ArrowUpCircle, Download, Eye, Pencil, ShieldOff } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
-import { PageHeader } from "@/components/layout/page-header";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  EntityCreateButton,
+  EntityPage,
+  EntityRowActions,
+  EntityTable,
+  EntityToolbar,
+  useServerListState,
+  type EntityRowAction,
+} from "@/components/entity";
+import { createColumn } from "@/components/tables";
+import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import {
+  AnonymizeDialog,
+  DataExportDialog,
+  UpgradeDialog,
+  type CustomerActionKind,
+} from "@/features/customers/components/customer-actions";
 import { CustomerListExportButton } from "@/features/customers/components/customer-list-export";
-import { resolveCustomerListAccess } from "@/features/customers/lib/access";
+import {
+  resolveCustomerDetailAccess,
+  resolveCustomerListAccess,
+} from "@/features/customers/lib/access";
 import { customerDisplayName } from "@/features/customers/lib/form";
 import {
   customerKeys,
   customersService,
   type CustomerListQuery,
   type CustomerStatus,
+  type CustomerSummary,
+  type ListExportQuery,
 } from "@/features/customers/services/customers.service";
-import { useDebounce } from "@/hooks/use-debounce";
-import { cn } from "@/lib/utils";
+import { useActiveOrganization } from "@/hooks/use-active-organization";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 
 export const CUSTOMER_PAGE_SIZE = 20;
+export const CUSTOMERS_PERSIST_KEY = "tenant-customers-v1";
 const STATUSES: CustomerStatus[] = [
   "active",
   "pending",
   "disabled",
   "anonymized",
 ];
+const TYPES = ["individual", "corporate"] as const;
 
 export function customerStatusTone(
   status: CustomerStatus,
@@ -50,42 +70,286 @@ export function customerStatusTone(
   }
 }
 
-export function customerPageCount(total: number, size: number): number {
-  return Math.max(1, Math.ceil(total / size));
+/**
+ * The list row has no `editable` flag: anonymized and disabled accounts
+ * are not editable (merged accounts leave the list), like the detail.
+ */
+function summaryAccessInput(c: CustomerSummary) {
+  return {
+    editable:
+      !c.anonymized && c.status !== "anonymized" && c.status !== "disabled",
+    anonymized: c.anonymized,
+    status: c.status,
+  };
 }
 
 /**
- * Tenant > Customers (TEC-163): customers linked to the organizations in
- * scope, searched by name / phone / e-mail (`q`), filtered by status, paged.
+ * Tenant > Customers (TEC-163, TEC-372): server DataTable over
+ * GET /v1/customers with sort, status / type facets, linked date range,
+ * organization filter (center / distributor), `q`, the detail actions per
+ * row and the list export with the same filters and sort. Mobile shows
+ * cards.
  */
 export function CustomersListPage({ slug }: { slug: string }) {
   const { t, format } = useLocale();
   const { can } = usePermission();
+  const router = useRouter();
+  const qc = useQueryClient();
+  const org = useActiveOrganization(slug);
   const access = resolveCustomerListAccess(can);
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<CustomerStatus | "">("");
-  const [page, setPage] = useState(0);
-  const q = useDebounce(search.trim(), 300);
+  const [action, setAction] = useState<{
+    kind: CustomerActionKind;
+    customer: CustomerSummary;
+  } | null>(null);
 
-  const query: CustomerListQuery = {
-    ...(q ? { q } : {}),
-    ...(status ? { status } : {}),
-    limit: CUSTOMER_PAGE_SIZE,
-    offset: page * CUSTOMER_PAGE_SIZE,
-  };
-  const list = useQuery({
-    queryKey: customerKeys.list(query),
-    queryFn: () => customersService.list(query),
-    enabled: access.canRead,
-    placeholderData: keepPreviousData,
+  // Center and distributor see several organizations; a dealer only its own.
+  const canFilterOrg =
+    access.canRead &&
+    can(permissions.organizations.tenantRead) &&
+    (org?.type === "center" || org?.type === "distributor");
+  const organizations = useQuery({
+    queryKey: customerKeys.organizations,
+    queryFn: () => customersService.listOrganizations(),
+    enabled: canFilterOrg,
+    staleTime: 5 * 60_000,
   });
+  const orgOptions = useMemo(
+    () =>
+      (organizations.data ?? []).map((o) => ({ value: o.uuid, label: o.name })),
+    [organizations.data],
+  );
+
+  const orgType = org?.type;
+  const columns = useMemo(
+    () =>
+      [
+        createColumn<CustomerSummary>({
+          id: "name",
+          accessorFn: (row) => customerDisplayName(row),
+          labelKey: "customers.fields.name",
+          enableSorting: true,
+          enableHiding: false,
+          gridPrimary: true,
+          cell: ({ row }) => (
+            <div className="min-w-0" data-testid="customer-row">
+              <Link
+                href={routes.tenant.customers.detail(slug, row.original.uuid)}
+                className="font-medium hover:underline"
+                onClick={(event) => event.stopPropagation()}
+              >
+                {customerDisplayName(row.original)}
+              </Link>
+              {row.original.type === "corporate" &&
+              row.original.company_name ? (
+                <p className="text-muted-foreground text-xs">
+                  {row.original.company_name}
+                </p>
+              ) : null}
+            </div>
+          ),
+        }),
+        createColumn<CustomerSummary>({
+          accessorKey: "phone",
+          labelKey: "customers.fields.phone",
+          enableSorting: false,
+          gridSecondary: true,
+          cell: ({ row }) => (
+            <span dir="ltr" className="whitespace-nowrap">
+              {row.original.phone ?? "—"}
+            </span>
+          ),
+        }),
+        createColumn<CustomerSummary>({
+          accessorKey: "email",
+          labelKey: "customers.fields.email",
+          enableSorting: true,
+          cell: ({ row }) => row.original.email ?? "—",
+        }),
+        createColumn<CustomerSummary>({
+          accessorKey: "type",
+          labelKey: "customers.fields.type",
+          enableSorting: false,
+          filterVariant: "faceted",
+          filterOptions: TYPES.map((value) => ({
+            value,
+            label: value,
+            labelKey: `customers.type.${value}`,
+          })),
+          param: "type",
+          cell: ({ row }) => t(`customers.type.${row.original.type}`),
+        }),
+        createColumn<CustomerSummary>({
+          accessorKey: "status",
+          labelKey: "customers.fields.status",
+          enableSorting: true,
+          filterVariant: "faceted",
+          filterOptions: STATUSES.map((value) => ({
+            value,
+            label: value,
+            labelKey: `customers.status.${value}`,
+          })),
+          param: "status",
+          cell: ({ row }) => (
+            <StatusChip
+              label={t(`customers.status.${row.original.status}`)}
+              tone={customerStatusTone(row.original.status)}
+            />
+          ),
+        }),
+        createColumn<CustomerSummary>({
+          accessorKey: "linked_at",
+          labelKey: "customers.fields.linked_at",
+          enableSorting: true,
+          filterVariant: "date-range",
+          param: "linked",
+          cell: ({ row }) => (
+            <span className="whitespace-nowrap">
+              {row.original.linked_at
+                ? format.date(row.original.linked_at)
+                : "—"}
+            </span>
+          ),
+        }),
+        createColumn<CustomerSummary>({
+          accessorKey: "first_service_at",
+          labelKey: "customers.fields.first_service_at",
+          enableSorting: true,
+          defaultHidden: true,
+          cell: ({ row }) => (
+            <span className="whitespace-nowrap">
+              {row.original.first_service_at
+                ? format.date(row.original.first_service_at)
+                : "—"}
+            </span>
+          ),
+        }),
+        // Filter only: the row carries no organization (TEC-371 matches
+        // customers linked to the chosen organizations, inside the scope).
+        createColumn<CustomerSummary>({
+          id: "organization",
+          accessorFn: () => "",
+          labelKey: "customers.fields.organization",
+          enableSorting: false,
+          enableHiding: false,
+          defaultHidden: true,
+          filterVariant: "faceted",
+          filterOptions: orgOptions,
+          enableColumnFilter: canFilterOrg && orgOptions.length > 0,
+          param: "organization_uuid",
+          cell: () => null,
+        }),
+        createColumn<CustomerSummary>({
+          id: "actions",
+          labelKey: "common.actions",
+          enableSorting: false,
+          enableHiding: false,
+          enableResizing: false,
+          cell: ({ row }) => {
+            const customer = row.original;
+            const rowAccess = resolveCustomerDetailAccess(
+              can,
+              orgType,
+              summaryAccessInput(customer),
+            );
+            const items: EntityRowAction[] = [
+              {
+                id: "view",
+                label: t("common.view"),
+                icon: Eye,
+                onSelect: () =>
+                  router.push(
+                    routes.tenant.customers.detail(slug, customer.uuid),
+                  ),
+              },
+            ];
+            if (rowAccess.canEdit) {
+              items.push({
+                id: "edit",
+                label: t("customers.actions.edit"),
+                icon: Pencil,
+                onSelect: () =>
+                  router.push(
+                    routes.tenant.customers.edit(slug, customer.uuid),
+                  ),
+              });
+            }
+            if (rowAccess.canUpgrade) {
+              items.push({
+                id: "upgrade",
+                label: t("customers.actions.upgrade.button"),
+                icon: ArrowUpCircle,
+                onSelect: () => setAction({ kind: "upgrade", customer }),
+              });
+            }
+            if (rowAccess.canExport) {
+              items.push({
+                id: "export",
+                label: t("customers.actions.export.button"),
+                icon: Download,
+                onSelect: () => setAction({ kind: "export", customer }),
+              });
+            }
+            if (rowAccess.canAnonymize) {
+              items.push({
+                id: "anonymize",
+                label: t("customers.actions.anonymize.button"),
+                icon: ShieldOff,
+                variant: "destructive",
+                onSelect: () => setAction({ kind: "anonymize", customer }),
+              });
+            }
+            return <EntityRowActions actions={items} />;
+          },
+        }),
+      ] as ColumnDef<CustomerSummary, unknown>[],
+    [can, canFilterOrg, format, orgOptions, orgType, router, slug, t],
+  );
+
+  // Column meta drives the params: status / type / organization (CSV),
+  // linked (_from / _to); sort is one of the backend fields.
+  const listState = useServerListState({
+    columns,
+    initialSort: "-linked_at",
+    initialPageSize: CUSTOMER_PAGE_SIZE,
+    persistKey: CUSTOMERS_PERSIST_KEY,
+  });
+  const params: CustomerListQuery = listState.params;
+
+  const list = useQuery({
+    queryKey: customerKeys.list(params),
+    queryFn: () => customersService.list(params),
+    enabled: access.canRead,
+  });
+  const total = list.data?.total ?? 0;
+
+  // The export runs on the same filters, search and sort as the list.
+  const exportQuery = useMemo<ListExportQuery>(() => {
+    const query: Record<string, string> = {};
+    for (const [key, value] of Object.entries(listState.filterParams)) {
+      if (value) query[key] = String(value);
+    }
+    if (params.q) query.q = params.q;
+    if (params.sort) query.sort = params.sort;
+    return query as ListExportQuery;
+  }, [listState.filterParams, params.q, params.sort]);
+
+  const done = () => {
+    setAction(null);
+    void qc.invalidateQueries({ queryKey: customerKeys.all });
+  };
 
   const title = t("customers.list.title");
-  const header = (
-    <PageHeader
+  return (
+    <EntityPage
       title={title}
-      icon={<Users className="size-6" />}
       description={t("customers.list.description")}
+      permission={permissions.customers.read}
+      forbiddenFallback={
+        <ErrorState
+          title={t("common.error_forbidden")}
+          description={t("customers.list.forbidden")}
+        />
+      }
       breadcrumbs={[
         { label: t("layout.breadcrumb_home"), href: routes.tenant.home(slug) },
         { label: title },
@@ -94,223 +358,102 @@ export function CustomersListPage({ slug }: { slug: string }) {
         access.canExport || access.canCreate ? (
           <div className="flex flex-wrap gap-2">
             {access.canExport ? (
-              <CustomerListExportButton
-                filters={{
-                  ...(q ? { q } : {}),
-                  ...(status ? { status } : {}),
-                }}
-              />
+              <CustomerListExportButton filters={exportQuery} />
             ) : null}
             {access.canCreate ? (
-              <Button asChild>
-                <Link
-                  href={routes.tenant.customers.create(slug)}
-                  data-testid="new-customer"
-                >
-                  <Plus className="size-4" />
-                  {t("customers.nav_new")}
-                </Link>
-              </Button>
+              <EntityCreateButton
+                label={t("customers.nav_new")}
+                onClick={() =>
+                  router.push(routes.tenant.customers.create(slug))
+                }
+              />
             ) : null}
           </div>
         ) : null
       }
-    />
-  );
-
-  if (!access.canRead) {
-    return (
-      <div className="space-y-6">
-        {header}
-        <ErrorState
-          title={t("common.error_forbidden")}
-          description={t("customers.list.forbidden")}
-        />
-      </div>
-    );
-  }
-
-  const total = list.data?.total ?? 0;
-  const pages = customerPageCount(total, CUSTOMER_PAGE_SIZE);
-  const rows = list.data?.items ?? [];
-  const filtered = Boolean(q || status);
-
-  return (
-    <div className="space-y-6">
-      {header}
-      <Card>
-        <CardContent className="space-y-4 pt-6" data-testid="customer-filters">
-          <div className="space-y-1.5">
-            <Label htmlFor="customer-search">
-              {t("customers.list.search")}
-            </Label>
-            <div className="relative">
-              <Search className="text-muted-foreground pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2" />
-              <Input
-                id="customer-search"
-                type="search"
-                className="ps-9"
-                value={search}
-                placeholder={t("customers.list.search_placeholder")}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(0);
-                }}
+    >
+      <EntityTable
+        columns={columns}
+        data={list.data?.items ?? []}
+        getRowId={(row) => row.uuid}
+        onRowClick={(row) =>
+          router.push(routes.tenant.customers.detail(slug, row.uuid))
+        }
+        isLoading={list.isLoading}
+        isError={list.isError}
+        onRetry={() => void list.refetch()}
+        emptyTitle={t("customers.list.empty_title")}
+        emptyDescription={
+          listState.columnFilters.length > 0 || params.q
+            ? t("customers.list.empty_filtered")
+            : t("customers.list.empty_description")
+        }
+        rowCount={total}
+        state={listState.tableState}
+        features={{ persistKey: CUSTOMERS_PERSIST_KEY }}
+        renderGridItem={(c) => (
+          <div className="space-y-2" data-testid="customer-card">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <Link
+                  href={routes.tenant.customers.detail(slug, c.uuid)}
+                  className="font-medium hover:underline"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  {customerDisplayName(c)}
+                </Link>
+                {c.type === "corporate" && c.company_name ? (
+                  <p className="text-muted-foreground text-xs">
+                    {c.company_name}
+                  </p>
+                ) : null}
+              </div>
+              <StatusChip
+                label={t(`customers.status.${c.status}`)}
+                tone={customerStatusTone(c.status)}
               />
             </div>
+            <p className="text-muted-foreground text-xs">
+              <span dir="ltr">{c.phone ?? "—"}</span>
+              {c.email ? ` · ${c.email}` : ""}
+            </p>
+            <p className="text-muted-foreground text-xs">
+              {t("customers.fields.linked_at")}:{" "}
+              {c.linked_at ? format.date(c.linked_at) : "—"}
+            </p>
           </div>
-          <div
-            className="flex flex-wrap gap-2"
-            role="group"
-            aria-label={t("customers.list.status")}
-          >
-            {(["", ...STATUSES] as const).map((s) => {
-              const active = status === s;
-              return (
-                <Button
-                  key={s || "all"}
-                  type="button"
-                  size="sm"
-                  variant={active ? "default" : "outline"}
-                  aria-pressed={active}
-                  data-status={s || "all"}
-                  onClick={() => {
-                    setStatus(s);
-                    setPage(0);
-                  }}
-                >
-                  {s ? t(`customers.status.${s}`) : t("customers.list.all")}
-                </Button>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+        )}
+        toolbarExtra={
+          <EntityToolbar
+            onRefresh={() => void list.refetch()}
+            refreshDisabled={list.isFetching}
+          />
+        }
+      />
 
-      {list.isError ? (
-        <ErrorState
-          title={t("common.error_generic")}
-          onRetry={() => void list.refetch()}
-          retryLabel={t("common.retry")}
+      {action?.kind === "anonymize" ? (
+        <AnonymizeDialog
+          customer={action.customer}
+          open
+          onClose={() => setAction(null)}
+          onDone={done}
         />
-      ) : (
-        <Card>
-          <CardContent className="pt-6">
-            {list.isLoading ? (
-              <p className="text-muted-foreground text-sm">
-                {t("customers.loading")}
-              </p>
-            ) : rows.length === 0 ? (
-              <div className="py-8 text-center" data-testid="customers-empty">
-                <p className="font-medium">{t("customers.list.empty_title")}</p>
-                <p className="text-muted-foreground text-sm">
-                  {filtered
-                    ? t("customers.list.empty_filtered")
-                    : t("customers.list.empty_description")}
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm" data-testid="customers-table">
-                  <thead>
-                    <tr className="text-muted-foreground border-b text-xs">
-                      <th className="p-2 text-start font-medium">
-                        {t("customers.fields.name")}
-                      </th>
-                      <th className="p-2 text-start font-medium">
-                        {t("customers.fields.phone")}
-                      </th>
-                      <th className="p-2 text-start font-medium">
-                        {t("customers.fields.email")}
-                      </th>
-                      <th className="p-2 text-start font-medium">
-                        {t("customers.fields.status")}
-                      </th>
-                      <th className="p-2 text-start font-medium">
-                        {t("customers.fields.linked_at")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((c) => (
-                      <tr
-                        key={c.uuid}
-                        className="hover:bg-accent/50 border-b last:border-0"
-                        data-testid="customer-row"
-                        data-uuid={c.uuid}
-                      >
-                        <td className="p-2">
-                          <Link
-                            href={routes.tenant.customers.detail(slug, c.uuid)}
-                            className="font-medium hover:underline"
-                          >
-                            {customerDisplayName(c)}
-                          </Link>
-                          {c.type === "corporate" && c.company_name ? (
-                            <p className="text-muted-foreground text-xs">
-                              {c.company_name}
-                            </p>
-                          ) : null}
-                        </td>
-                        <td className="p-2 whitespace-nowrap">
-                          <span dir="ltr">{c.phone ?? "—"}</span>
-                        </td>
-                        <td className="p-2">{c.email ?? "—"}</td>
-                        <td className="p-2">
-                          <StatusChip
-                            label={t(`customers.status.${c.status}`)}
-                            tone={customerStatusTone(c.status)}
-                          />
-                        </td>
-                        <td className="p-2 whitespace-nowrap">
-                          {c.linked_at ? format.date(c.linked_at) : "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            <div
-              className={cn(
-                "mt-4 flex flex-wrap items-center justify-between gap-2",
-                rows.length === 0 && page === 0 && "hidden",
-              )}
-            >
-              <p
-                className="text-muted-foreground text-sm"
-                data-testid="page-info"
-              >
-                {t("customers.list.page", { page: page + 1, pages, total })}
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  data-testid="page-prev"
-                  disabled={page === 0 || list.isFetching}
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                >
-                  <ChevronLeft className="size-4 rtl:rotate-180" />
-                  {t("customers.list.prev")}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  data-testid="page-next"
-                  disabled={page + 1 >= pages || list.isFetching}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  {t("customers.list.next")}
-                  <ChevronRight className="size-4 rtl:rotate-180" />
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+      ) : null}
+      {action?.kind === "export" ? (
+        <DataExportDialog
+          customer={action.customer}
+          open
+          onClose={() => setAction(null)}
+        />
+      ) : null}
+      {action?.kind === "upgrade" ? (
+        <UpgradeDialog
+          customer={action.customer}
+          open
+          onClose={() => setAction(null)}
+          onDone={done}
+        />
+      ) : null}
+    </EntityPage>
   );
 }

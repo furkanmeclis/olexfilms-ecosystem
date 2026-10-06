@@ -35,16 +35,53 @@ FOR UPDATE;
 SELECT * FROM stock_entries WHERE import_batch_id = sqlc.arg(import_batch_id) FOR UPDATE;
 
 -- name: ListStockEntries :many
-SELECT * FROM stock_entries
-WHERE organization_id = sqlc.arg(organization_id)
-  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
-ORDER BY created_at DESC, id DESC
+-- TEC-375: list contract (docs/list-contract.md), keys from warehouse
+-- usecase EntrySort. status sorts by flow rank; warehouse by name (import
+-- entries have none and come last). q: note, warehouse name or code.
+SELECT e.* FROM stock_entries e
+WHERE e.organization_id = sqlc.arg(organization_id)
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR e.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(modes)::text[]), 0) = 0 OR e.mode = ANY (sqlc.narg(modes)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(warehouse_uuids)::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM warehouses fw
+                  WHERE fw.id = e.warehouse_id AND fw.uuid = ANY (sqlc.narg(warehouse_uuids)::uuid[])))
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR e.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR e.created_at < sqlc.narg(created_before)::timestamptz)
+  AND (sqlc.narg(q)::text IS NULL
+       OR e.note ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR EXISTS (SELECT 1 FROM warehouses qw
+                  WHERE qw.id = e.warehouse_id
+                    AND (qw.name ILIKE '%' || sqlc.narg(q)::text || '%' OR qw.code ILIKE '%' || sqlc.narg(q)::text || '%')))
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN e.created_at END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN e.created_at END END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'status' THEN
+    CASE e.status WHEN 'draft' THEN 1 WHEN 'confirmed' THEN 2 WHEN 'undone' THEN 3 ELSE 4 END END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'status' THEN
+    CASE e.status WHEN 'draft' THEN 1 WHEN 'confirmed' THEN 2 WHEN 'undone' THEN 3 ELSE 4 END END END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'warehouse' THEN
+    (SELECT sw.name FROM warehouses sw WHERE sw.id = e.warehouse_id) END END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'warehouse' THEN
+    (SELECT sw.name FROM warehouses sw WHERE sw.id = e.warehouse_id) END END DESC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN e.id END DESC,
+  e.id ASC
 LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
 
 -- name: CountStockEntries :one
-SELECT count(*) FROM stock_entries
-WHERE organization_id = sqlc.arg(organization_id)
-  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text);
+SELECT count(*) FROM stock_entries e
+WHERE e.organization_id = sqlc.arg(organization_id)
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR e.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(modes)::text[]), 0) = 0 OR e.mode = ANY (sqlc.narg(modes)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(warehouse_uuids)::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM warehouses fw
+                  WHERE fw.id = e.warehouse_id AND fw.uuid = ANY (sqlc.narg(warehouse_uuids)::uuid[])))
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR e.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR e.created_at < sqlc.narg(created_before)::timestamptz)
+  AND (sqlc.narg(q)::text IS NULL
+       OR e.note ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR EXISTS (SELECT 1 FROM warehouses qw
+                  WHERE qw.id = e.warehouse_id
+                    AND (qw.name ILIKE '%' || sqlc.narg(q)::text || '%' OR qw.code ILIKE '%' || sqlc.narg(q)::text || '%')));
 
 -- name: ConfirmStockEntry :one
 UPDATE stock_entries

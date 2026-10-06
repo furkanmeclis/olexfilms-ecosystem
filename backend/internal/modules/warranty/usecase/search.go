@@ -143,8 +143,8 @@ func indexFilter(p db.ListWarrantyRowsParams) (string, bool) {
 	if p.ServiceCreatedBy.Valid {
 		f.Eq("created_by_user_id", p.ServiceCreatedBy.Int64)
 	}
-	if p.Status.Valid {
-		f.EqString("status", p.Status.String)
+	if len(p.Statuses) > 0 {
+		f.InStrings("status", p.Statuses)
 	}
 	if p.ProductID.Valid {
 		f.Eq("product_id", p.ProductID.Int64)

@@ -108,5 +108,6 @@
   "timeline.event.assigned": "Atandı",
   "timeline.event.follow_up_set": "Takip ayarlandı",
   "timeline.event.converted": "Dönüştürüldü",
-  "timeline.event.task_created": "Görev oluşturuldu"
+  "timeline.event.task_created": "Görev oluşturuldu",
+  "columns.created_at": "Oluşturulma"
 }

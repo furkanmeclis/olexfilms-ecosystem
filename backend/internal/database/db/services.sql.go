@@ -250,53 +250,65 @@ func (q *Queries) CompleteService(ctx context.Context, arg CompleteServiceParams
 
 const countServicesInScope = `-- name: CountServicesInScope :one
 SELECT COUNT(*) FROM services
-WHERE brand_id = $1
-  AND ($2::bigint[] IS NULL OR organization_id = ANY ($2::bigint[]))
-  AND ($3::bigint IS NULL OR created_by_user_id = $3)
-  AND ($4::bigint IS NULL OR customer_user_id = $4)
-  AND ($5::bigint IS NULL OR vehicle_id = $5)
-  AND ($6::text IS NULL OR status = $6::text)
-  AND ($7::timestamptz IS NULL OR created_at >= $7::timestamptz)
-  AND ($8::timestamptz IS NULL OR created_at < $8::timestamptz)
+WHERE services.brand_id = $1
+  AND ($2::bigint[] IS NULL OR services.organization_id = ANY ($2::bigint[]))
   AND (
-    $9::text IS NULL
-    OR service_no ILIKE '%' || $9 || '%'
-    OR plate ILIKE '%' || $9 || '%'
-    OR vin ILIKE '%' || $9 || '%'
+    COALESCE(cardinality($3::uuid[]), 0) = 0
+    OR services.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY ($3::uuid[]))
+  )
+  AND ($4::bigint IS NULL OR services.created_by_user_id = $4)
+  AND ($5::bigint IS NULL OR services.customer_user_id = $5)
+  AND ($6::bigint IS NULL OR services.vehicle_id = $6)
+  AND (COALESCE(cardinality($7::text[]), 0) = 0 OR services.status = ANY ($7::text[]))
+  AND ($8::timestamptz IS NULL OR services.created_at >= $8::timestamptz)
+  AND ($9::timestamptz IS NULL OR services.created_at < $9::timestamptz)
+  AND ($10::timestamptz IS NULL OR services.completed_at >= $10::timestamptz)
+  AND ($11::timestamptz IS NULL OR services.completed_at < $11::timestamptz)
+  AND (
+    $12::text IS NULL
+    OR services.service_no ILIKE '%' || $12 || '%'
+    OR services.plate ILIKE '%' || $12 || '%'
+    OR services.vin ILIKE '%' || $12 || '%'
     OR EXISTS (
       SELECT 1 FROM users cu
       WHERE cu.id = services.customer_user_id
         AND cu.status <> 'anonymized'
         AND (
-          (cu.name || ' ' || cu.surname) ILIKE '%' || $9 || '%'
-          OR cu.phone_e164 LIKE '%' || $9 || '%'
+          (cu.name || ' ' || cu.surname) ILIKE '%' || $12 || '%'
+          OR cu.phone_e164 LIKE '%' || $12 || '%'
         )
     )
   )
 `
 
 type CountServicesInScopeParams struct {
-	BrandID         int64              `json:"brand_id"`
-	OrgIds          []int64            `json:"org_ids"`
-	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
-	CustomerUserID  pgtype.Int8        `json:"customer_user_id"`
-	VehicleID       pgtype.Int8        `json:"vehicle_id"`
-	Status          pgtype.Text        `json:"status"`
-	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
-	CreatedTo       pgtype.Timestamptz `json:"created_to"`
-	Q               pgtype.Text        `json:"q"`
+	BrandID           int64              `json:"brand_id"`
+	OrgIds            []int64            `json:"org_ids"`
+	OrganizationUuids []uuid.UUID        `json:"organization_uuids"`
+	CreatedByUserID   pgtype.Int8        `json:"created_by_user_id"`
+	CustomerUserID    pgtype.Int8        `json:"customer_user_id"`
+	VehicleID         pgtype.Int8        `json:"vehicle_id"`
+	Statuses          []string           `json:"statuses"`
+	CreatedFrom       pgtype.Timestamptz `json:"created_from"`
+	CreatedTo         pgtype.Timestamptz `json:"created_to"`
+	CompletedFrom     pgtype.Timestamptz `json:"completed_from"`
+	CompletedTo       pgtype.Timestamptz `json:"completed_to"`
+	Q                 pgtype.Text        `json:"q"`
 }
 
 func (q *Queries) CountServicesInScope(ctx context.Context, arg CountServicesInScopeParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countServicesInScope,
 		arg.BrandID,
 		arg.OrgIds,
+		arg.OrganizationUuids,
 		arg.CreatedByUserID,
 		arg.CustomerUserID,
 		arg.VehicleID,
-		arg.Status,
+		arg.Statuses,
 		arg.CreatedFrom,
 		arg.CreatedTo,
+		arg.CompletedFrom,
+		arg.CompletedTo,
 		arg.Q,
 	)
 	var count int64
@@ -1527,65 +1539,118 @@ func (q *Queries) ListServicesByCustomer(ctx context.Context, arg ListServicesBy
 
 const listServicesInScope = `-- name: ListServicesInScope :many
 SELECT id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at, warranty_claim_id, income_entry_id, income_amount FROM services
-WHERE brand_id = $1
-  AND ($2::bigint[] IS NULL OR organization_id = ANY ($2::bigint[]))
-  AND ($3::bigint IS NULL OR created_by_user_id = $3)
-  AND ($4::bigint IS NULL OR customer_user_id = $4)
-  AND ($5::bigint IS NULL OR vehicle_id = $5)
-  AND ($6::text IS NULL OR status = $6::text)
-  AND ($7::timestamptz IS NULL OR created_at >= $7::timestamptz)
-  AND ($8::timestamptz IS NULL OR created_at < $8::timestamptz)
-  AND ($9::uuid[] IS NULL OR uuid = ANY ($9::uuid[]))
+WHERE services.brand_id = $1
+  AND ($2::bigint[] IS NULL OR services.organization_id = ANY ($2::bigint[]))
   AND (
-    $10::text IS NULL
-    OR service_no ILIKE '%' || $10 || '%'
-    OR plate ILIKE '%' || $10 || '%'
-    OR vin ILIKE '%' || $10 || '%'
+    COALESCE(cardinality($3::uuid[]), 0) = 0
+    OR services.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY ($3::uuid[]))
+  )
+  AND ($4::bigint IS NULL OR services.created_by_user_id = $4)
+  AND ($5::bigint IS NULL OR services.customer_user_id = $5)
+  AND ($6::bigint IS NULL OR services.vehicle_id = $6)
+  AND (COALESCE(cardinality($7::text[]), 0) = 0 OR services.status = ANY ($7::text[]))
+  AND ($8::timestamptz IS NULL OR services.created_at >= $8::timestamptz)
+  AND ($9::timestamptz IS NULL OR services.created_at < $9::timestamptz)
+  AND ($10::timestamptz IS NULL OR services.completed_at >= $10::timestamptz)
+  AND ($11::timestamptz IS NULL OR services.completed_at < $11::timestamptz)
+  AND ($12::uuid[] IS NULL OR services.uuid = ANY ($12::uuid[]))
+  AND (
+    $13::text IS NULL
+    OR services.service_no ILIKE '%' || $13 || '%'
+    OR services.plate ILIKE '%' || $13 || '%'
+    OR services.vin ILIKE '%' || $13 || '%'
     OR EXISTS (
       SELECT 1 FROM users cu
       WHERE cu.id = services.customer_user_id
         AND cu.status <> 'anonymized'
         AND (
-          (cu.name || ' ' || cu.surname) ILIKE '%' || $10 || '%'
-          OR cu.phone_e164 LIKE '%' || $10 || '%'
+          (cu.name || ' ' || cu.surname) ILIKE '%' || $13 || '%'
+          OR cu.phone_e164 LIKE '%' || $13 || '%'
         )
     )
   )
-ORDER BY created_at DESC, id DESC
-LIMIT $12 OFFSET $11
+ORDER BY
+  CASE WHEN NOT $14::bool THEN
+    CASE $15::text
+      WHEN 'service_no' THEN services.service_no::text
+      WHEN 'organization' THEN (SELECT so.name FROM organizations so WHERE so.id = services.organization_id)::text
+    END
+  END ASC,
+  CASE WHEN $14::bool THEN
+    CASE $15::text
+      WHEN 'service_no' THEN services.service_no::text
+      WHEN 'organization' THEN (SELECT so.name FROM organizations so WHERE so.id = services.organization_id)::text
+    END
+  END DESC,
+  CASE WHEN NOT $14::bool AND $15::text = 'status' THEN
+    CASE services.status WHEN 'draft' THEN 0 WHEN 'pending' THEN 1 WHEN 'processing' THEN 2
+      WHEN 'ready' THEN 3 WHEN 'completed' THEN 4 WHEN 'cancelled' THEN 5 ELSE 6 END
+  END ASC,
+  CASE WHEN $14::bool AND $15::text = 'status' THEN
+    CASE services.status WHEN 'draft' THEN 0 WHEN 'pending' THEN 1 WHEN 'processing' THEN 2
+      WHEN 'ready' THEN 3 WHEN 'completed' THEN 4 WHEN 'cancelled' THEN 5 ELSE 6 END
+  END DESC,
+  CASE WHEN NOT $14::bool THEN
+    CASE $15::text WHEN 'created_at' THEN services.created_at WHEN 'updated_at' THEN services.updated_at END
+  END ASC,
+  CASE WHEN $14::bool THEN
+    CASE $15::text WHEN 'created_at' THEN services.created_at WHEN 'updated_at' THEN services.updated_at END
+  END DESC,
+  CASE WHEN NOT $14::bool AND $15::text = 'completed_at' THEN services.completed_at END ASC NULLS LAST,
+  CASE WHEN $14::bool AND $15::text = 'completed_at' THEN services.completed_at END DESC NULLS LAST,
+  CASE WHEN NOT $14::bool AND $15::text = 'plate' THEN services.plate::text END ASC NULLS LAST,
+  CASE WHEN $14::bool AND $15::text = 'plate' THEN services.plate::text END DESC NULLS LAST,
+  CASE WHEN $14::bool THEN services.id END DESC,
+  services.id ASC
+LIMIT $17 OFFSET $16
 `
 
 type ListServicesInScopeParams struct {
-	BrandID         int64              `json:"brand_id"`
-	OrgIds          []int64            `json:"org_ids"`
-	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
-	CustomerUserID  pgtype.Int8        `json:"customer_user_id"`
-	VehicleID       pgtype.Int8        `json:"vehicle_id"`
-	Status          pgtype.Text        `json:"status"`
-	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
-	CreatedTo       pgtype.Timestamptz `json:"created_to"`
-	Uuids           []uuid.UUID        `json:"uuids"`
-	Q               pgtype.Text        `json:"q"`
-	RowOffset       int32              `json:"row_offset"`
-	RowLimit        int32              `json:"row_limit"`
+	BrandID           int64              `json:"brand_id"`
+	OrgIds            []int64            `json:"org_ids"`
+	OrganizationUuids []uuid.UUID        `json:"organization_uuids"`
+	CreatedByUserID   pgtype.Int8        `json:"created_by_user_id"`
+	CustomerUserID    pgtype.Int8        `json:"customer_user_id"`
+	VehicleID         pgtype.Int8        `json:"vehicle_id"`
+	Statuses          []string           `json:"statuses"`
+	CreatedFrom       pgtype.Timestamptz `json:"created_from"`
+	CreatedTo         pgtype.Timestamptz `json:"created_to"`
+	CompletedFrom     pgtype.Timestamptz `json:"completed_from"`
+	CompletedTo       pgtype.Timestamptz `json:"completed_to"`
+	Uuids             []uuid.UUID        `json:"uuids"`
+	Q                 pgtype.Text        `json:"q"`
+	SortDesc          bool               `json:"sort_desc"`
+	SortKey           string             `json:"sort_key"`
+	RowOffset         int32              `json:"row_offset"`
+	RowLimit          int32              `json:"row_limit"`
 }
 
 // Scope list: org_ids NULL = whole brand (brand/all scope); created_by for
 // scope own, customer_user_id for scope customer (portal). q matches the
 // service number, plate, VIN and the customer's name or phone (TEC-179;
 // anonymized customers are not searchable by name).
+// TEC-377 (DT-BE-7): statuses / organization_uuids are multi-value filters,
+// completed_from / completed_to a completion window; sort keys from
+// services usecase.ListSort (docs/list-contract.md): status sorts by the
+// flow rank, organization by name; plate and completed_at are nullable
+// (NULLS LAST both ways).
 func (q *Queries) ListServicesInScope(ctx context.Context, arg ListServicesInScopeParams) ([]Service, error) {
 	rows, err := q.db.Query(ctx, listServicesInScope,
 		arg.BrandID,
 		arg.OrgIds,
+		arg.OrganizationUuids,
 		arg.CreatedByUserID,
 		arg.CustomerUserID,
 		arg.VehicleID,
-		arg.Status,
+		arg.Statuses,
 		arg.CreatedFrom,
 		arg.CreatedTo,
+		arg.CompletedFrom,
+		arg.CompletedTo,
 		arg.Uuids,
 		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.RowOffset,
 		arg.RowLimit,
 	)

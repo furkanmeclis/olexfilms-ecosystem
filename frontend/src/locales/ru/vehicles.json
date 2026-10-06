@@ -100,5 +100,12 @@
   "transfer.status.completed": "Завершена",
   "transfer.status.cancelled": "Отменена",
   "transfer.status.expired": "Истекла",
-  "columns.created_at": "Создано"
+  "columns.created_at": "Создано",
+  "list.nav": "Автомобили",
+  "list.title": "Автомобили",
+  "list.description": "Автомобили клиентов, которых вы обслуживаете.",
+  "list.forbidden": "Чтобы открыть эту страницу, нужно право на просмотр автомобилей.",
+  "list.empty_title": "Нет автомобилей",
+  "list.empty_description": "Здесь появляются автомобили, зарегистрированные для ваших клиентов.",
+  "list.open_customer": "Открыть клиента"
 }

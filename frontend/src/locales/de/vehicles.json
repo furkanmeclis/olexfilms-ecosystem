@@ -100,5 +100,12 @@
   "transfer.status.completed": "Abgeschlossen",
   "transfer.status.cancelled": "Abgebrochen",
   "transfer.status.expired": "Abgelaufen",
-  "columns.created_at": "Erstellt"
+  "columns.created_at": "Erstellt",
+  "list.nav": "Fahrzeuge",
+  "list.title": "Fahrzeuge",
+  "list.description": "Fahrzeuge der Kunden, die Sie betreuen.",
+  "list.forbidden": "Sie benötigen die Leseberechtigung für Fahrzeuge, um diese Seite zu öffnen.",
+  "list.empty_title": "Keine Fahrzeuge",
+  "list.empty_description": "Hier erscheinen die für Ihre Kunden erfassten Fahrzeuge.",
+  "list.open_customer": "Kunden öffnen"
 }

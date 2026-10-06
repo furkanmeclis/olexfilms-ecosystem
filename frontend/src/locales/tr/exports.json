@@ -74,5 +74,6 @@
   "status.expired": "Süresi doldu",
   "resources.platform.organizations": "İşletmeler",
   "resources.orders.list": "Siparişler",
-  "resources.stock.units": "Stok birimleri"
+  "resources.stock.units": "Stok birimleri",
+  "resources.leads.list": "Lead'ler"
 }

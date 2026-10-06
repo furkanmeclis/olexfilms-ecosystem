@@ -74,5 +74,6 @@
   "status.expired": "Έληξε",
   "resources.platform.organizations": "Οργανισμοί",
   "resources.orders.list": "Παραγγελίες",
-  "resources.stock.units": "Μονάδες αποθέματος"
+  "resources.stock.units": "Μονάδες αποθέματος",
+  "resources.leads.list": "Δυνητικοί πελάτες"
 }

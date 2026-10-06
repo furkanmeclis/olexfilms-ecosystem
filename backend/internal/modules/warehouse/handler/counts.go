@@ -108,15 +108,19 @@ type countApproveBody struct {
 	Resolutions []countResolutionBody `json:"resolutions"`
 }
 
-// List (GET /v1/warehouse/stock-counts?status&limit&offset).
+// List (GET /v1/warehouse/stock-counts?status&method&visibility&scope_type&warehouse_uuid&created_from&created_to&q&sort&limit&offset).
 func (h *Counts) List(w http.ResponseWriter, r *http.Request) {
-	q := apiquery.Parse(r.URL.Query())
-	items, total, err := h.svc.List(r.Context(), countCaller(r), strings.TrimSpace(r.URL.Query().Get("status")), q.Limit, q.Offset)
+	f, err := wh.ParseCountListFilter(r.URL.Query())
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	items, total, err := h.svc.List(r.Context(), countCaller(r), f)
 	if err != nil {
 		writeCountError(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, f.Limit, f.Offset))
 }
 
 // Create (POST /v1/warehouse/stock-counts).
@@ -166,11 +170,22 @@ func (h *Counts) Report(w http.ResponseWriter, r *http.Request) {
 	h.withID(w, r, func(id uuid.UUID) (any, error) { return h.svc.Report(r.Context(), countCaller(r), id) })
 }
 
-// Scans (GET /v1/warehouse/stock-counts/{uuid}/scans).
+// Scans (GET /v1/warehouse/stock-counts/{uuid}/scans?limit&offset). TEC-375:
+// the page envelope (items, total, limit, offset); without limit and offset
+// every scan comes back (limit = total), as before.
 func (h *Counts) Scans(w http.ResponseWriter, r *http.Request) {
+	v := r.URL.Query()
+	var page *wh.ScanPage
+	if v.Has("limit") || v.Has("offset") {
+		q := apiquery.Parse(v)
+		page = &wh.ScanPage{Limit: q.Limit, Offset: q.Offset}
+	}
 	h.withID(w, r, func(id uuid.UUID) (any, error) {
-		items, err := h.svc.Scans(r.Context(), countCaller(r), id)
-		return listResponse[wh.CountScan]{Items: items}, err
+		items, total, err := h.svc.Scans(r.Context(), countCaller(r), id, page)
+		if page == nil {
+			return apiquery.NewPage(items, total, int32(len(items)), 0), err
+		}
+		return apiquery.NewPage(items, total, page.Limit, page.Offset), err
 	})
 }
 

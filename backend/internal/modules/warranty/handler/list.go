@@ -8,8 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
-	"strings"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
@@ -40,7 +38,14 @@ func panelCaller(r *http.Request) usecase.Caller {
 
 func writeListError(w http.ResponseWriter, r *http.Request, err error) {
 	var ve *usecase.ValidationError
+	var qe *apiquery.ValidationError
 	switch {
+	case errors.As(err, &qe):
+		details := make([]response.Detail, 0, len(qe.Details))
+		for _, d := range qe.Details {
+			details = append(details, response.Detail{Field: d.Field, Message: d.Message, Code: d.Code})
+		}
+		response.ValidationError(w, r, details)
 	case errors.As(err, &ve):
 		response.ValidationError(w, r, []response.Detail{{Field: ve.Field, Message: ve.Message}})
 	case errors.Is(err, usecase.ErrWarrantyNotFound):
@@ -61,40 +66,15 @@ func warrantyUUID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	return id, true
 }
 
-func optInt(raw, field string) (*int, error) {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return nil, nil
-	}
-	n, err := strconv.Atoi(raw)
-	if err != nil {
-		return nil, &usecase.ValidationError{Field: field, Message: "must be an integer"}
-	}
-	return &n, nil
-}
-
-// listFilter parses ?status&q&product_uuid&vehicle_uuid&days_left_min&days_left_max&limit&offset.
-func listFilter(r *http.Request) (usecase.ListFilter, apiquery.Query, error) {
-	pq := apiquery.Parse(r.URL.Query())
-	v := r.URL.Query()
-	minDays, err := optInt(v.Get("days_left_min"), "days_left_min")
-	if err != nil {
-		return usecase.ListFilter{}, pq, err
-	}
-	maxDays, err := optInt(v.Get("days_left_max"), "days_left_max")
-	if err != nil {
-		return usecase.ListFilter{}, pq, err
-	}
-	return usecase.ListFilter{
-		Status: v.Get("status"), Q: v.Get("q"), ProductUUID: v.Get("product_uuid"),
-		VehicleUUID: v.Get("vehicle_uuid"), DaysLeftMin: minDays, DaysLeftMax: maxDays,
-		Limit: pq.Limit, Offset: pq.Offset,
-	}, pq, nil
+// listFilter parses the list parameters (TEC-377: docs/list-contract.md,
+// usecase.ParseListFilter).
+func listFilter(r *http.Request) (usecase.ListFilter, error) {
+	return usecase.ParseListFilter(r.URL.Query())
 }
 
 // PanelList (GET /v1/warranties).
 func (h *List) PanelList(w http.ResponseWriter, r *http.Request) {
-	f, pq, err := listFilter(r)
+	f, err := listFilter(r)
 	if err != nil {
 		writeListError(w, r, err)
 		return
@@ -104,7 +84,7 @@ func (h *List) PanelList(w http.ResponseWriter, r *http.Request) {
 		writeListError(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, pq.Limit, pq.Offset))
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, f.Limit, f.Offset))
 }
 
 // PanelGet (GET /v1/warranties/{uuid}).
@@ -153,7 +133,7 @@ func portalBrand(r *http.Request) int64 {
 
 // PortalList (GET /v1/portal/warranties): the signed-in user's warranties.
 func (h *List) PortalList(w http.ResponseWriter, r *http.Request) {
-	f, pq, err := listFilter(r)
+	f, err := listFilter(r)
 	if err != nil {
 		writeListError(w, r, err)
 		return
@@ -164,7 +144,7 @@ func (h *List) PortalList(w http.ResponseWriter, r *http.Request) {
 		writeListError(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, pq.Limit, pq.Offset))
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, f.Limit, f.Offset))
 }
 
 // PortalGet (GET /v1/portal/warranties/{uuid}).

@@ -133,5 +133,6 @@
   "actions.upgrade.role_owner": "Dealer owner",
   "actions.upgrade.role_staff": "Dealer staff",
   "actions.upgrade.confirm": "Upgrade",
-  "actions.upgrade.success": "The customer is now a member of {{dealer}}."
+  "actions.upgrade.success": "The customer is now a member of {{dealer}}.",
+  "fields.organization": "Organization"
 }

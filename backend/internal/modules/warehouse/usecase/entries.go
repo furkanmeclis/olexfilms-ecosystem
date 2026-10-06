@@ -33,7 +33,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -278,21 +277,27 @@ func (s *StockEntries) Create(ctx context.Context, c EntryCaller, in EntryInput)
 	return s.view(ctx, s.q, e, true)
 }
 
-// List returns the entries of the active organization, newest first.
-func (s *StockEntries) List(ctx context.Context, c EntryCaller, status string, limit, offset int32) ([]StockEntry, int64, error) {
+// List returns the entries of the active organization (TEC-375: list
+// contract, default newest first).
+func (s *StockEntries) List(ctx context.Context, c EntryCaller, f EntryListFilter) ([]StockEntry, int64, error) {
 	org, err := guard(c.Caller)
 	if err != nil {
 		return nil, 0, err
 	}
-	st := pgtype.Text{String: status, Valid: status != ""}
-	if st.Valid && !slices.Contains([]string{EntryStatusDraft, EntryStatusConfirmed, EntryStatusCancelled, EntryStatusUndone}, status) {
-		return nil, 0, invalid("status", "must be draft, confirmed, cancelled or undone")
+	f.Sort = orDefault(f.Sort, EntrySort)
+	cp := db.CountStockEntriesParams{
+		OrganizationID: org, Statuses: f.Statuses, Modes: f.Modes, WarehouseUuids: f.WarehouseUUIDs,
+		CreatedFrom: listTS(f.CreatedFrom), CreatedBefore: listTS(f.CreatedBefore), Q: listQ(f.Q),
 	}
-	rows, err := s.q.ListStockEntries(ctx, db.ListStockEntriesParams{OrganizationID: org, Status: st, PageLimit: limit, PageOffset: offset})
+	rows, err := s.q.ListStockEntries(ctx, db.ListStockEntriesParams{
+		OrganizationID: cp.OrganizationID, Statuses: cp.Statuses, Modes: cp.Modes, WarehouseUuids: cp.WarehouseUuids,
+		CreatedFrom: cp.CreatedFrom, CreatedBefore: cp.CreatedBefore, Q: cp.Q,
+		SortKey: f.Sort.Key, SortDesc: f.Sort.Desc, PageLimit: f.Limit, PageOffset: f.Offset,
+	})
 	if err != nil {
 		return nil, 0, err
 	}
-	total, err := s.q.CountStockEntries(ctx, db.CountStockEntriesParams{OrganizationID: org, Status: st})
+	total, err := s.q.CountStockEntries(ctx, cp)
 	if err != nil {
 		return nil, 0, err
 	}

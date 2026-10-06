@@ -124,7 +124,7 @@ type Querier interface {
 	CountAppLogs(ctx context.Context, arg CountAppLogsParams) (int64, error)
 	CountAppLogsByLevel(ctx context.Context) ([]CountAppLogsByLevelRow, error)
 	CountAppointmentsByOrganizations(ctx context.Context, arg CountAppointmentsByOrganizationsParams) (int64, error)
-	CountBarcodeBatches(ctx context.Context, organizationID int64) (int64, error)
+	CountBarcodeBatches(ctx context.Context, arg CountBarcodeBatchesParams) (int64, error)
 	CountBinProductStockRows(ctx context.Context, arg CountBinProductStockRowsParams) (int64, error)
 	// TEC-229: booked return lines of an order (a received return whose line
 	// was priced and not excluded); a dispute on that order's sale cannot then
@@ -194,6 +194,7 @@ type Querier interface {
 	CountServicesOfUser(ctx context.Context, customerUserID int64) (int64, error)
 	CountStaffPayments(ctx context.Context, arg CountStaffPaymentsParams) (int64, error)
 	CountStaffProfiles(ctx context.Context, arg CountStaffProfilesParams) (int64, error)
+	CountStockCountScans(ctx context.Context, countID int64) (int64, error)
 	CountStockCounts(ctx context.Context, arg CountStockCountsParams) (int64, error)
 	CountStockEntries(ctx context.Context, arg CountStockEntriesParams) (int64, error)
 	CountStockEntryLines(ctx context.Context, entryID int64) (int64, error)
@@ -1155,6 +1156,9 @@ type Querier interface {
 	ListAppointmentClosures(ctx context.Context, arg ListAppointmentClosuresParams) ([]AppointmentClosure, error)
 	ListAppointmentSettingsByOrganizations(ctx context.Context, organizationIds []int64) ([]AppointmentSetting, error)
 	ListAppointmentsByOrganizations(ctx context.Context, arg ListAppointmentsByOrganizationsParams) ([]Appointment, error)
+	// TEC-375: list contract (docs/list-contract.md), keys from stock usecase
+	// BarcodeBatchSort. q: prefix, first/last barcode, product name or sku, or
+	// any barcode of the batch.
 	ListBarcodeBatches(ctx context.Context, arg ListBarcodeBatchesParams) ([]BarcodeBatch, error)
 	ListBinProductStockRows(ctx context.Context, arg ListBinProductStockRowsParams) ([]ListBinProductStockRowsRow, error)
 	ListBinProductStocksByLocation(ctx context.Context, locationID int64) ([]BinProductStock, error)
@@ -1251,6 +1255,8 @@ type Querier interface {
 	ListEODReportOrganizations(ctx context.Context) ([]ListEODReportOrganizationsRow, error)
 	// scope: '' every report, 'system' only system reports, 'warehouse' only
 	// warehouse reports (warehouse_id narrows to one warehouse).
+	// TEC-375: sort keys from warehouse usecase EODSort (report_date,
+	// generated_at); within one key the system report comes first.
 	ListEODReports(ctx context.Context, arg ListEODReportsParams) ([]EodReport, error)
 	ListEnabledLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
 	ListExchangeRatesByDate(ctx context.Context, arg ListExchangeRatesByDateParams) ([]ListExchangeRatesByDateRow, error)
@@ -1483,7 +1489,10 @@ type Querier interface {
 	// warranty holder sees it, within the domain brand, excluding Glorian.
 	ListPortalContracts(ctx context.Context, arg ListPortalContractsParams) ([]ListPortalContractsRow, error)
 	// Services of the user across every organization of the brand (one list,
-	// newest first). vehicle_id narrows to one vehicle (vehicle detail).
+	// newest first by default). vehicle_id narrows to one vehicle (vehicle
+	// detail). TEC-377 (DT-BE-7): statuses / organization_uuids (multi-value),
+	// created window, q (service number or plate; the caller escapes LIKE
+	// wildcards) and the sort keys of portalvehicles usecase.ServiceSort.
 	ListPortalServices(ctx context.Context, arg ListPortalServicesParams) ([]ListPortalServicesRow, error)
 	// Active warranties of one vehicle held by the user (soonest end first).
 	ListPortalVehicleActiveWarranties(ctx context.Context, arg ListPortalVehicleActiveWarrantiesParams) ([]ListPortalVehicleActiveWarrantiesRow, error)
@@ -1633,6 +1642,11 @@ type Querier interface {
 	// scope own, customer_user_id for scope customer (portal). q matches the
 	// service number, plate, VIN and the customer's name or phone (TEC-179;
 	// anonymized customers are not searchable by name).
+	// TEC-377 (DT-BE-7): statuses / organization_uuids are multi-value filters,
+	// completed_from / completed_to a completion window; sort keys from
+	// services usecase.ListSort (docs/list-contract.md): status sorts by the
+	// flow rank, organization by name; plate and completed_at are nullable
+	// (NULLS LAST both ways).
 	ListServicesInScope(ctx context.Context, arg ListServicesInScopeParams) ([]Service, error)
 	ListSharedKeys(ctx context.Context, keys []string) ([]string, error)
 	// ListStaffCostTotals is the salary/advance/bonus total per staff card of
@@ -1644,8 +1658,16 @@ type Querier interface {
 	ListStockCountLines(ctx context.Context, countID int64) ([]StockCountLine, error)
 	ListStockCountProducts(ctx context.Context, ids []int64) ([]ListStockCountProductsRow, error)
 	ListStockCountScans(ctx context.Context, countID int64) ([]StockCountScan, error)
+	// TEC-375: one page of a count's scans (scan order).
+	ListStockCountScansPage(ctx context.Context, arg ListStockCountScansPageParams) ([]StockCountScan, error)
 	ListStockCountUnits(ctx context.Context, ids []int64) ([]ListStockCountUnitsRow, error)
+	// TEC-375: list contract (docs/list-contract.md), keys from warehouse
+	// usecase CountSort. status sorts by flow rank, warehouse by name.
+	// q: note, warehouse name or code.
 	ListStockCounts(ctx context.Context, arg ListStockCountsParams) ([]StockCount, error)
+	// TEC-375: list contract (docs/list-contract.md), keys from warehouse
+	// usecase EntrySort. status sorts by flow rank; warehouse by name (import
+	// entries have none and come last). q: note, warehouse name or code.
 	ListStockEntries(ctx context.Context, arg ListStockEntriesParams) ([]StockEntry, error)
 	ListStockEntryLines(ctx context.Context, entryID int64) ([]StockEntryLine, error)
 	ListStockImportBatches(ctx context.Context, organizationID int64) ([]StockImportBatch, error)
@@ -1748,6 +1770,8 @@ type Querier interface {
 	// Typed locations of a warehouse, optionally one room.
 	ListWarehouseScopeLocationIDs(ctx context.Context, arg ListWarehouseScopeLocationIDsParams) ([]int64, error)
 	ListWarehouseTransferLines(ctx context.Context, transferID int64) ([]WarehouseTransferLine, error)
+	// TEC-375: list contract (docs/list-contract.md), keys from warehouse
+	// usecase TransferSort. status sorts by flow rank. q: transfer no, note.
 	ListWarehouseTransfers(ctx context.Context, arg ListWarehouseTransfersParams) ([]WarehouseTransfer, error)
 	// TEC-201: warehouse and location tree (000059). Every query is bound to
 	// one organization; the warehouse side is brand-independent (K20).
@@ -1786,6 +1810,10 @@ type Querier interface {
 	ListWarrantyClaimPhotos(ctx context.Context, claimID int64) ([]WarrantyClaimPhoto, error)
 	ListWarrantyClaimReapplyItems(ctx context.Context, claimID int64) ([]ListWarrantyClaimReapplyItemsRow, error)
 	ListWarrantyClaimsByWarranty(ctx context.Context, arg ListWarrantyClaimsByWarrantyParams) ([]WarrantyClaim, error)
+	// TEC-377 (DT-BE-7): organization_uuids (multi-value), q also matches the
+	// claim number exactly (q_exact) and the service number; sort keys from
+	// warranty_claims usecase.ListSort (status by flow rank, decided_at NULLS
+	// LAST both ways).
 	ListWarrantyClaimsInScope(ctx context.Context, arg ListWarrantyClaimsInScopeParams) ([]WarrantyClaim, error)
 	// Notification context of the cron events (TEC-187): plate, product and the
 	// organization's name and time zone (end date is shown in the org zone).
@@ -1811,6 +1839,11 @@ type Querier interface {
 	// public code, service number, product name or plate; q_plate is the
 	// normalized plate, geo.NormalizePlate), warranty_uuid (detail).
 	// Order: active first by the soonest end, then the rest by the latest end.
+	// TEC-377 (DT-BE-7): statuses / organization_uuids are multi-value filters,
+	// start_from / start_before and end_from / end_before date windows; the
+	// sort keys come from warranty usecase.ListSort (docs/list-contract.md).
+	// 'expiry' is the order above (descending reverses it), status sorts by
+	// rank (active, expired, void), product / organization by name.
 	ListWarrantyRows(ctx context.Context, arg ListWarrantyRowsParams) ([]ListWarrantyRowsRow, error)
 	ListWebAuthnCredentialsByUserID(ctx context.Context, userID int64) ([]WebauthnCredential, error)
 	ListWebAuthnCredentialsForUserIDs(ctx context.Context, userIds []int64) ([]WebauthnCredential, error)

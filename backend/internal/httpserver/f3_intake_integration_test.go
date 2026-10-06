@@ -50,6 +50,7 @@ func TestIntegrationF3IntakeContractMeasurement(t *testing.T) {
 		},
 		func(d *Deps) { d.Storage = store; d.Queue = qc },
 	)
+	it.lockWhatsAppSettings()
 	reset := func() { _, _ = it.srv.sysconfig.Reset(ctx, sysconfig.KeyContractsIntakeRequired) }
 	reset()
 	t.Cleanup(reset)

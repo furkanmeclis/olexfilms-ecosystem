@@ -133,5 +133,6 @@
   "actions.upgrade.role_owner": "经销商所有者",
   "actions.upgrade.role_staff": "经销商员工",
   "actions.upgrade.confirm": "升级",
-  "actions.upgrade.success": "该客户现已成为 {{dealer}} 的成员。"
+  "actions.upgrade.success": "该客户现已成为 {{dealer}} 的成员。",
+  "fields.organization": "组织"
 }

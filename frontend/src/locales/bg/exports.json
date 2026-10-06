@@ -74,5 +74,6 @@
   "status.expired": "Изтекъл",
   "resources.platform.organizations": "Организации",
   "resources.orders.list": "Поръчки",
-  "resources.stock.units": "Складови единици"
+  "resources.stock.units": "Складови единици",
+  "resources.leads.list": "Потенциални клиенти"
 }

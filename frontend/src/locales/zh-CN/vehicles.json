@@ -100,5 +100,12 @@
   "transfer.status.completed": "已完成",
   "transfer.status.cancelled": "已取消",
   "transfer.status.expired": "已过期",
-  "columns.created_at": "创建时间"
+  "columns.created_at": "创建时间",
+  "list.nav": "车辆",
+  "list.title": "车辆",
+  "list.description": "您所服务客户的车辆。",
+  "list.forbidden": "需要车辆查看权限才能打开此页面。",
+  "list.empty_title": "暂无车辆",
+  "list.empty_description": "为您的客户登记的车辆会显示在这里。",
+  "list.open_customer": "打开客户"
 }

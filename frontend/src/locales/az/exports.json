@@ -74,5 +74,6 @@
   "status.expired": "Müddəti bitib",
   "resources.platform.organizations": "Təşkilatlar",
   "resources.orders.list": "Sifarişlər",
-  "resources.stock.units": "Stok vahidləri"
+  "resources.stock.units": "Stok vahidləri",
+  "resources.leads.list": "Potensial müştərilər"
 }

@@ -24,15 +24,23 @@ type TransitionInput struct {
 	RejectionReason string `json:"rejection_reason"`
 }
 
+// ListFilter narrows GET /v1/warranty-claims. CreatedFrom is inclusive,
+// CreatedTo exclusive. TEC-377: Statuses / OrganizationUUIDs are
+// multi-value; SortKey / SortDesc come from usecase.ListSort (empty: the
+// default).
 type ListFilter struct {
-	Status      string
-	WarrantyID  uuid.UUID
-	ServiceID   uuid.UUID
-	VehicleID   uuid.UUID
-	CreatedFrom *time.Time
-	CreatedTo   *time.Time
-	Limit       int32
-	Offset      int32
+	Statuses          []string
+	WarrantyID        uuid.UUID
+	ServiceID         uuid.UUID
+	VehicleID         uuid.UUID
+	OrganizationUUIDs []uuid.UUID
+	Q                 string
+	CreatedFrom       *time.Time
+	CreatedTo         *time.Time
+	SortKey           string
+	SortDesc          bool
+	Limit             int32
+	Offset            int32
 }
 
 type CoverageCheck struct {

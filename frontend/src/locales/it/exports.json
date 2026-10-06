@@ -74,5 +74,6 @@
   "status.expired": "Scaduto",
   "resources.platform.organizations": "Organizzazioni",
   "resources.orders.list": "Ordini",
-  "resources.stock.units": "Unità di magazzino"
+  "resources.stock.units": "Unità di magazzino",
+  "resources.leads.list": "Contatti commerciali"
 }

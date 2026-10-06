@@ -11,6 +11,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -356,42 +357,47 @@ func (s *Service) Get(ctx context.Context, c Caller, id uuid.UUID) (ServiceView,
 }
 
 // ListFilter narrows the service list. Q matches the service number,
-// plate, VIN and the customer's name or phone. CreatedFrom is inclusive,
-// CreatedTo exclusive (TEC-183).
+// plate, VIN and the customer's name or phone. CreatedFrom / CompletedFrom
+// are inclusive, CreatedTo / CompletedTo exclusive (TEC-183). Statuses and
+// OrganizationUUIDs are multi-value (TEC-377); a zero Sort is the
+// ListSort default.
 type ListFilter struct {
-	Q            string
-	Status       string
-	CustomerUUID string
-	VehicleUUID  string
-	CreatedFrom  *time.Time
-	CreatedTo    *time.Time
-	Limit        int32
-	Offset       int32
+	Q                 string
+	Statuses          []string
+	OrganizationUUIDs []uuid.UUID
+	CustomerUUID      string
+	VehicleUUID       string
+	CreatedFrom       *time.Time
+	CreatedTo         *time.Time
+	CompletedFrom     *time.Time
+	CompletedTo       *time.Time
+	Sort              apiquery.ResolvedSort
+	SortExplicit      bool
+	Limit             int32
+	Offset            int32
 }
 
 // List returns services inside the caller's services.read scope (dealer:
 // its own organization, distributor: its subtree, center: the brand).
 func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]ServiceView, int64, error) {
+	sortKey, sortDesc := f.sortArgs()
 	p := db.ListServicesInScopeParams{
 		BrandID: c.Org.BrandID, OrgIds: c.Filter.OrgIDsArg(), RowLimit: f.Limit, RowOffset: f.Offset,
+		Statuses: f.Statuses, OrganizationUuids: f.OrganizationUUIDs,
+		CreatedFrom: tsArg(f.CreatedFrom), CreatedTo: tsArg(f.CreatedTo),
+		CompletedFrom: tsArg(f.CompletedFrom), CompletedTo: tsArg(f.CompletedTo),
+		SortKey: sortKey, SortDesc: sortDesc,
 	}
 	if c.Filter.UserOnly() {
 		p.CreatedByUserID = pgtype.Int8{Int64: c.Filter.UserID, Valid: true}
 	}
-	if st := strings.TrimSpace(f.Status); st != "" {
+	for _, st := range f.Statuses {
 		if !IsStatus(st) {
 			return nil, 0, invalid("status", "unknown service status")
 		}
-		p.Status = pgtype.Text{String: st, Valid: true}
 	}
-	if f.CreatedFrom != nil {
-		p.CreatedFrom = pgtype.Timestamptz{Time: *f.CreatedFrom, Valid: true}
-	}
-	if f.CreatedTo != nil {
-		if f.CreatedFrom != nil && !f.CreatedTo.After(*f.CreatedFrom) {
-			return nil, 0, invalid("created_to", "must be after created_from")
-		}
-		p.CreatedTo = pgtype.Timestamptz{Time: *f.CreatedTo, Valid: true}
+	if f.CreatedFrom != nil && f.CreatedTo != nil && !f.CreatedTo.After(*f.CreatedFrom) {
+		return nil, 0, invalid("created_to", "must be after created_from")
 	}
 	if q := strings.TrimSpace(f.Q); q != "" {
 		if len([]rune(q)) > 100 {
@@ -434,7 +440,7 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]ServiceVi
 	)
 	// TEC-209: a text search goes to the services index when it is up; the
 	// date bounds are not indexed, so they stay on SQL.
-	if p.Q.Valid && !p.CreatedFrom.Valid && !p.CreatedTo.Valid && s.indexEnabled() {
+	if p.Q.Valid && !f.sqlOnly() && s.indexEnabled() {
 		rows, total, indexed = s.searchIndexed(ctx, c, p)
 	}
 	if !indexed {
@@ -444,9 +450,10 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]ServiceVi
 			return nil, 0, fmt.Errorf("services: list: %w", err)
 		}
 		total, err = s.q.CountServicesInScope(ctx, db.CountServicesInScopeParams{
-			BrandID: p.BrandID, OrgIds: p.OrgIds, CreatedByUserID: p.CreatedByUserID,
-			CustomerUserID: p.CustomerUserID, VehicleID: p.VehicleID, Status: p.Status, Q: p.Q,
-			CreatedFrom: p.CreatedFrom, CreatedTo: p.CreatedTo,
+			BrandID: p.BrandID, OrgIds: p.OrgIds, OrganizationUuids: p.OrganizationUuids,
+			CreatedByUserID: p.CreatedByUserID, CustomerUserID: p.CustomerUserID, VehicleID: p.VehicleID,
+			Statuses: p.Statuses, Q: p.Q, CreatedFrom: p.CreatedFrom, CreatedTo: p.CreatedTo,
+			CompletedFrom: p.CompletedFrom, CompletedTo: p.CompletedTo,
 		})
 		if err != nil {
 			return nil, 0, fmt.Errorf("services: count: %w", err)

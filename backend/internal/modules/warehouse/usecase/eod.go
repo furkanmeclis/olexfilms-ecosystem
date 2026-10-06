@@ -12,6 +12,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -177,8 +178,12 @@ type EODListInput struct {
 	Scope         string
 	DateFrom      string
 	DateTo        string
-	Limit         int32
-	Offset        int32
+	// TEC-375: kind filter (auto, manual) and sort (EODSort; zero value
+	// means the default -report_date).
+	Kinds  []string
+	Sort   apiquery.ResolvedSort
+	Limit  int32
+	Offset int32
 }
 
 // EOD implements the end-of-day report use cases.
@@ -496,7 +501,11 @@ func (s *EOD) List(ctx context.Context, c Caller, in EODListInput) ([]EODReport,
 	if err != nil {
 		return nil, 0, err
 	}
-	arg := db.ListEODReportsParams{OrganizationID: orgID, Scope: scope, RowLimit: in.Limit, RowOffset: in.Offset}
+	sort := orDefault(in.Sort, EODSort)
+	arg := db.ListEODReportsParams{
+		OrganizationID: orgID, Scope: scope, Kinds: in.Kinds,
+		SortKey: sort.Key, SortDesc: sort.Desc, RowLimit: in.Limit, RowOffset: in.Offset,
+	}
 	if whID > 0 {
 		arg.WarehouseID = pgtype.Int8{Int64: whID, Valid: true}
 	}
@@ -519,6 +528,7 @@ func (s *EOD) List(ctx context.Context, c Caller, in EODListInput) ([]EODReport,
 	}
 	total, err := s.q.CountEODReports(ctx, db.CountEODReportsParams{
 		OrganizationID: orgID, WarehouseID: arg.WarehouseID, Scope: scope, DateFrom: arg.DateFrom, DateTo: arg.DateTo,
+		Kinds: in.Kinds,
 	})
 	if err != nil {
 		return nil, 0, err

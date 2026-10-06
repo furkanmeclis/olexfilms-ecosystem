@@ -124,18 +124,42 @@ func (q *Queries) CountWarehouseTransferLines(ctx context.Context, transferID in
 }
 
 const countWarehouseTransfers = `-- name: CountWarehouseTransfers :one
-SELECT count(*) FROM warehouse_transfers
-WHERE organization_id = $1
-  AND ($2::text IS NULL OR status = $2::text)
+SELECT count(*) FROM warehouse_transfers t
+WHERE t.organization_id = $1
+  AND (COALESCE(cardinality($2::text[]), 0) = 0 OR t.status = ANY ($2::text[]))
+  AND (COALESCE(cardinality($3::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM warehouses fw
+                  WHERE fw.id = t.from_warehouse_id AND fw.uuid = ANY ($3::uuid[])))
+  AND (COALESCE(cardinality($4::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM warehouses tw
+                  WHERE tw.id = t.to_warehouse_id AND tw.uuid = ANY ($4::uuid[])))
+  AND ($5::timestamptz IS NULL OR t.created_at >= $5::timestamptz)
+  AND ($6::timestamptz IS NULL OR t.created_at < $6::timestamptz)
+  AND ($7::text IS NULL
+       OR t.transfer_no ILIKE '%' || $7::text || '%'
+       OR t.note ILIKE '%' || $7::text || '%')
 `
 
 type CountWarehouseTransfersParams struct {
-	OrganizationID int64       `json:"organization_id"`
-	Status         pgtype.Text `json:"status"`
+	OrganizationID     int64              `json:"organization_id"`
+	Statuses           []string           `json:"statuses"`
+	FromWarehouseUuids []uuid.UUID        `json:"from_warehouse_uuids"`
+	ToWarehouseUuids   []uuid.UUID        `json:"to_warehouse_uuids"`
+	CreatedFrom        pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore      pgtype.Timestamptz `json:"created_before"`
+	Q                  pgtype.Text        `json:"q"`
 }
 
 func (q *Queries) CountWarehouseTransfers(ctx context.Context, arg CountWarehouseTransfersParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countWarehouseTransfers, arg.OrganizationID, arg.Status)
+	row := q.db.QueryRow(ctx, countWarehouseTransfers,
+		arg.OrganizationID,
+		arg.Statuses,
+		arg.FromWarehouseUuids,
+		arg.ToWarehouseUuids,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
+	)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -352,24 +376,61 @@ func (q *Queries) ListWarehouseTransferLines(ctx context.Context, transferID int
 }
 
 const listWarehouseTransfers = `-- name: ListWarehouseTransfers :many
-SELECT id, uuid, transfer_no, organization_id, brand_id, from_warehouse_id, to_warehouse_id, to_location_id, status, note, created_by_user_id, shipped_by_user_id, completed_by_user_id, cancelled_by_user_id, shipped_at, completed_at, cancelled_at, created_at, updated_at FROM warehouse_transfers
-WHERE organization_id = $1
-  AND ($2::text IS NULL OR status = $2::text)
-ORDER BY created_at DESC, id DESC
-LIMIT $4 OFFSET $3
+SELECT t.id, t.uuid, t.transfer_no, t.organization_id, t.brand_id, t.from_warehouse_id, t.to_warehouse_id, t.to_location_id, t.status, t.note, t.created_by_user_id, t.shipped_by_user_id, t.completed_by_user_id, t.cancelled_by_user_id, t.shipped_at, t.completed_at, t.cancelled_at, t.created_at, t.updated_at FROM warehouse_transfers t
+WHERE t.organization_id = $1
+  AND (COALESCE(cardinality($2::text[]), 0) = 0 OR t.status = ANY ($2::text[]))
+  AND (COALESCE(cardinality($3::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM warehouses fw
+                  WHERE fw.id = t.from_warehouse_id AND fw.uuid = ANY ($3::uuid[])))
+  AND (COALESCE(cardinality($4::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM warehouses tw
+                  WHERE tw.id = t.to_warehouse_id AND tw.uuid = ANY ($4::uuid[])))
+  AND ($5::timestamptz IS NULL OR t.created_at >= $5::timestamptz)
+  AND ($6::timestamptz IS NULL OR t.created_at < $6::timestamptz)
+  AND ($7::text IS NULL
+       OR t.transfer_no ILIKE '%' || $7::text || '%'
+       OR t.note ILIKE '%' || $7::text || '%')
+ORDER BY
+  CASE WHEN NOT $8::bool THEN CASE $9::text WHEN 'transfer_no' THEN t.transfer_no END END ASC,
+  CASE WHEN $8::bool THEN CASE $9::text WHEN 'transfer_no' THEN t.transfer_no END END DESC,
+  CASE WHEN NOT $8::bool THEN CASE $9::text WHEN 'status' THEN
+    CASE t.status WHEN 'draft' THEN 1 WHEN 'in_transit' THEN 2 WHEN 'completed' THEN 3 ELSE 4 END END END ASC,
+  CASE WHEN $8::bool THEN CASE $9::text WHEN 'status' THEN
+    CASE t.status WHEN 'draft' THEN 1 WHEN 'in_transit' THEN 2 WHEN 'completed' THEN 3 ELSE 4 END END END DESC,
+  CASE WHEN NOT $8::bool THEN CASE $9::text WHEN 'created_at' THEN t.created_at END END ASC,
+  CASE WHEN $8::bool THEN CASE $9::text WHEN 'created_at' THEN t.created_at END END DESC,
+  CASE WHEN $8::bool THEN t.id END DESC,
+  t.id ASC
+LIMIT $11 OFFSET $10
 `
 
 type ListWarehouseTransfersParams struct {
-	OrganizationID int64       `json:"organization_id"`
-	Status         pgtype.Text `json:"status"`
-	PageOffset     int32       `json:"page_offset"`
-	PageLimit      int32       `json:"page_limit"`
+	OrganizationID     int64              `json:"organization_id"`
+	Statuses           []string           `json:"statuses"`
+	FromWarehouseUuids []uuid.UUID        `json:"from_warehouse_uuids"`
+	ToWarehouseUuids   []uuid.UUID        `json:"to_warehouse_uuids"`
+	CreatedFrom        pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore      pgtype.Timestamptz `json:"created_before"`
+	Q                  pgtype.Text        `json:"q"`
+	SortDesc           bool               `json:"sort_desc"`
+	SortKey            string             `json:"sort_key"`
+	PageOffset         int32              `json:"page_offset"`
+	PageLimit          int32              `json:"page_limit"`
 }
 
+// TEC-375: list contract (docs/list-contract.md), keys from warehouse
+// usecase TransferSort. status sorts by flow rank. q: transfer no, note.
 func (q *Queries) ListWarehouseTransfers(ctx context.Context, arg ListWarehouseTransfersParams) ([]WarehouseTransfer, error) {
 	rows, err := q.db.Query(ctx, listWarehouseTransfers,
 		arg.OrganizationID,
-		arg.Status,
+		arg.Statuses,
+		arg.FromWarehouseUuids,
+		arg.ToWarehouseUuids,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.PageOffset,
 		arg.PageLimit,
 	)

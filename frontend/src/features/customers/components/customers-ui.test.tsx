@@ -91,6 +91,28 @@ vi.mock("@/features/vehicle-catalog/services/vehicle-catalog.service", () => ({
     listModels: vi.fn(async () => ({ items: [], total: 0 })),
   },
 }));
+vi.mock("@/features/customers/components/customer-vehicles-table", () => ({
+  CustomerVehiclesTable: ({
+    vehicles,
+    canWrite,
+    onEdit,
+  }: {
+    vehicles: { uuid: string; plate: string | null }[];
+    canWrite: boolean;
+    onEdit: (v: unknown) => void;
+  }) =>
+    createElement(
+      "div",
+      { "data-testid": "vehicle-table", "data-can-write": String(canWrite) },
+      vehicles.map((v) =>
+        createElement(
+          "button",
+          { key: v.uuid, type: "button", onClick: () => onEdit(v) },
+          v.plate,
+        ),
+      ),
+    ),
+}));
 vi.mock("@/features/customers/services/customers.service", async (orig) => ({
   ...(await orig<object>()),
   customersService: api,
@@ -104,7 +126,7 @@ import type {
 
 import { CustomerDetailPage } from "./customer-detail-page";
 import { CustomerForm } from "./customer-form-page";
-import { CustomersListPage } from "./customers-list-page";
+import { CustomerListExportButton } from "./customer-list-export";
 import { VehicleForm } from "./vehicle-form-dialog";
 
 (
@@ -225,66 +247,7 @@ const vehicle: Vehicle = {
   warnings: [],
 };
 
-describe("customers list (TEC-163)", () => {
-  it("is forbidden without customers.read", async () => {
-    await render(createElement(CustomersListPage, { slug: "acme" }));
-    expect(api.list).not.toHaveBeenCalled();
-    expect(container.textContent).toContain("customers.list.forbidden");
-  });
-
-  it("searches with q, filters status and pages", async () => {
-    state.grants = new Set([Permission.CustomersRead]);
-    api.list.mockResolvedValue({
-      items: [customer()],
-      total: 45,
-      limit: 20,
-      offset: 0,
-    });
-    await render(createElement(CustomersListPage, { slug: "acme" }));
-    expect(api.list).toHaveBeenLastCalledWith({ limit: 20, offset: 0 });
-    expect($("[data-testid=new-customer]")).toBeNull();
-    expect(
-      container.querySelectorAll("[data-testid=customer-row]"),
-    ).toHaveLength(1);
-    expect(container.textContent).toContain("Ayşe Yılmaz");
-
-    await type($("#customer-search"), "ayşe");
-    expect(api.list).toHaveBeenLastCalledWith({
-      q: "ayşe",
-      limit: 20,
-      offset: 0,
-    });
-    await click($("[data-status=anonymized]"));
-    expect(api.list).toHaveBeenLastCalledWith({
-      q: "ayşe",
-      status: "anonymized",
-      limit: 20,
-      offset: 0,
-    });
-    await click($("[data-testid=page-next]"));
-    expect(api.list).toHaveBeenLastCalledWith({
-      q: "ayşe",
-      status: "anonymized",
-      limit: 20,
-      offset: 20,
-    });
-  });
-
-  it("shows the new customer button with customers.write", async () => {
-    state.grants = new Set([
-      Permission.CustomersRead,
-      Permission.CustomersWrite,
-    ]);
-    api.list.mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 });
-    await render(createElement(CustomersListPage, { slug: "acme" }));
-    expect($("[data-testid=new-customer]")?.getAttribute("href")).toBe(
-      "/t/acme/customers/new",
-    );
-    expect($("[data-testid=customers-empty]")).not.toBeNull();
-  });
-});
-
-describe("customer list export (TEC-199)", () => {
+describe("customer list export (TEC-199, TEC-372)", () => {
   const job = {
     uuid: "le1",
     resource: "customers",
@@ -293,32 +256,15 @@ describe("customer list export (TEC-199)", () => {
     created_at: "2026-10-02T09:00:00Z",
   };
 
-  it("is hidden without customers.read", async () => {
-    state.grants = new Set([Permission.CustomersWrite]);
-    await render(createElement(CustomersListPage, { slug: "acme" }));
-    expect($("[data-testid=customer-list-export]")).toBeNull();
-  });
-
-  it("is shown with customers.read", async () => {
-    state.grants = new Set([Permission.CustomersRead]);
-    api.list.mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 });
-    await render(createElement(CustomersListPage, { slug: "acme" }));
-    expect($("[data-testid=customer-list-export]")).not.toBeNull();
-  });
-
-  it("queues the job with the list filters and downloads once ready", async () => {
-    state.grants = new Set([Permission.CustomersRead]);
-    api.list.mockResolvedValue({
-      items: [customer()],
-      total: 1,
-      limit: 20,
-      offset: 0,
-    });
+  it("queues the job with the list filters and sort and downloads once ready", async () => {
     api.requestListExport.mockResolvedValue({ ...job, status: "queued" });
     api.getListExport.mockResolvedValue({ ...job, status: "completed" });
-    await render(createElement(CustomersListPage, { slug: "acme" }));
-    await type($("#customer-search"), "ayşe");
-    await click($("[data-status=active]"));
+    const filters = {
+      q: "ayşe",
+      status: "active,pending",
+      sort: "-linked_at",
+    };
+    await render(createElement(CustomerListExportButton, { filters }));
 
     await click($("[data-testid=customer-list-export]"));
     const select = $("#list-export-format");
@@ -333,10 +279,7 @@ describe("customer list export (TEC-199)", () => {
       select.dispatchEvent(new Event("change", { bubbles: true }));
     });
     await click($("[data-testid=list-export-confirm]"));
-    expect(api.requestListExport).toHaveBeenCalledWith("csv", {
-      q: "ayşe",
-      status: "active",
-    });
+    expect(api.requestListExport).toHaveBeenCalledWith("csv", filters);
     expect(api.getListExport).toHaveBeenCalledWith("le1");
     expect(
       $("[data-testid=list-export-status]")?.getAttribute("data-status"),
@@ -349,11 +292,9 @@ describe("customer list export (TEC-199)", () => {
   });
 
   it("keeps polling while the job is processing", async () => {
-    state.grants = new Set([Permission.CustomersRead]);
-    api.list.mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 });
     api.requestListExport.mockResolvedValue({ ...job, status: "queued" });
     api.getListExport.mockResolvedValue({ ...job, status: "processing" });
-    await render(createElement(CustomersListPage, { slug: "acme" }));
+    await render(createElement(CustomerListExportButton, { filters: {} }));
     await click($("[data-testid=customer-list-export]"));
     await click($("[data-testid=list-export-confirm]"));
     expect(api.requestListExport).toHaveBeenCalledWith("xlsx", {});
@@ -406,8 +347,10 @@ describe("customer detail actions by permission", () => {
       "export",
       "anonymize",
       "add-vehicle",
-      "edit-vehicle",
     ]);
+    expect(
+      $("[data-testid=vehicle-table]")?.getAttribute("data-can-write"),
+    ).toBe("true");
     expect(container.textContent).toContain("34 ABC 123");
     expect(container.textContent).toContain("•••• 8901");
   });

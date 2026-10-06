@@ -22,6 +22,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -276,17 +277,32 @@ func freeSequences(ctx context.Context, q *db.Queries, brand int64, prefix strin
 	return seqs, nil
 }
 
-// List returns the batches of the center, newest first.
-func (s *Barcodes) List(ctx context.Context, c Caller, limit, offset int32) ([]model.BarcodeBatch, int64, error) {
+// List returns the batches of the center (TEC-375: list contract, default
+// newest first).
+func (s *Barcodes) List(ctx context.Context, c Caller, f BatchListFilter) ([]model.BarcodeBatch, int64, error) {
 	org, err := centerOrg(c)
 	if err != nil {
 		return nil, 0, err
 	}
-	rows, err := s.q.ListBarcodeBatches(ctx, db.ListBarcodeBatchesParams{OrganizationID: org, PageLimit: limit, PageOffset: offset})
+	if f.Sort.Key == "" {
+		f.Sort = apiquery.ResolvedSort{Key: BarcodeBatchSort.Default.Field, Desc: BarcodeBatchSort.Default.Desc}
+	}
+	cp := db.CountBarcodeBatchesParams{
+		OrganizationID: org, ProductUuids: f.ProductUUIDs,
+		CreatedFrom: batchListTS(f.CreatedFrom), CreatedBefore: batchListTS(f.CreatedBefore), Q: batchListQ(f.Q),
+	}
+	if f.Printed != nil {
+		cp.Printed = pgtype.Bool{Bool: *f.Printed, Valid: true}
+	}
+	rows, err := s.q.ListBarcodeBatches(ctx, db.ListBarcodeBatchesParams{
+		OrganizationID: cp.OrganizationID, ProductUuids: cp.ProductUuids, Printed: cp.Printed,
+		CreatedFrom: cp.CreatedFrom, CreatedBefore: cp.CreatedBefore, Q: cp.Q,
+		SortKey: f.Sort.Key, SortDesc: f.Sort.Desc, PageLimit: f.Limit, PageOffset: f.Offset,
+	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("stock: batches: %w", err)
 	}
-	total, err := s.q.CountBarcodeBatches(ctx, org)
+	total, err := s.q.CountBarcodeBatches(ctx, cp)
 	if err != nil {
 		return nil, 0, fmt.Errorf("stock: batches: %w", err)
 	}

@@ -127,22 +127,33 @@ WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id) AND status = 'draft';
 -- scope own, customer_user_id for scope customer (portal). q matches the
 -- service number, plate, VIN and the customer's name or phone (TEC-179;
 -- anonymized customers are not searchable by name).
+-- TEC-377 (DT-BE-7): statuses / organization_uuids are multi-value filters,
+-- completed_from / completed_to a completion window; sort keys from
+-- services usecase.ListSort (docs/list-contract.md): status sorts by the
+-- flow rank, organization by name; plate and completed_at are nullable
+-- (NULLS LAST both ways).
 -- name: ListServicesInScope :many
 SELECT * FROM services
-WHERE brand_id = sqlc.arg(brand_id)
-  AND (sqlc.narg(org_ids)::bigint[] IS NULL OR organization_id = ANY (sqlc.narg(org_ids)::bigint[]))
-  AND (sqlc.narg(created_by_user_id)::bigint IS NULL OR created_by_user_id = sqlc.narg(created_by_user_id))
-  AND (sqlc.narg(customer_user_id)::bigint IS NULL OR customer_user_id = sqlc.narg(customer_user_id))
-  AND (sqlc.narg(vehicle_id)::bigint IS NULL OR vehicle_id = sqlc.narg(vehicle_id))
-  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
-  AND (sqlc.narg(created_from)::timestamptz IS NULL OR created_at >= sqlc.narg(created_from)::timestamptz)
-  AND (sqlc.narg(created_to)::timestamptz IS NULL OR created_at < sqlc.narg(created_to)::timestamptz)
-  AND (sqlc.narg(uuids)::uuid[] IS NULL OR uuid = ANY (sqlc.narg(uuids)::uuid[]))
+WHERE services.brand_id = sqlc.arg(brand_id)
+  AND (sqlc.narg(org_ids)::bigint[] IS NULL OR services.organization_id = ANY (sqlc.narg(org_ids)::bigint[]))
+  AND (
+    COALESCE(cardinality(sqlc.narg(organization_uuids)::uuid[]), 0) = 0
+    OR services.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY (sqlc.narg(organization_uuids)::uuid[]))
+  )
+  AND (sqlc.narg(created_by_user_id)::bigint IS NULL OR services.created_by_user_id = sqlc.narg(created_by_user_id))
+  AND (sqlc.narg(customer_user_id)::bigint IS NULL OR services.customer_user_id = sqlc.narg(customer_user_id))
+  AND (sqlc.narg(vehicle_id)::bigint IS NULL OR services.vehicle_id = sqlc.narg(vehicle_id))
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR services.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR services.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_to)::timestamptz IS NULL OR services.created_at < sqlc.narg(created_to)::timestamptz)
+  AND (sqlc.narg(completed_from)::timestamptz IS NULL OR services.completed_at >= sqlc.narg(completed_from)::timestamptz)
+  AND (sqlc.narg(completed_to)::timestamptz IS NULL OR services.completed_at < sqlc.narg(completed_to)::timestamptz)
+  AND (sqlc.narg(uuids)::uuid[] IS NULL OR services.uuid = ANY (sqlc.narg(uuids)::uuid[]))
   AND (
     sqlc.narg(q)::text IS NULL
-    OR service_no ILIKE '%' || sqlc.narg(q) || '%'
-    OR plate ILIKE '%' || sqlc.narg(q) || '%'
-    OR vin ILIKE '%' || sqlc.narg(q) || '%'
+    OR services.service_no ILIKE '%' || sqlc.narg(q) || '%'
+    OR services.plate ILIKE '%' || sqlc.narg(q) || '%'
+    OR services.vin ILIKE '%' || sqlc.narg(q) || '%'
     OR EXISTS (
       SELECT 1 FROM users cu
       WHERE cu.id = services.customer_user_id
@@ -153,24 +164,62 @@ WHERE brand_id = sqlc.arg(brand_id)
         )
     )
   )
-ORDER BY created_at DESC, id DESC
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'service_no' THEN services.service_no::text
+      WHEN 'organization' THEN (SELECT so.name FROM organizations so WHERE so.id = services.organization_id)::text
+    END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'service_no' THEN services.service_no::text
+      WHEN 'organization' THEN (SELECT so.name FROM organizations so WHERE so.id = services.organization_id)::text
+    END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'status' THEN
+    CASE services.status WHEN 'draft' THEN 0 WHEN 'pending' THEN 1 WHEN 'processing' THEN 2
+      WHEN 'ready' THEN 3 WHEN 'completed' THEN 4 WHEN 'cancelled' THEN 5 ELSE 6 END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'status' THEN
+    CASE services.status WHEN 'draft' THEN 0 WHEN 'pending' THEN 1 WHEN 'processing' THEN 2
+      WHEN 'ready' THEN 3 WHEN 'completed' THEN 4 WHEN 'cancelled' THEN 5 ELSE 6 END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN services.created_at WHEN 'updated_at' THEN services.updated_at END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN services.created_at WHEN 'updated_at' THEN services.updated_at END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'completed_at' THEN services.completed_at END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'completed_at' THEN services.completed_at END DESC NULLS LAST,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'plate' THEN services.plate::text END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'plate' THEN services.plate::text END DESC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN services.id END DESC,
+  services.id ASC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
 -- name: CountServicesInScope :one
 SELECT COUNT(*) FROM services
-WHERE brand_id = sqlc.arg(brand_id)
-  AND (sqlc.narg(org_ids)::bigint[] IS NULL OR organization_id = ANY (sqlc.narg(org_ids)::bigint[]))
-  AND (sqlc.narg(created_by_user_id)::bigint IS NULL OR created_by_user_id = sqlc.narg(created_by_user_id))
-  AND (sqlc.narg(customer_user_id)::bigint IS NULL OR customer_user_id = sqlc.narg(customer_user_id))
-  AND (sqlc.narg(vehicle_id)::bigint IS NULL OR vehicle_id = sqlc.narg(vehicle_id))
-  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
-  AND (sqlc.narg(created_from)::timestamptz IS NULL OR created_at >= sqlc.narg(created_from)::timestamptz)
-  AND (sqlc.narg(created_to)::timestamptz IS NULL OR created_at < sqlc.narg(created_to)::timestamptz)
+WHERE services.brand_id = sqlc.arg(brand_id)
+  AND (sqlc.narg(org_ids)::bigint[] IS NULL OR services.organization_id = ANY (sqlc.narg(org_ids)::bigint[]))
+  AND (
+    COALESCE(cardinality(sqlc.narg(organization_uuids)::uuid[]), 0) = 0
+    OR services.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY (sqlc.narg(organization_uuids)::uuid[]))
+  )
+  AND (sqlc.narg(created_by_user_id)::bigint IS NULL OR services.created_by_user_id = sqlc.narg(created_by_user_id))
+  AND (sqlc.narg(customer_user_id)::bigint IS NULL OR services.customer_user_id = sqlc.narg(customer_user_id))
+  AND (sqlc.narg(vehicle_id)::bigint IS NULL OR services.vehicle_id = sqlc.narg(vehicle_id))
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR services.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR services.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_to)::timestamptz IS NULL OR services.created_at < sqlc.narg(created_to)::timestamptz)
+  AND (sqlc.narg(completed_from)::timestamptz IS NULL OR services.completed_at >= sqlc.narg(completed_from)::timestamptz)
+  AND (sqlc.narg(completed_to)::timestamptz IS NULL OR services.completed_at < sqlc.narg(completed_to)::timestamptz)
   AND (
     sqlc.narg(q)::text IS NULL
-    OR service_no ILIKE '%' || sqlc.narg(q) || '%'
-    OR plate ILIKE '%' || sqlc.narg(q) || '%'
-    OR vin ILIKE '%' || sqlc.narg(q) || '%'
+    OR services.service_no ILIKE '%' || sqlc.narg(q) || '%'
+    OR services.plate ILIKE '%' || sqlc.narg(q) || '%'
+    OR services.vin ILIKE '%' || sqlc.narg(q) || '%'
     OR EXISTS (
       SELECT 1 FROM users cu
       WHERE cu.id = services.customer_user_id

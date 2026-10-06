@@ -74,5 +74,6 @@
   "status.expired": "Abgelaufen",
   "resources.platform.organizations": "Organisationen",
   "resources.orders.list": "Bestellungen",
-  "resources.stock.units": "Bestandseinheiten"
+  "resources.stock.units": "Bestandseinheiten",
+  "resources.leads.list": "Leads"
 }

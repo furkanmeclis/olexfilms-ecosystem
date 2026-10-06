@@ -32,6 +32,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -86,16 +87,26 @@ type Caller struct {
 }
 
 // ListFilter are the GET /v1/warranties filters. DaysLeftMin / DaysLeftMax
-// bound end_at to (now + min days, now + max days].
+// bound end_at to (now + min days, now + max days]. TEC-377: Statuses and
+// OrganizationUUIDs are multi-value, StartFrom / EndFrom inclusive and
+// StartBefore / EndBefore exclusive bounds; a zero Sort is the ListSort
+// default.
 type ListFilter struct {
-	Status      string
-	Q           string
-	ProductUUID string
-	VehicleUUID string
-	DaysLeftMin *int
-	DaysLeftMax *int
-	Limit       int32
-	Offset      int32
+	Statuses          []string
+	Q                 string
+	ProductUUID       string
+	VehicleUUID       string
+	OrganizationUUIDs []uuid.UUID
+	DaysLeftMin       *int
+	DaysLeftMax       *int
+	StartFrom         *time.Time
+	StartBefore       *time.Time
+	EndFrom           *time.Time
+	EndBefore         *time.Time
+	Sort              apiquery.ResolvedSort
+	SortExplicit      bool
+	Limit             int32
+	Offset            int32
 }
 
 // NamedRef names a related record.
@@ -247,15 +258,19 @@ func escapeLike(s string) string {
 // listArgs validates the filter and builds the query arguments. ok=false
 // means a filter names a record that does not exist (an empty page).
 func (r *Reader) listArgs(ctx context.Context, sp scopeParams, f ListFilter) (db.ListWarrantyRowsParams, bool, error) {
+	sortKey, sortDesc := f.sortArgs()
 	p := db.ListWarrantyRowsParams{
 		BrandID: sp.brandID, OrgIds: sp.orgIDs, HolderUserID: sp.holderUserID,
 		ServiceCreatedBy: sp.serviceCreatedBy, RowLimit: f.Limit, RowOffset: f.Offset,
+		Statuses: f.Statuses, OrganizationUuids: f.OrganizationUUIDs,
+		StartFrom: tsArg(f.StartFrom), StartBefore: tsArg(f.StartBefore),
+		EndFrom: tsArg(f.EndFrom), EndBefore: tsArg(f.EndBefore),
+		SortKey: sortKey, SortDesc: sortDesc,
 	}
-	if st := strings.TrimSpace(f.Status); st != "" {
+	for _, st := range f.Statuses {
 		if !IsStatus(st) {
 			return p, false, invalidField("status", "unknown warranty status")
 		}
-		p.Status = pgtype.Text{String: st, Valid: true}
 	}
 	if q := strings.TrimSpace(f.Q); q != "" {
 		if utf8.RuneCountInString(q) > MaxQueryLength {
@@ -320,7 +335,9 @@ func (r *Reader) listArgs(ctx context.Context, sp scopeParams, f ListFilter) (db
 func countArgs(p db.ListWarrantyRowsParams) db.CountWarrantyRowsParams {
 	return db.CountWarrantyRowsParams{
 		BrandID: p.BrandID, OrgIds: p.OrgIds, HolderUserID: p.HolderUserID,
-		ServiceCreatedBy: p.ServiceCreatedBy, WarrantyUuid: p.WarrantyUuid, Status: p.Status,
+		ServiceCreatedBy: p.ServiceCreatedBy, WarrantyUuid: p.WarrantyUuid, Statuses: p.Statuses,
+		OrganizationUuids: p.OrganizationUuids, StartFrom: p.StartFrom, StartBefore: p.StartBefore,
+		EndFrom: p.EndFrom, EndBefore: p.EndBefore,
 		ProductID: p.ProductID, VehicleID: p.VehicleID, EndsAfter: p.EndsAfter, EndsBefore: p.EndsBefore,
 		Q: p.Q, QPlate: p.QPlate,
 	}
@@ -340,8 +357,9 @@ func (r *Reader) list(ctx context.Context, sp scopeParams, f ListFilter, view fu
 		indexed bool
 	)
 	// TEC-209: a text search goes to the warranties index when it is up; the
-	// days-left bounds move with the clock, so they stay on SQL.
-	if p.Q.Valid && !p.EndsAfter.Valid && !p.EndsBefore.Valid && r.indexEnabled() {
+	// days-left bounds move with the clock, so they stay on SQL, like the
+	// TEC-377 sort, organization and date filters.
+	if p.Q.Valid && !p.EndsAfter.Valid && !p.EndsBefore.Valid && !f.sqlOnly() && r.indexEnabled() {
 		rows, total, indexed = r.searchIndexed(ctx, p, strings.TrimSpace(f.Q))
 	}
 	if !indexed {

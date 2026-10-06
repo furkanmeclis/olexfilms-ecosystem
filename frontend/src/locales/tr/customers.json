@@ -133,5 +133,6 @@
   "actions.upgrade.role_owner": "Bayi sahibi",
   "actions.upgrade.role_staff": "Bayi personeli",
   "actions.upgrade.confirm": "Yükselt",
-  "actions.upgrade.success": "Müşteri artık {{dealer}} üyesi."
+  "actions.upgrade.success": "Müşteri artık {{dealer}} üyesi.",
+  "fields.organization": "Organizasyon"
 }

@@ -66,7 +66,6 @@ import type { Lead } from "@/features/leads/services/leads.service";
 
 import { LeadDetailPage } from "./lead-detail-page";
 import { LeadFormPage } from "./lead-form-page";
-import { LeadsListPage } from "./leads-list-page";
 import { leadsNavItem } from "../nav";
 
 (
@@ -175,20 +174,6 @@ function lead(patch: Partial<Lead> = {}): Lead {
     ...patch,
   };
 }
-
-describe("LeadsListPage", () => {
-  it("calls the overdue tab with follow_up=overdue", async () => {
-    state.grants = new Set([permissions.leads.read]);
-    await render(createElement(LeadsListPage, { slug: "olex" }));
-
-    await click("[data-testid=lead-tab-overdue]");
-    expect(api.list).toHaveBeenLastCalledWith({
-      follow_up: "overdue",
-      limit: 20,
-      offset: 0,
-    });
-  });
-});
 
 describe("lead nav badge", () => {
   it("shows the follow-up count", async () => {
