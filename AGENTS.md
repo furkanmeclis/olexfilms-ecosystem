@@ -51,3 +51,10 @@ Bu repo bir Claude Code cloud oturumu tarafından sıfırdan inşa edilir. Tek k
 - [ ] Yeni tablo → migration + sqlc + `organization_id`/`brand_id`
 - [ ] Yeni UI metni → i18n anahtarı (en az tr + en)
 - [ ] `.env.example` ve `docs/openapi.yaml` güncel
+
+## 6. DataTable kuralı (kalıcı, TEC-362)
+
+- Kayıt listesi gösteren her ekran `EntityTable` (`@/components/entity`, altında `@/components/tables` DataTable) + `useServerListState` kullanır; ham `<table>` / elle yazılmış kayıt listesi yok.
+- Verinin desteklediği tüm özellikler açılır: tek alanlı sıralama, `q` arama, kolon/faceted/tarih/sayı filtreleri, görünürlük/sıra/pin/genişlik, yoğunluk, benzersiz `persistKey`, seçim + toplu işlem (bulk-engine), satır aksiyonları, export/import (io), grid/mobil kart; anlamlıysa satır sıralama ve hücre içi düzenleme.
+- Liste sözleşmesi: `limit`/`offset`/`total`, `sort=alan|-alan` (whitelist, id tiebreak, varsayılan meta `default_sort`), `q`, çok değerli filtre CSV (`a,b`), tarih `<alan>_from/_to`, sayı `<alan>_min/_max`, boolean `true|false`. Ayrıntı: `backend/API_CONVENTIONS.md`, tarif: `frontend/README.md` "List screens".
+- İstisnalar: PDF/önizleme, zaman çizelgesi, yorum akışı, galeri, sihirbaz seçicileri, ayar formları, portal müşteri kartları.

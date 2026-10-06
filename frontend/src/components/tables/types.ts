@@ -31,6 +31,25 @@ export type ColumnFilterVariant =
   | "boolean"
   | "date-range";
 
+/**
+ * How a column filter value becomes server query params
+ * (`useServerListState`, list contract in AGENTS.md):
+ * - `string`       → `<param>=<trimmed value>` (text / select)
+ * - `csv`          → `<param>=a,b` (multi-select / faceted; single value ok)
+ * - `boolean`      → `<param>=true|false`
+ * - `date-range`   → `<param>_from` / `<param>_to`
+ * - `number-range` → `<param>_min` / `<param>_max`
+ * - function       → custom mapping; return `undefined` values to omit.
+ * When omitted it is derived from `filterVariant`.
+ */
+export type ColumnParamFormat =
+  | "string"
+  | "csv"
+  | "boolean"
+  | "date-range"
+  | "number-range"
+  | ((value: unknown) => Record<string, string | undefined>);
+
 /** Inline cell editor kinds (double-click) */
 export type ColumnEditVariant = "text" | "number" | "select" | "boolean";
 
@@ -58,6 +77,15 @@ export type DataTableColumnMeta = {
   /** Class overrides */
   headerClassName?: string;
   cellClassName?: string;
+  /**
+   * Server query param this column's filter maps to (server mode).
+   * Only columns with `param` are sent by `useServerListState`.
+   */
+  param?: string;
+  /** Override for the filter → param format (default from filterVariant) */
+  paramFormat?: ColumnParamFormat;
+  /** Backend sort field when it differs from the column id */
+  sortParam?: string;
 };
 
 declare module "@tanstack/react-table" {
@@ -75,6 +103,9 @@ declare module "@tanstack/react-table" {
     gridSecondary?: boolean;
     headerClassName?: string;
     cellClassName?: string;
+    param?: string;
+    paramFormat?: ColumnParamFormat;
+    sortParam?: string;
   }
 }
 
@@ -119,6 +150,10 @@ export type DataTableControlledState = Partial<{
 
 export type DataTableFeatures = {
   sorting?: boolean;
+  /**
+   * Shift-click multi-column sort. Default: false (list endpoints apply a
+   * single primary sort field).
+   */
   multiSort?: boolean;
   globalFilter?: boolean;
   columnFilters?: boolean;
@@ -151,7 +186,13 @@ export type DataTableFeatures = {
    * Default: true
    */
   facetedFilters?: boolean;
-  /** Persist table UI state to localStorage under this key */
+  /**
+   * Persist table UI state to localStorage under this key.
+   * Client mode: everything (sort, filters, page, layout).
+   * Server mode (any `manual` flag): only layout — column visibility,
+   * order, pinning, sizing, density, view mode and page size.
+   * Pass the same key to `useServerListState` to restore the page size.
+   */
   persistKey?: string;
 };
 
@@ -176,6 +217,12 @@ export type DataTableProps<TData> = {
   initialState?: Partial<DataTableState>;
 
   pageCount?: number;
+  /**
+   * Total row count across all pages (server mode: the list `total`).
+   * Drives the "x–y of total" label and, when `pageCount` is omitted,
+   * the page count.
+   */
+  rowCount?: number;
   pageSizeOptions?: number[];
 
   toolbar?: ReactNode | ((table: Table<TData>) => ReactNode);
@@ -231,4 +278,5 @@ export type UseDataTableOptions<TData> = Pick<
   | "state"
   | "initialState"
   | "pageCount"
+  | "rowCount"
 >;

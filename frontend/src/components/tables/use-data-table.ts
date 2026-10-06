@@ -32,7 +32,7 @@ const DEFAULT_FEATURES: Required<Omit<DataTableFeatures, "persistKey">> & {
   persistKey?: string;
 } = {
   sorting: true,
-  multiSort: true,
+  multiSort: false,
   globalFilter: true,
   columnFilters: true,
   columnVisibility: true,
@@ -49,7 +49,11 @@ const DEFAULT_FEATURES: Required<Omit<DataTableFeatures, "persistKey">> & {
   facetedFilters: true,
 };
 
-function readPersisted(
+/**
+ * Read the UI state DataTable persisted under `persistKey`
+ * (`features.persistKey`). Returns null on SSR / missing / invalid JSON.
+ */
+export function readPersistedTableState(
   key: string | undefined,
 ): Partial<DataTableState> | null {
   if (!key || typeof window === "undefined") return null;
@@ -71,6 +75,33 @@ function writePersisted(
   } catch {
     // ignore quota
   }
+}
+
+/** Layout-only subset persisted for server-mode tables. */
+function pickLayoutState(
+  state: Partial<DataTableState> | null,
+): Partial<DataTableState> | null {
+  if (!state) return null;
+  const {
+    columnVisibility,
+    columnOrder,
+    columnPinning,
+    columnSizing,
+    density,
+    viewMode,
+    pagination,
+  } = state;
+  return {
+    columnVisibility,
+    columnOrder,
+    columnPinning,
+    columnSizing,
+    density,
+    viewMode,
+    pagination: pagination
+      ? { pageIndex: 0, pageSize: pagination.pageSize }
+      : undefined,
+  };
 }
 
 function defaultHiddenVisibility<TData>(
@@ -98,12 +129,22 @@ export function useDataTable<TData>(options: UseDataTableOptions<TData>) {
     state: controlled,
     initialState,
     pageCount,
+    rowCount,
   } = options;
 
   const features = { ...DEFAULT_FEATURES, ...featuresProp };
-  const persisted = useMemo(
-    () => readPersisted(features.persistKey),
+  // Server mode: sort / filters / page are owned by the server-list state
+  // (useServerListState); only layout preferences are persisted here.
+  const serverMode = Boolean(
+    manual?.pagination || manual?.sorting || manual?.filtering,
+  );
+  const persistedRaw = useMemo(
+    () => readPersistedTableState(features.persistKey),
     [features.persistKey],
+  );
+  const persisted = useMemo(
+    () => (serverMode ? pickLayoutState(persistedRaw) : persistedRaw),
+    [persistedRaw, serverMode],
   );
 
   const [sorting, setSorting] = useState<SortingState>(
@@ -182,31 +223,53 @@ export function useDataTable<TData>(options: UseDataTableOptions<TData>) {
     }
   }, [controlled?.globalFilter]);
 
+  const effectiveVisibility = controlled?.columnVisibility ?? columnVisibility;
+  const effectiveOrder = controlled?.columnOrder ?? columnOrder;
+  const effectivePinning = controlled?.columnPinning ?? columnPinning;
+  const effectiveSizing = controlled?.columnSizing ?? columnSizing;
+  const effectivePagination = controlled?.pagination ?? pagination;
+  const effectiveDensity = controlled?.density ?? density;
+  const effectiveViewMode = controlled?.viewMode ?? viewMode;
+  const effectivePageSize = effectivePagination.pageSize;
+
   useEffect(() => {
-    writePersisted(features.persistKey, {
-      sorting,
-      columnFilters,
-      globalFilter,
-      columnVisibility,
-      columnOrder,
-      columnPinning,
-      columnSizing,
-      pagination,
-      density,
-      viewMode,
-    });
+    const layout = {
+      columnVisibility: effectiveVisibility,
+      columnOrder: effectiveOrder,
+      columnPinning: effectivePinning,
+      columnSizing: effectiveSizing,
+      density: effectiveDensity,
+      viewMode: effectiveViewMode,
+    };
+    writePersisted(
+      features.persistKey,
+      serverMode
+        ? {
+            ...layout,
+            pagination: { pageIndex: 0, pageSize: effectivePageSize },
+          }
+        : {
+            ...layout,
+            sorting,
+            columnFilters,
+            globalFilter,
+            pagination,
+          },
+    );
   }, [
     features.persistKey,
+    serverMode,
     sorting,
     columnFilters,
     globalFilter,
-    columnVisibility,
-    columnOrder,
-    columnPinning,
-    columnSizing,
     pagination,
-    density,
-    viewMode,
+    effectiveVisibility,
+    effectiveOrder,
+    effectivePinning,
+    effectiveSizing,
+    effectiveDensity,
+    effectiveViewMode,
+    effectivePageSize,
   ]);
 
   // TanStack Table returns functions that React Compiler cannot memoize safely.
@@ -215,6 +278,7 @@ export function useDataTable<TData>(options: UseDataTableOptions<TData>) {
     data,
     columns,
     pageCount,
+    rowCount,
     getRowId,
     state: {
       sorting: controlled?.sorting ?? sorting,

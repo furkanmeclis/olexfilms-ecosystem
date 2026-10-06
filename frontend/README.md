@@ -97,3 +97,28 @@ Media: never assemble SeaweedFS/S3 URLs in the browser. Use `assertServiceMediaU
 | `pnpm api:generate` | Regenerate OpenAPI client types |
 
 `src/generated/api.d.ts` is generated. If it still lists deleted product paths, ignore unused ones and regenerate after the OpenAPI spec is trimmed.
+
+## List screens (DataTable standard)
+
+Every record list uses `EntityTable` + `useServerListState` (rule: root
+`AGENTS.md` §6). Recipe:
+
+1. Columns with `createColumn`. Sortable columns keep `enableSorting`
+   (backend field = column id, or `sortParam`). Filterable columns declare
+   `filterVariant` **and** `param`; the hook maps the filter value:
+   `text`/`select` → `param=v`, `faceted`/`multi-select` → `param=a,b`,
+   `boolean` → `param=true|false`, `date-range` → `param_from`/`param_to`,
+   `number-range` → `param_min`/`param_max` (`paramFormat` overrides, also
+   a function). Columns without `param` are not sent.
+2. `const list = useServerListState({ columns, initialSort: meta?.default_sort ?? "<fallback>", persistKey })`
+   → `list.params` (`limit`, `offset`, `sort`, `q`, mapped filters) is the
+   query; `list.filterParams` feeds bulk/export queries. `initialSort: null`
+   sends no sort. Text filters and `q` are debounced; any filter/sort/search
+   change resets `offset`.
+3. `<EntityTable columns data={items} rowCount={total} state={list.tableState} features={{ persistKey }} … />`
+   — `rowCount` gives the correct "x–y of total" and page count; server mode
+   persists only layout (visibility, order, pinning, sizing, density, view,
+   page size), hides faceted counts and sorts by one field.
+4. Small fixed arrays: plain `DataTable` in client mode (no `manual`).
+
+Reference: `features/users/components/users-page.tsx`.

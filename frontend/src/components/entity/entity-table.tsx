@@ -28,6 +28,11 @@ type EntityTableProps<TData> = Omit<
 /**
  * DataTable wrapper with shared loading / empty / error conventions
  * for platform entity list pages.
+ *
+ * Server mode by default (`manual` sorting/filtering/pagination). Pass the
+ * list `total` as `rowCount` (page count is derived) and the
+ * `useServerListState().tableState` as `state`; single-field sort
+ * (`multiSort: false`).
  */
 export function EntityTable<TData>({
   isLoading,
@@ -88,6 +93,7 @@ export function EntityTable<TData>({
       }}
       features={{
         sorting: true,
+        multiSort: false,
         globalFilter: true,
         columnFilters: true,
         columnVisibility: true,

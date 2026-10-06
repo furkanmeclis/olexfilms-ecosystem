@@ -20,6 +20,7 @@
   "columns.role": "Ролі",
   "role": "Роль",
   "columns.uuid": "UUID",
+  "columns.created_at": "Створено",
   "columns.actions": "Дії",
   "fields.name": "Ім'я",
   "fields.surname": "Прізвище",

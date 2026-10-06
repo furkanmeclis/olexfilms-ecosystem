@@ -34,6 +34,8 @@ function statusTone(status: string) {
 
 export type UsersColumnsOptions = {
   handlers: UserRowActionHandlers;
+  /** Role filter options (value = role slug, the `role` query param). */
+  roleOptions?: { value: string; label: string }[];
   currentUserUuid?: string;
   canImpersonateSuperAdmin?: boolean;
   isImpersonating?: boolean;
@@ -41,11 +43,12 @@ export type UsersColumnsOptions = {
 
 export function useUsersColumns({
   handlers,
+  roleOptions,
   currentUserUuid,
   canImpersonateSuperAdmin,
   isImpersonating,
 }: UsersColumnsOptions) {
-  const { t } = useLocale();
+  const { t, format } = useLocale();
 
   return useMemo(
     () =>
@@ -54,8 +57,8 @@ export function useUsersColumns({
           id: "name",
           accessorFn: (row) => userFullName(row),
           labelKey: "users.columns.name",
+          // Name / email are searched through the toolbar `q`.
           enableSorting: true,
-          filterVariant: "text",
           gridPrimary: true,
           cell: ({ row }) => (
             <span className="font-medium">{userFullName(row.original)}</span>
@@ -65,7 +68,6 @@ export function useUsersColumns({
           accessorKey: "email",
           labelKey: "users.columns.email",
           enableSorting: true,
-          filterVariant: "text",
           gridSecondary: true,
         }),
         createColumn<PublicUser>({
@@ -73,6 +75,7 @@ export function useUsersColumns({
           labelKey: "users.columns.status",
           enableSorting: true,
           filterVariant: "faceted",
+          param: "status",
           filterOptions: USER_STATUS_VALUES.map((value) => ({
             value,
             labelKey: `users.status.${value}`,
@@ -93,7 +96,12 @@ export function useUsersColumns({
               .join(", "),
           labelKey: "users.columns.roles",
           enableSorting: false,
-          filterVariant: "text",
+          filterVariant: "select",
+          filterOptions: roleOptions ?? [],
+          // Without the role catalog (no roles.read) there is nothing to
+          // pick; page-local facet values would not be slugs.
+          enableColumnFilter: Boolean(roleOptions?.length),
+          param: "role",
           cell: ({ row }) => {
             const roles = row.original.roles ?? [];
             if (roles.length === 0) {
@@ -150,6 +158,19 @@ export function useUsersColumns({
           ),
         }),
         createColumn<PublicUser>({
+          accessorKey: "created_at",
+          labelKey: "users.columns.created_at",
+          enableSorting: true,
+          cell: ({ row }) =>
+            row.original.created_at ? (
+              <span className="text-sm tabular-nums">
+                {format.dateTime(row.original.created_at)}
+              </span>
+            ) : (
+              <span className="text-muted-foreground text-sm">—</span>
+            ),
+        }),
+        createColumn<PublicUser>({
           id: "actions",
           labelKey: "users.columns.actions",
           enableSorting: false,
@@ -167,6 +188,14 @@ export function useUsersColumns({
           ),
         }),
       ] as ColumnDef<PublicUser, unknown>[],
-    [canImpersonateSuperAdmin, currentUserUuid, handlers, isImpersonating, t],
+    [
+      canImpersonateSuperAdmin,
+      currentUserUuid,
+      format,
+      handlers,
+      isImpersonating,
+      roleOptions,
+      t,
+    ],
   );
 }
