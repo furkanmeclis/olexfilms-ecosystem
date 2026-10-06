@@ -52,5 +52,13 @@
   "toast.locale_saved": "Versión de idioma guardada.",
   "toast.save_failed": "No se pudo guardar la plantilla.",
   "toast.default_set": "Plantilla predeterminada actualizada.",
-  "toast.default_failed": "No se pudo cambiar la plantilla predeterminada."
+  "toast.default_failed": "No se pudo cambiar la plantilla predeterminada.",
+  "fields.is_default": "Predeterminada",
+  "fields.updated_at": "Última actualización",
+  "actions.delete": "Eliminar",
+  "delete_confirm.title": "¿Eliminar esta plantilla?",
+  "delete_confirm.description": "Se elimina «{{name}}». Una plantilla ya usada en contratos se desactiva en su lugar, para que los contratos firmados conserven su texto.",
+  "toast.deleted": "Plantilla de contrato eliminada.",
+  "toast.deactivated": "La plantilla se usa en contratos, por lo que se desactivó en lugar de eliminarse.",
+  "toast.delete_failed": "No se pudo eliminar la plantilla."
 }

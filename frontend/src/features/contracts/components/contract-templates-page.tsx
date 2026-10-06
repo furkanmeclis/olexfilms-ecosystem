@@ -1,13 +1,20 @@
 "use client";
 
-import Link from "next/link";
+import type { ColumnDef } from "@tanstack/react-table";
+import { Pencil, Star, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { ErrorState } from "@/components/common/error-state";
-import { Loading } from "@/components/common/loading";
-import { EntityPage } from "@/components/entity";
+import {
+  CLIENT_SIDE_MANUAL,
+  EntityPage,
+  EntityRowActions,
+  EntityTable,
+  type EntityRowAction,
+} from "@/components/entity";
+import { createColumn } from "@/components/tables";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +38,7 @@ import { routes } from "@/config/routes";
 import {
   useContractTemplates,
   useCreateContractTemplate,
+  useDeleteContractTemplate,
   useSetDefaultContractTemplate,
 } from "@/features/contracts/hooks/use-contract-templates";
 import {
@@ -39,18 +47,146 @@ import {
   type ContractTemplateKind,
 } from "@/features/contracts/services/contract-templates.service";
 import { ApiError } from "@/lib/api/errors";
+import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
 
-/** Contract template list: kind, default badge, active, "make default". */
+export const CONTRACT_TEMPLATES_PERSIST_KEY = "platform-contract-templates-v1";
+
+/**
+ * Contract template list (TEC-290, TEC-370): client-side DataTable over the
+ * full array with kind / active / default filters and row actions (edit,
+ * make default, delete).
+ */
 export function ContractTemplatesPage() {
-  const { t } = useLocale();
+  const { t, format } = useLocale();
+  const router = useRouter();
+  const { confirmDelete } = useDialogs();
   const query = useContractTemplates();
   const setDefault = useSetDefaultContractTemplate();
+  const removeTemplate = useDeleteContractTemplate();
+  const remove = removeTemplate.mutate;
   const [pending, setPending] = useState<ContractTemplate | null>(null);
   const [creating, setCreating] = useState(false);
   const items = query.data?.items ?? [];
   const moduleOff =
     query.error instanceof ApiError && query.error.code === "FEATURE_DISABLED";
+
+  const columns = useMemo<ColumnDef<ContractTemplate, unknown>[]>(
+    () => [
+      createColumn<ContractTemplate>({
+        accessorKey: "name",
+        labelKey: "contract_templates.fields.name",
+        enableSorting: true,
+        gridPrimary: true,
+        cell: ({ row }) => (
+          <span
+            className="flex flex-wrap items-center gap-2 font-medium"
+            data-testid={`contract-template-${row.original.uuid}`}
+          >
+            {row.original.name}
+            {row.original.is_default ? (
+              <Badge variant="success" data-testid="default-badge">
+                {t("contract_templates.default_badge")}
+              </Badge>
+            ) : null}
+          </span>
+        ),
+      }) as ColumnDef<ContractTemplate, unknown>,
+      createColumn<ContractTemplate>({
+        accessorKey: "kind",
+        labelKey: "contract_templates.fields.kind",
+        enableSorting: true,
+        filterVariant: "faceted",
+        filterOptions: CONTRACT_TEMPLATE_KINDS.map((value) => ({
+          value,
+          label: value,
+          labelKey: `contract_templates.kinds.${value}`,
+        })),
+        cell: ({ row }) => t(`contract_templates.kinds.${row.original.kind}`),
+      }) as ColumnDef<ContractTemplate, unknown>,
+      createColumn<ContractTemplate>({
+        accessorKey: "is_active",
+        labelKey: "contract_templates.fields.status",
+        enableSorting: true,
+        filterVariant: "boolean",
+        cell: ({ row }) => (
+          <Badge variant={row.original.is_active ? "secondary" : "outline"}>
+            {row.original.is_active
+              ? t("contract_templates.status.active")
+              : t("contract_templates.status.inactive")}
+          </Badge>
+        ),
+      }) as ColumnDef<ContractTemplate, unknown>,
+      createColumn<ContractTemplate>({
+        accessorKey: "is_default",
+        labelKey: "contract_templates.fields.is_default",
+        enableSorting: true,
+        filterVariant: "boolean",
+        defaultHidden: true,
+        cell: ({ row }) =>
+          row.original.is_default ? t("common.yes") : t("common.no"),
+      }) as ColumnDef<ContractTemplate, unknown>,
+      createColumn<ContractTemplate>({
+        accessorKey: "updated_at",
+        labelKey: "contract_templates.fields.updated_at",
+        enableSorting: true,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground text-sm">
+            {format.dateTime(row.original.updated_at)}
+          </span>
+        ),
+      }) as ColumnDef<ContractTemplate, unknown>,
+      createColumn<ContractTemplate>({
+        id: "actions",
+        labelKey: "common.actions",
+        enableSorting: false,
+        enableHiding: false,
+        enableResizing: false,
+        cell: ({ row }) => {
+          const template = row.original;
+          const actions: EntityRowAction[] = [
+            {
+              id: "edit",
+              label: t("contract_templates.actions.edit"),
+              icon: Pencil,
+              onSelect: () =>
+                router.push(
+                  routes.platform.contractTemplates.edit(template.uuid),
+                ),
+            },
+          ];
+          if (!template.is_default && template.is_active) {
+            actions.push({
+              id: "make_default",
+              label: t("contract_templates.actions.make_default"),
+              icon: Star,
+              onSelect: () => setPending(template),
+            });
+          }
+          actions.push({
+            id: "delete",
+            label: t("contract_templates.actions.delete"),
+            icon: Trash2,
+            variant: "destructive",
+            onSelect: () => {
+              void (async () => {
+                const ok = await confirmDelete({
+                  title: t("contract_templates.delete_confirm.title"),
+                  description: t(
+                    "contract_templates.delete_confirm.description",
+                    { name: template.name },
+                  ),
+                });
+                if (ok) remove(template.uuid);
+              })();
+            },
+          });
+          return <EntityRowActions actions={actions} />;
+        },
+      }) as ColumnDef<ContractTemplate, unknown>,
+    ],
+    [confirmDelete, format, remove, router, t],
+  );
 
   return (
     <EntityPage
@@ -73,100 +209,30 @@ export function ContractTemplatesPage() {
         </Button>
       }
     >
-      {query.isLoading ? <Loading label={t("common.loading")} /> : null}
-      {query.isError ? (
-        <ErrorState
-          title={t("common.error_generic")}
-          description={
-            moduleOff
-              ? t("contract_templates.module_disabled")
-              : t("contract_templates.load_failed")
-          }
-        />
-      ) : null}
-
-      {query.data ? (
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full text-sm">
-            <thead className="text-muted-foreground text-xs">
-              <tr>
-                <th className="px-4 py-2 text-start font-medium">
-                  {t("contract_templates.fields.name")}
-                </th>
-                <th className="px-4 py-2 text-start font-medium">
-                  {t("contract_templates.fields.kind")}
-                </th>
-                <th className="px-4 py-2 text-start font-medium">
-                  {t("contract_templates.fields.status")}
-                </th>
-                <th className="px-4 py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {items.length === 0 ? (
-                <tr className="border-t">
-                  <td
-                    colSpan={4}
-                    className="text-muted-foreground px-4 py-6 text-center"
-                  >
-                    {t("contract_templates.empty")}
-                  </td>
-                </tr>
-              ) : null}
-              {items.map((row) => (
-                <tr
-                  key={row.uuid}
-                  className="border-t"
-                  data-testid={`contract-template-${row.uuid}`}
-                >
-                  <td className="px-4 py-2">
-                    <span className="flex flex-wrap items-center gap-2">
-                      {row.name}
-                      {row.is_default ? (
-                        <Badge variant="success" data-testid="default-badge">
-                          {t("contract_templates.default_badge")}
-                        </Badge>
-                      ) : null}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2">
-                    {t(`contract_templates.kinds.${row.kind}`)}
-                  </td>
-                  <td className="px-4 py-2">
-                    <Badge variant={row.is_active ? "secondary" : "outline"}>
-                      {row.is_active
-                        ? t("contract_templates.status.active")
-                        : t("contract_templates.status.inactive")}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-2">
-                    <span className="flex flex-wrap justify-end gap-2">
-                      {!row.is_default && row.is_active ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setPending(row)}
-                        >
-                          {t("contract_templates.actions.make_default")}
-                        </Button>
-                      ) : null}
-                      <Button asChild size="sm" variant="outline">
-                        <Link
-                          href={routes.platform.contractTemplates.edit(
-                            row.uuid,
-                          )}
-                        >
-                          {t("contract_templates.actions.edit")}
-                        </Link>
-                      </Button>
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : null}
+      <EntityTable
+        columns={columns}
+        data={items}
+        getRowId={(row) => row.uuid}
+        manual={CLIENT_SIDE_MANUAL}
+        isLoading={query.isLoading}
+        isError={query.isError}
+        errorDescription={
+          moduleOff
+            ? t("contract_templates.module_disabled")
+            : t("contract_templates.load_failed")
+        }
+        onRetry={moduleOff ? undefined : () => void query.refetch()}
+        emptyTitle={t("contract_templates.empty")}
+        emptyDescription=""
+        onRowClick={(row) =>
+          router.push(routes.platform.contractTemplates.edit(row.uuid))
+        }
+        initialState={{ pagination: { pageIndex: 0, pageSize: 20 } }}
+        features={{
+          persistKey: CONTRACT_TEMPLATES_PERSIST_KEY,
+          rowSelection: false,
+        }}
+      />
 
       <ConfirmDialog
         open={pending !== null}

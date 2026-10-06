@@ -52,5 +52,13 @@
   "toast.locale_saved": "Dil sürümü kaydedildi.",
   "toast.save_failed": "Şablon kaydedilemedi.",
   "toast.default_set": "Varsayılan şablon güncellendi.",
-  "toast.default_failed": "Varsayılan şablon değiştirilemedi."
+  "toast.default_failed": "Varsayılan şablon değiştirilemedi.",
+  "fields.is_default": "Varsayılan",
+  "fields.updated_at": "Son güncelleme",
+  "actions.delete": "Sil",
+  "delete_confirm.title": "Bu şablon silinsin mi?",
+  "delete_confirm.description": "\"{{name}}\" silinir. Sözleşmelerde kullanılmış bir şablon silinmez, pasife alınır; imzalı sözleşmelerin metni korunur.",
+  "toast.deleted": "Sözleşme şablonu silindi.",
+  "toast.deactivated": "Şablon sözleşmelerde kullanıldığı için silinmedi, pasife alındı.",
+  "toast.delete_failed": "Şablon silinemedi."
 }

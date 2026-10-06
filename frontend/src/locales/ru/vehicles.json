@@ -99,5 +99,6 @@
   "transfer.status.pending": "Ожидает",
   "transfer.status.completed": "Завершена",
   "transfer.status.cancelled": "Отменена",
-  "transfer.status.expired": "Истекла"
+  "transfer.status.expired": "Истекла",
+  "columns.created_at": "Создано"
 }

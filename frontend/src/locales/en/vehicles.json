@@ -99,5 +99,6 @@
   "transfer.status.pending": "Pending",
   "transfer.status.completed": "Completed",
   "transfer.status.cancelled": "Cancelled",
-  "transfer.status.expired": "Expired"
+  "transfer.status.expired": "Expired",
+  "columns.created_at": "Created"
 }

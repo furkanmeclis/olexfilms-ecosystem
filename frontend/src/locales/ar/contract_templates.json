@@ -52,5 +52,13 @@
   "toast.locale_saved": "تم حفظ نسخة اللغة.",
   "toast.save_failed": "تعذر حفظ القالب.",
   "toast.default_set": "تم تحديث القالب الافتراضي.",
-  "toast.default_failed": "تعذر تغيير القالب الافتراضي."
+  "toast.default_failed": "تعذر تغيير القالب الافتراضي.",
+  "fields.is_default": "افتراضي",
+  "fields.updated_at": "آخر تحديث",
+  "actions.delete": "حذف",
+  "delete_confirm.title": "حذف هذا القالب؟",
+  "delete_confirm.description": "سيُحذف \"{{name}}\". أما القالب المستخدم بالفعل في عقود فيُعطَّل بدلاً من حذفه، لتحتفظ العقود الموقَّعة بنصها.",
+  "toast.deleted": "تم حذف قالب العقد.",
+  "toast.deactivated": "القالب مستخدم في عقود، لذلك تم تعطيله بدلاً من حذفه.",
+  "toast.delete_failed": "تعذر حذف القالب."
 }

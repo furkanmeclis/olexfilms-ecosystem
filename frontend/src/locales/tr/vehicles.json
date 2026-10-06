@@ -99,5 +99,6 @@
   "transfer.status.pending": "Bekliyor",
   "transfer.status.completed": "Tamamlandı",
   "transfer.status.cancelled": "İptal edildi",
-  "transfer.status.expired": "Süresi doldu"
+  "transfer.status.expired": "Süresi doldu",
+  "columns.created_at": "Oluşturulma"
 }

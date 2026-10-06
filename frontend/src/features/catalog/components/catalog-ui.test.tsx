@@ -37,6 +37,7 @@ vi.mock("@/hooks/use-active-organization", () => ({
     type: state.orgType,
   }),
 }));
+vi.mock("@/hooks/use-mobile", () => ({ useIsMobile: () => false }));
 vi.mock("@/providers/toast-provider", () => ({
   appToast: { success: vi.fn(), error: vi.fn() },
 }));
@@ -110,10 +111,14 @@ async function render(node: ReturnType<typeof createElement>) {
   }
 }
 
-const columns = () =>
-  Array.from(container.querySelectorAll("[data-price-column]")).map((el) =>
-    el.getAttribute("data-price-column"),
-  );
+// Price cells carry `data-price-column` (one row per currency → unique).
+const columns = () => [
+  ...new Set(
+    Array.from(container.querySelectorAll("[data-price-column]")).map((el) =>
+      el.getAttribute("data-price-column"),
+    ),
+  ),
+];
 const buttonLabels = () =>
   Array.from(container.querySelectorAll("button, a")).map(
     (el) => el.getAttribute("aria-label") ?? el.textContent?.trim() ?? "",
@@ -141,7 +146,8 @@ describe("PriceTable mask", () => {
     expect(columns()).toEqual(["purchase_price"]);
     expect(container.textContent).toContain("100.00 TRY");
     expect(container.textContent).not.toContain("catalog.prices.recommended");
-    expect(container.querySelector("button")).toBeNull();
+    expect(buttonLabels()).not.toContain("common.edit");
+    expect(buttonLabels()).not.toContain("common.delete");
   });
 
   it("distributor sees its purchase and dealer price, not the center's", async () => {

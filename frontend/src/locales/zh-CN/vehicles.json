@@ -99,5 +99,6 @@
   "transfer.status.pending": "待处理",
   "transfer.status.completed": "已完成",
   "transfer.status.cancelled": "已取消",
-  "transfer.status.expired": "已过期"
+  "transfer.status.expired": "已过期",
+  "columns.created_at": "创建时间"
 }
