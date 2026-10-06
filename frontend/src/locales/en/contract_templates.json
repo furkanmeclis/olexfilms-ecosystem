@@ -52,5 +52,13 @@
   "toast.locale_saved": "Language version saved.",
   "toast.save_failed": "The template could not be saved.",
   "toast.default_set": "Default template updated.",
-  "toast.default_failed": "The default template could not be changed."
+  "toast.default_failed": "The default template could not be changed.",
+  "fields.is_default": "Default",
+  "fields.updated_at": "Last updated",
+  "actions.delete": "Delete",
+  "delete_confirm.title": "Delete this template?",
+  "delete_confirm.description": "\"{{name}}\" is deleted. A template already used by contracts is deactivated instead, so signed contracts keep their text.",
+  "toast.deleted": "Contract template deleted.",
+  "toast.deactivated": "The template is used by contracts, so it was deactivated instead of deleted.",
+  "toast.delete_failed": "The template could not be deleted."
 }

@@ -20,21 +20,30 @@ export type CatalogPage<T> = {
   offset: number;
 };
 
+/**
+ * List query of `GET /v1/catalog/categories` (TEC-369): paging, `sort`
+ * (name, sort, active, created_at, updated_at), `q` and `active=true|false`.
+ */
 export type ListCategoriesParams = {
   limit?: number;
   offset?: number;
   q?: string;
-  active?: boolean;
+  sort?: string;
+  active?: boolean | string;
 };
 
+/**
+ * List query of `GET /v1/catalog/products` (TEC-369): paging, single-field
+ * `sort`, `q` and the column filters (`active`, `category_uuid` CSV,
+ * `unit_type` CSV, `uses_fixed_barcode`, warranty / micron `_min`/`_max`,
+ * `created_from` / `created_to`), passed through as query params.
+ */
 export type ListProductsParams = {
   limit?: number;
   offset?: number;
   q?: string;
-  active?: boolean;
-  category_uuid?: string;
-  unit_type?: CatalogUnitType;
-};
+  sort?: string;
+} & Record<string, string | number | boolean | undefined>;
 
 export type BulkActiveResult = {
   requested: number;
@@ -60,7 +69,7 @@ export function productImageUrl(key: string): string | null {
 /** At most this many uuids per bulk-active request (TEC-145). */
 export const BULK_ACTIVE_MAX = 500;
 
-function boolQuery(value: boolean | undefined) {
+function boolQuery(value: boolean | string | undefined) {
   return value === undefined ? undefined : String(value);
 }
 
@@ -75,9 +84,22 @@ export const catalogService = {
           limit: params.limit,
           offset: params.offset,
           q: params.q,
+          sort: params.sort,
           active: boolQuery(params.active),
         },
       },
+    );
+  },
+
+  /**
+   * Center only (TEC-369): rearranges the given categories within the
+   * positions they hold and renumbers every category; returns the full list.
+   */
+  reorderCategories(uuids: string[]) {
+    return platformRequest<{ items: CatalogCategory[] }>(
+      "PUT",
+      "/v1/catalog/categories/order",
+      { body: { uuids } },
     );
   },
 
@@ -103,19 +125,15 @@ export const catalogService = {
   },
 
   listProducts(params: ListProductsParams = {}) {
+    const query: Record<string, string | number | undefined> = {};
+    for (const [key, value] of Object.entries(params)) {
+      if (value === undefined || value === "") continue;
+      query[key] = typeof value === "boolean" ? String(value) : value;
+    }
     return platformRequest<CatalogPage<CatalogProduct>>(
       "GET",
       "/v1/catalog/products",
-      {
-        query: {
-          limit: params.limit,
-          offset: params.offset,
-          q: params.q,
-          active: boolQuery(params.active),
-          category_uuid: params.category_uuid,
-          unit_type: params.unit_type,
-        },
-      },
+      { query },
     );
   },
 

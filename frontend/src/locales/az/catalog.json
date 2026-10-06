@@ -135,5 +135,6 @@
   "services.categories.other": "Digər",
   "services.recurrences.one_time": "Birdəfəlik",
   "services.recurrences.monthly": "Aylıq",
-  "services.recurrences.yearly": "İllik"
+  "services.recurrences.yearly": "İllik",
+  "fields.created_at": "Yaradılma"
 }

@@ -99,5 +99,6 @@
   "transfer.status.pending": "Ausstehend",
   "transfer.status.completed": "Abgeschlossen",
   "transfer.status.cancelled": "Abgebrochen",
-  "transfer.status.expired": "Abgelaufen"
+  "transfer.status.expired": "Abgelaufen",
+  "columns.created_at": "Erstellt"
 }

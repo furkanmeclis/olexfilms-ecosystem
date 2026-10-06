@@ -1,12 +1,17 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ColumnDef } from "@tanstack/react-table";
 import { Pencil, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
-import { ErrorState } from "@/components/common/error-state";
-import { Loading } from "@/components/common/loading";
 import { DeleteDialog } from "@/components/dialogs/delete-dialog";
+import {
+  EntityRowActions,
+  EntityTable,
+  useServerListState,
+} from "@/components/entity";
+import { createColumn } from "@/components/tables";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -22,12 +27,25 @@ import { priceNumber } from "@/features/catalog/lib/prices";
 import {
   pricingService,
   type DistributorPrice,
+  type DistributorPriceListParams,
 } from "@/features/catalog/services/pricing.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
 
 type Editing = { row: DistributorPrice | null } | null;
+
+export const DISTRIBUTOR_PRICES_PERSIST_KEY =
+  "tenant-catalog-distributor-prices-v1";
+
+/** Currency filter text → `currency` CSV (ISO-4217, upper case). */
+function currencyParam(value: unknown) {
+  const codes = String(value ?? "")
+    .split(/[\s,]+/)
+    .map((code) => code.trim().toUpperCase())
+    .filter(Boolean);
+  return { currency: codes.length ? codes.join(",") : undefined };
+}
 
 /**
  * Center only: distributor-specific prices of one product (TEC-146). Such a
@@ -46,9 +64,96 @@ export function DistributorPricesCard({
   const [deleting, setDeleting] = useState<DistributorPrice | null>(null);
   const canWrite = access.canWriteDistributorPrices;
 
+  const columns = useMemo<ColumnDef<DistributorPrice, unknown>[]>(() => {
+    const cols = [
+      createColumn<DistributorPrice>({
+        id: "distributor",
+        accessorKey: "distributor_name",
+        labelKey: "catalog.distributor_prices.distributor",
+        enableSorting: true,
+        gridPrimary: true,
+      }),
+      createColumn<DistributorPrice>({
+        accessorKey: "currency",
+        labelKey: "catalog.prices.currency",
+        enableSorting: true,
+        filterVariant: "text",
+        param: "currency",
+        paramFormat: currencyParam,
+        cell: ({ row }) => (
+          <span className="font-mono">{row.original.currency}</span>
+        ),
+      }),
+      createColumn<DistributorPrice>({
+        accessorKey: "price",
+        labelKey: "catalog.distributor_prices.price",
+        enableSorting: true,
+        gridSecondary: true,
+        cell: ({ row }) => (
+          <span className="tabular-nums">
+            {format.currency(
+              priceNumber(row.original.price),
+              row.original.currency,
+            )}
+          </span>
+        ),
+      }),
+      createColumn<DistributorPrice>({
+        accessorKey: "updated_at",
+        labelKey: "catalog.distributor_prices.updated_at",
+        enableSorting: true,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">
+            {format.dateTime(row.original.updated_at)}
+          </span>
+        ),
+      }),
+    ] as ColumnDef<DistributorPrice, unknown>[];
+    if (canWrite) {
+      cols.push(
+        createColumn<DistributorPrice>({
+          id: "actions",
+          labelKey: "common.actions",
+          enableSorting: false,
+          enableHiding: false,
+          enableResizing: false,
+          cell: ({ row }) => (
+            <EntityRowActions
+              actions={[
+                {
+                  id: "edit",
+                  label: t("common.edit"),
+                  icon: Pencil,
+                  onSelect: () => setEditing({ row: row.original }),
+                },
+                {
+                  id: "delete",
+                  label: t("common.delete"),
+                  icon: Trash2,
+                  variant: "destructive",
+                  onSelect: () => setDeleting(row.original),
+                },
+              ]}
+            />
+          ),
+        }) as ColumnDef<DistributorPrice, unknown>,
+      );
+    }
+    return cols;
+  }, [canWrite, format, t]);
+
+  // Nested server table (TEC-369): sort, q (SKU / product / distributor),
+  // currency CSV, paging.
+  const listState = useServerListState({
+    columns,
+    initialSort: "distributor",
+    persistKey: DISTRIBUTOR_PRICES_PERSIST_KEY,
+  });
+  const listParams: DistributorPriceListParams = listState.params;
   const list = useQuery({
-    queryKey: catalogKeys.distributorPrices(productUuid),
-    queryFn: () => pricingService.listDistributorPrices(productUuid),
+    queryKey: catalogKeys.distributorPrices(productUuid, listParams),
+    queryFn: () =>
+      pricingService.listDistributorPrices(productUuid, listParams),
     enabled: access.canReadDistributorPrices,
   });
   const distributors = useQuery({
@@ -103,7 +208,6 @@ export function DistributorPricesCard({
   const options = row
     ? [{ value: row.distributor_uuid, label: row.distributor_name }]
     : (distributors.data ?? []).map((d) => ({ value: d.uuid, label: d.name }));
-  const items = list.data?.items ?? [];
 
   return (
     <Card data-testid="distributor-prices-card">
@@ -127,86 +231,22 @@ export function DistributorPricesCard({
         ) : null}
       </CardHeader>
       <CardContent>
-        {list.isLoading ? (
-          <Loading />
-        ) : list.isError ? (
-          <ErrorState
-            title={t("common.error_generic")}
-            onRetry={() => void list.refetch()}
-            retryLabel={t("common.retry")}
-          />
-        ) : !items.length ? (
-          <p className="text-muted-foreground text-sm">
-            {t("catalog.distributor_prices.empty")}
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-muted-foreground border-b">
-                  <th className="py-2 pe-4 text-start font-medium">
-                    {t("catalog.distributor_prices.distributor")}
-                  </th>
-                  <th className="py-2 pe-4 text-start font-medium">
-                    {t("catalog.prices.currency")}
-                  </th>
-                  <th className="py-2 pe-4 text-end font-medium">
-                    {t("catalog.distributor_prices.price")}
-                  </th>
-                  <th className="py-2 pe-4 text-start font-medium">
-                    {t("catalog.distributor_prices.updated_at")}
-                  </th>
-                  {canWrite ? (
-                    <th className="py-2">
-                      <span className="sr-only">{t("common.actions")}</span>
-                    </th>
-                  ) : null}
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => (
-                  <tr
-                    key={`${item.distributor_uuid}-${item.currency}`}
-                    className="border-b last:border-0"
-                  >
-                    <td className="py-2 pe-4">{item.distributor_name}</td>
-                    <td className="py-2 pe-4 font-mono">{item.currency}</td>
-                    <td className="py-2 pe-4 text-end tabular-nums">
-                      {format.currency(priceNumber(item.price), item.currency)}
-                    </td>
-                    <td className="text-muted-foreground py-2 pe-4">
-                      {format.dateTime(item.updated_at)}
-                    </td>
-                    {canWrite ? (
-                      <td className="py-2 text-end whitespace-nowrap">
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="size-8"
-                          aria-label={t("common.edit")}
-                          onClick={() => setEditing({ row: item })}
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="text-destructive size-8"
-                          aria-label={t("common.delete")}
-                          onClick={() => setDeleting(item)}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </td>
-                    ) : null}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <EntityTable
+          columns={columns}
+          data={list.data?.items ?? []}
+          getRowId={(row) => `${row.distributor_uuid}-${row.currency}`}
+          isLoading={list.isLoading}
+          isError={list.isError}
+          onRetry={() => void list.refetch()}
+          emptyTitle={t("catalog.distributor_prices.empty")}
+          emptyDescription=""
+          rowCount={list.data?.total ?? 0}
+          state={listState.tableState}
+          features={{
+            persistKey: DISTRIBUTOR_PRICES_PERSIST_KEY,
+            rowSelection: false,
+          }}
+        />
       </CardContent>
 
       {canWrite ? (

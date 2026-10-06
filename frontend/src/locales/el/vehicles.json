@@ -99,5 +99,6 @@
   "transfer.status.pending": "Σε αναμονή",
   "transfer.status.completed": "Ολοκληρώθηκε",
   "transfer.status.cancelled": "Ακυρώθηκε",
-  "transfer.status.expired": "Έληξε"
+  "transfer.status.expired": "Έληξε",
+  "columns.created_at": "Δημιουργία"
 }

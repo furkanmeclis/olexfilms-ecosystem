@@ -52,5 +52,13 @@
   "toast.locale_saved": "Sprachversion gespeichert.",
   "toast.save_failed": "Die Vorlage konnte nicht gespeichert werden.",
   "toast.default_set": "Standardvorlage aktualisiert.",
-  "toast.default_failed": "Die Standardvorlage konnte nicht geändert werden."
+  "toast.default_failed": "Die Standardvorlage konnte nicht geändert werden.",
+  "fields.is_default": "Standard",
+  "fields.updated_at": "Zuletzt aktualisiert",
+  "actions.delete": "Löschen",
+  "delete_confirm.title": "Diese Vorlage löschen?",
+  "delete_confirm.description": "\"{{name}}\" wird gelöscht. Eine bereits in Verträgen verwendete Vorlage wird stattdessen deaktiviert, damit unterschriebene Verträge ihren Text behalten.",
+  "toast.deleted": "Vertragsvorlage gelöscht.",
+  "toast.deactivated": "Die Vorlage wird in Verträgen verwendet und wurde daher deaktiviert statt gelöscht.",
+  "toast.delete_failed": "Die Vorlage konnte nicht gelöscht werden."
 }

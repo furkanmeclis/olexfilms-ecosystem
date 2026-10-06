@@ -135,5 +135,6 @@
   "services.categories.other": "Otro",
   "services.recurrences.one_time": "Una vez",
   "services.recurrences.monthly": "Mensual",
-  "services.recurrences.yearly": "Anual"
+  "services.recurrences.yearly": "Anual",
+  "fields.created_at": "Creado"
 }

@@ -27,6 +27,8 @@ export const vehicleCatalogKeys = {
   modelLists: () => [...vehicleCatalogKeys.all, "models"] as const,
   modelList: (params: VehicleModelListParams) =>
     [...vehicleCatalogKeys.modelLists(), params] as const,
+  modelFacets: (brandUuid: string) =>
+    [...vehicleCatalogKeys.modelLists(), "facets", brandUuid] as const,
 };
 
 export function useVehicleBrands(params: VehicleListParams) {
@@ -51,6 +53,16 @@ export function useVehicleModels(params: VehicleModelListParams) {
     queryFn: () => vehicleCatalogService.listModels(params),
     enabled: Boolean(params.brand_uuid),
     placeholderData: keepPreviousData,
+  });
+}
+
+/** body_type / powertrain facet options of one brand's models (TEC-369). */
+export function useVehicleModelFacets(brandUuid: string) {
+  return useQuery({
+    queryKey: vehicleCatalogKeys.modelFacets(brandUuid),
+    queryFn: () => vehicleCatalogService.modelFacets({ brand_uuid: brandUuid }),
+    enabled: Boolean(brandUuid),
+    staleTime: 60_000,
   });
 }
 

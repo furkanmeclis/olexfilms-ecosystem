@@ -10,7 +10,10 @@ import { routes } from "@/config/routes";
 import { visibleNavItems } from "@/features/nav-engine/lib/access";
 import type { ContractTemplate } from "@/features/contracts/services/contract-templates.service";
 
-const state = vi.hoisted(() => ({ grants: new Set<string>() }));
+const state = vi.hoisted(() => ({
+  grants: new Set<string>(),
+  confirmDelete: null as null | (() => Promise<boolean>),
+}));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -21,7 +24,14 @@ vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({
     t: (key: string) => key,
     locale: "en",
-    format: { date: () => "date" },
+    format: { date: () => "date", dateTime: () => "date" },
+  }),
+}));
+
+vi.mock("@/hooks/use-mobile", () => ({ useIsMobile: () => false }));
+vi.mock("@/providers/dialog-provider", () => ({
+  useDialogs: () => ({
+    confirmDelete: () => state.confirmDelete?.() ?? Promise.resolve(false),
   }),
 }));
 
@@ -78,6 +88,7 @@ function json(data: unknown) {
 }
 
 beforeEach(() => {
+  state.confirmDelete = null;
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
@@ -95,6 +106,11 @@ beforeEach(() => {
     if (m && method === "POST") {
       server = server.map((t) => ({ ...t, is_default: t.uuid === m[1] }));
       return json(server.find((t) => t.uuid === m[1]));
+    }
+    const del = /\/v1\/platform\/contract-templates\/([^/]+)$/.exec(url);
+    if (del && method === "DELETE") {
+      server = server.filter((t) => t.uuid !== del[1]);
+      return new Response(null, { status: 204 });
     }
     if (url.endsWith("/v1/platform/contract-templates") && method === "GET") {
       return json({ items: server });
@@ -132,13 +148,17 @@ async function render() {
   await flush();
 }
 
+// The name cell carries the test id; the DataTable row is its <tr>.
 function row(uuid: string) {
-  return document.querySelector(`[data-testid="contract-template-${uuid}"]`)!;
+  return document
+    .querySelector(`[data-testid="contract-template-${uuid}"]`)!
+    .closest("tr")!;
 }
 
 function buttonByText(scope: ParentNode, text: string) {
   return Array.from(scope.querySelectorAll("button")).find(
-    (b) => b.textContent?.trim() === text,
+    (b) =>
+      b.textContent?.trim() === text || b.getAttribute("aria-label") === text,
   ) as HTMLButtonElement | undefined;
 }
 
@@ -178,6 +198,39 @@ describe("ContractTemplatesPage (TEC-290)", () => {
     expect(row("tpl-a").querySelector('[data-testid="default-badge"]')).toBe(
       null,
     );
+  });
+
+  it("delete asks for confirmation and sends DELETE", async () => {
+    await render();
+    state.confirmDelete = () => Promise.resolve(true);
+    const action = buttonByText(
+      row("tpl-b"),
+      "contract_templates.actions.delete",
+    );
+    expect(action).toBeDefined();
+    await act(async () => action!.click());
+    await flush();
+    await flush();
+    const del = calls.find((c) => c.method === "DELETE");
+    expect(del?.url).toBe("/api/v1/platform/contract-templates/tpl-b");
+    expect(
+      document.querySelector('[data-testid="contract-template-tpl-b"]'),
+    ).toBeNull();
+  });
+
+  it("is a client-side table with kind / active / default filters", async () => {
+    await render();
+    // Header labels of the filterable columns are rendered by the DataTable.
+    expect(document.body.textContent).toContain(
+      "contract_templates.fields.kind",
+    );
+    expect(document.body.textContent).toContain(
+      "contract_templates.fields.status",
+    );
+    // Make default is offered only on non-default active rows.
+    expect(
+      buttonByText(row("tpl-a"), "contract_templates.actions.make_default"),
+    ).toBeUndefined();
   });
 
   it("does not render the list without contracts.templates.manage", async () => {

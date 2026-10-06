@@ -135,5 +135,6 @@
   "services.categories.other": "أخرى",
   "services.recurrences.one_time": "مرة واحدة",
   "services.recurrences.monthly": "شهري",
-  "services.recurrences.yearly": "سنوي"
+  "services.recurrences.yearly": "سنوي",
+  "fields.created_at": "تاريخ الإنشاء"
 }
