@@ -280,3 +280,23 @@ RETURNING *;
 UPDATE appointments
 SET deleted_at = NOW()
 WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id) AND deleted_at IS NULL;
+
+-- Panel calendar references (TEC-326): customer, vehicle and linked service
+-- UUIDs and labels of the given appointments.
+-- name: ListAppointmentRefs :many
+SELECT a.id,
+       u.uuid AS customer_uuid,
+       u.name AS customer_name,
+       u.surname AS customer_surname,
+       v.uuid AS vehicle_uuid,
+       v.plate AS vehicle_plate,
+       cb.name AS car_brand,
+       cm.name AS car_model,
+       s.uuid AS service_uuid
+FROM appointments a
+JOIN users u ON u.id = a.customer_user_id
+LEFT JOIN vehicles v ON v.id = a.vehicle_id
+LEFT JOIN car_brands cb ON cb.id = v.car_brand_id
+LEFT JOIN car_models cm ON cm.id = v.car_model_id
+LEFT JOIN services s ON s.id = a.service_id
+WHERE a.id = ANY(sqlc.arg(ids)::bigint[]);

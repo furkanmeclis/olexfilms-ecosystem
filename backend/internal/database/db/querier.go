@@ -1159,6 +1159,9 @@ type Querier interface {
 	// Sort: docs/list-contract.md, keys from apiquery.LogsSortSpec.
 	ListAppLogs(ctx context.Context, arg ListAppLogsParams) ([]AppLog, error)
 	ListAppointmentClosures(ctx context.Context, arg ListAppointmentClosuresParams) ([]AppointmentClosure, error)
+	// Panel calendar references (TEC-326): customer, vehicle and linked service
+	// UUIDs and labels of the given appointments.
+	ListAppointmentRefs(ctx context.Context, ids []int64) ([]ListAppointmentRefsRow, error)
 	ListAppointmentSettingsByOrganizations(ctx context.Context, organizationIds []int64) ([]AppointmentSetting, error)
 	ListAppointmentsByOrganizations(ctx context.Context, arg ListAppointmentsByOrganizationsParams) ([]Appointment, error)
 	// TEC-375: list contract (docs/list-contract.md), keys from stock usecase

@@ -17,6 +17,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -242,6 +243,41 @@ func TestStartIntakeCreatesDraftServiceAndSecondCallConflicts(t *testing.T) {
 	}
 	if _, err := f.svc.StartIntake(f.ctx, c, appt.UUID); !errors.Is(err, ErrIntakeStarted) {
 		t.Fatalf("second start err = %v, want ErrIntakeStarted", err)
+	}
+}
+
+func TestCreateByUUIDReturnsPanelRefs(t *testing.T) {
+	f := newFixture(t)
+	f.settings(f.dealer, 3)
+	f.link(f.user, f.dealer)
+	vehicle := f.vehicle(f.user, f.dealer)
+	c := f.caller(f.dealer, rbac.ScopeManaged, []int64{f.dealer.ID})
+	customerUUID, vehicleUUID := f.user.Uuid, vehicle.Uuid
+	appt, err := f.svc.Create(f.ctx, c, CreateInput{
+		CustomerUUID: &customerUUID, VehicleUUID: &vehicleUUID, StartsAt: time.Date(2026, 10, 5, 7, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if appt.CustomerUserID != f.user.ID || appt.VehicleID == nil || *appt.VehicleID != vehicle.ID {
+		t.Fatalf("created appointment = %+v, want resolved ids", appt)
+	}
+	if appt.CustomerUUID == nil || *appt.CustomerUUID != customerUUID || appt.CustomerName == "" ||
+		appt.VehicleUUID == nil || *appt.VehicleUUID != vehicleUUID {
+		t.Fatalf("created appointment refs = %+v", appt)
+	}
+	started, err := f.svc.StartIntake(f.ctx, c, appt.UUID)
+	if err != nil {
+		t.Fatalf("start intake: %v", err)
+	}
+	if started.ServiceUUID == nil {
+		t.Fatalf("started appointment has no service_uuid: %+v", started)
+	}
+	unknown := uuid.New()
+	if _, err := f.svc.Create(f.ctx, c, CreateInput{
+		CustomerUUID: &unknown, StartsAt: time.Date(2026, 10, 5, 8, 0, 0, 0, time.UTC),
+	}); err == nil {
+		t.Fatal("create with unknown customer_uuid succeeded")
 	}
 }
 

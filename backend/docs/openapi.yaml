@@ -32303,10 +32303,15 @@ components:
 
     AppointmentInput:
       type: object
-      required: [customer_user_id, starts_at]
+      description: >-
+        customer_user_id or customer_uuid is required (TEC-326: the panel
+        sends UUIDs; a UUID wins over the internal id when both are sent).
+      required: [starts_at]
       properties:
         customer_user_id: { type: integer, format: int64 }
+        customer_uuid: { type: [string, "null"], format: uuid }
         vehicle_id: { type: [integer, "null"], format: int64 }
+        vehicle_uuid: { type: [string, "null"], format: uuid }
         starts_at: { type: string, format: date-time }
         estimated_minutes: { type: [integer, "null"], minimum: 1 }
         source: { $ref: "#/components/schemas/AppointmentSource" }
@@ -32341,6 +32346,15 @@ components:
         created_by_user_id: { type: [integer, "null"], format: int64 }
         created_at: { type: [string, "null"], format: date-time }
         updated_at: { type: [string, "null"], format: date-time }
+        customer_uuid:
+          type: string
+          format: uuid
+          description: Panel responses only (TEC-326)
+        customer_name: { type: string, description: Panel responses only (TEC-326) }
+        vehicle_uuid: { type: [string, "null"], format: uuid }
+        vehicle_plate: { type: [string, "null"] }
+        vehicle_label: { type: [string, "null"], description: Car brand and model }
+        service_uuid: { type: [string, "null"], format: uuid, description: Draft service opened by start-intake }
 
     AppointmentStatusInput:
       type: object
