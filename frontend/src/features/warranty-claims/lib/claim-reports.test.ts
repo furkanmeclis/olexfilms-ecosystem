@@ -4,7 +4,6 @@ import {
   buildExportRequest,
   buildPeriodQuery,
   dealerFilterOptions,
-  filterDealerRows,
   formatClaimRate,
   isPeriodValid,
   tabReportKind,
@@ -145,10 +144,6 @@ describe("dealer filter", () => {
       { value: "d-2", label: "Dealer B" },
       { value: "dist", label: "Distributor X" },
     ]);
-    expect(
-      filterDealerRows(rows, "d-2").map((r) => r.organization_uuid),
-    ).toEqual(["d-2"]);
-    expect(filterDealerRows(rows, "")).toHaveLength(3);
   });
 
   it("never offers the center itself", () => {

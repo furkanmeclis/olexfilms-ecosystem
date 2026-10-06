@@ -58,6 +58,10 @@ vi.mock("@/components/ui/date-picker", async () => {
       }),
   };
 });
+vi.mock("@/hooks/use-mobile", () => ({
+  useIsMobile: () => false,
+  useIsXl: () => true,
+}));
 vi.mock("@/features/io/services/exports.service", () => ({
   exportsService: exportsApi,
 }));
@@ -74,6 +78,7 @@ import { WarrantyClaimReportsPage } from "./warranty-claim-reports-page";
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
 
+Element.prototype.scrollIntoView ??= () => {};
 globalThis.ResizeObserver ??= class {
   observe() {}
   unobserve() {}
@@ -259,16 +264,52 @@ describe("WarrantyClaimReportsPage", () => {
     // No unscoped organization list is ever loaded for the filter.
     expect(paths.every((p) => p.startsWith("/v1/warranty-claims/"))).toBe(true);
 
-    const options = $$("[data-testid=claim-report-dealer-filter] option").map(
-      (o) => (o as HTMLOptionElement).value,
-    );
-    expect(options).toEqual(["", "d-1", "dist"]);
     expect($$("[data-testid=claim-report-dealer-row]")).toHaveLength(2);
 
-    await select($("[data-testid=claim-report-dealer-filter]"), "d-1");
+    // TEC-378: the dealer filter is the organization facet of the table;
+    // its options come only from the scoped rows (center rows excluded).
+    const facet = $$("button").find((b) =>
+      b.textContent?.includes("warranty.claim_reports.columns.organization"),
+    );
+    await click(facet ?? null);
+    const items = [...document.body.querySelectorAll("[cmdk-item]")];
+    expect(items.map((i) => i.textContent?.trim())).toEqual([
+      "Dealer A",
+      "Distributor X",
+    ]);
+    await click(items[0] ?? null);
     const rows = $$("[data-testid=claim-report-dealer-row]");
     expect(rows.map((r) => r.getAttribute("data-uuid"))).toEqual(["d-1"]);
-    expect(rows[0]?.textContent).toContain("66.7%");
+    expect(rows[0]?.closest("tr")?.textContent).toContain("66.7%");
+  });
+
+  it("renders each report as a sortable client-side table (TEC-378)", async () => {
+    state.grants = new Set([Permission.WarrantyClaimsRead]);
+    await render();
+    const sortable = (table: string) =>
+      $$(`[data-testid=${table}] thead th`)
+        .filter((th) => th.querySelector("button"))
+        .map((th) => th.textContent?.trim());
+    expect(sortable("claim-report-failure-table")).toEqual([
+      "warranty.claim_reports.columns.product",
+      "warranty.claim_reports.columns.warranties",
+      "warranty.claim_reports.columns.claims",
+      "warranty.claim_reports.columns.approved",
+      "warranty.claim_reports.columns.claim_rate",
+      "warranty.claim_reports.columns.approved_rate",
+    ]);
+    await click($("[data-testid=claim-report-tab-lot]"));
+    expect(sortable("claim-report-failure-table")).toContain(
+      "warranty.claim_reports.columns.lot",
+    );
+    await click($("[data-testid=claim-report-tab-parts]"));
+    expect(sortable("claim-report-parts-table")).toEqual([
+      "warranty.claim_reports.columns.part",
+      "warranty.claim_reports.columns.product",
+      "warranty.claim_reports.columns.part_count",
+      "warranty.claim_reports.columns.claims",
+      "warranty.claim_reports.columns.approved",
+    ]);
   });
 
   it("exports the active tab through its own endpoint", async () => {

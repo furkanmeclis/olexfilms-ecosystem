@@ -16,6 +16,34 @@ import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
 
 /**
+ * Queues the certificate, waits for the export job and downloads the PDF;
+ * also the "Warranty PDF" row action of the warranty list (TEC-378).
+ */
+export async function downloadWarrantyCertificate({
+  client,
+  locale,
+  waitOptions,
+  t,
+}: {
+  client: CertificateClient;
+  locale?: string;
+  waitOptions?: WaitOptions;
+  t: (key: string) => string;
+}): Promise<void> {
+  try {
+    const { job, file } = await fetchCertificate(client, locale, waitOptions);
+    triggerBrowserDownload(file.blob, certificateFilename(file, job));
+    appToast.success(t("warranty.certificate.ready"));
+  } catch (error) {
+    appToast.error(
+      isNoActiveWarranty(error)
+        ? t("warranty.certificate.none")
+        : t("warranty.certificate.failed"),
+    );
+  }
+}
+
+/**
  * "Warranty PDF" (TEC-188): queues the certificate of a service, waits for
  * the export job and downloads the PDF in the user language. The client
  * decides the realm (panel or portal).
@@ -37,15 +65,7 @@ export function WarrantyCertificateButton({
   const onClick = async () => {
     setBusy(true);
     try {
-      const { job, file } = await fetchCertificate(client, locale, waitOptions);
-      triggerBrowserDownload(file.blob, certificateFilename(file, job));
-      appToast.success(t("warranty.certificate.ready"));
-    } catch (error) {
-      appToast.error(
-        isNoActiveWarranty(error)
-          ? t("warranty.certificate.none")
-          : t("warranty.certificate.failed"),
-      );
+      await downloadWarrantyCertificate({ client, locale, waitOptions, t });
     } finally {
       setBusy(false);
     }

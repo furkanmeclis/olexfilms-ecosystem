@@ -29,14 +29,11 @@ import {
   canDownloadWarrantyCertificate,
   resolveServiceListAccess,
 } from "@/features/services/lib/access";
-import { isKnownPart } from "@/features/services/lib/car-parts";
 import {
   customerName,
-  itemAmount,
   serviceStatusTone,
   sortedStatusLogs,
   vehicleTitle,
-  warrantyTone,
 } from "@/features/services/lib/detail";
 import {
   serviceImageSrc,
@@ -44,6 +41,10 @@ import {
   serviceWizardService,
   type Service,
 } from "@/features/services/services/service-wizard.service";
+import {
+  ServiceItemsTable,
+  ServiceWarrantiesTable,
+} from "@/features/services/components/service-detail-tables";
 import { ServicePdfButton } from "@/features/services/components/service-pdf-button";
 import { WarrantyCertificateButton } from "@/features/warranty/components/warranty-certificate-button";
 import { panelCertificateClient } from "@/features/warranty/services/certificate.service";
@@ -190,45 +191,7 @@ function Items({ service }: { service: Service }) {
           {t("services.stock.items_empty")}
         </Empty>
       ) : (
-        <ul className="space-y-2">
-          {items.map((item) => {
-            const amount = itemAmount(item);
-            return (
-              <li
-                key={item.uuid}
-                className="space-y-1 rounded-lg border p-3"
-                data-testid="detail-item"
-              >
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <p className="font-medium">{item.product.name}</p>
-                  <span className="text-sm">
-                    {t(amount.key, amount.params)}
-                  </span>
-                </div>
-                <p className="text-muted-foreground text-xs">
-                  <span className="font-mono" dir="ltr">
-                    {item.product.sku}
-                  </span>
-                  <span className="ms-2 font-mono" dir="ltr">
-                    {item.barcode}
-                  </span>
-                </p>
-                {item.applied_parts.length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {item.applied_parts.map((p) => (
-                      <Badge key={p} variant="outline" className="text-xs">
-                        {isKnownPart(p) ? t(`services.parts.names.${p}`) : p}
-                      </Badge>
-                    ))}
-                  </div>
-                ) : null}
-                {item.notes ? (
-                  <p className="text-muted-foreground text-xs">{item.notes}</p>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
+        <ServiceItemsTable items={items} />
       )}
     </Section>
   );
@@ -277,9 +240,14 @@ function Images({ service }: { service: Service }) {
   );
 }
 
-function Warranties({ service }: { service: Service }) {
-  const { t, format } = useLocale();
+function Warranties({ service, slug }: { service: Service; slug: string }) {
+  const { t } = useLocale();
+  const { can } = usePermission();
   const warranties = service.warranties ?? [];
+  const empty =
+    service.status === "completed"
+      ? t("services.detail.warranties_none")
+      : t("services.detail.warranties_pending");
   return (
     <Section
       title={t("services.detail.warranties")}
@@ -287,39 +255,14 @@ function Warranties({ service }: { service: Service }) {
       testId="detail-warranties"
     >
       {warranties.length === 0 ? (
-        <Empty testId="detail-warranties-empty">
-          {service.status === "completed"
-            ? t("services.detail.warranties_none")
-            : t("services.detail.warranties_pending")}
-        </Empty>
+        <Empty testId="detail-warranties-empty">{empty}</Empty>
       ) : (
-        <ul className="space-y-2">
-          {warranties.map((w) => (
-            <li
-              key={w.uuid}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
-              data-testid="detail-warranty"
-            >
-              <div className="min-w-0 space-y-0.5">
-                <p className="font-medium">{w.product_name || "—"}</p>
-                <p className="text-muted-foreground text-xs">
-                  <span className="font-mono" dir="ltr">
-                    {w.public_code}
-                  </span>
-                  <span className="ms-2">
-                    {t("services.detail.warranty_until", {
-                      date: format.date(w.end_at),
-                    })}
-                  </span>
-                </p>
-              </div>
-              <StatusChip
-                label={t(`services.detail.warranty_status.${w.status}`)}
-                tone={warrantyTone(w.status)}
-              />
-            </li>
-          ))}
-        </ul>
+        <ServiceWarrantiesTable
+          slug={slug}
+          warranties={warranties}
+          canOpen={can(permissions.warranties.read)}
+          emptyTitle={empty}
+        />
       )}
     </Section>
   );
@@ -512,15 +455,11 @@ export function ServiceDetailPage({
           </CardContent>
         </Card>
       ) : null}
+      <Items service={s} />
+      <Warranties service={s} slug={slug} />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <div className="space-y-6">
-          <Items service={s} />
-          <Images service={s} />
-        </div>
-        <div className="space-y-6">
-          <Warranties service={s} />
-          <StatusHistory service={s} />
-        </div>
+        <Images service={s} />
+        <StatusHistory service={s} />
       </div>
     </div>
   );
