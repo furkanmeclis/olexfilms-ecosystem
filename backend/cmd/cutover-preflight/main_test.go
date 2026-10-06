@@ -69,7 +69,7 @@ func (f fakeGlorian) ListIntegrationConnectionsByKey(_ context.Context, key stri
 }
 
 func (f fakeGlorian) ListGlorianSyncRuns(_ context.Context, arg db.ListGlorianSyncRunsParams) ([]db.IntegrationSyncRun, error) {
-	if arg.Kind.String != glorian.KindReconcile || arg.RowLimit != 1 {
+	if len(arg.Kinds) != 1 || arg.Kinds[0] != glorian.KindReconcile || arg.RowLimit != 1 {
 		return nil, errors.New("unexpected sync run filter")
 	}
 	return f.runs[arg.ConnectionID], nil
