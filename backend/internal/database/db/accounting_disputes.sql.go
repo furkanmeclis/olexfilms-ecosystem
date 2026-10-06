@@ -18,23 +18,43 @@ WHERE d.brand_id = $1
   AND ($2::bigint[] IS NULL
        OR d.organization_id = ANY ($2::bigint[])
        OR d.counterparty_org_id = ANY ($2::bigint[]))
-  AND ($3::text IS NULL OR d.status = $3::text)
-  AND ($4::bigint IS NULL OR d.organization_id = $4::bigint)
+  AND (COALESCE(cardinality($3::text[]), 0) = 0 OR d.status = ANY ($3::text[]))
+  AND (COALESCE(cardinality($4::uuid[]), 0) = 0
+       OR d.organization_id IN (SELECT fo.id FROM organizations fo
+                                WHERE fo.uuid = ANY ($4::uuid[])))
+  AND (COALESCE(cardinality($5::uuid[]), 0) = 0
+       OR d.counterparty_org_id IN (SELECT fc.id FROM organizations fc
+                                    WHERE fc.uuid = ANY ($5::uuid[])))
+  AND ($6::timestamptz IS NULL OR d.created_at >= $6::timestamptz)
+  AND ($7::timestamptz IS NULL OR d.created_at < $7::timestamptz)
+  AND ($8::text IS NULL
+       OR d.reason ILIKE '%' || $8::text || '%'
+       OR EXISTS (SELECT 1 FROM organizations qo
+                  WHERE qo.id IN (d.organization_id, d.counterparty_org_id)
+                    AND qo.name ILIKE '%' || $8::text || '%'))
 `
 
 type CountAccountingDisputesParams struct {
-	BrandID        int64       `json:"brand_id"`
-	OrgIds         []int64     `json:"org_ids"`
-	Status         pgtype.Text `json:"status"`
-	OrganizationID pgtype.Int8 `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	OrgIds            []int64            `json:"org_ids"`
+	Statuses          []string           `json:"statuses"`
+	OrganizationUuids []uuid.UUID        `json:"organization_uuids"`
+	CounterpartyUuids []uuid.UUID        `json:"counterparty_uuids"`
+	CreatedFrom       pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore     pgtype.Timestamptz `json:"created_before"`
+	Q                 pgtype.Text        `json:"q"`
 }
 
 func (q *Queries) CountAccountingDisputes(ctx context.Context, arg CountAccountingDisputesParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countAccountingDisputes,
 		arg.BrandID,
 		arg.OrgIds,
-		arg.Status,
-		arg.OrganizationID,
+		arg.Statuses,
+		arg.OrganizationUuids,
+		arg.CounterpartyUuids,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -257,19 +277,53 @@ WHERE d.brand_id = $1
   AND ($2::bigint[] IS NULL
        OR d.organization_id = ANY ($2::bigint[])
        OR d.counterparty_org_id = ANY ($2::bigint[]))
-  AND ($3::text IS NULL OR d.status = $3::text)
-  AND ($4::bigint IS NULL OR d.organization_id = $4::bigint)
-ORDER BY d.created_at DESC, d.id DESC
-LIMIT $6 OFFSET $5
+  AND (COALESCE(cardinality($3::text[]), 0) = 0 OR d.status = ANY ($3::text[]))
+  AND (COALESCE(cardinality($4::uuid[]), 0) = 0
+       OR d.organization_id IN (SELECT fo.id FROM organizations fo
+                                WHERE fo.uuid = ANY ($4::uuid[])))
+  AND (COALESCE(cardinality($5::uuid[]), 0) = 0
+       OR d.counterparty_org_id IN (SELECT fc.id FROM organizations fc
+                                    WHERE fc.uuid = ANY ($5::uuid[])))
+  AND ($6::timestamptz IS NULL OR d.created_at >= $6::timestamptz)
+  AND ($7::timestamptz IS NULL OR d.created_at < $7::timestamptz)
+  AND ($8::text IS NULL
+       OR d.reason ILIKE '%' || $8::text || '%'
+       OR EXISTS (SELECT 1 FROM organizations qo
+                  WHERE qo.id IN (d.organization_id, d.counterparty_org_id)
+                    AND qo.name ILIKE '%' || $8::text || '%'))
+ORDER BY
+  CASE WHEN NOT $9::bool AND $10::text = 'organization' THEN lower(o.name) END ASC,
+  CASE WHEN $9::bool AND $10::text = 'organization' THEN lower(o.name) END DESC,
+  CASE WHEN NOT $9::bool THEN CASE $10::text
+    WHEN 'status' THEN CASE d.status WHEN 'open' THEN 1 WHEN 'resolved_reversal' THEN 2
+                                     WHEN 'resolved_revision' THEN 3 ELSE 4 END::numeric
+    WHEN 'amount' THEN e.amount END END ASC,
+  CASE WHEN $9::bool THEN CASE $10::text
+    WHEN 'status' THEN CASE d.status WHEN 'open' THEN 1 WHEN 'resolved_reversal' THEN 2
+                                     WHEN 'resolved_revision' THEN 3 ELSE 4 END::numeric
+    WHEN 'amount' THEN e.amount END END DESC,
+  CASE WHEN NOT $9::bool AND $10::text = 'created_at' THEN d.created_at END ASC,
+  CASE WHEN $9::bool AND $10::text = 'created_at' THEN d.created_at END DESC,
+  CASE WHEN NOT $9::bool AND $10::text = 'resolved_at' THEN d.resolved_at END ASC NULLS LAST,
+  CASE WHEN $9::bool AND $10::text = 'resolved_at' THEN d.resolved_at END DESC NULLS LAST,
+  CASE WHEN $9::bool THEN d.id END DESC,
+  d.id ASC
+LIMIT $12 OFFSET $11
 `
 
 type ListAccountingDisputesParams struct {
-	BrandID        int64       `json:"brand_id"`
-	OrgIds         []int64     `json:"org_ids"`
-	Status         pgtype.Text `json:"status"`
-	OrganizationID pgtype.Int8 `json:"organization_id"`
-	RowOffset      int32       `json:"row_offset"`
-	RowLimit       int32       `json:"row_limit"`
+	BrandID           int64              `json:"brand_id"`
+	OrgIds            []int64            `json:"org_ids"`
+	Statuses          []string           `json:"statuses"`
+	OrganizationUuids []uuid.UUID        `json:"organization_uuids"`
+	CounterpartyUuids []uuid.UUID        `json:"counterparty_uuids"`
+	CreatedFrom       pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore     pgtype.Timestamptz `json:"created_before"`
+	Q                 pgtype.Text        `json:"q"`
+	SortDesc          bool               `json:"sort_desc"`
+	SortKey           string             `json:"sort_key"`
+	RowOffset         int32              `json:"row_offset"`
+	RowLimit          int32              `json:"row_limit"`
 }
 
 type ListAccountingDisputesRow struct {
@@ -309,12 +363,23 @@ type ListAccountingDisputesRow struct {
 	RevisionEntryUuid   pgtype.UUID        `json:"revision_entry_uuid"`
 }
 
+// TEC-379 (DT-BE-8): list contract (docs/list-contract.md). status sorts by
+// rank (open, resolved_reversal, resolved_revision, rejected), organization
+// by the disputing organization name, amount by the disputed amount in the
+// disputing book's currency; resolved_at keeps open disputes last; id is the
+// tiebreak. q matches the reason or either organization name.
 func (q *Queries) ListAccountingDisputes(ctx context.Context, arg ListAccountingDisputesParams) ([]ListAccountingDisputesRow, error) {
 	rows, err := q.db.Query(ctx, listAccountingDisputes,
 		arg.BrandID,
 		arg.OrgIds,
-		arg.Status,
-		arg.OrganizationID,
+		arg.Statuses,
+		arg.OrganizationUuids,
+		arg.CounterpartyUuids,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.RowOffset,
 		arg.RowLimit,
 	)

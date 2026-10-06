@@ -177,36 +177,46 @@ func (q *Queries) CountTaskComments(ctx context.Context, taskID int64) (int64, e
 const countTasks = `-- name: CountTasks :one
 SELECT COUNT(*)::bigint FROM tasks t
 WHERE t.brand_id = $1
-  AND ($2::text IS NULL OR t.status = $2::text)
-  AND (NOT $3::boolean OR t.status IN ('open', 'in_progress'))
-  AND ($4::text IS NULL OR t.priority = $4::text)
-  AND ($5::bigint IS NULL OR t.subject_org_id = $5::bigint)
-  AND ($6::bigint IS NULL OR t.assignee_user_id = $6::bigint)
-  AND ($7::timestamptz IS NULL OR t.due_at >= $7::timestamptz)
-  AND ($8::timestamptz IS NULL OR t.due_at < $8::timestamptz)
+  AND (COALESCE(cardinality($2::text[]), 0) = 0 OR t.status = ANY ($2::text[]))
+  AND (COALESCE(cardinality($3::text[]), 0) = 0 OR t.priority = ANY ($3::text[]))
+  AND (COALESCE(cardinality($4::uuid[]), 0) = 0
+       OR t.subject_org_id IN (SELECT so.id FROM organizations so
+                               WHERE so.uuid = ANY ($4::uuid[])))
+  AND ($5::bigint IS NULL OR t.assignee_user_id = $5::bigint)
+  AND ($6::timestamptz IS NULL OR t.due_at >= $6::timestamptz)
+  AND ($7::timestamptz IS NULL OR t.due_at < $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR t.created_at >= $8::timestamptz)
+  AND ($9::timestamptz IS NULL OR t.created_at < $9::timestamptz)
+  AND ($10::text IS NULL
+       OR t.title ILIKE '%' || $10::text || '%'
+       OR t.description ILIKE '%' || $10::text || '%')
 `
 
 type CountTasksParams struct {
-	BrandID        int64              `json:"brand_id"`
-	Status         pgtype.Text        `json:"status"`
-	OnlyOpen       bool               `json:"only_open"`
-	Priority       pgtype.Text        `json:"priority"`
-	SubjectOrgID   pgtype.Int8        `json:"subject_org_id"`
-	AssigneeUserID pgtype.Int8        `json:"assignee_user_id"`
-	DueAfter       pgtype.Timestamptz `json:"due_after"`
-	DueBefore      pgtype.Timestamptz `json:"due_before"`
+	BrandID         int64              `json:"brand_id"`
+	Statuses        []string           `json:"statuses"`
+	Priorities      []string           `json:"priorities"`
+	SubjectOrgUuids []uuid.UUID        `json:"subject_org_uuids"`
+	AssigneeUserID  pgtype.Int8        `json:"assignee_user_id"`
+	DueAfter        pgtype.Timestamptz `json:"due_after"`
+	DueBefore       pgtype.Timestamptz `json:"due_before"`
+	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore   pgtype.Timestamptz `json:"created_before"`
+	Q               pgtype.Text        `json:"q"`
 }
 
 func (q *Queries) CountTasks(ctx context.Context, arg CountTasksParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countTasks,
 		arg.BrandID,
-		arg.Status,
-		arg.OnlyOpen,
-		arg.Priority,
-		arg.SubjectOrgID,
+		arg.Statuses,
+		arg.Priorities,
+		arg.SubjectOrgUuids,
 		arg.AssigneeUserID,
 		arg.DueAfter,
 		arg.DueBefore,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
 	)
 	var column_1 int64
 	err := row.Scan(&column_1)
@@ -598,6 +608,76 @@ func (q *Queries) ListTaskComments(ctx context.Context, arg ListTaskCommentsPara
 	return items, nil
 }
 
+const listTaskUUIDsFiltered = `-- name: ListTaskUUIDsFiltered :many
+SELECT t.uuid FROM tasks t
+WHERE t.brand_id = $1
+  AND (COALESCE(cardinality($2::text[]), 0) = 0 OR t.status = ANY ($2::text[]))
+  AND (COALESCE(cardinality($3::text[]), 0) = 0 OR t.priority = ANY ($3::text[]))
+  AND (COALESCE(cardinality($4::uuid[]), 0) = 0
+       OR t.subject_org_id IN (SELECT so.id FROM organizations so
+                               WHERE so.uuid = ANY ($4::uuid[])))
+  AND ($5::bigint IS NULL OR t.assignee_user_id = $5::bigint)
+  AND ($6::timestamptz IS NULL OR t.due_at >= $6::timestamptz)
+  AND ($7::timestamptz IS NULL OR t.due_at < $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR t.created_at >= $8::timestamptz)
+  AND ($9::timestamptz IS NULL OR t.created_at < $9::timestamptz)
+  AND ($10::text IS NULL
+       OR t.title ILIKE '%' || $10::text || '%'
+       OR t.description ILIKE '%' || $10::text || '%')
+  AND t.organization_id = $11
+ORDER BY t.created_at DESC, t.id DESC
+LIMIT $12
+`
+
+type ListTaskUUIDsFilteredParams struct {
+	BrandID         int64              `json:"brand_id"`
+	Statuses        []string           `json:"statuses"`
+	Priorities      []string           `json:"priorities"`
+	SubjectOrgUuids []uuid.UUID        `json:"subject_org_uuids"`
+	AssigneeUserID  pgtype.Int8        `json:"assignee_user_id"`
+	DueAfter        pgtype.Timestamptz `json:"due_after"`
+	DueBefore       pgtype.Timestamptz `json:"due_before"`
+	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore   pgtype.Timestamptz `json:"created_before"`
+	Q               pgtype.Text        `json:"q"`
+	OrganizationID  int64              `json:"organization_id"`
+	RowLimit        int32              `json:"row_limit"`
+}
+
+// TEC-379: "select all matching" of the task bulk actions (same filters).
+func (q *Queries) ListTaskUUIDsFiltered(ctx context.Context, arg ListTaskUUIDsFilteredParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, listTaskUUIDsFiltered,
+		arg.BrandID,
+		arg.Statuses,
+		arg.Priorities,
+		arg.SubjectOrgUuids,
+		arg.AssigneeUserID,
+		arg.DueAfter,
+		arg.DueBefore,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
+		arg.OrganizationID,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []uuid.UUID{}
+	for rows.Next() {
+		var uuid uuid.UUID
+		if err := rows.Scan(&uuid); err != nil {
+			return nil, err
+		}
+		items = append(items, uuid)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTasks = `-- name: ListTasks :many
 SELECT t.id, t.uuid, t.organization_id, t.brand_id, t.subject_org_id, t.title, t.description, t.assignee_user_id, t.priority, t.due_at, t.status, t.source, t.created_by_user_id, t.closed_by_user_id, t.closed_at, t.created_at, t.updated_at, t.due_soon_notified_at, t.overdue_notified_at,
        s.uuid AS subject_uuid, s.name AS subject_name, s.type AS subject_type,
@@ -609,28 +689,58 @@ JOIN organizations s ON s.id = t.subject_org_id
 LEFT JOIN users a ON a.id = t.assignee_user_id
 LEFT JOIN users c ON c.id = t.created_by_user_id
 WHERE t.brand_id = $1
-  AND ($2::text IS NULL OR t.status = $2::text)
-  AND (NOT $3::boolean OR t.status IN ('open', 'in_progress'))
-  AND ($4::text IS NULL OR t.priority = $4::text)
-  AND ($5::bigint IS NULL OR t.subject_org_id = $5::bigint)
-  AND ($6::bigint IS NULL OR t.assignee_user_id = $6::bigint)
-  AND ($7::timestamptz IS NULL OR t.due_at >= $7::timestamptz)
-  AND ($8::timestamptz IS NULL OR t.due_at < $8::timestamptz)
-ORDER BY t.created_at DESC, t.id DESC
-LIMIT $10 OFFSET $9
+  AND (COALESCE(cardinality($2::text[]), 0) = 0 OR t.status = ANY ($2::text[]))
+  AND (COALESCE(cardinality($3::text[]), 0) = 0 OR t.priority = ANY ($3::text[]))
+  AND (COALESCE(cardinality($4::uuid[]), 0) = 0
+       OR t.subject_org_id IN (SELECT so.id FROM organizations so
+                               WHERE so.uuid = ANY ($4::uuid[])))
+  AND ($5::bigint IS NULL OR t.assignee_user_id = $5::bigint)
+  AND ($6::timestamptz IS NULL OR t.due_at >= $6::timestamptz)
+  AND ($7::timestamptz IS NULL OR t.due_at < $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR t.created_at >= $8::timestamptz)
+  AND ($9::timestamptz IS NULL OR t.created_at < $9::timestamptz)
+  AND ($10::text IS NULL
+       OR t.title ILIKE '%' || $10::text || '%'
+       OR t.description ILIKE '%' || $10::text || '%')
+ORDER BY
+  CASE WHEN NOT $11::bool THEN CASE $12::text
+    WHEN 'title' THEN lower(t.title) WHEN 'subject' THEN lower(s.name) END END ASC,
+  CASE WHEN $11::bool THEN CASE $12::text
+    WHEN 'title' THEN lower(t.title) WHEN 'subject' THEN lower(s.name) END END DESC,
+  CASE WHEN NOT $11::bool THEN CASE $12::text
+    WHEN 'status' THEN CASE t.status WHEN 'open' THEN 1 WHEN 'in_progress' THEN 2 WHEN 'done' THEN 3 ELSE 4 END
+    WHEN 'priority' THEN CASE t.priority WHEN 'low' THEN 1 WHEN 'normal' THEN 2 WHEN 'high' THEN 3 ELSE 4 END
+  END END ASC,
+  CASE WHEN $11::bool THEN CASE $12::text
+    WHEN 'status' THEN CASE t.status WHEN 'open' THEN 1 WHEN 'in_progress' THEN 2 WHEN 'done' THEN 3 ELSE 4 END
+    WHEN 'priority' THEN CASE t.priority WHEN 'low' THEN 1 WHEN 'normal' THEN 2 WHEN 'high' THEN 3 ELSE 4 END
+  END END DESC,
+  CASE WHEN NOT $11::bool THEN CASE $12::text
+    WHEN 'created_at' THEN t.created_at WHEN 'updated_at' THEN t.updated_at END END ASC,
+  CASE WHEN $11::bool THEN CASE $12::text
+    WHEN 'created_at' THEN t.created_at WHEN 'updated_at' THEN t.updated_at END END DESC,
+  CASE WHEN NOT $11::bool AND $12::text = 'due_at' THEN t.due_at END ASC NULLS LAST,
+  CASE WHEN $11::bool AND $12::text = 'due_at' THEN t.due_at END DESC NULLS LAST,
+  CASE WHEN $11::bool THEN t.id END DESC,
+  t.id ASC
+LIMIT $14 OFFSET $13
 `
 
 type ListTasksParams struct {
-	BrandID        int64              `json:"brand_id"`
-	Status         pgtype.Text        `json:"status"`
-	OnlyOpen       bool               `json:"only_open"`
-	Priority       pgtype.Text        `json:"priority"`
-	SubjectOrgID   pgtype.Int8        `json:"subject_org_id"`
-	AssigneeUserID pgtype.Int8        `json:"assignee_user_id"`
-	DueAfter       pgtype.Timestamptz `json:"due_after"`
-	DueBefore      pgtype.Timestamptz `json:"due_before"`
-	RowOffset      int32              `json:"row_offset"`
-	RowLimit       int32              `json:"row_limit"`
+	BrandID         int64              `json:"brand_id"`
+	Statuses        []string           `json:"statuses"`
+	Priorities      []string           `json:"priorities"`
+	SubjectOrgUuids []uuid.UUID        `json:"subject_org_uuids"`
+	AssigneeUserID  pgtype.Int8        `json:"assignee_user_id"`
+	DueAfter        pgtype.Timestamptz `json:"due_after"`
+	DueBefore       pgtype.Timestamptz `json:"due_before"`
+	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore   pgtype.Timestamptz `json:"created_before"`
+	Q               pgtype.Text        `json:"q"`
+	SortDesc        bool               `json:"sort_desc"`
+	SortKey         string             `json:"sort_key"`
+	RowOffset       int32              `json:"row_offset"`
+	RowLimit        int32              `json:"row_limit"`
 }
 
 type ListTasksRow struct {
@@ -665,16 +775,25 @@ type ListTasksRow struct {
 	CommentCount      int64              `json:"comment_count"`
 }
 
+// TEC-379 (DT-BE-8): list contract (docs/list-contract.md). status and
+// priority sort by their rank (open → cancelled, low → urgent), subject by
+// the subject organization name; due_at keeps tasks without a deadline
+// last in both directions; id is the tiebreak. q matches the title or the
+// description (the caller escapes LIKE wildcards).
 func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]ListTasksRow, error) {
 	rows, err := q.db.Query(ctx, listTasks,
 		arg.BrandID,
-		arg.Status,
-		arg.OnlyOpen,
-		arg.Priority,
-		arg.SubjectOrgID,
+		arg.Statuses,
+		arg.Priorities,
+		arg.SubjectOrgUuids,
 		arg.AssigneeUserID,
 		arg.DueAfter,
 		arg.DueBefore,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.RowOffset,
 		arg.RowLimit,
 	)
@@ -779,6 +898,97 @@ type SetTaskAssigneeParams struct {
 // TEC-212: bulk engine adapter (assign one task, logged + undoable).
 func (q *Queries) SetTaskAssignee(ctx context.Context, arg SetTaskAssigneeParams) (Task, error) {
 	row := q.db.QueryRow(ctx, setTaskAssignee, arg.AssigneeUserID, arg.ID)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.SubjectOrgID,
+		&i.Title,
+		&i.Description,
+		&i.AssigneeUserID,
+		&i.Priority,
+		&i.DueAt,
+		&i.Status,
+		&i.Source,
+		&i.CreatedByUserID,
+		&i.ClosedByUserID,
+		&i.ClosedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DueSoonNotifiedAt,
+		&i.OverdueNotifiedAt,
+	)
+	return i, err
+}
+
+const setTaskPriority = `-- name: SetTaskPriority :one
+UPDATE tasks
+SET priority = $1
+WHERE id = $2
+RETURNING id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at, due_soon_notified_at, overdue_notified_at
+`
+
+type SetTaskPriorityParams struct {
+	Priority string `json:"priority"`
+	ID       int64  `json:"id"`
+}
+
+func (q *Queries) SetTaskPriority(ctx context.Context, arg SetTaskPriorityParams) (Task, error) {
+	row := q.db.QueryRow(ctx, setTaskPriority, arg.Priority, arg.ID)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.SubjectOrgID,
+		&i.Title,
+		&i.Description,
+		&i.AssigneeUserID,
+		&i.Priority,
+		&i.DueAt,
+		&i.Status,
+		&i.Source,
+		&i.CreatedByUserID,
+		&i.ClosedByUserID,
+		&i.ClosedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DueSoonNotifiedAt,
+		&i.OverdueNotifiedAt,
+	)
+	return i, err
+}
+
+const setTaskStatus = `-- name: SetTaskStatus :one
+UPDATE tasks
+SET status = $1::text,
+    closed_at = CASE WHEN $1::text IN ('done', 'cancelled')
+                     THEN COALESCE($2::timestamptz, closed_at, NOW()) END,
+    closed_by_user_id = CASE WHEN $1::text IN ('done', 'cancelled')
+                             THEN $3::bigint END
+WHERE id = $4
+RETURNING id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at, due_soon_notified_at, overdue_notified_at
+`
+
+type SetTaskStatusParams struct {
+	Status         string             `json:"status"`
+	ClosedAt       pgtype.Timestamptz `json:"closed_at"`
+	ClosedByUserID pgtype.Int8        `json:"closed_by_user_id"`
+	ID             int64              `json:"id"`
+}
+
+// TEC-379 (DT-BE-8): bulk set_status / set_priority. Closing stamps
+// closed_at (chk_tasks_closed); reopening clears closed_at and closed_by.
+func (q *Queries) SetTaskStatus(ctx context.Context, arg SetTaskStatusParams) (Task, error) {
+	row := q.db.QueryRow(ctx, setTaskStatus,
+		arg.Status,
+		arg.ClosedAt,
+		arg.ClosedByUserID,
+		arg.ID,
+	)
 	var i Task
 	err := row.Scan(
 		&i.ID,

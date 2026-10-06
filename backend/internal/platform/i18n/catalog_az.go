@@ -398,6 +398,12 @@ var azCatalog = map[string]string{
 	"accounting.source.opening_balance":             "İlkin qalıq",
 	"export.title.tenant.accounting.cari_statement": "Hesab çıxarışı",
 	"export.title.tenant.accounting.balances":       "Qalıqlar hesabatı",
+	"export.title.tenant.accounting.entries":        "Mühasibat qeydləri",
+	"accounting.export.direction":                   "İstiqamət",
+	"accounting.export.account":                     "Hesab",
+	"accounting.export.amount":                      "Məbləğ",
+	"accounting.export.orig_amount":                 "İlkin məbləğ",
+	"accounting.export.orig_currency":               "İlkin valyuta",
 	"resources.tenant.accounting.cari_statement":    "Hesab çıxarışı",
 	"resources.tenant.accounting.balances":          "Qalıqlar hesabatı",
 	// TEC-166: order statuses.

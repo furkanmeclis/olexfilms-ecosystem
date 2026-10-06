@@ -3,10 +3,13 @@ package usecase
 import (
 	"context"
 	"errors"
+	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -65,10 +68,10 @@ func TestListAndCommentValidation(t *testing.T) {
 	s := New(nil, nil, nil)
 	c := Caller{UserID: 1, Org: orgctx.Scope{InternalID: 7, OrgType: "center", BrandID: 1}}
 	var ve *ValidationError
-	if _, _, err := s.List(context.Background(), c, Filter{Status: "closed"}); !errors.As(err, &ve) || ve.Field != "status" {
+	if _, _, err := s.List(context.Background(), c, Filter{Statuses: []string{"closed"}}); !errors.As(err, &ve) || ve.Field != "status" {
 		t.Fatalf("status filter: %v", err)
 	}
-	if _, _, err := s.List(context.Background(), c, Filter{Priority: "p0"}); !errors.As(err, &ve) || ve.Field != "priority" {
+	if _, _, err := s.List(context.Background(), c, Filter{Priorities: []string{"p0"}}); !errors.As(err, &ve) || ve.Field != "priority" {
 		t.Fatalf("priority filter: %v", err)
 	}
 	if _, err := s.AddComment(context.Background(), c, uuid.New(), "  "); !errors.As(err, &ve) || ve.Field != "body" {
@@ -94,5 +97,42 @@ func TestStatusHelpers(t *testing.T) {
 	a := pgtype.Timestamptz{}
 	if !sameTime(a, pgtype.Timestamptz{}) {
 		t.Fatal("two nulls differ")
+	}
+}
+
+func TestParseListFilter(t *testing.T) {
+	me := uuid.New()
+	f, err := ParseListFilter(url.Values{
+		"status": {"active,done"}, "priority": {"high,urgent"}, "q": {"50%"}, "sort": {"-due_at"},
+		"mine": {"true"}, "due_from": {"2026-10-01"}, "due_to": {"2026-10-02"}, "created_from": {"2026-09-01"},
+	}, &me)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(f.Statuses, ",") != "done,in_progress,open" || strings.Join(f.Priorities, ",") != "high,urgent" {
+		t.Fatalf("enums: %v %v", f.Statuses, f.Priorities)
+	}
+	if f.Sort.Key != "due_at" || !f.Sort.Desc || f.AssigneeUUID == nil || *f.AssigneeUUID != me {
+		t.Fatalf("sort/mine: %+v", f)
+	}
+	if !f.DueBefore.Equal(time.Date(2026, 10, 3, 0, 0, 0, 0, time.UTC)) || f.CreatedFrom == nil {
+		t.Fatalf("ranges: %+v", f)
+	}
+	if textArg(f.Q).String != `50\%` {
+		t.Fatalf("q not escaped: %q", textArg(f.Q).String)
+	}
+	def, _ := ParseListFilter(url.Values{}, nil)
+	if def.Sort.Key != "created_at" || !def.Sort.Desc {
+		t.Fatalf("default sort: %+v", def.Sort)
+	}
+	for _, bad := range []url.Values{
+		{"status": {"closed"}}, {"priority": {"p0"}}, {"sort": {"comment_count"}},
+		{"subject_organization_uuid": {"x"}}, {"mine": {"true"}}, {"due_after": {"2026-10-01"}},
+		{"due_after": {"2026-10-01T00:00:00Z"}, "due_from": {"2026-10-01"}},
+	} {
+		var ve *apiquery.ValidationError
+		if _, err := ParseListFilter(bad, nil); !errors.As(err, &ve) {
+			t.Fatalf("%v: got %v", bad, err)
+		}
 	}
 }

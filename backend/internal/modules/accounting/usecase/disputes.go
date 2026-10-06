@@ -12,6 +12,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting/posting"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -148,11 +149,15 @@ func disputeOf(r db.ListAccountingDisputesRow) Dispute {
 	return d
 }
 
-// DisputeFilter narrows ListDisputes.
+// DisputeFilter narrows ListDisputes (ParseDisputeFilter builds it).
 type DisputeFilter struct {
-	Status           string
-	OrganizationUUID *uuid.UUID // disputing organization
-	Limit, Offset    int32
+	Statuses                   []string
+	OrganizationUUIDs          []uuid.UUID // disputing organizations
+	CounterpartyUUIDs          []uuid.UUID // addressed (parent) organizations
+	CreatedFrom, CreatedBefore *time.Time
+	Q                          string
+	Sort                       apiquery.ResolvedSort
+	Limit, Offset              int32
 }
 
 func validDisputeStatus(s string) bool {
@@ -163,30 +168,23 @@ func validDisputeStatus(s string) bool {
 	return false
 }
 
-// ListDisputes lists the disputes the caller's scope reaches, newest first.
+// ListDisputes lists the disputes the caller's scope reaches (default
+// newest first).
 func (s *Service) ListDisputes(ctx context.Context, c Caller, f DisputeFilter) ([]Dispute, int64, error) {
 	if _, err := s.activeOrg(ctx, c); err != nil {
 		return nil, 0, err
 	}
+	sort := sortOrDefault(f.Sort, DisputeSort)
 	arg := db.ListAccountingDisputesParams{
-		BrandID: c.Org.BrandID, OrgIds: c.Filter.OrgIDsArg(),
-		RowLimit: f.Limit, RowOffset: f.Offset,
+		BrandID: c.Org.BrandID, OrgIds: c.Filter.OrgIDsArg(), Statuses: f.Statuses,
+		OrganizationUuids: f.OrganizationUUIDs, CounterpartyUuids: f.CounterpartyUUIDs,
+		CreatedFrom: timeArg(f.CreatedFrom), CreatedBefore: timeArg(f.CreatedBefore), Q: likeArg(f.Q),
+		SortKey: sort.Key, SortDesc: sort.Desc, RowLimit: f.Limit, RowOffset: f.Offset,
 	}
-	if f.Status != "" {
-		if !validDisputeStatus(f.Status) {
+	for _, st := range f.Statuses {
+		if !validDisputeStatus(st) {
 			return nil, 0, invalid("status", "must be open, resolved_reversal, resolved_revision or rejected")
 		}
-		arg.Status = pgtype.Text{String: f.Status, Valid: true}
-	}
-	if f.OrganizationUUID != nil {
-		o, err := s.q.GetOrganizationByUUID(ctx, *f.OrganizationUUID)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return []Dispute{}, 0, nil
-		}
-		if err != nil {
-			return nil, 0, fmt.Errorf("accounting: organization: %w", err)
-		}
-		arg.OrganizationID = pgtype.Int8{Int64: o.ID, Valid: true}
 	}
 	if arg.RowLimit <= 0 {
 		arg.RowLimit = 20
@@ -196,7 +194,9 @@ func (s *Service) ListDisputes(ctx context.Context, c Caller, f DisputeFilter) (
 		return nil, 0, fmt.Errorf("accounting: disputes: %w", err)
 	}
 	total, err := s.q.CountAccountingDisputes(ctx, db.CountAccountingDisputesParams{
-		BrandID: arg.BrandID, OrgIds: arg.OrgIds, Status: arg.Status, OrganizationID: arg.OrganizationID,
+		BrandID: arg.BrandID, OrgIds: arg.OrgIds, Statuses: arg.Statuses,
+		OrganizationUuids: arg.OrganizationUuids, CounterpartyUuids: arg.CounterpartyUuids,
+		CreatedFrom: arg.CreatedFrom, CreatedBefore: arg.CreatedBefore, Q: arg.Q,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("accounting: count disputes: %w", err)

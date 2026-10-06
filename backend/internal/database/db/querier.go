@@ -1125,6 +1125,11 @@ type Querier interface {
 	// Links the re-application service to an approved claim and moves it to
 	// reapplied. The reverse link is SetServiceWarrantyClaim.
 	LinkWarrantyClaimReapplyService(ctx context.Context, arg LinkWarrantyClaimReapplyServiceParams) (WarrantyClaim, error)
+	// TEC-379 (DT-BE-8): list contract (docs/list-contract.md). status sorts by
+	// rank (open, resolved_reversal, resolved_revision, rejected), organization
+	// by the disputing organization name, amount by the disputed amount in the
+	// disputing book's currency; resolved_at keeps open disputes last; id is the
+	// tiebreak. q matches the reason or either organization name.
 	ListAccountingDisputes(ctx context.Context, arg ListAccountingDisputesParams) ([]ListAccountingDisputesRow, error)
 	ListActiveDevicePushTokens(ctx context.Context, userID int64) ([]DevicePushToken, error)
 	ListActiveMobileSessionUUIDsForDevice(ctx context.Context, arg ListActiveMobileSessionUUIDsForDeviceParams) ([]uuid.UUID, error)
@@ -1179,6 +1184,10 @@ type Querier interface {
 	// TEC-369: sort keys from model.ModelSort (docs/list-contract.md); default brand.
 	ListCarModels(ctx context.Context, arg ListCarModelsParams) ([]ListCarModelsRow, error)
 	ListCariAccounts(ctx context.Context, arg ListCariAccountsParams) ([]CariAccount, error)
+	// TEC-379 (DT-BE-8): list contract (docs/list-contract.md). name is the
+	// counterparty name (the old order); last_entry_at keeps caris without an
+	// entry last; id is the tiebreak. kinds: center, distributor, dealer (the
+	// counterparty organization type) or customer (a user counterparty).
 	ListCariAccountsWithBalance(ctx context.Context, arg ListCariAccountsWithBalanceParams) ([]ListCariAccountsWithBalanceRow, error)
 	// ListCariAgingLines is every cari row of the book written before
 	// created_to (NULL = all), newest first per cari, with its signed cari
@@ -1272,6 +1281,9 @@ type Querier interface {
 	// TEC-172 (F1-07b): read models of the /v1/accounting endpoints. The caller
 	// resolves the book (one organization inside the request scope) and passes
 	// its id; every query is limited to that organization.
+	// TEC-379 (DT-BE-8): the account grid is a full array (client-side
+	// table); the sort follows docs/list-contract.md. type sorts by type, then
+	// name (the old order); last_entry_at keeps unused accounts last.
 	ListFinanceAccountsWithBalance(ctx context.Context, arg ListFinanceAccountsWithBalanceParams) ([]ListFinanceAccountsWithBalanceRow, error)
 	ListFinanceEntries(ctx context.Context, arg ListFinanceEntriesParams) ([]FinanceEntry, error)
 	// ListFinanceEntriesBySource lists every row of one source in every
@@ -1697,6 +1709,13 @@ type Querier interface {
 	ListSuppliers(ctx context.Context, arg ListSuppliersParams) ([]Supplier, error)
 	ListSystemSettings(ctx context.Context) ([]SystemSetting, error)
 	ListTaskComments(ctx context.Context, arg ListTaskCommentsParams) ([]ListTaskCommentsRow, error)
+	// TEC-379: "select all matching" of the task bulk actions (same filters).
+	ListTaskUUIDsFiltered(ctx context.Context, arg ListTaskUUIDsFilteredParams) ([]uuid.UUID, error)
+	// TEC-379 (DT-BE-8): list contract (docs/list-contract.md). status and
+	// priority sort by their rank (open → cancelled, low → urgent), subject by
+	// the subject organization name; due_at keeps tasks without a deadline
+	// last in both directions; id is the tiebreak. q matches the title or the
+	// description (the caller escapes LIKE wildcards).
 	ListTasks(ctx context.Context, arg ListTasksParams) ([]ListTasksRow, error)
 	ListTerritories(ctx context.Context, arg ListTerritoriesParams) ([]ListTerritoriesRow, error)
 	// TEC-229: return lines of a request whose order sale was already reversed
@@ -2287,6 +2306,11 @@ type Querier interface {
 	RotateRefreshTokenByHash(ctx context.Context, tokenHash string) (int64, error)
 	// SearchFinanceEntries is the filtered, paged ledger of one organization.
 	// reversed_by_uuid is set when the row has been reversed (void).
+	// TEC-379 (DT-BE-8): list contract (docs/list-contract.md): direction,
+	// category and source_type are lists, amount_min / amount_max bound the
+	// signed amount in the book currency, q matches the description, the
+	// account name or the cari counterparty name; id is the tiebreak (an empty
+	// sort_key orders by id only, as the single-entry lookup does).
 	SearchFinanceEntries(ctx context.Context, arg SearchFinanceEntriesParams) ([]SearchFinanceEntriesRow, error)
 	ServiceNoExists(ctx context.Context, serviceNo string) (bool, error)
 	// publish_at is stamped with NOW() when a row is published without one.
@@ -2383,6 +2407,10 @@ type Querier interface {
 	SetStockImportRowErrors(ctx context.Context, arg SetStockImportRowErrorsParams) (StockImportRow, error)
 	// TEC-212: bulk engine adapter (assign one task, logged + undoable).
 	SetTaskAssignee(ctx context.Context, arg SetTaskAssigneeParams) (Task, error)
+	SetTaskPriority(ctx context.Context, arg SetTaskPriorityParams) (Task, error)
+	// TEC-379 (DT-BE-8): bulk set_status / set_priority. Closing stamps
+	// closed_at (chk_tasks_closed); reopening clears closed_at and closed_by.
+	SetTaskStatus(ctx context.Context, arg SetTaskStatusParams) (Task, error)
 	SetTransferItemInMovement(ctx context.Context, arg SetTransferItemInMovementParams) error
 	SetTransferItemOutMovement(ctx context.Context, arg SetTransferItemOutMovementParams) error
 	// order_item_id (TEC-229): the parent's order line a return line reverses.

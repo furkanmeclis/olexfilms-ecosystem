@@ -8402,7 +8402,7 @@ export interface paths {
         };
         /**
          * Cash and bank accounts of a book with balances
-         * @description The book is the active organization, or organization_uuid when it is below the active organization and inside the accounting.read scope (otherwise 404).
+         * @description The book is the active organization, or organization_uuid when it is below the active organization and inside the accounting.read scope (otherwise 404). A full array (client-side grid). TEC-379: sort fields `type` (type, then name; default), `name`, `balance`, `created_at`, `last_entry_at` (unused accounts last), `id` tiebreak; `q` matches the name or the IBAN.
          */
         get: operations["listAccountingAccounts"];
         put?: never;
@@ -8465,7 +8465,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Cari accounts of a book with balances (positive = receivable) */
+        /**
+         * Cari accounts of a book with balances (positive = receivable)
+         * @description TEC-379: list contract (docs/list-contract.md). Sort fields `name` (counterparty name; default), `balance`, `entry_count`, `last_entry_at` (caris without an entry last), `created_at`; `id` tiebreak. `q` matches the counterparty organization or customer name.
+         */
         get: operations["listAccountingCari"];
         put?: never;
         /**
@@ -8503,7 +8506,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Ledger rows of a book, newest first */
+        /**
+         * Ledger rows of a book (default newest first)
+         * @description TEC-379: list contract (docs/list-contract.md). Sort fields `created_at` (default `-created_at`), `amount`, `direction`, `category`; `id` tiebreak. `q` matches the description, the account name or the cari counterparty name.
+         */
         get: operations["listAccountingEntries"];
         put?: never;
         /**
@@ -8511,6 +8517,26 @@ export interface paths {
          * @description Written to the active organization's book through the posting API. Income/expense need an account and/or a cari; a charge needs a cari only. The cari is named by cari_uuid or by the counterparty organization (the parent or a direct child of the same brand; opened when missing). System categories (sale, purchase) are refused. A repeated idempotency_key answers 200 with the earlier entry. TEC-342: cari_uuid may name a customer cari (POST /v1/accounting/cari); in a dealer organization every accounting write needs the dealer_accounting module (403 FEATURE_DISABLED).
          */
         post: operations["createAccountingEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/entries/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a ledger entry list export (CSV, XLSX or PDF)
+         * @description TEC-379. accounting.read: the job (worker-docs, exports queue, resource `tenant.accounting.entries`) exports the rows GET /v1/accounting/entries shows for `query` (every list parameter except limit and offset, including `q`, `sort` and `organization_uuid`; a bad value is 400 at request time). The worker re-checks the book against the job organization. Poll and download through /v1/accounting/exports/{uuid}.
+         */
+        post: operations["requestAccountingEntryExport"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8622,8 +8648,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Cari disputes inside the accounting.read scope, newest first
-         * @description A dispute is visible to the disputing organization and to the parent it addresses (K24); brand and all scopes see every dispute of the domain brand. A distributor sees the disputes of its dealers, another distributor does not.
+         * Cari disputes inside the accounting.read scope (default newest first)
+         * @description A dispute is visible to the disputing organization and to the parent it addresses (K24); brand and all scopes see every dispute of the domain brand. A distributor sees the disputes of its dealers, another distributor does not. TEC-379: sort fields `created_at` (default `-created_at`), `resolved_at` (open disputes last), `status` (rank open, resolved_reversal, resolved_revision, rejected), `amount` (disputed amount), `organization` (disputing organization name); `id` tiebreak. `q` matches the reason or either organization name.
          */
         get: operations["listAccountingDisputes"];
         put?: never;
@@ -10505,8 +10531,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Center tasks of the active brand, newest first
-         * @description Needs tasks.read (center roles only; distributor and dealer members get 403). The active organization must be the brand center.
+         * Center tasks of the active brand (default newest first)
+         * @description Needs tasks.read (center roles only; distributor and dealer members get 403). The active organization must be the brand center. TEC-379: list contract (docs/list-contract.md). Sort fields `title`, `subject` (subject organization name), `status` (rank open → cancelled), `priority` (rank low → urgent), `due_at` (tasks without a deadline last), `created_at`, `updated_at`; default `-created_at`, `id` tiebreak. `q` matches the title or the description.
          */
         get: operations["listTasks"];
         put?: never;
@@ -10574,7 +10600,7 @@ export interface paths {
         put?: never;
         /**
          * Run a logged, undoable bulk action on center tasks (TEC-212)
-         * @description Action `assign` with `target.params.assignee_uuid` (a member of the center, tasks.write) on target scope `ids`; closed tasks fail per item. Undo through `/v1/tenant/bulk-operations/{uuid}/undo`.
+         * @description Action `assign` with `target.params.assignee_uuid` (a member of the center, tasks.write); closed tasks fail per item. TEC-379: `set_status` (`target.params.status`: open, in_progress, done, cancelled; closing stamps closed_at, reopening clears it) and `set_priority` (`target.params.priority`: low, normal, high, urgent). Target scope `ids`, or `query` with the GET /v1/tasks filters (every task of the center that matches, at most 10000; `mine` is not supported there). Undo through `/v1/tenant/bulk-operations/{uuid}/undo`.
          */
         post: operations["bulkTasks"];
         delete?: never;
@@ -13105,6 +13131,16 @@ export interface components {
             /** @enum {string} */
             format: "csv" | "xlsx" | "pdf";
             /** @description List parameters of GET /v1/orders as strings (side, status, q, sort, created_from, created_to, seller_org_uuid, buyer_org_uuid, total_min, total_max). */
+            query?: {
+                [key: string]: string;
+            };
+            /** @description Document language (defaults to the request locale). */
+            locale?: string;
+        };
+        AccountingEntryExportInput: {
+            /** @enum {string} */
+            format: "csv" | "xlsx" | "pdf";
+            /** @description List parameters of GET /v1/accounting/entries as strings (organization_uuid, account_uuid, cari_uuid, direction, category, source_type, date_from, date_to, created_from, created_to, amount_min, amount_max, q, sort). */
             query?: {
                 [key: string]: string;
             };
@@ -35155,7 +35191,11 @@ export interface operations {
                 /** @description Book to read: the active organization (default) or an organization below it inside the accounting.read scope. */
                 organization_uuid?: components["parameters"]["AccountingOrganizationUUID"];
                 active?: boolean;
-                type?: "cash" | "bank";
+                /** @description CSV of cash, bank. Unknown value → 400. */
+                type?: string;
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
             };
             header?: never;
             path?: never;
@@ -35312,7 +35352,15 @@ export interface operations {
                 /** @description Book to read: the active organization (default) or an organization below it inside the accounting.read scope. */
                 organization_uuid?: components["parameters"]["AccountingOrganizationUUID"];
                 active?: boolean;
+                /** @description CSV of center, distributor, dealer (counterparty organization type) and customer (a customer cari). Unknown value → 400. */
+                counterparty_kind?: string;
+                /** @description Balance at least (book currency, signed). */
+                balance_min?: number;
+                /** @description Balance at most (book currency, signed). */
+                balance_max?: number;
                 q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
             };
@@ -35410,14 +35458,27 @@ export interface operations {
                 organization_uuid?: components["parameters"]["AccountingOrganizationUUID"];
                 account_uuid?: string;
                 cari_uuid?: string;
-                direction?: components["schemas"]["AccountingDirection"];
+                /** @description CSV of income, expense, charge, collection, payment, opening. Unknown value → 400. */
+                direction?: string;
+                /** @description CSV of category keys (e.g. rent). Unknown key → 400. */
                 category?: string;
-                /** @description manual, order, opening_balance, ... */
+                /** @description CSV of source types (manual, order, opening_balance, ...). */
                 source_type?: string;
-                /** @description First day (UTC, inclusive) of created_at */
+                /** @description First day (UTC, inclusive) of created_at; YYYY-MM-DD or RFC3339. Same as created_from (do not send both). */
                 date_from?: string;
-                /** @description Last day (UTC, inclusive) of created_at */
+                /** @description Last day (UTC, inclusive) of created_at; an RFC3339 value is that instant. Same as created_to (do not send both). */
                 date_to?: string;
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
+                /** @description Amount at least (book currency; reversal rows are negative). */
+                amount_min?: number;
+                /** @description Amount at most (book currency). */
+                amount_max?: number;
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
             };
@@ -35479,6 +35540,34 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    requestAccountingEntryExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountingEntryExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getAccountingEntry: {
@@ -35662,9 +35751,19 @@ export interface operations {
     listAccountingDisputes: {
         parameters: {
             query?: {
-                status?: components["schemas"]["AccountingDisputeStatus"];
-                /** @description Only disputes opened by this organization */
+                /** @description CSV of open, resolved_reversal, resolved_revision, rejected. Unknown value → 400. */
+                status?: string;
+                /** @description CSV; only disputes opened by these organizations */
                 organization_uuid?: string;
+                /** @description CSV; only disputes addressed to these (parent) organizations */
+                counterparty_organization_uuid?: string;
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
             };
@@ -38920,9 +39019,11 @@ export interface operations {
     listTasks: {
         parameters: {
             query?: {
-                /** @description A status, or `active` for open and in_progress */
-                status?: "open" | "in_progress" | "done" | "cancelled" | "active";
-                priority?: components["schemas"]["TaskPriority"];
+                /** @description CSV of open, in_progress, done, cancelled; `active` = open and in_progress. Unknown value → 400. */
+                status?: string;
+                /** @description CSV of low, normal, high, urgent. Unknown value → 400. */
+                priority?: string;
+                /** @description CSV of subject organization UUIDs. */
                 subject_organization_uuid?: string;
                 assignee_user_uuid?: string;
                 /** @description Only tasks assigned to the caller */
@@ -38931,6 +39032,17 @@ export interface operations {
                 due_after?: string;
                 /** @description Only tasks due before this instant (TEC-221); tasks without a due date are left out */
                 due_before?: string;
+                /** @description Due on or after (YYYY-MM-DD or RFC3339); cannot be combined with due_after. Tasks without a due date are left out. */
+                due_from?: string;
+                /** @description Due on or before (a date covers the whole day); cannot be combined with due_before. */
+                due_to?: string;
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
             };

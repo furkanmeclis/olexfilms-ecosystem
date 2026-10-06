@@ -8,6 +8,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting/posting"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -65,12 +66,15 @@ func cariOf(r db.GetCariAccountWithBalanceRow) Cari {
 	return out
 }
 
-// CariFilter narrows ListCari.
+// CariFilter narrows ListCari (ParseCariFilter builds it).
 type CariFilter struct {
-	OrganizationUUID *uuid.UUID
-	Active           *bool
-	Q                string
-	Limit, Offset    int32
+	OrganizationUUID       *uuid.UUID
+	Active                 *bool
+	Q                      string
+	Kinds                  []string // CariKinds
+	BalanceMin, BalanceMax *float64
+	Sort                   apiquery.ResolvedSort
+	Limit, Offset          int32
 }
 
 // ListCari lists the cari accounts of the book with balances.
@@ -83,15 +87,21 @@ func (s *Service) ListCari(ctx context.Context, c Caller, f CariFilter) ([]Cari,
 	if f.Active != nil {
 		active = pgtype.Bool{Bool: *f.Active, Valid: true}
 	}
-	q := pgtype.Text{String: f.Q, Valid: f.Q != ""}
+	if f.BalanceMin != nil && f.BalanceMax != nil && *f.BalanceMin > *f.BalanceMax {
+		return nil, 0, invalid("balance_min", "must not exceed balance_max")
+	}
+	q := likeArg(f.Q)
+	sort := sortOrDefault(f.Sort, CariSort)
+	minArg, maxArg := numArg(f.BalanceMin), numArg(f.BalanceMax)
 	rows, err := s.q.ListCariAccountsWithBalance(ctx, db.ListCariAccountsWithBalanceParams{
-		OrganizationID: book.ID, Active: active, Q: q, PageLimit: f.Limit, PageOffset: f.Offset,
+		OrganizationID: book.ID, Active: active, Q: q, Kinds: f.Kinds, BalanceMin: minArg, BalanceMax: maxArg,
+		SortKey: sort.Key, SortDesc: sort.Desc, PageLimit: f.Limit, PageOffset: f.Offset,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("accounting: list cari: %w", err)
 	}
 	total, err := s.q.CountCariAccountsWithBalance(ctx, db.CountCariAccountsWithBalanceParams{
-		OrganizationID: book.ID, Active: active, Q: q,
+		OrganizationID: book.ID, Active: active, Q: q, Kinds: f.Kinds, BalanceMin: minArg, BalanceMax: maxArg,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("accounting: count cari: %w", err)

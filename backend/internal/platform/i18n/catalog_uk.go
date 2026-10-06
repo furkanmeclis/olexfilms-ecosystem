@@ -398,6 +398,12 @@ var ukCatalog = map[string]string{
 	"accounting.source.opening_balance":             "Початковий залишок",
 	"export.title.tenant.accounting.cari_statement": "Виписка за рахунком",
 	"export.title.tenant.accounting.balances":       "Звіт про залишки",
+	"export.title.tenant.accounting.entries":        "Бухгалтерські проведення",
+	"accounting.export.direction":                   "Напрям",
+	"accounting.export.account":                     "Рахунок",
+	"accounting.export.amount":                      "Сума",
+	"accounting.export.orig_amount":                 "Початкова сума",
+	"accounting.export.orig_currency":               "Початкова валюта",
 	"resources.tenant.accounting.cari_statement":    "Виписка за рахунком",
 	"resources.tenant.accounting.balances":          "Звіт про залишки",
 	// TEC-166: order statuses.

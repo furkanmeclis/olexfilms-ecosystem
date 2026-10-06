@@ -165,7 +165,7 @@ func TestDispute_OpenVisibilityAndDuplicate(t *testing.T) {
 	}
 
 	items, total, err := e.svc.ListDisputes(e.ctx, caller(e.dist, rbac.PermAccountingRead),
-		acc.DisputeFilter{Status: acc.DisputeOpen, OrganizationUUID: &e.dealer.Uuid, Limit: 50})
+		acc.DisputeFilter{Statuses: []string{acc.DisputeOpen}, OrganizationUUIDs: []uuid.UUID{e.dealer.Uuid}, Limit: 50})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -182,7 +182,7 @@ func TestDispute_OpenVisibilityAndDuplicate(t *testing.T) {
 		t.Fatalf("other distributor detail err = %v, want not found", err)
 	}
 	_, total, err = e.svc.ListDisputes(e.ctx, caller(e.other, rbac.PermAccountingRead),
-		acc.DisputeFilter{OrganizationUUID: &e.dealer.Uuid, Limit: 50})
+		acc.DisputeFilter{OrganizationUUIDs: []uuid.UUID{e.dealer.Uuid}, Limit: 50})
 	if err != nil || total != 0 {
 		t.Fatalf("other distributor list = %d, %v", total, err)
 	}

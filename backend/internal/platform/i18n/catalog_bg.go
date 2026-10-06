@@ -398,6 +398,12 @@ var bgCatalog = map[string]string{
 	"accounting.source.opening_balance":             "Начално салдо",
 	"export.title.tenant.accounting.cari_statement": "Извлечение по сметка",
 	"export.title.tenant.accounting.balances":       "Отчет за салдата",
+	"export.title.tenant.accounting.entries":        "Счетоводни записи",
+	"accounting.export.direction":                   "Посока",
+	"accounting.export.account":                     "Сметка",
+	"accounting.export.amount":                      "Сума",
+	"accounting.export.orig_amount":                 "Първоначална сума",
+	"accounting.export.orig_currency":               "Първоначална валута",
 	"resources.tenant.accounting.cari_statement":    "Извлечение по сметка",
 	"resources.tenant.accounting.balances":          "Отчет за салдата",
 	// TEC-166: order statuses.

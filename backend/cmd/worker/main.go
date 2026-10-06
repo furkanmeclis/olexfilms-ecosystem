@@ -198,6 +198,8 @@ func main() {
 		accountingusecase.NewMarginAdapter(accountingSvc),
 		accountingusecase.NewCariAgingAdapter(accountingSvc),
 		accountingusecase.NewStaffCostAdapter(accountingSvc),
+		// TEC-379: ledger entry list export.
+		accountingusecase.NewEntriesAdapter(accountingSvc),
 		// TEC-161: personal data export (read only; identity numbers stay
 		// masked, so no PII key is needed here).
 		customersusecase.NewDataExportAdapter(customersExportSvc),

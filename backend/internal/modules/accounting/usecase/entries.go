@@ -11,6 +11,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting/posting"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/fxrates"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -77,63 +78,70 @@ func entryOf(r db.SearchFinanceEntriesRow) Entry {
 	return e
 }
 
-// EntryFilter narrows ListEntries. From/To are calendar days (UTC), both
-// inclusive.
+// EntryFilter narrows ListEntries (ParseEntryFilter builds it).
+// CreatedFrom / CreatedBefore bound created_at (inclusive / exclusive);
+// date_from / date_to and created_from / created_to both fill them.
 type EntryFilter struct {
-	OrganizationUUID *uuid.UUID
-	AccountUUID      *uuid.UUID
-	CariUUID         *uuid.UUID
-	Direction        string
-	Category         string
-	SourceType       string
-	From, To         *time.Time
-	Limit, Offset    int32
+	OrganizationUUID           *uuid.UUID
+	AccountUUID                *uuid.UUID
+	CariUUID                   *uuid.UUID
+	Directions                 []string
+	Categories                 []string
+	SourceTypes                []string
+	CreatedFrom, CreatedBefore *time.Time
+	AmountMin, AmountMax       *float64
+	Q                          string
+	Sort                       apiquery.ResolvedSort
+	Limit, Offset              int32
 }
 
-// ListEntries lists the ledger rows of the book, newest first.
+// ListEntries lists the ledger rows of the book (default newest first).
 func (s *Service) ListEntries(ctx context.Context, c Caller, f EntryFilter) ([]Entry, int64, error) {
 	book, err := s.readBook(ctx, c, f.OrganizationUUID)
 	if err != nil {
 		return nil, 0, err
 	}
-	arg := db.SearchFinanceEntriesParams{OrganizationID: book.ID, PageLimit: f.Limit, PageOffset: f.Offset}
+	return s.searchEntries(ctx, book.ID, f)
+}
+
+// searchEntries runs the entry list of one book (list endpoint and export).
+func (s *Service) searchEntries(ctx context.Context, bookID int64, f EntryFilter) ([]Entry, int64, error) {
+	sort := sortOrDefault(f.Sort, EntrySort)
+	arg := db.SearchFinanceEntriesParams{
+		OrganizationID: bookID, Directions: f.Directions, Categories: f.Categories, SourceTypes: f.SourceTypes,
+		CreatedFrom: timeArg(f.CreatedFrom), CreatedTo: timeArg(f.CreatedBefore),
+		AmountMin: numArg(f.AmountMin), AmountMax: numArg(f.AmountMax), Q: likeArg(f.Q),
+		SortKey: sort.Key, SortDesc: sort.Desc, PageLimit: f.Limit, PageOffset: f.Offset,
+	}
 	if f.AccountUUID != nil {
 		a, err := s.q.GetFinanceAccountByUUID(ctx, *f.AccountUUID)
-		if err != nil || a.OrganizationID != book.ID {
+		if err != nil || a.OrganizationID != bookID {
 			return []Entry{}, 0, nil
 		}
 		arg.AccountID = pgtype.Int8{Int64: a.ID, Valid: true}
 	}
 	if f.CariUUID != nil {
 		ca, err := s.q.GetCariAccountByUUID(ctx, *f.CariUUID)
-		if err != nil || ca.OrganizationID != book.ID {
+		if err != nil || ca.OrganizationID != bookID {
 			return []Entry{}, 0, nil
 		}
 		arg.CariID = pgtype.Int8{Int64: ca.ID, Valid: true}
 	}
-	if f.Direction != "" {
-		if !validDirection(f.Direction) {
+	for _, d := range f.Directions {
+		if !validDirection(d) {
 			return nil, 0, invalid("direction", "is not a ledger direction")
 		}
-		arg.Direction = pgtype.Text{String: f.Direction, Valid: true}
 	}
-	if f.Category != "" {
-		if !accounting.ValidCategoryKey(f.Category) {
+	for _, cat := range f.Categories {
+		if !accounting.ValidCategoryKey(cat) {
 			return nil, 0, invalid("category", "is not a category key")
 		}
-		arg.Category = pgtype.Text{String: f.Category, Valid: true}
 	}
-	if f.SourceType != "" {
-		arg.SourceType = pgtype.Text{String: f.SourceType, Valid: true}
-	}
-	if f.From != nil {
-		arg.CreatedFrom = pgtype.Timestamptz{Time: *f.From, Valid: true}
-	}
-	if f.To != nil {
-		arg.CreatedTo = pgtype.Timestamptz{Time: f.To.AddDate(0, 0, 1), Valid: true}
-	}
-	if f.From != nil && f.To != nil && f.To.Before(*f.From) {
+	if f.CreatedFrom != nil && f.CreatedBefore != nil && !f.CreatedBefore.After(*f.CreatedFrom) {
 		return nil, 0, invalid("date_to", "must not be before date_from")
+	}
+	if f.AmountMin != nil && f.AmountMax != nil && *f.AmountMin > *f.AmountMax {
+		return nil, 0, invalid("amount_min", "must not exceed amount_max")
 	}
 	rows, err := s.q.SearchFinanceEntries(ctx, arg)
 	if err != nil {
@@ -141,8 +149,9 @@ func (s *Service) ListEntries(ctx context.Context, c Caller, f EntryFilter) ([]E
 	}
 	total, err := s.q.CountSearchFinanceEntries(ctx, db.CountSearchFinanceEntriesParams{
 		OrganizationID: arg.OrganizationID, AccountID: arg.AccountID, CariID: arg.CariID,
-		Direction: arg.Direction, Category: arg.Category, SourceType: arg.SourceType,
+		Directions: arg.Directions, Categories: arg.Categories, SourceTypes: arg.SourceTypes,
 		CreatedFrom: arg.CreatedFrom, CreatedTo: arg.CreatedTo,
+		AmountMin: arg.AmountMin, AmountMax: arg.AmountMax, Q: arg.Q,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("accounting: count entries: %w", err)

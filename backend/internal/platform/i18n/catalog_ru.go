@@ -398,6 +398,12 @@ var ruCatalog = map[string]string{
 	"accounting.source.opening_balance":             "Начальный остаток",
 	"export.title.tenant.accounting.cari_statement": "Выписка по счёту",
 	"export.title.tenant.accounting.balances":       "Отчёт об остатках",
+	"export.title.tenant.accounting.entries":        "Бухгалтерские проводки",
+	"accounting.export.direction":                   "Направление",
+	"accounting.export.account":                     "Счёт",
+	"accounting.export.amount":                      "Сумма",
+	"accounting.export.orig_amount":                 "Исходная сумма",
+	"accounting.export.orig_currency":               "Исходная валюта",
 	"resources.tenant.accounting.cari_statement":    "Выписка по счёту",
 	"resources.tenant.accounting.balances":          "Отчёт об остатках",
 	// TEC-166: order statuses.

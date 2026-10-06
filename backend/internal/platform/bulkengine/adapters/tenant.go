@@ -5,9 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	tasks "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/tasks/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -285,8 +288,21 @@ func (a *CatalogProductsAdapter) RevertItem(ctx context.Context, action string, 
 
 const ResourceTasks = "tasks"
 
-// TasksAdapter assigns center tasks to a center member (TEC-214 rules:
-// the active organization is the brand center and owns the task).
+// Task bulk actions and params (TEC-379 adds set_status / set_priority and
+// the "select all matching" target).
+const (
+	ActionTasksAssign      = "assign"
+	ActionTasksSetStatus   = "set_status"
+	ActionTasksSetPriority = "set_priority"
+	ParamTaskStatus        = "status"
+	ParamTaskPriority      = "priority"
+	maxTaskQueryTargets    = 10000
+)
+
+// TasksAdapter changes center tasks (TEC-214 rules: the active organization
+// is the brand center and owns the task): assign, set_status, set_priority.
+// Targets are selected ids or every task matching the GET /v1/tasks filters
+// of target.query (mine is not supported there).
 type TasksAdapter struct {
 	q *db.Queries
 }
@@ -304,17 +320,76 @@ func (a *TasksAdapter) WithQueries(q *db.Queries) bulkengine.BulkAdapter {
 func (a *TasksAdapter) BulkActions() []bulkengine.BulkActionDef {
 	return []bulkengine.BulkActionDef{
 		{
-			ID: "assign", LabelKey: "bulk.actions.tasks.assign",
+			ID: ActionTasksAssign, LabelKey: "bulk.actions.tasks.assign",
 			Permission: rbac.PermTasksWrite, Reversible: true,
 			Params: []bulkengine.BulkActionParam{
 				{Key: ParamAssigneeUUID, Kind: "uuid", Required: true, LabelKey: "bulk.params.assignee"},
 			},
 		},
+		{
+			ID: ActionTasksSetStatus, LabelKey: "bulk.actions.tasks.set_status",
+			Permission: rbac.PermTasksWrite, Reversible: true, ConfirmKey: "bulk.confirm.tasks.set_status",
+			Params: []bulkengine.BulkActionParam{
+				{Key: ParamTaskStatus, Kind: "enum", Required: true, LabelKey: "bulk.params.task_status", Options: tasks.Statuses},
+			},
+		},
+		{
+			ID: ActionTasksSetPriority, LabelKey: "bulk.actions.tasks.set_priority",
+			Permission: rbac.PermTasksWrite, Reversible: true,
+			Params: []bulkengine.BulkActionParam{
+				{Key: ParamTaskPriority, Kind: "enum", Required: true, LabelKey: "bulk.params.task_priority", Options: tasks.Priorities},
+			},
+		},
 	}
 }
 
-func (a *TasksAdapter) ResolveTargets(_ context.Context, _ string, target bulkengine.BulkTarget) ([]string, error) {
-	return idsOnly(target)
+// taskParamsError validates the params of an action.
+func taskParamsError(action string, params map[string]string) error {
+	switch action {
+	case ActionTasksAssign:
+		if _, err := uuid.Parse(params[ParamAssigneeUUID]); err != nil {
+			return fmt.Errorf("%s must be a user uuid", ParamAssigneeUUID)
+		}
+	case ActionTasksSetStatus:
+		if !slices.Contains(tasks.Statuses, params[ParamTaskStatus]) {
+			return fmt.Errorf("%s must be one of open, in_progress, done, cancelled", ParamTaskStatus)
+		}
+	case ActionTasksSetPriority:
+		if !slices.Contains(tasks.Priorities, params[ParamTaskPriority]) {
+			return fmt.Errorf("%s must be one of low, normal, high, urgent", ParamTaskPriority)
+		}
+	}
+	return nil
+}
+
+func (a *TasksAdapter) ResolveTargets(ctx context.Context, action string, target bulkengine.BulkTarget) ([]string, error) {
+	if err := taskParamsError(action, target.Params); err != nil {
+		return nil, err
+	}
+	if target.Scope != "query" {
+		return idsOnly(target)
+	}
+	id, err := uuid.Parse(target.Query[QueryOrganizationUUID])
+	if err != nil {
+		return nil, ErrOrganizationScope
+	}
+	org, err := a.q.GetOrganizationByUUID(ctx, id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrOrganizationScope
+	}
+	if err != nil {
+		return nil, err
+	}
+	f, err := tasks.ParseListFilter(queryValues(target.Query), nil)
+	if err != nil {
+		return nil, err
+	}
+	c := tasks.Caller{Org: orgctx.Scope{InternalID: org.ID, UUID: org.Uuid, OrgType: org.Type, BrandID: org.BrandID}}
+	ids, err := tasks.New(nil, a.q, nil).MatchingUUIDs(ctx, c, f, maxTaskQueryTargets)
+	if errors.Is(err, tasks.ErrCenterOnly) {
+		return nil, fmt.Errorf("task bulk actions are center only")
+	}
+	return ids, err
 }
 
 func (a *TasksAdapter) center(ctx context.Context) (db.Organization, error) {
@@ -363,8 +438,27 @@ func (a *TasksAdapter) assigneeUUID(ctx context.Context, t db.Task) (map[int64]s
 	return out, nil
 }
 
+func taskClosed(status string) bool {
+	return status == tasks.StatusDone || status == tasks.StatusCancelled
+}
+
+// taskStatusState is the undo snapshot of set_status: the status and, for
+// a closed task, when and by whom it was closed.
+func taskStatusState(t db.Task) map[string]any {
+	out := map[string]any{"status": t.Status, "closed_at": nil, "closed_by_user_id": nil}
+	if t.ClosedAt.Valid {
+		out["closed_at"] = t.ClosedAt.Time.UTC().Format(time.RFC3339Nano)
+	}
+	if t.ClosedByUserID.Valid {
+		out["closed_by_user_id"] = t.ClosedByUserID.Int64
+	}
+	return out
+}
+
 func (a *TasksAdapter) ApplyItem(ctx context.Context, action, entityUUID string) (bulkengine.BulkItemResult, error) {
-	if action != "assign" {
+	switch action {
+	case ActionTasksAssign, ActionTasksSetStatus, ActionTasksSetPriority:
+	default:
 		return bulkengine.BulkItemResult{EntityUUID: entityUUID, OK: false, Error: "unknown action"}, nil
 	}
 	org, err := a.center(ctx)
@@ -372,6 +466,15 @@ func (a *TasksAdapter) ApplyItem(ctx context.Context, action, entityUUID string)
 		return bulkengine.BulkItemResult{}, err
 	}
 	run, _ := bulkengine.RunFrom(ctx)
+	if err := taskParamsError(action, run.Params); err != nil {
+		return bulkengine.BulkItemResult{}, err
+	}
+	switch action {
+	case ActionTasksSetStatus:
+		return a.applyStatus(ctx, org, entityUUID, run.Params[ParamTaskStatus])
+	case ActionTasksSetPriority:
+		return a.applyPriority(ctx, org, entityUUID, run.Params[ParamTaskPriority])
+	}
 	assigneeID, err := uuid.Parse(run.Params[ParamAssigneeUUID])
 	if err != nil {
 		return bulkengine.BulkItemResult{}, fmt.Errorf("%s must be a user uuid", ParamAssigneeUUID)
@@ -390,7 +493,7 @@ func (a *TasksAdapter) ApplyItem(ctx context.Context, action, entityUUID string)
 	if err != nil {
 		return bulkengine.BulkItemResult{}, err
 	}
-	if t.Status == "done" || t.Status == "cancelled" {
+	if taskClosed(t.Status) {
 		return bulkengine.BulkItemResult{EntityUUID: entityUUID, OK: false, Error: "task is closed"}, nil
 	}
 	uuids, err := a.assigneeUUID(ctx, t)
@@ -413,7 +516,57 @@ func (a *TasksAdapter) ApplyItem(ctx context.Context, action, entityUUID string)
 	return res, nil
 }
 
-func (a *TasksAdapter) CurrentState(ctx context.Context, _ string, entityUUID string) (map[string]any, error) {
+// applyStatus moves a task to status like PATCH /v1/tasks/{uuid}: closing
+// stamps closed_at (closed_by stays empty, the bulk operation records the
+// actor), moving between done and cancelled keeps the closing, reopening
+// clears it.
+func (a *TasksAdapter) applyStatus(ctx context.Context, org db.Organization, entityUUID, status string) (bulkengine.BulkItemResult, error) {
+	t, err := a.task(ctx, org, entityUUID)
+	if errors.Is(err, bulkengine.ErrEntityGone) {
+		return bulkengine.BulkItemResult{EntityUUID: entityUUID, OK: false, Error: "not found"}, nil
+	}
+	if err != nil {
+		return bulkengine.BulkItemResult{}, err
+	}
+	res := bulkengine.BulkItemResult{
+		EntityUUID: entityUUID, EntityType: "task", OK: true, Op: "update",
+		Previous: taskStatusState(t), Applied: map[string]any{"status": status},
+	}
+	if t.Status == status {
+		return res, nil
+	}
+	arg := db.SetTaskStatusParams{ID: t.ID, Status: status}
+	if taskClosed(status) && taskClosed(t.Status) {
+		arg.ClosedAt, arg.ClosedByUserID = t.ClosedAt, t.ClosedByUserID
+	}
+	if _, err := a.q.SetTaskStatus(ctx, arg); err != nil {
+		return bulkengine.BulkItemResult{}, fmt.Errorf("tasks: bulk status: %w", err)
+	}
+	return res, nil
+}
+
+func (a *TasksAdapter) applyPriority(ctx context.Context, org db.Organization, entityUUID, priority string) (bulkengine.BulkItemResult, error) {
+	t, err := a.task(ctx, org, entityUUID)
+	if errors.Is(err, bulkengine.ErrEntityGone) {
+		return bulkengine.BulkItemResult{EntityUUID: entityUUID, OK: false, Error: "not found"}, nil
+	}
+	if err != nil {
+		return bulkengine.BulkItemResult{}, err
+	}
+	res := bulkengine.BulkItemResult{
+		EntityUUID: entityUUID, EntityType: "task", OK: true, Op: "update",
+		Previous: map[string]any{"priority": t.Priority}, Applied: map[string]any{"priority": priority},
+	}
+	if t.Priority == priority {
+		return res, nil
+	}
+	if _, err := a.q.SetTaskPriority(ctx, db.SetTaskPriorityParams{ID: t.ID, Priority: priority}); err != nil {
+		return bulkengine.BulkItemResult{}, fmt.Errorf("tasks: bulk priority: %w", err)
+	}
+	return res, nil
+}
+
+func (a *TasksAdapter) CurrentState(ctx context.Context, action string, entityUUID string) (map[string]any, error) {
 	org, err := a.center(ctx)
 	if err != nil {
 		return nil, err
@@ -421,6 +574,12 @@ func (a *TasksAdapter) CurrentState(ctx context.Context, _ string, entityUUID st
 	t, err := a.task(ctx, org, entityUUID)
 	if err != nil {
 		return nil, err
+	}
+	switch action {
+	case ActionTasksSetStatus:
+		return map[string]any{"status": t.Status}, nil
+	case ActionTasksSetPriority:
+		return map[string]any{"priority": t.Priority}, nil
 	}
 	uuids, err := a.assigneeUUID(ctx, t)
 	if err != nil {
@@ -429,13 +588,24 @@ func (a *TasksAdapter) CurrentState(ctx context.Context, _ string, entityUUID st
 	return assigneeState(t, uuids), nil
 }
 
-func (a *TasksAdapter) RevertItem(ctx context.Context, _ string, entityUUID string, previous map[string]any) error {
+func (a *TasksAdapter) RevertItem(ctx context.Context, action string, entityUUID string, previous map[string]any) error {
 	org, err := a.center(ctx)
 	if err != nil {
 		return err
 	}
 	t, err := a.task(ctx, org, entityUUID)
 	if err != nil {
+		return err
+	}
+	switch action {
+	case ActionTasksSetStatus:
+		return a.revertStatus(ctx, t, previous)
+	case ActionTasksSetPriority:
+		p, _ := previous["priority"].(string)
+		if !slices.Contains(tasks.Priorities, p) {
+			return fmt.Errorf("missing task priority snapshot")
+		}
+		_, err := a.q.SetTaskPriority(ctx, db.SetTaskPriorityParams{ID: t.ID, Priority: p})
 		return err
 	}
 	raw, ok := previous["assignee_uuid"]
@@ -455,5 +625,29 @@ func (a *TasksAdapter) RevertItem(ctx context.Context, _ string, entityUUID stri
 		assignee = pgtype.Int8{Int64: u.ID, Valid: true}
 	}
 	_, err = a.q.SetTaskAssignee(ctx, db.SetTaskAssigneeParams{AssigneeUserID: assignee, ID: t.ID})
+	return err
+}
+
+// revertStatus restores the status and the closing of the snapshot.
+func (a *TasksAdapter) revertStatus(ctx context.Context, t db.Task, previous map[string]any) error {
+	status, _ := previous["status"].(string)
+	if !slices.Contains(tasks.Statuses, status) {
+		return fmt.Errorf("missing task status snapshot")
+	}
+	arg := db.SetTaskStatusParams{ID: t.ID, Status: status}
+	if s, ok := previous["closed_at"].(string); ok && s != "" {
+		at, err := time.Parse(time.RFC3339Nano, s)
+		if err != nil {
+			return fmt.Errorf("task status snapshot: %w", err)
+		}
+		arg.ClosedAt = pgtype.Timestamptz{Time: at, Valid: true}
+	}
+	switch v := previous["closed_by_user_id"].(type) {
+	case float64:
+		arg.ClosedByUserID = pgtype.Int8{Int64: int64(v), Valid: true}
+	case int64:
+		arg.ClosedByUserID = pgtype.Int8{Int64: v, Valid: true}
+	}
+	_, err := a.q.SetTaskStatus(ctx, arg)
 	return err
 }
