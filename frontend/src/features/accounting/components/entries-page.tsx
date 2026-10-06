@@ -2,23 +2,26 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, BookOpen } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
 import {
   EntityPage,
+  EntityRowActions,
   EntityTable,
   EntityToolbar,
   useServerListState,
+  type EntityRowAction,
 } from "@/components/entity";
 import { createColumn } from "@/components/tables";
 import { Button } from "@/components/ui/button";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { DisputeButton } from "@/features/accounting/components/dispute-dialog";
-import { EntryFilters } from "@/features/accounting/components/entry-filters";
+import { EntriesExportMenu } from "@/features/accounting/components/entries-export";
 import { SettlementDialog } from "@/features/accounting/components/settlement-dialog";
 import {
   EntryAmount,
@@ -32,16 +35,16 @@ import {
 } from "@/features/accounting/hooks/use-accounting-access";
 import { isEntryDisputable } from "@/features/accounting/lib/disputes";
 import {
-  EMPTY_ENTRY_FILTERS,
-  entryFilterParams,
-  type EntryFilterValues,
-} from "@/features/accounting/lib/form";
-import {
+  ACCOUNTING_DIRECTIONS,
   accountingService,
+  ENTRY_SOURCE_TYPES,
   type FinanceEntry,
+  type ListEntriesParams,
   type SettlementKind,
 } from "@/features/accounting/services/accounting.service";
 import { useLocale } from "@/providers/locale-provider";
+
+export const ENTRIES_PERSIST_KEY = "tenant-accounting-entries-v2";
 
 /** Dispute controls of a child organization's ledger rows (TEC-195). */
 export type EntryDisputeOptions = {
@@ -85,11 +88,37 @@ export function EntryStatusCell({
   );
 }
 
-/** Columns shared by the ledger list and the cari detail's recent rows. */
-export function useEntryColumns(
-  categories: Map<string, string>,
-  dispute?: EntryDisputeOptions | null,
-) {
+type FilterOption = { value: string; label: string };
+
+/** Filter options of the ledger columns (catalogs of the active book). */
+export type EntryColumnOptions = {
+  categories: Map<string, string>;
+  cari: FilterOption[];
+  accounts: FilterOption[];
+  dispute?: EntryDisputeOptions | null;
+  /** Row action: open the cari account of the row. */
+  onOpenCari?: (cariUuid: string) => void;
+};
+
+function enumOptions(values: readonly string[], prefix: string) {
+  return values.map((value) => ({
+    value,
+    label: value,
+    labelKey: `${prefix}.${value}`,
+  }));
+}
+
+/**
+ * Ledger columns (TEC-380): sort on date, type, category and amount; facets
+ * (type, category, source), cari / account selects, date and amount ranges.
+ */
+export function useEntryColumns({
+  categories,
+  cari,
+  accounts,
+  dispute,
+  onOpenCari,
+}: EntryColumnOptions) {
   const { t, format } = useLocale();
   return useMemo(
     () =>
@@ -97,7 +126,9 @@ export function useEntryColumns(
         createColumn<FinanceEntry>({
           accessorKey: "created_at",
           labelKey: "accounting.fields.date",
-          enableSorting: false,
+          enableSorting: true,
+          filterVariant: "date-range",
+          param: "created",
           cell: ({ row }) => (
             <span className="whitespace-nowrap">
               {format.dateTime(row.original.created_at)}
@@ -107,16 +138,29 @@ export function useEntryColumns(
         createColumn<FinanceEntry>({
           accessorKey: "direction",
           labelKey: "accounting.fields.direction",
-          enableSorting: false,
+          enableSorting: true,
           gridSecondary: true,
+          filterVariant: "faceted",
+          filterOptions: enumOptions(
+            ACCOUNTING_DIRECTIONS,
+            "accounting.directions",
+          ),
+          param: "direction",
           cell: ({ row }) =>
             t(`accounting.directions.${row.original.direction}`),
         }),
         createColumn<FinanceEntry>({
           accessorKey: "category",
           labelKey: "accounting.fields.category",
-          enableSorting: false,
+          enableSorting: true,
           gridPrimary: true,
+          filterVariant: "faceted",
+          filterOptions: Array.from(categories, ([value, label]) => ({
+            value,
+            label,
+          })),
+          enableColumnFilter: categories.size > 0,
+          param: "category",
           cell: ({ row }) =>
             categories.get(row.original.category) ?? row.original.category,
         }),
@@ -125,6 +169,10 @@ export function useEntryColumns(
           accessorFn: (row) => row.counterparty_organization?.name ?? "",
           labelKey: "accounting.fields.cari",
           enableSorting: false,
+          filterVariant: "select",
+          filterOptions: cari,
+          enableColumnFilter: cari.length > 0,
+          param: "cari_uuid",
           cell: ({ row }) =>
             row.original.counterparty_organization?.name ?? "—",
         }),
@@ -133,18 +181,23 @@ export function useEntryColumns(
           accessorFn: (row) => row.account?.name ?? "",
           labelKey: "accounting.fields.account",
           enableSorting: false,
+          filterVariant: "select",
+          filterOptions: accounts,
+          enableColumnFilter: accounts.length > 0,
+          param: "account_uuid",
           cell: ({ row }) => row.original.account?.name ?? "—",
         }),
         createColumn<FinanceEntry>({
           accessorKey: "source_type",
           labelKey: "accounting.fields.source",
           enableSorting: false,
+          filterVariant: "faceted",
+          filterOptions: enumOptions(ENTRY_SOURCE_TYPES, "accounting.sources"),
+          param: "source_type",
           cell: ({ row }) => {
             const s = row.original.source_type;
             if (!s) return "—";
-            return (
-              ["manual", "order", "service", "transfer"] as string[]
-            ).includes(s)
+            return (ENTRY_SOURCE_TYPES as readonly string[]).includes(s)
               ? t(`accounting.sources.${s}`)
               : s;
           },
@@ -152,7 +205,9 @@ export function useEntryColumns(
         createColumn<FinanceEntry>({
           accessorKey: "amount",
           labelKey: "accounting.fields.amount",
-          enableSorting: false,
+          enableSorting: true,
+          filterVariant: "number-range",
+          param: "amount",
           cell: ({ row }) => <EntryAmount entry={row.original} />,
         }),
         createColumn<FinanceEntry>({
@@ -160,6 +215,7 @@ export function useEntryColumns(
           accessorFn: (row) => (row.reversal_of_uuid ? 2 : row.voided ? 1 : 0),
           labelKey: "accounting.fields.status",
           enableSorting: false,
+          enableColumnFilter: false,
           cell: ({ row }) => (
             <EntryStatusCell entry={row.original} dispute={dispute} />
           ),
@@ -168,15 +224,45 @@ export function useEntryColumns(
           accessorKey: "description",
           labelKey: "accounting.fields.description",
           enableSorting: false,
+          enableColumnFilter: false,
           defaultHidden: true,
           cell: ({ row }) => row.original.description ?? "—",
         }),
+        createColumn<FinanceEntry>({
+          id: "actions",
+          labelKey: "common.actions",
+          enableSorting: false,
+          enableHiding: false,
+          enableResizing: false,
+          enableColumnFilter: false,
+          cell: ({ row }) => {
+            const cariUuid = row.original.cari_uuid;
+            const actions: EntityRowAction[] =
+              cariUuid && onOpenCari
+                ? [
+                    {
+                      id: "cari",
+                      label: t("accounting.cari.detail_title"),
+                      icon: BookOpen,
+                      onSelect: () => onOpenCari(cariUuid),
+                    },
+                  ]
+                : [];
+            return actions.length ? (
+              <EntityRowActions actions={actions} />
+            ) : null;
+          },
+        }),
       ] as ColumnDef<FinanceEntry, unknown>[],
-    [categories, dispute, format, t],
+    [accounts, cari, categories, dispute, format, onOpenCari, t],
   );
 }
 
-/** Tenant > Accounting > Entries: filters, pagination, reversal markers. */
+/**
+ * Tenant > Accounting > Entries (TEC-176, TEC-380): server DataTable over
+ * GET /v1/accounting/entries with sort, `q`, column filters (date, type,
+ * category, cari, account, source, amount) and the list export.
+ */
 export function EntriesPage({
   slug,
   initialCari = "",
@@ -185,12 +271,8 @@ export function EntriesPage({
   initialCari?: string;
 }) {
   const { t } = useLocale();
+  const router = useRouter();
   const access = useAccountingAccess(slug);
-  const listState = useServerListState({ initialSort: "-created_at" });
-  const [filters, setFilters] = useState<EntryFilterValues>({
-    ...EMPTY_ENTRY_FILTERS,
-    cari_uuid: initialCari,
-  });
   const [settle, setSettle] = useState<SettlementKind | null>(null);
   const enabled = access.canRead && Boolean(access.orgUuid);
   const categories = useCategoryLabels(access.orgUuid, enabled);
@@ -210,33 +292,75 @@ export function EntriesPage({
         : null,
     [access.canDispute, access.orgUuid, access.parentUuid, disputeKey],
   );
-  const columns = useEntryColumns(categories, dispute);
 
-  const params = useMemo(
+  const cari = useQuery({
+    queryKey: accountingKeys.cariList(access.orgUuid, { limit: 100 }),
+    queryFn: () => accountingService.listCari({ limit: 100 }),
+    enabled,
+  });
+  const accounts = useQuery({
+    queryKey: accountingKeys.accounts(access.orgUuid, {}),
+    queryFn: () => accountingService.listAccounts(),
+    enabled,
+  });
+  const cariOptions = useMemo(
     () =>
-      entryFilterParams(filters, {
-        limit: listState.params.limit,
-        offset: listState.params.offset,
-      }),
-    [filters, listState.params.limit, listState.params.offset],
+      (cari.data?.items ?? []).map((c) => ({
+        value: c.uuid,
+        label: c.counterparty.name,
+      })),
+    [cari.data],
   );
+  const accountOptions = useMemo(
+    () =>
+      (accounts.data?.items ?? []).map((a) => ({
+        value: a.uuid,
+        label: a.name,
+      })),
+    [accounts.data],
+  );
+  const openCari = useMemo(
+    () => (uuid: string) =>
+      router.push(routes.tenant.accounting.cariDetail(slug, uuid)),
+    [router, slug],
+  );
+  const columns = useEntryColumns({
+    categories,
+    cari: cariOptions,
+    accounts: accountOptions,
+    dispute,
+    onOpenCari: openCari,
+  });
+
+  const initialFilters = useMemo(
+    () => (initialCari ? [{ id: "counterparty", value: initialCari }] : []),
+    [initialCari],
+  );
+  // Column meta drives the params: facets (CSV), selects, created / amount.
+  const listState = useServerListState({
+    columns,
+    initialSort: "-created_at",
+    persistKey: ENTRIES_PERSIST_KEY,
+    initialColumnFilters: initialFilters,
+  });
+  const params: ListEntriesParams = listState.params;
 
   const list = useQuery({
     queryKey: accountingKeys.entries(access.orgUuid, params),
     queryFn: () => accountingService.listEntries(params),
     enabled,
   });
-  const cari = useQuery({
-    queryKey: accountingKeys.cariList(access.orgUuid, { limit: 100 }),
-    queryFn: () => accountingService.listCari({ limit: 100 }),
-    enabled,
-  });
 
-  const total = list.data?.total ?? 0;
-  const pageCount = Math.max(
-    1,
-    Math.ceil(total / (listState.pagination.pageSize || 20)),
-  );
+  // The export takes the list filters, search and sort.
+  const exportQuery = useMemo(() => {
+    const query: Record<string, string> = {};
+    for (const [key, value] of Object.entries(listState.filterParams)) {
+      if (value) query[key] = String(value);
+    }
+    if (params.q) query.q = String(params.q);
+    if (params.sort) query.sort = String(params.sort);
+    return query;
+  }, [listState.filterParams, params.q, params.sort]);
 
   return (
     <EntityPage
@@ -269,17 +393,6 @@ export function EntriesPage({
         ) : null
       }
     >
-      <EntryFilters
-        value={filters}
-        cariOptions={(cari.data?.items ?? []).map((c) => ({
-          value: c.uuid,
-          label: c.counterparty.name,
-        }))}
-        onChange={(next) => {
-          setFilters(next);
-          listState.setPagination((p) => ({ ...p, pageIndex: 0 }));
-        }}
-      />
       <EntityTable
         columns={columns}
         data={list.data?.items ?? []}
@@ -289,20 +402,22 @@ export function EntriesPage({
         onRetry={() => void list.refetch()}
         emptyTitle={t("accounting.entries.empty_title")}
         emptyDescription={t("accounting.entries.empty_description")}
-        pageCount={pageCount}
+        rowCount={list.data?.total ?? 0}
         state={listState.tableState}
         features={{
-          persistKey: "tenant-accounting-entries-v1",
+          persistKey: ENTRIES_PERSIST_KEY,
           rowSelection: false,
-          globalFilter: false,
-          columnFilters: false,
-          facetedFilters: false,
         }}
         toolbarExtra={
-          <EntityToolbar
-            onRefresh={() => void list.refetch()}
-            refreshDisabled={list.isFetching}
-          />
+          <>
+            {enabled ? (
+              <EntriesExportMenu orgUuid={access.orgUuid} query={exportQuery} />
+            ) : null}
+            <EntityToolbar
+              onRefresh={() => void list.refetch()}
+              refreshDisabled={list.isFetching}
+            />
+          </>
         }
       />
       {settle ? (

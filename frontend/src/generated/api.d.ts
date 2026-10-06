@@ -13877,6 +13877,8 @@ export interface components {
             /** Format: date-time */
             voided_at?: string | null;
             void_reason?: string | null;
+            /** @description True once the executed PDF is stored; GET /v1/contracts/{uuid}/pdf answers 404 until then (TEC-291). */
+            pdf_ready: boolean;
             signers: components["schemas"]["ContractSigner"][];
             media: components["schemas"]["ContractMedia"][];
             /** Format: date-time */
@@ -17593,6 +17595,8 @@ export interface components {
             status: components["schemas"]["ContractStatus"];
             /** Format: int64 */
             contract_no: number;
+            /** @description True once the executed contract PDF is stored (TEC-291). */
+            pdf_ready: boolean;
         };
         ServiceProfit: {
             /** @description Recorded service income amount; null without accounting.read/accounting.write. */

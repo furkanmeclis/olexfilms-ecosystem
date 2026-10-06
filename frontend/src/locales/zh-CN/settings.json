@@ -131,5 +131,7 @@
   "system.labor.errors.amount_number": "请输入有效金额(最多 2 位小数)。",
   "system.labor.errors.amount_min": "金额不能为负数。",
   "system.labor.errors.percent_integer": "请输入整数。",
-  "system.labor.errors.percent_range": "百分比必须介于 0 到 100 之间。"
+  "system.labor.errors.percent_range": "百分比必须介于 0 到 100 之间。",
+  "system.keys.contracts_intake_required": "车辆接收合同为必填",
+  "system.keys.contracts_intake_required_hint": "开启后（且已启用车辆接收合同模块），服务在接收合同签署之前不能进入处理或完成。"
 }

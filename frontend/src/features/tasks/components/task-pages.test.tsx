@@ -54,7 +54,6 @@ import type { Task } from "@/features/tasks/services/tasks.service";
 
 import { TaskDetailPage } from "./task-detail-page";
 import { TaskFormPage } from "./task-form-page";
-import { TasksListPage } from "./tasks-list-page";
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -128,10 +127,6 @@ function task(patch: Partial<Task> = {}): Task {
   };
 }
 
-function page(items: Task[]) {
-  return { items, total: items.length, limit: 20, offset: 0 };
-}
-
 const q = <T extends Element>(sel: string) =>
   container.querySelector(sel) as T | null;
 
@@ -164,82 +159,6 @@ async function click(el: Element | null) {
   });
   await flush();
 }
-
-describe("TasksListPage", () => {
-  it("is forbidden without tasks.read", async () => {
-    await render(createElement(TasksListPage, { slug: "olex" }));
-    expect(api.list).not.toHaveBeenCalled();
-    expect(container.textContent).toContain("tasks.list.forbidden");
-  });
-
-  it("lists active tasks first and narrows by every filter", async () => {
-    state.grants = new Set([Permission.TasksRead]);
-    api.list.mockResolvedValue(
-      page([
-        task(),
-        task({
-          uuid: "t-2",
-          title: "Geciken",
-          due_at: "2020-01-01T09:00:00Z",
-          priority: "urgent",
-        }),
-      ]),
-    );
-    await render(createElement(TasksListPage, { slug: "olex" }));
-
-    expect(api.list).toHaveBeenLastCalledWith({
-      status: "active",
-      limit: 20,
-      offset: 0,
-    });
-    expect(container.querySelectorAll("[data-testid=task-row]")).toHaveLength(
-      2,
-    );
-    // The overdue open task is flagged.
-    expect(q('[data-uuid="t-2"] [data-overdue="true"]')?.textContent).toContain(
-      "tasks.list.overdue",
-    );
-    // No "new" button without tasks.write.
-    expect(q("[data-testid=task-new]")).toBeNull();
-
-    await choose("[data-testid=task-filter-status]", "done");
-    await choose("[data-testid=task-filter-priority]", "high");
-    await choose("[data-testid=task-filter-assignee]", "u-2");
-    await choose("[data-testid=task-filter-subject]", "o-2");
-    expect(api.list).toHaveBeenLastCalledWith({
-      status: "done",
-      priority: "high",
-      assignee_user_uuid: "u-2",
-      subject_organization_uuid: "o-2",
-      limit: 20,
-      offset: 0,
-    });
-
-    await choose("[data-testid=task-filter-due]", "overdue");
-    const last = api.list.mock.calls.at(-1)![0];
-    expect(last.due_before).toEqual(expect.any(String));
-    expect(last.due_after).toBeUndefined();
-
-    await choose("[data-testid=task-filter-due]", "week");
-    const week = api.list.mock.calls.at(-1)![0];
-    expect(
-      new Date(week.due_before).getTime() - new Date(week.due_after).getTime(),
-    ).toBe(7 * 24 * 60 * 60 * 1000);
-
-    await choose("[data-testid=task-filter-status]", "");
-    expect(api.list.mock.calls.at(-1)![0].status).toBeUndefined();
-  });
-
-  it("shows the new button with tasks.write", async () => {
-    state.grants = new Set([Permission.TasksRead, Permission.TasksWrite]);
-    api.list.mockResolvedValue(page([]));
-    await render(createElement(TasksListPage, { slug: "olex" }));
-    expect(q("[data-testid=task-new]")?.getAttribute("href")).toBe(
-      "/t/olex/tasks/new",
-    );
-    expect(q("[data-testid=tasks-empty]")).not.toBeNull();
-  });
-});
 
 describe("TaskFormPage", () => {
   it("validates, then creates the task and opens it", async () => {

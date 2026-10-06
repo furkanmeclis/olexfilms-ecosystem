@@ -4,7 +4,8 @@ import type { Page, Route } from "@playwright/test";
  * Mocked BFF for the center tasks e2e (TEC-221): a center member with
  * tasks.read + tasks.write, two distributors/dealers to pick as the
  * subject, two center members as assignees and an in-memory task list with
- * comments. Filters of GET /v1/tasks are applied like the API does.
+ * comments. Filters of GET /v1/tasks are applied like the API does
+ * (CSV status / priority / subject, due_from / due_to; TEC-379).
  */
 
 export const TASK_SLUG = "olex-merkez";
@@ -115,25 +116,31 @@ export class TaskMock {
 
   private filter(url: URL): Task[] {
     const p = url.searchParams;
-    const status = p.get("status");
-    const priority = p.get("priority");
+    const csv = (key: string) =>
+      (p.get(key) ?? "").split(",").filter((v) => v !== "");
+    // CSV status with "active" = open + in_progress (TEC-379).
+    const statuses = csv("status").flatMap((s) =>
+      s === "active" ? ["open", "in_progress"] : [s],
+    );
+    const priorities = csv("priority");
+    const subjectIds = csv("subject_organization_uuid");
     const assignee = p.get("assignee_user_uuid");
-    const subject = p.get("subject_organization_uuid");
-    const before = p.get("due_before");
-    const after = p.get("due_after");
+    const to = p.get("due_to");
+    const from = p.get("due_from");
     return this.tasks.filter((t) => {
-      if (status === "active" && !["open", "in_progress"].includes(t.status))
-        return false;
-      if (status && status !== "active" && t.status !== status) return false;
-      if (priority && t.priority !== priority) return false;
+      if (statuses.length && !statuses.includes(t.status)) return false;
+      if (priorities.length && !priorities.includes(t.priority)) return false;
       if (assignee && (t.assignee as Json | null)?.uuid !== assignee)
         return false;
-      if (subject && (t.subject_organization as Json).uuid !== subject)
+      if (
+        subjectIds.length &&
+        !subjectIds.includes(String((t.subject_organization as Json).uuid))
+      )
         return false;
       const due = t.due_at ? new Date(String(t.due_at)).getTime() : null;
-      if ((before || after) && due === null) return false;
-      if (before && due! >= new Date(before).getTime()) return false;
-      if (after && due! < new Date(after).getTime()) return false;
+      if ((to || from) && due === null) return false;
+      if (to && due! > new Date(to).getTime()) return false;
+      if (from && due! < new Date(from).getTime()) return false;
       return true;
     });
   }

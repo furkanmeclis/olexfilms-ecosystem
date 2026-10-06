@@ -886,7 +886,7 @@ func (s *Service) viewContract(ctx context.Context, row db.ContractInstance) (mo
 		UUID: row.Uuid, ContractNo: row.ContractNo, SubjectType: row.SubjectType, SubjectID: row.SubjectID,
 		Kind: row.Kind, Locale: row.Locale, TemplateVersion: row.TemplateVersion,
 		OTPRequired: row.OtpRequired, SignatureRequired: row.SignatureRequired, Status: row.Status,
-		CreatedAt: row.CreatedAt.Time, UpdatedAt: row.UpdatedAt.Time,
+		PDFReady: row.PdfKey.Valid, CreatedAt: row.CreatedAt.Time, UpdatedAt: row.UpdatedAt.Time,
 	}
 	if row.RenderedHtml.Valid {
 		v.RenderedHTML = row.RenderedHtml.String

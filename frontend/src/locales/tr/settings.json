@@ -131,5 +131,7 @@
   "system.labor.errors.amount_number": "Geçerli bir tutar girin (en fazla 2 ondalık).",
   "system.labor.errors.amount_min": "Tutar negatif olamaz.",
   "system.labor.errors.percent_integer": "Tam sayı girin.",
-  "system.labor.errors.percent_range": "Yüzde 0 ile 100 arasında olmalıdır."
+  "system.labor.errors.percent_range": "Yüzde 0 ile 100 arasında olmalıdır.",
+  "system.keys.contracts_intake_required": "Araç kabul sözleşmesi zorunlu",
+  "system.keys.contracts_intake_required_hint": "Açıkken (ve araç kabul sözleşmesi modülü etkinse) hizmet, kabul sözleşmesi imzalanmadan işleme alınamaz veya tamamlanamaz."
 }

@@ -45,6 +45,7 @@ import {
   ServiceItemsTable,
   ServiceWarrantiesTable,
 } from "@/features/services/components/service-detail-tables";
+import { ServiceContractCard } from "@/features/services/components/service-contract-card";
 import { ServicePdfButton } from "@/features/services/components/service-pdf-button";
 import { WarrantyCertificateButton } from "@/features/warranty/components/warranty-certificate-button";
 import { panelCertificateClient } from "@/features/warranty/services/certificate.service";
@@ -455,6 +456,7 @@ export function ServiceDetailPage({
           </CardContent>
         </Card>
       ) : null}
+      {s.contract ? <ServiceContractCard contract={s.contract} /> : null}
       <Items service={s} />
       <Warranties service={s} slug={slug} />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">

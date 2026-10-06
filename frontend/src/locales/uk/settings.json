@@ -131,5 +131,7 @@
   "system.labor.errors.amount_number": "Введіть коректну суму (до 2 знаків після коми).",
   "system.labor.errors.amount_min": "Сума не може бути від'ємною.",
   "system.labor.errors.percent_integer": "Введіть ціле число.",
-  "system.labor.errors.percent_range": "Відсоток має бути від 0 до 100."
+  "system.labor.errors.percent_range": "Відсоток має бути від 0 до 100.",
+  "system.keys.contracts_intake_required": "Обов'язковий договір приймання автомобіля",
+  "system.keys.contracts_intake_required_hint": "Якщо увімкнено (і модуль договору приймання активний), послугу не можна взяти в роботу чи завершити, доки договір приймання не підписано."
 }
