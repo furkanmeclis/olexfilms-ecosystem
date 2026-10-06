@@ -145,8 +145,8 @@ func indexFilter(c Caller, p db.ListServicesInScopeParams) (string, bool) {
 	if p.VehicleID.Valid {
 		f.Eq("vehicle_id", p.VehicleID.Int64)
 	}
-	if p.Status.Valid {
-		f.EqString("status", p.Status.String)
+	if len(p.Statuses) > 0 {
+		f.InStrings("status", p.Statuses)
 	}
 	return f.String(), true
 }

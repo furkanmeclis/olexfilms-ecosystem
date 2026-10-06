@@ -54,33 +54,73 @@ SELECT * FROM warranty_claims
 WHERE warranty_id = sqlc.arg(warranty_id) AND brand_id = sqlc.arg(brand_id)
 ORDER BY created_at DESC, id DESC;
 
+-- TEC-377 (DT-BE-7): organization_uuids (multi-value), q also matches the
+-- claim number exactly (q_exact) and the service number; sort keys from
+-- warranty_claims usecase.ListSort (status by flow rank, decided_at NULLS
+-- LAST both ways).
 -- name: ListWarrantyClaimsInScope :many
 SELECT * FROM warranty_claims
-WHERE brand_id = sqlc.arg(brand_id)
-  AND (sqlc.arg(organization_ids)::bigint[] IS NULL OR organization_id = ANY(sqlc.arg(organization_ids)::bigint[]))
-  AND (sqlc.arg(statuses)::varchar[] IS NULL OR status = ANY(sqlc.arg(statuses)::varchar[]))
-  AND (sqlc.narg(warranty_id)::bigint IS NULL OR warranty_id = sqlc.narg(warranty_id)::bigint)
-  AND (sqlc.narg(service_id)::bigint IS NULL OR service_id = sqlc.narg(service_id)::bigint)
-  AND (sqlc.narg(vehicle_id)::bigint IS NULL OR vehicle_id = sqlc.narg(vehicle_id)::bigint)
-  AND (sqlc.narg(customer_user_id)::bigint IS NULL OR customer_user_id = sqlc.narg(customer_user_id)::bigint)
-  AND (sqlc.narg(created_from)::timestamptz IS NULL OR created_at >= sqlc.narg(created_from)::timestamptz)
-  AND (sqlc.narg(created_to)::timestamptz IS NULL OR created_at < sqlc.narg(created_to)::timestamptz)
-  AND (sqlc.narg(q)::text IS NULL OR description ILIKE '%' || sqlc.narg(q)::text || '%')
-ORDER BY created_at DESC, id DESC
+WHERE warranty_claims.brand_id = sqlc.arg(brand_id)
+  AND (sqlc.arg(organization_ids)::bigint[] IS NULL OR warranty_claims.organization_id = ANY(sqlc.arg(organization_ids)::bigint[]))
+  AND (sqlc.arg(statuses)::varchar[] IS NULL OR warranty_claims.status = ANY(sqlc.arg(statuses)::varchar[]))
+  AND (sqlc.narg(warranty_id)::bigint IS NULL OR warranty_claims.warranty_id = sqlc.narg(warranty_id)::bigint)
+  AND (sqlc.narg(service_id)::bigint IS NULL OR warranty_claims.service_id = sqlc.narg(service_id)::bigint)
+  AND (sqlc.narg(vehicle_id)::bigint IS NULL OR warranty_claims.vehicle_id = sqlc.narg(vehicle_id)::bigint)
+  AND (sqlc.narg(customer_user_id)::bigint IS NULL OR warranty_claims.customer_user_id = sqlc.narg(customer_user_id)::bigint)
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR warranty_claims.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_to)::timestamptz IS NULL OR warranty_claims.created_at < sqlc.narg(created_to)::timestamptz)
+  AND (
+    COALESCE(cardinality(sqlc.narg(organization_uuids)::uuid[]), 0) = 0
+    OR warranty_claims.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY (sqlc.narg(organization_uuids)::uuid[]))
+  )
+  AND (sqlc.narg(q)::text IS NULL
+       OR warranty_claims.description ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR warranty_claims.claim_no::text = sqlc.narg(q_exact)::text
+       OR EXISTS (SELECT 1 FROM services qs WHERE qs.id = warranty_claims.service_id
+                  AND qs.service_no ILIKE '%' || sqlc.narg(q)::text || '%'))
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'claim_no' THEN claim_no END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'claim_no' THEN claim_no END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'status' THEN
+    CASE status WHEN 'open' THEN 0 WHEN 'dealer_review' THEN 1 WHEN 'center_review' THEN 2 WHEN 'approved' THEN 3
+      WHEN 'rejected' THEN 4 WHEN 'reapplied' THEN 5 WHEN 'closed' THEN 6 ELSE 7 END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'status' THEN
+    CASE status WHEN 'open' THEN 0 WHEN 'dealer_review' THEN 1 WHEN 'center_review' THEN 2 WHEN 'approved' THEN 3
+      WHEN 'rejected' THEN 4 WHEN 'reapplied' THEN 5 WHEN 'closed' THEN 6 ELSE 7 END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'decided_at' THEN decided_at END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'decided_at' THEN decided_at END DESC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN id END DESC,
+  id ASC
 LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
 
 -- name: CountWarrantyClaimsInScope :one
 SELECT COUNT(*) FROM warranty_claims
-WHERE brand_id = sqlc.arg(brand_id)
-  AND (sqlc.arg(organization_ids)::bigint[] IS NULL OR organization_id = ANY(sqlc.arg(organization_ids)::bigint[]))
-  AND (sqlc.arg(statuses)::varchar[] IS NULL OR status = ANY(sqlc.arg(statuses)::varchar[]))
-  AND (sqlc.narg(warranty_id)::bigint IS NULL OR warranty_id = sqlc.narg(warranty_id)::bigint)
-  AND (sqlc.narg(service_id)::bigint IS NULL OR service_id = sqlc.narg(service_id)::bigint)
-  AND (sqlc.narg(vehicle_id)::bigint IS NULL OR vehicle_id = sqlc.narg(vehicle_id)::bigint)
-  AND (sqlc.narg(customer_user_id)::bigint IS NULL OR customer_user_id = sqlc.narg(customer_user_id)::bigint)
-  AND (sqlc.narg(created_from)::timestamptz IS NULL OR created_at >= sqlc.narg(created_from)::timestamptz)
-  AND (sqlc.narg(created_to)::timestamptz IS NULL OR created_at < sqlc.narg(created_to)::timestamptz)
-  AND (sqlc.narg(q)::text IS NULL OR description ILIKE '%' || sqlc.narg(q)::text || '%');
+WHERE warranty_claims.brand_id = sqlc.arg(brand_id)
+  AND (sqlc.arg(organization_ids)::bigint[] IS NULL OR warranty_claims.organization_id = ANY(sqlc.arg(organization_ids)::bigint[]))
+  AND (sqlc.arg(statuses)::varchar[] IS NULL OR warranty_claims.status = ANY(sqlc.arg(statuses)::varchar[]))
+  AND (sqlc.narg(warranty_id)::bigint IS NULL OR warranty_claims.warranty_id = sqlc.narg(warranty_id)::bigint)
+  AND (sqlc.narg(service_id)::bigint IS NULL OR warranty_claims.service_id = sqlc.narg(service_id)::bigint)
+  AND (sqlc.narg(vehicle_id)::bigint IS NULL OR warranty_claims.vehicle_id = sqlc.narg(vehicle_id)::bigint)
+  AND (sqlc.narg(customer_user_id)::bigint IS NULL OR warranty_claims.customer_user_id = sqlc.narg(customer_user_id)::bigint)
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR warranty_claims.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_to)::timestamptz IS NULL OR warranty_claims.created_at < sqlc.narg(created_to)::timestamptz)
+  AND (
+    COALESCE(cardinality(sqlc.narg(organization_uuids)::uuid[]), 0) = 0
+    OR warranty_claims.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY (sqlc.narg(organization_uuids)::uuid[]))
+  )
+  AND (sqlc.narg(q)::text IS NULL
+       OR warranty_claims.description ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR warranty_claims.claim_no::text = sqlc.narg(q_exact)::text
+       OR EXISTS (SELECT 1 FROM services qs WHERE qs.id = warranty_claims.service_id
+                  AND qs.service_no ILIKE '%' || sqlc.narg(q)::text || '%'));
 
 -- name: SetWarrantyClaimStatus :one
 -- Moves the claim from from_status to status (no row when the claim moved

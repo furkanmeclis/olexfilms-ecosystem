@@ -8,6 +8,11 @@
 -- public code, service number, product name or plate; q_plate is the
 -- normalized plate, geo.NormalizePlate), warranty_uuid (detail).
 -- Order: active first by the soonest end, then the rest by the latest end.
+-- TEC-377 (DT-BE-7): statuses / organization_uuids are multi-value filters,
+-- start_from / start_before and end_from / end_before date windows; the
+-- sort keys come from warranty usecase.ListSort (docs/list-contract.md).
+-- 'expiry' is the order above (descending reverses it), status sorts by
+-- rank (active, expired, void), product / organization by name.
 
 -- name: ListWarrantyRows :many
 SELECT w.id, w.uuid, w.public_code, w.organization_id, w.brand_id, w.status, w.item_kind,
@@ -32,7 +37,15 @@ WHERE w.brand_id = sqlc.arg(brand_id)::bigint
   AND (sqlc.narg(holder_user_id)::bigint IS NULL OR w.holder_user_id = sqlc.narg(holder_user_id)::bigint)
   AND (sqlc.narg(service_created_by)::bigint IS NULL OR s.created_by_user_id = sqlc.narg(service_created_by)::bigint)
   AND (sqlc.narg(warranty_uuid)::uuid IS NULL OR w.uuid = sqlc.narg(warranty_uuid)::uuid)
-  AND (sqlc.narg(status)::text IS NULL OR w.status = sqlc.narg(status)::text)
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR w.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (
+    COALESCE(cardinality(sqlc.narg(organization_uuids)::uuid[]), 0) = 0
+    OR w.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY (sqlc.narg(organization_uuids)::uuid[]))
+  )
+  AND (sqlc.narg(start_from)::timestamptz IS NULL OR w.start_at >= sqlc.narg(start_from)::timestamptz)
+  AND (sqlc.narg(start_before)::timestamptz IS NULL OR w.start_at < sqlc.narg(start_before)::timestamptz)
+  AND (sqlc.narg(end_from)::timestamptz IS NULL OR w.end_at >= sqlc.narg(end_from)::timestamptz)
+  AND (sqlc.narg(end_before)::timestamptz IS NULL OR w.end_at < sqlc.narg(end_before)::timestamptz)
   AND (sqlc.narg(product_id)::bigint IS NULL OR w.product_id = sqlc.narg(product_id)::bigint)
   AND (sqlc.narg(vehicle_id)::bigint IS NULL OR w.vehicle_id = sqlc.narg(vehicle_id)::bigint)
   AND (sqlc.narg(ends_after)::timestamptz IS NULL OR w.end_at > sqlc.narg(ends_after)::timestamptz)
@@ -45,7 +58,45 @@ WHERE w.brand_id = sqlc.arg(brand_id)::bigint
               upper(translate(COALESCE(s.plate, ''), ' -._·', '')) LIKE '%' || sqlc.narg(q_plate)::text || '%'
               OR COALESCE(v.plate_normalized, '') LIKE '%' || sqlc.narg(q_plate)::text || '%')))
   AND (sqlc.narg(uuids)::uuid[] IS NULL OR w.uuid = ANY (sqlc.narg(uuids)::uuid[]))
-ORDER BY CASE WHEN w.status = 'active' THEN w.end_at END ASC NULLS LAST, w.end_at DESC, w.id DESC
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'expiry' THEN
+    CASE WHEN w.status = 'active' THEN w.end_at END
+  END ASC NULLS LAST,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'expiry' THEN w.end_at END DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'expiry' THEN
+    CASE WHEN w.status = 'active' THEN w.end_at END
+  END DESC NULLS FIRST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'expiry' THEN w.end_at END ASC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'public_code' THEN w.public_code::text
+      WHEN 'service_no' THEN s.service_no::text
+      WHEN 'product' THEN p.name::text
+      WHEN 'organization' THEN o.name::text
+    END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'public_code' THEN w.public_code::text
+      WHEN 'service_no' THEN s.service_no::text
+      WHEN 'product' THEN p.name::text
+      WHEN 'organization' THEN o.name::text
+    END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'status' THEN
+    CASE w.status WHEN 'active' THEN 0 WHEN 'expired' THEN 1 WHEN 'void' THEN 2 ELSE 3 END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'status' THEN
+    CASE w.status WHEN 'active' THEN 0 WHEN 'expired' THEN 1 WHEN 'void' THEN 2 ELSE 3 END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'end_at' THEN w.end_at WHEN 'start_at' THEN w.start_at WHEN 'created_at' THEN w.created_at END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'end_at' THEN w.end_at WHEN 'start_at' THEN w.start_at WHEN 'created_at' THEN w.created_at END
+  END DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN w.id END DESC,
+  w.id ASC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
 
 -- name: CountWarrantyRows :one
@@ -59,7 +110,15 @@ WHERE w.brand_id = sqlc.arg(brand_id)::bigint
   AND (sqlc.narg(holder_user_id)::bigint IS NULL OR w.holder_user_id = sqlc.narg(holder_user_id)::bigint)
   AND (sqlc.narg(service_created_by)::bigint IS NULL OR s.created_by_user_id = sqlc.narg(service_created_by)::bigint)
   AND (sqlc.narg(warranty_uuid)::uuid IS NULL OR w.uuid = sqlc.narg(warranty_uuid)::uuid)
-  AND (sqlc.narg(status)::text IS NULL OR w.status = sqlc.narg(status)::text)
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR w.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (
+    COALESCE(cardinality(sqlc.narg(organization_uuids)::uuid[]), 0) = 0
+    OR w.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY (sqlc.narg(organization_uuids)::uuid[]))
+  )
+  AND (sqlc.narg(start_from)::timestamptz IS NULL OR w.start_at >= sqlc.narg(start_from)::timestamptz)
+  AND (sqlc.narg(start_before)::timestamptz IS NULL OR w.start_at < sqlc.narg(start_before)::timestamptz)
+  AND (sqlc.narg(end_from)::timestamptz IS NULL OR w.end_at >= sqlc.narg(end_from)::timestamptz)
+  AND (sqlc.narg(end_before)::timestamptz IS NULL OR w.end_at < sqlc.narg(end_before)::timestamptz)
   AND (sqlc.narg(product_id)::bigint IS NULL OR w.product_id = sqlc.narg(product_id)::bigint)
   AND (sqlc.narg(vehicle_id)::bigint IS NULL OR w.vehicle_id = sqlc.narg(vehicle_id)::bigint)
   AND (sqlc.narg(ends_after)::timestamptz IS NULL OR w.end_at > sqlc.narg(ends_after)::timestamptz)

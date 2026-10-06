@@ -266,7 +266,7 @@ func (s *Service) GetVehicle(ctx context.Context, c Caller, id uuid.UUID) (Vehic
 	}
 	svcRows, err := s.q.ListPortalServices(ctx, db.ListPortalServicesParams{
 		UserID: c.UserID, BrandID: c.BrandID, VehicleID: pgtype.Int8{Int64: v.ID, Valid: true},
-		RowLimit: MaxVehicleServices,
+		SortKey: "created_at", SortDesc: true, RowLimit: MaxVehicleServices,
 	})
 	if err != nil {
 		return VehicleDetailView{}, fmt.Errorf("portal: vehicle services: %w", err)
@@ -305,18 +305,29 @@ func (s *Service) GetVehicle(ctx context.Context, c Caller, id uuid.UUID) (Vehic
 }
 
 // ListServices returns one page of the user's services across every
-// organization of the brand.
-func (s *Service) ListServices(ctx context.Context, c Caller, p Page) ([]ServiceView, int64, error) {
+// organization of the brand (TEC-377: filters, q and sort of
+// ServiceListFilter).
+func (s *Service) ListServices(ctx context.Context, c Caller, f ServiceListFilter) ([]ServiceView, int64, error) {
 	if !c.valid() {
 		return []ServiceView{}, 0, nil
 	}
+	sortKey, sortDesc := f.sortArgs()
+	var q pgtype.Text
+	if v := strings.TrimSpace(f.Q); v != "" {
+		q = pgtype.Text{String: escapeLike(v), Valid: true}
+	}
 	rows, err := s.q.ListPortalServices(ctx, db.ListPortalServicesParams{
-		UserID: c.UserID, BrandID: c.BrandID, RowLimit: p.Limit, RowOffset: p.Offset,
+		UserID: c.UserID, BrandID: c.BrandID, Statuses: f.Statuses, OrganizationUuids: f.OrganizationUUIDs,
+		CreatedFrom: optTS(f.CreatedFrom), CreatedBefore: optTS(f.CreatedBefore), Q: q,
+		SortKey: sortKey, SortDesc: sortDesc, RowLimit: f.Limit, RowOffset: f.Offset,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("portal: services: %w", err)
 	}
-	total, err := s.q.CountPortalServices(ctx, db.CountPortalServicesParams{UserID: c.UserID, BrandID: c.BrandID})
+	total, err := s.q.CountPortalServices(ctx, db.CountPortalServicesParams{
+		UserID: c.UserID, BrandID: c.BrandID, Statuses: f.Statuses, OrganizationUuids: f.OrganizationUUIDs,
+		CreatedFrom: optTS(f.CreatedFrom), CreatedBefore: optTS(f.CreatedBefore), Q: q,
+	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("portal: count services: %w", err)
 	}
