@@ -131,5 +131,7 @@
   "system.labor.errors.amount_number": "Saisissez un montant valide (2 décimales max.).",
   "system.labor.errors.amount_min": "Le montant ne peut pas être négatif.",
   "system.labor.errors.percent_integer": "Saisissez un nombre entier.",
-  "system.labor.errors.percent_range": "Le pourcentage doit être compris entre 0 et 100."
+  "system.labor.errors.percent_range": "Le pourcentage doit être compris entre 0 et 100.",
+  "system.keys.contracts_intake_required": "Contrat de réception obligatoire",
+  "system.keys.contracts_intake_required_hint": "Lorsque cette option est activée (et que le module de contrat de réception est actif), une prestation ne peut pas passer en traitement ni être terminée tant que son contrat de réception n'est pas signé."
 }

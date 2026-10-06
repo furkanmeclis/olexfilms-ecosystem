@@ -259,7 +259,8 @@ JOIN car_models cm ON cm.id = s.car_model_id
 WHERE s.id = sqlc.arg(id);
 
 -- name: GetServiceContractSummary :one
-SELECT ci.uuid, ci.status, ci.contract_no
+SELECT ci.uuid, ci.status, ci.contract_no,
+       (ci.pdf_key IS NOT NULL)::boolean AS pdf_ready
 FROM services s
 JOIN contract_instances ci ON ci.id = s.contract_id
 WHERE s.id = sqlc.arg(id);

@@ -131,5 +131,7 @@
   "system.labor.errors.amount_number": "Introduzca un importe válido (hasta 2 decimales).",
   "system.labor.errors.amount_min": "El importe no puede ser negativo.",
   "system.labor.errors.percent_integer": "Introduzca un número entero.",
-  "system.labor.errors.percent_range": "El porcentaje debe estar entre 0 y 100."
+  "system.labor.errors.percent_range": "El porcentaje debe estar entre 0 y 100.",
+  "system.keys.contracts_intake_required": "Contrato de recepción obligatorio",
+  "system.keys.contracts_intake_required_hint": "Si está activado (y el módulo de contrato de recepción está habilitado), un servicio no puede pasar a proceso ni completarse hasta que su contrato de recepción esté firmado."
 }

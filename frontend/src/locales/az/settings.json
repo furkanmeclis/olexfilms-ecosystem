@@ -131,5 +131,7 @@
   "system.labor.errors.amount_number": "Düzgün məbləğ daxil edin (ən çox 2 onluq).",
   "system.labor.errors.amount_min": "Məbləğ mənfi ola bilməz.",
   "system.labor.errors.percent_integer": "Tam ədəd daxil edin.",
-  "system.labor.errors.percent_range": "Faiz 0 ilə 100 arasında olmalıdır."
+  "system.labor.errors.percent_range": "Faiz 0 ilə 100 arasında olmalıdır.",
+  "system.keys.contracts_intake_required": "Avtomobil qəbulu müqaviləsi məcburidir",
+  "system.keys.contracts_intake_required_hint": "Aktiv olduqda (və avtomobil qəbulu müqaviləsi modulu aktivdirsə) qəbul müqaviləsi imzalanmadan xidmət emala götürülə və ya tamamlana bilməz."
 }

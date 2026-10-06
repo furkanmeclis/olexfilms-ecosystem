@@ -131,5 +131,7 @@
   "system.labor.errors.amount_number": "Inserisci un importo valido (massimo 2 decimali).",
   "system.labor.errors.amount_min": "L'importo non può essere negativo.",
   "system.labor.errors.percent_integer": "Inserisci un numero intero.",
-  "system.labor.errors.percent_range": "La percentuale deve essere tra 0 e 100."
+  "system.labor.errors.percent_range": "La percentuale deve essere tra 0 e 100.",
+  "system.keys.contracts_intake_required": "Contratto di accettazione obbligatorio",
+  "system.keys.contracts_intake_required_hint": "Se attivo (e il modulo del contratto di accettazione è abilitato), un servizio non può passare in lavorazione né essere completato finché il contratto di accettazione non è firmato."
 }

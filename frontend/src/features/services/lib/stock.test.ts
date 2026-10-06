@@ -136,6 +136,9 @@ describe("stock rules (TEC-182)", () => {
     expect(stockErrorKey("SERVICE_UNIT_NOT_AVAILABLE")).toBe(
       "services.stock.errors.SERVICE_UNIT_NOT_AVAILABLE",
     );
+    expect(stockErrorKey("CONTRACT_REQUIRED")).toBe(
+      "services.stock.errors.CONTRACT_REQUIRED",
+    );
     expect(stockErrorKey("HTTP_500")).toBe("services.stock.errors.generic");
     expect(stockErrorKey(undefined)).toBe("services.stock.errors.generic");
   });

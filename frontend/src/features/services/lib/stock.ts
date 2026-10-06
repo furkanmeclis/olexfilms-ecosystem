@@ -75,6 +75,8 @@ export const STOCK_ERROR_CODES = [
   "SERVICE_NOT_EDITABLE",
   "SERVICE_INVALID_TRANSITION",
   "ORGANIZATION_READ_ONLY",
+  // TEC-291: completion needs the executed intake contract.
+  "CONTRACT_REQUIRED",
 ] as const;
 
 export function stockErrorKey(code: string | undefined): string {

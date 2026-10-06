@@ -88,10 +88,12 @@ type Contract struct {
 	ExecutedAt        *time.Time `json:"executed_at,omitempty"`
 	VoidedAt          *time.Time `json:"voided_at,omitempty"`
 	VoidReason        string     `json:"void_reason,omitempty"`
-	Signers           []Signer   `json:"signers"`
-	Media             []Media    `json:"media"`
-	CreatedAt         time.Time  `json:"created_at"`
-	UpdatedAt         time.Time  `json:"updated_at"`
+	// PDFReady is true once the executed PDF is stored (GET .../pdf answers 200).
+	PDFReady  bool      `json:"pdf_ready"`
+	Signers   []Signer  `json:"signers"`
+	Media     []Media   `json:"media"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // Signer is one fixed signing slot.
