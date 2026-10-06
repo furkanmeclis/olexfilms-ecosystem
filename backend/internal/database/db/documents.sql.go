@@ -15,19 +15,47 @@ import (
 const countDocumentTemplates = `-- name: CountDocumentTemplates :one
 SELECT COUNT(*)::bigint
 FROM document_templates t
-WHERE ($1::text IS NULL OR t.kind = $1::text)
-  AND ($2::text IS NULL OR t.language = $2::text)
+WHERE (
+    COALESCE(cardinality($1::text[]), 0) = 0
+    OR t.kind = ANY ($1::text[])
+  )
+  AND (
+    COALESCE(cardinality($2::text[]), 0) = 0
+    OR t.language = ANY ($2::text[])
+  )
   AND (NOT $3::bool OR t.is_active OR t.published_at IS NULL)
+  -- Derived status: draft (unpublished), active, superseded (published, not active).
+  AND (
+    COALESCE(cardinality($4::text[]), 0) = 0
+    OR (CASE WHEN t.published_at IS NULL THEN 'draft' WHEN t.is_active THEN 'active' ELSE 'superseded' END)
+      = ANY ($4::text[])
+  )
+  -- Brand: platform_default_only = brand NULL; brand_id = that brand's override.
+  AND (NOT $5::bool OR t.brand_id IS NULL)
+  AND ($6::bigint IS NULL OR t.brand_id = $6)
+  AND ($7::text IS NULL OR t.name ILIKE '%' || $7 || '%')
 `
 
 type CountDocumentTemplatesParams struct {
-	Kind        pgtype.Text `json:"kind"`
-	Language    pgtype.Text `json:"language"`
-	CurrentOnly bool        `json:"current_only"`
+	Kinds               []string    `json:"kinds"`
+	Languages           []string    `json:"languages"`
+	CurrentOnly         bool        `json:"current_only"`
+	Statuses            []string    `json:"statuses"`
+	PlatformDefaultOnly bool        `json:"platform_default_only"`
+	BrandID             pgtype.Int8 `json:"brand_id"`
+	Q                   pgtype.Text `json:"q"`
 }
 
 func (q *Queries) CountDocumentTemplates(ctx context.Context, arg CountDocumentTemplatesParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countDocumentTemplates, arg.Kind, arg.Language, arg.CurrentOnly)
+	row := q.db.QueryRow(ctx, countDocumentTemplates,
+		arg.Kinds,
+		arg.Languages,
+		arg.CurrentOnly,
+		arg.Statuses,
+		arg.PlatformDefaultOnly,
+		arg.BrandID,
+		arg.Q,
+	)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -368,19 +396,62 @@ const listDocumentTemplates = `-- name: ListDocumentTemplates :many
 SELECT t.id, t.uuid, t.kind, t.brand_id, t.language, t.name, t.version, t.is_active, t.lexical_json, t.html, t.variables, t.content_hash, t.created_by, t.published_at, t.created_at, t.updated_at, b.slug AS brand_slug
 FROM document_templates t
 LEFT JOIN brands b ON b.id = t.brand_id
-WHERE ($1::text IS NULL OR t.kind = $1::text)
-  AND ($2::text IS NULL OR t.language = $2::text)
+WHERE (
+    COALESCE(cardinality($1::text[]), 0) = 0
+    OR t.kind = ANY ($1::text[])
+  )
+  AND (
+    COALESCE(cardinality($2::text[]), 0) = 0
+    OR t.language = ANY ($2::text[])
+  )
   AND (NOT $3::bool OR t.is_active OR t.published_at IS NULL)
-ORDER BY t.kind, t.brand_id NULLS FIRST, t.language, t.version DESC
-LIMIT $5 OFFSET $4
+  -- Derived status: draft (unpublished), active, superseded (published, not active).
+  AND (
+    COALESCE(cardinality($4::text[]), 0) = 0
+    OR (CASE WHEN t.published_at IS NULL THEN 'draft' WHEN t.is_active THEN 'active' ELSE 'superseded' END)
+      = ANY ($4::text[])
+  )
+  -- Brand: platform_default_only = brand NULL; brand_id = that brand's override.
+  AND (NOT $5::bool OR t.brand_id IS NULL)
+  AND ($6::bigint IS NULL OR t.brand_id = $6)
+  AND ($7::text IS NULL OR t.name ILIKE '%' || $7 || '%')
+ORDER BY
+  CASE WHEN NOT $8::bool THEN
+    CASE $9::text
+      WHEN 'kind' THEN t.kind::text WHEN 'language' THEN t.language::text WHEN 'name' THEN t.name::text
+    END
+  END ASC,
+  CASE WHEN $8::bool THEN
+    CASE $9::text
+      WHEN 'kind' THEN t.kind::text WHEN 'language' THEN t.language::text WHEN 'name' THEN t.name::text
+    END
+  END DESC,
+  CASE WHEN NOT $8::bool AND $9::text = 'version' THEN t.version END ASC,
+  CASE WHEN $8::bool AND $9::text = 'version' THEN t.version END DESC,
+  CASE WHEN NOT $8::bool THEN
+    CASE $9::text WHEN 'updated_at' THEN t.updated_at WHEN 'created_at' THEN t.created_at END
+  END ASC,
+  CASE WHEN $8::bool THEN
+    CASE $9::text WHEN 'updated_at' THEN t.updated_at WHEN 'created_at' THEN t.created_at END
+  END DESC,
+  t.kind, t.brand_id NULLS FIRST, t.language, t.version DESC,
+  CASE WHEN $8::bool THEN t.id END DESC,
+  t.id ASC
+LIMIT $11 OFFSET $10
 `
 
 type ListDocumentTemplatesParams struct {
-	Kind        pgtype.Text `json:"kind"`
-	Language    pgtype.Text `json:"language"`
-	CurrentOnly bool        `json:"current_only"`
-	OffsetCount int32       `json:"offset_count"`
-	LimitCount  int32       `json:"limit_count"`
+	Kinds               []string    `json:"kinds"`
+	Languages           []string    `json:"languages"`
+	CurrentOnly         bool        `json:"current_only"`
+	Statuses            []string    `json:"statuses"`
+	PlatformDefaultOnly bool        `json:"platform_default_only"`
+	BrandID             pgtype.Int8 `json:"brand_id"`
+	Q                   pgtype.Text `json:"q"`
+	SortDesc            bool        `json:"sort_desc"`
+	SortKey             string      `json:"sort_key"`
+	OffsetCount         int32       `json:"offset_count"`
+	LimitCount          int32       `json:"limit_count"`
 }
 
 type ListDocumentTemplatesRow struct {
@@ -403,11 +474,19 @@ type ListDocumentTemplatesRow struct {
 	BrandSlug   pgtype.Text        `json:"brand_slug"`
 }
 
+// Sort: docs/list-contract.md, keys from documents handler templatesSortSpec.
+// Secondary order keeps the catalog grouping (kind, brand, language, version DESC).
 func (q *Queries) ListDocumentTemplates(ctx context.Context, arg ListDocumentTemplatesParams) ([]ListDocumentTemplatesRow, error) {
 	rows, err := q.db.Query(ctx, listDocumentTemplates,
-		arg.Kind,
-		arg.Language,
+		arg.Kinds,
+		arg.Languages,
 		arg.CurrentOnly,
+		arg.Statuses,
+		arg.PlatformDefaultOnly,
+		arg.BrandID,
+		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.OffsetCount,
 		arg.LimitCount,
 	)

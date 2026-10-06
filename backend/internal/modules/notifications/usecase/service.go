@@ -407,7 +407,8 @@ func (s *Service) ReclaimStuck(ctx context.Context, staleMinutes int32) (int, er
 
 // ListInbox returns the caller's notifications page.
 func (s *Service) ListInbox(ctx context.Context, userID int64, q apiquery.Query, status, channel string, unread *bool) (apiquery.Page[model.Notification], error) {
-	if err := apiquery.ValidateSort(q.Sort, apiquery.NotificationsSort); err != nil {
+	sort, err := apiquery.ResolveSort(q.Sort, apiquery.NotificationsSortSpec)
+	if err != nil {
 		return apiquery.Page[model.Notification]{}, err
 	}
 	params := db.ListNotificationsForUserParams{
@@ -416,6 +417,8 @@ func (s *Service) ListInbox(ctx context.Context, userID int64, q apiquery.Query,
 		Channel:     optionalText(channel),
 		Unread:      optionalBool(unread),
 		Q:           optionalText(q.Q),
+		SortKey:     sort.Key,
+		SortDesc:    sort.Desc,
 		LimitCount:  q.Limit,
 		OffsetCount: q.Offset,
 	}
@@ -508,28 +511,38 @@ func (s *Service) MarkAllRead(ctx context.Context, userID int64) error {
 	return err
 }
 
+// PlatformFilter narrows ListPlatform (TEC-367). Nil slices do not filter.
+type PlatformFilter struct {
+	Statuses   []string
+	Channels   []string
+	Priorities []string
+	Created    apiquery.TimeRange
+	Scope      string
+	UserUUID   string
+}
+
 // ListPlatform returns notifications for platform operators.
 // Without platform.notifications.read_all the page is always the caller's own rows.
 func (s *Service) ListPlatform(
 	ctx context.Context,
 	actor authctx.Principal,
 	q apiquery.Query,
-	statuses []string,
-	channel, scope, userUUID string,
+	f PlatformFilter,
 ) (apiquery.Page[model.Notification], error) {
 	sort, err := apiquery.ResolveSort(q.Sort, apiquery.NotificationsSortSpec)
 	if err != nil {
 		return apiquery.Page[model.Notification]{}, err
 	}
-	audience, err := resolvePlatformAudience(actor, scope, userUUID, func(id uuid.UUID) (int64, error) {
+	audience, err := resolvePlatformAudience(actor, f.Scope, f.UserUUID, func(id uuid.UUID) (int64, error) {
 		return s.ResolveUserID(ctx, id)
 	})
 	if err != nil {
 		return apiquery.Page[model.Notification]{}, err
 	}
 	params := db.ListPlatformNotificationsParams{
-		Statuses: statuses, Channel: optionalText(channel), Q: optionalText(q.Q),
-		UserID: audience.UserID, SortKey: sort.Key, SortDesc: sort.Desc,
+		Statuses: f.Statuses, Channels: f.Channels, Priorities: f.Priorities,
+		CreatedFrom: tsArg(f.Created.From), CreatedBefore: tsArg(f.Created.Before),
+		Q: optionalText(q.Q), UserID: audience.UserID, SortKey: sort.Key, SortDesc: sort.Desc,
 		LimitCount: q.Limit, OffsetCount: q.Offset,
 	}
 	rows, err := s.q.ListPlatformNotifications(ctx, params)
@@ -537,7 +550,8 @@ func (s *Service) ListPlatform(
 		return apiquery.Page[model.Notification]{}, err
 	}
 	total, err := s.q.CountPlatformNotifications(ctx, db.CountPlatformNotificationsParams{
-		Statuses: params.Statuses, Channel: params.Channel, Q: params.Q, UserID: params.UserID,
+		Statuses: params.Statuses, Channels: params.Channels, Priorities: params.Priorities,
+		CreatedFrom: params.CreatedFrom, CreatedBefore: params.CreatedBefore, Q: params.Q, UserID: params.UserID,
 	})
 	if err != nil {
 		return apiquery.Page[model.Notification]{}, err
@@ -632,6 +646,13 @@ func optionalText(v string) pgtype.Text {
 		return pgtype.Text{}
 	}
 	return pgtype.Text{String: v, Valid: true}
+}
+
+func tsArg(t *time.Time) pgtype.Timestamptz {
+	if t == nil {
+		return pgtype.Timestamptz{}
+	}
+	return pgtype.Timestamptz{Time: *t, Valid: true}
 }
 
 func optionalBool(v *bool) pgtype.Bool {

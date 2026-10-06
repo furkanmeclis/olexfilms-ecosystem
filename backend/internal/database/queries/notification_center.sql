@@ -138,25 +138,67 @@ SET status = sqlc.arg(status),
 WHERE id = sqlc.arg(id);
 
 -- name: ListNotificationDeliveries :many
+-- Sort: docs/list-contract.md, keys from usecase.DeliveriesSortSpec.
 SELECT d.*, u.uuid AS user_uuid, COALESCE(u.email, '')::text AS user_email
 FROM notification_deliveries d
 JOIN users u ON u.id = d.user_id
-WHERE (sqlc.narg(status)::text IS NULL OR d.status = sqlc.narg(status))
-  AND (sqlc.narg(channel)::text IS NULL OR d.channel = sqlc.narg(channel))
+WHERE (
+    COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0
+    OR d.status = ANY (sqlc.narg(statuses)::text[])
+  )
+  AND (
+    COALESCE(cardinality(sqlc.narg(channels)::text[]), 0) = 0
+    OR d.channel = ANY (sqlc.narg(channels)::text[])
+  )
   AND (sqlc.narg(event_code)::text IS NULL OR d.event_code = sqlc.narg(event_code))
   AND (sqlc.narg(event_id)::uuid IS NULL OR d.event_id = sqlc.narg(event_id))
   AND (sqlc.narg(user_id)::bigint IS NULL OR d.user_id = sqlc.narg(user_id))
-ORDER BY d.created_at DESC, d.id DESC
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR d.created_at >= sqlc.narg(created_from))
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR d.created_at < sqlc.narg(created_before))
+  AND (
+    sqlc.narg(q)::text IS NULL
+    OR COALESCE(u.email, '') ILIKE '%' || sqlc.narg(q) || '%'
+    OR d.event_code ILIKE '%' || sqlc.narg(q) || '%'
+  )
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'status' THEN d.status::text WHEN 'channel' THEN d.channel::text WHEN 'event_code' THEN d.event_code::text
+    END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'status' THEN d.status::text WHEN 'channel' THEN d.channel::text WHEN 'event_code' THEN d.event_code::text
+    END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'created_at' THEN d.created_at END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'created_at' THEN d.created_at END DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN d.id END DESC,
+  d.id ASC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
 -- name: CountNotificationDeliveries :one
 SELECT COUNT(*)::bigint
 FROM notification_deliveries d
-WHERE (sqlc.narg(status)::text IS NULL OR d.status = sqlc.narg(status))
-  AND (sqlc.narg(channel)::text IS NULL OR d.channel = sqlc.narg(channel))
+JOIN users u ON u.id = d.user_id
+WHERE (
+    COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0
+    OR d.status = ANY (sqlc.narg(statuses)::text[])
+  )
+  AND (
+    COALESCE(cardinality(sqlc.narg(channels)::text[]), 0) = 0
+    OR d.channel = ANY (sqlc.narg(channels)::text[])
+  )
   AND (sqlc.narg(event_code)::text IS NULL OR d.event_code = sqlc.narg(event_code))
   AND (sqlc.narg(event_id)::uuid IS NULL OR d.event_id = sqlc.narg(event_id))
-  AND (sqlc.narg(user_id)::bigint IS NULL OR d.user_id = sqlc.narg(user_id));
+  AND (sqlc.narg(user_id)::bigint IS NULL OR d.user_id = sqlc.narg(user_id))
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR d.created_at >= sqlc.narg(created_from))
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR d.created_at < sqlc.narg(created_before))
+  AND (
+    sqlc.narg(q)::text IS NULL
+    OR COALESCE(u.email, '') ILIKE '%' || sqlc.narg(q) || '%'
+    OR d.event_code ILIKE '%' || sqlc.narg(q) || '%'
+  );
 
 -- name: PurgeNotificationDeliveriesBefore :execrows
 DELETE FROM notification_deliveries

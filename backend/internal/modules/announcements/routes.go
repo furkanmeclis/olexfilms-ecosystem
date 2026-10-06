@@ -26,6 +26,7 @@ func RegisterRoutes(mux *http.ServeMux, h *handler.Handler, tokens *jwt.Manager,
 	mux.Handle("GET /v1/announcements", read(h.List))
 	mux.Handle("POST /v1/announcements", write(h.Create))
 	mux.Handle("GET /v1/announcements/unread-count", read(h.UnreadCount))
+	mux.Handle("GET /v1/announcements/manage", write(h.AdminList))
 	mux.Handle("GET /v1/announcements/{uuid}", read(h.Get))
 	mux.Handle("PATCH /v1/announcements/{uuid}", write(h.Update))
 	mux.Handle("PUT /v1/announcements/{uuid}/locales/{locale}", write(h.UpsertLocale))

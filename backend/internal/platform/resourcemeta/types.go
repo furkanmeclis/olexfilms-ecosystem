@@ -23,6 +23,8 @@ type FilterVariant string
 const (
 	FilterVariantText    FilterVariant = "text"
 	FilterVariantFaceted FilterVariant = "faceted"
+	// FilterVariantDateRange: <key prefix>_from / _to (docs/list-contract.md).
+	FilterVariantDateRange FilterVariant = "date_range"
 )
 
 // Capabilities declares which list/resource operations the API actually supports.
@@ -166,6 +168,26 @@ func PlatformNotifications() ResourceMeta {
 	m := Notifications()
 	m.Resource = "platform.notifications"
 	m.Capabilities.Export = true
+	// TEC-367: the platform list also filters by priority and created_at
+	// (created_from / created_to); unread is inbox only.
+	m.FilterableFields = []string{"status", "channel", "priority", "created_at"}
+	cols := make([]Column, len(m.Columns))
+	copy(cols, m.Columns)
+	for i := range cols {
+		switch cols[i].Key {
+		case "priority":
+			cols[i].Filterable, cols[i].FilterVariant = true, FilterVariantFaceted
+		case "created_at":
+			cols[i].Filterable, cols[i].FilterVariant = true, FilterVariantDateRange
+		}
+	}
+	m.Columns = cols
+	m.Filters = []Filter{
+		{Key: "status", LabelKey: "notifications.status", Variant: FilterVariantFaceted},
+		{Key: "channel", LabelKey: "notifications.channel", Variant: FilterVariantFaceted},
+		{Key: "priority", LabelKey: "notifications.priority", Variant: FilterVariantFaceted},
+		{Key: "created_at", LabelKey: "notifications.created_at", Variant: FilterVariantDateRange},
+	}
 	return m
 }
 

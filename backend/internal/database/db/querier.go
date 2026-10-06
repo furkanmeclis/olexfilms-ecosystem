@@ -147,6 +147,8 @@ type Querier interface {
 	CountEODReports(ctx context.Context, arg CountEODReportsParams) (int64, error)
 	CountExportJobsForActor(ctx context.Context, actorID int64) (int64, error)
 	CountExportJobsForOrganization(ctx context.Context, organizationID pgtype.Int8) (int64, error)
+	CountGlorianOutbounds(ctx context.Context, arg CountGlorianOutboundsParams) (int64, error)
+	CountGlorianSyncRuns(ctx context.Context, arg CountGlorianSyncRunsParams) (int64, error)
 	CountImportJobsForActor(ctx context.Context, actorID int64) (int64, error)
 	CountImportJobsForOrganization(ctx context.Context, organizationID int64) (int64, error)
 	CountLeadsByOrganizations(ctx context.Context, arg CountLeadsByOrganizationsParams) (int64, error)
@@ -1145,8 +1147,9 @@ type Querier interface {
 	ListAnnouncementReadReport(ctx context.Context, arg ListAnnouncementReadReportParams) ([]ListAnnouncementReadReportRow, error)
 	ListAnnouncementReads(ctx context.Context, arg ListAnnouncementReadsParams) ([]AnnouncementRead, error)
 	ListAnnouncementTargetUserIDs(ctx context.Context, announcementID int64) ([]int64, error)
-	// Author view: announcements written by the given organizations (the
-	// caller's resolved write scope), newest first.
+	// Author view (TEC-367): announcements written by the given organizations
+	// (the caller's write scope) in every status. Sort keys from
+	// usecase.AdminSortSpec (docs/list-contract.md); default -created_at.
 	ListAnnouncementsByOrganizations(ctx context.Context, arg ListAnnouncementsByOrganizationsParams) ([]Announcement, error)
 	ListAppLogSources(ctx context.Context) ([]string, error)
 	// Sort: docs/list-contract.md, keys from apiquery.LogsSortSpec.
@@ -1234,6 +1237,8 @@ type Querier interface {
 	ListDistributorPriceOverrides(ctx context.Context, arg ListDistributorPriceOverridesParams) ([]ListDistributorPriceOverridesRow, error)
 	ListDistrictsByProvince(ctx context.Context, provinceID int64) ([]District, error)
 	ListDocumentTemplateVersions(ctx context.Context, arg ListDocumentTemplateVersionsParams) ([]DocumentTemplate, error)
+	// Sort: docs/list-contract.md, keys from documents handler templatesSortSpec.
+	// Secondary order keeps the catalog grouping (kind, brand, language, version DESC).
 	ListDocumentTemplates(ctx context.Context, arg ListDocumentTemplatesParams) ([]ListDocumentTemplatesRow, error)
 	ListDueQuoteReminders(ctx context.Context, arg ListDueQuoteRemindersParams) ([]QuoteReminder, error)
 	// The organizations the cron reports on: active centers and distributors
@@ -1272,8 +1277,8 @@ type Querier interface {
 	// a connection, in line order. Olex and local products have no connection
 	// and never appear.
 	ListGlorianOrderUnits(ctx context.Context, orderID int64) ([]ListGlorianOrderUnitsRow, error)
-	// Order outbounds of a connection in one state with their order, oldest
-	// first (the replay order).
+	// Order outbounds of a connection with their order (TEC-367 list contract,
+	// keys from usecase.OutboundsSortSpec; default created_at, the replay order).
 	ListGlorianOutbounds(ctx context.Context, arg ListGlorianOutboundsParams) ([]ListGlorianOutboundsRow, error)
 	// Active dealers of the connection with the buyer's phone: the order's
 	// customer link (exactly one match links, none or several hold).
@@ -1291,8 +1296,8 @@ type Querier interface {
 	// TEC-273 (F2-02h): Glorian admin API. Every read is limited to one
 	// connection; the handler resolves the connection of the glorian brand
 	// first.
-	// Sync runs of a connection, newest first, optionally filtered by kind
-	// and status.
+	// Sync runs of a connection (TEC-367 list contract, keys from
+	// usecase.SyncRunsSortSpec; default -started_at).
 	ListGlorianSyncRuns(ctx context.Context, arg ListGlorianSyncRunsParams) ([]IntegrationSyncRun, error)
 	// Grants of global roles (user_roles / JWT roles claim).
 	ListGrantsByRoleSlugs(ctx context.Context, roleSlugs []string) ([]ListGrantsByRoleSlugsRow, error)
@@ -1367,9 +1372,11 @@ type Querier interface {
 	// haversine great-circle distance in km (mean Earth radius 6371.0088).
 	ListNearbyDealers(ctx context.Context, arg ListNearbyDealersParams) ([]ListNearbyDealersRow, error)
 	ListNotificationChannelSettings(ctx context.Context) ([]NotificationChannelSetting, error)
+	// Sort: docs/list-contract.md, keys from usecase.DeliveriesSortSpec.
 	ListNotificationDeliveries(ctx context.Context, arg ListNotificationDeliveriesParams) ([]ListNotificationDeliveriesRow, error)
 	ListNotificationPreferenceRows(ctx context.Context, userID int64) ([]NotificationPreference, error)
 	ListNotificationTemplates(ctx context.Context, arg ListNotificationTemplatesParams) ([]NotificationTemplate, error)
+	// Sort: docs/list-contract.md, keys from apiquery.NotificationsSortSpec.
 	ListNotificationsForUser(ctx context.Context, arg ListNotificationsForUserParams) ([]Notification, error)
 	ListOAuthAccountsByUserID(ctx context.Context, userID int64) ([]ListOAuthAccountsByUserIDRow, error)
 	ListOAuthAccountsForUserIDs(ctx context.Context, userIds []int64) ([]ListOAuthAccountsForUserIDsRow, error)
@@ -2267,6 +2274,8 @@ type Querier interface {
 	// Organization Google Business link (decision 7).
 	SetOrganizationGoogleBusinessURL(ctx context.Context, arg SetOrganizationGoogleBusinessURLParams) (Organization, error)
 	SetOrganizationLogo(ctx context.Context, arg SetOrganizationLogoParams) (Organization, error)
+	// TEC-367: batch reorder (PUT /v1/platform/plate-formats/order).
+	SetPlateFormatSortOrder(ctx context.Context, arg SetPlateFormatSortOrderParams) error
 	// TEC-212: bulk engine adapter (one product, logged + undoable).
 	SetProductActiveByUUID(ctx context.Context, arg SetProductActiveByUUIDParams) (Product, error)
 	SetProductSaleFinanceEntry(ctx context.Context, arg SetProductSaleFinanceEntryParams) (ProductSale, error)

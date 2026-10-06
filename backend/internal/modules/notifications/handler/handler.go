@@ -233,21 +233,27 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListPlatform(w http.ResponseWriter, r *http.Request) {
 	p := authctx.MustPrincipal(r.Context())
-	q := apiquery.Parse(r.URL.Query())
-	statuses, err := apiquery.EnumList(r.URL.Query(), "status", model.NotificationStatuses...)
-	if err != nil {
+	qv := r.URL.Query()
+	q := apiquery.Parse(qv)
+	f := usecase.PlatformFilter{Scope: qv.Get("scope"), UserUUID: qv.Get("user_uuid")}
+	var err error
+	if f.Statuses, err = apiquery.EnumList(qv, "status", model.NotificationStatuses...); err != nil {
 		writeErr(w, r, err)
 		return
 	}
-	page, err := h.svc.ListPlatform(
-		r.Context(),
-		p,
-		q,
-		statuses,
-		r.URL.Query().Get("channel"),
-		r.URL.Query().Get("scope"),
-		r.URL.Query().Get("user_uuid"),
-	)
+	if f.Channels, err = apiquery.EnumList(qv, "channel", model.NotificationChannels...); err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	if f.Priorities, err = apiquery.EnumList(qv, "priority", model.NotificationPriorities...); err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	if f.Created, err = apiquery.DateRange(qv, "created"); err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	page, err := h.svc.ListPlatform(r.Context(), p, q, f)
 	if err != nil {
 		writeErr(w, r, err)
 		return

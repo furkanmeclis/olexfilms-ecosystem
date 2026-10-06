@@ -45,13 +45,43 @@ func (h *Handler) Kinds(w http.ResponseWriter, r *http.Request) {
 
 // List lists template versions.
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	q := apiquery.Parse(r.URL.Query())
-	f := docusecase.ListFilter{
-		Kind:        strings.TrimSpace(r.URL.Query().Get("kind")),
-		Language:    model.NormalizeLanguage(r.URL.Query().Get("language")),
-		CurrentOnly: r.URL.Query().Get("current") != "false",
-		Limit:       q.Limit, Offset: q.Offset,
+	qv := r.URL.Query()
+	q := apiquery.Parse(qv)
+	sort, err := apiquery.ResolveSort(q.Sort, docusecase.TemplatesSortSpec)
+	if err != nil {
+		writeErr(w, r, err)
+		return
 	}
+	f := docusecase.ListFilter{
+		BrandSlug: strings.TrimSpace(qv.Get("brand")), Q: q.Q,
+		CurrentOnly: qv.Get("current") != "false",
+		SortKey:     sort.Key, SortDesc: sort.Desc,
+		Limit: q.Limit, Offset: q.Offset,
+	}
+	if f.Kinds, err = apiquery.EnumList(qv, "kind", model.Kinds...); err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	if f.Statuses, err = apiquery.EnumList(qv, "status", docusecase.TemplateStatuses...); err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	for _, raw := range apiquery.CSVValues(qv, "language") {
+		lang := model.NormalizeLanguage(raw)
+		if lang == "" {
+			writeErr(w, r, &apiquery.ValidationError{Details: []apiquery.Detail{{
+				Field: "language", Message: "invalid value " + strconv.Quote(raw), Code: "invalid",
+			}}})
+			return
+		}
+		f.Languages = append(f.Languages, lang)
+	}
+	defaultOnly, err := apiquery.Bool(qv, "platform_default")
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	f.DefaultOnly = defaultOnly != nil && *defaultOnly
 	items, total, err := h.svc.ListTemplates(r.Context(), f)
 	if err != nil {
 		writeErr(w, r, err)
@@ -257,7 +287,14 @@ func pathUUID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 
 func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 	var unknown *docusecase.UnknownVariablesError
+	var ve *apiquery.ValidationError
 	switch {
+	case errors.As(err, &ve):
+		details := make([]response.Detail, 0, len(ve.Details))
+		for _, d := range ve.Details {
+			details = append(details, response.Detail{Field: d.Field, Message: d.Message, Code: d.Code})
+		}
+		response.ValidationError(w, r, details)
 	case errors.As(err, &unknown):
 		details := make([]response.Detail, 0, len(unknown.Keys))
 		for _, k := range unknown.Keys {

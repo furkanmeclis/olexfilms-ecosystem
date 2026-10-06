@@ -41,6 +41,22 @@ var NotificationStatuses = []string{
 	StatusQueued, StatusProcessing, StatusSent, StatusDelivered, StatusRead, StatusFailed, StatusCancelled,
 }
 
+// NotificationChannels are the notifications.channel values
+// (notifications_channel_chk, also notification_deliveries.channel).
+var NotificationChannels = []string{
+	ChannelInapp, ChannelEmail, ChannelWebPush, ChannelExpoPush, ChannelSMS, ChannelWhatsApp,
+}
+
+// NotificationPriorities are the notifications.priority values.
+var NotificationPriorities = []string{PriorityLow, PriorityNormal, PriorityHigh, PriorityCritical}
+
+// DeliveryStatuses are the notification_deliveries.status values
+// (notification_deliveries_status_chk).
+var DeliveryStatuses = []string{
+	StatusQueued, StatusProcessing, StatusSent, StatusDelivered, StatusFailed,
+	DeliverySkippedDisabled, DeliverySkippedPreference, DeliverySkippedNoTemplate, DeliverySkippedNoRecipient,
+}
+
 // Notification is the API projection.
 type Notification struct {
 	UUID            uuid.UUID         `json:"uuid"`

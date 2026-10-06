@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -88,15 +89,36 @@ func (q *stubQ) SetIntegrationConnectionAPIKey(_ context.Context, arg db.SetInte
 	return *q.conn, nil
 }
 
+func (q *stubQ) matchRun(r db.IntegrationSyncRun, conn int64, kinds, statuses []string) bool {
+	return r.ConnectionID == conn && (len(kinds) == 0 || slices.Contains(kinds, r.Kind)) &&
+		(len(statuses) == 0 || slices.Contains(statuses, r.Status))
+}
+
 func (q *stubQ) ListGlorianSyncRuns(_ context.Context, arg db.ListGlorianSyncRunsParams) ([]db.IntegrationSyncRun, error) {
 	var out []db.IntegrationSyncRun
 	for _, r := range q.runs {
-		if r.ConnectionID == arg.ConnectionID && (!arg.Kind.Valid || r.Kind == arg.Kind.String) &&
-			(!arg.Status.Valid || r.Status == arg.Status.String) {
+		if q.matchRun(r, arg.ConnectionID, arg.Kinds, arg.Statuses) {
 			out = append(out, r)
 		}
 	}
+	if int(arg.RowOffset) >= len(out) {
+		return nil, nil
+	}
+	out = out[arg.RowOffset:]
+	if len(out) > int(arg.RowLimit) {
+		out = out[:arg.RowLimit]
+	}
 	return out, nil
+}
+
+func (q *stubQ) CountGlorianSyncRuns(_ context.Context, arg db.CountGlorianSyncRunsParams) (int64, error) {
+	var n int64
+	for _, r := range q.runs {
+		if q.matchRun(r, arg.ConnectionID, arg.Kinds, arg.Statuses) {
+			n++
+		}
+	}
+	return n, nil
 }
 
 func (q *stubQ) GetGlorianSyncRunByUUID(_ context.Context, arg db.GetGlorianSyncRunByUUIDParams) (db.IntegrationSyncRun, error) {
@@ -126,11 +148,21 @@ func (q *stubQ) FinishIntegrationSyncRun(_ context.Context, arg db.FinishIntegra
 func (q *stubQ) ListGlorianOutbounds(_ context.Context, arg db.ListGlorianOutboundsParams) ([]db.ListGlorianOutboundsRow, error) {
 	var out []db.ListGlorianOutboundsRow
 	for _, ob := range q.outbounds {
-		if ob.State == arg.State {
+		if len(arg.States) == 0 || slices.Contains(arg.States, ob.State) {
 			out = append(out, db.ListGlorianOutboundsRow(ob))
 		}
 	}
 	return out, nil
+}
+
+func (q *stubQ) CountGlorianOutbounds(_ context.Context, arg db.CountGlorianOutboundsParams) (int64, error) {
+	var n int64
+	for _, ob := range q.outbounds {
+		if len(arg.States) == 0 || slices.Contains(arg.States, ob.State) {
+			n++
+		}
+	}
+	return n, nil
 }
 
 func (q *stubQ) GetGlorianOutboundByUUID(_ context.Context, arg db.GetGlorianOutboundByUUIDParams) (db.GetGlorianOutboundByUUIDRow, error) {
@@ -269,6 +301,7 @@ func TestUnauthorizedCallerGets403(t *testing.T) {
 		{"GET", ""}, {"PUT", ""}, {"POST", "/test"}, {"GET", "/sync-runs"}, {"POST", "/sync-runs"},
 		{"GET", "/sync-runs/" + uuid.NewString()}, {"GET", "/outbounds?state=held"},
 		{"POST", "/outbounds/" + held.String() + "/replay"}, {"POST", "/reconcile"},
+		{"POST", "/outbounds/replay"},
 	}
 	writes := map[string]bool{"PUT": true, "POST": true}
 
@@ -445,9 +478,20 @@ func TestReplayQueuesHeldOutbound(t *testing.T) {
 		{ID: 42, Uuid: sent, OrderNo: "ORD-42", State: glorian.OutboundSent, CreatedAt: now, UpdatedAt: now},
 	}
 
-	code, env, body := e.do("GET", "/outbounds", nil)
+	code, env, body := e.do("GET", "/outbounds?state=held", nil)
 	if code != http.StatusOK || !strings.Contains(string(env.Data), held.String()) || strings.Contains(string(env.Data), sent.String()) {
 		t.Fatalf("held list = %d %s", code, body)
+	}
+	// TEC-367: no state lists every state, with total.
+	code, env, body = e.do("GET", "/outbounds", nil)
+	if code != http.StatusOK || !strings.Contains(string(env.Data), held.String()) || !strings.Contains(string(env.Data), sent.String()) ||
+		!strings.Contains(string(env.Data), `"total":2`) {
+		t.Fatalf("all states list = %d %s", code, body)
+	}
+	for _, q := range []string{"?state=bogus", "?sort=bogus", "?offset=-1", "?updated_from=nope"} {
+		if code, env, body := e.do("GET", "/outbounds"+q, nil); code != http.StatusBadRequest || env.Error.Code != "VALIDATION_ERROR" {
+			t.Fatalf("outbounds %s = %d %s", q, code, body)
+		}
 	}
 
 	code, _, body = e.do("POST", "/outbounds/"+held.String()+"/replay", nil)
@@ -542,7 +586,23 @@ func TestSyncRunsListAndTrigger(t *testing.T) {
 	if len(list.Items) != 1 || list.Items[0].Kind != glorian.KindPullProducts || string(list.Items[0].Counts) != `{"fetched":3}` {
 		t.Fatalf("items = %+v", list.Items)
 	}
-	for _, q := range []string{"?kind=bogus", "?status=done", "?limit=0", "?limit=x"} {
+	// TEC-367: multi-value filters, offset paging and total.
+	code, env, body = e.do("GET", "/sync-runs?kind=pull_products,reconcile&limit=1&offset=1", nil)
+	var page struct {
+		Items  []usecase.SyncRunView `json:"items"`
+		Total  int64                 `json:"total"`
+		Offset int32                 `json:"offset"`
+	}
+	if code != http.StatusOK {
+		t.Fatalf("paged list = %d %s", code, body)
+	}
+	if err := json.Unmarshal(env.Data, &page); err != nil {
+		t.Fatal(err)
+	}
+	if page.Total != 2 || page.Offset != 1 || len(page.Items) != 1 || page.Items[0].Kind != glorian.KindReconcile {
+		t.Fatalf("page = %+v", page)
+	}
+	for _, q := range []string{"?kind=bogus", "?status=done", "?limit=0", "?limit=x", "?sort=nope", "?offset=x", "?started_from=2026-13-01"} {
 		if code, env, body := e.do("GET", "/sync-runs"+q, nil); code != http.StatusBadRequest || env.Error.Code != "VALIDATION_ERROR" {
 			t.Fatalf("list %s = %d %s", q, code, body)
 		}
@@ -564,5 +624,45 @@ func TestSyncRunsListAndTrigger(t *testing.T) {
 	}
 	if len(e.queue.tasks) != 2 || e.queue.tasks[0].Type() != queue.TaskGlorianPullCatalog || e.queue.tasks[1].Type() != queue.TaskGlorianOrderReplay {
 		t.Fatalf("tasks = %+v", e.queue.tasks)
+	}
+}
+
+func TestReplayOutboundsBatch(t *testing.T) {
+	e := newEnv(t)
+	e.withConnection(true, fake.APIKey)
+	held, failed, sent, unknown := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	now := pgtype.Timestamptz{Time: time.Now(), Valid: true}
+	e.q.outbounds = []db.GetGlorianOutboundByUUIDRow{
+		{ID: 51, Uuid: held, OrderNo: "ORD-51", State: glorian.OutboundHeld,
+			HeldReason: pgtype.Text{String: glorian.HeldMissingCustomer, Valid: true}, CreatedAt: now, UpdatedAt: now},
+		{ID: 52, Uuid: failed, OrderNo: "ORD-52", State: glorian.OutboundFailed, CreatedAt: now, UpdatedAt: now},
+		{ID: 53, Uuid: sent, OrderNo: "ORD-53", State: glorian.OutboundSent, CreatedAt: now, UpdatedAt: now},
+	}
+	code, env, body := e.do("POST", "/outbounds/replay", map[string]any{
+		"uuids": []string{held.String(), failed.String(), sent.String(), unknown.String(), held.String()},
+	})
+	if code != http.StatusAccepted {
+		t.Fatalf("batch replay = %d %s", code, body)
+	}
+	var out usecase.ReplayBatchResult
+	if err := json.Unmarshal(env.Data, &out); err != nil {
+		t.Fatal(err)
+	}
+	if len(out.Queued) != 2 || len(out.Skipped) != 2 || len(e.queue.tasks) != 2 {
+		t.Fatalf("result = %+v tasks=%d", out, len(e.queue.tasks))
+	}
+	reasons := map[uuid.UUID]string{}
+	for _, s := range out.Skipped {
+		reasons[s.UUID] = s.Reason
+	}
+	if reasons[sent] != usecase.SkipNotReplayable || reasons[unknown] != usecase.SkipNotFound {
+		t.Fatalf("skipped = %+v", out.Skipped)
+	}
+	if code, env, body := e.do("POST", "/outbounds/replay", map[string]any{"uuids": []string{}}); code != http.StatusBadRequest ||
+		env.Error.Code != "VALIDATION_ERROR" {
+		t.Fatalf("empty batch = %d %s", code, body)
+	}
+	if code, _, body := e.do("POST", "/outbounds/replay", map[string]any{"uuids": []string{"nope"}}); code != http.StatusBadRequest {
+		t.Fatalf("bad uuid batch = %d %s", code, body)
 	}
 }

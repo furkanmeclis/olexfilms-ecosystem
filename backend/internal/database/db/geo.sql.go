@@ -794,6 +794,21 @@ func (q *Queries) SetCountryActive(ctx context.Context, arg SetCountryActivePara
 	return i, err
 }
 
+const setPlateFormatSortOrder = `-- name: SetPlateFormatSortOrder :exec
+UPDATE plate_formats SET sort_order = $1 WHERE country_id = $2
+`
+
+type SetPlateFormatSortOrderParams struct {
+	SortOrder int32 `json:"sort_order"`
+	CountryID int64 `json:"country_id"`
+}
+
+// TEC-367: batch reorder (PUT /v1/platform/plate-formats/order).
+func (q *Queries) SetPlateFormatSortOrder(ctx context.Context, arg SetPlateFormatSortOrderParams) error {
+	_, err := q.db.Exec(ctx, setPlateFormatSortOrder, arg.SortOrder, arg.CountryID)
+	return err
+}
+
 const updatePlateFormat = `-- name: UpdatePlateFormat :one
 UPDATE plate_formats
 SET regex = COALESCE($1, regex),

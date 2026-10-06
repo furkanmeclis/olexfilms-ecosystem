@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"unicode"
 
@@ -278,4 +279,66 @@ func (s *Service) DeletePlateFormat(ctx context.Context, iso2 string) error {
 		return fmt.Errorf("%w: plate format", ErrNotFound)
 	}
 	return nil
+}
+
+// UnknownPlateFormatsError: a reorder named countries without a format.
+type UnknownPlateFormatsError struct{ Countries []string }
+
+func (e *UnknownPlateFormatsError) Error() string {
+	return "geo: no plate format for " + strings.Join(e.Countries, ", ")
+}
+
+// PlateFormatOrderStep is the sort_order gap ReorderPlateFormats writes.
+const PlateFormatOrderStep = 10
+
+// ReorderPlateFormats applies a drag-and-drop order (TEC-367, PUT
+// /v1/platform/plate-formats/order). countries are ISO2 codes in their new
+// order; they may be a subset (a filtered table): the named formats keep
+// the positions they occupy among all formats and are rearranged inside
+// them. Every format is then renumbered 10, 20, ... in one transaction.
+// countries must be valid, distinct ISO2 codes (the handler checks).
+func (s *Service) ReorderPlateFormats(ctx context.Context, countries []string) ([]PlateFormat, error) {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	qtx := s.q.WithTx(tx)
+	rows, err := qtx.ListPlateFormats(ctx, false)
+	if err != nil {
+		return nil, err
+	}
+	pos := make(map[string]int, len(rows))
+	for i, r := range rows {
+		pos[r.CountryIso2] = i
+	}
+	var unknown []string
+	slots := make([]int, 0, len(countries))
+	for _, c := range countries {
+		i, ok := pos[c]
+		if !ok {
+			unknown = append(unknown, c)
+			continue
+		}
+		slots = append(slots, i)
+	}
+	if len(unknown) > 0 {
+		return nil, &UnknownPlateFormatsError{Countries: unknown}
+	}
+	slices.Sort(slots)
+	order := slices.Clone(rows)
+	for k, c := range countries {
+		order[slots[k]] = rows[pos[c]]
+	}
+	for i, r := range order {
+		if err := qtx.SetPlateFormatSortOrder(ctx, db.SetPlateFormatSortOrderParams{
+			CountryID: r.CountryID, SortOrder: int32((i + 1) * PlateFormatOrderStep),
+		}); err != nil {
+			return nil, err
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return s.PlateFormats(ctx, true)
 }

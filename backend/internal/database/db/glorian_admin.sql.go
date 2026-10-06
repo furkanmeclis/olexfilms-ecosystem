@@ -12,6 +12,81 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countGlorianOutbounds = `-- name: CountGlorianOutbounds :one
+SELECT COUNT(*)::bigint
+FROM order_outbounds ob
+JOIN orders o ON o.id = ob.order_id
+WHERE ob.connection_id = $1
+  AND (
+    COALESCE(cardinality($2::text[]), 0) = 0
+    OR ob.state = ANY ($2::text[])
+  )
+  AND (
+    $3::text IS NULL
+    OR o.order_no ILIKE '%' || $3 || '%'
+    OR ob.external_reference ILIKE '%' || $3 || '%'
+  )
+  AND ($4::timestamptz IS NULL OR ob.updated_at >= $4)
+  AND ($5::timestamptz IS NULL OR ob.updated_at < $5)
+`
+
+type CountGlorianOutboundsParams struct {
+	ConnectionID  int64              `json:"connection_id"`
+	States        []string           `json:"states"`
+	Q             pgtype.Text        `json:"q"`
+	UpdatedFrom   pgtype.Timestamptz `json:"updated_from"`
+	UpdatedBefore pgtype.Timestamptz `json:"updated_before"`
+}
+
+func (q *Queries) CountGlorianOutbounds(ctx context.Context, arg CountGlorianOutboundsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countGlorianOutbounds,
+		arg.ConnectionID,
+		arg.States,
+		arg.Q,
+		arg.UpdatedFrom,
+		arg.UpdatedBefore,
+	)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countGlorianSyncRuns = `-- name: CountGlorianSyncRuns :one
+SELECT COUNT(*)::bigint FROM integration_sync_runs
+WHERE connection_id = $1
+  AND (
+    COALESCE(cardinality($2::text[]), 0) = 0
+    OR kind = ANY ($2::text[])
+  )
+  AND (
+    COALESCE(cardinality($3::text[]), 0) = 0
+    OR status = ANY ($3::text[])
+  )
+  AND ($4::timestamptz IS NULL OR started_at >= $4)
+  AND ($5::timestamptz IS NULL OR started_at < $5)
+`
+
+type CountGlorianSyncRunsParams struct {
+	ConnectionID  int64              `json:"connection_id"`
+	Kinds         []string           `json:"kinds"`
+	Statuses      []string           `json:"statuses"`
+	StartedFrom   pgtype.Timestamptz `json:"started_from"`
+	StartedBefore pgtype.Timestamptz `json:"started_before"`
+}
+
+func (q *Queries) CountGlorianSyncRuns(ctx context.Context, arg CountGlorianSyncRunsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countGlorianSyncRuns,
+		arg.ConnectionID,
+		arg.Kinds,
+		arg.Statuses,
+		arg.StartedFrom,
+		arg.StartedBefore,
+	)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const getGlorianOutboundByUUID = `-- name: GetGlorianOutboundByUUID :one
 SELECT ob.id, ob.uuid, ob.order_id, ob.external_reference, ob.state, ob.held_reason,
        ob.attempts, ob.last_error, ob.created_at, ob.updated_at,
@@ -125,15 +200,47 @@ SELECT ob.id, ob.uuid, ob.order_id, ob.external_reference, ob.state, ob.held_rea
 FROM order_outbounds ob
 JOIN orders o ON o.id = ob.order_id
 WHERE ob.connection_id = $1
-  AND ob.state = $2
-ORDER BY ob.id
-LIMIT $3
+  AND (
+    COALESCE(cardinality($2::text[]), 0) = 0
+    OR ob.state = ANY ($2::text[])
+  )
+  AND (
+    $3::text IS NULL
+    OR o.order_no ILIKE '%' || $3 || '%'
+    OR ob.external_reference ILIKE '%' || $3 || '%'
+  )
+  AND ($4::timestamptz IS NULL OR ob.updated_at >= $4)
+  AND ($5::timestamptz IS NULL OR ob.updated_at < $5)
+ORDER BY
+  CASE WHEN NOT $6::bool THEN
+    CASE $7::text WHEN 'state' THEN ob.state::text WHEN 'order_no' THEN o.order_no::text END
+  END ASC,
+  CASE WHEN $6::bool THEN
+    CASE $7::text WHEN 'state' THEN ob.state::text WHEN 'order_no' THEN o.order_no::text END
+  END DESC,
+  CASE WHEN NOT $6::bool AND $7::text = 'attempts' THEN ob.attempts END ASC,
+  CASE WHEN $6::bool AND $7::text = 'attempts' THEN ob.attempts END DESC,
+  CASE WHEN NOT $6::bool THEN
+    CASE $7::text WHEN 'created_at' THEN ob.created_at WHEN 'updated_at' THEN ob.updated_at END
+  END ASC,
+  CASE WHEN $6::bool THEN
+    CASE $7::text WHEN 'created_at' THEN ob.created_at WHEN 'updated_at' THEN ob.updated_at END
+  END DESC,
+  CASE WHEN $6::bool THEN ob.id END DESC,
+  ob.id ASC
+LIMIT $9 OFFSET $8
 `
 
 type ListGlorianOutboundsParams struct {
-	ConnectionID int64  `json:"connection_id"`
-	State        string `json:"state"`
-	RowLimit     int32  `json:"row_limit"`
+	ConnectionID  int64              `json:"connection_id"`
+	States        []string           `json:"states"`
+	Q             pgtype.Text        `json:"q"`
+	UpdatedFrom   pgtype.Timestamptz `json:"updated_from"`
+	UpdatedBefore pgtype.Timestamptz `json:"updated_before"`
+	SortDesc      bool               `json:"sort_desc"`
+	SortKey       string             `json:"sort_key"`
+	RowOffset     int32              `json:"row_offset"`
+	RowLimit      int32              `json:"row_limit"`
 }
 
 type ListGlorianOutboundsRow struct {
@@ -152,10 +259,20 @@ type ListGlorianOutboundsRow struct {
 	OrderStatus       string             `json:"order_status"`
 }
 
-// Order outbounds of a connection in one state with their order, oldest
-// first (the replay order).
+// Order outbounds of a connection with their order (TEC-367 list contract,
+// keys from usecase.OutboundsSortSpec; default created_at, the replay order).
 func (q *Queries) ListGlorianOutbounds(ctx context.Context, arg ListGlorianOutboundsParams) ([]ListGlorianOutboundsRow, error) {
-	rows, err := q.db.Query(ctx, listGlorianOutbounds, arg.ConnectionID, arg.State, arg.RowLimit)
+	rows, err := q.db.Query(ctx, listGlorianOutbounds,
+		arg.ConnectionID,
+		arg.States,
+		arg.Q,
+		arg.UpdatedFrom,
+		arg.UpdatedBefore,
+		arg.SortDesc,
+		arg.SortKey,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -192,29 +309,59 @@ const listGlorianSyncRuns = `-- name: ListGlorianSyncRuns :many
 
 SELECT id, uuid, organization_id, brand_id, connection_id, kind, status, started_at, finished_at, watermark, counts, error FROM integration_sync_runs
 WHERE connection_id = $1
-  AND ($2::text IS NULL OR kind = $2::text)
-  AND ($3::text IS NULL OR status = $3::text)
-ORDER BY started_at DESC, id DESC
-LIMIT $4
+  AND (
+    COALESCE(cardinality($2::text[]), 0) = 0
+    OR kind = ANY ($2::text[])
+  )
+  AND (
+    COALESCE(cardinality($3::text[]), 0) = 0
+    OR status = ANY ($3::text[])
+  )
+  AND ($4::timestamptz IS NULL OR started_at >= $4)
+  AND ($5::timestamptz IS NULL OR started_at < $5)
+ORDER BY
+  CASE WHEN NOT $6::bool THEN
+    CASE $7::text WHEN 'kind' THEN kind::text WHEN 'status' THEN status::text END
+  END ASC,
+  CASE WHEN $6::bool THEN
+    CASE $7::text WHEN 'kind' THEN kind::text WHEN 'status' THEN status::text END
+  END DESC,
+  CASE WHEN NOT $6::bool AND $7::text = 'started_at' THEN started_at END ASC,
+  CASE WHEN $6::bool AND $7::text = 'started_at' THEN started_at END DESC,
+  CASE WHEN NOT $6::bool AND $7::text = 'finished_at' THEN finished_at END ASC NULLS LAST,
+  CASE WHEN $6::bool AND $7::text = 'finished_at' THEN finished_at END DESC NULLS LAST,
+  CASE WHEN $6::bool THEN id END DESC,
+  id ASC
+LIMIT $9 OFFSET $8
 `
 
 type ListGlorianSyncRunsParams struct {
-	ConnectionID int64       `json:"connection_id"`
-	Kind         pgtype.Text `json:"kind"`
-	Status       pgtype.Text `json:"status"`
-	RowLimit     int32       `json:"row_limit"`
+	ConnectionID  int64              `json:"connection_id"`
+	Kinds         []string           `json:"kinds"`
+	Statuses      []string           `json:"statuses"`
+	StartedFrom   pgtype.Timestamptz `json:"started_from"`
+	StartedBefore pgtype.Timestamptz `json:"started_before"`
+	SortDesc      bool               `json:"sort_desc"`
+	SortKey       string             `json:"sort_key"`
+	RowOffset     int32              `json:"row_offset"`
+	RowLimit      int32              `json:"row_limit"`
 }
 
 // TEC-273 (F2-02h): Glorian admin API. Every read is limited to one
 // connection; the handler resolves the connection of the glorian brand
 // first.
-// Sync runs of a connection, newest first, optionally filtered by kind
-// and status.
+// Sync runs of a connection (TEC-367 list contract, keys from
+// usecase.SyncRunsSortSpec; default -started_at).
 func (q *Queries) ListGlorianSyncRuns(ctx context.Context, arg ListGlorianSyncRunsParams) ([]IntegrationSyncRun, error) {
 	rows, err := q.db.Query(ctx, listGlorianSyncRuns,
 		arg.ConnectionID,
-		arg.Kind,
-		arg.Status,
+		arg.Kinds,
+		arg.Statuses,
+		arg.StartedFrom,
+		arg.StartedBefore,
+		arg.SortDesc,
+		arg.SortKey,
+		arg.RowOffset,
 		arg.RowLimit,
 	)
 	if err != nil {
