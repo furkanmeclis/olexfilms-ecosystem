@@ -101,7 +101,7 @@ Media: never assemble SeaweedFS/S3 URLs in the browser. Use `assertServiceMediaU
 ## List screens (DataTable standard)
 
 Every record list uses `EntityTable` + `useServerListState` (rule: root
-`AGENTS.md` §6). Recipe:
+`AGENTS.md` §6; contract: `docs/list-contract.md`). Recipe:
 
 1. Columns with `createColumn`. Sortable columns keep `enableSorting`
    (backend field = column id, or `sortParam`). Filterable columns declare
