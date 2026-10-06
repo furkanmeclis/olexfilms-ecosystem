@@ -22,6 +22,8 @@ export type ResourceMeta = {
   capabilities?: ResourceCapabilities;
   sortable?: string[];
   filterable?: string[];
+  /** Endpoint default sort (`field` / `-field`); absent on older metas. */
+  default_sort?: string;
   bulk_actions?: BulkActionMeta[];
 };
 

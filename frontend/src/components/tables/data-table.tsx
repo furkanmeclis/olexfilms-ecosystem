@@ -28,6 +28,7 @@ export function DataTable<TData>({
   state,
   initialState,
   pageCount,
+  rowCount,
   pageSizeOptions,
   toolbar,
   bulkActions,
@@ -83,6 +84,7 @@ export function DataTable<TData>({
     state,
     initialState,
     pageCount,
+    rowCount,
   });
 
   const forceMobileCards =
@@ -149,6 +151,7 @@ export function DataTable<TData>({
         toolbar={toolbarNode}
         bulkActions={bulkActions}
         forceMobileCards={forceMobileCards}
+        hideFacetCounts={Boolean(manual?.filtering)}
         reorderMode={reorderMode}
         onReorderModeChange={
           canReorder

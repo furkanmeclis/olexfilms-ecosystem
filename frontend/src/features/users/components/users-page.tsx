@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 
@@ -33,6 +34,8 @@ import {
   useUsersMeta,
 } from "@/features/users/hooks/use-users-query";
 import { userFullName } from "@/features/users/lib/user-display";
+import { roleDisplayName } from "@/features/roles/lib/role-display";
+import { rolesService } from "@/features/roles/services/roles.service";
 import { ResourceIOToolbar } from "@/features/io";
 import type { ResourceMeta } from "@/features/io/types";
 import type {
@@ -41,47 +44,35 @@ import type {
 } from "@/features/users/services/users.service";
 import { useLocale } from "@/providers/locale-provider";
 import { useAuth } from "@/providers/auth-provider";
+import { usePermission } from "@/providers/permission-provider";
 
-function firstString(value: string | string[] | undefined) {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
+export const USERS_PERSIST_KEY = "platform-users-v1";
 
 export function UsersPage() {
   const { t } = useLocale();
   const router = useRouter();
   const { user: currentUser } = useAuth();
-
-  const listState = useServerListState({
-    initialSort: "-created_at",
-    initialPageSize: 20,
-  });
+  const { can } = usePermission();
 
   const [passwordTarget, setPasswordTarget] = useState<PublicUser | null>(null);
 
-  const listParams = useMemo<ListUsersParams>(() => {
-    const columnValue = (id: string) =>
-      firstString(
-        listState.columnFilters.find((filter) => filter.id === id)?.value as
-          string | string[] | undefined,
-      );
-
-    const q =
-      listState.params.q ||
-      columnValue("email")?.trim() ||
-      columnValue("name")?.trim() ||
-      undefined;
-
-    return {
-      ...listState.params,
-      q,
-      status: columnValue("status"),
-      role: columnValue("role")?.trim() || undefined,
-    };
-  }, [listState.columnFilters, listState.params]);
-
-  const listQuery = useUsersList(listParams);
   const metaQuery = useUsersMeta(true);
+  const meta = metaQuery.data as ResourceMeta | undefined;
+  // Same query key as the role picker (role-multi-select) → shared cache.
+  const rolesQuery = useQuery({
+    queryKey: ["platform", "roles", "picker"],
+    queryFn: () => rolesService.list({ limit: 100, offset: 0 }),
+    enabled: can(permissions.roles.read),
+  });
+  const roleOptions = useMemo(
+    () =>
+      (rolesQuery.data?.items ?? []).map((role) => ({
+        value: role.slug,
+        label: roleDisplayName(role, t),
+      })),
+    [rolesQuery.data?.items, t],
+  );
+
   const enableUser = useEnableUser();
   const disableUser = useDisableUser();
   const impersonateUser = useImpersonateUser();
@@ -114,6 +105,7 @@ export function UsersPage() {
 
   const baseColumns = useUsersColumns({
     handlers: rowHandlers,
+    roleOptions,
     currentUserUuid: currentUser?.uuid,
     canImpersonateSuperAdmin: Boolean(currentUser?.isSuperAdmin),
     isImpersonating: Boolean(currentUser?.impersonation),
@@ -123,14 +115,23 @@ export function UsersPage() {
     [baseColumns],
   );
 
+  // Column meta drives the params: status (faceted → CSV), role (slug).
+  const listState = useServerListState({
+    columns,
+    initialSort: meta?.default_sort ?? "-created_at",
+    initialPageSize: 20,
+    persistKey: USERS_PERSIST_KEY,
+  });
+  const listParams: ListUsersParams = listState.params;
+
+  const listQuery = useUsersList(listParams);
   const bulkQuery = useMemo(
     () => ({
+      ...listState.filterParams,
       q: listParams.q,
-      status: listParams.status,
-      role: listParams.role,
       sort: listParams.sort,
     }),
-    [listParams.q, listParams.status, listParams.role, listParams.sort],
+    [listState.filterParams, listParams.q, listParams.sort],
   );
 
   const bulkSelection = useBulkSelection({
@@ -139,19 +140,11 @@ export function UsersPage() {
     total: listQuery.data?.total ?? 0,
   });
 
-  const meta = metaQuery.data as ResourceMeta | undefined;
-
   const bulkActions = useMemo(
     () =>
       resolveBulkActionsWithIcons("platform.users", meta?.bulk_actions ?? []),
     [meta?.bulk_actions],
   );
-
-  const pageCount = useMemo(() => {
-    const total = listQuery.data?.total ?? 0;
-    const size = listState.pagination.pageSize || 20;
-    return Math.max(1, Math.ceil(total / size));
-  }, [listQuery.data?.total, listState.pagination.pageSize]);
 
   return (
     <EntityPage
@@ -194,14 +187,14 @@ export function UsersPage() {
         onRetry={() => void listQuery.refetch()}
         emptyTitle={t("users.empty_title")}
         emptyDescription={t("users.empty_description")}
-        pageCount={pageCount}
+        rowCount={listQuery.data?.total ?? 0}
         state={{
           ...listState.tableState,
           rowSelection: bulkSelection.rowSelection,
           onRowSelectionChange: bulkSelection.onRowSelectionChange,
         }}
         features={{
-          persistKey: "platform-users-v1",
+          persistKey: USERS_PERSIST_KEY,
           rowSelection: true,
         }}
         toolbarExtra={
@@ -215,12 +208,7 @@ export function UsersPage() {
             />
             <ResourceIOToolbar
               resource="platform.users"
-              query={{
-                q: listParams.q,
-                status: listParams.status,
-                role: listParams.role,
-                sort: listParams.sort,
-              }}
+              query={bulkQuery}
               capabilities={meta?.capabilities}
               onImportComplete={() => void listQuery.refetch()}
             />
