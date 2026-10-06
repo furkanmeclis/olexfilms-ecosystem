@@ -8,7 +8,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"strconv"
+	"net/url"
 	"strings"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/catalog/model"
@@ -75,6 +75,10 @@ func readBody(w http.ResponseWriter, r *http.Request, dst any) (map[string]json.
 }
 
 func writeError(w http.ResponseWriter, r *http.Request, err error) {
+	if response.QueryValidation(w, r, err) {
+		// TEC-369: list parameters (sort, filters) answer 400.
+		return
+	}
 	var verr *catalogusecase.ValidationError
 	var conflict *catalogusecase.ConflictError
 	var locked *catalogusecase.LockedError
@@ -131,38 +135,51 @@ func pathUUID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	return id, true
 }
 
-func queryBool(w http.ResponseWriter, r *http.Request, name string) (*bool, bool) {
-	raw := strings.TrimSpace(r.URL.Query().Get(name))
-	if raw == "" {
-		return nil, true
-	}
-	v, err := strconv.ParseBool(raw)
-	if err != nil {
-		response.ErrorWithDetails(w, r, http.StatusBadRequest, response.CodeValidationError, name+" must be true or false",
-			[]response.Detail{{Field: name, Message: "must be true or false", Code: "invalid"}})
-		return nil, false
-	}
-	return &v, true
-}
-
 // --- Categories -------------------------------------------------------------
 
-// ListCategories serves GET /v1/catalog/categories.
+// ListCategories serves GET /v1/catalog/categories (TEC-369: sort, q,
+// active).
 func (h *Handler) ListCategories(w http.ResponseWriter, r *http.Request) {
 	org := orgctx.MustScope(r.Context())
-	q := apiquery.Parse(r.URL.Query())
-	active, ok := queryBool(w, r, "active")
-	if !ok {
-		return
-	}
-	items, total, err := h.svc.ListCategories(r.Context(), org, model.CategoryFilter{
-		Q: q.Q, Active: active, Limit: q.Limit, Offset: q.Offset,
-	})
+	f, err := catalogusecase.ParseCategoryFilter(r.URL.Query())
 	if err != nil {
 		writeError(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
+	items, total, err := h.svc.ListCategories(r.Context(), org, f)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, f.Limit, f.Offset))
+}
+
+// ReorderCategories serves PUT /v1/catalog/categories/order (TEC-369): the
+// categories in drag-and-drop order; a subset is rearranged within its
+// slots and the full renumbered list returns.
+func (h *Handler) ReorderCategories(w http.ResponseWriter, r *http.Request) {
+	var in model.CategoryOrderInput
+	if _, ok := readBody(w, r, &in); !ok {
+		return
+	}
+	items, err := h.svc.ReorderCategories(r.Context(), orgctx.MustScope(r.Context()), in.UUIDs)
+	var verr *catalogusecase.ValidationError
+	if errors.As(err, &verr) {
+		// Malformed order input is a 400 (list contract), not the 422 of
+		// the catalog write rules.
+		details := make([]response.Detail, 0, len(verr.Fields))
+		for _, f := range verr.Fields {
+			details = append(details, response.Detail{Field: f.Field, Message: f.Message, Code: f.Code})
+		}
+		response.ValidationError(w, r, details)
+		return
+	}
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	h.record(r, "catalog.category.reordered", nil, map[string]any{"count": len(in.UUIDs)})
+	response.JSON(w, r, http.StatusOK, map[string]any{"items": items})
 }
 
 // GetCategory serves GET /v1/catalog/categories/{uuid}.
@@ -229,36 +246,22 @@ func (h *Handler) DeleteCategory(w http.ResponseWriter, r *http.Request) {
 
 // --- Products ---------------------------------------------------------------
 
-// ListProducts serves GET /v1/catalog/products.
+// ListProducts serves GET /v1/catalog/products (TEC-369: sort, multi-value
+// category_uuid / unit_type, uses_fixed_barcode, warranty / micron ranges,
+// created range).
 func (h *Handler) ListProducts(w http.ResponseWriter, r *http.Request) {
 	org := orgctx.MustScope(r.Context())
-	q := apiquery.Parse(r.URL.Query())
-	active, ok := queryBool(w, r, "active")
-	if !ok {
+	f, err := catalogusecase.ParseProductFilter(r.URL.Query())
+	if err != nil {
+		writeError(w, r, err)
 		return
-	}
-	f := model.ProductFilter{Q: q.Q, Active: active, Limit: q.Limit, Offset: q.Offset}
-	if raw := strings.TrimSpace(r.URL.Query().Get("category_uuid")); raw != "" {
-		id, err := uuid.Parse(raw)
-		if err != nil {
-			response.BadRequest(w, r, response.CodeValidationError, "category_uuid is invalid")
-			return
-		}
-		f.CategoryUUID = &id
-	}
-	if unit := strings.TrimSpace(r.URL.Query().Get("unit_type")); unit != "" {
-		if unit != model.UnitPiece && unit != model.UnitRollMeter {
-			response.BadRequest(w, r, response.CodeValidationError, "unit_type must be piece or roll_meter")
-			return
-		}
-		f.UnitType = unit
 	}
 	items, total, err := h.svc.ListProducts(r.Context(), org, f)
 	if err != nil {
 		writeError(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, f.Limit, f.Offset))
 }
 
 // GetProduct serves GET /v1/catalog/products/{uuid}.
@@ -385,10 +388,17 @@ func (h *Handler) ExportProducts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	query := ioengine.ExportQuery{}
-	for _, k := range []string{"q", "active", "category_uuid", "unit_type"} {
+	values := url.Values{}
+	for _, k := range catalogusecase.ProductListKeys {
 		if v := strings.TrimSpace(in.Query[k]); v != "" {
 			query[k] = v
+			values.Set(k, v)
 		}
+	}
+	// Bad filters fail now, not in the worker (TEC-369).
+	if _, err := catalogusecase.ParseProductFilter(values); err != nil {
+		writeError(w, r, err)
+		return
 	}
 	if in.Locale == "" {
 		in.Locale = "tr"

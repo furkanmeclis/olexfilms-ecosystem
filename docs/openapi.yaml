@@ -5703,16 +5703,24 @@ paths:
       tags: [Contract Templates]
       operationId: listContractTemplates
       summary: List contract templates for the active brand
-      description: Requires the active organization, intake_contracts feature, and contracts.templates.manage.
+      description: >-
+        Requires the active organization, intake_contracts feature, and
+        contracts.templates.manage. Full array (small list, client-side
+        table). TEC-369: `active` and `is_default` filter on true / false and
+        list everything when omitted; `kind` is CSV. Bad values → 400.
       security:
         - bearerAuth: []
       parameters:
         - name: kind
           in: query
-          schema: { $ref: "#/components/schemas/ContractTemplateKind" }
+          description: CSV of vehicle_intake, service_sale.
+          schema: { type: string }
         - name: active
           in: query
-          schema: { type: boolean, default: false }
+          schema: { type: boolean }
+        - name: is_default
+          in: query
+          schema: { type: boolean }
       responses:
         "200":
           description: Contract templates
@@ -7309,15 +7317,20 @@ paths:
       summary: Product categories of the active brand
       description: >-
         Needs `catalog.read`. Filtered by the brand of the active organization
-        (K1/K20); a category of another brand is never listed.
+        (K1/K20); a category of another brand is never listed. `q` matches the
+        name. Sortable (`sort`, one primary field, id tiebreak): name, sort,
+        active, created_at, updated_at. Default `sort` (TEC-369). Unknown
+        field → 400.
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
         - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
         - name: active
           in: query
+          description: "`true` / `false`; any other value → 400."
           schema: { type: boolean }
       responses:
         "200":
@@ -7364,6 +7377,80 @@ paths:
           $ref: "#/components/responses/Conflict"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/catalog/categories/order:
+    put:
+      tags: [Catalog]
+      operationId: reorderCatalogCategories
+      summary: Set the display order of product categories (TEC-369, center only)
+      description: >-
+        Needs `catalog.write` and the brand center as active organization (K4).
+        `uuids` are categories of the brand in their new order (drag and
+        drop). A subset keeps the positions it occupies among all categories
+        and is rearranged inside them; every category is then renumbered
+        (`sort` 10, 20, …). Empty, duplicate or unknown uuids → 400. Returns
+        the full list in the new order. Sort is a local field, so brands whose
+        categories come from an integration may reorder too.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogCategoryOrderRequest"
+      responses:
+        "200":
+          description: Reordered categories
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCatalogCategoryList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/catalog/categories/bulk:
+    post:
+      tags: [Catalog]
+      operationId: bulkCatalogCategories
+      summary: Run a logged bulk action on product categories (TEC-369)
+      description: >-
+        Center only, `catalog.write`, target scope `ids`. Actions `activate` /
+        `deactivate` (undoable through `/v1/tenant/bulk-operations/{uuid}/undo`)
+        and `delete` (not undoable; a category that still has products fails
+        per item with `in use`). A brand whose categories come from an
+        integration connection fails every item (`locked`).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkExecuteRequest"
+      responses:
+        "200":
+          description: Sync bulk result with its operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkSyncResult"
+        "202":
+          description: Async bulk job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /v1/catalog/categories/{uuid}:
     parameters:
@@ -7456,22 +7543,52 @@ paths:
       description: >-
         Needs `catalog.read`. Filtered by the brand of the active organization
         (K1/K20): an Olex organization never lists a Glorian product. `q`
-        matches name or SKU.
+        matches name or SKU. Sortable (`sort`, one primary field, id
+        tiebreak): sku, name, category (category name), unit_type,
+        warranty_duration_months, micron_thickness (empty values last), active,
+        created_at, updated_at. Default `name` (TEC-369). Unknown field or a
+        bad filter value → 400.
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
         - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
         - name: active
           in: query
           schema: { type: boolean }
         - name: category_uuid
           in: query
-          schema: { type: string, format: uuid }
+          description: One or more category uuids (CSV); any of. Unknown categories match nothing.
+          schema: { type: string }
         - name: unit_type
           in: query
-          schema: { $ref: "#/components/schemas/CatalogUnitType" }
+          description: "CSV of `piece`, `roll_meter`."
+          schema: { type: string }
+        - name: uses_fixed_barcode
+          in: query
+          schema: { type: boolean }
+        - name: warranty_duration_months_min
+          in: query
+          schema: { type: number }
+        - name: warranty_duration_months_max
+          in: query
+          schema: { type: number }
+        - name: micron_thickness_min
+          in: query
+          schema: { type: number }
+        - name: micron_thickness_max
+          in: query
+          schema: { type: number }
+        - name: created_from
+          in: query
+          description: YYYY-MM-DD or RFC3339 (inclusive).
+          schema: { type: string }
+        - name: created_to
+          in: query
+          description: YYYY-MM-DD (whole day) or RFC3339 (inclusive).
+          schema: { type: string }
       responses:
         "200":
           description: Products
@@ -7563,9 +7680,13 @@ paths:
       operationId: bulkCatalogProducts
       summary: Run a logged, undoable bulk action on products (TEC-212)
       description: >-
-        Actions `activate` / `deactivate` (center only, catalog.write) on target
-        scope `ids`. The run is logged as a bulk operation; undo it through
-        `/v1/tenant/bulk-operations/{uuid}/undo`.
+        Actions `activate` / `deactivate` and (TEC-369) `set_category`
+        (`target.params.category_uuid`, a category of the brand; a product whose
+        category the integration sync owns fails per item with `locked`).
+        Center only, catalog.write, target scope `ids`. The run is logged as a
+        bulk operation; undo it through `/v1/tenant/bulk-operations/{uuid}/undo`.
+        There is no bulk delete: products are referenced by stock, orders and
+        services (RESTRICT) and own storage images.
       security:
         - bearerAuth: []
       requestBody:
@@ -7617,12 +7738,22 @@ paths:
                 locale: { type: string, example: tr }
                 query:
                   type: object
-                  description: Optional filters
+                  description: >-
+                    Optional list parameters (TEC-369: the same filters, q and
+                    sort as `GET /v1/catalog/products`; bad values → 400).
                   properties:
                     q: { type: string }
+                    sort: { type: string }
                     active: { type: string, enum: ["true", "false"] }
-                    category_uuid: { type: string, format: uuid }
-                    unit_type: { $ref: "#/components/schemas/CatalogUnitType" }
+                    category_uuid: { type: string, description: "CSV of category uuids" }
+                    unit_type: { type: string, description: "CSV of piece, roll_meter" }
+                    uses_fixed_barcode: { type: string, enum: ["true", "false"] }
+                    warranty_duration_months_min: { type: string }
+                    warranty_duration_months_max: { type: string }
+                    micron_thickness_min: { type: string }
+                    micron_thickness_max: { type: string }
+                    created_from: { type: string }
+                    created_to: { type: string }
       responses:
         "202":
           description: Export job queued
@@ -10820,15 +10951,22 @@ paths:
       description: >-
         Needs `vehicle_catalog.read`. Global reference data, no organization
         context. Readers without `vehicle_catalog.write` see active brands
-        only and `active` is ignored for them.
+        only and `active` is ignored for them. Sortable (`sort`, one primary
+        field, id tiebreak): name, model_count, active, created_at,
+        updated_at. Default `name` (TEC-369). Unknown field → 400.
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
         - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
         - name: active
           in: query
+          schema: { type: boolean }
+        - name: has_logo
+          in: query
+          description: "`true` brands with an uploaded logo, `false` without."
           schema: { type: boolean }
       responses:
         "200":
@@ -10878,6 +11016,10 @@ paths:
         Needs `vehicle_catalog.read`. `q` matches "brand model" text or the
         exact external id; `brand_uuid` limits to one brand. Readers without
         `vehicle_catalog.write` see active models of active brands only.
+        Sortable (`sort`, one primary field, id tiebreak): brand, name,
+        year_start, year_stop, body_type, powertrain (empty values last),
+        active, created_at, updated_at. Default `brand` (then model name,
+        TEC-369). Unknown field → 400.
       security:
         - bearerAuth: []
       parameters:
@@ -10890,6 +11032,22 @@ paths:
         - name: active
           in: query
           schema: { type: boolean }
+        - $ref: "#/components/parameters/Sort"
+        - name: body_type
+          in: query
+          description: CSV of exact body_type values (options from `/v1/vehicle-catalog/models/facets`).
+          schema: { type: string }
+        - name: powertrain
+          in: query
+          description: CSV of exact powertrain values (options from `/v1/vehicle-catalog/models/facets`).
+          schema: { type: string }
+        - name: year_min
+          in: query
+          description: Production span [year_start, year_stop] overlaps [year_min, year_max]; open ends match. 1900..2100.
+          schema: { type: integer, minimum: 1900, maximum: 2100 }
+        - name: year_max
+          in: query
+          schema: { type: integer, minimum: 1900, maximum: 2100 }
       responses:
         "200":
           description: Models
@@ -10897,6 +11055,41 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeVehicleModelPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/vehicle-catalog/models/facets:
+    get:
+      tags: [VehicleCatalog]
+      operationId: listVehicleModelFacets
+      summary: Faceted filter options of the model list (TEC-369)
+      description: >-
+        Needs `vehicle_catalog.read`. Distinct `body_type` and `powertrain`
+        values with model counts, scoped like the model list (`brand_uuid`,
+        `active`; readers without `vehicle_catalog.write` count active models
+        of active brands only).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: brand_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - name: active
+          in: query
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Facet values
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVehicleModelFacets"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -11831,6 +12024,10 @@ paths:
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
         - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: has_logo
+          in: query
+          schema: { type: boolean }
       responses:
         "200":
           description: Brands
@@ -11858,6 +12055,22 @@ paths:
         - name: brand_uuid
           in: query
           schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/Sort"
+        - name: body_type
+          in: query
+          description: CSV of exact body_type values (options from `/v1/vehicle-catalog/models/facets`).
+          schema: { type: string }
+        - name: powertrain
+          in: query
+          description: CSV of exact powertrain values (options from `/v1/vehicle-catalog/models/facets`).
+          schema: { type: string }
+        - name: year_min
+          in: query
+          description: Production span [year_start, year_stop] overlaps [year_min, year_max]; open ends match. 1900..2100.
+          schema: { type: integer, minimum: 1900, maximum: 2100 }
+        - name: year_max
+          in: query
+          schema: { type: integer, minimum: 1900, maximum: 2100 }
       responses:
         "200":
           description: Models
@@ -11873,6 +12086,43 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  /v1/platform/vehicle-catalog/brands/bulk:
+    post:
+      tags: [VehicleCatalog]
+      operationId: bulkVehicleBrands
+      summary: Activate or deactivate car brands in bulk (TEC-369)
+      description: >-
+        Needs `vehicle_catalog.write`. Actions `activate` / `deactivate` on
+        target scope `ids`; logged as a platform bulk operation and undoable
+        through `/v1/platform/bulk-operations/{uuid}/undo`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkExecuteRequest"
+      responses:
+        "200":
+          description: Sync bulk result with its operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkSyncResult"
+        "202":
+          description: Async bulk job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /v1/platform/vehicle-catalog/brands:
     post:
@@ -12073,6 +12323,43 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  /v1/platform/vehicle-catalog/models/bulk:
+    post:
+      tags: [VehicleCatalog]
+      operationId: bulkVehicleModels
+      summary: Activate or deactivate car models in bulk (TEC-369)
+      description: >-
+        Needs `vehicle_catalog.write`. Actions `activate` / `deactivate` on
+        target scope `ids`; logged as a platform bulk operation and undoable
+        through `/v1/platform/bulk-operations/{uuid}/undo`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkExecuteRequest"
+      responses:
+        "200":
+          description: Sync bulk result with its operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkSyncResult"
+        "202":
+          description: Async bulk job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /v1/platform/vehicle-catalog/models:
     post:
@@ -14896,7 +15183,12 @@ paths:
       tags: [Pricing]
       operationId: listTenantDistributorPrices
       summary: Center lists distributor-specific prices of the brand
-      description: Center organizations with pricing.sale.read (brand scope).
+      description: >-
+        Center organizations with pricing.sale.read (brand scope). `q` matches
+        the product SKU / name and the distributor name. Sortable (`sort`, one
+        primary field, id tiebreak): product (SKU), distributor, currency,
+        price, updated_at. Default `product` (then distributor and currency,
+        TEC-369). Unknown field → 400.
       security:
         - bearerAuth: []
       parameters:
@@ -14906,6 +15198,12 @@ paths:
         - name: distributor_uuid
           in: query
           schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: currency
+          in: query
+          description: CSV of ISO-4217 codes (any of); a malformed code → 400.
+          schema: { type: string }
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 100 }
@@ -15062,12 +15360,22 @@ paths:
       tags: [ServiceCatalog]
       operationId: listPlatformServiceCatalog
       summary: Center lists service catalog items
+      description: >-
+        Full array (small brand catalog; the panel table sorts client-side).
+        TEC-369: `category` and `recurrence` are CSV (any of), `q` matches name
+        and description; a bad enum or boolean → 400.
       security:
         - bearerAuth: []
       parameters:
+        - $ref: "#/components/parameters/Q"
         - name: category
           in: query
-          schema: { $ref: "#/components/schemas/ServiceCatalogCategory" }
+          description: CSV of advertising, training, setup, software, module_bundle, other.
+          schema: { type: string }
+        - name: recurrence
+          in: query
+          description: CSV of one_time, monthly, yearly.
+          schema: { type: string }
         - name: active
           in: query
           schema: { type: boolean }
@@ -15078,6 +15386,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeServiceCatalogList"
+        "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
@@ -15288,14 +15597,27 @@ paths:
         distributor sees its own override or the default price; a dealer sees
         its parent distributor's override or the default price. Prices are
         omitted when the caller lacks the relevant pricing.* read permission.
+        Active items only (full array). TEC-369: `q`, `category` and
+        `recurrence` (CSV) filter like the platform list.
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - name: category
+          in: query
+          description: CSV of advertising, training, setup, software, module_bundle, other.
+          schema: { type: string }
+        - name: recurrence
+          in: query
+          description: CSV of one_time, monthly, yearly.
+          schema: { type: string }
       responses:
         "200":
           description: Visible service catalog
           content:
             application/json:
               schema: { $ref: "#/components/schemas/EnvelopeServiceCatalogList" }
+        "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
@@ -25457,6 +25779,56 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/CatalogCategory" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    CatalogCategoryOrderRequest:
+      type: object
+      required: [uuids]
+      properties:
+        uuids:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items: { type: string, format: uuid }
+
+    EnvelopeCatalogCategoryList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/CatalogCategory" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    VehicleModelFacetValue:
+      type: object
+      required: [value, count]
+      properties:
+        value: { type: string }
+        count: { type: integer, format: int64 }
+
+    VehicleModelFacets:
+      type: object
+      required: [body_type, powertrain]
+      properties:
+        body_type:
+          type: array
+          items: { $ref: "#/components/schemas/VehicleModelFacetValue" }
+        powertrain:
+          type: array
+          items: { $ref: "#/components/schemas/VehicleModelFacetValue" }
+
+    EnvelopeVehicleModelFacets:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/VehicleModelFacets" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeCatalogCategoryPage:

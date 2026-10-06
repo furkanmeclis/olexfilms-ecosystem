@@ -36,6 +36,8 @@ func RegisterRoutes(mux *http.ServeMux, h *handler.Handler, tokens *jwt.Manager,
 	mux.Handle("GET /v1/vehicle-catalog/brands", read(h.ListBrands))
 	mux.Handle("GET /v1/vehicle-catalog/brands/{uuid}", read(h.GetBrand))
 	mux.Handle("GET /v1/vehicle-catalog/models", read(h.ListModels))
+	// TEC-369: faceted filter options (distinct body_type / powertrain).
+	mux.Handle("GET /v1/vehicle-catalog/models/facets", read(h.ModelFacets))
 	mux.Handle("GET /v1/vehicle-catalog/models/{uuid}", read(h.GetModel))
 
 	// Portal reads (customer / fleet sessions; active rows only).

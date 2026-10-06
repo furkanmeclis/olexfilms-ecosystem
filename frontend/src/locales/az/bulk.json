@@ -53,5 +53,18 @@
   "confirm.organizations.suspend": "{{count}} təşkilat dayandırılsın?",
   "confirm.organizations.set_read_only": "{{count}} təşkilat yalnız oxunan edilsin?",
   "confirm.organizations.extend_access": "{{count}} təşkilatın girişi uzadılsın?",
-  "params.days": "Gün"
+  "params.days": "Gün",
+  "actions.catalog_products.set_category": "Kateqoriya təyin et",
+  "params.category": "Kateqoriya",
+  "actions.catalog_categories.activate": "Aktivləşdir",
+  "actions.catalog_categories.deactivate": "Deaktiv et",
+  "actions.catalog_categories.delete": "Sil",
+  "confirm.catalog_categories.deactivate": "Seçilmiş kateqoriyalar deaktiv edilsin?",
+  "confirm.catalog_categories.delete": "Seçilmiş kateqoriyalar silinsin? Məhsulu olan kateqoriyalar keçilir.",
+  "actions.vehicle_brands.activate": "Aktivləşdir",
+  "actions.vehicle_brands.deactivate": "Deaktiv et",
+  "confirm.vehicle_brands.deactivate": "Seçilmiş markalar deaktiv edilsin?",
+  "actions.vehicle_models.activate": "Aktivləşdir",
+  "actions.vehicle_models.deactivate": "Deaktiv et",
+  "confirm.vehicle_models.deactivate": "Seçilmiş modellər deaktiv edilsin?"
 }

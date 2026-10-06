@@ -14,6 +14,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/otp"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
 	"github.com/google/uuid"
 )
@@ -31,9 +32,19 @@ func (h *Handler) Variables(w http.ResponseWriter, r *http.Request) {
 
 // List lists templates of the active brand.
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	items, err := h.svc.List(r.Context(), caller(r), usecase.ListFilter{
-		Kind: strings.TrimSpace(r.URL.Query().Get("kind")), ActiveOnly: r.URL.Query().Get("active") == "true",
-	})
+	// TEC-369: kind (CSV), active and is_default (true|false; omitted = all).
+	values := r.URL.Query()
+	f := usecase.ListFilter{Kinds: apiquery.CSVValues(values, "kind")}
+	var err error
+	if f.Active, err = apiquery.Bool(values, "active"); err != nil {
+		response.QueryValidation(w, r, err)
+		return
+	}
+	if f.IsDefault, err = apiquery.Bool(values, "is_default"); err != nil {
+		response.QueryValidation(w, r, err)
+		return
+	}
+	items, err := h.svc.List(r.Context(), caller(r), f)
 	if err != nil {
 		writeErr(w, r, err)
 		return

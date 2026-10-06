@@ -643,6 +643,10 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		// TEC-212: tenant resources with undo.
 		bulkadapters.NewCatalogProducts(deps.Queries),
 		bulkadapters.NewTasks(deps.Queries),
+		// TEC-369: catalog categories (tenant) and vehicle catalog (platform).
+		bulkadapters.NewCatalogCategories(deps.Queries),
+		bulkadapters.NewVehicleBrands(deps.Queries),
+		bulkadapters.NewVehicleModels(deps.Queries),
 	)
 	bulkSvc := bulkusecase.New(deps.Queries, bulkReg, deps.Queue, notifSvc, activityRec, cfg.Bulk, log).WithPool(deps.DB)
 	logsSvc := logsusecase.New(deps.Queries)

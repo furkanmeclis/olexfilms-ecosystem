@@ -53,5 +53,18 @@
   "confirm.organizations.suspend": "¿Suspender {{count}} organizaciones?",
   "confirm.organizations.set_read_only": "¿Poner {{count}} organizaciones en solo lectura?",
   "confirm.organizations.extend_access": "¿Ampliar el acceso de {{count}} organizaciones?",
-  "params.days": "Días"
+  "params.days": "Días",
+  "actions.catalog_products.set_category": "Asignar categoría",
+  "params.category": "Categoría",
+  "actions.catalog_categories.activate": "Activar",
+  "actions.catalog_categories.deactivate": "Desactivar",
+  "actions.catalog_categories.delete": "Eliminar",
+  "confirm.catalog_categories.deactivate": "¿Desactivar las categorías seleccionadas?",
+  "confirm.catalog_categories.delete": "¿Eliminar las categorías seleccionadas? Se omiten las que aún tienen productos.",
+  "actions.vehicle_brands.activate": "Activar",
+  "actions.vehicle_brands.deactivate": "Desactivar",
+  "confirm.vehicle_brands.deactivate": "¿Desactivar las marcas seleccionadas?",
+  "actions.vehicle_models.activate": "Activar",
+  "actions.vehicle_models.deactivate": "Desactivar",
+  "confirm.vehicle_models.deactivate": "¿Desactivar los modelos seleccionados?"
 }

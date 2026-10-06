@@ -148,13 +148,35 @@ type OverrideView struct {
 	Currency         string    `json:"currency"`
 }
 
-func (s *Service) ListPlatform(ctx context.Context, org orgctx.Scope, category string, active *bool) ([]ItemView, error) {
+// Categories and Recurrences are the fixed enum values of the catalog
+// (list filters, TEC-369).
+var (
+	Categories  = []string{"advertising", "training", "setup", "software", CategoryModuleBundle, "other"}
+	Recurrences = []string{"one_time", "monthly", "yearly"}
+)
+
+// ListFilter narrows the service catalog list (TEC-369): Categories and
+// Recurrences are any of; Q matches name and description. The list stays a
+// full array (small brand catalog, client-side table).
+type ListFilter struct {
+	Q           string
+	Categories  []string
+	Recurrences []string
+	Active      *bool
+}
+
+func (f ListFilter) params(brandID int64) db.ListServiceCatalogItemsParams {
+	return db.ListServiceCatalogItemsParams{
+		BrandID: brandID, Categories: f.Categories, Recurrences: f.Recurrences,
+		IsActive: boolArg(f.Active), Q: textArg(f.Q),
+	}
+}
+
+func (s *Service) ListPlatform(ctx context.Context, org orgctx.Scope, f ListFilter) ([]ItemView, error) {
 	if org.OrgType != pricing.OrgCenter {
 		return nil, ErrForbidden
 	}
-	items, err := s.q.ListServiceCatalogItems(ctx, db.ListServiceCatalogItemsParams{
-		BrandID: org.BrandID, Category: textArg(category), IsActive: boolArg(active),
-	})
+	items, err := s.q.ListServiceCatalogItems(ctx, f.params(org.BrandID))
 	if err != nil {
 		return nil, err
 	}
@@ -340,12 +362,15 @@ func (s *Service) DeleteOverride(ctx context.Context, org orgctx.Scope, itemID, 
 	return nil
 }
 
-func (s *Service) ListVisible(ctx context.Context, org orgctx.Scope, viewer pricing.Viewer) ([]ItemView, error) {
+// ListVisible lists the active catalog items a tenant may buy; f.Active is
+// ignored (always active).
+func (s *Service) ListVisible(ctx context.Context, org orgctx.Scope, viewer pricing.Viewer, f ListFilter) ([]ItemView, error) {
 	if org.OrgType != pricing.OrgDistributor && org.OrgType != pricing.OrgDealer && org.OrgType != pricing.OrgCenter {
 		return nil, ErrForbidden
 	}
 	t := true
-	items, err := s.q.ListServiceCatalogItems(ctx, db.ListServiceCatalogItemsParams{BrandID: org.BrandID, IsActive: boolArg(&t)})
+	f.Active = &t
+	items, err := s.q.ListServiceCatalogItems(ctx, f.params(org.BrandID))
 	if err != nil {
 		return nil, err
 	}

@@ -84,8 +84,22 @@ func (a *CatalogProductsAdapter) BulkActions() []bulkengine.BulkActionDef {
 			Permission: rbac.PermCatalogWrite, Destructive: true, Reversible: true,
 			ConfirmKey: "bulk.confirm.catalog_products.deactivate",
 		},
+		// TEC-369: move products to another category of the brand.
+		{
+			ID: ActionSetCategory, LabelKey: "bulk.actions.catalog_products.set_category",
+			Permission: rbac.PermCatalogWrite, Reversible: true,
+			Params: []bulkengine.BulkActionParam{
+				{Key: ParamCategoryUUID, Kind: "uuid", Required: true, LabelKey: "bulk.params.category"},
+			},
+		},
 	}
 }
+
+// ActionSetCategory / ParamCategoryUUID: catalog.products set_category.
+const (
+	ActionSetCategory = "set_category"
+	ParamCategoryUUID = "category_uuid"
+)
 
 func (a *CatalogProductsAdapter) ResolveTargets(_ context.Context, _ string, target bulkengine.BulkTarget) ([]string, error) {
 	return idsOnly(target)
@@ -103,6 +117,9 @@ func (a *CatalogProductsAdapter) center(ctx context.Context) (db.Organization, e
 }
 
 func (a *CatalogProductsAdapter) ApplyItem(ctx context.Context, action, entityUUID string) (bulkengine.BulkItemResult, error) {
+	if action == ActionSetCategory {
+		return a.setCategory(ctx, entityUUID)
+	}
 	var want bool
 	switch action {
 	case "activate":
@@ -145,7 +162,70 @@ func (a *CatalogProductsAdapter) ApplyItem(ctx context.Context, action, entityUU
 	return res, nil
 }
 
-func (a *CatalogProductsAdapter) CurrentState(ctx context.Context, _ string, entityUUID string) (map[string]any, error) {
+// categoryUUIDOf returns the public id of a product's category.
+func (a *CatalogProductsAdapter) categoryUUIDOf(ctx context.Context, p db.Product) (string, error) {
+	c, err := a.q.GetProductCategory(ctx, db.GetProductCategoryParams{ID: p.CategoryID, BrandID: p.BrandID})
+	if err != nil {
+		return "", err
+	}
+	return c.Uuid.String(), nil
+}
+
+// setCategory moves one product to the run's category_uuid (TEC-369). A
+// category outside the brand fails the whole run; a product whose category
+// the integration sync owns is skipped (TEC-268).
+func (a *CatalogProductsAdapter) setCategory(ctx context.Context, entityUUID string) (bulkengine.BulkItemResult, error) {
+	org, err := a.center(ctx)
+	if err != nil {
+		return bulkengine.BulkItemResult{}, err
+	}
+	run, _ := bulkengine.RunFrom(ctx)
+	catID, err := uuid.Parse(run.Params[ParamCategoryUUID])
+	if err != nil {
+		return bulkengine.BulkItemResult{}, fmt.Errorf("%s must be a category uuid", ParamCategoryUUID)
+	}
+	cat, err := a.q.GetProductCategoryByUUID(ctx, db.GetProductCategoryByUUIDParams{Uuid: catID, BrandID: org.BrandID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return bulkengine.BulkItemResult{}, fmt.Errorf("%s must be a category of the brand", ParamCategoryUUID)
+	}
+	if err != nil {
+		return bulkengine.BulkItemResult{}, err
+	}
+	id, err := uuid.Parse(entityUUID)
+	if err != nil {
+		return bulkengine.BulkItemResult{EntityUUID: entityUUID, OK: false, Error: "invalid uuid"}, nil
+	}
+	p, err := a.q.GetProductByUUID(ctx, db.GetProductByUUIDParams{Uuid: id, BrandID: org.BrandID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return bulkengine.BulkItemResult{EntityUUID: entityUUID, OK: false, Error: "not found"}, nil
+	}
+	if err != nil {
+		return bulkengine.BulkItemResult{}, err
+	}
+	prev, err := a.categoryUUIDOf(ctx, p)
+	if err != nil {
+		return bulkengine.BulkItemResult{}, err
+	}
+	res := bulkengine.BulkItemResult{
+		EntityUUID: entityUUID, EntityType: "product", OK: true, Op: "update",
+		Previous: map[string]any{ParamCategoryUUID: prev},
+		Applied:  map[string]any{ParamCategoryUUID: cat.Uuid.String()},
+	}
+	if p.CategoryID == cat.ID {
+		return res, nil
+	}
+	if slices.Contains(p.LockedFields, ParamCategoryUUID) {
+		return bulkengine.BulkItemResult{EntityUUID: entityUUID, OK: false, Error: "locked"}, nil
+	}
+	if _, err := a.q.SetProductCategoryByUUID(ctx, db.SetProductCategoryByUUIDParams{
+		CategoryID: cat.ID, Uuid: id, BrandID: org.BrandID,
+	}); err != nil {
+		return bulkengine.BulkItemResult{EntityUUID: entityUUID, OK: false, Error: err.Error()}, nil
+	}
+	return res, nil
+}
+
+func (a *CatalogProductsAdapter) CurrentState(ctx context.Context, action string, entityUUID string) (map[string]any, error) {
 	org, err := a.center(ctx)
 	if err != nil {
 		return nil, err
@@ -161,16 +241,36 @@ func (a *CatalogProductsAdapter) CurrentState(ctx context.Context, _ string, ent
 	if err != nil {
 		return nil, err
 	}
+	if action == ActionSetCategory {
+		cat, err := a.categoryUUIDOf(ctx, p)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{ParamCategoryUUID: cat}, nil
+	}
 	return map[string]any{"active": p.Active}, nil
 }
 
-func (a *CatalogProductsAdapter) RevertItem(ctx context.Context, _ string, entityUUID string, previous map[string]any) error {
+func (a *CatalogProductsAdapter) RevertItem(ctx context.Context, action string, entityUUID string, previous map[string]any) error {
 	org, err := a.center(ctx)
 	if err != nil {
 		return err
 	}
 	id, err := uuid.Parse(entityUUID)
 	if err != nil {
+		return err
+	}
+	if action == ActionSetCategory {
+		raw, _ := previous[ParamCategoryUUID].(string)
+		catID, err := uuid.Parse(raw)
+		if err != nil {
+			return fmt.Errorf("missing product category snapshot")
+		}
+		cat, err := a.q.GetProductCategoryByUUID(ctx, db.GetProductCategoryByUUIDParams{Uuid: catID, BrandID: org.BrandID})
+		if err != nil {
+			return err
+		}
+		_, err = a.q.SetProductCategoryByUUID(ctx, db.SetProductCategoryByUUIDParams{CategoryID: cat.ID, Uuid: id, BrandID: org.BrandID})
 		return err
 	}
 	prev, ok := previous["active"].(bool)

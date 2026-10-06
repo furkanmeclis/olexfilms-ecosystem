@@ -7,8 +7,13 @@
 -- name: ListContractTemplates :many
 SELECT * FROM contract_templates
 WHERE brand_id = sqlc.arg(brand_id)
-  AND (sqlc.narg(kind)::text IS NULL OR kind = sqlc.narg(kind)::text)
-  AND (NOT sqlc.arg(active_only)::bool OR is_active)
+  AND (
+    COALESCE(cardinality(sqlc.narg(kinds)::text[]), 0) = 0
+    OR kind = ANY (sqlc.narg(kinds)::text[])
+  )
+  -- TEC-369: active / is_default are true|false|omitted filters.
+  AND (sqlc.narg(is_active)::bool IS NULL OR is_active = sqlc.narg(is_active)::bool)
+  AND (sqlc.narg(is_default)::bool IS NULL OR is_default = sqlc.narg(is_default)::bool)
 ORDER BY kind, is_default DESC, name, id;
 
 -- name: GetContractTemplateByUUID :one

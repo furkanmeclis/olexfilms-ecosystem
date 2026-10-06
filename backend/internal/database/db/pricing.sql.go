@@ -12,6 +12,47 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countDistributorOverrideDetails = `-- name: CountDistributorOverrideDetails :one
+SELECT COUNT(*)::bigint
+FROM distributor_price_overrides o
+JOIN products p ON p.id = o.product_id
+JOIN organizations d ON d.id = o.distributor_org_id
+WHERE o.brand_id = $1
+  AND ($2::bigint IS NULL OR o.product_id = $2::bigint)
+  AND ($3::bigint IS NULL OR o.distributor_org_id = $3::bigint)
+  AND (
+    COALESCE(cardinality($4::text[]), 0) = 0
+    OR o.currency = ANY ($4::text[])
+  )
+  AND (
+    $5::text IS NULL
+    OR p.sku ILIKE '%' || $5::text || '%'
+    OR p.name ILIKE '%' || $5::text || '%'
+    OR d.name ILIKE '%' || $5::text || '%'
+  )
+`
+
+type CountDistributorOverrideDetailsParams struct {
+	BrandID          int64       `json:"brand_id"`
+	ProductID        pgtype.Int8 `json:"product_id"`
+	DistributorOrgID pgtype.Int8 `json:"distributor_org_id"`
+	Currencies       []string    `json:"currencies"`
+	Q                pgtype.Text `json:"q"`
+}
+
+func (q *Queries) CountDistributorOverrideDetails(ctx context.Context, arg CountDistributorOverrideDetailsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countDistributorOverrideDetails,
+		arg.BrandID,
+		arg.ProductID,
+		arg.DistributorOrgID,
+		arg.Currencies,
+		arg.Q,
+	)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const countDistributorPriceOverrides = `-- name: CountDistributorPriceOverrides :one
 SELECT COUNT(*)::bigint FROM distributor_price_overrides
 WHERE brand_id = $1
@@ -256,14 +297,57 @@ JOIN organizations d ON d.id = o.distributor_org_id
 WHERE o.brand_id = $1
   AND ($2::bigint IS NULL OR o.product_id = $2::bigint)
   AND ($3::bigint IS NULL OR o.distributor_org_id = $3::bigint)
-ORDER BY p.sku ASC, d.name ASC, o.currency ASC
-LIMIT $5 OFFSET $4
+  AND (
+    COALESCE(cardinality($4::text[]), 0) = 0
+    OR o.currency = ANY ($4::text[])
+  )
+  AND (
+    $5::text IS NULL
+    OR p.sku ILIKE '%' || $5::text || '%'
+    OR p.name ILIKE '%' || $5::text || '%'
+    OR d.name ILIKE '%' || $5::text || '%'
+  )
+ORDER BY
+  CASE WHEN NOT $6::bool THEN
+    CASE $7::text
+      WHEN 'product' THEN p.sku::text
+      WHEN 'distributor' THEN d.name::text
+      WHEN 'currency' THEN o.currency::text
+    END
+  END ASC,
+  CASE WHEN $6::bool THEN
+    CASE $7::text
+      WHEN 'product' THEN p.sku::text
+      WHEN 'distributor' THEN d.name::text
+      WHEN 'currency' THEN o.currency::text
+    END
+  END DESC,
+  CASE WHEN NOT $6::bool THEN
+    CASE $7::text WHEN 'price' THEN o.price END
+  END ASC,
+  CASE WHEN $6::bool THEN
+    CASE $7::text WHEN 'price' THEN o.price END
+  END DESC,
+  CASE WHEN NOT $6::bool THEN
+    CASE $7::text WHEN 'updated_at' THEN o.updated_at END
+  END ASC,
+  CASE WHEN $6::bool THEN
+    CASE $7::text WHEN 'updated_at' THEN o.updated_at END
+  END DESC,
+  p.sku ASC, d.name ASC, o.currency ASC,
+  CASE WHEN $6::bool THEN o.id END DESC,
+  o.id ASC
+LIMIT $9 OFFSET $8
 `
 
 type ListDistributorOverrideDetailsParams struct {
 	BrandID          int64       `json:"brand_id"`
 	ProductID        pgtype.Int8 `json:"product_id"`
 	DistributorOrgID pgtype.Int8 `json:"distributor_org_id"`
+	Currencies       []string    `json:"currencies"`
+	Q                pgtype.Text `json:"q"`
+	SortDesc         bool        `json:"sort_desc"`
+	SortKey          string      `json:"sort_key"`
 	OffsetCount      int32       `json:"offset_count"`
 	LimitCount       int32       `json:"limit_count"`
 }
@@ -280,12 +364,17 @@ type ListDistributorOverrideDetailsRow struct {
 }
 
 // Center view of the distributor-specific prices with product and
-// distributor identities.
+// distributor identities. TEC-369: sort keys from
+// usecase.DistributorPriceSort (docs/list-contract.md); default product.
 func (q *Queries) ListDistributorOverrideDetails(ctx context.Context, arg ListDistributorOverrideDetailsParams) ([]ListDistributorOverrideDetailsRow, error) {
 	rows, err := q.db.Query(ctx, listDistributorOverrideDetails,
 		arg.BrandID,
 		arg.ProductID,
 		arg.DistributorOrgID,
+		arg.Currencies,
+		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.OffsetCount,
 		arg.LimitCount,
 	)
