@@ -68,6 +68,10 @@ vi.mock("@/hooks/use-active-organization", () => ({
 }));
 vi.mock("@/providers/dialog-provider", () => ({ useDialogs: () => dialogs }));
 vi.mock("@/providers/toast-provider", () => ({ appToast: toast }));
+vi.mock("@/hooks/use-mobile", () => ({
+  useIsMobile: () => false,
+  useIsXl: () => true,
+}));
 vi.mock("@/hooks/use-debounce", () => ({
   useDebounce: <T,>(value: T) => value,
 }));
@@ -314,6 +318,39 @@ describe("TransferDetailPage (TEC-232)", () => {
     await flush();
     expect($("transfer-status")?.getAttribute("data-status")).toBe("completed");
     expect($("transfer-cancel")).toBeNull();
+  });
+});
+
+describe("TransferDetailPage lines table (TEC-376)", () => {
+  it("in transit: the selected lines are placed instead of every open line", async () => {
+    const second = { ...LINE, uuid: "line-2", barcode: "OLEX-00000002" };
+    const inTransit = transfer({
+      status: "in_transit",
+      lines: [LINE, second],
+      line_count: 2,
+    });
+    api.getTransfer.mockResolvedValue(inTransit);
+    api.placeTransfer.mockResolvedValue(inTransit);
+    await render(
+      m,
+      createElement(TransferDetailPage, { slug: "acme", uuid: "tr-1" }),
+    );
+    expect(
+      m.container.querySelectorAll('[data-testid="transfer-line"]'),
+    ).toHaveLength(2);
+    const boxes = m.container.querySelectorAll<HTMLButtonElement>(
+      'button[aria-label="table.select_row"]',
+    );
+    expect(boxes).toHaveLength(2);
+    await click(boxes[1]);
+    expect(m.container.textContent).toContain(
+      'warehouse.entry.place_selected {"count":1}',
+    );
+    await scan("transfer-location", "OFW:LOC:WH2-R1-B");
+    expect(api.placeTransfer).toHaveBeenCalledWith("tr-1", {
+      location_code: "OFW:LOC:WH2-R1-B",
+      line_uuids: ["line-2"],
+    });
   });
 });
 

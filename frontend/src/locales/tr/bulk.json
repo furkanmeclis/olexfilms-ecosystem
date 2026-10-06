@@ -77,5 +77,6 @@
   "params.lead_status.won": "Kazanıldı",
   "params.lead_status.lost": "Kaybedildi",
   "params.lost_reason": "Kayıp nedeni",
-  "actions.stock_units.print_labels": "Etiketleri yazdır"
+  "actions.stock_units.print_labels": "Etiketleri yazdır",
+  "actions.warehouse_count_lines.set_resolution": "Çözüm uygula: {{resolution}}"
 }

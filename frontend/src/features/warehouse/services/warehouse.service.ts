@@ -60,32 +60,35 @@ export type Page<T> = {
   offset: number;
 };
 
-export type StockEntryListQuery = {
-  status?: StockEntryStatus;
+/**
+ * Server list query of a warehouse list (TEC-375 / TEC-376): `limit`,
+ * `offset`, `sort` (`field` / `-field`), `q` and the mapped column filters
+ * (CSV multi-values, `<field>_from` / `<field>_to` date ranges).
+ */
+export type WarehouseListQuery = {
   limit: number;
   offset: number;
-};
+  sort?: string;
+  q?: string;
+} & Record<string, string | number | undefined>;
 
-export type TransferListQuery = {
-  status?: WarehouseTransferStatus;
-  limit: number;
-  offset: number;
-};
+/** Stock entries: status, mode, warehouse_uuid (CSV), created_from/_to. */
+export type StockEntryListQuery = WarehouseListQuery;
 
-export type CountListQuery = {
-  status?: StockCountStatus;
-  limit: number;
-  offset: number;
-};
+/** Transfers: status, from_/to_warehouse_uuid (CSV), created_from/_to. */
+export type TransferListQuery = WarehouseListQuery;
 
-export type EodListQuery = {
-  scope?: "system" | "warehouse";
-  warehouse_uuid?: string;
-  date_from?: string;
-  date_to?: string;
-  limit: number;
-  offset: number;
-};
+/**
+ * Counts: status, method, visibility, scope_type, warehouse_uuid (CSV),
+ * created_from/_to.
+ */
+export type CountListQuery = WarehouseListQuery;
+
+/** End-of-day: scope, warehouse_uuid, kind (CSV), date_from/_to. */
+export type EodListQuery = WarehouseListQuery;
+
+/** Barcode batches: product_uuid (CSV), printed, created_from/_to. */
+export type BatchListQuery = WarehouseListQuery;
 
 const enc = encodeURIComponent;
 
@@ -252,7 +255,7 @@ export const warehouseService = {
   },
 
   // --- Barcode batches, center only (TEC-202, K14) ---------------------------
-  listBatches(params: { limit: number; offset: number }) {
+  listBatches(params: BatchListQuery) {
     return platformRequest<Page<BarcodeBatch>>("GET", "/v1/stock/barcodes", {
       query: params,
     });
@@ -357,10 +360,15 @@ export const warehouseService = {
       `/v1/warehouse/stock-counts/${enc(uuid)}/${action}`,
     );
   },
-  listCountScans(uuid: string) {
-    return platformRequest<{ items: StockCountScan[] }>(
+  /**
+   * Scans of a count in the page envelope (TEC-375). Without `limit` /
+   * `offset` every scan comes back (`limit = total`), oldest first.
+   */
+  listCountScans(uuid: string, params?: { limit: number; offset: number }) {
+    return platformRequest<Page<StockCountScan>>(
       "GET",
       `/v1/warehouse/stock-counts/${enc(uuid)}/scans`,
+      params ? { query: params } : undefined,
     );
   },
   scanCount(uuid: string, body: StockCountScanInput) {
@@ -450,7 +458,7 @@ export const warehouseKeys = {
   entries: (params: StockEntryListQuery) =>
     ["warehouse", "entries", params] as const,
   entry: (uuid: string) => ["warehouse", "entry", uuid] as const,
-  batches: (params: { limit: number; offset: number }) =>
+  batches: (params: BatchListQuery) =>
     ["warehouse", "batches", params] as const,
   transfers: (params: TransferListQuery) =>
     ["warehouse", "transfers", params] as const,

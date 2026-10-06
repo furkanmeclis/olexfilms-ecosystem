@@ -77,5 +77,6 @@
   "params.lead_status.won": "Gewonnen",
   "params.lead_status.lost": "Verloren",
   "params.lost_reason": "Verlustgrund",
-  "actions.stock_units.print_labels": "Etiketten drucken"
+  "actions.stock_units.print_labels": "Etiketten drucken",
+  "actions.warehouse_count_lines.set_resolution": "Lösung festlegen: {{resolution}}"
 }
