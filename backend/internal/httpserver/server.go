@@ -501,7 +501,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	if listFinder != nil {
 		ordersSvc.SetFinder(listFinder) // TEC-210
 	}
-	ordersmodule.RegisterRoutes(mux, ordershandler.New(ordersSvc), tokens, loader, deps.Queries, featureSvc)
+	ordersH := ordershandler.New(ordersSvc)
+	ordersmodule.RegisterRoutes(mux, ordersH, tokens, loader, deps.Queries, featureSvc)
 	// TEC-197: stock transfer requests between siblings (K13).
 	// TEC-200: a received transfer books A alacak / B borç.
 	transfersSvc := transfersusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)).
@@ -617,12 +618,18 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		warrantyclaimsusecase.NewFailureRateAdapter(warrantyClaimsSvc),
 		warrantyclaimsusecase.NewByDealerAdapter(warrantyClaimsSvc),
 		warrantyclaimsusecase.NewPartsAdapter(warrantyClaimsSvc),
+		// TEC-371: lead list export (read only, SQL search).
+		leadsusecase.NewListExportAdapter(leadsusecase.New(deps.DB, deps.Queries, nil)),
+		// TEC-373: order list and stock unit list exports.
+		ordersusecase.NewListExportAdapter(ordersSvc),
+		stockusecase.NewUnitsExportAdapter(stockusecase.New(deps.Queries)),
 	)
 	exportSvc := exportusecase.New(deps.Queries, deps.Storage, ioReg, deps.Queue, notifSvc, activityRec, log)
 	exportSvc.SetDocumentPDF(pdfClient)
 	servicesH.WithExports(exportSvc)
 	accountingH.WithExports(exportSvc)
 	customersH.WithExports(exportSvc)
+	ordersH.WithExports(exportSvc) // TEC-373
 	warrantyclaimsmodule.RegisterRoutes(mux, warrantyclaimshandler.New(warrantyClaimsSvc, exportSvc), tokens, loader, deps.Queries, featureSvc)
 	warrantymodule.RegisterCertificateRoutes(mux, warrantyhandler.NewCertificate(warrantyCert, exportSvc), tokens, loader, deps.Queries, featureSvc)
 	servicesmodule.RegisterPDFRoutes(mux, serviceshandler.NewPDF(servicePDF, exportSvc), tokens, loader, deps.Queries, featureSvc)
@@ -647,6 +654,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		bulkadapters.NewCatalogCategories(deps.Queries),
 		bulkadapters.NewVehicleBrands(deps.Queries),
 		bulkadapters.NewVehicleModels(deps.Queries),
+		// TEC-371: leads (assign, set status).
+		leadsusecase.NewBulkAdapter(deps.Queries),
 	)
 	bulkSvc := bulkusecase.New(deps.Queries, bulkReg, deps.Queue, notifSvc, activityRec, cfg.Bulk, log).WithPool(deps.DB)
 	logsSvc := logsusecase.New(deps.Queries)
@@ -733,7 +742,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	if listFinder != nil {
 		stockSvc.SetFinder(listFinder) // TEC-210: unit list q
 	}
-	stockmodule.RegisterRoutes(mux, stockhandler.New(stockSvc),
+	stockmodule.RegisterRoutes(mux, stockhandler.New(stockSvc).WithExports(exportSvc), // TEC-373: unit list export
 		stockhandler.NewReclassify(stockusecase.NewReclassifications(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries))),
 		featureSvc, tokens, loader, deps.Queries, stepUpSvc)
 	// TEC-184: roll split (meters cut off a roll as a new unit).
@@ -776,7 +785,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		s.worker.WithQuoteExpire(leadsSvc.ExpireDueQuotesTask).
 			WithQuoteReminder(leadsSvc.QuoteReminderTask)
 	}
-	leadsmodule.RegisterRoutes(mux, leadshandler.New(leadsSvc).WithDocuments(docSvc), tokens, loader, deps.Queries, featureSvc)
+	leadsmodule.RegisterRoutes(mux, leadshandler.New(leadsSvc).WithDocuments(docSvc).WithExports(exportSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-323: appointments, capacity, availability and intake start.
 	appointmentsSvc := appointmentsusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries), servicesSvc)
 	appointmentsSvc.SetFeatureChecker(featureSvc)

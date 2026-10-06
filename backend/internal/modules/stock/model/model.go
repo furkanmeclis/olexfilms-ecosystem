@@ -4,6 +4,7 @@ package model
 import (
 	"time"
 
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 )
 
@@ -142,15 +143,25 @@ const (
 // UnitStatuses are the units.status values the unit list filters on.
 var UnitStatuses = []string{"reserved", "printed", "available", "placed", "in_transit", "used", "void"}
 
-// UnitFilter filters the organization unit list (TEC-216).
+// UnitFilter filters the organization unit list (TEC-216). TEC-373:
+// Statuses is any-of (empty: available and placed); Barcode is an exact
+// match, or a prefix with BarcodePrefix; LocationUUIDs is any-of (units
+// on those locations; fixed barcodes have no single location);
+// UpdatedFrom inclusive, UpdatedBefore exclusive; Sort zero means the
+// default (product); SortExplicit marks a sort the request asked for.
 type UnitFilter struct {
-	ProductUUID *uuid.UUID
-	// Status is "" (available and placed) or one unit status.
-	Status  string
-	Barcode string
-	Q       string
-	Limit   int32
-	Offset  int32
+	ProductUUID   *uuid.UUID
+	Statuses      []string
+	Barcode       string
+	BarcodePrefix bool
+	LocationUUIDs []uuid.UUID
+	UpdatedFrom   *time.Time
+	UpdatedBefore *time.Time
+	Q             string
+	Sort          apiquery.ResolvedSort
+	SortExplicit  bool
+	Limit         int32
+	Offset        int32
 }
 
 // UnitPurchasePrice is the purchase price the holding organization pays
@@ -186,6 +197,8 @@ type StockFilter struct {
 	// Status is "", in_stock or out_of_stock.
 	Status string
 	Q      string
+	// Sort is the resolved sort (TEC-373; zero: by product name).
+	Sort   apiquery.ResolvedSort
 	Limit  int32
 	Offset int32
 }

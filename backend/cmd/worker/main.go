@@ -219,6 +219,11 @@ func main() {
 		warrantyclaimsusecase.NewFailureRateAdapter(warrantyClaimsSvc),
 		warrantyclaimsusecase.NewByDealerAdapter(warrantyClaimsSvc),
 		warrantyclaimsusecase.NewPartsAdapter(warrantyClaimsSvc),
+		// TEC-371: lead list export (read only).
+		leadsusecase.NewListExportAdapter(leadsusecase.New(pool, queries, nil)),
+		// TEC-373: order list and stock unit list exports (read only).
+		ordersusecase.NewListExportAdapter(ordersusecase.New(pool, queries, nil, nil)),
+		stockusecase.NewUnitsExportAdapter(stockusecase.New(queries)),
 	)
 	exportSvc := exportusecase.New(queries, store, ioReg, nil, notifSvc, activityRec, log)
 	pdfClient := pdfrender.NewWithOptions(cfg.Gotenberg.URL, pdfrender.Options{MaxConnsPerHost: cfg.Queue.Concurrency})
@@ -255,6 +260,8 @@ func main() {
 		bulkadapters.NewCatalogCategories(queries),
 		bulkadapters.NewVehicleBrands(queries),
 		bulkadapters.NewVehicleModels(queries),
+		// TEC-371: leads (assign, set status).
+		leadsusecase.NewBulkAdapter(queries),
 	)
 	bulkSvc := bulkusecase.New(queries, bulkReg, nil, notifSvc, activityRec, cfg.Bulk, log).
 		WithPool(pool).WithUndoWindow(sysconfig.New(queries, sysconfig.NoCache{}).BulkUndoWindowHours)

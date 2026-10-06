@@ -40,6 +40,8 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/leads", route(h.List))
 	mux.Handle("POST /v1/leads", route(h.Create, write))
 	mux.Handle("GET /v1/leads/follow-up-count", route(h.FollowUpCount))
+	// TEC-371: list export (same scope as the list).
+	mux.Handle("POST /v1/leads/export", route(h.RequestListExport))
 	mux.Handle("GET /v1/leads/{uuid}", route(h.Get))
 	mux.Handle("PATCH /v1/leads/{uuid}", route(h.Patch, write))
 	mux.Handle("POST /v1/leads/{uuid}/status", route(h.SetStatus, write))

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -194,14 +195,21 @@ const (
 	DirectionApproval = "approval"
 )
 
-// ListFilter narrows the request list.
+// ListFilter narrows the request list. TEC-373: Kinds, Directions,
+// Statuses and OrganizationUUIDs (sender or receiver) are any-of (empty =
+// all); CreatedBefore is exclusive; Sort zero means -created_at.
 type ListFilter struct {
-	// Kind narrows to sibling transfers or returns ("": both).
-	Kind      string
-	Direction string
-	Status    string
-	Limit     int32
-	Offset    int32
+	Kinds             []string
+	Directions        []string
+	Statuses          []string
+	CreatedFrom       *time.Time
+	CreatedBefore     *time.Time
+	OrganizationUUIDs []uuid.UUID
+	// Q matches the transfer number and the sender / receiver names.
+	Q      string
+	Sort   apiquery.ResolvedSort
+	Limit  int32
+	Offset int32
 }
 
 // List returns the requests of the active organization: as the giver
@@ -210,35 +218,41 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]TransferV
 	if c.Org.InternalID == 0 {
 		return nil, 0, ErrForbidden
 	}
-	dir := strings.TrimSpace(f.Direction)
-	switch dir {
-	case DirectionAll, DirectionOutgoing, DirectionIncoming, DirectionApproval:
-	default:
-		return nil, 0, invalid("direction", "must be outgoing, incoming or approval")
+	for _, d := range f.Directions {
+		if d != DirectionOutgoing && d != DirectionIncoming && d != DirectionApproval {
+			return nil, 0, invalid("direction", "must be outgoing, incoming or approval")
+		}
 	}
-	status := pgtype.Text{}
-	if st := strings.TrimSpace(f.Status); st != "" {
+	for _, st := range f.Statuses {
 		if !IsStatus(st) {
 			return nil, 0, invalid("status", "unknown transfer status")
 		}
-		status = pgtype.Text{String: st, Valid: true}
 	}
-	kind := pgtype.Text{}
-	if k := strings.TrimSpace(f.Kind); k != "" {
+	for _, k := range f.Kinds {
 		if !IsKind(k) {
 			return nil, 0, invalid("kind", "must be sibling or return")
 		}
-		kind = pgtype.Text{String: k, Valid: true}
 	}
-	rows, err := s.q.ListTransferRequestsForOrg(ctx, db.ListTransferRequestsForOrgParams{
-		BrandID: c.Org.BrandID, Direction: dir, OrgID: c.Org.InternalID, Status: status, Kind: kind,
-		RowLimit: f.Limit, RowOffset: f.Offset,
-	})
+	key, desc := f.Sort.Key, f.Sort.Desc
+	if key == "" {
+		key, desc = ListSort.Columns[ListSort.Default.Field], ListSort.Default.Desc
+	}
+	q := pgtype.Text{}
+	if v := strings.TrimSpace(f.Q); v != "" {
+		q = pgtype.Text{String: v, Valid: true}
+	}
+	p := db.ListTransferRequestsFilteredParams{
+		BrandID: c.Org.BrandID, Directions: f.Directions, OrgID: c.Org.InternalID, Statuses: f.Statuses, Kinds: f.Kinds,
+		CreatedFrom: tsArg(f.CreatedFrom), CreatedBefore: tsArg(f.CreatedBefore), Q: q, OrgUuids: f.OrganizationUUIDs,
+		SortKey: key, SortDesc: desc, RowLimit: f.Limit, RowOffset: f.Offset,
+	}
+	rows, err := s.q.ListTransferRequestsFiltered(ctx, p)
 	if err != nil {
 		return nil, 0, fmt.Errorf("transfers: list: %w", err)
 	}
-	total, err := s.q.CountTransferRequestsForOrg(ctx, db.CountTransferRequestsForOrgParams{
-		BrandID: c.Org.BrandID, Direction: dir, OrgID: c.Org.InternalID, Status: status, Kind: kind,
+	total, err := s.q.CountTransferRequestsFiltered(ctx, db.CountTransferRequestsFilteredParams{
+		BrandID: p.BrandID, Directions: p.Directions, OrgID: p.OrgID, Statuses: p.Statuses, Kinds: p.Kinds,
+		CreatedFrom: p.CreatedFrom, CreatedBefore: p.CreatedBefore, Q: p.Q, OrgUuids: p.OrgUuids,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("transfers: count: %w", err)

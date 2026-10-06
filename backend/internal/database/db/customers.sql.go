@@ -41,37 +41,58 @@ func (q *Queries) CountCustomerOrganizationLinks(ctx context.Context, arg CountC
 }
 
 const countOrganizationCustomers = `-- name: CountOrganizationCustomers :one
-SELECT COUNT(DISTINCT u.id)::bigint
-FROM users u
-JOIN customer_organizations co ON co.user_id = u.id
-LEFT JOIN customer_profiles cp ON cp.user_id = u.id
-WHERE u.deleted_at IS NULL
-  AND ($1::bigint[] IS NULL OR co.organization_id = ANY ($1::bigint[]))
-  AND ($2::bigint IS NULL OR co.brand_id = $2)
-  AND ($3::text IS NULL OR u.status = $3)
-  AND (
-    $4::text IS NULL
-    OR u.name ILIKE '%' || $4 || '%'
-    OR u.surname ILIKE '%' || $4 || '%'
-    OR u.email ILIKE '%' || $4 || '%'
-    OR u.phone_e164 LIKE '%' || $4 || '%'
-    OR cp.company_name ILIKE '%' || $4 || '%'
-  )
+SELECT COUNT(*)::bigint FROM (
+  SELECT u.id
+  FROM users u
+  JOIN customer_organizations co ON co.user_id = u.id
+  LEFT JOIN customer_profiles cp ON cp.user_id = u.id
+  WHERE u.deleted_at IS NULL
+    AND ($1::bigint[] IS NULL OR co.organization_id = ANY ($1::bigint[]))
+    AND ($2::bigint IS NULL OR co.brand_id = $2)
+    AND (
+      $3::uuid[] IS NULL
+      OR co.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY ($3::uuid[]))
+    )
+    AND (COALESCE(cardinality($4::text[]), 0) = 0 OR u.status = ANY ($4::text[]))
+    AND (
+      COALESCE(cardinality($5::text[]), 0) = 0
+      OR COALESCE(cp.type, 'individual') = ANY ($5::text[])
+    )
+    AND (
+      $6::text IS NULL
+      OR u.name ILIKE '%' || $6 || '%'
+      OR u.surname ILIKE '%' || $6 || '%'
+      OR u.email ILIKE '%' || $6 || '%'
+      OR u.phone_e164 LIKE '%' || $6 || '%'
+      OR cp.company_name ILIKE '%' || $6 || '%'
+    )
+  GROUP BY u.id
+  HAVING ($7::timestamptz IS NULL OR MIN(co.created_at) >= $7::timestamptz)
+     AND ($8::timestamptz IS NULL OR MIN(co.created_at) < $8::timestamptz)
+) matched
 `
 
 type CountOrganizationCustomersParams struct {
-	OrgIds  []int64     `json:"org_ids"`
-	BrandID pgtype.Int8 `json:"brand_id"`
-	Status  pgtype.Text `json:"status"`
-	Q       pgtype.Text `json:"q"`
+	OrgIds            []int64            `json:"org_ids"`
+	BrandID           pgtype.Int8        `json:"brand_id"`
+	OrganizationUuids []uuid.UUID        `json:"organization_uuids"`
+	Statuses          []string           `json:"statuses"`
+	CustomerTypes     []string           `json:"customer_types"`
+	Q                 pgtype.Text        `json:"q"`
+	LinkedFrom        pgtype.Timestamptz `json:"linked_from"`
+	LinkedBefore      pgtype.Timestamptz `json:"linked_before"`
 }
 
 func (q *Queries) CountOrganizationCustomers(ctx context.Context, arg CountOrganizationCustomersParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countOrganizationCustomers,
 		arg.OrgIds,
 		arg.BrandID,
-		arg.Status,
+		arg.OrganizationUuids,
+		arg.Statuses,
+		arg.CustomerTypes,
 		arg.Q,
+		arg.LinkedFrom,
+		arg.LinkedBefore,
 	)
 	var column_1 int64
 	err := row.Scan(&column_1)
@@ -92,6 +113,8 @@ func (q *Queries) CountOrganizationMembershipsByUser(ctx context.Context, userID
 const countScopedVehicles = `-- name: CountScopedVehicles :one
 SELECT COUNT(*)::bigint
 FROM vehicles v
+LEFT JOIN car_brands cb ON cb.id = v.car_brand_id
+LEFT JOIN car_models cm ON cm.id = v.car_model_id
 WHERE v.deleted_at IS NULL
   AND v.brand_id = $1
   AND ($2::bigint IS NULL OR v.user_id = $2)
@@ -100,19 +123,40 @@ WHERE v.deleted_at IS NULL
     WHERE co.user_id = v.user_id
       AND co.brand_id = $1
       AND ($3::bigint[] IS NULL OR co.organization_id = ANY ($3::bigint[]))
+      AND (
+        $4::uuid[] IS NULL
+        OR co.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY ($4::uuid[]))
+      )
   )
-  AND ($4::text IS NULL OR v.plate_normalized LIKE $4 || '%')
-  AND ($5::text IS NULL OR v.vin = $5)
-  AND ($6::text IS NULL OR v.plate_normalized LIKE $6::text || '%' OR v.vin LIKE $6::text || '%')
+  AND ($5::text IS NULL OR v.plate_normalized LIKE $5 || '%')
+  AND ($6::text IS NULL OR v.vin = $6)
+  AND (
+    ($7::text IS NULL AND $8::text IS NULL)
+    OR v.plate_normalized LIKE $7::text || '%'
+    OR v.vin LIKE $7::text || '%'
+    OR concat_ws(' ', cb.name, cm.name) ILIKE '%' || $8::text || '%'
+  )
+  AND (
+    $9::uuid[] IS NULL
+    OR v.car_brand_id IN (SELECT fb.id FROM car_brands fb WHERE fb.uuid = ANY ($9::uuid[]))
+  )
+  AND (
+    $10::uuid[] IS NULL
+    OR v.car_model_id IN (SELECT fm.id FROM car_models fm WHERE fm.uuid = ANY ($10::uuid[]))
+  )
 `
 
 type CountScopedVehiclesParams struct {
-	BrandID         int64       `json:"brand_id"`
-	UserID          pgtype.Int8 `json:"user_id"`
-	OrgIds          []int64     `json:"org_ids"`
-	PlateNormalized pgtype.Text `json:"plate_normalized"`
-	Vin             pgtype.Text `json:"vin"`
-	Q               pgtype.Text `json:"q"`
+	BrandID           int64       `json:"brand_id"`
+	UserID            pgtype.Int8 `json:"user_id"`
+	OrgIds            []int64     `json:"org_ids"`
+	OrganizationUuids []uuid.UUID `json:"organization_uuids"`
+	PlateNormalized   pgtype.Text `json:"plate_normalized"`
+	Vin               pgtype.Text `json:"vin"`
+	Q                 pgtype.Text `json:"q"`
+	QName             pgtype.Text `json:"q_name"`
+	CarBrandUuids     []uuid.UUID `json:"car_brand_uuids"`
+	CarModelUuids     []uuid.UUID `json:"car_model_uuids"`
 }
 
 func (q *Queries) CountScopedVehicles(ctx context.Context, arg CountScopedVehiclesParams) (int64, error) {
@@ -120,9 +164,13 @@ func (q *Queries) CountScopedVehicles(ctx context.Context, arg CountScopedVehicl
 		arg.BrandID,
 		arg.UserID,
 		arg.OrgIds,
+		arg.OrganizationUuids,
 		arg.PlateNormalized,
 		arg.Vin,
 		arg.Q,
+		arg.QName,
+		arg.CarBrandUuids,
+		arg.CarModelUuids,
 	)
 	var column_1 int64
 	err := row.Scan(&column_1)
@@ -887,30 +935,60 @@ LEFT JOIN customer_profiles cp ON cp.user_id = u.id
 WHERE u.deleted_at IS NULL
   AND ($1::bigint[] IS NULL OR co.organization_id = ANY ($1::bigint[]))
   AND ($2::bigint IS NULL OR co.brand_id = $2)
-  AND ($3::text IS NULL OR u.status = $3)
   AND (
-    $4::text IS NULL
-    OR u.name ILIKE '%' || $4 || '%'
-    OR u.surname ILIKE '%' || $4 || '%'
-    OR u.email ILIKE '%' || $4 || '%'
-    OR u.phone_e164 LIKE '%' || $4 || '%'
-    OR cp.company_name ILIKE '%' || $4 || '%'
+    $3::uuid[] IS NULL
+    OR co.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY ($3::uuid[]))
+  )
+  AND (COALESCE(cardinality($4::text[]), 0) = 0 OR u.status = ANY ($4::text[]))
+  AND (
+    COALESCE(cardinality($5::text[]), 0) = 0
+    OR COALESCE(cp.type, 'individual') = ANY ($5::text[])
+  )
+  AND (
+    $6::text IS NULL
+    OR u.name ILIKE '%' || $6 || '%'
+    OR u.surname ILIKE '%' || $6 || '%'
+    OR u.email ILIKE '%' || $6 || '%'
+    OR u.phone_e164 LIKE '%' || $6 || '%'
+    OR cp.company_name ILIKE '%' || $6 || '%'
   )
   -- TEC-164: Meilisearch hits; the scope filter above still applies.
-  AND ($5::uuid[] IS NULL OR u.uuid = ANY ($5::uuid[]))
+  AND ($7::uuid[] IS NULL OR u.uuid = ANY ($7::uuid[]))
 GROUP BY u.id, cp.user_id
-ORDER BY linked_at DESC, u.id DESC
-LIMIT $7 OFFSET $6
+HAVING ($8::timestamptz IS NULL OR MIN(co.created_at) >= $8::timestamptz)
+   AND ($9::timestamptz IS NULL OR MIN(co.created_at) < $9::timestamptz)
+ORDER BY
+  CASE WHEN NOT $10::bool THEN
+    CASE $11::text WHEN 'name' THEN lower(u.name || ' ' || u.surname) WHEN 'status' THEN u.status END
+  END ASC,
+  CASE WHEN $10::bool THEN
+    CASE $11::text WHEN 'name' THEN lower(u.name || ' ' || u.surname) WHEN 'status' THEN u.status END
+  END DESC,
+  CASE WHEN NOT $10::bool AND $11::text = 'email' THEN lower(u.email) END ASC NULLS LAST,
+  CASE WHEN $10::bool AND $11::text = 'email' THEN lower(u.email) END DESC NULLS LAST,
+  CASE WHEN NOT $10::bool AND $11::text = 'linked_at' THEN MIN(co.created_at) END ASC,
+  CASE WHEN $10::bool AND $11::text = 'linked_at' THEN MIN(co.created_at) END DESC,
+  CASE WHEN NOT $10::bool AND $11::text = 'first_service_at' THEN MIN(co.first_service_at) END ASC NULLS LAST,
+  CASE WHEN $10::bool AND $11::text = 'first_service_at' THEN MIN(co.first_service_at) END DESC NULLS LAST,
+  CASE WHEN $10::bool THEN u.id END DESC,
+  u.id ASC
+LIMIT $13 OFFSET $12
 `
 
 type ListOrganizationCustomersParams struct {
-	OrgIds      []int64     `json:"org_ids"`
-	BrandID     pgtype.Int8 `json:"brand_id"`
-	Status      pgtype.Text `json:"status"`
-	Q           pgtype.Text `json:"q"`
-	Uuids       []uuid.UUID `json:"uuids"`
-	OffsetCount int32       `json:"offset_count"`
-	LimitCount  int32       `json:"limit_count"`
+	OrgIds            []int64            `json:"org_ids"`
+	BrandID           pgtype.Int8        `json:"brand_id"`
+	OrganizationUuids []uuid.UUID        `json:"organization_uuids"`
+	Statuses          []string           `json:"statuses"`
+	CustomerTypes     []string           `json:"customer_types"`
+	Q                 pgtype.Text        `json:"q"`
+	Uuids             []uuid.UUID        `json:"uuids"`
+	LinkedFrom        pgtype.Timestamptz `json:"linked_from"`
+	LinkedBefore      pgtype.Timestamptz `json:"linked_before"`
+	SortDesc          bool               `json:"sort_desc"`
+	SortKey           string             `json:"sort_key"`
+	OffsetCount       int32              `json:"offset_count"`
+	LimitCount        int32              `json:"limit_count"`
 }
 
 type ListOrganizationCustomersRow struct {
@@ -930,13 +1008,23 @@ type ListOrganizationCustomersRow struct {
 }
 
 // Customers of the organizations in scope; one row per user.
+// TEC-371: statuses / customer types are CSV filters, linked_at is a date
+// range on the first link, organization_uuids narrows the links to those
+// organizations (inside the scope above). Sort: docs/list-contract.md, keys
+// from customers usecase customersSortSpec.
 func (q *Queries) ListOrganizationCustomers(ctx context.Context, arg ListOrganizationCustomersParams) ([]ListOrganizationCustomersRow, error) {
 	rows, err := q.db.Query(ctx, listOrganizationCustomers,
 		arg.OrgIds,
 		arg.BrandID,
-		arg.Status,
+		arg.OrganizationUuids,
+		arg.Statuses,
+		arg.CustomerTypes,
 		arg.Q,
 		arg.Uuids,
+		arg.LinkedFrom,
+		arg.LinkedBefore,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.OffsetCount,
 		arg.LimitCount,
 	)
@@ -1036,25 +1124,60 @@ WHERE v.deleted_at IS NULL
     WHERE co.user_id = v.user_id
       AND co.brand_id = $1
       AND ($3::bigint[] IS NULL OR co.organization_id = ANY ($3::bigint[]))
+      AND (
+        $4::uuid[] IS NULL
+        OR co.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY ($4::uuid[]))
+      )
   )
-  AND ($4::text IS NULL OR v.plate_normalized LIKE $4 || '%')
-  AND ($5::text IS NULL OR v.vin = $5)
-  AND ($6::text IS NULL OR v.plate_normalized LIKE $6::text || '%' OR v.vin LIKE $6::text || '%')
-  AND ($7::uuid[] IS NULL OR v.uuid = ANY ($7::uuid[]))
-ORDER BY v.created_at DESC, v.id DESC
-LIMIT $9 OFFSET $8
+  AND ($5::text IS NULL OR v.plate_normalized LIKE $5 || '%')
+  AND ($6::text IS NULL OR v.vin = $6)
+  AND (
+    ($7::text IS NULL AND $8::text IS NULL)
+    OR v.plate_normalized LIKE $7::text || '%'
+    OR v.vin LIKE $7::text || '%'
+    OR concat_ws(' ', cb.name, cm.name) ILIKE '%' || $8::text || '%'
+  )
+  AND (
+    $9::uuid[] IS NULL
+    OR v.car_brand_id IN (SELECT fb.id FROM car_brands fb WHERE fb.uuid = ANY ($9::uuid[]))
+  )
+  AND (
+    $10::uuid[] IS NULL
+    OR v.car_model_id IN (SELECT fm.id FROM car_models fm WHERE fm.uuid = ANY ($10::uuid[]))
+  )
+  AND ($11::uuid[] IS NULL OR v.uuid = ANY ($11::uuid[]))
+ORDER BY
+  CASE WHEN NOT $12::bool AND $13::text = 'plate' THEN v.plate_normalized END ASC NULLS LAST,
+  CASE WHEN $12::bool AND $13::text = 'plate' THEN v.plate_normalized END DESC NULLS LAST,
+  CASE WHEN NOT $12::bool AND $13::text = 'brand' THEN lower(cb.name) END ASC NULLS LAST,
+  CASE WHEN $12::bool AND $13::text = 'brand' THEN lower(cb.name) END DESC NULLS LAST,
+  CASE WHEN NOT $12::bool AND $13::text = 'model' THEN lower(cm.name) END ASC NULLS LAST,
+  CASE WHEN $12::bool AND $13::text = 'model' THEN lower(cm.name) END DESC NULLS LAST,
+  CASE WHEN NOT $12::bool AND $13::text = 'model_year' THEN v.model_year END ASC NULLS LAST,
+  CASE WHEN $12::bool AND $13::text = 'model_year' THEN v.model_year END DESC NULLS LAST,
+  CASE WHEN NOT $12::bool AND $13::text = 'created_at' THEN v.created_at END ASC,
+  CASE WHEN $12::bool AND $13::text = 'created_at' THEN v.created_at END DESC,
+  CASE WHEN $12::bool THEN v.id END DESC,
+  v.id ASC
+LIMIT $15 OFFSET $14
 `
 
 type ListScopedVehiclesParams struct {
-	BrandID         int64       `json:"brand_id"`
-	UserID          pgtype.Int8 `json:"user_id"`
-	OrgIds          []int64     `json:"org_ids"`
-	PlateNormalized pgtype.Text `json:"plate_normalized"`
-	Vin             pgtype.Text `json:"vin"`
-	Q               pgtype.Text `json:"q"`
-	Uuids           []uuid.UUID `json:"uuids"`
-	OffsetCount     int32       `json:"offset_count"`
-	LimitCount      int32       `json:"limit_count"`
+	BrandID           int64       `json:"brand_id"`
+	UserID            pgtype.Int8 `json:"user_id"`
+	OrgIds            []int64     `json:"org_ids"`
+	OrganizationUuids []uuid.UUID `json:"organization_uuids"`
+	PlateNormalized   pgtype.Text `json:"plate_normalized"`
+	Vin               pgtype.Text `json:"vin"`
+	Q                 pgtype.Text `json:"q"`
+	QName             pgtype.Text `json:"q_name"`
+	CarBrandUuids     []uuid.UUID `json:"car_brand_uuids"`
+	CarModelUuids     []uuid.UUID `json:"car_model_uuids"`
+	Uuids             []uuid.UUID `json:"uuids"`
+	SortDesc          bool        `json:"sort_desc"`
+	SortKey           string      `json:"sort_key"`
+	OffsetCount       int32       `json:"offset_count"`
+	LimitCount        int32       `json:"limit_count"`
 }
 
 type ListScopedVehiclesRow struct {
@@ -1068,16 +1191,25 @@ type ListScopedVehiclesRow struct {
 }
 
 // Vehicles of customers linked to the organizations in scope; the brand is
-// always the domain brand (K20).
+// always the domain brand (K20). TEC-371: q also matches the car brand /
+// model name (q_name), car_brand_uuids / car_model_uuids / organization_uuids
+// filters (the organization filter narrows the owner's links inside the
+// scope). Sort: docs/list-contract.md, keys from vehiclesSortSpec.
 func (q *Queries) ListScopedVehicles(ctx context.Context, arg ListScopedVehiclesParams) ([]ListScopedVehiclesRow, error) {
 	rows, err := q.db.Query(ctx, listScopedVehicles,
 		arg.BrandID,
 		arg.UserID,
 		arg.OrgIds,
+		arg.OrganizationUuids,
 		arg.PlateNormalized,
 		arg.Vin,
 		arg.Q,
+		arg.QName,
+		arg.CarBrandUuids,
+		arg.CarModelUuids,
 		arg.Uuids,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.OffsetCount,
 		arg.LimitCount,
 	)

@@ -122,8 +122,8 @@ func unitIndexFilter(p db.ListOrganizationStockUnitRowsParams) string {
 	if p.ProductID.Valid {
 		f.Eq("product_id", p.ProductID.Int64)
 	}
-	if p.Status.Valid {
-		f.EqString("status", p.Status.String)
+	if len(p.Statuses) > 0 {
+		f.InStrings("status", p.Statuses)
 	} else {
 		f.InStrings("status", listedStatuses)
 	}

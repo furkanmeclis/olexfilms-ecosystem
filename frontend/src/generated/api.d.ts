@@ -4336,7 +4336,7 @@ export interface paths {
         };
         /**
          * Product stock of an organization
-         * @description Needs `stock.read`; the organization must be inside the viewer's reach (404 otherwise). Rows come from the `organization_product_stocks` projection: available and placed units only (in transit, used and void are not counted). `quantity` counts pieces and fixed barcode quantities, `meters` the remaining roll meters; `fixed_barcodes` lists the fixed barcode quantities on hand. `q` matches product name or SKU.
+         * @description Needs `stock.read`; the organization must be inside the viewer's reach (404 otherwise). Rows come from the `organization_product_stocks` projection: available and placed units only (in transit, used and void are not counted). `quantity` counts pieces and fixed barcode quantities, `meters` the remaining roll meters; `fixed_barcodes` lists the fixed barcode quantities on hand. `q` matches product name or SKU. TEC-373: `sort` is one of product (name, default), sku, category (name), quantity, meters, updated_at (product id tiebreak). A product picker loads the products page by page with `q` (limit is at most 100).
          */
         get: operations["listStockOrganizationProducts"];
         put?: never;
@@ -4359,11 +4359,34 @@ export interface paths {
         };
         /**
          * Units held by an organization
-         * @description Needs `stock.read`; the organization must be inside the viewer's reach (404 otherwise). The distributor roles distributor_owner and distributor_warehouse_staff hold `stock.read` at scope `subtree` (TEC-216, migration 000061), so a distributor lists the units of its own dealers; it still cannot write or adjust them. Serial units come from `unit_current_state` (one row, `quantity` 1), fixed barcodes from `fixed_barcode_holdings` (one row per barcode with the quantity on hand). Without `status` the list holds the units counted as stock (available, placed); `status` lists exactly that status. `barcode` is an exact match, `product_uuid` narrows to one product, `q` matches a part of the product name, SKU or barcode (TEC-210: when Meilisearch is up and no `barcode` is given the stock units index answers it, which also matches the bin full_code; hits are reloaded from Postgres with the same filters). `purchase_price` is the price the holding organization pays for the product (K8, in the organization's currency); it is null when the viewer's `pricing.purchase.read` does not reach the organization (a direct parent sees its child's purchase price through its own `pricing.sale.read`), for the center, or when no price is set.
+         * @description Needs `stock.read`; the organization must be inside the viewer's reach (404 otherwise). The distributor roles distributor_owner and distributor_warehouse_staff hold `stock.read` at scope `subtree` (TEC-216, migration 000061), so a distributor lists the units of its own dealers; it still cannot write or adjust them. Serial units come from `unit_current_state` (one row, `quantity` 1), fixed barcodes from `fixed_barcode_holdings` (one row per barcode with the quantity on hand). Without `status` the list holds the units counted as stock (available, placed); `status` lists exactly that status. `barcode` is an exact match, `product_uuid` narrows to one product, `q` matches a part of the product name, SKU or barcode (TEC-210: when Meilisearch is up and no `barcode` is given the stock units index answers it, which also matches the bin full_code; hits are reloaded from Postgres with the same filters). `purchase_price` is the price the holding organization pays for the product (K8, in the organization's currency); it is null when the viewer's `pricing.purchase.read` does not reach the organization (a direct parent sees its child's purchase price through its own `pricing.sale.read`), for the center, or when no price is set. TEC-373 (docs/list-contract.md): `status` is a comma separated any-of filter; `barcode_match=prefix` makes `barcode` a prefix match; `location_uuid` (comma separated) keeps units on those locations (fixed barcodes have no single location and drop out); `updated_from` / `updated_to` bound the holding's last change; `sort` is one of product (default; barcode inside a product), barcode, status (flow rank reserved → void), quantity, meters (remaining, pieces last), updated_at, with an id tiebreak. An explicit sort, a barcode, location or date filter makes `q` search Postgres instead of the index. Labels for selected units: GET /v1/stock/labels/units.pdf with one `barcode` per unit.
          */
         get: operations["listStockOrganizationUnits"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock/organizations/{uuid}/units/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a unit list export of an organization (CSV, XLSX or PDF)
+         * @description TEC-373. stock.read with the list's scope; the organization must be inside it (404 otherwise). The job (worker-docs, exports queue, resource `stock.units`) exports the units the list shows for `query` (every unit list parameter except limit and offset, including `q` and `sort`; a bad value is 400 at request time; `q` always searches Postgres). The purchase price is not exported. The worker re-authorizes the stored scope against the job organization. Poll and download through /v1/tenant/exports/{uuid}.
+         */
+        post: operations["requestStockUnitListExport"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4382,7 +4405,7 @@ export interface paths {
         };
         /**
          * Product stock of a warehouse location (bin)
-         * @description Needs `stock.read`; the location's organization must be inside the viewer's reach (404 otherwise). Rows come from the `bin_product_stocks` projection; same shape and filters as the organization stock.
+         * @description Needs `stock.read`; the location's organization must be inside the viewer's reach (404 otherwise). Rows come from the `bin_product_stocks` projection; same shape, filters and sort as the organization stock.
          */
         get: operations["listStockLocationProducts"];
         put?: never;
@@ -5869,7 +5892,7 @@ export interface paths {
         };
         /**
          * Customers linked to the organizations in scope
-         * @description customers.read. A dealer sees the customers linked to its organization (customer_organizations), a distributor its subtree, the center the brand; always the domain brand (K20). Anonymized customers are listed masked (`anonymized: true`, localized name, no contact data). TEC-164: `q` searches the Meilisearch customers index when it is up (filtered on the scope's organizations and the brand, ranked by relevance; the hits are reloaded from Postgres with the same scope) and falls back to the SQL search otherwise. Anonymized customers are never indexed, so `status=anonymized` always uses the SQL search.
+         * @description customers.read. A dealer sees the customers linked to its organization (customer_organizations), a distributor its subtree, the center the brand; always the domain brand (K20). Anonymized customers are listed masked (`anonymized: true`, localized name, no contact data). TEC-164: `q` searches the Meilisearch customers index when it is up (filtered on the scope's organizations and the brand, ranked by relevance; the hits are reloaded from Postgres with the same scope) and falls back to the SQL search otherwise. Anonymized customers are never indexed, so `status=anonymized` always uses the SQL search. TEC-371: sort (`name`, `email`, `status`, `linked_at`, `first_service_at`; default `-linked_at`, `id` tiebreak), `status` / `type` CSV, `linked_from`/`linked_to` (first organization link) and `organization_uuid` CSV (links to those organizations, inside the scope). An explicit sort or any of the TEC-371 filters keeps a `q` search on SQL.
          */
         get: operations["listCustomers"];
         put?: never;
@@ -5999,7 +6022,7 @@ export interface paths {
         put?: never;
         /**
          * Queue a customer list export (CSV, XLSX or PDF)
-         * @description TEC-164. customers.read with the list's scope: the job (worker-docs, exports queue) exports the customers of the scope with the list filters (`q`, `status`), masked like the list (anonymized customers show the anonymized label; identity numbers are not exported). The worker re-authorizes the stored scope against the job organization. The request is written to the activity log (customers.list_exported). Poll and download through /v1/customer-list-exports/{uuid}.
+         * @description TEC-164. customers.read with the list's scope: the job (worker-docs, exports queue) exports the customers of the scope with the list filters and sort (TEC-371: every GET /v1/customers parameter; a bad value is a 400 at request time), masked like the list (anonymized customers show the anonymized label; identity numbers are not exported). The worker re-authorizes the stored scope against the job organization. The request is written to the activity log (customers.list_exported). Poll and download through /v1/customer-list-exports/{uuid}.
          */
         post: operations["requestCustomerListExport"];
         delete?: never;
@@ -6168,7 +6191,7 @@ export interface paths {
         };
         /**
          * Vehicles of customers in scope
-         * @description vehicles.read. Only vehicles whose customer is linked to an organization in scope (domain brand). `customer_uuid` outside the scope answers 404; `plate` is a prefix of the normalized plate. `q` (TEC-209) searches plate and VIN: the vehicles search index when it is up (same scope, hits reloaded from the database), otherwise a prefix of the normalized plate or the VIN.
+         * @description vehicles.read. Only vehicles whose customer is linked to an organization in scope (domain brand). `customer_uuid` outside the scope answers 404; `plate` is a prefix of the normalized plate. `q` (TEC-209) searches plate and VIN: the vehicles search index when it is up (same scope, hits reloaded from the database), otherwise a prefix of the normalized plate or the VIN, and (TEC-371) the car brand / model name. TEC-371: sort (`plate`, `brand`, `model`, `model_year`, `created_at`; default `-created_at`, empty values last, `id` tiebreak); `car_brand_uuid` / `car_model_uuid` / `organization_uuid` CSV filters (organization: the owner is linked to one of them, inside the scope). An explicit sort or these filters keep a `q` search on SQL.
          */
         get: operations["listVehicles"];
         put?: never;
@@ -9648,7 +9671,7 @@ export interface paths {
         };
         /**
          * Orders inside the orders.read scope (sales and purchases)
-         * @description Every order where an organization of the orders.read scope is the seller or the buyer (managed: the active organization's own sales and purchases; a dealer never sees its distributor's other dealers). side=seller|buyer limits the list to the active organization's sales or purchases. List rows carry no items or history. `q` (TEC-210) searches the order number, tracking number and external reference; when Meilisearch is up (and no created_from / created_to is given) the orders index answers it, which also matches the seller and buyer names and dealer codes, inside the same scope (hits are reloaded from Postgres).
+         * @description Every order where an organization of the orders.read scope is the seller or the buyer (managed: the active organization's own sales and purchases; a dealer never sees its distributor's other dealers). side=seller|buyer limits the list to the active organization's sales or purchases. List rows carry no items or history. `q` (TEC-210) searches the order number, tracking number and external reference; when Meilisearch is up (and no created_from / created_to is given) the orders index answers it, which also matches the seller and buyer names and dealer codes, inside the same scope (hits are reloaded from Postgres). TEC-373 (docs/list-contract.md): `sort` is one of order_no, status (flow rank draft → cancelled), total, created_at (default `-created_at`, id tiebreak); `status`, `seller_org_uuid` and `buyer_org_uuid` are comma separated any-of filters; `total_min` / `total_max` bound the order total (inclusive, order currency). The party filters only narrow the scoped set, so an organization outside the scope gives an empty list. An explicit sort, a date, party or total filter makes `q` search Postgres instead of the index.
          */
         get: operations["listOrders"];
         put?: never;
@@ -9657,6 +9680,26 @@ export interface paths {
          * @description The active organization is the buyer and its parent the seller: distributor -> center or dealer -> distributor (anything else is 422 ORDER_NO_SUPPLIER). The currency is the brand currency. Unit prices are the buyer's effective purchase price from the pricing module (K8); price fields sent by the client are ignored. A product without a price in the order currency is 400 with detail code PRICE_NOT_FOUND. Needs orders.write.
          */
         post: operations["createOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orders/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue an order list export (CSV, XLSX or PDF)
+         * @description TEC-373. orders.read with the list's scope: the job (worker-docs, exports queue, resource `orders.list`) exports the orders the list shows for `query` (every GET /v1/orders parameter except limit and offset, including `q` and `sort`; a bad value is 400 at request time). The worker re-authorizes the stored scope against the job organization. Poll and download through /v1/tenant/exports/{uuid}.
+         */
+        post: operations["requestOrderListExport"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9772,7 +9815,7 @@ export interface paths {
         };
         /**
          * Stock transfer requests of the active organization
-         * @description Requests where the active organization is the giver (outgoing), the receiver (incoming) or the common parent (approval); direction narrows the list. Needs transfers.request or transfers.approve and the dealer_transfers module. List rows carry no items. kind narrows to sibling transfers or returns to the parent (TEC-223).
+         * @description Requests where the active organization is the giver (outgoing), the receiver (incoming) or the common parent (approval); direction narrows the list. Needs transfers.request or transfers.approve and the dealer_transfers module. List rows carry no items. kind narrows to sibling transfers or returns to the parent (TEC-223). TEC-373 (docs/list-contract.md): `kind`, `direction` and `status` are comma separated any-of filters; `q` matches the transfer number and the sender / receiver names; `organization_uuid` keeps requests whose sender or receiver is one of the listed organizations; `sort` is one of transfer_no, status (flow rank requested, approved, shipped, received, rejected, cancelled), created_at (default `-created_at`, id tiebreak).
          */
         get: operations["listStockTransfers"];
         put?: never;
@@ -9854,11 +9897,54 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List leads in the caller scope */
+        /**
+         * List leads in the caller scope
+         * @description TEC-371: sort (`created_at`, `follow_up_date`, `status`, `temperature`, `name`; default `-created_at`, `id` tiebreak; status and temperature sort by pipeline rank, name is the company or contact name, empty values last). `status`, `target_type`, `source`, `temperature` are CSV; `assignee_user_id` is a CSV of user ids, `none` for unassigned; `created_from`/`created_to`. An explicit sort or these filters keep a `q` search on SQL.
+         */
         get: operations["listLeads"];
         put?: never;
         /** Create a lead in the active organization */
         post: operations["createLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/leads/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a lead list export (CSV, XLSX or PDF)
+         * @description TEC-371. leads.read with the list's scope: the job (exports queue) exports the leads of the scope with the filters and sort of GET /v1/leads (a bad value is a 400 at request time). The worker re-authorizes the stored scope against the job organization. Poll and download through /v1/tenant/exports/{uuid}.
+         */
+        post: operations["requestLeadListExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/leads/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run a logged, undoable bulk action on leads (TEC-371)
+         * @description leads.write; the run stays inside the caller's leads.write scope. Actions: `assign` with `target.params.assignee_user_id` (a member of the lead's or the active organization; others fail per item); `set_status` with `target.params.status` (new, contacted, quoted, won, lost) and `target.params.lost_reason` (required for lost); the pipeline rules of POST /v1/leads/{uuid}/status apply per item. Target scope `ids`, or `query` with the GET /v1/leads filters ("select all matching", at most 10000). Undo through `/v1/tenant/bulk-operations/{uuid}/undo`.
+         */
+        post: operations["bulkLeads"];
         delete?: never;
         options?: never;
         head?: never;
@@ -12989,11 +13075,48 @@ export interface components {
         CustomerListExportInput: {
             /** @enum {string} */
             format: "csv" | "xlsx" | "pdf";
-            /** @description List filters (same as GET /v1/customers). */
+            /** @description List filters and sort (same as GET /v1/customers). */
             query?: {
                 q?: string;
-                /** @enum {string} */
-                status?: "active" | "disabled" | "pending" | "anonymized";
+                /** @description CSV of active, disabled, pending, anonymized. */
+                status?: string;
+                /** @description CSV of individual, corporate. */
+                type?: string;
+                linked_from?: string;
+                linked_to?: string;
+                /** @description CSV of organization UUIDs. */
+                organization_uuid?: string;
+                sort?: string;
+            };
+            /** @description Document language (defaults to the request locale). */
+            locale?: string;
+        };
+        LeadListExportInput: {
+            /** @enum {string} */
+            format: "csv" | "xlsx" | "pdf";
+            /** @description List filters and sort (same as GET /v1/leads). */
+            query?: {
+                [key: string]: string;
+            };
+            /** @description Document language (defaults to the request locale). */
+            locale?: string;
+        };
+        OrderListExportInput: {
+            /** @enum {string} */
+            format: "csv" | "xlsx" | "pdf";
+            /** @description List parameters of GET /v1/orders as strings (side, status, q, sort, created_from, created_to, seller_org_uuid, buyer_org_uuid, total_min, total_max). */
+            query?: {
+                [key: string]: string;
+            };
+            /** @description Document language (defaults to the request locale). */
+            locale?: string;
+        };
+        StockUnitListExportInput: {
+            /** @enum {string} */
+            format: "csv" | "xlsx" | "pdf";
+            /** @description Unit list parameters as strings (q, sort, product_uuid, status, barcode, barcode_match, location_uuid, updated_from, updated_to). */
+            query?: {
+                [key: string]: string;
             };
             /** @description Document language (defaults to the request locale). */
             locale?: string;
@@ -20052,10 +20175,18 @@ export interface components {
         VehicleCatalogUUID: string;
         StockProductUUIDFilter: string;
         StockCategoryUUIDFilter: string;
-        /** @description One unit status; without it the list holds available and placed units. */
-        StockUnitStatusFilter: components["schemas"]["StockUnitStatus"];
-        /** @description Exact barcode (scanner lookup). */
+        /** @description Comma separated unit statuses (reserved, printed, available, placed, in_transit, used, void); without it the list holds available and placed units. */
+        StockUnitStatusFilter: string;
+        /** @description Barcode; exact (scanner lookup) unless barcode_match=prefix. */
         StockBarcodeFilter: string;
+        /** @description `exact` (default) or `prefix` (TEC-373). */
+        StockBarcodeMatch: "exact" | "prefix";
+        /** @description Comma separated warehouse location uuids (any of). */
+        StockLocationUUIDFilter: string;
+        /** @description Updated on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+        UpdatedFrom: string;
+        /** @description Updated on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `updated_from` after `updated_to` → 400. */
+        UpdatedTo: string;
         /** @description `in_stock`: quantity or meters above zero; `out_of_stock`: both zero. */
         StockStatusFilter: "in_stock" | "out_of_stock";
         ProductUUID: string;
@@ -27695,6 +27826,8 @@ export interface operations {
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
                 q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
                 product_uuid?: components["parameters"]["StockProductUUIDFilter"];
                 category_uuid?: components["parameters"]["StockCategoryUUIDFilter"];
                 /** @description `in_stock`: quantity or meters above zero; `out_of_stock`: both zero. */
@@ -27730,11 +27863,21 @@ export interface operations {
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
                 q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
                 product_uuid?: components["parameters"]["StockProductUUIDFilter"];
-                /** @description One unit status; without it the list holds available and placed units. */
+                /** @description Comma separated unit statuses (reserved, printed, available, placed, in_transit, used, void); without it the list holds available and placed units. */
                 status?: components["parameters"]["StockUnitStatusFilter"];
-                /** @description Exact barcode (scanner lookup). */
+                /** @description Barcode; exact (scanner lookup) unless barcode_match=prefix. */
                 barcode?: components["parameters"]["StockBarcodeFilter"];
+                /** @description `exact` (default) or `prefix` (TEC-373). */
+                barcode_match?: components["parameters"]["StockBarcodeMatch"];
+                /** @description Comma separated warehouse location uuids (any of). */
+                location_uuid?: components["parameters"]["StockLocationUUIDFilter"];
+                /** @description Updated on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                updated_from?: components["parameters"]["UpdatedFrom"];
+                /** @description Updated on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `updated_from` after `updated_to` → 400. */
+                updated_to?: components["parameters"]["UpdatedTo"];
             };
             header?: never;
             path: {
@@ -27760,12 +27903,45 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    requestStockUnitListExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockUnitListExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     listStockLocationProducts: {
         parameters: {
             query?: {
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
                 q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
                 product_uuid?: components["parameters"]["StockProductUUIDFilter"];
                 category_uuid?: components["parameters"]["StockCategoryUUIDFilter"];
                 /** @description `in_stock`: quantity or meters above zero; `out_of_stock`: both zero. */
@@ -30427,7 +30603,18 @@ export interface operations {
         parameters: {
             query?: {
                 q?: components["parameters"]["Q"];
-                status?: "active" | "disabled" | "pending" | "anonymized";
+                /** @description CSV of active, disabled, pending, anonymized. */
+                status?: string;
+                /** @description CSV of individual, corporate (customer type; no profile counts as individual). */
+                type?: string;
+                /** @description First organization link on or after (YYYY-MM-DD or RFC3339). */
+                linked_from?: string;
+                /** @description First organization link on or before; a date covers the whole day. */
+                linked_to?: string;
+                /** @description CSV of organization UUIDs; customers linked to one of them (inside the scope). */
+                organization_uuid?: string;
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
             };
@@ -30931,6 +31118,14 @@ export interface operations {
                 plate?: string;
                 vin?: string;
                 q?: string;
+                /** @description CSV of car brand UUIDs. */
+                car_brand_uuid?: string;
+                /** @description CSV of car model UUIDs. */
+                car_model_uuid?: string;
+                /** @description CSV of organization UUIDs (owner linked to one of them). */
+                organization_uuid?: string;
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
             };
@@ -37179,11 +37374,22 @@ export interface operations {
             query?: {
                 side?: "seller" | "buyer";
                 q?: components["parameters"]["Q"];
-                status?: components["schemas"]["OrderStatus"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Comma separated order statuses (draft, submitted, approved, preparing, ready, processing, shipped, delivered, received, cancelling, cancelled); unknown value → 400. */
+                status?: string;
                 /** @description Inclusive lower bound of created_at (TEC-170): RFC3339, or a YYYY-MM-DD day in UTC. */
                 created_from?: string;
-                /** @description Exclusive upper bound of created_at: RFC3339, or a YYYY-MM-DD day in UTC that covers the whole day. Must be after created_from. */
+                /** @description Upper bound of created_at: a YYYY-MM-DD day in UTC covers the whole day, an RFC3339 value that instant. Must not be before created_from. */
                 created_to?: string;
+                /** @description Comma separated seller organization uuids (any of). */
+                seller_org_uuid?: string;
+                /** @description Comma separated buyer organization uuids (any of). */
+                buyer_org_uuid?: string;
+                /** @description Inclusive lower bound of the order total. */
+                total_min?: number;
+                /** @description Inclusive upper bound of the order total. */
+                total_max?: number;
                 limit?: number;
                 offset?: number;
             };
@@ -37233,6 +37439,33 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    requestOrderListExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderListExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getOrder: {
@@ -37387,9 +37620,21 @@ export interface operations {
     listStockTransfers: {
         parameters: {
             query?: {
-                kind?: components["schemas"]["StockTransferKind"];
-                direction?: "outgoing" | "incoming" | "approval";
-                status?: components["schemas"]["StockTransferStatus"];
+                /** @description Comma separated kinds (sibling, return). */
+                kind?: string;
+                /** @description Comma separated directions (outgoing, incoming, approval). */
+                direction?: string;
+                /** @description Comma separated statuses (requested, approved, rejected, shipped, received, cancelled). */
+                status?: string;
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
+                /** @description Comma separated sender / receiver organization uuids (any of). */
+                organization_uuid?: string;
                 limit?: number;
                 offset?: number;
             };
@@ -37524,10 +37769,24 @@ export interface operations {
     listLeads: {
         parameters: {
             query?: {
-                status?: components["schemas"]["LeadStatus"];
-                target_type?: components["schemas"]["LeadTargetType"];
+                /** @description CSV of new, contacted, quoted, won, lost. */
+                status?: string;
+                /** @description CSV of customer, dealer_candidate, distributor_candidate. */
+                target_type?: string;
+                /** @description CSV of incoming_call, outgoing_call, walk_in, whatsapp, social, referral, website, application_form, other. */
+                source?: string;
+                /** @description CSV of cold, warm, hot. */
+                temperature?: string;
+                /** @description CSV of assignee user ids; `none` matches unassigned leads. */
+                assignee_user_id?: string;
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
                 follow_up?: "overdue" | "today";
                 q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
             };
@@ -37571,6 +37830,69 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeLead"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    requestLeadListExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadListExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    bulkLeads: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkExecuteRequest"];
+            };
+        };
+        responses: {
+            /** @description Sync bulk result with its undoable operation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkSyncResult"];
+                };
+            };
+            /** @description Async bulk job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkJob"];
                 };
             };
             400: components["responses"]["BadRequest"];

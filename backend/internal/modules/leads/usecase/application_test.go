@@ -151,7 +151,7 @@ func TestApplicationBerlinRoutesToGermanDistributor(t *testing.T) {
 		l.CandidatePhoneE164.String != "+493012345678" || l.ProvinceID.Int64 != a.berlin.ID || l.CreatedByUserID.Valid {
 		t.Fatalf("lead = %+v", l)
 	}
-	rows, total, err := a.svc.List(a.ctx, a.caller(a.dist, rbac.ScopeManaged), ListFilter{TargetType: TargetDealerCandidate, Limit: 50})
+	rows, total, err := a.svc.List(a.ctx, a.caller(a.dist, rbac.ScopeManaged), ListFilter{TargetTypes: []string{TargetDealerCandidate}, Limit: 50})
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}

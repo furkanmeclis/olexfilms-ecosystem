@@ -2,7 +2,7 @@ package usecase
 
 // TEC-164: customer list export (I/O engine, queue "exports", worker-docs).
 // POST /v1/customers/export queues a job of the active organization with
-// the list filters (q, status) and the resolved permission scope: "brand"
+// the list filters (TEC-371: every GET /v1/customers filter and the sort) and the resolved permission scope: "brand"
 // or the organization ids of the caller's scope. The worker re-authorizes
 // the job like every tenant export: a brand wide scope needs a center job
 // organization, organization ids are kept only when the job organization
@@ -15,6 +15,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -45,6 +46,18 @@ const listExportPage = 500
 
 // errListExportScope: the stored scope reaches no organization of the job.
 var errListExportScope = errors.New("customers list export: scope is outside the job organization")
+
+// ListExportValues returns the list parameters of an export query (or of
+// an export request body) as URL values for ParseListFilter.
+func ListExportValues(q map[string]string) url.Values {
+	out := url.Values{}
+	for _, k := range customerListKeys {
+		if v := strings.TrimSpace(q[k]); v != "" {
+			out.Set(k, v)
+		}
+	}
+	return out
+}
 
 // ExportScope encodes the caller's scope for the export job query.
 func ExportScope(c Caller) (string, error) {
@@ -104,7 +117,12 @@ func (a *ListExportAdapter) Export(ctx context.Context, q ioengine.ExportQuery, 
 	if err != nil {
 		return ioengine.Dataset{}, err
 	}
-	f := ListFilter{Q: q[QueryQ], Status: q[QueryStatus], Limit: listExportPage}
+	// TEC-371: the same filters and sort as GET /v1/customers.
+	f, err := ParseListFilter(ListExportValues(q))
+	if err != nil {
+		return ioengine.Dataset{}, err
+	}
+	f.Limit = listExportPage
 	rows := []map[string]any{}
 	for {
 		page, total, err := a.svc.ListCustomers(ctx, c, f)

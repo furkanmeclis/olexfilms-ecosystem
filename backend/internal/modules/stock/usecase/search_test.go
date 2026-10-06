@@ -25,8 +25,8 @@ func TestStockUnitsIndexFilter(t *testing.T) {
 			`organization_ids IN [4] AND status IN ["available", "placed"]`},
 		{"brand + product + status", db.ListOrganizationStockUnitRowsParams{
 			OrganizationID: 4, BrandID: pgtype.Int8{Int64: 2, Valid: true}, ProductID: pgtype.Int8{Int64: 8, Valid: true},
-			Status: pgtype.Text{String: "reserved", Valid: true},
-		}, `organization_ids IN [4] AND brand_ids = 2 AND product_id = 8 AND status = "reserved"`},
+			Statuses: []string{"reserved", "void"},
+		}, `organization_ids IN [4] AND brand_ids = 2 AND product_id = 8 AND status IN ["reserved", "void"]`},
 	}
 	for _, tc := range cases {
 		if got := unitIndexFilter(tc.p); got != tc.want {

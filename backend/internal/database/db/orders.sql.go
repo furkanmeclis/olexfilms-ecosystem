@@ -279,110 +279,58 @@ func (q *Queries) ConsumeStockReservation(ctx context.Context, id int64) (StockR
 	return i, err
 }
 
-const countOrdersByBuyer = `-- name: CountOrdersByBuyer :one
-SELECT COUNT(*) FROM orders
-WHERE brand_id = $1
-  AND buyer_org_id = $2
-  AND ($3::text IS NULL OR status = $3::text)
-  AND ($4::timestamptz IS NULL OR created_at >= $4::timestamptz)
-  AND ($5::timestamptz IS NULL OR created_at < $5::timestamptz)
-  AND ($6::text IS NULL
-       OR order_no ILIKE '%' || $6::text || '%'
-       OR tracking_no ILIKE '%' || $6::text || '%'
-       OR external_reference ILIKE '%' || $6::text || '%')
+const countOrdersFiltered = `-- name: CountOrdersFiltered :one
+SELECT COUNT(*) FROM orders o
+WHERE o.brand_id = $1
+  AND ($2::bigint IS NULL OR o.organization_id = $2::bigint)
+  AND ($3::bigint IS NULL OR o.buyer_org_id = $3::bigint)
+  AND ($4::bigint[] IS NULL
+       OR o.organization_id = ANY ($4::bigint[])
+       OR o.buyer_org_id = ANY ($4::bigint[]))
+  AND (COALESCE(cardinality($5::text[]), 0) = 0 OR o.status = ANY ($5::text[]))
+  AND ($6::timestamptz IS NULL OR o.created_at >= $6::timestamptz)
+  AND ($7::timestamptz IS NULL OR o.created_at < $7::timestamptz)
+  AND ($8::text IS NULL
+       OR o.order_no ILIKE '%' || $8::text || '%'
+       OR o.tracking_no ILIKE '%' || $8::text || '%'
+       OR o.external_reference ILIKE '%' || $8::text || '%')
+  AND (COALESCE(cardinality($9::uuid[]), 0) = 0
+       OR o.organization_id IN (SELECT so.id FROM organizations so WHERE so.uuid = ANY ($9::uuid[])))
+  AND (COALESCE(cardinality($10::uuid[]), 0) = 0
+       OR o.buyer_org_id IN (SELECT bo.id FROM organizations bo WHERE bo.uuid = ANY ($10::uuid[])))
+  AND ($11::numeric IS NULL OR o.total >= $11::numeric)
+  AND ($12::numeric IS NULL OR o.total <= $12::numeric)
 `
 
-type CountOrdersByBuyerParams struct {
-	BrandID     int64              `json:"brand_id"`
-	BuyerOrgID  int64              `json:"buyer_org_id"`
-	Status      pgtype.Text        `json:"status"`
-	CreatedFrom pgtype.Timestamptz `json:"created_from"`
-	CreatedTo   pgtype.Timestamptz `json:"created_to"`
-	Q           pgtype.Text        `json:"q"`
+type CountOrdersFilteredParams struct {
+	BrandID       int64              `json:"brand_id"`
+	SellerOrgID   pgtype.Int8        `json:"seller_org_id"`
+	BuyerOrgID    pgtype.Int8        `json:"buyer_org_id"`
+	OrgIds        []int64            `json:"org_ids"`
+	Statuses      []string           `json:"statuses"`
+	CreatedFrom   pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore pgtype.Timestamptz `json:"created_before"`
+	Q             pgtype.Text        `json:"q"`
+	SellerUuids   []uuid.UUID        `json:"seller_uuids"`
+	BuyerUuids    []uuid.UUID        `json:"buyer_uuids"`
+	TotalMin      pgtype.Numeric     `json:"total_min"`
+	TotalMax      pgtype.Numeric     `json:"total_max"`
 }
 
-func (q *Queries) CountOrdersByBuyer(ctx context.Context, arg CountOrdersByBuyerParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countOrdersByBuyer,
-		arg.BrandID,
-		arg.BuyerOrgID,
-		arg.Status,
-		arg.CreatedFrom,
-		arg.CreatedTo,
-		arg.Q,
-	)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const countOrdersBySeller = `-- name: CountOrdersBySeller :one
-SELECT COUNT(*) FROM orders
-WHERE brand_id = $1
-  AND organization_id = $2
-  AND ($3::text IS NULL OR status = $3::text)
-  AND ($4::timestamptz IS NULL OR created_at >= $4::timestamptz)
-  AND ($5::timestamptz IS NULL OR created_at < $5::timestamptz)
-  AND ($6::text IS NULL
-       OR order_no ILIKE '%' || $6::text || '%'
-       OR tracking_no ILIKE '%' || $6::text || '%'
-       OR external_reference ILIKE '%' || $6::text || '%')
-`
-
-type CountOrdersBySellerParams struct {
-	BrandID     int64              `json:"brand_id"`
-	SellerOrgID int64              `json:"seller_org_id"`
-	Status      pgtype.Text        `json:"status"`
-	CreatedFrom pgtype.Timestamptz `json:"created_from"`
-	CreatedTo   pgtype.Timestamptz `json:"created_to"`
-	Q           pgtype.Text        `json:"q"`
-}
-
-func (q *Queries) CountOrdersBySeller(ctx context.Context, arg CountOrdersBySellerParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countOrdersBySeller,
+func (q *Queries) CountOrdersFiltered(ctx context.Context, arg CountOrdersFilteredParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countOrdersFiltered,
 		arg.BrandID,
 		arg.SellerOrgID,
-		arg.Status,
-		arg.CreatedFrom,
-		arg.CreatedTo,
-		arg.Q,
-	)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const countOrdersInScope = `-- name: CountOrdersInScope :one
-SELECT COUNT(*) FROM orders
-WHERE brand_id = $1
-  AND ($2::bigint[] IS NULL
-       OR organization_id = ANY ($2::bigint[])
-       OR buyer_org_id = ANY ($2::bigint[]))
-  AND ($3::text IS NULL OR status = $3::text)
-  AND ($4::timestamptz IS NULL OR created_at >= $4::timestamptz)
-  AND ($5::timestamptz IS NULL OR created_at < $5::timestamptz)
-  AND ($6::text IS NULL
-       OR order_no ILIKE '%' || $6::text || '%'
-       OR tracking_no ILIKE '%' || $6::text || '%'
-       OR external_reference ILIKE '%' || $6::text || '%')
-`
-
-type CountOrdersInScopeParams struct {
-	BrandID     int64              `json:"brand_id"`
-	OrgIds      []int64            `json:"org_ids"`
-	Status      pgtype.Text        `json:"status"`
-	CreatedFrom pgtype.Timestamptz `json:"created_from"`
-	CreatedTo   pgtype.Timestamptz `json:"created_to"`
-	Q           pgtype.Text        `json:"q"`
-}
-
-func (q *Queries) CountOrdersInScope(ctx context.Context, arg CountOrdersInScopeParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countOrdersInScope,
-		arg.BrandID,
+		arg.BuyerOrgID,
 		arg.OrgIds,
-		arg.Status,
+		arg.Statuses,
 		arg.CreatedFrom,
-		arg.CreatedTo,
+		arg.CreatedBefore,
 		arg.Q,
+		arg.SellerUuids,
+		arg.BuyerUuids,
+		arg.TotalMin,
+		arg.TotalMax,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -1419,237 +1367,92 @@ func (q *Queries) ListOrderStatusHistory(ctx context.Context, orderID int64) ([]
 	return items, nil
 }
 
-const listOrdersByBuyer = `-- name: ListOrdersByBuyer :many
-SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at FROM orders
-WHERE brand_id = $1
-  AND buyer_org_id = $2
-  AND ($3::text IS NULL OR status = $3::text)
-  AND ($4::timestamptz IS NULL OR created_at >= $4::timestamptz)
-  AND ($5::timestamptz IS NULL OR created_at < $5::timestamptz)
-  AND ($6::text IS NULL
-       OR order_no ILIKE '%' || $6::text || '%'
-       OR tracking_no ILIKE '%' || $6::text || '%'
-       OR external_reference ILIKE '%' || $6::text || '%')
-  AND ($7::uuid[] IS NULL OR uuid = ANY ($7::uuid[]))
-ORDER BY created_at DESC, id DESC
-LIMIT $9 OFFSET $8
+const listOrdersFiltered = `-- name: ListOrdersFiltered :many
+SELECT o.id, o.uuid, o.order_no, o.organization_id, o.brand_id, o.seller_org_id, o.buyer_org_id, o.seller_warehouse_location_id, o.buyer_warehouse_location_id, o.status, o.currency, o.rate_snapshot, o.try_rate, o.subtotal, o.tax_total, o.total, o.delivery_mode, o.tracking_no, o.shipping_document_key, o.receipt_document_key, o.external_reference, o.note, o.cancel_reason, o.created_by_user_id, o.approved_by_user_id, o.submitted_at, o.approved_at, o.ready_at, o.shipped_at, o.delivered_at, o.received_at, o.cancel_requested_at, o.cancelled_at, o.created_at, o.updated_at FROM orders o
+WHERE o.brand_id = $1
+  AND ($2::bigint IS NULL OR o.organization_id = $2::bigint)
+  AND ($3::bigint IS NULL OR o.buyer_org_id = $3::bigint)
+  AND ($4::bigint[] IS NULL
+       OR o.organization_id = ANY ($4::bigint[])
+       OR o.buyer_org_id = ANY ($4::bigint[]))
+  AND (COALESCE(cardinality($5::text[]), 0) = 0 OR o.status = ANY ($5::text[]))
+  AND ($6::timestamptz IS NULL OR o.created_at >= $6::timestamptz)
+  AND ($7::timestamptz IS NULL OR o.created_at < $7::timestamptz)
+  AND ($8::text IS NULL
+       OR o.order_no ILIKE '%' || $8::text || '%'
+       OR o.tracking_no ILIKE '%' || $8::text || '%'
+       OR o.external_reference ILIKE '%' || $8::text || '%')
+  AND (COALESCE(cardinality($9::uuid[]), 0) = 0
+       OR o.organization_id IN (SELECT so.id FROM organizations so WHERE so.uuid = ANY ($9::uuid[])))
+  AND (COALESCE(cardinality($10::uuid[]), 0) = 0
+       OR o.buyer_org_id IN (SELECT bo.id FROM organizations bo WHERE bo.uuid = ANY ($10::uuid[])))
+  AND ($11::numeric IS NULL OR o.total >= $11::numeric)
+  AND ($12::numeric IS NULL OR o.total <= $12::numeric)
+  AND ($13::uuid[] IS NULL OR o.uuid = ANY ($13::uuid[]))
+ORDER BY
+  CASE WHEN NOT $14::bool THEN CASE $15::text WHEN 'order_no' THEN o.order_no END END ASC,
+  CASE WHEN $14::bool THEN CASE $15::text WHEN 'order_no' THEN o.order_no END END DESC,
+  CASE WHEN NOT $14::bool THEN CASE $15::text WHEN 'status' THEN
+    CASE o.status WHEN 'draft' THEN 1 WHEN 'submitted' THEN 2 WHEN 'approved' THEN 3 WHEN 'preparing' THEN 4
+                 WHEN 'ready' THEN 5 WHEN 'processing' THEN 6 WHEN 'shipped' THEN 7 WHEN 'delivered' THEN 8
+                 WHEN 'received' THEN 9 WHEN 'cancelling' THEN 10 ELSE 11 END END END ASC,
+  CASE WHEN $14::bool THEN CASE $15::text WHEN 'status' THEN
+    CASE o.status WHEN 'draft' THEN 1 WHEN 'submitted' THEN 2 WHEN 'approved' THEN 3 WHEN 'preparing' THEN 4
+                 WHEN 'ready' THEN 5 WHEN 'processing' THEN 6 WHEN 'shipped' THEN 7 WHEN 'delivered' THEN 8
+                 WHEN 'received' THEN 9 WHEN 'cancelling' THEN 10 ELSE 11 END END END DESC,
+  CASE WHEN NOT $14::bool THEN CASE $15::text WHEN 'total' THEN o.total END END ASC,
+  CASE WHEN $14::bool THEN CASE $15::text WHEN 'total' THEN o.total END END DESC,
+  CASE WHEN NOT $14::bool THEN CASE $15::text WHEN 'created_at' THEN o.created_at END END ASC,
+  CASE WHEN $14::bool THEN CASE $15::text WHEN 'created_at' THEN o.created_at END END DESC,
+  CASE WHEN $14::bool THEN o.id END DESC,
+  o.id ASC
+LIMIT $17 OFFSET $16
 `
 
-type ListOrdersByBuyerParams struct {
-	BrandID     int64              `json:"brand_id"`
-	BuyerOrgID  int64              `json:"buyer_org_id"`
-	Status      pgtype.Text        `json:"status"`
-	CreatedFrom pgtype.Timestamptz `json:"created_from"`
-	CreatedTo   pgtype.Timestamptz `json:"created_to"`
-	Q           pgtype.Text        `json:"q"`
-	Uuids       []uuid.UUID        `json:"uuids"`
-	RowOffset   int32              `json:"row_offset"`
-	RowLimit    int32              `json:"row_limit"`
+type ListOrdersFilteredParams struct {
+	BrandID       int64              `json:"brand_id"`
+	SellerOrgID   pgtype.Int8        `json:"seller_org_id"`
+	BuyerOrgID    pgtype.Int8        `json:"buyer_org_id"`
+	OrgIds        []int64            `json:"org_ids"`
+	Statuses      []string           `json:"statuses"`
+	CreatedFrom   pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore pgtype.Timestamptz `json:"created_before"`
+	Q             pgtype.Text        `json:"q"`
+	SellerUuids   []uuid.UUID        `json:"seller_uuids"`
+	BuyerUuids    []uuid.UUID        `json:"buyer_uuids"`
+	TotalMin      pgtype.Numeric     `json:"total_min"`
+	TotalMax      pgtype.Numeric     `json:"total_max"`
+	Uuids         []uuid.UUID        `json:"uuids"`
+	SortDesc      bool               `json:"sort_desc"`
+	SortKey       string             `json:"sort_key"`
+	RowOffset     int32              `json:"row_offset"`
+	RowLimit      int32              `json:"row_limit"`
 }
 
-// Buyer side: orders the organization buys.
-func (q *Queries) ListOrdersByBuyer(ctx context.Context, arg ListOrdersByBuyerParams) ([]Order, error) {
-	rows, err := q.db.Query(ctx, listOrdersByBuyer,
-		arg.BrandID,
-		arg.BuyerOrgID,
-		arg.Status,
-		arg.CreatedFrom,
-		arg.CreatedTo,
-		arg.Q,
-		arg.Uuids,
-		arg.RowOffset,
-		arg.RowLimit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []Order{}
-	for rows.Next() {
-		var i Order
-		if err := rows.Scan(
-			&i.ID,
-			&i.Uuid,
-			&i.OrderNo,
-			&i.OrganizationID,
-			&i.BrandID,
-			&i.SellerOrgID,
-			&i.BuyerOrgID,
-			&i.SellerWarehouseLocationID,
-			&i.BuyerWarehouseLocationID,
-			&i.Status,
-			&i.Currency,
-			&i.RateSnapshot,
-			&i.TryRate,
-			&i.Subtotal,
-			&i.TaxTotal,
-			&i.Total,
-			&i.DeliveryMode,
-			&i.TrackingNo,
-			&i.ShippingDocumentKey,
-			&i.ReceiptDocumentKey,
-			&i.ExternalReference,
-			&i.Note,
-			&i.CancelReason,
-			&i.CreatedByUserID,
-			&i.ApprovedByUserID,
-			&i.SubmittedAt,
-			&i.ApprovedAt,
-			&i.ReadyAt,
-			&i.ShippedAt,
-			&i.DeliveredAt,
-			&i.ReceivedAt,
-			&i.CancelRequestedAt,
-			&i.CancelledAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listOrdersBySeller = `-- name: ListOrdersBySeller :many
-SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at FROM orders
-WHERE brand_id = $1
-  AND organization_id = $2
-  AND ($3::text IS NULL OR status = $3::text)
-  AND ($4::timestamptz IS NULL OR created_at >= $4::timestamptz)
-  AND ($5::timestamptz IS NULL OR created_at < $5::timestamptz)
-  AND ($6::text IS NULL
-       OR order_no ILIKE '%' || $6::text || '%'
-       OR tracking_no ILIKE '%' || $6::text || '%'
-       OR external_reference ILIKE '%' || $6::text || '%')
-  AND ($7::uuid[] IS NULL OR uuid = ANY ($7::uuid[]))
-ORDER BY created_at DESC, id DESC
-LIMIT $9 OFFSET $8
-`
-
-type ListOrdersBySellerParams struct {
-	BrandID     int64              `json:"brand_id"`
-	SellerOrgID int64              `json:"seller_org_id"`
-	Status      pgtype.Text        `json:"status"`
-	CreatedFrom pgtype.Timestamptz `json:"created_from"`
-	CreatedTo   pgtype.Timestamptz `json:"created_to"`
-	Q           pgtype.Text        `json:"q"`
-	Uuids       []uuid.UUID        `json:"uuids"`
-	RowOffset   int32              `json:"row_offset"`
-	RowLimit    int32              `json:"row_limit"`
-}
-
-// Seller side: orders the organization sells.
-func (q *Queries) ListOrdersBySeller(ctx context.Context, arg ListOrdersBySellerParams) ([]Order, error) {
-	rows, err := q.db.Query(ctx, listOrdersBySeller,
+// TEC-373 (DT-BE-5): the order list. One query serves every side:
+// seller_org_id (side=seller: the active organization sells), buyer_org_id
+// (side=buyer) or org_ids (side all: any organization of the orders.read
+// scope sells or buys; NULL = whole brand). statuses, seller_uuids and
+// buyer_uuids are any-of filters (NULL / empty = no filter); created_before
+// is exclusive. sort_key: order_no, status (flow rank), total, created_at;
+// id is the tiebreak (docs/list-contract.md). uuids reloads index hits.
+func (q *Queries) ListOrdersFiltered(ctx context.Context, arg ListOrdersFilteredParams) ([]Order, error) {
+	rows, err := q.db.Query(ctx, listOrdersFiltered,
 		arg.BrandID,
 		arg.SellerOrgID,
-		arg.Status,
-		arg.CreatedFrom,
-		arg.CreatedTo,
-		arg.Q,
-		arg.Uuids,
-		arg.RowOffset,
-		arg.RowLimit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []Order{}
-	for rows.Next() {
-		var i Order
-		if err := rows.Scan(
-			&i.ID,
-			&i.Uuid,
-			&i.OrderNo,
-			&i.OrganizationID,
-			&i.BrandID,
-			&i.SellerOrgID,
-			&i.BuyerOrgID,
-			&i.SellerWarehouseLocationID,
-			&i.BuyerWarehouseLocationID,
-			&i.Status,
-			&i.Currency,
-			&i.RateSnapshot,
-			&i.TryRate,
-			&i.Subtotal,
-			&i.TaxTotal,
-			&i.Total,
-			&i.DeliveryMode,
-			&i.TrackingNo,
-			&i.ShippingDocumentKey,
-			&i.ReceiptDocumentKey,
-			&i.ExternalReference,
-			&i.Note,
-			&i.CancelReason,
-			&i.CreatedByUserID,
-			&i.ApprovedByUserID,
-			&i.SubmittedAt,
-			&i.ApprovedAt,
-			&i.ReadyAt,
-			&i.ShippedAt,
-			&i.DeliveredAt,
-			&i.ReceivedAt,
-			&i.CancelRequestedAt,
-			&i.CancelledAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listOrdersInScope = `-- name: ListOrdersInScope :many
-SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at FROM orders
-WHERE brand_id = $1
-  AND ($2::bigint[] IS NULL
-       OR organization_id = ANY ($2::bigint[])
-       OR buyer_org_id = ANY ($2::bigint[]))
-  AND ($3::text IS NULL OR status = $3::text)
-  AND ($4::timestamptz IS NULL OR created_at >= $4::timestamptz)
-  AND ($5::timestamptz IS NULL OR created_at < $5::timestamptz)
-  AND ($6::text IS NULL
-       OR order_no ILIKE '%' || $6::text || '%'
-       OR tracking_no ILIKE '%' || $6::text || '%'
-       OR external_reference ILIKE '%' || $6::text || '%')
-  AND ($7::uuid[] IS NULL OR uuid = ANY ($7::uuid[]))
-ORDER BY created_at DESC, id DESC
-LIMIT $9 OFFSET $8
-`
-
-type ListOrdersInScopeParams struct {
-	BrandID     int64              `json:"brand_id"`
-	OrgIds      []int64            `json:"org_ids"`
-	Status      pgtype.Text        `json:"status"`
-	CreatedFrom pgtype.Timestamptz `json:"created_from"`
-	CreatedTo   pgtype.Timestamptz `json:"created_to"`
-	Q           pgtype.Text        `json:"q"`
-	Uuids       []uuid.UUID        `json:"uuids"`
-	RowOffset   int32              `json:"row_offset"`
-	RowLimit    int32              `json:"row_limit"`
-}
-
-// Scope list: orders where any of org_ids is the seller or the buyer
-// (org_ids NULL = whole brand, for brand/all scopes).
-func (q *Queries) ListOrdersInScope(ctx context.Context, arg ListOrdersInScopeParams) ([]Order, error) {
-	rows, err := q.db.Query(ctx, listOrdersInScope,
-		arg.BrandID,
+		arg.BuyerOrgID,
 		arg.OrgIds,
-		arg.Status,
+		arg.Statuses,
 		arg.CreatedFrom,
-		arg.CreatedTo,
+		arg.CreatedBefore,
 		arg.Q,
+		arg.SellerUuids,
+		arg.BuyerUuids,
+		arg.TotalMin,
+		arg.TotalMax,
 		arg.Uuids,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.RowOffset,
 		arg.RowLimit,
 	)

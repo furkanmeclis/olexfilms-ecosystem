@@ -18,6 +18,7 @@ var translatedLocales = []Locale{
 var universalLabels = map[string]bool{
 	"UUID": true, "PDF": true, "CSV": true, "JSON": true, "Excel": true, "IBAN": true,
 	"Slug": true, "SKU": true,
+	"WhatsApp": true, // TEC-371: brand name (lead source)
 }
 
 // sameAsEN lists real cognates that are correct translations in a locale.
