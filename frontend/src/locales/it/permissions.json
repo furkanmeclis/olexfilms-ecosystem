@@ -199,5 +199,9 @@
   "labels.library.manage": "Gestire la libreria documenti",
   "groups.announcements": "Annunci",
   "groups.library": "Libreria documenti",
-  "labels.warranty_claims.read": "Visualizzare i reclami in garanzia"
+  "labels.warranty_claims.read": "Visualizzare i reclami in garanzia",
+  "labels.leads.convert_org": "Convertire un contatto in organizzazione",
+  "labels.quotes.read": "Visualizzare i preventivi",
+  "labels.quotes.write": "Gestire i preventivi",
+  "groups.quotes": "Preventivi"
 }

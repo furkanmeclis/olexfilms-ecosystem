@@ -199,5 +199,9 @@
   "labels.library.manage": "管理文档库",
   "groups.announcements": "公告",
   "groups.library": "文档库",
-  "labels.warranty_claims.read": "查看质保索赔"
+  "labels.warranty_claims.read": "查看质保索赔",
+  "labels.leads.convert_org": "将线索转化为组织",
+  "labels.quotes.read": "查看报价",
+  "labels.quotes.write": "管理报价",
+  "groups.quotes": "报价"
 }

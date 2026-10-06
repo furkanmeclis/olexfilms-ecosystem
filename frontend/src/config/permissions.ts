@@ -95,6 +95,9 @@ export const Permission = {
   CampaignsWrite: "campaigns.write",
   LeadsRead: "leads.read",
   LeadsWrite: "leads.write",
+  LeadsConvertOrg: "leads.convert_org",
+  QuotesRead: "quotes.read",
+  QuotesWrite: "quotes.write",
   SocialRead: "social.read",
   SocialWrite: "social.write",
   PrivacyAnonymize: "privacy.anonymize",
@@ -399,6 +402,11 @@ export const permissions = {
   leads: {
     read: Permission.LeadsRead,
     write: Permission.LeadsWrite,
+    convertOrg: Permission.LeadsConvertOrg,
+  },
+  quotes: {
+    read: Permission.QuotesRead,
+    write: Permission.QuotesWrite,
   },
   social: {
     read: Permission.SocialRead,

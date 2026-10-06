@@ -199,5 +199,9 @@
   "labels.library.manage": "Doküman kütüphanesini yönet",
   "groups.announcements": "Duyurular",
   "groups.library": "Doküman kütüphanesi",
-  "labels.warranty_claims.read": "Garanti taleplerini görüntüle"
+  "labels.warranty_claims.read": "Garanti taleplerini görüntüle",
+  "labels.leads.convert_org": "Lead'i organizasyona dönüştür",
+  "labels.quotes.read": "Teklifleri görüntüle",
+  "labels.quotes.write": "Teklifleri yönet",
+  "groups.quotes": "Teklifler"
 }
