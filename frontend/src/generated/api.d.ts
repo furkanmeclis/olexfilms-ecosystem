@@ -7240,9 +7240,29 @@ export interface paths {
         };
         /**
          * List paint measurement results
-         * @description Requires the measurements module and `measurements.read`. Managed readers see the active organization; subtree readers see the active organization and descendants. Portal endpoints do not expose measurement data.
+         * @description Requires the measurements module and `measurements.read`. Managed readers see the active organization; subtree readers see the active organization and descendants. Portal endpoints do not expose measurement data. List contract (docs/list-contract.md, TEC-299): sort fields measured_at (measured_at, falling back to created_at), created_at, vin, status, plate (vin and plate sort blanks last in both directions); default `-measured_at`; id tiebreak. `q` searches the VIN, the vehicle plate and the device serial (contains, case-insensitive). `status` and `device_uuid` are comma separated any-of filters.
          */
         get: operations["listMeasurements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/measurement-part-maps/{body_type}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the raw NexPTG part map of a body type
+         * @description TEC-299. The unfilled NexPTG part map assets of a body type (manifest order) so the client renders and colors the map itself. body_type is a model id or a case-insensitive folder / name / bodywork (e.g. `SEDAN`). Requires the measurements module and `measurements.read`. The assets are immutable: `Cache-Control: private, max-age=86400`.
+         */
+        get: operations["getMeasurementPartMap"];
         put?: never;
         post?: never;
         delete?: never;
@@ -16071,6 +16091,8 @@ export interface components {
             device_serial: string | null;
             device: components["schemas"]["MeasurementDevice"] | null;
             service: components["schemas"]["MeasurementServiceRef"] | null;
+            /** @description Plate of the result's vehicle, else of the linked service's vehicle. */
+            plate: string | null;
             /** Format: date-time */
             measured_at: string | null;
             /** Format: date-time */
@@ -16128,6 +16150,35 @@ export interface components {
                 limit: number;
                 offset: number;
             };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        MeasurementPartMapPoint: {
+            count: number | null;
+            x: number;
+            y: number;
+        };
+        MeasurementPartMapAsset: {
+            part: string;
+            /** @enum {string} */
+            place: "left" | "right" | "top" | "back";
+            /** @enum {string} */
+            kind: "main" | "element";
+            points: components["schemas"]["MeasurementPartMapPoint"][];
+            /** @description Raw SVG file content; null when the body type ships no file for the part. */
+            svg: string | null;
+        };
+        MeasurementPartMap: {
+            id: string;
+            name: string;
+            bodywork: string;
+            point_radius: number;
+            places: ("left" | "right" | "top" | "back")[];
+            assets: components["schemas"]["MeasurementPartMapAsset"][];
+        };
+        EnvelopeMeasurementPartMap: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["MeasurementPartMap"];
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeMeasurementDetail: {
@@ -33148,13 +33199,20 @@ export interface operations {
     listMeasurements: {
         parameters: {
             query?: {
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Contains search on the VIN, the vehicle plate and the device serial. */
+                q?: string;
+                /** @description Exact VIN. */
                 vin?: string;
+                /** @description Comma separated measurement device UUIDs (single value accepted); an invalid UUID → 400. */
                 device_uuid?: string;
                 /** @description Date (`YYYY-MM-DD`) or RFC3339 date-time; compared to measured_at, falling back to created_at. */
                 measured_from?: string;
                 /** @description Date (`YYYY-MM-DD`, exclusive next day) or RFC3339 date-time. */
                 measured_to?: string;
-                status?: "accepted" | "vin_pending";
+                /** @description Comma separated statuses (accepted, vin_pending; single value accepted); unknown value → 400. */
+                status?: string;
                 /** @description true for results linked to a service, false for unlinked results. */
                 linked?: boolean;
                 limit?: number;
@@ -33178,6 +33236,33 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getMeasurementPartMap: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                body_type: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Part map */
+            200: {
+                headers: {
+                    /** @description private, max-age=86400 */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeMeasurementPartMap"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getMeasurement: {

@@ -91,7 +91,12 @@ WHERE uuid = sqlc.arg(uuid) AND organization_id = sqlc.arg(organization_id);
 
 -- name: ListMeasurementResultsPanel :many
 -- org_ids NULL means the whole brand (brand/all scopes); an empty set
--- (customer scope) matches nothing.
+-- (customer scope) matches nothing. TEC-299: statuses / device_uuids are
+-- multi-value filters, q searches the VIN, the vehicle plate and the device
+-- serial (an escaped LIKE term), and the sort keys come from
+-- measurements usecase.ListSort (docs/list-contract.md). The vehicle is the
+-- result's own, else the linked service's (as GetMeasurementPDFContext);
+-- service_measurements is unique per result so no join duplicates a row.
 SELECT
     mr.*,
     md.uuid AS device_uuid,
@@ -106,21 +111,53 @@ SELECT
     s.service_no AS service_no,
     o.uuid AS organization_uuid,
     o.name AS organization_name,
+    v.plate AS vehicle_plate,
     count(*) OVER() AS total_count
 FROM measurement_results mr
 LEFT JOIN measurement_devices md ON md.id = mr.device_id
 LEFT JOIN service_measurements sm ON sm.measurement_result_id = mr.id
 LEFT JOIN services s ON s.id = sm.service_id
+LEFT JOIN services vs ON vs.id = COALESCE(sm.service_id, mr.service_id)
+LEFT JOIN vehicles v ON v.id = COALESCE(mr.vehicle_id, vs.vehicle_id)
 LEFT JOIN organizations o ON o.id = mr.organization_id
 WHERE mr.brand_id = sqlc.arg(brand_id)
   AND (sqlc.narg(org_ids)::bigint[] IS NULL OR mr.organization_id = ANY(sqlc.narg(org_ids)::bigint[]))
   AND (sqlc.narg(vin)::varchar IS NULL OR mr.vin = sqlc.narg(vin)::varchar)
-  AND (sqlc.narg(device_uuid)::uuid IS NULL OR md.uuid = sqlc.narg(device_uuid)::uuid)
-  AND (sqlc.narg(status)::varchar IS NULL OR mr.status = sqlc.narg(status)::varchar)
+  AND (COALESCE(cardinality(sqlc.narg(device_uuids)::uuid[]), 0) = 0 OR md.uuid = ANY(sqlc.narg(device_uuids)::uuid[]))
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR mr.status = ANY(sqlc.narg(statuses)::text[]))
   AND (sqlc.narg(linked)::boolean IS NULL OR (sm.id IS NOT NULL) = sqlc.narg(linked)::boolean)
   AND (sqlc.narg(measured_from)::timestamptz IS NULL OR COALESCE(mr.measured_at, mr.created_at) >= sqlc.narg(measured_from)::timestamptz)
   AND (sqlc.narg(measured_to)::timestamptz IS NULL OR COALESCE(mr.measured_at, mr.created_at) < sqlc.narg(measured_to)::timestamptz)
-ORDER BY COALESCE(mr.measured_at, mr.created_at) DESC, mr.id DESC
+  AND (sqlc.narg(q)::text IS NULL
+       OR mr.vin ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR v.plate ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR COALESCE(md.serial, mr.device_serial) ILIKE '%' || sqlc.narg(q)::text || '%')
+ORDER BY
+  -- time columns (NOT NULL)
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'measured_at' THEN COALESCE(mr.measured_at, mr.created_at)
+      WHEN 'created_at' THEN mr.created_at
+    END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'measured_at' THEN COALESCE(mr.measured_at, mr.created_at)
+      WHEN 'created_at' THEN mr.created_at
+    END
+  END DESC,
+  -- status (NOT NULL)
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'status' THEN mr.status::text END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'status' THEN mr.status::text END DESC,
+  -- nullable text columns: blanks last in both directions
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'vin' THEN mr.vin::text WHEN 'plate' THEN v.plate::text END
+  END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'vin' THEN mr.vin::text WHEN 'plate' THEN v.plate::text END
+  END DESC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN mr.id END DESC,
+  mr.id ASC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
 -- name: GetMeasurementResultPanel :one
@@ -137,11 +174,14 @@ SELECT
     s.uuid AS service_uuid,
     s.service_no AS service_no,
     o.uuid AS organization_uuid,
-    o.name AS organization_name
+    o.name AS organization_name,
+    v.plate AS vehicle_plate
 FROM measurement_results mr
 LEFT JOIN measurement_devices md ON md.id = mr.device_id
 LEFT JOIN service_measurements sm ON sm.measurement_result_id = mr.id
 LEFT JOIN services s ON s.id = sm.service_id
+LEFT JOIN services vs ON vs.id = COALESCE(sm.service_id, mr.service_id)
+LEFT JOIN vehicles v ON v.id = COALESCE(mr.vehicle_id, vs.vehicle_id)
 LEFT JOIN organizations o ON o.id = mr.organization_id
 WHERE mr.uuid = sqlc.arg(uuid)
   AND mr.brand_id = sqlc.arg(brand_id)

@@ -145,6 +145,11 @@ export const Permission = {
   ContractsRead: "contracts.read",
   ContractsWrite: "contracts.write",
   WarrantyClaimsRead: "warranty_claims.read",
+  /** TEC-299: measurement pages and NexPTG devices. */
+  MeasurementsRead: "measurements.read",
+  MeasurementsLink: "measurements.link",
+  MeasurementsWrite: "measurements.write",
+  MeasurementDevicesManage: "measurement_devices.manage",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];
@@ -448,5 +453,11 @@ export const permissions = {
   },
   warrantyClaims: {
     read: Permission.WarrantyClaimsRead,
+  },
+  measurements: {
+    read: Permission.MeasurementsRead,
+    link: Permission.MeasurementsLink,
+    write: Permission.MeasurementsWrite,
+    devicesManage: Permission.MeasurementDevicesManage,
   },
 } as const;
