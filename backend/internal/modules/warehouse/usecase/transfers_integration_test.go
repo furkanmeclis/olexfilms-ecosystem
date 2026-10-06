@@ -333,7 +333,7 @@ func TestWarehouseTransferFullFlow(t *testing.T) {
 	if _, err := tr.AddTransferLines(e.ctx, c, back.UUID, codes); err != nil {
 		t.Fatalf("units free after completion: %v", err)
 	}
-	list, total, err := tr.ListTransfers(e.ctx, c, wh.TransferStatusCompleted, 50, 0)
+	list, total, err := tr.ListTransfers(e.ctx, c, wh.TransferListFilter{Statuses: []string{wh.TransferStatusCompleted}, Limit: 50})
 	if err != nil || total < 1 || len(list) < 1 || list[0].Lines != nil {
 		t.Fatalf("list = %d %v", total, err)
 	}

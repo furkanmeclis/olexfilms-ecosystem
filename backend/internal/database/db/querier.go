@@ -124,7 +124,7 @@ type Querier interface {
 	CountAppLogs(ctx context.Context, arg CountAppLogsParams) (int64, error)
 	CountAppLogsByLevel(ctx context.Context) ([]CountAppLogsByLevelRow, error)
 	CountAppointmentsByOrganizations(ctx context.Context, arg CountAppointmentsByOrganizationsParams) (int64, error)
-	CountBarcodeBatches(ctx context.Context, organizationID int64) (int64, error)
+	CountBarcodeBatches(ctx context.Context, arg CountBarcodeBatchesParams) (int64, error)
 	CountBinProductStockRows(ctx context.Context, arg CountBinProductStockRowsParams) (int64, error)
 	// TEC-229: booked return lines of an order (a received return whose line
 	// was priced and not excluded); a dispute on that order's sale cannot then
@@ -194,6 +194,7 @@ type Querier interface {
 	CountServicesOfUser(ctx context.Context, customerUserID int64) (int64, error)
 	CountStaffPayments(ctx context.Context, arg CountStaffPaymentsParams) (int64, error)
 	CountStaffProfiles(ctx context.Context, arg CountStaffProfilesParams) (int64, error)
+	CountStockCountScans(ctx context.Context, countID int64) (int64, error)
 	CountStockCounts(ctx context.Context, arg CountStockCountsParams) (int64, error)
 	CountStockEntries(ctx context.Context, arg CountStockEntriesParams) (int64, error)
 	CountStockEntryLines(ctx context.Context, entryID int64) (int64, error)
@@ -1155,6 +1156,9 @@ type Querier interface {
 	ListAppointmentClosures(ctx context.Context, arg ListAppointmentClosuresParams) ([]AppointmentClosure, error)
 	ListAppointmentSettingsByOrganizations(ctx context.Context, organizationIds []int64) ([]AppointmentSetting, error)
 	ListAppointmentsByOrganizations(ctx context.Context, arg ListAppointmentsByOrganizationsParams) ([]Appointment, error)
+	// TEC-375: list contract (docs/list-contract.md), keys from stock usecase
+	// BarcodeBatchSort. q: prefix, first/last barcode, product name or sku, or
+	// any barcode of the batch.
 	ListBarcodeBatches(ctx context.Context, arg ListBarcodeBatchesParams) ([]BarcodeBatch, error)
 	ListBinProductStockRows(ctx context.Context, arg ListBinProductStockRowsParams) ([]ListBinProductStockRowsRow, error)
 	ListBinProductStocksByLocation(ctx context.Context, locationID int64) ([]BinProductStock, error)
@@ -1251,6 +1255,8 @@ type Querier interface {
 	ListEODReportOrganizations(ctx context.Context) ([]ListEODReportOrganizationsRow, error)
 	// scope: '' every report, 'system' only system reports, 'warehouse' only
 	// warehouse reports (warehouse_id narrows to one warehouse).
+	// TEC-375: sort keys from warehouse usecase EODSort (report_date,
+	// generated_at); within one key the system report comes first.
 	ListEODReports(ctx context.Context, arg ListEODReportsParams) ([]EodReport, error)
 	ListEnabledLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
 	ListExchangeRatesByDate(ctx context.Context, arg ListExchangeRatesByDateParams) ([]ListExchangeRatesByDateRow, error)
@@ -1644,8 +1650,16 @@ type Querier interface {
 	ListStockCountLines(ctx context.Context, countID int64) ([]StockCountLine, error)
 	ListStockCountProducts(ctx context.Context, ids []int64) ([]ListStockCountProductsRow, error)
 	ListStockCountScans(ctx context.Context, countID int64) ([]StockCountScan, error)
+	// TEC-375: one page of a count's scans (scan order).
+	ListStockCountScansPage(ctx context.Context, arg ListStockCountScansPageParams) ([]StockCountScan, error)
 	ListStockCountUnits(ctx context.Context, ids []int64) ([]ListStockCountUnitsRow, error)
+	// TEC-375: list contract (docs/list-contract.md), keys from warehouse
+	// usecase CountSort. status sorts by flow rank, warehouse by name.
+	// q: note, warehouse name or code.
 	ListStockCounts(ctx context.Context, arg ListStockCountsParams) ([]StockCount, error)
+	// TEC-375: list contract (docs/list-contract.md), keys from warehouse
+	// usecase EntrySort. status sorts by flow rank; warehouse by name (import
+	// entries have none and come last). q: note, warehouse name or code.
 	ListStockEntries(ctx context.Context, arg ListStockEntriesParams) ([]StockEntry, error)
 	ListStockEntryLines(ctx context.Context, entryID int64) ([]StockEntryLine, error)
 	ListStockImportBatches(ctx context.Context, organizationID int64) ([]StockImportBatch, error)
@@ -1748,6 +1762,8 @@ type Querier interface {
 	// Typed locations of a warehouse, optionally one room.
 	ListWarehouseScopeLocationIDs(ctx context.Context, arg ListWarehouseScopeLocationIDsParams) ([]int64, error)
 	ListWarehouseTransferLines(ctx context.Context, transferID int64) ([]WarehouseTransferLine, error)
+	// TEC-375: list contract (docs/list-contract.md), keys from warehouse
+	// usecase TransferSort. status sorts by flow rank. q: transfer no, note.
 	ListWarehouseTransfers(ctx context.Context, arg ListWarehouseTransfersParams) ([]WarehouseTransfer, error)
 	// TEC-201: warehouse and location tree (000059). Every query is bound to
 	// one organization; the warehouse side is brand-independent (K20).

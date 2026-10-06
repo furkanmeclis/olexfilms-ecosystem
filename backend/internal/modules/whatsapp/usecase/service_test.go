@@ -66,6 +66,8 @@ func TestPollStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
+		// Do not leave this fake gateway's token for the httpserver tests.
+		_, _ = lockConn.Exec(context.Background(), `UPDATE whatsapp_settings SET user_token_enc = NULL, status = 'unknown', jid = NULL WHERE id = 1`)
 		_, _ = lockConn.Exec(context.Background(), `SELECT pg_advisory_unlock(920092)`)
 		lockConn.Release()
 	})

@@ -21,6 +21,7 @@ WHERE organization_id = $1
        OR ($3::text = 'warehouse' AND warehouse_id IS NOT NULL))
   AND ($4::date IS NULL OR report_date >= $4::date)
   AND ($5::date IS NULL OR report_date <= $5::date)
+  AND (COALESCE(cardinality($6::text[]), 0) = 0 OR kind = ANY ($6::text[]))
 `
 
 type CountEODReportsParams struct {
@@ -29,6 +30,7 @@ type CountEODReportsParams struct {
 	Scope          string      `json:"scope"`
 	DateFrom       pgtype.Date `json:"date_from"`
 	DateTo         pgtype.Date `json:"date_to"`
+	Kinds          []string    `json:"kinds"`
 }
 
 func (q *Queries) CountEODReports(ctx context.Context, arg CountEODReportsParams) (int64, error) {
@@ -38,6 +40,7 @@ func (q *Queries) CountEODReports(ctx context.Context, arg CountEODReportsParams
 		arg.Scope,
 		arg.DateFrom,
 		arg.DateTo,
+		arg.Kinds,
 	)
 	var column_1 int64
 	err := row.Scan(&column_1)
@@ -209,8 +212,16 @@ WHERE organization_id = $1
        OR ($3::text = 'warehouse' AND warehouse_id IS NOT NULL))
   AND ($4::date IS NULL OR report_date >= $4::date)
   AND ($5::date IS NULL OR report_date <= $5::date)
-ORDER BY report_date DESC, warehouse_id NULLS FIRST, id DESC
-LIMIT $7 OFFSET $6
+  AND (COALESCE(cardinality($6::text[]), 0) = 0 OR kind = ANY ($6::text[]))
+ORDER BY
+  CASE WHEN NOT $7::bool THEN CASE $8::text WHEN 'report_date' THEN report_date END END ASC,
+  CASE WHEN $7::bool THEN CASE $8::text WHEN 'report_date' THEN report_date END END DESC,
+  CASE WHEN NOT $7::bool THEN CASE $8::text WHEN 'generated_at' THEN generated_at END END ASC,
+  CASE WHEN $7::bool THEN CASE $8::text WHEN 'generated_at' THEN generated_at END END DESC,
+  warehouse_id NULLS FIRST,
+  CASE WHEN $7::bool THEN id END DESC,
+  id ASC
+LIMIT $10 OFFSET $9
 `
 
 type ListEODReportsParams struct {
@@ -219,12 +230,17 @@ type ListEODReportsParams struct {
 	Scope          string      `json:"scope"`
 	DateFrom       pgtype.Date `json:"date_from"`
 	DateTo         pgtype.Date `json:"date_to"`
+	Kinds          []string    `json:"kinds"`
+	SortDesc       bool        `json:"sort_desc"`
+	SortKey        string      `json:"sort_key"`
 	RowOffset      int32       `json:"row_offset"`
 	RowLimit       int32       `json:"row_limit"`
 }
 
 // scope: ” every report, 'system' only system reports, 'warehouse' only
 // warehouse reports (warehouse_id narrows to one warehouse).
+// TEC-375: sort keys from warehouse usecase EODSort (report_date,
+// generated_at); within one key the system report comes first.
 func (q *Queries) ListEODReports(ctx context.Context, arg ListEODReportsParams) ([]EodReport, error) {
 	rows, err := q.db.Query(ctx, listEODReports,
 		arg.OrganizationID,
@@ -232,6 +248,9 @@ func (q *Queries) ListEODReports(ctx context.Context, arg ListEODReportsParams) 
 		arg.Scope,
 		arg.DateFrom,
 		arg.DateTo,
+		arg.Kinds,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.RowOffset,
 		arg.RowLimit,
 	)

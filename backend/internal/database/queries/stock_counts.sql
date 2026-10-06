@@ -23,16 +23,59 @@ WHERE uuid = sqlc.arg(uuid) AND organization_id = sqlc.arg(organization_id)
 FOR UPDATE;
 
 -- name: ListStockCounts :many
-SELECT * FROM stock_counts
-WHERE organization_id = sqlc.arg(organization_id)
-  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
-ORDER BY created_at DESC, id DESC
+-- TEC-375: list contract (docs/list-contract.md), keys from warehouse
+-- usecase CountSort. status sorts by flow rank, warehouse by name.
+-- q: note, warehouse name or code.
+SELECT c.* FROM stock_counts c
+WHERE c.organization_id = sqlc.arg(organization_id)
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR c.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(methods)::text[]), 0) = 0 OR c.method = ANY (sqlc.narg(methods)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(visibilities)::text[]), 0) = 0 OR c.visibility = ANY (sqlc.narg(visibilities)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(scope_types)::text[]), 0) = 0 OR c.scope_type = ANY (sqlc.narg(scope_types)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(warehouse_uuids)::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM warehouses fw
+                  WHERE fw.id = c.warehouse_id AND fw.uuid = ANY (sqlc.narg(warehouse_uuids)::uuid[])))
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR c.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR c.created_at < sqlc.narg(created_before)::timestamptz)
+  AND (sqlc.narg(q)::text IS NULL
+       OR c.note ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR EXISTS (SELECT 1 FROM warehouses qw
+                  WHERE qw.id = c.warehouse_id
+                    AND (qw.name ILIKE '%' || sqlc.narg(q)::text || '%' OR qw.code ILIKE '%' || sqlc.narg(q)::text || '%')))
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN c.created_at END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN c.created_at END END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'status' THEN
+    CASE c.status WHEN 'draft' THEN 1 WHEN 'in_progress' THEN 2 WHEN 'pending_review' THEN 3
+                  WHEN 'approved' THEN 4 ELSE 5 END END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'status' THEN
+    CASE c.status WHEN 'draft' THEN 1 WHEN 'in_progress' THEN 2 WHEN 'pending_review' THEN 3
+                  WHEN 'approved' THEN 4 ELSE 5 END END END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'warehouse' THEN
+    (SELECT sw.name FROM warehouses sw WHERE sw.id = c.warehouse_id) END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'warehouse' THEN
+    (SELECT sw.name FROM warehouses sw WHERE sw.id = c.warehouse_id) END END DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN c.id END DESC,
+  c.id ASC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
 -- name: CountStockCounts :one
-SELECT COUNT(*) FROM stock_counts
-WHERE organization_id = sqlc.arg(organization_id)
-  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text);
+SELECT COUNT(*) FROM stock_counts c
+WHERE c.organization_id = sqlc.arg(organization_id)
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR c.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(methods)::text[]), 0) = 0 OR c.method = ANY (sqlc.narg(methods)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(visibilities)::text[]), 0) = 0 OR c.visibility = ANY (sqlc.narg(visibilities)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(scope_types)::text[]), 0) = 0 OR c.scope_type = ANY (sqlc.narg(scope_types)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(warehouse_uuids)::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM warehouses fw
+                  WHERE fw.id = c.warehouse_id AND fw.uuid = ANY (sqlc.narg(warehouse_uuids)::uuid[])))
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR c.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR c.created_at < sqlc.narg(created_before)::timestamptz)
+  AND (sqlc.narg(q)::text IS NULL
+       OR c.note ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR EXISTS (SELECT 1 FROM warehouses qw
+                  WHERE qw.id = c.warehouse_id
+                    AND (qw.name ILIKE '%' || sqlc.narg(q)::text || '%' OR qw.code ILIKE '%' || sqlc.narg(q)::text || '%')));
 
 -- name: ApproveStockCountStart :one
 UPDATE stock_counts
@@ -155,6 +198,14 @@ RETURNING *;
 
 -- name: ListStockCountScans :many
 SELECT * FROM stock_count_scans WHERE count_id = sqlc.arg(count_id) ORDER BY id;
+
+-- name: ListStockCountScansPage :many
+-- TEC-375: one page of a count's scans (scan order).
+SELECT * FROM stock_count_scans WHERE count_id = sqlc.arg(count_id) ORDER BY id
+LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
+
+-- name: CountStockCountScans :one
+SELECT COUNT(*)::bigint FROM stock_count_scans WHERE count_id = sqlc.arg(count_id);
 
 -- name: GetStockCountScanByUUID :one
 SELECT * FROM stock_count_scans WHERE uuid = sqlc.arg(uuid) AND count_id = sqlc.arg(count_id);

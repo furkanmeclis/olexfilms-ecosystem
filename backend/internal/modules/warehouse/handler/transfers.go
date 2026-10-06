@@ -118,15 +118,19 @@ func (h *Transfers) PlaceOrder(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, out)
 }
 
-// List (GET /v1/warehouse/transfers?status&limit&offset).
+// List (GET /v1/warehouse/transfers?status&from_warehouse_uuid&to_warehouse_uuid&created_from&created_to&q&sort&limit&offset).
 func (h *Transfers) List(w http.ResponseWriter, r *http.Request) {
-	q := apiquery.Parse(r.URL.Query())
-	items, total, err := h.svc.ListTransfers(r.Context(), entryCaller(r), r.URL.Query().Get("status"), q.Limit, q.Offset)
+	f, err := wh.ParseTransferListFilter(r.URL.Query())
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	items, total, err := h.svc.ListTransfers(r.Context(), entryCaller(r), f)
 	if err != nil {
 		writeTransferError(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, f.Limit, f.Offset))
 }
 
 // Create (POST /v1/warehouse/transfers).

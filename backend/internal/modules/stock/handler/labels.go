@@ -36,7 +36,15 @@ func NewLabels(b *stockusecase.Barcodes, t *stockusecase.LabelTemplates, p *stoc
 
 func writeLabelError(w http.ResponseWriter, r *http.Request, err error) {
 	var ve *stockusecase.ValidationError
+	var qe *apiquery.ValidationError
 	switch {
+	case errors.As(err, &qe):
+		// TEC-375: list query parameters.
+		details := make([]response.Detail, 0, len(qe.Details))
+		for _, d := range qe.Details {
+			details = append(details, response.Detail{Field: d.Field, Message: d.Message, Code: d.Code})
+		}
+		response.ValidationError(w, r, details)
 	case errors.As(err, &ve):
 		response.ValidationError(w, r, []response.Detail{{Field: ve.Field, Message: ve.Message}})
 	case errors.Is(err, stockusecase.ErrBarcodesCenterOnly):
@@ -115,15 +123,20 @@ func (h *Labels) CreateBatch(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusCreated, out)
 }
 
-// ListBatches serves GET /v1/stock/barcodes.
+// ListBatches serves GET /v1/stock/barcodes
+// (?product_uuid&printed&created_from&created_to&q&sort&limit&offset).
 func (h *Labels) ListBatches(w http.ResponseWriter, r *http.Request) {
-	q := apiquery.Parse(r.URL.Query())
-	items, total, err := h.batches.List(r.Context(), reclassCaller(r), q.Limit, q.Offset)
+	f, err := stockusecase.ParseBatchListFilter(r.URL.Query())
 	if err != nil {
 		writeLabelError(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
+	items, total, err := h.batches.List(r.Context(), reclassCaller(r), f)
+	if err != nil {
+		writeLabelError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, f.Limit, f.Offset))
 }
 
 // GetBatch serves GET /v1/stock/barcodes/{uuid}.

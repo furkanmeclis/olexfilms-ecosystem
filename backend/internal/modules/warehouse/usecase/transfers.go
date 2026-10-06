@@ -329,22 +329,29 @@ func (s *WarehouseTransfers) CreateTransfer(ctx context.Context, c EntryCaller, 
 	return s.view(ctx, s.q, t, true)
 }
 
-// ListTransfers returns the transfers of the active organization, newest
-// first.
-func (s *WarehouseTransfers) ListTransfers(ctx context.Context, c EntryCaller, status string, limit, offset int32) ([]WarehouseTransfer, int64, error) {
+// ListTransfers returns the transfers of the active organization (TEC-375:
+// list contract, default newest first).
+func (s *WarehouseTransfers) ListTransfers(ctx context.Context, c EntryCaller, f TransferListFilter) ([]WarehouseTransfer, int64, error) {
 	org, err := guard(c.Caller)
 	if err != nil {
 		return nil, 0, err
 	}
-	st := pgtype.Text{String: status, Valid: status != ""}
-	if st.Valid && !slices.Contains([]string{TransferStatusDraft, TransferStatusInTransit, TransferStatusCompleted, TransferStatusCancelled}, status) {
-		return nil, 0, invalid("status", "must be draft, in_transit, completed or cancelled")
+	f.Sort = orDefault(f.Sort, TransferSort)
+	cp := db.CountWarehouseTransfersParams{
+		OrganizationID: org, Statuses: f.Statuses,
+		FromWarehouseUuids: f.FromWarehouseUUIDs, ToWarehouseUuids: f.ToWarehouseUUIDs,
+		CreatedFrom: listTS(f.CreatedFrom), CreatedBefore: listTS(f.CreatedBefore), Q: listQ(f.Q),
 	}
-	rows, err := s.q.ListWarehouseTransfers(ctx, db.ListWarehouseTransfersParams{OrganizationID: org, Status: st, PageLimit: limit, PageOffset: offset})
+	rows, err := s.q.ListWarehouseTransfers(ctx, db.ListWarehouseTransfersParams{
+		OrganizationID: cp.OrganizationID, Statuses: cp.Statuses,
+		FromWarehouseUuids: cp.FromWarehouseUuids, ToWarehouseUuids: cp.ToWarehouseUuids,
+		CreatedFrom: cp.CreatedFrom, CreatedBefore: cp.CreatedBefore, Q: cp.Q,
+		SortKey: f.Sort.Key, SortDesc: f.Sort.Desc, PageLimit: f.Limit, PageOffset: f.Offset,
+	})
 	if err != nil {
 		return nil, 0, err
 	}
-	total, err := s.q.CountWarehouseTransfers(ctx, db.CountWarehouseTransfersParams{OrganizationID: org, Status: st})
+	total, err := s.q.CountWarehouseTransfers(ctx, cp)
 	if err != nil {
 		return nil, 0, err
 	}

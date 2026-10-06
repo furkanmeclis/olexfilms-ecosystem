@@ -130,26 +130,43 @@ func newWhatsAppIntegration(t *testing.T) (*itest, *fakeWuzapi) {
 	it := newIntegrationWith(t, func(c *config.Config) {
 		c.Wuzapi = config.WuzapiConfig{URL: srv.URL, AdminToken: itWuzapiAdmin, WebhookSecret: itWebhookKey, WebhookURL: itWebhookURL}
 	})
-	// whatsapp_settings is a singleton shared with other packages' tests:
-	// serialize on a session advisory lock (released on cleanup).
-	lockConn, err := it.pool.Acquire(context.Background())
+	it.lockWhatsAppSettings()
+	return it, fw
+}
+
+// lockWhatsAppSettings gives the test exclusive use of the whatsapp_settings
+// singleton. Every test that sends through the wuzapi gateway must call it:
+// the row caches the instance user token, and a token left by another test
+// (e.g. modules/whatsapp/usecase running in parallel under go test ./...)
+// makes this run's fake wuzapi answer 401, so OTP delivery fails with 500.
+// Serialized on a session advisory lock (released on cleanup); the row is
+// reset on entry and exit.
+func (it *itest) lockWhatsAppSettings() {
+	t := it.t
+	t.Helper()
+	ctx := context.Background()
+	lockConn, err := it.pool.Acquire(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := lockConn.Exec(context.Background(), `SELECT pg_advisory_lock(920092)`); err != nil {
+	if _, err := lockConn.Exec(ctx, `SELECT pg_advisory_lock(920092)`); err != nil {
+		lockConn.Release()
 		t.Fatal(err)
+	}
+	reset := func() error {
+		_, err := lockConn.Exec(ctx, `UPDATE whatsapp_settings
+			SET user_token_enc = NULL, instance_id = NULL, status = 'unknown', jid = NULL, phone_e164 = NULL,
+			    last_error_reason = NULL, sms_fallback_enabled = FALSE, instance_name = $1 WHERE id = 1`, itInstanceName)
+		return err
 	}
 	t.Cleanup(func() {
-		_, _ = lockConn.Exec(context.Background(), `SELECT pg_advisory_unlock(920092)`)
+		_ = reset()
+		_, _ = lockConn.Exec(ctx, `SELECT pg_advisory_unlock(920092)`)
 		lockConn.Release()
 	})
-	// Fresh gateway singleton for this run.
-	if _, err := it.pool.Exec(context.Background(), `UPDATE whatsapp_settings
-		SET user_token_enc = NULL, instance_id = NULL, status = 'unknown', jid = NULL, phone_e164 = NULL,
-		    last_error_reason = NULL, sms_fallback_enabled = FALSE, instance_name = $1 WHERE id = 1`, itInstanceName); err != nil {
+	if err := reset(); err != nil {
 		t.Fatal(err)
 	}
-	return it, fw
 }
 
 func itPhone() string { return fmt.Sprintf("+90533%07d", rand.IntN(10_000_000)) }

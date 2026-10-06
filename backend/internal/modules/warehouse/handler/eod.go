@@ -66,27 +66,19 @@ type eodPDFBody struct {
 	Locale string `json:"locale"`
 }
 
-func optQuery(r *http.Request, key string) *string {
-	v := strings.TrimSpace(r.URL.Query().Get(key))
-	if v == "" {
-		return nil
-	}
-	return &v
-}
-
-// List (GET /v1/warehouse/eod-reports?warehouse_uuid&scope&date_from&date_to&limit&offset).
+// List (GET /v1/warehouse/eod-reports?warehouse_uuid&scope&date_from&date_to&kind&sort&limit&offset).
 func (h *EOD) List(w http.ResponseWriter, r *http.Request) {
-	q := apiquery.Parse(r.URL.Query())
-	v := r.URL.Query()
-	items, total, err := h.svc.List(r.Context(), caller(r), wh.EODListInput{
-		WarehouseUUID: optQuery(r, "warehouse_uuid"), Scope: strings.TrimSpace(v.Get("scope")),
-		DateFrom: v.Get("date_from"), DateTo: v.Get("date_to"), Limit: q.Limit, Offset: q.Offset,
-	})
+	in, err := wh.ParseEODListInput(r.URL.Query())
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	items, total, err := h.svc.List(r.Context(), caller(r), in)
 	if err != nil {
 		writeEODError(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, in.Limit, in.Offset))
 }
 
 // Generate (POST /v1/warehouse/eod-reports): builds (or rebuilds) the
