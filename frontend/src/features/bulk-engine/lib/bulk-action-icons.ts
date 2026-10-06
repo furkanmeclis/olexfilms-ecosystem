@@ -4,6 +4,7 @@ import {
   CircleCheck,
   Lock,
   CircleOff,
+  Flag,
   FolderInput,
   ListChecks,
   Trash2,
@@ -37,6 +38,8 @@ const bulkActionIconCatalog: Record<
   },
   tasks: {
     assign: UserPlus,
+    set_status: ListChecks,
+    set_priority: Flag,
   },
   "platform.organizations": {
     activate: CircleCheck,

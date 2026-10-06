@@ -1,7 +1,6 @@
 import type {
   Task,
   TaskCreateInput,
-  TaskListQuery,
   TaskPriority,
   TaskStatus,
   TaskUpdateInput,
@@ -18,7 +17,7 @@ export const TASK_STATUSES: TaskStatus[] = [
   "cancelled",
 ];
 
-/** Status filter values: "active" is open + in_progress. */
+/** Status filter values: "active" is open + in_progress (CSV `status`). */
 export const TASK_STATUS_FILTERS: (TaskStatus | "active")[] = [
   "active",
   ...TASK_STATUSES,
@@ -79,27 +78,27 @@ export function isOverdue(task: Task, now: Date = new Date()): boolean {
 }
 
 /**
- * due_after / due_before of a preset: overdue is "due before now" (with the
- * active status filter the page shows open tasks only), today the local
- * calendar day, week the next seven days from now.
+ * due_from / due_to (RFC3339) of a preset: overdue is "due before now"
+ * (with the active status filter the page shows open tasks only), today
+ * the local calendar day, week the next seven days from now.
  */
 export function dueRange(
   filter: DueFilter,
   now: Date = new Date(),
-): Pick<TaskListQuery, "due_after" | "due_before"> {
+): { due_from?: string; due_to?: string } {
   switch (filter) {
     case "overdue":
-      return { due_before: now.toISOString() };
+      return { due_to: now.toISOString() };
     case "today": {
       const start = new Date(now);
       start.setHours(0, 0, 0, 0);
       const end = new Date(start);
       end.setDate(end.getDate() + 1);
-      return { due_after: start.toISOString(), due_before: end.toISOString() };
+      return { due_from: start.toISOString(), due_to: end.toISOString() };
     }
     case "week": {
       const end = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-      return { due_after: now.toISOString(), due_before: end.toISOString() };
+      return { due_from: now.toISOString(), due_to: end.toISOString() };
     }
   }
 }
@@ -237,37 +236,4 @@ export function taskErrorMessage(err: unknown, t: T, fallback: string): string {
   const key = `tasks.errors.${err.code}`;
   const text = t(key);
   return text !== key ? text : fallback;
-}
-
-/** Number of pages for a total (at least one). */
-export function pageCount(total: number, size: number): number {
-  return Math.max(1, Math.ceil(total / size));
-}
-
-export const TASK_PAGE_SIZE = 20;
-
-/** Filters of the list page; "" means no filter. */
-export type TaskListFilters = {
-  status: TaskStatus | "active" | "";
-  priority: TaskPriority | "";
-  assignee: string;
-  subject: string;
-  due: DueFilter | "";
-};
-
-/** Query of the list for a set of filters (due presets resolved at now). */
-export function listQuery(
-  f: TaskListFilters,
-  page: number,
-  now: Date = new Date(),
-): TaskListQuery {
-  return {
-    ...(f.status ? { status: f.status } : {}),
-    ...(f.priority ? { priority: f.priority } : {}),
-    ...(f.assignee ? { assignee_user_uuid: f.assignee } : {}),
-    ...(f.subject ? { subject_organization_uuid: f.subject } : {}),
-    ...(f.due ? dueRange(f.due, now) : {}),
-    limit: TASK_PAGE_SIZE,
-    offset: page * TASK_PAGE_SIZE,
-  };
 }

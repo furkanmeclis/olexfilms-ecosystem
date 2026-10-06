@@ -4,8 +4,6 @@ import {
   accountCreateInput,
   accountFormSchema,
   accountUpdateInput,
-  EMPTY_ENTRY_FILTERS,
-  entryFilterParams,
   isValidIban,
   normalizeAmount,
   settlementFormSchema,
@@ -135,45 +133,5 @@ describe("settlement form", () => {
       description: "makbuz 12",
       idempotency_key: "k1",
     });
-  });
-});
-
-describe("entryFilterParams", () => {
-  it("drops empty filters", () => {
-    expect(
-      entryFilterParams(EMPTY_ENTRY_FILTERS, { limit: 20, offset: 0 }),
-    ).toEqual({ limit: 20, offset: 0 });
-  });
-
-  it("maps every filter and swaps a reversed date range", () => {
-    expect(
-      entryFilterParams(
-        {
-          date_from: "2026-10-31",
-          date_to: "2026-10-01",
-          cari_uuid: "c1",
-          source_type: "order",
-          direction: "collection",
-        },
-        { limit: 50, offset: 100 },
-      ),
-    ).toEqual({
-      limit: 50,
-      offset: 100,
-      date_from: "2026-10-01",
-      date_to: "2026-10-31",
-      cari_uuid: "c1",
-      source_type: "order",
-      direction: "collection",
-    });
-  });
-
-  it("ignores a malformed date", () => {
-    expect(
-      entryFilterParams(
-        { ...EMPTY_ENTRY_FILTERS, date_from: "01.10.2026" },
-        { limit: 20, offset: 0 },
-      ),
-    ).toEqual({ limit: 20, offset: 0 });
   });
 });

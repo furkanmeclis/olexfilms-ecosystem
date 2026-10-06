@@ -2,31 +2,36 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
+import { Eye, Gavel } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
 import {
   EntityPage,
+  EntityRowActions,
   EntityTable,
   EntityToolbar,
   useServerListState,
+  type EntityRowAction,
 } from "@/components/entity";
 import { createColumn } from "@/components/tables";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import {
   Money,
-  NativeSelect,
   useCategoryLabels,
 } from "@/features/accounting/components/shared";
 import {
   accountingKeys,
   useAccountingAccess,
 } from "@/features/accounting/hooks/use-accounting-access";
-import { disputeStatusTone } from "@/features/accounting/lib/disputes";
+import {
+  canResolveDispute,
+  disputeStatusTone,
+} from "@/features/accounting/lib/disputes";
 import {
   accountingService,
   DISPUTE_STATUSES,
@@ -35,6 +40,11 @@ import {
   type ListDisputesParams,
 } from "@/features/accounting/services/accounting.service";
 import { useLocale } from "@/providers/locale-provider";
+
+export const DISPUTES_PERSIST_KEY = "tenant-accounting-disputes-v2";
+
+/** Open is the default filter: the parent panel starts on the work to do. */
+const INITIAL_FILTERS = [{ id: "status", value: ["open"] }];
 
 export function DisputeStatusChip({
   status,
@@ -53,34 +63,35 @@ export function DisputeStatusChip({
 }
 
 /**
- * Tenant > Accounting > Disputes (K24). The backend lists what the read
- * scope reaches: a child sees the disputes it opened, the parent the ones
- * addressed to it (a distributor: its dealers'). Open is the default filter
- * so the parent panel starts on the work to do.
+ * Tenant > Accounting > Disputes (K24, TEC-380). The backend lists what the
+ * read scope reaches: a child sees the disputes it opened, the parent the
+ * ones addressed to it (a distributor: its dealers'). Server DataTable with
+ * sort (opened, resolved, status, amount, organization), `q` (reason or
+ * organization names), status facet (default open), organization facets
+ * from the book's cari counterparties and the opened range.
  */
 export function DisputesPage({ slug }: { slug: string }) {
   const { t, format } = useLocale();
   const router = useRouter();
   const access = useAccountingAccess(slug);
-  const listState = useServerListState({ initialSort: "-created_at" });
-  const [status, setStatus] = useState<AccountingDisputeStatus | "">("open");
   const enabled = access.canRead && Boolean(access.orgUuid);
   const categories = useCategoryLabels(access.orgUuid, enabled);
 
-  const params = useMemo<ListDisputesParams>(
-    () => ({
-      limit: listState.params.limit,
-      offset: listState.params.offset,
-      ...(status ? { status } : {}),
-    }),
-    [listState.params.limit, listState.params.offset, status],
-  );
-
-  const list = useQuery({
-    queryKey: accountingKeys.disputes(access.orgUuid, params),
-    queryFn: () => accountingService.listDisputes(params),
+  // Disputing and addressed organizations are cari counterparties of the
+  // active book (its parent and its children).
+  const cari = useQuery({
+    queryKey: accountingKeys.cariList(access.orgUuid, { limit: 100 }),
+    queryFn: () => accountingService.listCari({ limit: 100 }),
     enabled,
   });
+  const orgOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const c of cari.data?.items ?? []) {
+      const { type, uuid, name } = c.counterparty;
+      if (type === "organization" && uuid) seen.set(uuid, name);
+    }
+    return Array.from(seen, ([value, label]) => ({ value, label }));
+  }, [cari.data]);
 
   const columns = useMemo(
     () =>
@@ -88,7 +99,9 @@ export function DisputesPage({ slug }: { slug: string }) {
         createColumn<AccountingDispute>({
           accessorKey: "created_at",
           labelKey: "accounting.disputes.fields.opened_at",
-          enableSorting: false,
+          enableSorting: true,
+          filterVariant: "date-range",
+          param: "created",
           cell: ({ row }) => (
             <Link
               href={routes.tenant.accounting.disputeDetail(
@@ -106,8 +119,12 @@ export function DisputesPage({ slug }: { slug: string }) {
           id: "organization",
           accessorFn: (row) => row.organization.name,
           labelKey: "accounting.disputes.fields.organization",
-          enableSorting: false,
+          enableSorting: true,
           gridPrimary: true,
+          filterVariant: "faceted",
+          filterOptions: orgOptions,
+          enableColumnFilter: orgOptions.length > 0,
+          param: "organization_uuid",
           cell: ({ row }) => row.original.organization.name,
         }),
         createColumn<AccountingDispute>({
@@ -115,6 +132,10 @@ export function DisputesPage({ slug }: { slug: string }) {
           accessorFn: (row) => row.counterparty_organization.name,
           labelKey: "accounting.disputes.fields.counterparty",
           enableSorting: false,
+          filterVariant: "faceted",
+          filterOptions: orgOptions,
+          enableColumnFilter: orgOptions.length > 0,
+          param: "counterparty_organization_uuid",
           cell: ({ row }) => row.original.counterparty_organization.name,
         }),
         createColumn<AccountingDispute>({
@@ -122,6 +143,7 @@ export function DisputesPage({ slug }: { slug: string }) {
           accessorFn: (row) => row.entry.category,
           labelKey: "accounting.disputes.fields.entry",
           enableSorting: false,
+          enableColumnFilter: false,
           gridSecondary: true,
           cell: ({ row }) =>
             categories.get(row.original.entry.category) ??
@@ -131,7 +153,8 @@ export function DisputesPage({ slug }: { slug: string }) {
           id: "amount",
           accessorFn: (row) => row.entry.amount,
           labelKey: "accounting.fields.amount",
-          enableSorting: false,
+          enableSorting: true,
+          enableColumnFilter: false,
           cell: ({ row }) => (
             <div className="text-end">
               <Money
@@ -144,27 +167,100 @@ export function DisputesPage({ slug }: { slug: string }) {
         createColumn<AccountingDispute>({
           accessorKey: "status",
           labelKey: "accounting.fields.status",
-          enableSorting: false,
+          enableSorting: true,
+          filterVariant: "faceted",
+          filterOptions: DISPUTE_STATUSES.map((value) => ({
+            value,
+            label: value,
+            labelKey: `accounting.disputes.statuses.${value}`,
+          })),
+          param: "status",
           cell: ({ row }) => <DisputeStatusChip status={row.original.status} />,
+        }),
+        createColumn<AccountingDispute>({
+          accessorKey: "resolved_at",
+          labelKey: "accounting.disputes.fields.resolved_at",
+          enableSorting: true,
+          enableColumnFilter: false,
+          cell: ({ row }) =>
+            row.original.resolved_at ? (
+              <span className="whitespace-nowrap">
+                {format.dateTime(row.original.resolved_at)}
+              </span>
+            ) : (
+              "—"
+            ),
         }),
         createColumn<AccountingDispute>({
           accessorKey: "reason",
           labelKey: "accounting.disputes.fields.reason",
           enableSorting: false,
+          enableColumnFilter: false,
           defaultHidden: true,
           cell: ({ row }) => (
             <span className="line-clamp-2">{row.original.reason}</span>
           ),
         }),
+        createColumn<AccountingDispute>({
+          id: "actions",
+          labelKey: "common.actions",
+          enableSorting: false,
+          enableHiding: false,
+          enableResizing: false,
+          enableColumnFilter: false,
+          cell: ({ row }) => {
+            const href = routes.tenant.accounting.disputeDetail(
+              slug,
+              row.original.uuid,
+            );
+            const actions: EntityRowAction[] = [
+              {
+                id: "open",
+                label: t("common.open"),
+                icon: Eye,
+                onSelect: () => router.push(href),
+              },
+            ];
+            if (
+              canResolveDispute(row.original, access.orgUuid, access.canResolve)
+            ) {
+              actions.push({
+                id: "resolve",
+                label: t("accounting.disputes.resolve.title"),
+                icon: Gavel,
+                onSelect: () => router.push(href),
+              });
+            }
+            return <EntityRowActions actions={actions} />;
+          },
+        }),
       ] as ColumnDef<AccountingDispute, unknown>[],
-    [categories, format, slug],
+    [
+      access.canResolve,
+      access.orgUuid,
+      categories,
+      format,
+      orgOptions,
+      router,
+      slug,
+      t,
+    ],
   );
 
-  const total = list.data?.total ?? 0;
-  const pageCount = Math.max(
-    1,
-    Math.ceil(total / (listState.pagination.pageSize || 20)),
-  );
+  // Column meta drives the params: facets (CSV), created (_from / _to).
+  const listState = useServerListState({
+    columns,
+    initialSort: "-created_at",
+    persistKey: DISPUTES_PERSIST_KEY,
+    initialColumnFilters: INITIAL_FILTERS,
+  });
+  const params: ListDisputesParams = listState.params;
+
+  const list = useQuery({
+    queryKey: accountingKeys.disputes(access.orgUuid, params),
+    queryFn: () => accountingService.listDisputes(params),
+    enabled,
+  });
 
   return (
     <EntityPage
@@ -183,25 +279,6 @@ export function DisputesPage({ slug }: { slug: string }) {
         { label: t("accounting.disputes.title") },
       ]}
     >
-      <div className="flex flex-wrap items-end gap-2">
-        <NativeSelect
-          id="dispute-filter-status"
-          label={t("accounting.fields.status")}
-          value={status}
-          className="w-56"
-          onChange={(v) => {
-            setStatus(v as AccountingDisputeStatus | "");
-            listState.setPagination((p) => ({ ...p, pageIndex: 0 }));
-          }}
-          options={[
-            { value: "", label: t("accounting.filters.all_statuses") },
-            ...DISPUTE_STATUSES.map((s) => ({
-              value: s,
-              label: t(`accounting.disputes.statuses.${s}`),
-            })),
-          ]}
-        />
-      </div>
       <EntityTable
         columns={columns}
         data={list.data?.items ?? []}
@@ -214,14 +291,11 @@ export function DisputesPage({ slug }: { slug: string }) {
         onRetry={() => void list.refetch()}
         emptyTitle={t("accounting.disputes.empty_title")}
         emptyDescription={t("accounting.disputes.empty_description")}
-        pageCount={pageCount}
+        rowCount={list.data?.total ?? 0}
         state={listState.tableState}
         features={{
-          persistKey: "tenant-accounting-disputes-v1",
+          persistKey: DISPUTES_PERSIST_KEY,
           rowSelection: false,
-          globalFilter: false,
-          columnFilters: false,
-          facetedFilters: false,
         }}
         toolbarExtra={
           <EntityToolbar

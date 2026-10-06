@@ -1,4 +1,5 @@
 import type { components } from "@/generated/api";
+import type { ServerListQuery } from "@/components/entity";
 import { platformRequest } from "@/lib/api/platform-request";
 
 type Schemas = components["schemas"];
@@ -18,17 +19,14 @@ export type TaskSubjectOption = {
   type: "distributor" | "dealer";
 };
 
-/** GET /v1/tasks filters (TEC-214 + due range, TEC-221). */
-export type TaskListQuery = {
-  status?: TaskStatus | "active";
-  priority?: TaskPriority;
-  assignee_user_uuid?: string;
-  subject_organization_uuid?: string;
-  due_after?: string;
-  due_before?: string;
-  limit: number;
-  offset: number;
-};
+/**
+ * GET /v1/tasks query (TEC-214/221, list contract TEC-379): limit, offset,
+ * sort (title, subject, status, priority, due_at, created_at, updated_at),
+ * q (title / description), CSV status (incl. "active") / priority /
+ * subject_organization_uuid, single assignee_user_uuid, due_from / due_to
+ * and created_from / created_to.
+ */
+export type TaskListQuery = ServerListQuery;
 
 export type Page<T> = {
   items: T[];

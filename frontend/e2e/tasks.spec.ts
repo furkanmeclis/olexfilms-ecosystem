@@ -24,28 +24,48 @@ test("tasks: list filters", async ({ page }) => {
   await page.goto(`/t/${TASK_SLUG}/tasks`);
   await expect(page.getByRole("heading", { name: "Tasks" })).toBeVisible();
   const rows = page.getByTestId("task-row");
-  // Default: open and in progress tasks only.
+  // Default: open and in progress tasks only (status facet "active").
   await expect(rows).toHaveCount(2);
   await expect(page.getByText("Closed follow-up")).toHaveCount(0);
-  await expect(
-    rows.filter({ hasText: "Overdue price review" }).locator("[data-overdue]"),
-  ).toBeVisible();
+  expect(api.calls.some((c) => c.includes("status=active"))).toBe(true);
+  await expect(page.locator("[data-overdue]")).toHaveCount(1);
 
-  await page.getByTestId("task-filter-priority").selectOption("urgent");
+  // Priority facet in the table toolbar → priority=urgent.
+  await page
+    .getByRole("button", { name: "Priority", exact: true })
+    .first()
+    .click();
+  await page.getByRole("option", { name: "Urgent" }).click();
+  await page.keyboard.press("Escape");
   await expect(rows).toHaveCount(1);
   await expect(rows.first()).toContainText("Monthly visit");
   expect(api.calls.some((c) => c.includes("priority=urgent"))).toBe(true);
 
-  await page.getByTestId("task-filter-priority").selectOption("");
-  await page.getByTestId("task-filter-due").selectOption("overdue");
+  // With a value the toolbar button also shows the chosen badge.
+  await page
+    .getByRole("button", { name: /^Priority/ })
+    .first()
+    .click();
+  await page.getByRole("option", { name: "Urgent" }).click();
+  await page.keyboard.press("Escape");
+  await expect(rows).toHaveCount(2);
+
+  // Due presets stay in the toolbar → due_to.
+  await page.getByTestId("task-due-overdue").click();
   await expect(rows).toHaveCount(1);
   await expect(rows.first()).toContainText("Overdue price review");
-  expect(api.calls.some((c) => c.includes("due_before="))).toBe(true);
+  expect(api.calls.some((c) => c.includes("due_to="))).toBe(true);
+  await page.getByTestId("task-due-all").click();
 
-  await page.getByTestId("task-filter-due").selectOption("");
-  await page.getByTestId("task-filter-status").selectOption("done");
-  await expect(rows).toHaveCount(1);
-  await expect(rows.first()).toContainText("Closed follow-up");
+  // Sorting is sent to the backend.
+  await page
+    .getByRole("table")
+    .getByRole("button", { name: "Due date" })
+    .click();
+  await page.getByRole("menuitem", { name: "Sort ascending" }).click();
+  await expect
+    .poll(() => api.calls.some((c) => c.includes("sort=due_at")))
+    .toBe(true);
 });
 
 test("tasks: create, change status, comment", async ({ page }) => {

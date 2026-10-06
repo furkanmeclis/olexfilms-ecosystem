@@ -37,9 +37,15 @@ vi.mock("next/navigation", () => ({
 
 // The page shell gates on the permission provider; the tests drive the
 // access flags directly through the mocked hook below.
-vi.mock("@/components/entity", async () => {
+vi.mock("@/hooks/use-mobile", () => ({
+  useIsMobile: () => false,
+  useIsXl: () => true,
+}));
+
+vi.mock("@/components/entity", async (importOriginal) => {
   const { createElement: h } = await import("react");
   return {
+    ...(await importOriginal<object>()),
     EntityPage: ({
       actions,
       children,

@@ -70,24 +70,42 @@ export type AccountingPage<T> = {
   offset: number;
 };
 
-export type ListCariParams = {
+/** List query params (limit, offset, sort, q and the mapped filters). */
+type ListQuery = Record<string, string | number | boolean | undefined>;
+
+/**
+ * GET /v1/accounting/cari (TEC-379): sort name (default), balance,
+ * entry_count, last_entry_at, created_at; q; active; CSV
+ * counterparty_kind (center, distributor, dealer, customer);
+ * balance_min / balance_max.
+ */
+export type ListCariParams = ListQuery & {
   limit?: number;
   offset?: number;
   q?: string;
   active?: boolean;
 };
 
-export type ListEntriesParams = {
+/**
+ * GET /v1/accounting/entries (TEC-379): sort created_at (default
+ * -created_at), amount, direction, category; q; account_uuid, cari_uuid;
+ * CSV direction / category / source_type; created_from / created_to
+ * (YYYY-MM-DD, inclusive) and amount_min / amount_max.
+ */
+export type ListEntriesParams = ListQuery & {
   limit?: number;
   offset?: number;
   cari_uuid?: string;
   account_uuid?: string;
-  direction?: AccountingDirection;
-  source_type?: string;
-  /** YYYY-MM-DD, inclusive (UTC day of created_at). */
-  date_from?: string;
-  date_to?: string;
 };
+
+/** Cari counterparty kinds of the `counterparty_kind` filter. */
+export const CARI_COUNTERPARTY_KINDS = [
+  "center",
+  "distributor",
+  "dealer",
+  "customer",
+] as const;
 
 export type StatementPeriod = {
   /** YYYY-MM-DD, inclusive (UTC calendar day). */
@@ -95,14 +113,29 @@ export type StatementPeriod = {
   to?: string;
 };
 
-export type ListDisputesParams = {
+/**
+ * GET /v1/accounting/disputes (TEC-379): sort created_at (default
+ * -created_at), resolved_at, status, amount, organization; q; CSV status /
+ * organization_uuid / counterparty_organization_uuid; created_from /
+ * created_to.
+ */
+export type ListDisputesParams = ListQuery & {
   limit?: number;
   offset?: number;
-  status?: AccountingDisputeStatus;
+  status?: string;
 };
 
 function boolQuery(value: boolean | undefined) {
   return value === undefined ? undefined : String(value);
+}
+
+/** List params → query (booleans as "true" / "false"). */
+function listQuery(params: ListQuery) {
+  const out: Record<string, string | number | undefined> = {};
+  for (const [key, value] of Object.entries(params)) {
+    out[key] = typeof value === "boolean" ? String(value) : value;
+  }
+  return out;
 }
 
 const path = (base: string, uuid: string) =>
@@ -152,14 +185,23 @@ export const accountingService = {
     return platformRequest<AccountingPage<CariAccount>>(
       "GET",
       "/v1/accounting/cari",
-      {
-        query: {
-          limit: params.limit,
-          offset: params.offset,
-          q: params.q,
-          active: boolQuery(params.active),
-        },
-      },
+      { query: listQuery(params) },
+    );
+  },
+
+  /**
+   * Queues a ledger list export (TEC-379, 202): the list filters, q and
+   * sort; polled and downloaded through /v1/accounting/exports/{uuid}.
+   */
+  exportEntries(
+    format: AccountingExportFormat,
+    query: Record<string, string>,
+    locale?: string,
+  ) {
+    return platformRequest<AccountingExportJob>(
+      "POST",
+      "/v1/accounting/entries/export",
+      { body: { format, query, ...(locale ? { locale } : {}) } },
     );
   },
 
@@ -174,7 +216,7 @@ export const accountingService = {
     return platformRequest<AccountingPage<FinanceEntry>>(
       "GET",
       "/v1/accounting/entries",
-      { query: { ...params } },
+      { query: listQuery(params) },
     );
   },
 
@@ -254,7 +296,7 @@ export const accountingService = {
     return platformRequest<AccountingPage<AccountingDispute>>(
       "GET",
       "/v1/accounting/disputes",
-      { query: { ...params } },
+      { query: listQuery(params) },
     );
   },
 

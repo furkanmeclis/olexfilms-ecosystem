@@ -9,7 +9,6 @@ import {
   emptyTaskForm,
   fromLocalInput,
   isOverdue,
-  listQuery,
   statusTargets,
   taskFormOf,
   toLocalInput,
@@ -52,26 +51,19 @@ describe("tasks lib", () => {
 
   it("resolves the due presets", () => {
     expect(dueRange("overdue", now)).toEqual({
-      due_before: now.toISOString(),
+      due_to: now.toISOString(),
     });
     const today = dueRange("today", now);
     expect(
-      new Date(today.due_before!).getTime() -
-        new Date(today.due_after!).getTime(),
+      new Date(today.due_to!).getTime() - new Date(today.due_from!).getTime(),
     ).toBeGreaterThanOrEqual(23 * 3600 * 1000);
-    expect(new Date(today.due_after!).getTime()).toBeLessThanOrEqual(
+    expect(new Date(today.due_from!).getTime()).toBeLessThanOrEqual(
       now.getTime(),
     );
-  });
-
-  it("builds the list query from the filters", () => {
+    const week = dueRange("week", now);
     expect(
-      listQuery(
-        { status: "", priority: "", assignee: "", subject: "", due: "" },
-        2,
-        now,
-      ),
-    ).toEqual({ limit: 20, offset: 40 });
+      new Date(week.due_to!).getTime() - new Date(week.due_from!).getTime(),
+    ).toBe(7 * 24 * 3600 * 1000);
   });
 
   it("round-trips the datetime-local value", () => {
