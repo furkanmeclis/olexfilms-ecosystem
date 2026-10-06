@@ -4848,7 +4848,7 @@ export interface paths {
         };
         /**
          * List barcode batches of the center
-         * @description Needs `stock.read` in the active organization; only the center issues barcodes (K14), any other organization type answers 403 STOCK_BARCODES_CENTER_ONLY. Newest first.
+         * @description Needs `stock.read` in the active organization; only the center issues barcodes (K14), any other organization type answers 403 STOCK_BARCODES_CENTER_ONLY. TEC-375 (docs/list-contract.md): `sort` is one of created_at (default `-created_at`), quantity, print_count (id tiebreak). `q` matches the prefix, the first or last barcode, the product name or SKU, or any barcode of the batch. Labels of a batch: GET /v1/stock/barcodes/{uuid}/labels.pdf.
          */
         get: operations["listBarcodeBatches"];
         put?: never;
@@ -5013,7 +5013,7 @@ export interface paths {
         };
         /**
          * Stock counts of the active organization
-         * @description Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Newest first; no expected values.
+         * @description Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). No expected values. TEC-375 (docs/list-contract.md): `sort` is one of created_at (default `-created_at`), status (flow rank draft → cancelled), warehouse (name), with an id tiebreak; `status`, `method`, `visibility`, `scope_type` and `warehouse_uuid` are comma separated any-of filters; `q` matches the note and the warehouse name or code. A per-count CSV export is GET .../{uuid}/export.
          */
         get: operations["listStockCounts"];
         put?: never;
@@ -5097,7 +5097,7 @@ export interface paths {
         };
         /**
          * Recorded scans of a count
-         * @description Needs `warehouse.read`. No expected values.
+         * @description Needs `warehouse.read`. No expected values. TEC-375: `limit` / `offset` page the scans (oldest first) and `total` counts every scan of the count; without either parameter every scan comes back (limit = total).
          */
         get: operations["listStockCountScans"];
         put?: never;
@@ -5261,7 +5261,7 @@ export interface paths {
         };
         /**
          * List the stock entry documents of the active organization
-         * @description Needs `warehouse.read` with the warehouse module on (center or distributor, K12). Newest first; entries written by an applied stock import (TEC-158) have mode `import`. An unknown status is 400 VALIDATION_ERROR.
+         * @description Needs `warehouse.read` with the warehouse module on (center or distributor, K12). Newest first; entries written by an applied stock import (TEC-158) have mode `import`. TEC-375 (docs/list-contract.md): `sort` is one of created_at (default `-created_at`), status (flow rank draft, confirmed, undone, cancelled), warehouse (name; import entries last), with an id tiebreak; `status`, `mode` and `warehouse_uuid` are comma separated any-of filters; `q` matches the note and the warehouse name or code. An unknown value is 400 VALIDATION_ERROR.
          */
         get: operations["listStockEntries"];
         put?: never;
@@ -5442,7 +5442,7 @@ export interface paths {
         };
         /**
          * List the warehouse transfers of the active organization
-         * @description Needs `warehouse.read`. Newest first. Transfers between organizations are `/v1/transfers` (TEC-197). An unknown status is 400 VALIDATION_ERROR.
+         * @description Needs `warehouse.read`. Transfers between organizations are `/v1/transfers` (TEC-197). TEC-375 (docs/list-contract.md): `sort` is one of transfer_no, created_at (default `-created_at`), status (flow rank draft, in_transit, completed, cancelled), with an id tiebreak; `status`, `from_warehouse_uuid` and `to_warehouse_uuid` are comma separated any-of filters; `q` matches the transfer number and the note. An unknown value is 400 VALIDATION_ERROR.
          */
         get: operations["listWarehouseTransfers"];
         put?: never;
@@ -5600,7 +5600,7 @@ export interface paths {
         };
         /**
          * List end-of-day reports
-         * @description TEC-207. Needs `warehouse.read`; center and distributor only. Stored reports of the active organization, newest day first (the system report before the warehouse reports of a day). The hourly cron writes the previous local day of every center / distributor with a warehouse (kind auto); a manual run rewrites a day (kind manual).
+         * @description TEC-207. Needs `warehouse.read`; center and distributor only. Stored reports of the active organization, newest day first (the system report before the warehouse reports of a day). The hourly cron writes the previous local day of every center / distributor with a warehouse (kind auto); a manual run rewrites a day (kind manual). TEC-375 (docs/list-contract.md): `sort` is one of report_date (default `-report_date`), generated_at; within one value the system report comes first, then an id tiebreak. `kind` is a comma separated any-of filter (auto, manual). PDF of a report: POST /v1/warehouse/eod-reports/{uuid}/pdf.
          */
         get: operations["listEodReports"];
         put?: never;
@@ -7506,7 +7506,7 @@ export interface paths {
          * Mobile: Stock counts of the active organization
          * @description Mobile mirror (TEC-235) of `GET /v1/warehouse/stock-counts`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
          *
-         *     Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Newest first; no expected values.
+         *     Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). No expected values. TEC-375: same list contract (sort, CSV filters, q, created range) as the panel endpoint.
          */
         get: operations["mobileListStockCounts"];
         put?: never;
@@ -7600,7 +7600,7 @@ export interface paths {
          * Mobile: Recorded scans of a count
          * @description Mobile mirror (TEC-235) of `GET /v1/warehouse/stock-counts/{uuid}/scans`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
          *
-         *     Needs `warehouse.read`. No expected values.
+         *     Needs `warehouse.read`. No expected values. TEC-375: optional `limit` / `offset` page the scans; without them every scan comes back.
          */
         get: operations["mobileListStockCountScans"];
         put?: never;
@@ -7738,7 +7738,7 @@ export interface paths {
          * Mobile: List the warehouse transfers of the active organization
          * @description Mobile mirror (TEC-235) of `GET /v1/warehouse/transfers`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
          *
-         *     Needs `warehouse.read`. Newest first. Transfers between organizations are `/v1/transfers` (TEC-197). An unknown status is 400 VALIDATION_ERROR.
+         *     Needs `warehouse.read`. Transfers between organizations are `/v1/transfers` (TEC-197). TEC-375: same list contract (sort, CSV filters, q, created range) as the panel endpoint. An unknown value is 400 VALIDATION_ERROR.
          */
         get: operations["mobileListWarehouseTransfers"];
         put?: never;
@@ -15171,6 +15171,10 @@ export interface components {
             success: true;
             data: {
                 items: components["schemas"]["StockCountScan"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -28808,6 +28812,17 @@ export interface operations {
             query?: {
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Comma separated product uuids (any of). */
+                product_uuid?: string;
+                /** @description true: printed at least once (print_count > 0); false: never printed. */
+                printed?: boolean;
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
             };
             header?: never;
             path?: never;
@@ -28824,6 +28839,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeBarcodeBatchPage"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
         };
@@ -29132,7 +29148,23 @@ export interface operations {
     listStockCounts: {
         parameters: {
             query?: {
-                status?: components["schemas"]["StockCountStatus"];
+                /** @description Comma separated StockCountStatus values (any of). */
+                status?: string;
+                /** @description Comma separated methods (location_first, unit_first, product_qty, initial_placement). */
+                method?: string;
+                /** @description Comma separated visibilities (blind, guided). */
+                visibility?: string;
+                /** @description Comma separated scope types (warehouse, room, location, product). */
+                scope_type?: string;
+                /** @description Comma separated warehouse uuids (any of). */
+                warehouse_uuid?: string;
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
             };
@@ -29266,7 +29298,10 @@ export interface operations {
     };
     listStockCountScans: {
         parameters: {
-            query?: never;
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
             header?: never;
             path: {
                 /** @description Resource UUID */
@@ -29544,7 +29579,19 @@ export interface operations {
     listStockEntries: {
         parameters: {
             query?: {
-                status?: components["schemas"]["StockEntryStatus"];
+                /** @description Comma separated StockEntryStatus values (any of). */
+                status?: string;
+                /** @description Comma separated modes (with_existing, generate_new, import). */
+                mode?: string;
+                /** @description Comma separated warehouse uuids (any of). */
+                warehouse_uuid?: string;
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
                 limit?: number;
                 offset?: number;
             };
@@ -29848,7 +29895,19 @@ export interface operations {
     listWarehouseTransfers: {
         parameters: {
             query?: {
-                status?: components["schemas"]["WarehouseTransferStatus"];
+                /** @description Comma separated WarehouseTransferStatus values (any of). */
+                status?: string;
+                /** @description Comma separated source warehouse uuids (any of). */
+                from_warehouse_uuid?: string;
+                /** @description Comma separated target warehouse uuids (any of). */
+                to_warehouse_uuid?: string;
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
                 limit?: number;
                 offset?: number;
             };
@@ -30108,6 +30167,10 @@ export interface operations {
         parameters: {
             query?: {
                 warehouse_uuid?: string;
+                /** @description Comma separated kinds (auto, manual). */
+                kind?: string;
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
                 /** @description system: only system reports; warehouse: only warehouse reports. */
                 scope?: "system" | "warehouse";
                 date_from?: string;
@@ -33420,7 +33483,23 @@ export interface operations {
     mobileListStockCounts: {
         parameters: {
             query?: {
-                status?: components["schemas"]["StockCountStatus"];
+                /** @description Comma separated StockCountStatus values (any of). */
+                status?: string;
+                /** @description Comma separated methods (any of). */
+                method?: string;
+                /** @description Comma separated visibilities (any of). */
+                visibility?: string;
+                /** @description Comma separated scope types (any of). */
+                scope_type?: string;
+                /** @description Comma separated warehouse uuids (any of). */
+                warehouse_uuid?: string;
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
             };
@@ -33574,7 +33653,10 @@ export interface operations {
     };
     mobileListStockCountScans: {
         parameters: {
-            query?: never;
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
             header: {
                 /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
                 "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
@@ -33817,7 +33899,19 @@ export interface operations {
     mobileListWarehouseTransfers: {
         parameters: {
             query?: {
-                status?: components["schemas"]["WarehouseTransferStatus"];
+                /** @description Comma separated WarehouseTransferStatus values (any of). */
+                status?: string;
+                /** @description Comma separated source warehouse uuids (any of). */
+                from_warehouse_uuid?: string;
+                /** @description Comma separated target warehouse uuids (any of). */
+                to_warehouse_uuid?: string;
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
                 limit?: number;
                 offset?: number;
             };

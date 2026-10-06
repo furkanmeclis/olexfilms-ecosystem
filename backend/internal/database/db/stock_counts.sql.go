@@ -187,19 +187,60 @@ func (q *Queries) CompleteStockCount(ctx context.Context, arg CompleteStockCount
 	return i, err
 }
 
+const countStockCountScans = `-- name: CountStockCountScans :one
+SELECT COUNT(*)::bigint FROM stock_count_scans WHERE count_id = $1
+`
+
+func (q *Queries) CountStockCountScans(ctx context.Context, countID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, countStockCountScans, countID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const countStockCounts = `-- name: CountStockCounts :one
-SELECT COUNT(*) FROM stock_counts
-WHERE organization_id = $1
-  AND ($2::text IS NULL OR status = $2::text)
+SELECT COUNT(*) FROM stock_counts c
+WHERE c.organization_id = $1
+  AND (COALESCE(cardinality($2::text[]), 0) = 0 OR c.status = ANY ($2::text[]))
+  AND (COALESCE(cardinality($3::text[]), 0) = 0 OR c.method = ANY ($3::text[]))
+  AND (COALESCE(cardinality($4::text[]), 0) = 0 OR c.visibility = ANY ($4::text[]))
+  AND (COALESCE(cardinality($5::text[]), 0) = 0 OR c.scope_type = ANY ($5::text[]))
+  AND (COALESCE(cardinality($6::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM warehouses fw
+                  WHERE fw.id = c.warehouse_id AND fw.uuid = ANY ($6::uuid[])))
+  AND ($7::timestamptz IS NULL OR c.created_at >= $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR c.created_at < $8::timestamptz)
+  AND ($9::text IS NULL
+       OR c.note ILIKE '%' || $9::text || '%'
+       OR EXISTS (SELECT 1 FROM warehouses qw
+                  WHERE qw.id = c.warehouse_id
+                    AND (qw.name ILIKE '%' || $9::text || '%' OR qw.code ILIKE '%' || $9::text || '%')))
 `
 
 type CountStockCountsParams struct {
-	OrganizationID int64       `json:"organization_id"`
-	Status         pgtype.Text `json:"status"`
+	OrganizationID int64              `json:"organization_id"`
+	Statuses       []string           `json:"statuses"`
+	Methods        []string           `json:"methods"`
+	Visibilities   []string           `json:"visibilities"`
+	ScopeTypes     []string           `json:"scope_types"`
+	WarehouseUuids []uuid.UUID        `json:"warehouse_uuids"`
+	CreatedFrom    pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore  pgtype.Timestamptz `json:"created_before"`
+	Q              pgtype.Text        `json:"q"`
 }
 
 func (q *Queries) CountStockCounts(ctx context.Context, arg CountStockCountsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countStockCounts, arg.OrganizationID, arg.Status)
+	row := q.db.QueryRow(ctx, countStockCounts,
+		arg.OrganizationID,
+		arg.Statuses,
+		arg.Methods,
+		arg.Visibilities,
+		arg.ScopeTypes,
+		arg.WarehouseUuids,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
+	)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -866,6 +907,51 @@ func (q *Queries) ListStockCountScans(ctx context.Context, countID int64) ([]Sto
 	return items, nil
 }
 
+const listStockCountScansPage = `-- name: ListStockCountScansPage :many
+SELECT id, uuid, count_id, kind, raw_code, unit_id, product_id, location_id, quantity, meters, scanned_by_user_id, created_at FROM stock_count_scans WHERE count_id = $1 ORDER BY id
+LIMIT $3 OFFSET $2
+`
+
+type ListStockCountScansPageParams struct {
+	CountID   int64 `json:"count_id"`
+	RowOffset int32 `json:"row_offset"`
+	RowLimit  int32 `json:"row_limit"`
+}
+
+// TEC-375: one page of a count's scans (scan order).
+func (q *Queries) ListStockCountScansPage(ctx context.Context, arg ListStockCountScansPageParams) ([]StockCountScan, error) {
+	rows, err := q.db.Query(ctx, listStockCountScansPage, arg.CountID, arg.RowOffset, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []StockCountScan{}
+	for rows.Next() {
+		var i StockCountScan
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.CountID,
+			&i.Kind,
+			&i.RawCode,
+			&i.UnitID,
+			&i.ProductID,
+			&i.LocationID,
+			&i.Quantity,
+			&i.Meters,
+			&i.ScannedByUserID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listStockCountUnits = `-- name: ListStockCountUnits :many
 SELECT id, uuid, barcode, unit_kind, product_id FROM units WHERE id = ANY($1::bigint[])
 `
@@ -905,24 +991,72 @@ func (q *Queries) ListStockCountUnits(ctx context.Context, ids []int64) ([]ListS
 }
 
 const listStockCounts = `-- name: ListStockCounts :many
-SELECT id, uuid, organization_id, brand_id, warehouse_id, method, visibility, scope_type, scope_room_id, scope_location_id, scope_product_id, status, note, created_by_user_id, start_approved_by_user_id, start_approved_at, started_by_user_id, started_at, completed_by_user_id, completed_at, approved_by_user_id, approved_at, cancelled_at, created_at, updated_at FROM stock_counts
-WHERE organization_id = $1
-  AND ($2::text IS NULL OR status = $2::text)
-ORDER BY created_at DESC, id DESC
-LIMIT $4 OFFSET $3
+SELECT c.id, c.uuid, c.organization_id, c.brand_id, c.warehouse_id, c.method, c.visibility, c.scope_type, c.scope_room_id, c.scope_location_id, c.scope_product_id, c.status, c.note, c.created_by_user_id, c.start_approved_by_user_id, c.start_approved_at, c.started_by_user_id, c.started_at, c.completed_by_user_id, c.completed_at, c.approved_by_user_id, c.approved_at, c.cancelled_at, c.created_at, c.updated_at FROM stock_counts c
+WHERE c.organization_id = $1
+  AND (COALESCE(cardinality($2::text[]), 0) = 0 OR c.status = ANY ($2::text[]))
+  AND (COALESCE(cardinality($3::text[]), 0) = 0 OR c.method = ANY ($3::text[]))
+  AND (COALESCE(cardinality($4::text[]), 0) = 0 OR c.visibility = ANY ($4::text[]))
+  AND (COALESCE(cardinality($5::text[]), 0) = 0 OR c.scope_type = ANY ($5::text[]))
+  AND (COALESCE(cardinality($6::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM warehouses fw
+                  WHERE fw.id = c.warehouse_id AND fw.uuid = ANY ($6::uuid[])))
+  AND ($7::timestamptz IS NULL OR c.created_at >= $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR c.created_at < $8::timestamptz)
+  AND ($9::text IS NULL
+       OR c.note ILIKE '%' || $9::text || '%'
+       OR EXISTS (SELECT 1 FROM warehouses qw
+                  WHERE qw.id = c.warehouse_id
+                    AND (qw.name ILIKE '%' || $9::text || '%' OR qw.code ILIKE '%' || $9::text || '%')))
+ORDER BY
+  CASE WHEN NOT $10::bool THEN CASE $11::text WHEN 'created_at' THEN c.created_at END END ASC,
+  CASE WHEN $10::bool THEN CASE $11::text WHEN 'created_at' THEN c.created_at END END DESC,
+  CASE WHEN NOT $10::bool THEN CASE $11::text WHEN 'status' THEN
+    CASE c.status WHEN 'draft' THEN 1 WHEN 'in_progress' THEN 2 WHEN 'pending_review' THEN 3
+                  WHEN 'approved' THEN 4 ELSE 5 END END END ASC,
+  CASE WHEN $10::bool THEN CASE $11::text WHEN 'status' THEN
+    CASE c.status WHEN 'draft' THEN 1 WHEN 'in_progress' THEN 2 WHEN 'pending_review' THEN 3
+                  WHEN 'approved' THEN 4 ELSE 5 END END END DESC,
+  CASE WHEN NOT $10::bool THEN CASE $11::text WHEN 'warehouse' THEN
+    (SELECT sw.name FROM warehouses sw WHERE sw.id = c.warehouse_id) END END ASC,
+  CASE WHEN $10::bool THEN CASE $11::text WHEN 'warehouse' THEN
+    (SELECT sw.name FROM warehouses sw WHERE sw.id = c.warehouse_id) END END DESC,
+  CASE WHEN $10::bool THEN c.id END DESC,
+  c.id ASC
+LIMIT $13 OFFSET $12
 `
 
 type ListStockCountsParams struct {
-	OrganizationID int64       `json:"organization_id"`
-	Status         pgtype.Text `json:"status"`
-	RowOffset      int32       `json:"row_offset"`
-	RowLimit       int32       `json:"row_limit"`
+	OrganizationID int64              `json:"organization_id"`
+	Statuses       []string           `json:"statuses"`
+	Methods        []string           `json:"methods"`
+	Visibilities   []string           `json:"visibilities"`
+	ScopeTypes     []string           `json:"scope_types"`
+	WarehouseUuids []uuid.UUID        `json:"warehouse_uuids"`
+	CreatedFrom    pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore  pgtype.Timestamptz `json:"created_before"`
+	Q              pgtype.Text        `json:"q"`
+	SortDesc       bool               `json:"sort_desc"`
+	SortKey        string             `json:"sort_key"`
+	RowOffset      int32              `json:"row_offset"`
+	RowLimit       int32              `json:"row_limit"`
 }
 
+// TEC-375: list contract (docs/list-contract.md), keys from warehouse
+// usecase CountSort. status sorts by flow rank, warehouse by name.
+// q: note, warehouse name or code.
 func (q *Queries) ListStockCounts(ctx context.Context, arg ListStockCountsParams) ([]StockCount, error) {
 	rows, err := q.db.Query(ctx, listStockCounts,
 		arg.OrganizationID,
-		arg.Status,
+		arg.Statuses,
+		arg.Methods,
+		arg.Visibilities,
+		arg.ScopeTypes,
+		arg.WarehouseUuids,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.RowOffset,
 		arg.RowLimit,
 	)

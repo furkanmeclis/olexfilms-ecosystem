@@ -96,15 +96,19 @@ type placeBody struct {
 	LocationCode string      `json:"location_code"`
 }
 
-// List (GET /v1/warehouse/stock-entries?status&limit&offset).
+// List (GET /v1/warehouse/stock-entries?status&mode&warehouse_uuid&created_from&created_to&q&sort&limit&offset).
 func (h *Entries) List(w http.ResponseWriter, r *http.Request) {
-	q := apiquery.Parse(r.URL.Query())
-	items, total, err := h.svc.List(r.Context(), entryCaller(r), r.URL.Query().Get("status"), q.Limit, q.Offset)
+	f, err := wh.ParseEntryListFilter(r.URL.Query())
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	items, total, err := h.svc.List(r.Context(), entryCaller(r), f)
 	if err != nil {
 		writeEntryError(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, f.Limit, f.Offset))
 }
 
 // Create (POST /v1/warehouse/stock-entries).

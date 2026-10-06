@@ -169,7 +169,7 @@ func TestBarcodeBatchReserve(t *testing.T) {
 	if err != nil || len(got.Units) != 2 {
 		t.Fatalf("get batch = %+v %v", got, err)
 	}
-	list, total, err := e.bc.List(e.ctx, c, 50, 0)
+	list, total, err := e.bc.List(e.ctx, c, stockusecase.BatchListFilter{Limit: 50})
 	if err != nil || total < 2 || len(list) < 2 {
 		t.Fatalf("list = %d %v", total, err)
 	}
@@ -190,7 +190,7 @@ func TestBarcodeBatchReserve(t *testing.T) {
 	if _, err := e.bc.Create(e.ctx, e.caller(e.dist), stockusecase.BatchInput{ProductUUID: e.piece.Uuid.String(), Quantity: 1}); !errors.Is(err, stockusecase.ErrBarcodesCenterOnly) {
 		t.Fatalf("distributor batch: %v", err)
 	}
-	if _, _, err := e.bc.List(e.ctx, e.caller(e.dist), 10, 0); !errors.Is(err, stockusecase.ErrBarcodesCenterOnly) {
+	if _, _, err := e.bc.List(e.ctx, e.caller(e.dist), stockusecase.BatchListFilter{Limit: 10}); !errors.Is(err, stockusecase.ErrBarcodesCenterOnly) {
 		t.Fatalf("distributor list: %v", err)
 	}
 	out := c
