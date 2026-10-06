@@ -35,6 +35,12 @@ const (
 	PriorityCritical = "critical"
 )
 
+// NotificationStatuses are the notifications.status values
+// (notifications_status_chk), for list filter validation.
+var NotificationStatuses = []string{
+	StatusQueued, StatusProcessing, StatusSent, StatusDelivered, StatusRead, StatusFailed, StatusCancelled,
+}
+
 // Notification is the API projection.
 type Notification struct {
 	UUID            uuid.UUID         `json:"uuid"`

@@ -34,6 +34,7 @@ Bu repo bir Claude Code cloud oturumu tarafından sıfırdan inşa edilir. Tek k
 - Her modülde usecase testi; kritik akışlarda uçtan uca senaryo (F1-13); Playwright ana akışlar.
 - OpenAPI (`docs/openapi.yaml`) değişince `pnpm api:generate` çalıştır ve üretilen tipleri commit'le.
 - Secret'lar `.env`'de; `.env.example` güncel tutulur; `scripts/gen-env-server.sh` prod env'i üretir.
+- Liste uçları (sort whitelist + varsayılan + id tiebreak, çok değerli/tarih/sayı filtreleri, sqlc dinamik ORDER BY kalıbı): `docs/list-contract.md`.
 
 ## 4. Sınırlar
 

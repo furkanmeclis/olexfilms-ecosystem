@@ -82,13 +82,15 @@ func (s *Service) WriteLog(ctx context.Context, entry logging.Entry) error {
 
 // List returns paginated logs.
 func (s *Service) List(ctx context.Context, q apiquery.Query, filter model.ListFilter) ([]model.Log, int64, error) {
-	if err := apiquery.ValidateSort(q.Sort, apiquery.LogsSort); err != nil {
+	sort, err := apiquery.ResolveSort(q.Sort, apiquery.LogsSortSpec)
+	if err != nil {
 		return nil, 0, err
 	}
 	if err := validateLevels(filter.Levels); err != nil {
 		return nil, 0, err
 	}
 	params := listParams(q.Limit, q.Offset, filter)
+	params.SortKey, params.SortDesc = sort.Key, sort.Desc
 	rows, err := s.q.ListAppLogs(ctx, params)
 	if err != nil {
 		return nil, 0, err

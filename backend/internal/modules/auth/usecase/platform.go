@@ -21,10 +21,9 @@ import (
 // ListPlatformUsers lists users for platform admin with roles and login methods.
 func (u *AuthUseCase) ListPlatformUsers(
 	ctx context.Context,
-	limit, offset int32,
-	q, status, roleSlug string,
+	f model.UserListFilter,
 ) ([]model.PlatformUserDetail, int64, error) {
-	rows, total, err := u.repo.ListUsersFiltered(ctx, limit, offset, q, status, roleSlug)
+	rows, total, err := u.repo.ListUsersFiltered(ctx, f)
 	if err != nil {
 		return nil, 0, err
 	}

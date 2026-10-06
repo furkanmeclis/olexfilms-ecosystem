@@ -51,7 +51,7 @@ type Repository interface {
 	LocaleSources(ctx context.Context, userID int64, orgUUID *uuid.UUID, brandID *int64) (i18n.Sources, error)
 	SetEmailVerified(ctx context.Context, userID int64) (model.User, error)
 	UpdateUserPlatform(ctx context.Context, id uuid.UUID, name, surname, status *string) (model.User, error)
-	ListUsersFiltered(ctx context.Context, limit, offset int32, q, status, roleSlug string) ([]model.User, int64, error)
+	ListUsersFiltered(ctx context.Context, f model.UserListFilter) ([]model.User, int64, error)
 	CountUsersWithRole(ctx context.Context, roleSlug string) (int64, error)
 	UpsertSuperAdmin(ctx context.Context, email, name, surname, hash string) (model.User, bool, error)
 	GetRoleIDBySlug(ctx context.Context, slug string) (int64, error)

@@ -330,13 +330,21 @@ func (h *Handler) ListPlatformUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := apiquery.Parse(r.URL.Query())
-	if err := apiquery.ValidateSort(q.Sort, apiquery.UsersSort); err != nil {
+	sort, err := apiquery.ResolveSort(q.Sort, apiquery.UsersSortSpec)
+	if err != nil {
 		writeUsecaseError(w, r, err)
 		return
 	}
-	status := strings.TrimSpace(r.URL.Query().Get("status"))
-	role := strings.TrimSpace(r.URL.Query().Get("role"))
-	items, total, err := h.uc.ListPlatformUsers(r.Context(), q.Limit, q.Offset, q.Q, status, role)
+	statuses, err := apiquery.EnumList(r.URL.Query(), "status", model.UserStatuses...)
+	if err != nil {
+		writeUsecaseError(w, r, err)
+		return
+	}
+	items, total, err := h.uc.ListPlatformUsers(r.Context(), model.UserListFilter{
+		Limit: q.Limit, Offset: q.Offset, Q: q.Q, Statuses: statuses,
+		RoleSlug: strings.TrimSpace(r.URL.Query().Get("role")),
+		SortKey:  sort.Key, SortDesc: sort.Desc,
+	})
 	if err != nil {
 		writeUsecaseError(w, r, err)
 		return

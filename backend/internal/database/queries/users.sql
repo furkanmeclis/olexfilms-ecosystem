@@ -89,30 +89,73 @@ SET locale = $2
 WHERE id = $1 AND deleted_at IS NULL;
 
 -- name: ListUsersFiltered :many
-SELECT DISTINCT u.*
+-- Platform users list. Sort follows docs/list-contract.md: sort_key is the
+-- trusted key from apiquery.UsersSortSpec, one CASE pair per column type,
+-- id as the unique tiebreak in the same direction.
+SELECT u.*
 FROM users u
-LEFT JOIN user_roles ur ON ur.user_id = u.id
-LEFT JOIN roles r ON r.id = ur.role_id
 WHERE u.deleted_at IS NULL
-  AND (sqlc.narg(status)::text IS NULL OR u.status = sqlc.narg(status))
-  AND (sqlc.narg(role_slug)::text IS NULL OR r.slug = sqlc.narg(role_slug))
+  AND (
+    COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0
+    OR u.status = ANY (sqlc.narg(statuses)::text[])
+  )
+  AND (
+    sqlc.narg(role_slug)::text IS NULL
+    OR EXISTS (
+      SELECT 1 FROM user_roles ur
+      JOIN roles r ON r.id = ur.role_id
+      WHERE ur.user_id = u.id AND r.slug = sqlc.narg(role_slug)
+    )
+  )
   AND (
     sqlc.narg(q)::text IS NULL
     OR u.email ILIKE '%' || sqlc.narg(q) || '%'
     OR u.name ILIKE '%' || sqlc.narg(q) || '%'
     OR u.surname ILIKE '%' || sqlc.narg(q) || '%'
   )
-ORDER BY u.created_at DESC
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'email' THEN u.email WHEN 'name' THEN u.name
+      WHEN 'surname' THEN u.surname WHEN 'status' THEN u.status
+    END
+  END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'email' THEN u.email WHEN 'name' THEN u.name
+      WHEN 'surname' THEN u.surname WHEN 'status' THEN u.status
+    END
+  END DESC NULLS LAST,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'created_at' THEN u.created_at WHEN 'updated_at' THEN u.updated_at
+    END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'created_at' THEN u.created_at WHEN 'updated_at' THEN u.updated_at
+    END
+  END DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN u.id END DESC,
+  u.id ASC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
 -- name: CountUsers :one
-SELECT COUNT(DISTINCT u.id)::bigint
+SELECT COUNT(*)::bigint
 FROM users u
-LEFT JOIN user_roles ur ON ur.user_id = u.id
-LEFT JOIN roles r ON r.id = ur.role_id
 WHERE u.deleted_at IS NULL
-  AND (sqlc.narg(status)::text IS NULL OR u.status = sqlc.narg(status))
-  AND (sqlc.narg(role_slug)::text IS NULL OR r.slug = sqlc.narg(role_slug))
+  AND (
+    COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0
+    OR u.status = ANY (sqlc.narg(statuses)::text[])
+  )
+  AND (
+    sqlc.narg(role_slug)::text IS NULL
+    OR EXISTS (
+      SELECT 1 FROM user_roles ur
+      JOIN roles r ON r.id = ur.role_id
+      WHERE ur.user_id = u.id AND r.slug = sqlc.narg(role_slug)
+    )
+  )
   AND (
     sqlc.narg(q)::text IS NULL
     OR u.email ILIKE '%' || sqlc.narg(q) || '%'
@@ -130,33 +173,49 @@ WHERE u.deleted_at IS NULL
   AND r.slug = sqlc.arg(role_slug);
 
 -- name: ListUsersForExport :many
-SELECT DISTINCT u.*
+SELECT u.*
 FROM users u
-LEFT JOIN user_roles ur ON ur.user_id = u.id
-LEFT JOIN roles r ON r.id = ur.role_id
 WHERE u.deleted_at IS NULL
-  AND (sqlc.narg(status)::text IS NULL OR u.status = sqlc.narg(status))
-  AND (sqlc.narg(role_slug)::text IS NULL OR r.slug = sqlc.narg(role_slug))
+  AND (
+    COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0
+    OR u.status = ANY (sqlc.narg(statuses)::text[])
+  )
+  AND (
+    sqlc.narg(role_slug)::text IS NULL
+    OR EXISTS (
+      SELECT 1 FROM user_roles ur
+      JOIN roles r ON r.id = ur.role_id
+      WHERE ur.user_id = u.id AND r.slug = sqlc.narg(role_slug)
+    )
+  )
   AND (
     sqlc.narg(q)::text IS NULL
     OR u.email ILIKE '%' || sqlc.narg(q) || '%'
     OR u.name ILIKE '%' || sqlc.narg(q) || '%'
     OR u.surname ILIKE '%' || sqlc.narg(q) || '%'
   )
-ORDER BY u.created_at DESC;
+ORDER BY u.created_at DESC, u.id DESC;
 
 -- name: ListUserUUIDsForBulk :many
-SELECT DISTINCT u.uuid
+SELECT u.uuid
 FROM users u
-LEFT JOIN user_roles ur ON ur.user_id = u.id
-LEFT JOIN roles r ON r.id = ur.role_id
 WHERE u.deleted_at IS NULL
-  AND (sqlc.narg(status)::text IS NULL OR u.status = sqlc.narg(status))
-  AND (sqlc.narg(role_slug)::text IS NULL OR r.slug = sqlc.narg(role_slug))
+  AND (
+    COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0
+    OR u.status = ANY (sqlc.narg(statuses)::text[])
+  )
+  AND (
+    sqlc.narg(role_slug)::text IS NULL
+    OR EXISTS (
+      SELECT 1 FROM user_roles ur
+      JOIN roles r ON r.id = ur.role_id
+      WHERE ur.user_id = u.id AND r.slug = sqlc.narg(role_slug)
+    )
+  )
   AND (
     sqlc.narg(q)::text IS NULL
     OR u.email ILIKE '%' || sqlc.narg(q) || '%'
     OR u.name ILIKE '%' || sqlc.narg(q) || '%'
     OR u.surname ILIKE '%' || sqlc.narg(q) || '%'
   )
-ORDER BY u.created_at DESC;
+ORDER BY u.created_at DESC, u.id DESC;

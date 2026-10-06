@@ -367,3 +367,18 @@ type TOTPConfirmResult struct {
 	Enabled       bool     `json:"enabled"`
 	RecoveryCodes []string `json:"recovery_codes"`
 }
+
+// UserListFilter narrows and orders the platform users list (TEC-363).
+type UserListFilter struct {
+	Limit, Offset int32
+	Q             string
+	// Statuses is a multi-value status filter; empty means all.
+	Statuses []string
+	RoleSlug string
+	// SortKey/SortDesc come from apiquery.ResolveSort(…, UsersSortSpec).
+	SortKey  string
+	SortDesc bool
+}
+
+// UserStatuses are the users.status values (chk_users_status).
+var UserStatuses = []string{"active", "disabled", "pending", "anonymized"}

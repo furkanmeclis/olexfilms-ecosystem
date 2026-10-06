@@ -7,6 +7,7 @@ SELECT * FROM app_logs
 WHERE uuid = $1;
 
 -- name: ListAppLogs :many
+-- Sort: docs/list-contract.md, keys from apiquery.LogsSortSpec.
 SELECT * FROM app_logs
 WHERE (
         sqlc.narg(levels)::text[] IS NULL
@@ -22,7 +23,20 @@ WHERE (
     )
   AND (sqlc.narg(created_from)::timestamptz IS NULL OR created_at >= sqlc.narg(created_from))
   AND (sqlc.narg(created_to)::timestamptz IS NULL OR created_at < sqlc.narg(created_to))
-ORDER BY created_at DESC
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'source' THEN source END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'source' THEN source END DESC,
+  -- level sorts by severity rank, not alphabetically.
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'level' THEN
+    CASE level WHEN 'debug' THEN 1 WHEN 'warn' THEN 2 WHEN 'error' THEN 3 END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'level' THEN
+    CASE level WHEN 'debug' THEN 1 WHEN 'warn' THEN 2 WHEN 'error' THEN 3 END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'created_at' THEN created_at END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'created_at' THEN created_at END DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN id END DESC,
+  id ASC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
 -- name: CountAppLogs :one

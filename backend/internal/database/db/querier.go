@@ -1149,6 +1149,7 @@ type Querier interface {
 	// caller's resolved write scope), newest first.
 	ListAnnouncementsByOrganizations(ctx context.Context, arg ListAnnouncementsByOrganizationsParams) ([]Announcement, error)
 	ListAppLogSources(ctx context.Context) ([]string, error)
+	// Sort: docs/list-contract.md, keys from apiquery.LogsSortSpec.
 	ListAppLogs(ctx context.Context, arg ListAppLogsParams) ([]AppLog, error)
 	ListAppointmentClosures(ctx context.Context, arg ListAppointmentClosuresParams) ([]AppointmentClosure, error)
 	ListAppointmentSettingsByOrganizations(ctx context.Context, organizationIds []int64) ([]AppointmentSetting, error)
@@ -1415,6 +1416,7 @@ type Querier interface {
 	// filter lists exactly that status.
 	ListOrganizationStockUnitRows(ctx context.Context, arg ListOrganizationStockUnitRowsParams) ([]ListOrganizationStockUnitRowsRow, error)
 	ListOrganizationsByIDs(ctx context.Context, ids []int64) ([]Organization, error)
+	// Sort: docs/list-contract.md, keys from apiquery.TenantsSortSpec.
 	ListOrganizationsFiltered(ctx context.Context, arg ListOrganizationsFilteredParams) ([]ListOrganizationsFilteredRow, error)
 	// TEC-210: organizations (name, dealer code = slug), orders (order number,
 	// parties) and stock units (barcode, product, status, location) indexes.
@@ -1435,6 +1437,7 @@ type Querier interface {
 	ListPermissionSlugsByRoleSlug(ctx context.Context, slug string) ([]string, error)
 	ListPermissionsFiltered(ctx context.Context, arg ListPermissionsFilteredParams) ([]Permission, error)
 	ListPlateFormats(ctx context.Context, activeOnly bool) ([]ListPlateFormatsRow, error)
+	// Sort: docs/list-contract.md, keys from apiquery.NotificationsSortSpec.
 	ListPlatformNotifications(ctx context.Context, arg ListPlatformNotificationsParams) ([]Notification, error)
 	ListPlatformNotificationsForExport(ctx context.Context, arg ListPlatformNotificationsForExportParams) ([]Notification, error)
 	// TEC-346 (F3-07f) reports below read one book (the caller's own
@@ -1672,6 +1675,9 @@ type Querier interface {
 	ListUserRolesByUserUUID(ctx context.Context, argUuid uuid.UUID) ([]Role, error)
 	ListUserUUIDsForBulk(ctx context.Context, arg ListUserUUIDsForBulkParams) ([]uuid.UUID, error)
 	ListUsersByIDs(ctx context.Context, ids []int64) ([]ListUsersByIDsRow, error)
+	// Platform users list. Sort follows docs/list-contract.md: sort_key is the
+	// trusted key from apiquery.UsersSortSpec, one CASE pair per column type,
+	// id as the unique tiebreak in the same direction.
 	ListUsersFiltered(ctx context.Context, arg ListUsersFilteredParams) ([]User, error)
 	ListUsersForExport(ctx context.Context, arg ListUsersForExportParams) ([]User, error)
 	ListVehicleTransfersByVehicle(ctx context.Context, arg ListVehicleTransfersByVehicleParams) ([]VehicleTransfer, error)
