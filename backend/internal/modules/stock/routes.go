@@ -38,6 +38,8 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/stock/organizations/{uuid}/products", read(h.OrganizationStock))
 	// TEC-216: unit list; the distributor reaches its dealers (subtree).
 	mux.Handle("GET /v1/stock/organizations/{uuid}/units", read(h.OrganizationUnits))
+	// TEC-373: unit list export with the list filters (stock.read scope).
+	mux.Handle("POST /v1/stock/organizations/{uuid}/units/export", read(h.RequestUnitsExport))
 	mux.Handle("GET /v1/stock/locations/{uuid}/products", read(h.LocationStock))
 
 	// TEC-157 reclassification: the holding organization requests

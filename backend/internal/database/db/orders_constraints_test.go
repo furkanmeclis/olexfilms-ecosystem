@@ -163,19 +163,21 @@ func TestOrderSchemaConstraints(t *testing.T) {
 			return err
 		}, "23514")
 		down := f.order(t, f.dist.ID, f.dealer.ID)
-		seller, err := f.q.ListOrdersBySeller(ctx, db.ListOrdersBySellerParams{
-			BrandID: f.brandID, SellerOrgID: f.dist.ID, RowLimit: 10,
+		seller, err := f.q.ListOrdersFiltered(ctx, db.ListOrdersFilteredParams{
+			BrandID: f.brandID, SellerOrgID: pgtype.Int8{Int64: f.dist.ID, Valid: true},
+			SortKey: "created_at", SortDesc: true, RowLimit: 10,
 		})
 		if err != nil || len(seller) != 1 || seller[0].ID != down.ID {
 			t.Fatalf("seller list = %+v, %v", seller, err)
 		}
-		buyer, err := f.q.ListOrdersByBuyer(ctx, db.ListOrdersByBuyerParams{
-			BrandID: f.brandID, BuyerOrgID: f.dist.ID, RowLimit: 10,
+		buyer, err := f.q.ListOrdersFiltered(ctx, db.ListOrdersFilteredParams{
+			BrandID: f.brandID, BuyerOrgID: pgtype.Int8{Int64: f.dist.ID, Valid: true},
+			SortKey: "created_at", SortDesc: true, RowLimit: 10,
 		})
 		if err != nil || len(buyer) != 1 || buyer[0].ID != o.ID {
 			t.Fatalf("buyer list = %+v, %v", buyer, err)
 		}
-		scoped, err := f.q.CountOrdersInScope(ctx, db.CountOrdersInScopeParams{
+		scoped, err := f.q.CountOrdersFiltered(ctx, db.CountOrdersFilteredParams{
 			BrandID: f.brandID, OrgIds: []int64{f.dist.ID},
 		})
 		if err != nil || scoped != 2 {
@@ -445,14 +447,15 @@ func TestStockTransferRequestConstraints(t *testing.T) {
 	if n, err := f.q.CountOpenTransferItemsByUnit(ctx, db.CountOpenTransferItemsByUnitParams{UnitID: u.ID}); err != nil || n != 0 {
 		t.Fatalf("open items after receipt = %d, %v", n, err)
 	}
-	list, err := f.q.ListTransferRequestsForOrg(ctx, db.ListTransferRequestsForOrgParams{
-		BrandID: f.brandID, Direction: "approval", OrgID: f.dist.ID, RowLimit: 10,
+	list, err := f.q.ListTransferRequestsFiltered(ctx, db.ListTransferRequestsFilteredParams{
+		BrandID: f.brandID, Directions: []string{"approval"}, OrgID: f.dist.ID,
+		SortKey: "created_at", SortDesc: true, RowLimit: 10,
 	})
 	if err != nil || len(list) != 1 || list[0].ID != req.ID {
 		t.Fatalf("approval list = %+v, %v", list, err)
 	}
-	incoming, err := f.q.CountTransferRequestsForOrg(ctx, db.CountTransferRequestsForOrgParams{
-		BrandID: f.brandID, Direction: "incoming", OrgID: f.dealer2.ID,
+	incoming, err := f.q.CountTransferRequestsFiltered(ctx, db.CountTransferRequestsFilteredParams{
+		BrandID: f.brandID, Directions: []string{"incoming"}, OrgID: f.dealer2.ID,
 	})
 	if err != nil || incoming != 1 {
 		t.Fatalf("incoming = %d, %v", incoming, err)

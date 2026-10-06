@@ -40,6 +40,8 @@ func RegisterRoutes(
 		rbac.PermOrdersShip, rbac.PermOrdersReceive, rbac.PermOrdersCancel)
 
 	mux.Handle("GET /v1/orders", route(h.List))
+	// TEC-373: list export with the list filters (orders.read scope).
+	mux.Handle("POST /v1/orders/export", route(h.RequestListExport))
 	mux.Handle("POST /v1/orders", route(h.Create, write))
 	mux.Handle("GET /v1/orders/{uuid}", route(h.Get))
 	mux.Handle("PUT /v1/orders/{uuid}/items", route(h.ReplaceItems, write))

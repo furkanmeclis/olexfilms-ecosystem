@@ -94,14 +94,14 @@ func (q *Queries) CountOrganizationProductStockRows(ctx context.Context, arg Cou
 
 const countOrganizationStockUnitRows = `-- name: CountOrganizationStockUnitRows :one
 WITH held AS (
-    SELECT s.unit_id
+    SELECT s.unit_id, s.owner_type, s.owner_id, s.updated_at
     FROM unit_current_state s
-    WHERE s.holder_org_id = $6
+    WHERE s.holder_org_id = $10
       AND s.owner_type IN ('organization', 'warehouse_location')
     UNION ALL
-    SELECT h.unit_id
+    SELECT h.unit_id, NULL::varchar AS owner_type, NULL::bigint AS owner_id, MAX(h.updated_at) AS updated_at
     FROM fixed_barcode_holdings h
-    WHERE h.holder_org_id = $6
+    WHERE h.holder_org_id = $10
       AND h.owner_type IN ('organization', 'warehouse_location')
     GROUP BY h.unit_id
     HAVING SUM(h.quantity_on_hand) > 0
@@ -110,34 +110,48 @@ SELECT COUNT(*)::bigint
 FROM held
 JOIN units u ON u.id = held.unit_id
 JOIN products p ON p.id = u.product_id
+LEFT JOIN warehouse_locations l ON held.owner_type = 'warehouse_location' AND l.id = held.owner_id
 WHERE ($1::bigint IS NULL OR u.brand_id = $1::bigint)
   AND ($2::bigint IS NULL OR u.product_id = $2::bigint)
-  AND (($3::text IS NULL AND u.status IN ('available', 'placed'))
-       OR u.status = $3::text)
+  AND ((COALESCE(cardinality($3::text[]), 0) = 0 AND u.status IN ('available', 'placed'))
+       OR u.status = ANY ($3::text[]))
   AND ($4::text IS NULL OR u.barcode = $4::text)
+  AND ($5::text IS NULL OR u.barcode LIKE $5::text || '%')
+  AND (COALESCE(cardinality($6::uuid[]), 0) = 0
+       OR l.uuid = ANY ($6::uuid[]))
+  AND ($7::timestamptz IS NULL OR held.updated_at >= $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR held.updated_at < $8::timestamptz)
   AND (
-    $5::text IS NULL
-    OR p.name ILIKE '%' || $5::text || '%'
-    OR p.sku ILIKE '%' || $5::text || '%'
-    OR u.barcode ILIKE '%' || $5::text || '%'
+    $9::text IS NULL
+    OR p.name ILIKE '%' || $9::text || '%'
+    OR p.sku ILIKE '%' || $9::text || '%'
+    OR u.barcode ILIKE '%' || $9::text || '%'
   )
 `
 
 type CountOrganizationStockUnitRowsParams struct {
-	BrandID        pgtype.Int8 `json:"brand_id"`
-	ProductID      pgtype.Int8 `json:"product_id"`
-	Status         pgtype.Text `json:"status"`
-	Barcode        pgtype.Text `json:"barcode"`
-	Q              pgtype.Text `json:"q"`
-	OrganizationID int64       `json:"organization_id"`
+	BrandID        pgtype.Int8        `json:"brand_id"`
+	ProductID      pgtype.Int8        `json:"product_id"`
+	Statuses       []string           `json:"statuses"`
+	Barcode        pgtype.Text        `json:"barcode"`
+	BarcodePrefix  pgtype.Text        `json:"barcode_prefix"`
+	LocationUuids  []uuid.UUID        `json:"location_uuids"`
+	UpdatedFrom    pgtype.Timestamptz `json:"updated_from"`
+	UpdatedBefore  pgtype.Timestamptz `json:"updated_before"`
+	Q              pgtype.Text        `json:"q"`
+	OrganizationID int64              `json:"organization_id"`
 }
 
 func (q *Queries) CountOrganizationStockUnitRows(ctx context.Context, arg CountOrganizationStockUnitRowsParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countOrganizationStockUnitRows,
 		arg.BrandID,
 		arg.ProductID,
-		arg.Status,
+		arg.Statuses,
 		arg.Barcode,
+		arg.BarcodePrefix,
+		arg.LocationUuids,
+		arg.UpdatedFrom,
+		arg.UpdatedBefore,
 		arg.Q,
 		arg.OrganizationID,
 	)
@@ -200,8 +214,18 @@ WHERE s.location_id = $1
     OR p.name ILIKE '%' || $6::text || '%'
     OR p.sku ILIKE '%' || $6::text || '%'
   )
-ORDER BY p.name, p.id
-LIMIT $8 OFFSET $7
+ORDER BY
+  CASE WHEN NOT $7::bool THEN CASE $8::text WHEN 'product' THEN p.name WHEN 'sku' THEN p.sku WHEN 'category' THEN c.name END END ASC,
+  CASE WHEN $7::bool THEN CASE $8::text WHEN 'product' THEN p.name WHEN 'sku' THEN p.sku WHEN 'category' THEN c.name END END DESC,
+  CASE WHEN NOT $7::bool THEN CASE $8::text WHEN 'quantity' THEN s.quantity END END ASC,
+  CASE WHEN $7::bool THEN CASE $8::text WHEN 'quantity' THEN s.quantity END END DESC,
+  CASE WHEN NOT $7::bool THEN CASE $8::text WHEN 'meters' THEN s.meters END END ASC,
+  CASE WHEN $7::bool THEN CASE $8::text WHEN 'meters' THEN s.meters END END DESC,
+  CASE WHEN NOT $7::bool THEN CASE $8::text WHEN 'updated_at' THEN s.updated_at END END ASC,
+  CASE WHEN $7::bool THEN CASE $8::text WHEN 'updated_at' THEN s.updated_at END END DESC,
+  CASE WHEN $7::bool THEN p.id END DESC,
+  p.id ASC
+LIMIT $10 OFFSET $9
 `
 
 type ListBinProductStockRowsParams struct {
@@ -211,6 +235,8 @@ type ListBinProductStockRowsParams struct {
 	CategoryID  pgtype.Int8 `json:"category_id"`
 	InStock     pgtype.Bool `json:"in_stock"`
 	Q           pgtype.Text `json:"q"`
+	SortDesc    bool        `json:"sort_desc"`
+	SortKey     string      `json:"sort_key"`
 	OffsetCount int32       `json:"offset_count"`
 	LimitCount  int32       `json:"limit_count"`
 }
@@ -238,6 +264,8 @@ func (q *Queries) ListBinProductStockRows(ctx context.Context, arg ListBinProduc
 		arg.CategoryID,
 		arg.InStock,
 		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.OffsetCount,
 		arg.LimitCount,
 	)
@@ -390,8 +418,18 @@ WHERE s.organization_id = $1
     OR p.name ILIKE '%' || $6::text || '%'
     OR p.sku ILIKE '%' || $6::text || '%'
   )
-ORDER BY p.name, p.id
-LIMIT $8 OFFSET $7
+ORDER BY
+  CASE WHEN NOT $7::bool THEN CASE $8::text WHEN 'product' THEN p.name WHEN 'sku' THEN p.sku WHEN 'category' THEN c.name END END ASC,
+  CASE WHEN $7::bool THEN CASE $8::text WHEN 'product' THEN p.name WHEN 'sku' THEN p.sku WHEN 'category' THEN c.name END END DESC,
+  CASE WHEN NOT $7::bool THEN CASE $8::text WHEN 'quantity' THEN s.quantity END END ASC,
+  CASE WHEN $7::bool THEN CASE $8::text WHEN 'quantity' THEN s.quantity END END DESC,
+  CASE WHEN NOT $7::bool THEN CASE $8::text WHEN 'meters' THEN s.meters END END ASC,
+  CASE WHEN $7::bool THEN CASE $8::text WHEN 'meters' THEN s.meters END END DESC,
+  CASE WHEN NOT $7::bool THEN CASE $8::text WHEN 'updated_at' THEN s.updated_at END END ASC,
+  CASE WHEN $7::bool THEN CASE $8::text WHEN 'updated_at' THEN s.updated_at END END DESC,
+  CASE WHEN $7::bool THEN p.id END DESC,
+  p.id ASC
+LIMIT $10 OFFSET $9
 `
 
 type ListOrganizationProductStockRowsParams struct {
@@ -401,6 +439,8 @@ type ListOrganizationProductStockRowsParams struct {
 	CategoryID     pgtype.Int8 `json:"category_id"`
 	InStock        pgtype.Bool `json:"in_stock"`
 	Q              pgtype.Text `json:"q"`
+	SortDesc       bool        `json:"sort_desc"`
+	SortKey        string      `json:"sort_key"`
 	OffsetCount    int32       `json:"offset_count"`
 	LimitCount     int32       `json:"limit_count"`
 }
@@ -421,7 +461,9 @@ type ListOrganizationProductStockRowsRow struct {
 }
 
 // organization_product_stocks with product and category. in_stock: true =
-// quantity or meters above zero, false = both zero.
+// quantity or meters above zero, false = both zero. TEC-373: sort_key
+// product (name), sku, category (name), quantity, meters, updated_at; the
+// product id is the tiebreak (one row per product).
 func (q *Queries) ListOrganizationProductStockRows(ctx context.Context, arg ListOrganizationProductStockRowsParams) ([]ListOrganizationProductStockRowsRow, error) {
 	rows, err := q.db.Query(ctx, listOrganizationProductStockRows,
 		arg.OrganizationID,
@@ -430,6 +472,8 @@ func (q *Queries) ListOrganizationProductStockRows(ctx context.Context, arg List
 		arg.CategoryID,
 		arg.InStock,
 		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.OffsetCount,
 		arg.LimitCount,
 	)
@@ -469,13 +513,13 @@ const listOrganizationStockUnitRows = `-- name: ListOrganizationStockUnitRows :m
 WITH held AS (
     SELECT s.unit_id, 1::int AS quantity, s.owner_type, s.owner_id, s.updated_at
     FROM unit_current_state s
-    WHERE s.holder_org_id = $9
+    WHERE s.holder_org_id = $15
       AND s.owner_type IN ('organization', 'warehouse_location')
     UNION ALL
     SELECT h.unit_id, SUM(h.quantity_on_hand)::int AS quantity,
            NULL::varchar AS owner_type, NULL::bigint AS owner_id, MAX(h.updated_at) AS updated_at
     FROM fixed_barcode_holdings h
-    WHERE h.holder_org_id = $9
+    WHERE h.holder_org_id = $15
       AND h.owner_type IN ('organization', 'warehouse_location')
     GROUP BY h.unit_id
     HAVING SUM(h.quantity_on_hand) > 0
@@ -492,30 +536,58 @@ JOIN products p ON p.id = u.product_id
 LEFT JOIN warehouse_locations l ON held.owner_type = 'warehouse_location' AND l.id = held.owner_id
 WHERE ($1::bigint IS NULL OR u.brand_id = $1::bigint)
   AND ($2::bigint IS NULL OR u.product_id = $2::bigint)
-  AND (($3::text IS NULL AND u.status IN ('available', 'placed'))
-       OR u.status = $3::text)
+  AND ((COALESCE(cardinality($3::text[]), 0) = 0 AND u.status IN ('available', 'placed'))
+       OR u.status = ANY ($3::text[]))
   AND ($4::text IS NULL OR u.barcode = $4::text)
-  AND ($5::uuid[] IS NULL OR u.uuid = ANY ($5::uuid[]))
+  AND ($5::text IS NULL OR u.barcode LIKE $5::text || '%')
+  AND (COALESCE(cardinality($6::uuid[]), 0) = 0
+       OR l.uuid = ANY ($6::uuid[]))
+  AND ($7::timestamptz IS NULL OR held.updated_at >= $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR held.updated_at < $8::timestamptz)
+  AND ($9::uuid[] IS NULL OR u.uuid = ANY ($9::uuid[]))
   AND (
-    $6::text IS NULL
-    OR p.name ILIKE '%' || $6::text || '%'
-    OR p.sku ILIKE '%' || $6::text || '%'
-    OR u.barcode ILIKE '%' || $6::text || '%'
+    $10::text IS NULL
+    OR p.name ILIKE '%' || $10::text || '%'
+    OR p.sku ILIKE '%' || $10::text || '%'
+    OR u.barcode ILIKE '%' || $10::text || '%'
   )
-ORDER BY p.name, u.barcode, u.id
-LIMIT $8 OFFSET $7
+ORDER BY
+  CASE WHEN NOT $11::bool THEN CASE $12::text WHEN 'product' THEN p.name WHEN 'barcode' THEN u.barcode END END ASC,
+  CASE WHEN $11::bool THEN CASE $12::text WHEN 'product' THEN p.name WHEN 'barcode' THEN u.barcode END END DESC,
+  CASE WHEN NOT $11::bool THEN CASE $12::text WHEN 'quantity' THEN held.quantity WHEN 'status' THEN
+    CASE u.status WHEN 'reserved' THEN 1 WHEN 'printed' THEN 2 WHEN 'available' THEN 3 WHEN 'placed' THEN 4
+                 WHEN 'in_transit' THEN 5 WHEN 'used' THEN 6 ELSE 7 END END END ASC,
+  CASE WHEN $11::bool THEN CASE $12::text WHEN 'quantity' THEN held.quantity WHEN 'status' THEN
+    CASE u.status WHEN 'reserved' THEN 1 WHEN 'printed' THEN 2 WHEN 'available' THEN 3 WHEN 'placed' THEN 4
+                 WHEN 'in_transit' THEN 5 WHEN 'used' THEN 6 ELSE 7 END END END DESC,
+  CASE WHEN NOT $11::bool THEN CASE $12::text WHEN 'meters' THEN u.remaining_meters END END ASC NULLS LAST,
+  CASE WHEN $11::bool THEN CASE $12::text WHEN 'meters' THEN u.remaining_meters END END DESC NULLS LAST,
+  CASE WHEN NOT $11::bool THEN CASE $12::text WHEN 'updated_at' THEN held.updated_at END END ASC NULLS LAST,
+  CASE WHEN $11::bool THEN CASE $12::text WHEN 'updated_at' THEN held.updated_at END END DESC NULLS LAST,
+  -- product sort: barcode inside one product (the former fixed order)
+  CASE WHEN $12::text = 'product' AND NOT $11::bool THEN u.barcode END ASC,
+  CASE WHEN $12::text = 'product' AND $11::bool THEN u.barcode END DESC,
+  CASE WHEN $11::bool THEN u.id END DESC,
+  u.id ASC
+LIMIT $14 OFFSET $13
 `
 
 type ListOrganizationStockUnitRowsParams struct {
-	BrandID        pgtype.Int8 `json:"brand_id"`
-	ProductID      pgtype.Int8 `json:"product_id"`
-	Status         pgtype.Text `json:"status"`
-	Barcode        pgtype.Text `json:"barcode"`
-	Uuids          []uuid.UUID `json:"uuids"`
-	Q              pgtype.Text `json:"q"`
-	OffsetCount    int32       `json:"offset_count"`
-	LimitCount     int32       `json:"limit_count"`
-	OrganizationID int64       `json:"organization_id"`
+	BrandID        pgtype.Int8        `json:"brand_id"`
+	ProductID      pgtype.Int8        `json:"product_id"`
+	Statuses       []string           `json:"statuses"`
+	Barcode        pgtype.Text        `json:"barcode"`
+	BarcodePrefix  pgtype.Text        `json:"barcode_prefix"`
+	LocationUuids  []uuid.UUID        `json:"location_uuids"`
+	UpdatedFrom    pgtype.Timestamptz `json:"updated_from"`
+	UpdatedBefore  pgtype.Timestamptz `json:"updated_before"`
+	Uuids          []uuid.UUID        `json:"uuids"`
+	Q              pgtype.Text        `json:"q"`
+	SortDesc       bool               `json:"sort_desc"`
+	SortKey        string             `json:"sort_key"`
+	OffsetCount    int32              `json:"offset_count"`
+	LimitCount     int32              `json:"limit_count"`
+	OrganizationID int64              `json:"organization_id"`
 }
 
 type ListOrganizationStockUnitRowsRow struct {
@@ -544,14 +616,26 @@ type ListOrganizationStockUnitRowsRow struct {
 // per unit); both narrowed on holder_org_id. Without a status filter the
 // list holds the units counted as stock (available, placed); a status
 // filter lists exactly that status.
+// TEC-373 (DT-BE-5): statuses is any-of (empty: available + placed),
+// barcode exact or barcode_prefix (LIKE, the caller escapes % and _),
+// location_uuids any-of (fixed barcodes have no single location and drop
+// out), updated_from / updated_before (exclusive) on the holding's last
+// change. sort_key: product, barcode, status (unit flow rank), quantity,
+// meters (remaining, empty last), updated_at; id is the tiebreak.
 func (q *Queries) ListOrganizationStockUnitRows(ctx context.Context, arg ListOrganizationStockUnitRowsParams) ([]ListOrganizationStockUnitRowsRow, error) {
 	rows, err := q.db.Query(ctx, listOrganizationStockUnitRows,
 		arg.BrandID,
 		arg.ProductID,
-		arg.Status,
+		arg.Statuses,
 		arg.Barcode,
+		arg.BarcodePrefix,
+		arg.LocationUuids,
+		arg.UpdatedFrom,
+		arg.UpdatedBefore,
 		arg.Uuids,
 		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.OffsetCount,
 		arg.LimitCount,
 		arg.OrganizationID,

@@ -101,33 +101,55 @@ func (q *Queries) CountTransferRequestItems(ctx context.Context, requestID int64
 	return count, err
 }
 
-const countTransferRequestsForOrg = `-- name: CountTransferRequestsForOrg :one
-SELECT COUNT(*) FROM stock_transfer_requests
-WHERE brand_id = $1
+const countTransferRequestsFiltered = `-- name: CountTransferRequestsFiltered :one
+SELECT COUNT(*) FROM stock_transfer_requests r
+WHERE r.brand_id = $1
   AND (
-      ($2::text IN ('', 'outgoing') AND from_org_id = $3::bigint)
-      OR ($2::text IN ('', 'incoming') AND to_org_id = $3::bigint)
-      OR ($2::text IN ('', 'approval') AND approver_org_id = $3::bigint)
+      ((COALESCE(cardinality($2::text[]), 0) = 0 OR 'outgoing' = ANY ($2::text[]))
+       AND r.from_org_id = $3::bigint)
+      OR ((COALESCE(cardinality($2::text[]), 0) = 0 OR 'incoming' = ANY ($2::text[]))
+       AND r.to_org_id = $3::bigint)
+      OR ((COALESCE(cardinality($2::text[]), 0) = 0 OR 'approval' = ANY ($2::text[]))
+       AND r.approver_org_id = $3::bigint)
   )
-  AND ($4::text IS NULL OR status = $4::text)
-  AND ($5::text IS NULL OR kind = $5::text)
+  AND (COALESCE(cardinality($4::text[]), 0) = 0 OR r.status = ANY ($4::text[]))
+  AND (COALESCE(cardinality($5::text[]), 0) = 0 OR r.kind = ANY ($5::text[]))
+  AND ($6::timestamptz IS NULL OR r.created_at >= $6::timestamptz)
+  AND ($7::timestamptz IS NULL OR r.created_at < $7::timestamptz)
+  AND ($8::text IS NULL
+       OR r.transfer_no ILIKE '%' || $8::text || '%'
+       OR EXISTS (SELECT 1 FROM organizations qo
+                  WHERE qo.id IN (r.from_org_id, r.to_org_id)
+                    AND qo.name ILIKE '%' || $8::text || '%'))
+  AND (COALESCE(cardinality($9::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM organizations fo
+                  WHERE fo.uuid = ANY ($9::uuid[])
+                    AND fo.id IN (r.from_org_id, r.to_org_id)))
 `
 
-type CountTransferRequestsForOrgParams struct {
-	BrandID   int64       `json:"brand_id"`
-	Direction string      `json:"direction"`
-	OrgID     int64       `json:"org_id"`
-	Status    pgtype.Text `json:"status"`
-	Kind      pgtype.Text `json:"kind"`
+type CountTransferRequestsFilteredParams struct {
+	BrandID       int64              `json:"brand_id"`
+	Directions    []string           `json:"directions"`
+	OrgID         int64              `json:"org_id"`
+	Statuses      []string           `json:"statuses"`
+	Kinds         []string           `json:"kinds"`
+	CreatedFrom   pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore pgtype.Timestamptz `json:"created_before"`
+	Q             pgtype.Text        `json:"q"`
+	OrgUuids      []uuid.UUID        `json:"org_uuids"`
 }
 
-func (q *Queries) CountTransferRequestsForOrg(ctx context.Context, arg CountTransferRequestsForOrgParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countTransferRequestsForOrg,
+func (q *Queries) CountTransferRequestsFiltered(ctx context.Context, arg CountTransferRequestsFilteredParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countTransferRequestsFiltered,
 		arg.BrandID,
-		arg.Direction,
+		arg.Directions,
 		arg.OrgID,
-		arg.Status,
-		arg.Kind,
+		arg.Statuses,
+		arg.Kinds,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
+		arg.OrgUuids,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -593,40 +615,81 @@ func (q *Queries) ListTransferRequestItems(ctx context.Context, requestID int64)
 	return items, nil
 }
 
-const listTransferRequestsForOrg = `-- name: ListTransferRequestsForOrg :many
-SELECT id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind FROM stock_transfer_requests
-WHERE brand_id = $1
+const listTransferRequestsFiltered = `-- name: ListTransferRequestsFiltered :many
+SELECT r.id, r.uuid, r.organization_id, r.brand_id, r.from_org_id, r.to_org_id, r.approver_org_id, r.product_id, r.unit_id, r.quantity, r.meters, r.currency, r.unit_price, r.line_total, r.rate_snapshot, r.status, r.reason, r.requested_by_user_id, r.decided_by_user_id, r.decided_at, r.decision_note, r.completed_at, r.cancelled_at, r.created_at, r.updated_at, r.transfer_no, r.total, r.cancel_reason, r.shipped_by_user_id, r.received_by_user_id, r.cancelled_by_user_id, r.shipped_at, r.received_at, r.kind FROM stock_transfer_requests r
+WHERE r.brand_id = $1
   AND (
-      ($2::text IN ('', 'outgoing') AND from_org_id = $3::bigint)
-      OR ($2::text IN ('', 'incoming') AND to_org_id = $3::bigint)
-      OR ($2::text IN ('', 'approval') AND approver_org_id = $3::bigint)
+      ((COALESCE(cardinality($2::text[]), 0) = 0 OR 'outgoing' = ANY ($2::text[]))
+       AND r.from_org_id = $3::bigint)
+      OR ((COALESCE(cardinality($2::text[]), 0) = 0 OR 'incoming' = ANY ($2::text[]))
+       AND r.to_org_id = $3::bigint)
+      OR ((COALESCE(cardinality($2::text[]), 0) = 0 OR 'approval' = ANY ($2::text[]))
+       AND r.approver_org_id = $3::bigint)
   )
-  AND ($4::text IS NULL OR status = $4::text)
-  AND ($5::text IS NULL OR kind = $5::text)
-ORDER BY created_at DESC, id DESC
-LIMIT $7 OFFSET $6
+  AND (COALESCE(cardinality($4::text[]), 0) = 0 OR r.status = ANY ($4::text[]))
+  AND (COALESCE(cardinality($5::text[]), 0) = 0 OR r.kind = ANY ($5::text[]))
+  AND ($6::timestamptz IS NULL OR r.created_at >= $6::timestamptz)
+  AND ($7::timestamptz IS NULL OR r.created_at < $7::timestamptz)
+  AND ($8::text IS NULL
+       OR r.transfer_no ILIKE '%' || $8::text || '%'
+       OR EXISTS (SELECT 1 FROM organizations qo
+                  WHERE qo.id IN (r.from_org_id, r.to_org_id)
+                    AND qo.name ILIKE '%' || $8::text || '%'))
+  AND (COALESCE(cardinality($9::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM organizations fo
+                  WHERE fo.uuid = ANY ($9::uuid[])
+                    AND fo.id IN (r.from_org_id, r.to_org_id)))
+ORDER BY
+  CASE WHEN NOT $10::bool THEN CASE $11::text WHEN 'transfer_no' THEN r.transfer_no END END ASC,
+  CASE WHEN $10::bool THEN CASE $11::text WHEN 'transfer_no' THEN r.transfer_no END END DESC,
+  CASE WHEN NOT $10::bool THEN CASE $11::text WHEN 'status' THEN
+    CASE r.status WHEN 'requested' THEN 1 WHEN 'approved' THEN 2 WHEN 'shipped' THEN 3
+                 WHEN 'received' THEN 4 WHEN 'rejected' THEN 5 ELSE 6 END END END ASC,
+  CASE WHEN $10::bool THEN CASE $11::text WHEN 'status' THEN
+    CASE r.status WHEN 'requested' THEN 1 WHEN 'approved' THEN 2 WHEN 'shipped' THEN 3
+                 WHEN 'received' THEN 4 WHEN 'rejected' THEN 5 ELSE 6 END END END DESC,
+  CASE WHEN NOT $10::bool THEN CASE $11::text WHEN 'created_at' THEN r.created_at END END ASC,
+  CASE WHEN $10::bool THEN CASE $11::text WHEN 'created_at' THEN r.created_at END END DESC,
+  CASE WHEN $10::bool THEN r.id END DESC,
+  r.id ASC
+LIMIT $13 OFFSET $12
 `
 
-type ListTransferRequestsForOrgParams struct {
-	BrandID   int64       `json:"brand_id"`
-	Direction string      `json:"direction"`
-	OrgID     int64       `json:"org_id"`
-	Status    pgtype.Text `json:"status"`
-	Kind      pgtype.Text `json:"kind"`
-	RowOffset int32       `json:"row_offset"`
-	RowLimit  int32       `json:"row_limit"`
+type ListTransferRequestsFilteredParams struct {
+	BrandID       int64              `json:"brand_id"`
+	Directions    []string           `json:"directions"`
+	OrgID         int64              `json:"org_id"`
+	Statuses      []string           `json:"statuses"`
+	Kinds         []string           `json:"kinds"`
+	CreatedFrom   pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore pgtype.Timestamptz `json:"created_before"`
+	Q             pgtype.Text        `json:"q"`
+	OrgUuids      []uuid.UUID        `json:"org_uuids"`
+	SortDesc      bool               `json:"sort_desc"`
+	SortKey       string             `json:"sort_key"`
+	RowOffset     int32              `json:"row_offset"`
+	RowLimit      int32              `json:"row_limit"`
 }
 
-// Requests where org is the giver, the receiver or the common parent.
-// direction: ” (all), 'outgoing' (giver), 'incoming' (receiver),
-// 'approval' (parent).
-func (q *Queries) ListTransferRequestsForOrg(ctx context.Context, arg ListTransferRequestsForOrgParams) ([]StockTransferRequest, error) {
-	rows, err := q.db.Query(ctx, listTransferRequestsForOrg,
+// TEC-373 (DT-BE-5): requests where org is the giver (direction
+// outgoing), the receiver (incoming) or the common parent (approval);
+// directions, statuses and kinds are any-of filters (NULL / empty = all).
+// q matches the transfer number and the sender / receiver names; org_uuids
+// keeps requests whose sender or receiver is one of them. sort_key:
+// transfer_no, status (flow rank), created_at; id is the tiebreak.
+func (q *Queries) ListTransferRequestsFiltered(ctx context.Context, arg ListTransferRequestsFilteredParams) ([]StockTransferRequest, error) {
+	rows, err := q.db.Query(ctx, listTransferRequestsFiltered,
 		arg.BrandID,
-		arg.Direction,
+		arg.Directions,
 		arg.OrgID,
-		arg.Status,
-		arg.Kind,
+		arg.Statuses,
+		arg.Kinds,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
+		arg.OrgUuids,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.RowOffset,
 		arg.RowLimit,
 	)

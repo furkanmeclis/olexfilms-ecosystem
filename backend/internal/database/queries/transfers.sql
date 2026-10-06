@@ -23,32 +23,75 @@ SELECT * FROM stock_transfer_requests
 WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id)
 FOR UPDATE;
 
--- Requests where org is the giver, the receiver or the common parent.
--- direction: '' (all), 'outgoing' (giver), 'incoming' (receiver),
--- 'approval' (parent).
--- name: ListTransferRequestsForOrg :many
-SELECT * FROM stock_transfer_requests
-WHERE brand_id = sqlc.arg(brand_id)
+-- TEC-373 (DT-BE-5): requests where org is the giver (direction
+-- outgoing), the receiver (incoming) or the common parent (approval);
+-- directions, statuses and kinds are any-of filters (NULL / empty = all).
+-- q matches the transfer number and the sender / receiver names; org_uuids
+-- keeps requests whose sender or receiver is one of them. sort_key:
+-- transfer_no, status (flow rank), created_at; id is the tiebreak.
+-- name: ListTransferRequestsFiltered :many
+SELECT r.* FROM stock_transfer_requests r
+WHERE r.brand_id = sqlc.arg(brand_id)
   AND (
-      (sqlc.arg(direction)::text IN ('', 'outgoing') AND from_org_id = sqlc.arg(org_id)::bigint)
-      OR (sqlc.arg(direction)::text IN ('', 'incoming') AND to_org_id = sqlc.arg(org_id)::bigint)
-      OR (sqlc.arg(direction)::text IN ('', 'approval') AND approver_org_id = sqlc.arg(org_id)::bigint)
+      ((COALESCE(cardinality(sqlc.narg(directions)::text[]), 0) = 0 OR 'outgoing' = ANY (sqlc.narg(directions)::text[]))
+       AND r.from_org_id = sqlc.arg(org_id)::bigint)
+      OR ((COALESCE(cardinality(sqlc.narg(directions)::text[]), 0) = 0 OR 'incoming' = ANY (sqlc.narg(directions)::text[]))
+       AND r.to_org_id = sqlc.arg(org_id)::bigint)
+      OR ((COALESCE(cardinality(sqlc.narg(directions)::text[]), 0) = 0 OR 'approval' = ANY (sqlc.narg(directions)::text[]))
+       AND r.approver_org_id = sqlc.arg(org_id)::bigint)
   )
-  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
-  AND (sqlc.narg(kind)::text IS NULL OR kind = sqlc.narg(kind)::text)
-ORDER BY created_at DESC, id DESC
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR r.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(kinds)::text[]), 0) = 0 OR r.kind = ANY (sqlc.narg(kinds)::text[]))
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR r.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR r.created_at < sqlc.narg(created_before)::timestamptz)
+  AND (sqlc.narg(q)::text IS NULL
+       OR r.transfer_no ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR EXISTS (SELECT 1 FROM organizations qo
+                  WHERE qo.id IN (r.from_org_id, r.to_org_id)
+                    AND qo.name ILIKE '%' || sqlc.narg(q)::text || '%'))
+  AND (COALESCE(cardinality(sqlc.narg(org_uuids)::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM organizations fo
+                  WHERE fo.uuid = ANY (sqlc.narg(org_uuids)::uuid[])
+                    AND fo.id IN (r.from_org_id, r.to_org_id)))
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'transfer_no' THEN r.transfer_no END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'transfer_no' THEN r.transfer_no END END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'status' THEN
+    CASE r.status WHEN 'requested' THEN 1 WHEN 'approved' THEN 2 WHEN 'shipped' THEN 3
+                 WHEN 'received' THEN 4 WHEN 'rejected' THEN 5 ELSE 6 END END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'status' THEN
+    CASE r.status WHEN 'requested' THEN 1 WHEN 'approved' THEN 2 WHEN 'shipped' THEN 3
+                 WHEN 'received' THEN 4 WHEN 'rejected' THEN 5 ELSE 6 END END END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN r.created_at END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN r.created_at END END DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN r.id END DESC,
+  r.id ASC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
--- name: CountTransferRequestsForOrg :one
-SELECT COUNT(*) FROM stock_transfer_requests
-WHERE brand_id = sqlc.arg(brand_id)
+-- name: CountTransferRequestsFiltered :one
+SELECT COUNT(*) FROM stock_transfer_requests r
+WHERE r.brand_id = sqlc.arg(brand_id)
   AND (
-      (sqlc.arg(direction)::text IN ('', 'outgoing') AND from_org_id = sqlc.arg(org_id)::bigint)
-      OR (sqlc.arg(direction)::text IN ('', 'incoming') AND to_org_id = sqlc.arg(org_id)::bigint)
-      OR (sqlc.arg(direction)::text IN ('', 'approval') AND approver_org_id = sqlc.arg(org_id)::bigint)
+      ((COALESCE(cardinality(sqlc.narg(directions)::text[]), 0) = 0 OR 'outgoing' = ANY (sqlc.narg(directions)::text[]))
+       AND r.from_org_id = sqlc.arg(org_id)::bigint)
+      OR ((COALESCE(cardinality(sqlc.narg(directions)::text[]), 0) = 0 OR 'incoming' = ANY (sqlc.narg(directions)::text[]))
+       AND r.to_org_id = sqlc.arg(org_id)::bigint)
+      OR ((COALESCE(cardinality(sqlc.narg(directions)::text[]), 0) = 0 OR 'approval' = ANY (sqlc.narg(directions)::text[]))
+       AND r.approver_org_id = sqlc.arg(org_id)::bigint)
   )
-  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
-  AND (sqlc.narg(kind)::text IS NULL OR kind = sqlc.narg(kind)::text);
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR r.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(kinds)::text[]), 0) = 0 OR r.kind = ANY (sqlc.narg(kinds)::text[]))
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR r.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR r.created_at < sqlc.narg(created_before)::timestamptz)
+  AND (sqlc.narg(q)::text IS NULL
+       OR r.transfer_no ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR EXISTS (SELECT 1 FROM organizations qo
+                  WHERE qo.id IN (r.from_org_id, r.to_org_id)
+                    AND qo.name ILIKE '%' || sqlc.narg(q)::text || '%'))
+  AND (COALESCE(cardinality(sqlc.narg(org_uuids)::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM organizations fo
+                  WHERE fo.uuid = ANY (sqlc.narg(org_uuids)::uuid[])
+                    AND fo.id IN (r.from_org_id, r.to_org_id)));
 
 -- name: DecideTransferRequest :one
 UPDATE stock_transfer_requests
