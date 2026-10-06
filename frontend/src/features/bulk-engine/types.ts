@@ -78,13 +78,18 @@ export type BulkExecuteSyncResult = {
 };
 
 export type BulkResource =
-  "platform.users" | "platform.roles" | "catalog.products" | "tasks";
+  | "platform.users"
+  | "platform.roles"
+  | "catalog.products"
+  | "tasks"
+  | "platform.organizations";
 
 export const BULK_PATHS: Record<BulkResource, string> = {
   "platform.users": "/v1/platform/users/bulk",
   "platform.roles": "/v1/platform/roles/bulk",
   "catalog.products": "/v1/catalog/products/bulk",
   tasks: "/v1/tasks/bulk",
+  "platform.organizations": "/v1/platform/organizations/bulk",
 };
 
 /** Tenant resources log their operations under the active organization. */

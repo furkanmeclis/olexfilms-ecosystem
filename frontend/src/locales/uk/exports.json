@@ -69,5 +69,8 @@
   "status.failed": "Помилка",
   "toast.queued": "Експорт поставлено в чергу. Ви отримаєте сповіщення, коли файл буде готовий.",
   "toast.failed": "Не вдалося запустити експорт. Перевірте права та фільтри.",
-  "toast.download_failed": "Не вдалося завантажити файл."
+  "toast.download_failed": "Не вдалося завантажити файл.",
+  "status.queued": "У черзі",
+  "status.expired": "Минув термін",
+  "resources.platform.organizations": "Організації"
 }

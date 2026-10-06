@@ -53,5 +53,18 @@
   "confirm.organizations.suspend": "{{count}} organizasyon askıya alınsın mı?",
   "confirm.organizations.set_read_only": "{{count}} organizasyon salt okunur yapılsın mı?",
   "confirm.organizations.extend_access": "{{count}} organizasyonun erişimi uzatılsın mı?",
-  "params.days": "Gün"
+  "params.days": "Gün",
+  "actions.catalog_products.set_category": "Kategori ata",
+  "params.category": "Kategori",
+  "actions.catalog_categories.activate": "Aktifleştir",
+  "actions.catalog_categories.deactivate": "Pasifleştir",
+  "actions.catalog_categories.delete": "Sil",
+  "confirm.catalog_categories.deactivate": "Seçili kategoriler pasifleştirilsin mi?",
+  "confirm.catalog_categories.delete": "Seçili kategoriler silinsin mi? Ürünü olan kategoriler atlanır.",
+  "actions.vehicle_brands.activate": "Aktifleştir",
+  "actions.vehicle_brands.deactivate": "Pasifleştir",
+  "confirm.vehicle_brands.deactivate": "Seçili markalar pasifleştirilsin mi?",
+  "actions.vehicle_models.activate": "Aktifleştir",
+  "actions.vehicle_models.deactivate": "Pasifleştir",
+  "confirm.vehicle_models.deactivate": "Seçili modeller pasifleştirilsin mi?"
 }

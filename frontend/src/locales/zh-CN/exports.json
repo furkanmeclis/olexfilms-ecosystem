@@ -69,5 +69,8 @@
   "status.failed": "失败",
   "toast.queued": "导出已加入队列。文件就绪后会通知您。",
   "toast.failed": "无法开始导出。请检查权限和筛选条件。",
-  "toast.download_failed": "无法下载文件。"
+  "toast.download_failed": "无法下载文件。",
+  "status.queued": "排队中",
+  "status.expired": "已过期",
+  "resources.platform.organizations": "组织"
 }

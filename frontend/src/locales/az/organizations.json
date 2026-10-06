@@ -126,5 +126,9 @@
   "fields.timezone": "Saat qurşağı",
   "fields.timezone_hint": "İstifadəçi özü seçmədikcə tarix və saatlar bu qurşaqda göstərilir.",
   "form.section_regional": "Dil və region",
-  "form.section_regional_desc": "İstifadəçilər, sənədlər və bildirişlər üçün defolt dil və saat qurşağı."
+  "form.section_regional_desc": "İstifadəçilər, sənədlər və bildirişlər üçün defolt dil və saat qurşağı.",
+  "columns.created_at": "Yaradılıb",
+  "columns.email": "E-poçt",
+  "detail.children": "Alt təşkilatlar",
+  "detail.children_empty": "Hələ alt təşkilat yoxdur."
 }

@@ -69,5 +69,8 @@
   "status.failed": "Uğursuz",
   "toast.queued": "İxrac növbəyə qoyuldu. Fayl hazır olduqda xəbər veriləcək.",
   "toast.failed": "İxracı başlatmaq mümkün olmadı. İcazələri və filtrləri yoxlayın.",
-  "toast.download_failed": "Faylı yükləmək mümkün olmadı."
+  "toast.download_failed": "Faylı yükləmək mümkün olmadı.",
+  "status.queued": "Növbədə",
+  "status.expired": "Müddəti bitib",
+  "resources.platform.organizations": "Təşkilatlar"
 }

@@ -55,5 +55,7 @@
   "delete_description": "确定删除角色“{{name}}”吗？用户将保留其他角色；此操作无法撤销。",
   "toast.created": "角色已创建",
   "toast.updated": "角色已更新",
-  "toast.deleted": "角色已删除"
+  "toast.deleted": "角色已删除",
+  "labels.custom": "自定义",
+  "fields.created_at": "创建时间"
 }

@@ -43,6 +43,13 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/platform/organizations/bulk", middleware.Chain(
 		http.HandlerFunc(h.ExecuteOrganizations), authn, require(rbac.PermPlatformOrganizationsRead),
 	))
+	// TEC-369: vehicle catalog activate / deactivate (global reference data).
+	mux.Handle("POST /v1/platform/vehicle-catalog/brands/bulk", middleware.Chain(
+		h.ExecutePlatform(adapters.ResourceVehicleBrands), authn, require(rbac.PermVehicleCatalogWrite),
+	))
+	mux.Handle("POST /v1/platform/vehicle-catalog/models/bulk", middleware.Chain(
+		h.ExecutePlatform(adapters.ResourceVehicleModels), authn, require(rbac.PermVehicleCatalogWrite),
+	))
 	// TEC-212: undo of a platform operation (users / roles).
 	mux.Handle("POST /v1/platform/bulk-operations/{uuid}/undo", middleware.Chain(
 		http.HandlerFunc(h.UndoPlatform), authn, require(rbac.PermPlatformBulkRead),
@@ -69,6 +76,11 @@ func RegisterTenantRoutes(
 
 	mux.Handle("POST /v1/catalog/products/bulk", route(
 		h.ExecuteTenant(adapters.ResourceCatalogProducts), rbac.PermCatalogWrite,
+		middleware.RequireFeature(checker, features.ModuleCatalog),
+	))
+	// TEC-369: catalog categories activate / deactivate / delete.
+	mux.Handle("POST /v1/catalog/categories/bulk", route(
+		h.ExecuteTenant(adapters.ResourceCatalogCategories), rbac.PermCatalogWrite,
 		middleware.RequireFeature(checker, features.ModuleCatalog),
 	))
 	mux.Handle("POST /v1/tasks/bulk", route(h.ExecuteTenant(adapters.ResourceTasks), rbac.PermTasksWrite))

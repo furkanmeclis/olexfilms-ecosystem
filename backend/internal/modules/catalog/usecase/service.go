@@ -18,6 +18,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/catalog/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -91,6 +92,9 @@ type Store interface {
 	DeleteProductCategory(ctx context.Context, arg db.DeleteProductCategoryParams) (int64, error)
 	ListProductCategories(ctx context.Context, arg db.ListProductCategoriesParams) ([]db.ProductCategory, error)
 	CountProductCategories(ctx context.Context, arg db.CountProductCategoriesParams) (int64, error)
+	// TEC-369: category display order.
+	ListProductCategoryOrder(ctx context.Context, brandID int64) ([]db.ListProductCategoryOrderRow, error)
+	SetProductCategorySorts(ctx context.Context, arg db.SetProductCategorySortsParams) (int64, error)
 
 	CreateProduct(ctx context.Context, arg db.CreateProductParams) (db.Product, error)
 	GetProductByUUID(ctx context.Context, arg db.GetProductByUUIDParams) (db.Product, error)
@@ -140,8 +144,12 @@ func requireCenter(org orgctx.Scope) error {
 func (s *Service) ListCategories(ctx context.Context, org orgctx.Scope, f model.CategoryFilter) ([]model.Category, int64, error) {
 	active := boolArg(f.Active)
 	q := textArg(f.Q)
+	if f.Sort.Key == "" {
+		f.Sort = apiquery.ResolvedSort{Key: model.CategorySort.Default.Field}
+	}
 	rows, err := s.store.ListProductCategories(ctx, db.ListProductCategoriesParams{
-		BrandID: org.BrandID, Active: active, Q: q, LimitCount: f.Limit, OffsetCount: f.Offset,
+		BrandID: org.BrandID, Active: active, Q: q, SortKey: f.Sort.Key, SortDesc: f.Sort.Desc,
+		LimitCount: f.Limit, OffsetCount: f.Offset,
 	})
 	if err != nil {
 		return nil, 0, err
@@ -305,28 +313,22 @@ func (s *Service) category(ctx context.Context, org orgctx.Scope, id uuid.UUID) 
 
 // ListProducts lists the products of the active brand.
 func (s *Service) ListProducts(ctx context.Context, org orgctx.Scope, f model.ProductFilter) ([]model.Product, int64, error) {
-	var categoryID pgtype.Int8
-	if f.CategoryUUID != nil {
-		cat, err := s.category(ctx, org, *f.CategoryUUID)
-		if errors.Is(err, ErrNotFound) {
-			return []model.Product{}, 0, nil
-		}
-		if err != nil {
-			return nil, 0, err
-		}
-		categoryID = pgtype.Int8{Int64: cat.ID, Valid: true}
-	}
-	active, unit, q := boolArg(f.Active), textArg(f.UnitType), textArg(f.Q)
-	rows, err := s.store.ListProducts(ctx, db.ListProductsParams{
-		BrandID: org.BrandID, CategoryID: categoryID, Active: active, UnitType: unit, Q: q,
-		LimitCount: f.Limit, OffsetCount: f.Offset,
-	})
+	categoryIDs, ok, err := s.categoryIDs(ctx, org, f.CategoryUUIDs)
 	if err != nil {
 		return nil, 0, err
 	}
-	total, err := s.store.CountProducts(ctx, db.CountProductsParams{
-		BrandID: org.BrandID, CategoryID: categoryID, Active: active, UnitType: unit, Q: q,
-	})
+	if !ok {
+		return []model.Product{}, 0, nil
+	}
+	if f.Sort.Key == "" {
+		f.Sort = apiquery.ResolvedSort{Key: model.ProductSort.Default.Field, Desc: model.ProductSort.Default.Desc}
+	}
+	params := productListParams(org.BrandID, categoryIDs, f)
+	rows, err := s.store.ListProducts(ctx, params)
+	if err != nil {
+		return nil, 0, err
+	}
+	total, err := s.store.CountProducts(ctx, productCountParams(params))
 	if err != nil {
 		return nil, 0, err
 	}

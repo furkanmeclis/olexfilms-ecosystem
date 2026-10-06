@@ -251,6 +251,10 @@ func main() {
 		// TEC-212: tenant resources with undo.
 		bulkadapters.NewCatalogProducts(queries),
 		bulkadapters.NewTasks(queries),
+		// TEC-369: catalog categories (tenant) and vehicle catalog (platform).
+		bulkadapters.NewCatalogCategories(queries),
+		bulkadapters.NewVehicleBrands(queries),
+		bulkadapters.NewVehicleModels(queries),
 	)
 	bulkSvc := bulkusecase.New(queries, bulkReg, nil, notifSvc, activityRec, cfg.Bulk, log).
 		WithPool(pool).WithUndoWindow(sysconfig.New(queries, sysconfig.NoCache{}).BulkUndoWindowHours)

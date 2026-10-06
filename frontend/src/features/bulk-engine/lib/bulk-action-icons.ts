@@ -1,5 +1,8 @@
 import {
+  Ban,
+  CalendarPlus,
   CircleCheck,
+  Lock,
   CircleOff,
   Trash2,
   UserCheck,
@@ -31,6 +34,12 @@ const bulkActionIconCatalog: Record<
   },
   tasks: {
     assign: UserPlus,
+  },
+  "platform.organizations": {
+    activate: CircleCheck,
+    suspend: Ban,
+    set_read_only: Lock,
+    extend_access: CalendarPlus,
   },
 };
 

@@ -53,5 +53,18 @@
   "confirm.organizations.suspend": "تعليق {{count}} منظمة؟",
   "confirm.organizations.set_read_only": "جعل {{count}} منظمة للقراءة فقط؟",
   "confirm.organizations.extend_access": "تمديد وصول {{count}} منظمة؟",
-  "params.days": "الأيام"
+  "params.days": "الأيام",
+  "actions.catalog_products.set_category": "تعيين الفئة",
+  "params.category": "الفئة",
+  "actions.catalog_categories.activate": "تفعيل",
+  "actions.catalog_categories.deactivate": "إلغاء التفعيل",
+  "actions.catalog_categories.delete": "حذف",
+  "confirm.catalog_categories.deactivate": "إلغاء تفعيل الفئات المحددة؟",
+  "confirm.catalog_categories.delete": "حذف الفئات المحددة؟ يتم تخطي الفئات التي تحتوي على منتجات.",
+  "actions.vehicle_brands.activate": "تفعيل",
+  "actions.vehicle_brands.deactivate": "إلغاء التفعيل",
+  "confirm.vehicle_brands.deactivate": "إلغاء تفعيل العلامات المحددة؟",
+  "actions.vehicle_models.activate": "تفعيل",
+  "actions.vehicle_models.deactivate": "إلغاء التفعيل",
+  "confirm.vehicle_models.deactivate": "إلغاء تفعيل الطرازات المحددة؟"
 }

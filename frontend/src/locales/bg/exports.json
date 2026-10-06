@@ -69,5 +69,8 @@
   "status.failed": "Неуспешен",
   "toast.queued": "Експортът е в опашката. Ще бъдете уведомени, когато файлът е готов.",
   "toast.failed": "Експортът не можа да започне. Проверете разрешенията и филтрите.",
-  "toast.download_failed": "Файлът не можа да бъде изтеглен."
+  "toast.download_failed": "Файлът не можа да бъде изтеглен.",
+  "status.queued": "На опашка",
+  "status.expired": "Изтекъл",
+  "resources.platform.organizations": "Организации"
 }

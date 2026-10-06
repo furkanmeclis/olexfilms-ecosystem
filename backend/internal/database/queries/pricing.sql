@@ -135,7 +135,8 @@ ORDER BY product_id ASC, currency ASC;
 
 -- name: ListDistributorOverrideDetails :many
 -- Center view of the distributor-specific prices with product and
--- distributor identities.
+-- distributor identities. TEC-369: sort keys from
+-- usecase.DistributorPriceSort (docs/list-contract.md); default product.
 SELECT o.currency, o.price::text AS price, o.updated_at,
     p.uuid AS product_uuid, p.sku AS product_sku, p.name AS product_name,
     d.uuid AS distributor_uuid, d.name AS distributor_name
@@ -145,8 +146,66 @@ JOIN organizations d ON d.id = o.distributor_org_id
 WHERE o.brand_id = sqlc.arg(brand_id)
   AND (sqlc.narg(product_id)::bigint IS NULL OR o.product_id = sqlc.narg(product_id)::bigint)
   AND (sqlc.narg(distributor_org_id)::bigint IS NULL OR o.distributor_org_id = sqlc.narg(distributor_org_id)::bigint)
-ORDER BY p.sku ASC, d.name ASC, o.currency ASC
+  AND (
+    COALESCE(cardinality(sqlc.narg(currencies)::text[]), 0) = 0
+    OR o.currency = ANY (sqlc.narg(currencies)::text[])
+  )
+  AND (
+    sqlc.narg(q)::text IS NULL
+    OR p.sku ILIKE '%' || sqlc.narg(q)::text || '%'
+    OR p.name ILIKE '%' || sqlc.narg(q)::text || '%'
+    OR d.name ILIKE '%' || sqlc.narg(q)::text || '%'
+  )
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'product' THEN p.sku::text
+      WHEN 'distributor' THEN d.name::text
+      WHEN 'currency' THEN o.currency::text
+    END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'product' THEN p.sku::text
+      WHEN 'distributor' THEN d.name::text
+      WHEN 'currency' THEN o.currency::text
+    END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'price' THEN o.price END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'price' THEN o.price END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'updated_at' THEN o.updated_at END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'updated_at' THEN o.updated_at END
+  END DESC,
+  p.sku ASC, d.name ASC, o.currency ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN o.id END DESC,
+  o.id ASC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
+
+-- name: CountDistributorOverrideDetails :one
+SELECT COUNT(*)::bigint
+FROM distributor_price_overrides o
+JOIN products p ON p.id = o.product_id
+JOIN organizations d ON d.id = o.distributor_org_id
+WHERE o.brand_id = sqlc.arg(brand_id)
+  AND (sqlc.narg(product_id)::bigint IS NULL OR o.product_id = sqlc.narg(product_id)::bigint)
+  AND (sqlc.narg(distributor_org_id)::bigint IS NULL OR o.distributor_org_id = sqlc.narg(distributor_org_id)::bigint)
+  AND (
+    COALESCE(cardinality(sqlc.narg(currencies)::text[]), 0) = 0
+    OR o.currency = ANY (sqlc.narg(currencies)::text[])
+  )
+  AND (
+    sqlc.narg(q)::text IS NULL
+    OR p.sku ILIKE '%' || sqlc.narg(q)::text || '%'
+    OR p.name ILIKE '%' || sqlc.narg(q)::text || '%'
+    OR d.name ILIKE '%' || sqlc.narg(q)::text || '%'
+  );
 
 -- name: UpsertDistributorDealerPrice :one
 -- The database refuses an owner that is not a distributor of the brand.

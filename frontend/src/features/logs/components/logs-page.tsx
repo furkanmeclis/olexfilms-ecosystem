@@ -8,15 +8,11 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
 import {
-  EntityFilters,
   EntityPage,
   EntityRowActions,
   EntityTable,
   EntityToolbar,
-  countActiveFilters,
   useServerListState,
-  type EntityFilterDef,
-  type EntityFilterValues,
 } from "@/components/entity";
 import { createColumn } from "@/components/tables";
 import { Card, CardContent } from "@/components/common/card";
@@ -35,11 +31,6 @@ import {
 import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
-
-function firstString(value: string | string[] | undefined) {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
 
 function levelTone(level: AppLog["level"]) {
   if (level === "error") return "danger" as const;
@@ -83,94 +74,34 @@ function StatsCards() {
   );
 }
 
+export const LOGS_PERSIST_KEY = "platform-logs-v1";
+
+const LOG_LEVELS = ["debug", "warn", "error"] as const;
+
 function LogsListPanel() {
   const { t, format } = useLocale();
   const { can } = usePermission();
   const { confirmDelete } = useDialogs();
   const deleteLog = useDeleteLog();
-
-  const listState = useServerListState({
-    initialSort: "-created_at",
-    initialPageSize: 20,
-  });
-
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [draftFilters, setDraftFilters] = useState<EntityFilterValues>({});
-  const [appliedFilters, setAppliedFilters] = useState<EntityFilterValues>({});
   const [selected, setSelected] = useState<AppLog | null>(null);
 
+  const metaQuery = useQuery({
+    queryKey: logsKeys.meta(),
+    queryFn: () => logsService.meta(),
+    staleTime: 5 * 60_000,
+  });
   const sourcesQuery = useQuery({
     queryKey: logsKeys.sources(),
     queryFn: () => logsService.sources(),
     staleTime: 60_000,
   });
-
-  const listParams = useMemo<ListLogsParams>(() => {
-    const level = firstString(appliedFilters.level);
-    const source = firstString(appliedFilters.source);
-    const createdFrom = firstString(appliedFilters.created_from);
-    const createdTo = firstString(appliedFilters.created_to);
-
-    return {
-      ...listState.params,
-      q: listState.params.q,
-      level,
-      source,
-      created_from: createdFrom,
-      created_to: createdTo,
-    };
-  }, [appliedFilters, listState.params]);
-
-  const listQuery = useQuery({
-    queryKey: logsKeys.list(listParams),
-    queryFn: () => logsService.list(listParams),
-  });
-
-  const filterDefs = useMemo<EntityFilterDef[]>(
-    () => [
-      {
-        key: "level",
-        labelKey: "logs.columns.level",
-        variant: "select",
-        options: [
-          {
-            value: "debug",
-            label: t("logs.levels.debug"),
-            labelKey: "logs.levels.debug",
-          },
-          {
-            value: "warn",
-            label: t("logs.levels.warn"),
-            labelKey: "logs.levels.warn",
-          },
-          {
-            value: "error",
-            label: t("logs.levels.error"),
-            labelKey: "logs.levels.error",
-          },
-        ],
-      },
-      {
-        key: "source",
-        labelKey: "logs.columns.source",
-        variant: "select",
-        options: (sourcesQuery.data?.items ?? []).map((source) => ({
-          value: source,
-          label: source,
-        })),
-      },
-      {
-        key: "created_from",
-        labelKey: "logs.filters.created_from",
-        variant: "date",
-      },
-      {
-        key: "created_to",
-        labelKey: "logs.filters.created_to",
-        variant: "date",
-      },
-    ],
-    [sourcesQuery.data?.items, t],
+  const sourceOptions = useMemo(
+    () =>
+      (sourcesQuery.data?.items ?? []).map((source) => ({
+        value: source,
+        label: source,
+      })),
+    [sourcesQuery.data?.items],
   );
 
   const handleDelete = useCallback(
@@ -185,17 +116,20 @@ function LogsListPanel() {
     [confirmDelete, deleteLog, t],
   );
 
+  // Sortable: created_at, level, source (backend whitelist); message is not.
   const columns = useMemo<ColumnDef<AppLog>[]>(
     () => [
       createColumn<AppLog>({
         accessorKey: "level",
         labelKey: "logs.columns.level",
+        enableSorting: true,
         filterVariant: "faceted",
-        filterOptions: [
-          { value: "debug", label: t("logs.levels.debug") },
-          { value: "warn", label: t("logs.levels.warn") },
-          { value: "error", label: t("logs.levels.error") },
-        ],
+        param: "level",
+        filterOptions: LOG_LEVELS.map((value) => ({
+          value,
+          labelKey: `logs.levels.${value}`,
+          label: value,
+        })),
         cell: ({ row }) => (
           <StatusChip
             label={t(`logs.levels.${row.original.level}`)}
@@ -206,6 +140,8 @@ function LogsListPanel() {
       createColumn<AppLog>({
         accessorKey: "message",
         labelKey: "logs.columns.message",
+        enableSorting: false,
+        gridPrimary: true,
         cell: ({ row }) => (
           <span className="line-clamp-2 font-mono text-xs">
             {row.original.message}
@@ -215,11 +151,21 @@ function LogsListPanel() {
       createColumn<AppLog>({
         accessorKey: "source",
         labelKey: "logs.columns.source",
+        enableSorting: true,
+        // Single value (`source=`), options from /logs/sources.
+        filterVariant: "select",
+        param: "source",
+        filterOptions: sourceOptions,
+        enableColumnFilter: sourceOptions.length > 0,
+        gridSecondary: true,
         cell: ({ row }) => row.original.source || "—",
       }),
       createColumn<AppLog>({
         accessorKey: "created_at",
         labelKey: "logs.columns.created_at",
+        enableSorting: true,
+        filterVariant: "date-range",
+        param: "created",
         cell: ({ row }) =>
           format.dateTime(row.original.created_at, { seconds: true }),
       }),
@@ -227,6 +173,7 @@ function LogsListPanel() {
         id: "actions",
         labelKey: "common.actions",
         enableSorting: false,
+        enableHiding: false,
         cell: ({ row }) => (
           <EntityRowActions
             actions={[
@@ -252,16 +199,22 @@ function LogsListPanel() {
         ),
       }),
     ],
-    [can, handleDelete, t, format],
+    [can, handleDelete, sourceOptions, t, format],
   );
 
-  const pageCount = useMemo(() => {
-    const total = listQuery.data?.total ?? 0;
-    const size = listState.pagination.pageSize || 20;
-    return Math.max(1, Math.ceil(total / size));
-  }, [listQuery.data?.total, listState.pagination.pageSize]);
+  const listState = useServerListState({
+    columns,
+    initialSort: metaQuery.data?.default_sort ?? "-created_at",
+    initialPageSize: 20,
+    persistKey: LOGS_PERSIST_KEY,
+  });
+  const listParams: ListLogsParams = listState.params;
 
-  const activeFilterCount = countActiveFilters(appliedFilters);
+  const listQuery = useQuery({
+    queryKey: logsKeys.list(listParams),
+    queryFn: () => logsService.list(listParams),
+    placeholderData: (previous) => previous,
+  });
 
   return (
     <div className="space-y-6">
@@ -277,39 +230,15 @@ function LogsListPanel() {
         onRetry={() => void listQuery.refetch()}
         emptyTitle={t("logs.empty_title")}
         emptyDescription={t("logs.empty_description")}
-        pageCount={pageCount}
+        rowCount={listQuery.data?.total ?? 0}
         state={listState.tableState}
-        features={{ persistKey: "platform-logs-v1", rowSelection: false }}
+        features={{ persistKey: LOGS_PERSIST_KEY, rowSelection: false }}
         toolbarExtra={
           <EntityToolbar
             onRefresh={() => void listQuery.refetch()}
             refreshDisabled={listQuery.isFetching}
-            onFiltersOpen={() => {
-              setDraftFilters(appliedFilters);
-              setFiltersOpen(true);
-            }}
-            filtersActive={activeFilterCount > 0}
-            filtersLabel={
-              activeFilterCount > 0
-                ? `${t("entity.filters")} (${activeFilterCount})`
-                : t("entity.filters")
-            }
           />
         }
-      />
-
-      <EntityFilters
-        open={filtersOpen}
-        onOpenChange={setFiltersOpen}
-        title={t("logs.filters_title")}
-        description={t("logs.filters_description")}
-        filters={filterDefs}
-        values={draftFilters}
-        onChange={(key, value) =>
-          setDraftFilters((current) => ({ ...current, [key]: value }))
-        }
-        onReset={() => setDraftFilters({})}
-        onApply={() => setAppliedFilters(draftFilters)}
       />
 
       <LogDetailDrawer

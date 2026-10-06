@@ -53,5 +53,18 @@
   "confirm.organizations.suspend": "暂停 {{count}} 个组织？",
   "confirm.organizations.set_read_only": "将 {{count}} 个组织设为只读？",
   "confirm.organizations.extend_access": "延长 {{count}} 个组织的访问期限？",
-  "params.days": "天数"
+  "params.days": "天数",
+  "actions.catalog_products.set_category": "设置分类",
+  "params.category": "分类",
+  "actions.catalog_categories.activate": "启用",
+  "actions.catalog_categories.deactivate": "停用",
+  "actions.catalog_categories.delete": "删除",
+  "confirm.catalog_categories.deactivate": "停用所选分类？",
+  "confirm.catalog_categories.delete": "删除所选分类？仍有产品的分类将被跳过。",
+  "actions.vehicle_brands.activate": "启用",
+  "actions.vehicle_brands.deactivate": "停用",
+  "confirm.vehicle_brands.deactivate": "停用所选品牌？",
+  "actions.vehicle_models.activate": "启用",
+  "actions.vehicle_models.deactivate": "停用",
+  "confirm.vehicle_models.deactivate": "停用所选车型？"
 }

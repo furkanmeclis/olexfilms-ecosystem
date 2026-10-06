@@ -166,7 +166,7 @@ export function RoleForm({
 
   const permissionsQuery = useQuery({
     queryKey: rolesKeys.permissions(),
-    queryFn: () => rolesService.listPermissions({ limit: 200, offset: 0 }),
+    queryFn: () => rolesService.listPermissionCatalog(),
   });
 
   const permissionItems = useMemo(

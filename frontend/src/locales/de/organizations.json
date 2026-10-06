@@ -126,5 +126,9 @@
   "fields.timezone": "Zeitzone",
   "fields.timezone_hint": "Datum und Uhrzeit werden in dieser Zone angezeigt, sofern ein Benutzer keine eigene wählt.",
   "form.section_regional": "Sprache und Region",
-  "form.section_regional_desc": "Standardsprache und Zeitzone für Benutzer, Dokumente und Benachrichtigungen."
+  "form.section_regional_desc": "Standardsprache und Zeitzone für Benutzer, Dokumente und Benachrichtigungen.",
+  "columns.created_at": "Erstellt",
+  "columns.email": "E-Mail",
+  "detail.children": "Unterorganisationen",
+  "detail.children_empty": "Noch keine Unterorganisationen."
 }

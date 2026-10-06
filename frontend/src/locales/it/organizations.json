@@ -126,5 +126,9 @@
   "fields.timezone": "Fuso orario",
   "fields.timezone_hint": "Date e orari vengono mostrati in questo fuso, a meno che l'utente non ne scelga uno proprio.",
   "form.section_regional": "Lingua e regione",
-  "form.section_regional_desc": "Lingua e fuso orario predefiniti per utenti, documenti e notifiche."
+  "form.section_regional_desc": "Lingua e fuso orario predefiniti per utenti, documenti e notifiche.",
+  "columns.created_at": "Creata",
+  "columns.email": "E-mail",
+  "detail.children": "Sotto-organizzazioni",
+  "detail.children_empty": "Ancora nessuna sotto-organizzazione."
 }

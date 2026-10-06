@@ -69,5 +69,8 @@
   "status.failed": "Fallido",
   "toast.queued": "Exportación en cola. Recibirá una notificación cuando el archivo esté listo.",
   "toast.failed": "No se pudo iniciar la exportación. Revise los permisos y los filtros.",
-  "toast.download_failed": "No se pudo descargar el archivo."
+  "toast.download_failed": "No se pudo descargar el archivo.",
+  "status.queued": "En cola",
+  "status.expired": "Caducado",
+  "resources.platform.organizations": "Organizaciones"
 }

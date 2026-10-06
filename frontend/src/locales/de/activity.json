@@ -192,5 +192,7 @@
   "actions.stock.reclassification.cancelled": "Umklassifizierungsanfrage zurückgezogen",
   "resources.stock.reclassification": "Bestandsumklassifizierung",
   "actions.stock.split.created": "Rolle geteilt",
-  "resources.stock.split": "Rollenteilung"
+  "resources.stock.split": "Rollenteilung",
+  "filters.actor": "Nach Benutzer filtern",
+  "resources.platform.organizations": "Organisationen"
 }

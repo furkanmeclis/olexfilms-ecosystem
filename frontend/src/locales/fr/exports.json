@@ -69,5 +69,8 @@
   "status.failed": "Échec",
   "toast.queued": "Export mis en file d'attente. Vous serez averti lorsque le fichier sera prêt.",
   "toast.failed": "Impossible de lancer l'export. Vérifiez les autorisations et les filtres.",
-  "toast.download_failed": "Impossible de télécharger le fichier."
+  "toast.download_failed": "Impossible de télécharger le fichier.",
+  "status.queued": "En file d’attente",
+  "status.expired": "Expiré",
+  "resources.platform.organizations": "Organisations"
 }

@@ -100,6 +100,10 @@ func readBody(w http.ResponseWriter, r *http.Request, dst any) (map[string]bool,
 }
 
 func writeError(w http.ResponseWriter, r *http.Request, err error) {
+	if response.QueryValidation(w, r, err) {
+		// TEC-369: list parameters (sort, filters) answer 400.
+		return
+	}
 	var verr *usecase.ValidationError
 	var conflict *usecase.ConflictError
 	switch {
@@ -181,9 +185,17 @@ func (h *Handler) ListBrands(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	items, total, err := h.svc.ListBrands(r.Context(), model.BrandFilter{
-		Q: q.Q, Active: active, Limit: q.Limit, Offset: q.Offset,
-	})
+	f := model.BrandFilter{Q: q.Q, Active: active, Limit: q.Limit, Offset: q.Offset}
+	var err error
+	if f.HasLogo, err = apiquery.Bool(r.URL.Query(), "has_logo"); err != nil {
+		writeError(w, r, err)
+		return
+	}
+	if f.Sort, err = apiquery.ResolveSort(q.Sort, model.BrandSort); err != nil {
+		writeError(w, r, err)
+		return
+	}
+	items, total, err := h.svc.ListBrands(r.Context(), f)
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -263,29 +275,82 @@ func (h *Handler) DeleteBrand(w http.ResponseWriter, r *http.Request) {
 // --- Models -----------------------------------------------------------------
 
 // ListModels serves GET /v1/vehicle-catalog/models: list/search by
-// "brand model" text, optionally inside one brand (brand_uuid).
+// "brand model" text, optionally inside one brand (brand_uuid). TEC-369:
+// sort, body_type / powertrain (CSV), year_min / year_max.
 func (h *Handler) ListModels(w http.ResponseWriter, r *http.Request) {
-	q := apiquery.Parse(r.URL.Query())
-	active, onlyActiveBrands, ok := readerActive(w, r)
+	f, ok := h.modelFilter(w, r)
 	if !ok {
 		return
-	}
-	f := model.ModelFilter{Q: q.Q, Active: active, OnlyActiveBrands: onlyActiveBrands, Limit: q.Limit, Offset: q.Offset}
-	if raw := strings.TrimSpace(r.URL.Query().Get("brand_uuid")); raw != "" {
-		id, err := uuid.Parse(raw)
-		if err != nil {
-			response.ErrorWithDetails(w, r, http.StatusBadRequest, response.CodeValidationError, "brand_uuid is invalid",
-				[]response.Detail{{Field: "brand_uuid", Message: "must be a uuid", Code: "invalid"}})
-			return
-		}
-		f.BrandUUID = &id
 	}
 	items, total, err := h.svc.ListModels(r.Context(), f)
 	if err != nil {
 		writeError(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, f.Limit, f.Offset))
+}
+
+// ModelFacets serves GET /v1/vehicle-catalog/models/facets (TEC-369): the
+// distinct body_type and powertrain values with counts, for the faceted
+// filters of the model list. brand_uuid and active narrow it like the list.
+func (h *Handler) ModelFacets(w http.ResponseWriter, r *http.Request) {
+	f, ok := h.modelFilter(w, r)
+	if !ok {
+		return
+	}
+	out, err := h.svc.ModelFacets(r.Context(), f)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
+// Model years the year_min / year_max filter accepts (chk_car_models_year_*).
+const (
+	minModelYear = 1900
+	maxModelYear = 2100
+)
+
+func (h *Handler) modelFilter(w http.ResponseWriter, r *http.Request) (model.ModelFilter, bool) {
+	values := r.URL.Query()
+	q := apiquery.Parse(values)
+	active, onlyActiveBrands, ok := readerActive(w, r)
+	if !ok {
+		return model.ModelFilter{}, false
+	}
+	f := model.ModelFilter{
+		Q: q.Q, Active: active, OnlyActiveBrands: onlyActiveBrands, Limit: q.Limit, Offset: q.Offset,
+		BodyTypes: apiquery.CSVValues(values, "body_type"), Powertrains: apiquery.CSVValues(values, "powertrain"),
+	}
+	if raw := strings.TrimSpace(values.Get("brand_uuid")); raw != "" {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			response.ErrorWithDetails(w, r, http.StatusBadRequest, response.CodeValidationError, "brand_uuid is invalid",
+				[]response.Detail{{Field: "brand_uuid", Message: "must be a uuid", Code: "invalid"}})
+			return f, false
+		}
+		f.BrandUUID = &id
+	}
+	var err error
+	if f.Year, err = apiquery.NumRange(values, "year"); err != nil {
+		writeError(w, r, err)
+		return f, false
+	}
+	for _, b := range []struct {
+		key string
+		v   *float64
+	}{{"year_min", f.Year.Min}, {"year_max", f.Year.Max}} {
+		if b.v != nil && (*b.v != float64(int(*b.v)) || *b.v < minModelYear || *b.v > maxModelYear) {
+			response.ValidationError(w, r, []response.Detail{{Field: b.key, Message: "must be a year between 1900 and 2100", Code: "invalid"}})
+			return f, false
+		}
+	}
+	if f.Sort, err = apiquery.ResolveSort(q.Sort, model.ModelSort); err != nil {
+		writeError(w, r, err)
+		return f, false
+	}
+	return f, true
 }
 
 // GetModel serves GET /v1/vehicle-catalog/models/{uuid}.

@@ -192,5 +192,7 @@
   "actions.stock.reclassification.cancelled": "Demande de reclassement retirée",
   "resources.stock.reclassification": "Reclassement de stock",
   "actions.stock.split.created": "Rouleau découpé",
-  "resources.stock.split": "Découpe de rouleau"
+  "resources.stock.split": "Découpe de rouleau",
+  "filters.actor": "Filtrer par utilisateur",
+  "resources.platform.organizations": "Organisations"
 }

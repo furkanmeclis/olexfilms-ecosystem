@@ -69,5 +69,8 @@
   "status.failed": "Απέτυχε",
   "toast.queued": "Η εξαγωγή μπήκε σε ουρά. Θα ειδοποιηθείτε όταν το αρχείο είναι έτοιμο.",
   "toast.failed": "Δεν ήταν δυνατή η έναρξη της εξαγωγής. Ελέγξτε δικαιώματα και φίλτρα.",
-  "toast.download_failed": "Δεν ήταν δυνατή η λήψη του αρχείου."
+  "toast.download_failed": "Δεν ήταν δυνατή η λήψη του αρχείου.",
+  "status.queued": "Στην ουρά",
+  "status.expired": "Έληξε",
+  "resources.platform.organizations": "Οργανισμοί"
 }

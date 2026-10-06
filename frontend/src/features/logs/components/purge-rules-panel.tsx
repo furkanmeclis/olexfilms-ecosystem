@@ -1,6 +1,6 @@
 "use client";
 
-import { Play, Trash2 } from "lucide-react";
+import { Pencil, Play, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -11,9 +11,8 @@ import {
   EntityRowActions,
   EntityTable,
   EntityToolbar,
-  useServerListState,
 } from "@/components/entity";
-import { createColumn } from "@/components/tables";
+import { createColumn, type DataTableManual } from "@/components/tables";
 import { Badge } from "@/components/ui/badge";
 import { permissions } from "@/config/permissions";
 import { PurgeRuleFormDrawer } from "@/features/logs/components/purge-rule-form-drawer";
@@ -38,10 +37,20 @@ function intervalLabel(t: (key: string) => string, minutes: number) {
   return label === key ? `${minutes}m` : label;
 }
 
+export const PURGE_RULES_PERSIST_KEY = "platform-log-rules-v1";
+
+/** `GET /log-rules` returns the full array → client-side table. */
+const CLIENT_SIDE: DataTableManual = {
+  sorting: false,
+  filtering: false,
+  pagination: false,
+};
+
+const RULE_LEVELS = ["debug", "warn", "error"] as const;
+
 export function PurgeRulesPanel() {
   const { t, format } = useLocale();
   const { confirmDelete } = useDialogs();
-  const listState = useServerListState({ initialPageSize: 50 });
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<PurgeRule | null>(null);
 
@@ -82,6 +91,7 @@ export function PurgeRulesPanel() {
       createColumn<PurgeRule>({
         accessorKey: "name",
         labelKey: "logs.rules.columns.name",
+        gridPrimary: true,
         cell: ({ row }) => (
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium">{row.original.name}</span>
@@ -96,6 +106,9 @@ export function PurgeRulesPanel() {
       createColumn<PurgeRule>({
         accessorKey: "enabled",
         labelKey: "logs.rules.columns.enabled",
+        filterVariant: "boolean",
+        filterFn: (row, columnId, value: unknown) =>
+          value === undefined || row.getValue(columnId) === value,
         cell: ({ row }) => (
           <StatusChip
             label={
@@ -110,6 +123,19 @@ export function PurgeRulesPanel() {
       createColumn<PurgeRule>({
         accessorKey: "levels",
         labelKey: "logs.rules.columns.levels",
+        enableSorting: false,
+        filterVariant: "faceted",
+        filterOptions: RULE_LEVELS.map((value) => ({
+          value,
+          labelKey: `logs.levels.${value}`,
+          label: value,
+        })),
+        // A rule matches when it covers any of the selected levels.
+        filterFn: (row, _columnId, value: unknown) => {
+          const selected = value as string[] | undefined;
+          if (!selected?.length) return true;
+          return row.original.levels.some((level) => selected.includes(level));
+        },
         cell: ({ row }) =>
           row.original.levels
             .map((level) => t(`logs.levels.${level}`))
@@ -131,6 +157,7 @@ export function PurgeRulesPanel() {
       createColumn<PurgeRule>({
         accessorKey: "last_run_at",
         labelKey: "logs.rules.columns.last_run",
+        sortUndefined: "last",
         cell: ({ row }) =>
           row.original.last_run_at
             ? format.dateTime(row.original.last_run_at)
@@ -140,6 +167,7 @@ export function PurgeRulesPanel() {
         id: "actions",
         labelKey: "common.actions",
         enableSorting: false,
+        enableHiding: false,
         cell: ({ row }) => (
           <EntityRowActions
             actions={[
@@ -152,7 +180,8 @@ export function PurgeRulesPanel() {
               },
               {
                 id: "edit",
-                label: t("common.save"),
+                label: t("common.edit"),
+                icon: Pencil,
                 permission: permissions.logs.write,
                 onSelect: () => openEdit(row.original),
               },
@@ -176,14 +205,6 @@ export function PurgeRulesPanel() {
     [handleDelete, openEdit, runRule, t, format],
   );
 
-  const pageCount = Math.max(
-    1,
-    Math.ceil(
-      (rulesQuery.data?.items.length ?? 0) /
-        (listState.pagination.pageSize || 50),
-    ),
-  );
-
   return (
     <>
       <EntityTable
@@ -195,9 +216,11 @@ export function PurgeRulesPanel() {
         onRetry={() => void rulesQuery.refetch()}
         emptyTitle={t("logs.rules.empty_title")}
         emptyDescription={t("logs.rules.empty_description")}
-        pageCount={pageCount}
-        state={listState.tableState}
-        features={{ persistKey: "platform-log-rules-v1", rowSelection: false }}
+        manual={CLIENT_SIDE}
+        features={{
+          persistKey: PURGE_RULES_PERSIST_KEY,
+          rowSelection: false,
+        }}
         toolbarExtra={
           <>
             <EntityCreateButton

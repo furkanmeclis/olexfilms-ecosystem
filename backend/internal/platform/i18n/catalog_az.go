@@ -66,6 +66,7 @@ var azCatalog = map[string]string{
 	"export.document":                                  "İxrac",
 	"export.generated_at":                              "Yaradılma vaxtı",
 	"export.title.platform.users":                      "İstifadəçilərin ixracı",
+	"export.title.platform.organizations":              "Təşkilatların ixracı",
 	"export.title.platform.roles":                      "Rolların ixracı",
 	"export.title.platform.notifications":              "Bildirişlərin ixracı",
 	"export.title.platform.activity":                   "Fəaliyyət jurnalının ixracı",

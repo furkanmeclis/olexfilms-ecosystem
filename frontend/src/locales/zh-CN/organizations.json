@@ -126,5 +126,9 @@
   "fields.timezone": "时区",
   "fields.timezone_hint": "除非用户自行选择，日期和时间将按此时区显示。",
   "form.section_regional": "语言与地区",
-  "form.section_regional_desc": "用户、文件和通知的默认语言与时区。"
+  "form.section_regional_desc": "用户、文件和通知的默认语言与时区。",
+  "columns.created_at": "创建时间",
+  "columns.email": "电子邮箱",
+  "detail.children": "下级组织",
+  "detail.children_empty": "暂无下级组织。"
 }

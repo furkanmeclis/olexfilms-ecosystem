@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 
@@ -17,28 +17,25 @@ import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { ResourceIOToolbar } from "@/features/io/components/resource-io-toolbar";
 import { formatActivityResource } from "@/features/io/lib/display";
+import {
+  ACTIVITY_ACTION_OPTIONS,
+  ACTIVITY_RESOURCE_OPTIONS,
+} from "@/features/io/lib/filter-options";
 import { ioKeys } from "@/features/io/hooks/query-keys";
 import {
   activityService,
   type ListActivityParams,
 } from "@/features/io/services/activity.service";
 import type { ActivityEvent } from "@/features/io/types";
+import { UserFilterCombobox } from "@/features/users/components/user-filter-combobox";
 import { useLocale } from "@/providers/locale-provider";
+import { usePermission } from "@/providers/permission-provider";
+
+export const ACTIVITY_PERSIST_KEY = "platform-activity-v1";
 
 export function ActivityPage() {
   const { t, format } = useLocale();
-  const listState = useServerListState({
-    initialSort: "-created_at",
-    initialPageSize: 20,
-  });
-
-  const listParams = useMemo<ListActivityParams>(
-    () => ({
-      ...listState.params,
-      q: listState.params.q,
-    }),
-    [listState.params],
-  );
+  const { can } = usePermission();
 
   const metaQuery = useQuery({
     queryKey: ioKeys.activity.meta(),
@@ -46,16 +43,17 @@ export function ActivityPage() {
     staleTime: 5 * 60_000,
   });
 
-  const listQuery = useQuery({
-    queryKey: ioKeys.activity.list(listParams),
-    queryFn: () => activityService.list(listParams),
-  });
-
+  // Sortable: created_at, action, resource (backend whitelist).
   const columns = useMemo<ColumnDef<ActivityEvent>[]>(
     () => [
       createColumn<ActivityEvent>({
         accessorKey: "action",
         labelKey: "activity.columns.action",
+        enableSorting: true,
+        filterVariant: "faceted",
+        param: "action",
+        filterOptions: ACTIVITY_ACTION_OPTIONS,
+        gridPrimary: true,
         cell: ({ row }) => {
           const key = `activity.actions.${row.original.action}`;
           const label = t(key);
@@ -74,27 +72,72 @@ export function ActivityPage() {
       createColumn<ActivityEvent>({
         accessorKey: "resource",
         labelKey: "activity.columns.resource",
+        enableSorting: true,
+        filterVariant: "faceted",
+        param: "resource",
+        filterOptions: ACTIVITY_RESOURCE_OPTIONS,
+        gridSecondary: true,
         cell: ({ row }) => formatActivityResource(t, row.original.resource),
       }),
       createColumn<ActivityEvent>({
+        // Filter value = user uuid, set from the toolbar user picker.
+        id: "actor",
         accessorKey: "actor_user_id",
         labelKey: "activity.columns.actor",
+        enableSorting: false,
+        enableColumnFilter: false,
+        param: "actor",
+        paramFormat: "string",
         cell: ({ row }) => row.original.actor_user_id ?? "—",
       }),
       createColumn<ActivityEvent>({
         accessorKey: "created_at",
         labelKey: "activity.columns.created_at",
+        enableSorting: true,
+        filterVariant: "date-range",
+        param: "created",
         cell: ({ row }) => format.dateTime(row.original.created_at),
       }),
     ],
     [t, format],
   );
 
-  const pageCount = useMemo(() => {
-    const total = listQuery.data?.total ?? 0;
-    const size = listState.pagination.pageSize || 20;
-    return Math.max(1, Math.ceil(total / size));
-  }, [listQuery.data?.total, listState.pagination.pageSize]);
+  const listState = useServerListState({
+    columns,
+    initialSort: metaQuery.data?.default_sort ?? "-created_at",
+    initialPageSize: 20,
+    persistKey: ACTIVITY_PERSIST_KEY,
+  });
+  const listParams: ListActivityParams = listState.params;
+
+  const listQuery = useQuery({
+    queryKey: ioKeys.activity.list(listParams),
+    queryFn: () => activityService.list(listParams),
+    placeholderData: (previous) => previous,
+  });
+
+  // The export applies the same filters and sort.
+  const exportQuery = useMemo(
+    () => ({
+      ...listState.filterParams,
+      q: listParams.q,
+      sort: listParams.sort,
+    }),
+    [listState.filterParams, listParams.q, listParams.sort],
+  );
+
+  const actorUuid =
+    (listState.columnFilters.find((filter) => filter.id === "actor")?.value as
+      string | undefined) ?? "";
+  const { onColumnFiltersChange } = listState;
+  const setActor = useCallback(
+    (uuid: string) =>
+      onColumnFiltersChange((current) => [
+        ...current.filter((filter) => filter.id !== "actor"),
+        ...(uuid ? [{ id: "actor", value: uuid }] : []),
+      ]),
+    [onColumnFiltersChange],
+  );
 
   return (
     <EntityPage
@@ -121,14 +164,22 @@ export function ActivityPage() {
         onRetry={() => void listQuery.refetch()}
         emptyTitle={t("activity.empty_title")}
         emptyDescription={t("activity.empty_description")}
-        pageCount={pageCount}
+        rowCount={listQuery.data?.total ?? 0}
         state={listState.tableState}
-        features={{ persistKey: "platform-activity-v1", rowSelection: false }}
+        features={{ persistKey: ACTIVITY_PERSIST_KEY, rowSelection: false }}
         toolbarExtra={
           <>
+            {can(permissions.users.read) ? (
+              <UserFilterCombobox
+                value={actorUuid}
+                onValueChange={setActor}
+                placeholder={t("activity.filters.actor")}
+                className="h-8 w-56"
+              />
+            ) : null}
             <ResourceIOToolbar
               resource="platform.activity"
-              query={{ q: listParams.q }}
+              query={exportQuery}
               capabilities={metaQuery.data?.capabilities}
             />
             <EntityToolbar

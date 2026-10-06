@@ -55,5 +55,7 @@
   "delete_description": "Eliminare il ruolo «{{name}}»? Gli utenti mantengono gli altri ruoli; l'operazione è irreversibile.",
   "toast.created": "Ruolo creato",
   "toast.updated": "Ruolo aggiornato",
-  "toast.deleted": "Ruolo eliminato"
+  "toast.deleted": "Ruolo eliminato",
+  "labels.custom": "Personalizzato",
+  "fields.created_at": "Creato"
 }

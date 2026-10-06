@@ -126,5 +126,9 @@
   "fields.timezone": "Saat dilimi",
   "fields.timezone_hint": "Kullanıcı kendi dilimini seçmediyse tarih ve saatler bu dilimde gösterilir.",
   "form.section_regional": "Dil ve bölge",
-  "form.section_regional_desc": "Kullanıcılar, belgeler ve bildirimler için varsayılan dil ve saat dilimi."
+  "form.section_regional_desc": "Kullanıcılar, belgeler ve bildirimler için varsayılan dil ve saat dilimi.",
+  "columns.created_at": "Oluşturulma",
+  "columns.email": "E-posta",
+  "detail.children": "Alt işletmeler",
+  "detail.children_empty": "Henüz alt işletme yok."
 }

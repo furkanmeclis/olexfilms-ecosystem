@@ -53,5 +53,18 @@
   "confirm.organizations.suspend": "Да се спрат ли {{count}} организации?",
   "confirm.organizations.set_read_only": "Да се направят ли {{count}} организации само за четене?",
   "confirm.organizations.extend_access": "Да се удължи ли достъпът на {{count}} организации?",
-  "params.days": "Дни"
+  "params.days": "Дни",
+  "actions.catalog_products.set_category": "Задай категория",
+  "params.category": "Категория",
+  "actions.catalog_categories.activate": "Активирай",
+  "actions.catalog_categories.deactivate": "Деактивирай",
+  "actions.catalog_categories.delete": "Изтрий",
+  "confirm.catalog_categories.deactivate": "Да се деактивират ли избраните категории?",
+  "confirm.catalog_categories.delete": "Да се изтрият ли избраните категории? Категориите с продукти се пропускат.",
+  "actions.vehicle_brands.activate": "Активирай",
+  "actions.vehicle_brands.deactivate": "Деактивирай",
+  "confirm.vehicle_brands.deactivate": "Да се деактивират ли избраните марки?",
+  "actions.vehicle_models.activate": "Активирай",
+  "actions.vehicle_models.deactivate": "Деактивирай",
+  "confirm.vehicle_models.deactivate": "Да се деактивират ли избраните модели?"
 }

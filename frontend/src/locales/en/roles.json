@@ -55,5 +55,7 @@
   "delete_description": "Delete role \"{{name}}\"? Users keep their other roles; this cannot be undone.",
   "toast.created": "Role created",
   "toast.updated": "Role updated",
-  "toast.deleted": "Role deleted"
+  "toast.deleted": "Role deleted",
+  "labels.custom": "Custom",
+  "fields.created_at": "Created"
 }

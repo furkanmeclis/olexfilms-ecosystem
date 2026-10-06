@@ -75,10 +75,16 @@ export type OrganizationListResult = {
   offset: number;
 };
 
+/** `GET /v1/platform/organizations` params; status/type/plan_code are CSV. */
 export type ListOrganizationsParams = ServerListParams & {
   status?: string;
-  type?: OrganizationType;
+  type?: string;
+  plan_code?: string;
   parent_uuid?: string;
+  access_ends_from?: string;
+  access_ends_to?: string;
+  created_from?: string;
+  created_to?: string;
 };
 
 export type CreatePlatformOrganizationRequest = {
@@ -206,7 +212,12 @@ export const organizationsService = {
           q: params.q,
           status: params.status,
           type: params.type,
+          plan_code: params.plan_code,
           parent_uuid: params.parent_uuid,
+          access_ends_from: params.access_ends_from,
+          access_ends_to: params.access_ends_to,
+          created_from: params.created_from,
+          created_to: params.created_to,
         },
       },
     );

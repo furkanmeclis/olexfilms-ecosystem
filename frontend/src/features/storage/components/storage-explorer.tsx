@@ -3,8 +3,14 @@
 import { Menu } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
+import type { OnChangeFn, RowSelectionState } from "@tanstack/react-table";
+
 import { ErrorState } from "@/components/common/error-state";
-import { EntityPage } from "@/components/entity";
+import {
+  EntityPage,
+  EntityTable,
+  useServerListState,
+} from "@/components/entity";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -18,8 +24,12 @@ import { StorageConfirmDialog } from "@/features/storage/components/storage-conf
 import type { StorageAction } from "@/features/storage/components/storage-context-menu";
 import { StorageDetailsPanel } from "@/features/storage/components/storage-details";
 import { StorageEmptyState } from "@/features/storage/components/storage-empty-state";
-import { StorageFileGrid } from "@/features/storage/components/storage-file-grid";
-import { StorageFileList } from "@/features/storage/components/storage-file-list";
+import {
+  STORAGE_FILES_PERSIST_KEY,
+  STORAGE_FILTER_PARAMS,
+  StorageFileCard,
+  useStorageColumns,
+} from "@/features/storage/components/storage-file-table";
 import {
   StorageInputDialog,
   type InputMode,
@@ -50,7 +60,11 @@ import { useStorageUpload } from "@/features/storage/hooks/use-storage-upload";
 import { joinKey } from "@/features/storage/lib/format";
 import { isPreviewable } from "@/features/storage/lib/preview";
 import { storageService } from "@/features/storage/services/storage.service";
-import type { StorageObject, StorageView } from "@/features/storage/types";
+import type {
+  ListStorageParams,
+  StorageObject,
+  StorageView,
+} from "@/features/storage/types";
 import { usePermission } from "@/providers/permission-provider";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
@@ -62,13 +76,6 @@ export function StorageExplorer() {
 
   const [view, setView] = useState<StorageView>("all");
   const [prefix, setPrefix] = useState("");
-  const [query, setQuery] = useState("");
-  const [sort, setSort] = useState("name");
-  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
-  const [kind, setKind] = useState("");
-  const [access, setAccess] = useState("");
-  const [modifiedFrom, setModifiedFrom] = useState("");
-  const [modifiedTo, setModifiedTo] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [detail, setDetail] = useState<StorageObject | null>(null);
   const [preview, setPreview] = useState<StorageObject | null>(null);
@@ -84,21 +91,35 @@ export function StorageExplorer() {
   );
   const [mobileNav, setMobileNav] = useState(false);
 
-  const listParams = useMemo(
+  // Server list state: q, sort (name/size/updated_at/type), kind/access/
+  // modified filters and paging (the API caps a page at 100 objects).
+  const listState = useServerListState({
+    filterParams: STORAGE_FILTER_PARAMS,
+    initialSort: "name",
+    initialPageSize: 50,
+    persistKey: STORAGE_FILES_PERSIST_KEY,
+  });
+  const { setPagination } = listState;
+  const query = listState.params.q ?? "";
+  const listParams = useMemo<ListStorageParams>(
     () => ({
+      ...listState.params,
       prefix: view === "all" ? prefix : undefined,
       view,
-      q: query || undefined,
-      kind: kind || undefined,
-      access: access || undefined,
-      sort,
-      modified_from: modifiedFrom || undefined,
-      modified_to: modifiedTo || undefined,
-      limit: 100,
-      offset: 0,
       recursive: Boolean(query),
     }),
-    [prefix, view, query, kind, access, sort, modifiedFrom, modifiedTo],
+    [listState.params, prefix, query, view],
+  );
+
+  // Changing folder / view starts at the first page with no selection.
+  const navigate = useCallback(
+    (next: { view?: StorageView; prefix: string }) => {
+      if (next.view) setView(next.view);
+      setPrefix(next.prefix);
+      setSelected(new Set());
+      setPagination((current) => ({ ...current, pageIndex: 0 }));
+    },
+    [setPagination],
   );
 
   const listQuery = useStorageFiles(listParams);
@@ -119,20 +140,31 @@ export function StorageExplorer() {
   );
   const trash = view === "trash";
 
-  const toggleSelect = useCallback((key: string, checked: boolean) => {
-    setSelected((current) => {
-      const next = new Set(current);
-      if (checked) next.add(key);
-      else next.delete(key);
-      return next;
-    });
-  }, []);
+  const rowSelection = useMemo<RowSelectionState>(
+    () => Object.fromEntries([...selected].map((key) => [key, true])),
+    [selected],
+  );
+  const onRowSelectionChange: OnChangeFn<RowSelectionState> = useCallback(
+    (updater) => {
+      setSelected((current) => {
+        const prev = Object.fromEntries([...current].map((key) => [key, true]));
+        const next = typeof updater === "function" ? updater(prev) : updater;
+        return new Set(
+          Object.entries(next)
+            .filter(([, on]) => on)
+            .map(([key]) => key),
+        );
+      });
+    },
+    [],
+  );
 
   const openItem = useCallback(
     (item: StorageObject) => {
       if (item.kind === "folder" && view === "all") {
-        setPrefix(item.key.endsWith("/") ? item.key : `${item.key}/`);
-        setSelected(new Set());
+        navigate({
+          prefix: item.key.endsWith("/") ? item.key : `${item.key}/`,
+        });
         return;
       }
       if (item.kind === "file" && isPreviewable(item)) {
@@ -141,7 +173,7 @@ export function StorageExplorer() {
       }
       setDetail(item);
     },
-    [view],
+    [navigate, view],
   );
 
   const openShare = useCallback(
@@ -225,6 +257,18 @@ export function StorageExplorer() {
     [openItem, openShare, restoreFiles, starFile, t],
   );
 
+  const columns = useStorageColumns({
+    canWrite,
+    trash,
+    onAction: handleAction,
+  });
+  const emptyFolder =
+    items.length === 0 &&
+    !listQuery.isLoading &&
+    !query &&
+    listState.columnFilters.length === 0 &&
+    listState.pagination.pageIndex === 0;
+
   const handleInputSubmit = useCallback(
     (value: string) => {
       if (inputMode === "folder") {
@@ -280,11 +324,7 @@ export function StorageExplorer() {
         <div className="hidden lg:block">
           <StorageSidebar
             view={view}
-            onViewChange={(next) => {
-              setView(next);
-              setPrefix("");
-              setSelected(new Set());
-            }}
+            onViewChange={(next) => navigate({ view: next, prefix: "" })}
             usage={usageQuery.data}
           />
         </div>
@@ -303,10 +343,7 @@ export function StorageExplorer() {
               {view === "all" ? (
                 <StorageBreadcrumb
                   prefix={prefix}
-                  onNavigate={(next) => {
-                    setPrefix(next);
-                    setSelected(new Set());
-                  }}
+                  onNavigate={(next) => navigate({ prefix: next })}
                 />
               ) : (
                 <p className="text-sm font-medium">
@@ -316,20 +353,6 @@ export function StorageExplorer() {
             </div>
             <StorageToolbar
               view={view}
-              query={query}
-              sort={sort}
-              viewMode={viewMode}
-              kind={kind}
-              access={access}
-              modifiedFrom={modifiedFrom}
-              modifiedTo={modifiedTo}
-              onQueryChange={setQuery}
-              onSortChange={setSort}
-              onViewModeChange={setViewMode}
-              onKindChange={setKind}
-              onAccessChange={setAccess}
-              onModifiedFromChange={setModifiedFrom}
-              onModifiedToChange={setModifiedTo}
               onNewFolder={() => setInputMode("folder")}
               onUpload={() =>
                 document.getElementById("storage-file-input")?.click()
@@ -414,7 +437,9 @@ export function StorageExplorer() {
                 onRetry={() => void listQuery.refetch()}
                 retryLabel={t("storage.retry")}
               />
-            ) : items.length === 0 && !listQuery.isLoading ? (
+            ) : emptyFolder ? (
+              // Unfiltered empty folder/view: upload hint. Searches and
+              // filters keep the table (and its reset controls) visible.
               <StorageEmptyState
                 view={view}
                 canWrite={canWrite}
@@ -422,27 +447,34 @@ export function StorageExplorer() {
                   document.getElementById("storage-file-input")?.click()
                 }
               />
-            ) : viewMode === "grid" ? (
-              <StorageFileGrid
-                items={items}
-                loading={listQuery.isLoading}
-                selected={selected}
-                canWrite={canWrite}
-                trash={trash}
-                onToggle={toggleSelect}
-                onOpen={openItem}
-                onAction={handleAction}
-              />
             ) : (
-              <StorageFileList
-                items={items}
-                loading={listQuery.isLoading}
-                selected={selected}
-                canWrite={canWrite}
-                trash={trash}
-                onToggle={toggleSelect}
-                onOpen={openItem}
-                onAction={handleAction}
+              <EntityTable
+                columns={columns}
+                data={items}
+                getRowId={(row) => row.key}
+                onRowClick={openItem}
+                isLoading={listQuery.isLoading}
+                emptyTitle={t("storage.empty_title")}
+                emptyDescription=""
+                rowCount={listQuery.data?.total ?? 0}
+                pageSizeOptions={[25, 50, 100]}
+                state={{
+                  ...listState.tableState,
+                  rowSelection,
+                  onRowSelectionChange,
+                }}
+                features={{
+                  persistKey: STORAGE_FILES_PERSIST_KEY,
+                  rowSelection: true,
+                }}
+                renderGridItem={(item) => (
+                  <StorageFileCard
+                    item={item}
+                    canWrite={canWrite}
+                    trash={trash}
+                    onAction={handleAction}
+                  />
+                )}
               />
             )}
           </div>
@@ -551,9 +583,7 @@ export function StorageExplorer() {
           <StorageSidebar
             view={view}
             onViewChange={(next) => {
-              setView(next);
-              setPrefix("");
-              setSelected(new Set());
+              navigate({ view: next, prefix: "" });
               setMobileNav(false);
             }}
             usage={usageQuery.data}
