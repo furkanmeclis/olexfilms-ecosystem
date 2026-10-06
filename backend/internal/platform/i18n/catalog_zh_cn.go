@@ -66,6 +66,7 @@ var zhCNCatalog = map[string]string{
 	"export.document":                                  "导出",
 	"export.generated_at":                              "生成时间",
 	"export.title.platform.users":                      "用户导出",
+	"export.title.platform.organizations":              "组织导出",
 	"export.title.platform.roles":                      "角色导出",
 	"export.title.platform.notifications":              "通知导出",
 	"export.title.platform.activity":                   "操作日志导出",

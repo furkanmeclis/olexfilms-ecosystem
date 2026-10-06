@@ -66,6 +66,7 @@ var ruCatalog = map[string]string{
 	"export.document":                                  "Экспорт",
 	"export.generated_at":                              "Сформировано",
 	"export.title.platform.users":                      "Экспорт пользователей",
+	"export.title.platform.organizations":              "Экспорт организаций",
 	"export.title.platform.roles":                      "Экспорт ролей",
 	"export.title.platform.notifications":              "Экспорт уведомлений",
 	"export.title.platform.activity":                   "Экспорт журнала действий",
