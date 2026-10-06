@@ -139,6 +139,17 @@ func (h *Handler) Countries(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, map[string]any{"items": items})
 }
 
+// PublicCountries lists the active countries (GET /v1/public/geo/countries);
+// unlike Countries it never includes the hidden ones.
+func (h *Handler) PublicCountries(w http.ResponseWriter, r *http.Request) {
+	items, err := h.svc.Countries(r.Context(), false)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, map[string]any{"items": items})
+}
+
 // Provinces lists a country's provinces (GET /v1/geo/countries/{iso2}/provinces).
 func (h *Handler) Provinces(w http.ResponseWriter, r *http.Request) {
 	items, err := h.svc.Provinces(r.Context(), r.PathValue("iso2"))

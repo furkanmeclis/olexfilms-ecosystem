@@ -70,4 +70,5 @@ func RegisterPublicRoutes(mux *http.ServeMux, h *handler.Public) {
 	mux.HandleFunc("POST /v1/public/dealer-applications", h.Submit)
 	mux.HandleFunc("GET /v1/public/quotes/{token}", h.Quote)
 	mux.HandleFunc("GET /v1/public/quotes/{token}/pdf", h.QuotePDF)
+	mux.HandleFunc("GET /v1/public/quotes/{token}/pdf/file", h.QuotePDFFile)
 }

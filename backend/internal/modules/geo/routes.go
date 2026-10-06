@@ -24,6 +24,12 @@ func RegisterRoutes(mux *http.ServeMux, h *geohandler.Handler, tokens *jwt.Manag
 	mux.Handle("GET /v1/geo/countries/{iso2}/provinces", signedIn(h.Provinces))
 	mux.Handle("GET /v1/geo/provinces/{id}/districts", signedIn(h.Districts))
 
+	// Anonymous pickers (TEC-320) for the public dealer application form:
+	// active countries only, reference data without personal fields.
+	mux.HandleFunc("GET /v1/public/geo/countries", h.PublicCountries)
+	mux.HandleFunc("GET /v1/public/geo/countries/{iso2}/provinces", h.Provinces)
+	mux.HandleFunc("GET /v1/public/geo/provinces/{id}/districts", h.Districts)
+
 	mux.Handle("PATCH /v1/platform/geo/countries/{iso2}", platform(h.PatchCountry, rbac.PermPlatformGeoWrite))
 	mux.Handle("POST /v1/platform/geo/countries/{iso2}/provinces", platform(h.CreateProvince, rbac.PermPlatformGeoWrite))
 	mux.Handle("DELETE /v1/platform/geo/provinces/{id}", platform(h.DeleteProvince, rbac.PermPlatformGeoWrite))

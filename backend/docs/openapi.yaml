@@ -12781,6 +12781,60 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/public/geo/countries:
+    get:
+      tags: [Geo]
+      operationId: listPublicCountries
+      summary: Active countries for anonymous pickers (TEC-320)
+      description: |
+        No authentication. Same items as `GET /v1/geo/countries` but always
+        active countries only (`all` is ignored). Used by the public
+        `/bayi-basvuru` form.
+      security: []
+      responses:
+        "200":
+          description: Countries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCountryList"
+
+  /v1/public/geo/countries/{iso2}/provinces:
+    get:
+      tags: [Geo]
+      operationId: listPublicProvinces
+      summary: Provinces of a country for anonymous pickers (TEC-320)
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/CountryISO2"
+      responses:
+        "200":
+          description: Provinces
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeProvinceList"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/public/geo/provinces/{id}/districts:
+    get:
+      tags: [Geo]
+      operationId: listPublicDistricts
+      summary: Districts of a province for anonymous pickers (TEC-320)
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/GeoID"
+      responses:
+        "200":
+          description: Districts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDistrictList"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/platform/geo/countries/{iso2}:
     patch:
       tags: [Geo]
@@ -20291,6 +20345,42 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/EnvelopeDocumentRender" }
+        "202":
+          description: Quote PDF render queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeDocumentRender" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /v1/public/quotes/{token}/pdf/file:
+    get:
+      tags: [Leads]
+      operationId: downloadPublicQuotePdf
+      summary: Download the public quote PDF (TEC-320)
+      description: |
+        No authentication. Requests (or finds) the quote PDF render like
+        `/pdf` and, once it is ready, answers the PDF bytes; while the
+        render is queued it answers 202 with the render so the caller can
+        retry. The `download_url` of `/pdf` needs a tenant session, so the
+        public `/teklif/{token}` page downloads through here. Shares the
+        per-IP limit of `/pdf`.
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: locale
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: Quote PDF
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
         "202":
           description: Quote PDF render queued
           content:

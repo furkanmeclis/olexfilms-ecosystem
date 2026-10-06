@@ -4,8 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -46,6 +49,12 @@ type PublicQuotes interface {
 	PublicQuoteOwner(ctx context.Context, brandID int64, token uuid.UUID) (uuid.UUID, int64, int64, error)
 }
 
+// QuoteFiles reads the bytes of a ready render (documents usecase); the
+// public PDF file route streams it to anonymous visitors (TEC-320).
+type QuoteFiles interface {
+	Download(ctx context.Context, organizationID int64, id uuid.UUID) (io.ReadCloser, string, error)
+}
+
 // RateLimits caps the form: IPLimit hits per window per client IP (counted
 // before validation) and PhoneLimit stored applications per window per
 // E.164 phone. Zero disables a limit.
@@ -60,6 +69,7 @@ type Public struct {
 	apps    Applications
 	quotes  PublicQuotes
 	docs    DocumentRenderer
+	files   QuoteFiles
 	limiter Limiter
 	limits  RateLimits
 }
@@ -69,10 +79,14 @@ func NewPublic(apps Applications, limiter Limiter, limits RateLimits) *Public {
 	return &Public{apps: apps, limiter: limiter, limits: limits}
 }
 
-// WithQuotes enables /v1/public/quotes/{token}.
+// WithQuotes enables /v1/public/quotes/{token}. When docs can also read
+// render bytes (QuoteFiles), /pdf/file serves the PDF itself.
 func (h *Public) WithQuotes(quotes PublicQuotes, docs DocumentRenderer) *Public {
 	h.quotes = quotes
 	h.docs = docs
+	if files, ok := docs.(QuoteFiles); ok {
+		h.files = files
+	}
 	return h
 }
 
@@ -200,33 +214,8 @@ func (h *Public) Quote(w http.ResponseWriter, r *http.Request) {
 
 // QuotePDF answers GET /v1/public/quotes/{token}/pdf.
 func (h *Public) QuotePDF(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "no-store")
-	w.Header().Set("X-Robots-Tag", "noindex, nofollow")
-	if h.quotes == nil || h.docs == nil {
-		response.NotFound(w, r, quoteNotFound)
-		return
-	}
-	if !h.allow(w, r, quotePublicAction+"_pdf", clientIP(r), h.limits.IPLimit) {
-		return
-	}
-	token, b, ok := h.publicQuoteToken(w, r)
+	v, ready, _, ok := h.quoteRender(w, r)
 	if !ok {
-		return
-	}
-	quoteUUID, orgID, brandID, err := h.quotes.PublicQuoteOwner(r.Context(), b.ID, token)
-	if err != nil {
-		if errors.Is(err, usecase.ErrQuoteNotFound) {
-			response.NotFound(w, r, quoteNotFound)
-			return
-		}
-		response.InternalErr(w, r, err, "quote public pdf failed")
-		return
-	}
-	v, ready, err := h.docs.RequestRender(r.Context(), docmodel.Viewer{
-		OrganizationID: orgID, BrandID: brandID, System: true,
-	}, docusecase.RenderInput{Kind: docmodel.KindQuote, SourceID: quoteUUID.String(), Locale: r.URL.Query().Get("locale")})
-	if err != nil {
-		response.InternalErr(w, r, err, "quote public pdf failed")
 		return
 	}
 	status := http.StatusAccepted
@@ -234,6 +223,70 @@ func (h *Public) QuotePDF(w http.ResponseWriter, r *http.Request) {
 		status = http.StatusOK
 	}
 	response.JSON(w, r, status, v)
+}
+
+// QuotePDFFile answers GET /v1/public/quotes/{token}/pdf/file (TEC-320):
+// the PDF bytes once the render is ready, else 202 with the queued render
+// so the caller can retry. The tenant download_url needs a session, so the
+// public page downloads through here. Same limit bucket as /pdf.
+func (h *Public) QuotePDFFile(w http.ResponseWriter, r *http.Request) {
+	if h.files == nil {
+		w.Header().Set("Cache-Control", "no-store")
+		response.NotFound(w, r, quoteNotFound)
+		return
+	}
+	v, ready, orgID, ok := h.quoteRender(w, r)
+	if !ok {
+		return
+	}
+	if !ready {
+		response.JSON(w, r, http.StatusAccepted, v)
+		return
+	}
+	rc, name, err := h.files.Download(r.Context(), orgID, v.UUID)
+	if err != nil {
+		response.InternalErr(w, r, err, "quote public pdf failed")
+		return
+	}
+	defer func() { _ = rc.Close() }()
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"; filename*=UTF-8''%s`, name, url.PathEscape(name)))
+	_, _ = io.Copy(w, rc)
+}
+
+// quoteRender requests (or finds) the quote's PDF render for a public
+// token; on false the response is already written.
+func (h *Public) quoteRender(w http.ResponseWriter, r *http.Request) (docmodel.RenderView, bool, int64, bool) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("X-Robots-Tag", "noindex, nofollow")
+	if h.quotes == nil || h.docs == nil {
+		response.NotFound(w, r, quoteNotFound)
+		return docmodel.RenderView{}, false, 0, false
+	}
+	if !h.allow(w, r, quotePublicAction+"_pdf", clientIP(r), h.limits.IPLimit) {
+		return docmodel.RenderView{}, false, 0, false
+	}
+	token, b, ok := h.publicQuoteToken(w, r)
+	if !ok {
+		return docmodel.RenderView{}, false, 0, false
+	}
+	quoteUUID, orgID, brandID, err := h.quotes.PublicQuoteOwner(r.Context(), b.ID, token)
+	if err != nil {
+		if errors.Is(err, usecase.ErrQuoteNotFound) {
+			response.NotFound(w, r, quoteNotFound)
+			return docmodel.RenderView{}, false, 0, false
+		}
+		response.InternalErr(w, r, err, "quote public pdf failed")
+		return docmodel.RenderView{}, false, 0, false
+	}
+	v, ready, err := h.docs.RequestRender(r.Context(), docmodel.Viewer{
+		OrganizationID: orgID, BrandID: brandID, System: true,
+	}, docusecase.RenderInput{Kind: docmodel.KindQuote, SourceID: quoteUUID.String(), Locale: r.URL.Query().Get("locale")})
+	if err != nil {
+		response.InternalErr(w, r, err, "quote public pdf failed")
+		return docmodel.RenderView{}, false, 0, false
+	}
+	return v, ready, orgID, true
 }
 
 func (h *Public) publicQuoteToken(w http.ResponseWriter, r *http.Request) (uuid.UUID, brandctx.Brand, bool) {
