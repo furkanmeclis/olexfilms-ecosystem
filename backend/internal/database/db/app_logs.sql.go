@@ -340,8 +340,21 @@ WHERE (
     )
   AND ($4::timestamptz IS NULL OR created_at >= $4)
   AND ($5::timestamptz IS NULL OR created_at < $5)
-ORDER BY created_at DESC
-LIMIT $7 OFFSET $6
+ORDER BY
+  CASE WHEN NOT $6::bool AND $7::text = 'source' THEN source END ASC,
+  CASE WHEN $6::bool AND $7::text = 'source' THEN source END DESC,
+  -- level sorts by severity rank, not alphabetically.
+  CASE WHEN NOT $6::bool AND $7::text = 'level' THEN
+    CASE level WHEN 'debug' THEN 1 WHEN 'warn' THEN 2 WHEN 'error' THEN 3 END
+  END ASC,
+  CASE WHEN $6::bool AND $7::text = 'level' THEN
+    CASE level WHEN 'debug' THEN 1 WHEN 'warn' THEN 2 WHEN 'error' THEN 3 END
+  END DESC,
+  CASE WHEN NOT $6::bool AND $7::text = 'created_at' THEN created_at END ASC,
+  CASE WHEN $6::bool AND $7::text = 'created_at' THEN created_at END DESC,
+  CASE WHEN $6::bool THEN id END DESC,
+  id ASC
+LIMIT $9 OFFSET $8
 `
 
 type ListAppLogsParams struct {
@@ -350,10 +363,13 @@ type ListAppLogsParams struct {
 	Q           pgtype.Text        `json:"q"`
 	CreatedFrom pgtype.Timestamptz `json:"created_from"`
 	CreatedTo   pgtype.Timestamptz `json:"created_to"`
+	SortDesc    bool               `json:"sort_desc"`
+	SortKey     string             `json:"sort_key"`
 	OffsetCount int32              `json:"offset_count"`
 	LimitCount  int32              `json:"limit_count"`
 }
 
+// Sort: docs/list-contract.md, keys from apiquery.LogsSortSpec.
 func (q *Queries) ListAppLogs(ctx context.Context, arg ListAppLogsParams) ([]AppLog, error) {
 	rows, err := q.db.Query(ctx, listAppLogs,
 		arg.Levels,
@@ -361,6 +377,8 @@ func (q *Queries) ListAppLogs(ctx context.Context, arg ListAppLogsParams) ([]App
 		arg.Q,
 		arg.CreatedFrom,
 		arg.CreatedTo,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.OffsetCount,
 		arg.LimitCount,
 	)

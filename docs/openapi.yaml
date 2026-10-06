@@ -2610,16 +2610,23 @@ paths:
       tags: [Platform]
       operationId: getPlatformOrganizations
       summary: List organizations
+      description: |
+        Sortable (`sort`, one primary field, id tiebreak): name, slug, city, status,
+        access_ends_at (empty values last), created_at, updated_at. Default `-created_at`
+        (see `/v1/platform/organizations/meta` `default_sort`). Unknown field → 400.
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
         - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
         - name: status
           in: query
-          schema:
-            $ref: "#/components/schemas/OrganizationStatus"
+          description: >-
+            Comma-separated statuses (pending, active, read_only, suspended, expired),
+            e.g. `active,suspended`. Unknown value → 400.
+          schema: { type: string }
         - name: type
           in: query
           schema:
@@ -2852,7 +2859,10 @@ paths:
       tags: [Platform]
       operationId: getPlatformUsers
       summary: List platform users
-      description: Requires `super_admin` and `platform.users.read`.
+      description: |
+        Requires `super_admin` and `platform.users.read`.
+        Sortable (`sort`, one primary field, id tiebreak): email, name, surname, status,
+        created_at, updated_at. Default `-created_at`. Unknown field → 400.
       security:
         - bearerAuth: []
       parameters:
@@ -2862,6 +2872,13 @@ paths:
         - $ref: "#/components/parameters/Sort"
         - name: status
           in: query
+          description: >-
+            Comma-separated statuses (active, disabled, pending, anonymized),
+            e.g. `active,pending`. Unknown value → 400.
+          schema: { type: string }
+        - name: role
+          in: query
+          description: Role slug
           schema: { type: string }
         - name: is_super_admin
           in: query
@@ -3802,6 +3819,9 @@ paths:
       description: |
         Defaults to the caller's own notifications (`scope=me`).
         `platform.notifications.read_all` is required for `scope=all` or `user_uuid`.
+        Sortable (`sort`, one primary field, id tiebreak): channel, status, priority
+        (by severity), created_at, updated_at, sent_at (empty values last).
+        Default `-created_at`. Unknown field → 400.
       security:
         - bearerAuth: []
       parameters:
@@ -3811,6 +3831,9 @@ paths:
         - $ref: "#/components/parameters/Sort"
         - name: status
           in: query
+          description: >-
+            Comma-separated statuses (queued, processing, sent, delivered, read,
+            failed, cancelled). Unknown value → 400.
           schema: { type: string }
         - name: channel
           in: query
@@ -19944,7 +19967,10 @@ components:
     Sort:
       name: sort
       in: query
-      description: Comma-separated fields; prefix `-` for descending
+      description: >-
+        One primary sort field from the endpoint whitelist; prefix `-` for
+        descending. Extra comma-separated fields are validated but ignored.
+        Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md.
       schema: { type: string }
 
   responses:

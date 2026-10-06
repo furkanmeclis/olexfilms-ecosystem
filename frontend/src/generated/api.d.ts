@@ -1470,7 +1470,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List organizations */
+        /**
+         * List organizations
+         * @description Sortable (`sort`, one primary field, id tiebreak): name, slug, city, status,
+         *     access_ends_at (empty values last), created_at, updated_at. Default `-created_at`
+         *     (see `/v1/platform/organizations/meta` `default_sort`). Unknown field → 400.
+         */
         get: operations["getPlatformOrganizations"];
         put?: never;
         /** Create organization */
@@ -1561,6 +1566,8 @@ export interface paths {
         /**
          * List platform users
          * @description Requires `super_admin` and `platform.users.read`.
+         *     Sortable (`sort`, one primary field, id tiebreak): email, name, surname, status,
+         *     created_at, updated_at. Default `-created_at`. Unknown field → 400.
          */
         get: operations["getPlatformUsers"];
         put?: never;
@@ -2150,6 +2157,9 @@ export interface paths {
          * List platform notifications
          * @description Defaults to the caller's own notifications (`scope=me`).
          *     `platform.notifications.read_all` is required for `scope=all` or `user_uuid`.
+         *     Sortable (`sort`, one primary field, id tiebreak): channel, status, priority
+         *     (by severity), created_at, updated_at, sent_at (empty values last).
+         *     Default `-created_at`. Unknown field → 400.
          */
         get: operations["getPlatformNotifications"];
         put?: never;
@@ -19293,7 +19303,7 @@ export interface components {
         Limit: number;
         Offset: number;
         Q: string;
-        /** @description Comma-separated fields; prefix `-` for descending */
+        /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
         Sort: string;
     };
     requestBodies: never;
@@ -21584,7 +21594,10 @@ export interface operations {
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
                 q?: components["parameters"]["Q"];
-                status?: components["schemas"]["OrganizationStatus"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Comma-separated statuses (pending, active, read_only, suspended, expired), e.g. `active,suspended`. Unknown value → 400. */
+                status?: string;
                 type?: components["schemas"]["OrganizationType"];
                 parent_uuid?: string;
             };
@@ -21800,9 +21813,12 @@ export interface operations {
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
                 q?: components["parameters"]["Q"];
-                /** @description Comma-separated fields; prefix `-` for descending */
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
                 sort?: components["parameters"]["Sort"];
+                /** @description Comma-separated statuses (active, disabled, pending, anonymized), e.g. `active,pending`. Unknown value → 400. */
                 status?: string;
+                /** @description Role slug */
+                role?: string;
                 is_super_admin?: boolean;
             };
             header?: never;
@@ -22519,7 +22535,7 @@ export interface operations {
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
                 q?: components["parameters"]["Q"];
-                /** @description Comma-separated fields; prefix `-` for descending */
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
                 sort?: components["parameters"]["Sort"];
                 status?: string;
                 channel?: string;
@@ -22799,8 +22815,9 @@ export interface operations {
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
                 q?: components["parameters"]["Q"];
-                /** @description Comma-separated fields; prefix `-` for descending */
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
                 sort?: components["parameters"]["Sort"];
+                /** @description Comma-separated statuses (queued, processing, sent, delivered, read, failed, cancelled). Unknown value → 400. */
                 status?: string;
                 channel?: string;
                 /** @description me (default) or all (requires read_all) */

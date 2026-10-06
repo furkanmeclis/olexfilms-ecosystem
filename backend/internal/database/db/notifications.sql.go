@@ -54,7 +54,10 @@ func (q *Queries) CountNotificationsForUser(ctx context.Context, arg CountNotifi
 
 const countPlatformNotifications = `-- name: CountPlatformNotifications :one
 SELECT COUNT(*)::bigint FROM notifications
-WHERE ($1::text IS NULL OR status = $1)
+WHERE (
+    COALESCE(cardinality($1::text[]), 0) = 0
+    OR status = ANY ($1::text[])
+  )
   AND ($2::text IS NULL OR channel = $2)
   AND ($3::bigint IS NULL OR user_id = $3)
   AND (
@@ -65,15 +68,15 @@ WHERE ($1::text IS NULL OR status = $1)
 `
 
 type CountPlatformNotificationsParams struct {
-	Status  pgtype.Text `json:"status"`
-	Channel pgtype.Text `json:"channel"`
-	UserID  pgtype.Int8 `json:"user_id"`
-	Q       pgtype.Text `json:"q"`
+	Statuses []string    `json:"statuses"`
+	Channel  pgtype.Text `json:"channel"`
+	UserID   pgtype.Int8 `json:"user_id"`
+	Q        pgtype.Text `json:"q"`
 }
 
 func (q *Queries) CountPlatformNotifications(ctx context.Context, arg CountPlatformNotificationsParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countPlatformNotifications,
-		arg.Status,
+		arg.Statuses,
 		arg.Channel,
 		arg.UserID,
 		arg.Q,
@@ -410,7 +413,10 @@ func (q *Queries) ListNotificationsForUser(ctx context.Context, arg ListNotifica
 
 const listPlatformNotifications = `-- name: ListPlatformNotifications :many
 SELECT id, uuid, user_id, channel, status, priority, title, body, payload, action_url, recipient, template_code, source_event, scheduled_at, sent_at, delivered_at, read_at, failed_at, cancelled_at, attempt_count, max_attempts, last_error, provider, provider_reference, created_at, updated_at, organization_id, brand_id, event_id, language, delivery_id FROM notifications
-WHERE ($1::text IS NULL OR status = $1)
+WHERE (
+    COALESCE(cardinality($1::text[]), 0) = 0
+    OR status = ANY ($1::text[])
+  )
   AND ($2::text IS NULL OR channel = $2)
   AND ($3::bigint IS NULL OR user_id = $3)
   AND (
@@ -418,25 +424,53 @@ WHERE ($1::text IS NULL OR status = $1)
     OR title ILIKE '%' || $4 || '%'
     OR body ILIKE '%' || $4 || '%'
   )
-ORDER BY created_at DESC
-LIMIT $6 OFFSET $5
+ORDER BY
+  CASE WHEN NOT $5::bool THEN
+    CASE $6::text WHEN 'channel' THEN channel WHEN 'status' THEN status END
+  END ASC,
+  CASE WHEN $5::bool THEN
+    CASE $6::text WHEN 'channel' THEN channel WHEN 'status' THEN status END
+  END DESC,
+  -- priority sorts by severity rank, not alphabetically.
+  CASE WHEN NOT $5::bool AND $6::text = 'priority' THEN
+    CASE priority WHEN 'low' THEN 1 WHEN 'normal' THEN 2 WHEN 'high' THEN 3 WHEN 'critical' THEN 4 END
+  END ASC,
+  CASE WHEN $5::bool AND $6::text = 'priority' THEN
+    CASE priority WHEN 'low' THEN 1 WHEN 'normal' THEN 2 WHEN 'high' THEN 3 WHEN 'critical' THEN 4 END
+  END DESC,
+  CASE WHEN NOT $5::bool THEN
+    CASE $6::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END ASC,
+  CASE WHEN $5::bool THEN
+    CASE $6::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END DESC,
+  CASE WHEN NOT $5::bool AND $6::text = 'sent_at' THEN sent_at END ASC NULLS LAST,
+  CASE WHEN $5::bool AND $6::text = 'sent_at' THEN sent_at END DESC NULLS LAST,
+  CASE WHEN $5::bool THEN id END DESC,
+  id ASC
+LIMIT $8 OFFSET $7
 `
 
 type ListPlatformNotificationsParams struct {
-	Status      pgtype.Text `json:"status"`
+	Statuses    []string    `json:"statuses"`
 	Channel     pgtype.Text `json:"channel"`
 	UserID      pgtype.Int8 `json:"user_id"`
 	Q           pgtype.Text `json:"q"`
+	SortDesc    bool        `json:"sort_desc"`
+	SortKey     string      `json:"sort_key"`
 	OffsetCount int32       `json:"offset_count"`
 	LimitCount  int32       `json:"limit_count"`
 }
 
+// Sort: docs/list-contract.md, keys from apiquery.NotificationsSortSpec.
 func (q *Queries) ListPlatformNotifications(ctx context.Context, arg ListPlatformNotificationsParams) ([]Notification, error) {
 	rows, err := q.db.Query(ctx, listPlatformNotifications,
-		arg.Status,
+		arg.Statuses,
 		arg.Channel,
 		arg.UserID,
 		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.OffsetCount,
 		arg.LimitCount,
 	)
@@ -492,7 +526,10 @@ func (q *Queries) ListPlatformNotifications(ctx context.Context, arg ListPlatfor
 
 const listPlatformNotificationsForExport = `-- name: ListPlatformNotificationsForExport :many
 SELECT id, uuid, user_id, channel, status, priority, title, body, payload, action_url, recipient, template_code, source_event, scheduled_at, sent_at, delivered_at, read_at, failed_at, cancelled_at, attempt_count, max_attempts, last_error, provider, provider_reference, created_at, updated_at, organization_id, brand_id, event_id, language, delivery_id FROM notifications
-WHERE ($1::text IS NULL OR status = $1)
+WHERE (
+    COALESCE(cardinality($1::text[]), 0) = 0
+    OR status = ANY ($1::text[])
+  )
   AND ($2::text IS NULL OR channel = $2)
   AND ($3::bigint IS NULL OR user_id = $3)
   AND (
@@ -500,19 +537,19 @@ WHERE ($1::text IS NULL OR status = $1)
     OR title ILIKE '%' || $4 || '%'
     OR body ILIKE '%' || $4 || '%'
   )
-ORDER BY created_at DESC
+ORDER BY created_at DESC, id DESC
 `
 
 type ListPlatformNotificationsForExportParams struct {
-	Status  pgtype.Text `json:"status"`
-	Channel pgtype.Text `json:"channel"`
-	UserID  pgtype.Int8 `json:"user_id"`
-	Q       pgtype.Text `json:"q"`
+	Statuses []string    `json:"statuses"`
+	Channel  pgtype.Text `json:"channel"`
+	UserID   pgtype.Int8 `json:"user_id"`
+	Q        pgtype.Text `json:"q"`
 }
 
 func (q *Queries) ListPlatformNotificationsForExport(ctx context.Context, arg ListPlatformNotificationsForExportParams) ([]Notification, error) {
 	rows, err := q.db.Query(ctx, listPlatformNotificationsForExport,
-		arg.Status,
+		arg.Statuses,
 		arg.Channel,
 		arg.UserID,
 		arg.Q,

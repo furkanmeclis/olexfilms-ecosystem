@@ -56,6 +56,8 @@ Parse with `pkg/apiquery`:
 
 **Forbidden query names:** `page`, `page_size`, `per_page`, `search` (use `q` only). Unknown `sort` → `400 VALIDATION_ERROR` with details.
 
+Sort is a single primary field applied in SQL with an `id` tiebreak; multi-value/date/number filters and the sqlc dynamic ORDER BY pattern are in [`docs/list-contract.md`](../docs/list-contract.md).
+
 ## Resource meta
 
 Primary list resources expose `GET /v1/{resource}/meta` via `internal/platform/resourcemeta`:

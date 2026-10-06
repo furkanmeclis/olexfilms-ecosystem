@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/logs/model"
 	logsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/logs/usecase"
@@ -187,30 +186,20 @@ func (h *Handler) RunRule(w http.ResponseWriter, r *http.Request) {
 
 func parseListFilter(r *http.Request) (model.ListFilter, error) {
 	values := r.URL.Query()
+	levels, err := apiquery.EnumList(values, "level", model.LevelDebug, model.LevelWarn, model.LevelError)
+	if err != nil {
+		return model.ListFilter{}, err
+	}
+	created, err := apiquery.DateRange(values, "created")
+	if err != nil {
+		return model.ListFilter{}, err
+	}
 	filter := model.ListFilter{
-		Levels: apiquery.SplitCSV(values.Get("level")),
-		Source: strings.TrimSpace(values.Get("source")),
-		Q:      strings.TrimSpace(values.Get("q")),
-	}
-	if extra := values["level"]; len(extra) > 1 {
-		filter.Levels = append(filter.Levels, extra[1:]...)
-	}
-	from, err := parseDate(values.Get("created_from"))
-	if err != nil {
-		return model.ListFilter{}, &apiquery.ValidationError{Details: []apiquery.Detail{{
-			Field: "created_from", Message: "invalid date", Code: "invalid",
-		}}}
-	}
-	to, err := parseDate(values.Get("created_to"))
-	if err != nil {
-		return model.ListFilter{}, &apiquery.ValidationError{Details: []apiquery.Detail{{
-			Field: "created_to", Message: "invalid date", Code: "invalid",
-		}}}
-	}
-	filter.CreatedFrom = from
-	if to != nil {
-		end := to.Add(24 * time.Hour)
-		filter.CreatedTo = &end
+		Levels:      levels,
+		Source:      strings.TrimSpace(values.Get("source")),
+		Q:           strings.TrimSpace(values.Get("q")),
+		CreatedFrom: created.From,
+		CreatedTo:   created.Before,
 	}
 	if raw := strings.TrimSpace(values.Get("older_than_hours")); raw != "" {
 		n, err := strconv.ParseInt(raw, 10, 32)
@@ -223,23 +212,6 @@ func parseListFilter(r *http.Request) (model.ListFilter, error) {
 		filter.OlderHours = &v
 	}
 	return filter, nil
-}
-
-func parseDate(raw string) (*time.Time, error) {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return nil, nil
-	}
-	if t, err := time.Parse("2006-01-02", raw); err == nil {
-		utc := t.UTC()
-		return &utc, nil
-	}
-	t, err := time.Parse(time.RFC3339, raw)
-	if err != nil {
-		return nil, err
-	}
-	utc := t.UTC()
-	return &utc, nil
 }
 
 func parseUUIDParam(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {

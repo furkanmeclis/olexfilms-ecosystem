@@ -87,7 +87,10 @@ const countOrganizations = `-- name: CountOrganizations :one
 SELECT COUNT(*)::bigint
 FROM organizations
 WHERE deleted_at IS NULL
-  AND ($1::text IS NULL OR status = $1)
+  AND (
+    COALESCE(cardinality($1::text[]), 0) = 0
+    OR status = ANY ($1::text[])
+  )
   AND ($2::bigint IS NULL OR brand_id = $2)
   AND ($3::text IS NULL OR type = $3)
   AND ($4::bigint IS NULL OR parent_id = $4)
@@ -101,7 +104,7 @@ WHERE deleted_at IS NULL
 `
 
 type CountOrganizationsParams struct {
-	Status   pgtype.Text `json:"status"`
+	Statuses []string    `json:"statuses"`
 	BrandID  pgtype.Int8 `json:"brand_id"`
 	Type     pgtype.Text `json:"type"`
 	ParentID pgtype.Int8 `json:"parent_id"`
@@ -110,7 +113,7 @@ type CountOrganizationsParams struct {
 
 func (q *Queries) CountOrganizations(ctx context.Context, arg CountOrganizationsParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countOrganizations,
-		arg.Status,
+		arg.Statuses,
 		arg.BrandID,
 		arg.Type,
 		arg.ParentID,
@@ -1060,7 +1063,10 @@ FROM organizations o
 JOIN brands b ON b.id = o.brand_id
 LEFT JOIN organizations p ON p.id = o.parent_id
 WHERE o.deleted_at IS NULL
-  AND ($1::text IS NULL OR o.status = $1)
+  AND (
+    COALESCE(cardinality($1::text[]), 0) = 0
+    OR o.status = ANY ($1::text[])
+  )
   AND ($2::bigint IS NULL OR o.brand_id = $2)
   AND ($3::text IS NULL OR o.type = $3)
   AND ($4::bigint IS NULL OR o.parent_id = $4)
@@ -1071,16 +1077,45 @@ WHERE o.deleted_at IS NULL
     OR o.city ILIKE '%' || $5 || '%'
     OR o.phone ILIKE '%' || $5 || '%'
   )
-ORDER BY o.created_at DESC
-LIMIT $7 OFFSET $6
+ORDER BY
+  CASE WHEN NOT $6::bool THEN
+    CASE $7::text
+      WHEN 'name' THEN o.name WHEN 'slug' THEN o.slug
+      WHEN 'city' THEN o.city WHEN 'status' THEN o.status
+    END
+  END ASC,
+  CASE WHEN $6::bool THEN
+    CASE $7::text
+      WHEN 'name' THEN o.name WHEN 'slug' THEN o.slug
+      WHEN 'city' THEN o.city WHEN 'status' THEN o.status
+    END
+  END DESC,
+  CASE WHEN NOT $6::bool THEN
+    CASE $7::text
+      WHEN 'created_at' THEN o.created_at WHEN 'updated_at' THEN o.updated_at
+    END
+  END ASC,
+  CASE WHEN $6::bool THEN
+    CASE $7::text
+      WHEN 'created_at' THEN o.created_at WHEN 'updated_at' THEN o.updated_at
+    END
+  END DESC,
+  -- Nullable column: its own pair so NULLS LAST does not affect the others.
+  CASE WHEN NOT $6::bool AND $7::text = 'access_ends_at' THEN o.access_ends_at END ASC NULLS LAST,
+  CASE WHEN $6::bool AND $7::text = 'access_ends_at' THEN o.access_ends_at END DESC NULLS LAST,
+  CASE WHEN $6::bool THEN o.id END DESC,
+  o.id ASC
+LIMIT $9 OFFSET $8
 `
 
 type ListOrganizationsFilteredParams struct {
-	Status      pgtype.Text `json:"status"`
+	Statuses    []string    `json:"statuses"`
 	BrandID     pgtype.Int8 `json:"brand_id"`
 	Type        pgtype.Text `json:"type"`
 	ParentID    pgtype.Int8 `json:"parent_id"`
 	Q           pgtype.Text `json:"q"`
+	SortDesc    bool        `json:"sort_desc"`
+	SortKey     string      `json:"sort_key"`
 	OffsetCount int32       `json:"offset_count"`
 	LimitCount  int32       `json:"limit_count"`
 }
@@ -1092,13 +1127,16 @@ type ListOrganizationsFilteredRow struct {
 	ParentName   pgtype.Text  `json:"parent_name"`
 }
 
+// Sort: docs/list-contract.md, keys from apiquery.TenantsSortSpec.
 func (q *Queries) ListOrganizationsFiltered(ctx context.Context, arg ListOrganizationsFilteredParams) ([]ListOrganizationsFilteredRow, error) {
 	rows, err := q.db.Query(ctx, listOrganizationsFiltered,
-		arg.Status,
+		arg.Statuses,
 		arg.BrandID,
 		arg.Type,
 		arg.ParentID,
 		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.OffsetCount,
 		arg.LimitCount,
 	)
