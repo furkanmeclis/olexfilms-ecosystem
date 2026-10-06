@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -38,13 +39,32 @@ type DeviceView struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+// ListSort is the sort contract of GET /v1/measurements (TEC-299,
+// docs/list-contract.md): measured_at is COALESCE(measured_at, created_at);
+// vin and plate are nullable and sort blanks last in both directions.
+var ListSort = apiquery.SortSpec{
+	Columns: apiquery.SortColumns{
+		"measured_at": "measured_at", "created_at": "created_at", "vin": "vin",
+		"status": "status", "plate": "plate",
+	},
+	Default: apiquery.SortField{Field: "measured_at", Desc: true},
+}
+
+// Statuses are the measurement result statuses (list filter values).
+var Statuses = []string{StatusAccepted, StatusVINPending}
+
+// MeasurementFilter is the panel list filter. Statuses and DeviceUUIDs are
+// multi-value (nil = no filter); Q searches the VIN, the vehicle plate and
+// the device serial; a zero Sort is the ListSort default.
 type MeasurementFilter struct {
 	VIN          string
-	DeviceUUID   *uuid.UUID
-	Status       string
+	DeviceUUIDs  []uuid.UUID
+	Statuses     []string
+	Q            string
 	Linked       *bool
 	MeasuredFrom *time.Time
 	MeasuredTo   *time.Time
+	Sort         apiquery.ResolvedSort
 	Limit        int32
 	Offset       int32
 }
@@ -71,6 +91,7 @@ type MeasurementSummary struct {
 	DeviceSerial *string         `json:"device_serial"`
 	Device       *DeviceView     `json:"device"`
 	Service      *ServiceRef     `json:"service"`
+	Plate        *string         `json:"plate"`
 	MeasuredAt   *time.Time      `json:"measured_at"`
 	CreatedAt    time.Time       `json:"created_at"`
 }
@@ -178,10 +199,19 @@ func (s *Service) ListMeasurements(ctx context.Context, c PanelCaller, f Measure
 	if err := validateMeasurementFilter(f); err != nil {
 		return nil, 0, err
 	}
+	sort := f.Sort
+	if sort.Key == "" {
+		sort = apiquery.ResolvedSort{Key: ListSort.Columns[ListSort.Default.Field], Desc: ListSort.Default.Desc}
+	}
+	var q pgtype.Text
+	if term := strings.TrimSpace(f.Q); term != "" {
+		q = pgtype.Text{String: escapeLike(term), Valid: true}
+	}
 	rows, err := s.store.ListMeasurementResultsPanel(ctx, db.ListMeasurementResultsPanelParams{
 		BrandID: c.Org.BrandID, OrgIds: c.Filter.OrgIDsArg(), Vin: text(strings.ToUpper(strings.TrimSpace(f.VIN))),
-		DeviceUuid: uuidPtr(f.DeviceUUID), Status: text(f.Status), Linked: boolPtr(f.Linked),
-		MeasuredFrom: timePtr(f.MeasuredFrom), MeasuredTo: timePtr(f.MeasuredTo),
+		DeviceUuids: f.DeviceUUIDs, Statuses: f.Statuses, Linked: boolPtr(f.Linked),
+		MeasuredFrom: timePtr(f.MeasuredFrom), MeasuredTo: timePtr(f.MeasuredTo), Q: q,
+		SortKey: sort.Key, SortDesc: sort.Desc,
 		LimitCount: f.Limit, OffsetCount: f.Offset,
 	})
 	if err != nil {
@@ -251,13 +281,29 @@ func validateMeasurementFilter(f MeasurementFilter) error {
 	if vin != "" && !vinRe.MatchString(vin) {
 		return invalid("vin", "must be 11 to 17 letters or digits")
 	}
-	if f.Status != "" && f.Status != StatusAccepted && f.Status != StatusVINPending {
-		return invalid("status", "must be accepted or vin_pending")
+	for _, st := range f.Statuses {
+		if st != StatusAccepted && st != StatusVINPending {
+			return invalid("status", "must be accepted or vin_pending")
+		}
+	}
+	if f.Sort.Key != "" {
+		known := false
+		for _, k := range ListSort.Columns {
+			known = known || k == f.Sort.Key
+		}
+		if !known {
+			return invalid("sort", "is not a sortable field")
+		}
 	}
 	if f.MeasuredFrom != nil && f.MeasuredTo != nil && f.MeasuredTo.Before(*f.MeasuredFrom) {
 		return invalid("measured_to", "must not be before measured_from")
 	}
 	return nil
+}
+
+// escapeLike escapes the LIKE wildcards of a search term.
+func escapeLike(s string) string {
+	return strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(s)
 }
 
 func boolPtr(v *bool) pgtype.Bool {
@@ -314,6 +360,7 @@ func summaryFromList(row db.ListMeasurementResultsPanelRow) MeasurementSummary {
 		DeviceSerial: textOut(row.DeviceSerial),
 		Device:       rowDevice(row.DeviceUuid, row.RegistryDeviceSerial, row.DeviceLabel, row.DeviceModel, row.DeviceIsActive),
 		Service:      rowService(row.ServiceUuid, row.ServiceNo, row.ServicePhase, row.ServiceLinkSource, row.ServiceConfirmedAt),
+		Plate:        textOut(row.VehiclePlate),
 		MeasuredAt:   timeOut(row.MeasuredAt), CreatedAt: row.CreatedAt.Time,
 	}
 }
@@ -325,6 +372,7 @@ func summaryFromDetail(row db.GetMeasurementResultPanelRow) MeasurementSummary {
 		DeviceSerial: textOut(row.DeviceSerial),
 		Device:       rowDevice(row.DeviceUuid, row.RegistryDeviceSerial, row.DeviceLabel, row.DeviceModel, row.DeviceIsActive),
 		Service:      rowService(row.ServiceUuid, row.ServiceNo, row.ServicePhase, row.ServiceLinkSource, row.ServiceConfirmedAt),
+		Plate:        textOut(row.VehiclePlate),
 		MeasuredAt:   timeOut(row.MeasuredAt), CreatedAt: row.CreatedAt.Time,
 	}
 }

@@ -13943,16 +13943,35 @@ paths:
       tags: [Measurements]
       operationId: listMeasurements
       summary: List paint measurement results
-      description: Requires the measurements module and `measurements.read`. Managed readers see the active organization; subtree readers see the active organization and descendants. Portal endpoints do not expose measurement data.
+      description: >-
+        Requires the measurements module and `measurements.read`. Managed
+        readers see the active organization; subtree readers see the active
+        organization and descendants. Portal endpoints do not expose
+        measurement data. List contract (docs/list-contract.md, TEC-299):
+        sort fields measured_at (measured_at, falling back to created_at),
+        created_at, vin, status, plate (vin and plate sort blanks last in both
+        directions); default `-measured_at`; id tiebreak. `q` searches the
+        VIN, the vehicle plate and the device serial (contains,
+        case-insensitive). `status` and `device_uuid` are comma separated
+        any-of filters.
       security:
         - bearerAuth: []
       parameters:
+        - $ref: "#/components/parameters/Sort"
+        - name: q
+          in: query
+          description: Contains search on the VIN, the vehicle plate and the device serial.
+          schema: { type: string, maxLength: 100 }
         - name: vin
           in: query
+          description: Exact VIN.
           schema: { type: string, minLength: 11, maxLength: 17 }
         - name: device_uuid
           in: query
-          schema: { type: string, format: uuid }
+          description: >-
+            Comma separated measurement device UUIDs (single value accepted);
+            an invalid UUID → 400.
+          schema: { type: string }
         - name: measured_from
           in: query
           schema: { type: string }
@@ -13963,7 +13982,10 @@ paths:
           description: Date (`YYYY-MM-DD`, exclusive next day) or RFC3339 date-time.
         - name: status
           in: query
-          schema: { type: string, enum: [accepted, vin_pending] }
+          description: >-
+            Comma separated statuses (accepted, vin_pending; single value
+            accepted); unknown value → 400.
+          schema: { type: string }
         - name: linked
           in: query
           schema: { type: boolean }
@@ -13987,6 +14009,42 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           $ref: "#/components/responses/Forbidden"
+
+  /v1/measurement-part-maps/{body_type}:
+    get:
+      tags: [Measurements]
+      operationId: getMeasurementPartMap
+      summary: Get the raw NexPTG part map of a body type
+      description: >-
+        TEC-299. The unfilled NexPTG part map assets of a body type (manifest
+        order) so the client renders and colors the map itself. body_type is
+        a model id or a case-insensitive folder / name / bodywork (e.g.
+        `SEDAN`). Requires the measurements module and `measurements.read`.
+        The assets are immutable: `Cache-Control: private, max-age=86400`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: body_type
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Part map
+          headers:
+            Cache-Control:
+              schema: { type: string }
+              description: private, max-age=86400
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMeasurementPartMap"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /v1/measurements/{uuid}:
     get:
@@ -28780,7 +28838,7 @@ components:
 
     MeasurementSummary:
       type: object
-      required: [uuid, organization, vin, status, source, device_serial, device, service, measured_at, created_at]
+      required: [uuid, organization, vin, status, source, device_serial, device, service, plate, measured_at, created_at]
       properties:
         uuid: { type: string, format: uuid }
         organization: { $ref: "#/components/schemas/MeasurementOrganizationRef" }
@@ -28796,6 +28854,9 @@ components:
           oneOf:
             - $ref: "#/components/schemas/MeasurementServiceRef"
             - type: "null"
+        plate:
+          type: [string, "null"]
+          description: Plate of the result's vehicle, else of the linked service's vehicle.
         measured_at: { type: [string, "null"], format: date-time }
         created_at: { type: string, format: date-time }
 
@@ -28876,6 +28937,52 @@ components:
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    # TEC-299: raw NexPTG part map of a body type.
+    MeasurementPartMapPoint:
+      type: object
+      required: [count, x, y]
+      properties:
+        count: { type: [integer, "null"] }
+        x: { type: number }
+        y: { type: number }
+
+    MeasurementPartMapAsset:
+      type: object
+      required: [part, place, kind, points, svg]
+      properties:
+        part: { type: string }
+        place: { type: string, enum: [left, right, top, back] }
+        kind: { type: string, enum: [main, element] }
+        points:
+          type: array
+          items: { $ref: "#/components/schemas/MeasurementPartMapPoint" }
+        svg:
+          type: [string, "null"]
+          description: Raw SVG file content; null when the body type ships no file for the part.
+
+    MeasurementPartMap:
+      type: object
+      required: [id, name, bodywork, point_radius, places, assets]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        bodywork: { type: string }
+        point_radius: { type: number }
+        places:
+          type: array
+          items: { type: string, enum: [left, right, top, back] }
+        assets:
+          type: array
+          items: { $ref: "#/components/schemas/MeasurementPartMapAsset" }
+
+    EnvelopeMeasurementPartMap:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/MeasurementPartMap" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeMeasurementDetail:

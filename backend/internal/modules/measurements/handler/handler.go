@@ -47,7 +47,14 @@ func panelCaller(r *http.Request) usecase.PanelCaller {
 
 func writeError(w http.ResponseWriter, r *http.Request, err error) {
 	var ve *usecase.ValidationError
+	var qe *apiquery.ValidationError
 	switch {
+	case errors.As(err, &qe):
+		details := make([]response.Detail, 0, len(qe.Details))
+		for _, d := range qe.Details {
+			details = append(details, response.Detail{Field: d.Field, Message: d.Message, Code: d.Code})
+		}
+		response.ValidationError(w, r, details)
 	case errors.As(err, &ve):
 		response.ValidationError(w, r, []response.Detail{{Field: ve.Field, Message: ve.Message}})
 	case errors.Is(err, usecase.ErrNotFound):
@@ -155,10 +162,24 @@ func (h *Handler) UpdateDevice(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListMeasurements(w http.ResponseWriter, r *http.Request) {
 	q := apiquery.Parse(r.URL.Query())
 	v := r.URL.Query()
-	deviceID, err := optionalUUID(v.Get("device_uuid"))
+	sort, err := apiquery.ResolveSort(q.Sort, usecase.ListSort)
 	if err != nil {
-		writeError(w, r, &usecase.ValidationError{Field: "device_uuid", Message: "must be a UUID"})
+		writeError(w, r, err)
 		return
+	}
+	statuses, err := apiquery.EnumList(v, "status", usecase.Statuses...)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	var deviceIDs []uuid.UUID
+	for _, raw := range apiquery.CSVValues(v, "device_uuid") {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			writeError(w, r, &usecase.ValidationError{Field: "device_uuid", Message: "must be a UUID"})
+			return
+		}
+		deviceIDs = append(deviceIDs, id)
 	}
 	linked, err := optionalBool(v.Get("linked"))
 	if err != nil {
@@ -176,8 +197,8 @@ func (h *Handler) ListMeasurements(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	items, total, err := h.svc.ListMeasurements(r.Context(), panelCaller(r), usecase.MeasurementFilter{
-		VIN: v.Get("vin"), DeviceUUID: deviceID, Status: strings.TrimSpace(v.Get("status")),
-		Linked: linked, MeasuredFrom: from, MeasuredTo: to, Limit: q.Limit, Offset: q.Offset,
+		VIN: v.Get("vin"), DeviceUUIDs: deviceIDs, Statuses: statuses, Q: q.Q,
+		Linked: linked, MeasuredFrom: from, MeasuredTo: to, Sort: sort, Limit: q.Limit, Offset: q.Offset,
 	})
 	if err != nil {
 		writeError(w, r, err)
@@ -197,18 +218,6 @@ func (h *Handler) GetMeasurement(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, r, http.StatusOK, out)
-}
-
-func optionalUUID(raw string) (*uuid.UUID, error) {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return nil, nil
-	}
-	id, err := uuid.Parse(raw)
-	if err != nil {
-		return nil, err
-	}
-	return &id, nil
 }
 
 func optionalBool(raw string) (*bool, error) {
