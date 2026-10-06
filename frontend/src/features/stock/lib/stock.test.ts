@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  buildUnitsQuery,
-  EMPTY_STOCK_FILTERS,
-  hasActiveFilters,
   parseDecimal,
   showPurchasePrice,
   summarizeProducts,
@@ -13,8 +10,6 @@ import type {
   StockProduct,
   StockUnitRow,
 } from "@/features/stock/services/stock.service";
-
-const page = { limit: 20, offset: 40 };
 
 function unit(patch: Partial<StockUnitRow> = {}): StockUnitRow {
   return {
@@ -57,47 +52,6 @@ function product(patch: Partial<StockProduct> = {}): StockProduct {
     ...patch,
   };
 }
-
-describe("buildUnitsQuery (TEC-224)", () => {
-  it("leaves empty filters out and keeps the page", () => {
-    expect(buildUnitsQuery("stock", EMPTY_STOCK_FILTERS, page)).toEqual(page);
-  });
-
-  it("trims text filters and passes product and status", () => {
-    expect(
-      buildUnitsQuery(
-        "stock",
-        { q: " ppf ", barcode: " OLX-1 ", product: "p-1", status: "placed" },
-        page,
-      ),
-    ).toEqual({
-      ...page,
-      q: "ppf",
-      barcode: "OLX-1",
-      product_uuid: "p-1",
-      status: "placed",
-    });
-  });
-
-  it("pins status=used on the consumed tab", () => {
-    expect(
-      buildUnitsQuery(
-        "consumed",
-        { ...EMPTY_STOCK_FILTERS, status: "available" },
-        page,
-      ),
-    ).toEqual({ ...page, status: "used" });
-  });
-});
-
-describe("hasActiveFilters", () => {
-  it("ignores whitespace", () => {
-    expect(hasActiveFilters({ ...EMPTY_STOCK_FILTERS, q: "  " })).toBe(false);
-    expect(hasActiveFilters({ ...EMPTY_STOCK_FILTERS, barcode: "x" })).toBe(
-      true,
-    );
-  });
-});
 
 describe("showPurchasePrice", () => {
   it("is false when every row has a null price", () => {

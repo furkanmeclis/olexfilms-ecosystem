@@ -72,5 +72,7 @@
   "toast.download_failed": "Файлът не можа да бъде изтеглен.",
   "status.queued": "На опашка",
   "status.expired": "Изтекъл",
-  "resources.platform.organizations": "Организации"
+  "resources.platform.organizations": "Организации",
+  "resources.orders.list": "Поръчки",
+  "resources.stock.units": "Складови единици"
 }

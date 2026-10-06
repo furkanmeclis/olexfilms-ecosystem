@@ -76,5 +76,6 @@
   "params.lead_status.quoted": "Presupuestado",
   "params.lead_status.won": "Ganado",
   "params.lead_status.lost": "Perdido",
-  "params.lost_reason": "Motivo de pérdida"
+  "params.lost_reason": "Motivo de pérdida",
+  "actions.stock_units.print_labels": "Imprimir etiquetas"
 }

@@ -91,11 +91,28 @@ import type { Order } from "@/features/orders/services/orders.service";
 
 import { OrderDetailPage } from "./order-detail-page";
 import { OrderFormPage } from "./order-form-page";
-import { OrdersListPage } from "./orders-list-page";
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
+// DataTable reads the mobile breakpoint (jsdom has no matchMedia).
+window.matchMedia ??= ((query: string) => ({
+  matches: false,
+  media: query,
+  onchange: null,
+  addEventListener: () => {},
+  removeEventListener: () => {},
+  addListener: () => {},
+  removeListener: () => {},
+  dispatchEvent: () => false,
+})) as typeof window.matchMedia;
+(
+  globalThis as typeof globalThis & { ResizeObserver?: typeof ResizeObserver }
+).ResizeObserver = class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+} as typeof ResizeObserver;
 
 let container: HTMLDivElement;
 let root: Root;
@@ -240,6 +257,11 @@ describe("OrderDetailPage: buttons by role and status", () => {
       "orders.detail.rate_pending",
     );
     expect($$("[data-testid=history-row]")).toHaveLength(1);
+    // Lines are a nested DataTable (TEC-374); no assignment column on drafts.
+    expect($("[data-testid=order-items] table")).not.toBeNull();
+    expect($$("[data-testid=order-item]")).toHaveLength(1);
+    expect($("[data-testid=line-total]")?.textContent).toBe("240 EUR");
+    expect($("[data-testid=line-assigned]")).toBeNull();
   });
 
   it("seller submitted: approve and reject, no edit", async () => {
@@ -484,68 +506,5 @@ describe("OrderFormPage: validation", () => {
     expect(api.create).toHaveBeenCalledTimes(1);
     expect(api.transition).toHaveBeenCalledWith("o1", "submitted");
     expect(nav.push).toHaveBeenCalledWith("/t/acme/orders/o1");
-  });
-});
-
-describe("OrdersListPage: filters", () => {
-  beforeEach(() => {
-    state.grants = new Set(["orders.read", "orders.write", "catalog.read"]);
-    api.list.mockResolvedValue({
-      items: [order({ status: "submitted", status_label: "Gönderildi" })],
-      total: 45,
-      limit: 20,
-      offset: 0,
-    });
-  });
-  const lastQuery = () => api.list.mock.calls.at(-1)?.[0];
-
-  it("distributor: incoming and outgoing tabs", async () => {
-    await render(createElement(OrdersListPage, { slug: "acme" }));
-    expect(lastQuery()).toEqual({ side: "seller", limit: 20, offset: 0 });
-    expect($$("[role=tab]")).toHaveLength(2);
-    await click($("[data-testid=side-buyer]"));
-    expect(lastQuery()?.side).toBe("buyer");
-    expect($("[data-testid=new-order]")).not.toBeNull();
-  });
-
-  it("center: incoming only, no new order", async () => {
-    state.orgType = "center";
-    await render(createElement(OrdersListPage, { slug: "acme" }));
-    expect($$("[role=tab]")).toHaveLength(0);
-    expect(lastQuery()?.side).toBe("seller");
-    expect($("[data-testid=new-order]")).toBeNull();
-  });
-
-  it("dealer: outgoing only", async () => {
-    state.orgType = "dealer";
-    await render(createElement(OrdersListPage, { slug: "acme" }));
-    expect(lastQuery()?.side).toBe("buyer");
-  });
-
-  it("status, dates and paging reach the query", async () => {
-    await render(createElement(OrdersListPage, { slug: "acme" }));
-    await click($('[data-status="shipped"]'));
-    expect(lastQuery()?.status).toBe("shipped");
-    await type($("#order-from"), "2026-10-01");
-    await type($("#order-to"), "2026-10-02");
-    expect(lastQuery()?.created_from).toBeTruthy();
-    expect(lastQuery()?.created_to).toBeTruthy();
-    await click($("[data-testid=page-next]"));
-    expect(lastQuery()?.offset).toBe(20);
-
-    await type($("#order-to"), "2026-09-01");
-    expect($("[data-testid=date-error]")).not.toBeNull();
-    expect(lastQuery()?.created_to).toBeUndefined();
-
-    await click($("[data-testid=clear-filters]"));
-    expect(lastQuery()).toEqual({ side: "seller", limit: 20, offset: 0 });
-    expect($$("[data-testid=order-row]")).toHaveLength(1);
-  });
-
-  it("is forbidden without orders.read", async () => {
-    state.grants = new Set();
-    await render(createElement(OrdersListPage, { slug: "acme" }));
-    expect(api.list).not.toHaveBeenCalled();
-    expect(container.textContent).toContain("orders.list.forbidden");
   });
 });

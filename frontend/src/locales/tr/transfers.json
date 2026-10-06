@@ -104,5 +104,7 @@
   "errors.TRANSFER_UNIT_NOT_FOUND": "Bu barkodla birim bulunamadı.",
   "errors.TRANSFER_UNIT_NOT_AVAILABLE": "Bu birim kuruluşunuzun stoğunda değil.",
   "errors.TRANSFER_UNIT_RESERVED": "Bu birim bir sipariş veya başka bir transfer tarafından ayrılmış.",
-  "errors.TRANSFER_INSUFFICIENT_STOCK": "Bu barkod için yeterli stok yok."
+  "errors.TRANSFER_INSUFFICIENT_STOCK": "Bu barkod için yeterli stok yok.",
+  "columns.organization": "Organizasyon",
+  "detail.line_total": "Satır toplamı"
 }

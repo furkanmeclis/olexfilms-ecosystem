@@ -72,5 +72,7 @@
   "toast.download_failed": "Faylı yükləmək mümkün olmadı.",
   "status.queued": "Növbədə",
   "status.expired": "Müddəti bitib",
-  "resources.platform.organizations": "Təşkilatlar"
+  "resources.platform.organizations": "Təşkilatlar",
+  "resources.orders.list": "Sifarişlər",
+  "resources.stock.units": "Stok vahidləri"
 }

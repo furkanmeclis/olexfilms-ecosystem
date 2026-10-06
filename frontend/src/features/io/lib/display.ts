@@ -9,8 +9,16 @@ const RESOURCE_LABEL_KEYS: Record<IoResource, string> = {
   "platform.organizations": "organizations.title",
 };
 
+/**
+ * Export jobs of endpoints outside `IoResource` (their own export path,
+ * e.g. POST /v1/orders/export, TEC-374); label at `exports.resources.*`.
+ */
+const EXPORT_ONLY_RESOURCES = new Set<string>(["orders.list", "stock.units"]);
+
 export function resourceLabelKey(resource: string): string | null {
-  const key = RESOURCE_LABEL_KEYS[resource as IoResource];
+  const key =
+    RESOURCE_LABEL_KEYS[resource as IoResource] ??
+    (EXPORT_ONLY_RESOURCES.has(resource) ? resource : undefined);
   return key ? `resources.${resource}` : null;
 }
 

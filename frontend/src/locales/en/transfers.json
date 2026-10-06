@@ -104,5 +104,7 @@
   "errors.TRANSFER_UNIT_NOT_FOUND": "No unit with this barcode was found.",
   "errors.TRANSFER_UNIT_NOT_AVAILABLE": "This unit is not in your organization's stock.",
   "errors.TRANSFER_UNIT_RESERVED": "This unit is reserved by an order or another transfer.",
-  "errors.TRANSFER_INSUFFICIENT_STOCK": "Not enough stock for this barcode."
+  "errors.TRANSFER_INSUFFICIENT_STOCK": "Not enough stock for this barcode.",
+  "columns.organization": "Organization",
+  "detail.line_total": "Line total"
 }

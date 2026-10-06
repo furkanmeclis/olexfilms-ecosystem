@@ -76,5 +76,6 @@
   "params.lead_status.quoted": "Teklif verildi",
   "params.lead_status.won": "Kazanıldı",
   "params.lead_status.lost": "Kaybedildi",
-  "params.lost_reason": "Kayıp nedeni"
+  "params.lost_reason": "Kayıp nedeni",
+  "actions.stock_units.print_labels": "Etiketleri yazdır"
 }

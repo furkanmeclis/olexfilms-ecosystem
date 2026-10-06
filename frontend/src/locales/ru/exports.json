@@ -72,5 +72,7 @@
   "toast.download_failed": "Не удалось скачать файл.",
   "status.queued": "В очереди",
   "status.expired": "Истёк",
-  "resources.platform.organizations": "Организации"
+  "resources.platform.organizations": "Организации",
+  "resources.orders.list": "Заказы",
+  "resources.stock.units": "Единицы запаса"
 }

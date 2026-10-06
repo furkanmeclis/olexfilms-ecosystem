@@ -26,16 +26,30 @@ export type OrderListAccess = {
  * Tabs by organization type: the center only sells, a dealer only buys, a
  * distributor does both. Unknown type (no membership info) shows both.
  */
+export function orderListSides(
+  orgType: OrganizationType | null | undefined,
+): OrderSide[] {
+  return orgType === "center"
+    ? ["seller"]
+    : orgType === "dealer"
+      ? ["buyer"]
+      : ["seller", "buyer"];
+}
+
+/** The picked tab when the organization has it, else its first tab. */
+export function activeOrderSide(
+  picked: OrderSide | null,
+  orgType: OrganizationType | null | undefined,
+): OrderSide {
+  const sides = orderListSides(orgType);
+  return picked && sides.includes(picked) ? picked : sides[0];
+}
+
 export function resolveOrderListAccess(
   can: Can,
   orgType: OrganizationType | null | undefined,
 ): OrderListAccess {
-  const sides: OrderSide[] =
-    orgType === "center"
-      ? ["seller"]
-      : orgType === "dealer"
-        ? ["buyer"]
-        : ["seller", "buyer"];
+  const sides = orderListSides(orgType);
   return {
     canRead: can(permissions.orders.read),
     canCreate:

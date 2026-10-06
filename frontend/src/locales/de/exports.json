@@ -72,5 +72,7 @@
   "toast.download_failed": "Die Datei konnte nicht heruntergeladen werden.",
   "status.queued": "In Warteschlange",
   "status.expired": "Abgelaufen",
-  "resources.platform.organizations": "Organisationen"
+  "resources.platform.organizations": "Organisationen",
+  "resources.orders.list": "Bestellungen",
+  "resources.stock.units": "Bestandseinheiten"
 }

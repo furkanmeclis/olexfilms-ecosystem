@@ -76,5 +76,6 @@
   "params.lead_status.quoted": "Пропозицію надіслано",
   "params.lead_status.won": "Виграно",
   "params.lead_status.lost": "Програно",
-  "params.lost_reason": "Причина програшу"
+  "params.lost_reason": "Причина програшу",
+  "actions.stock_units.print_labels": "Друк етикеток"
 }

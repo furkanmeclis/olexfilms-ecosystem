@@ -72,5 +72,7 @@
   "toast.download_failed": "Impossible de télécharger le fichier.",
   "status.queued": "En file d’attente",
   "status.expired": "Expiré",
-  "resources.platform.organizations": "Organisations"
+  "resources.platform.organizations": "Organisations",
+  "resources.orders.list": "Commandes",
+  "resources.stock.units": "Unités de stock"
 }

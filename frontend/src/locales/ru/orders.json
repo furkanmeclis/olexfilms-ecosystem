@@ -161,5 +161,9 @@
   "assign.failed": "Не удалось назначить единицу.",
   "assign.meters": "Метры",
   "assign.meters_placeholder": "Весь",
-  "assign.split_success": "Рулон разделён: новый штрихкод {{barcode}}, в рулоне осталось {{rest}} м."
+  "assign.split_success": "Рулон разделён: новый штрихкод {{barcode}}, в рулоне осталось {{rest}} м.",
+  "items.amount": "Количество",
+  "items.unit_price": "Цена за единицу",
+  "items.line_total": "Сумма по строке",
+  "items.units": "Назначенные единицы"
 }

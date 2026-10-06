@@ -76,5 +76,6 @@
   "params.lead_status.quoted": "Preventivato",
   "params.lead_status.won": "Vinto",
   "params.lead_status.lost": "Perso",
-  "params.lost_reason": "Motivo della perdita"
+  "params.lost_reason": "Motivo della perdita",
+  "actions.stock_units.print_labels": "Stampa etichette"
 }

@@ -161,5 +161,9 @@
   "assign.failed": "L'unité n'a pas pu être attribuée.",
   "assign.meters": "Mètres",
   "assign.meters_placeholder": "Tout",
-  "assign.split_success": "Rouleau découpé : nouveau code-barres {{barcode}}, il reste {{rest}} m sur le rouleau."
+  "assign.split_success": "Rouleau découpé : nouveau code-barres {{barcode}}, il reste {{rest}} m sur le rouleau.",
+  "items.amount": "Quantité",
+  "items.unit_price": "Prix unitaire",
+  "items.line_total": "Total de la ligne",
+  "items.units": "Unités affectées"
 }

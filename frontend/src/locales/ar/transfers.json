@@ -104,5 +104,7 @@
   "errors.TRANSFER_UNIT_NOT_FOUND": "لم يُعثر على وحدة بهذا الباركود.",
   "errors.TRANSFER_UNIT_NOT_AVAILABLE": "هذه الوحدة ليست في مخزون مؤسستك.",
   "errors.TRANSFER_UNIT_RESERVED": "هذه الوحدة محجوزة لطلب شراء أو تحويل آخر.",
-  "errors.TRANSFER_INSUFFICIENT_STOCK": "المخزون غير كافٍ لهذا الباركود."
+  "errors.TRANSFER_INSUFFICIENT_STOCK": "المخزون غير كافٍ لهذا الباركود.",
+  "columns.organization": "المؤسسة",
+  "detail.line_total": "إجمالي البند"
 }

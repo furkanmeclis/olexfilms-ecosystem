@@ -56,5 +56,7 @@
   "widget.empty": "No hay productos en stock.",
   "widget.meters_value": "{{meters}} m",
   "widget.quantity_value": "{{quantity}} uds.",
-  "widget.truncated": "El resumen cubre los primeros {{limit}} productos."
+  "widget.truncated": "El resumen cubre los primeros {{limit}} productos.",
+  "filters.product_search": "Nombre del producto o referencia",
+  "filters.product_none": "No hay productos en este stock."
 }

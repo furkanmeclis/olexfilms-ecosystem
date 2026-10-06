@@ -1,11 +1,8 @@
 import type {
   StockProduct,
-  StockUnitListQuery,
   StockUnitRow,
   StockUnitStatus,
 } from "@/features/stock/services/stock.service";
-
-export { pageCount } from "@/features/services/lib/list-filters";
 
 /** The two tabs of the page: units on hand, units consumed in services. */
 export type StockTab = "stock" | "consumed";
@@ -20,51 +17,6 @@ export const STOCK_FILTER_STATUSES = [
 
 /** Units consumed by a service end in `used` (consumption movements). */
 export const CONSUMED_STATUS: StockUnitStatus = "used";
-
-export const ALL = "all";
-
-export type StockListFilters = {
-  q: string;
-  barcode: string;
-  product: string | typeof ALL;
-  status: (typeof STOCK_FILTER_STATUSES)[number] | typeof ALL;
-};
-
-export const EMPTY_STOCK_FILTERS: StockListFilters = {
-  q: "",
-  barcode: "",
-  product: ALL,
-  status: ALL,
-};
-
-/**
- * Builds the units query: the consumed tab pins `status=used` and ignores
- * the status filter; empty text filters are left out.
- */
-export function buildUnitsQuery(
-  tab: StockTab,
-  filters: StockListFilters,
-  page: { limit: number; offset: number },
-): StockUnitListQuery {
-  const query: StockUnitListQuery = { limit: page.limit, offset: page.offset };
-  const q = filters.q.trim();
-  const barcode = filters.barcode.trim();
-  if (q) query.q = q;
-  if (barcode) query.barcode = barcode;
-  if (filters.product !== ALL) query.product_uuid = filters.product;
-  if (tab === "consumed") query.status = CONSUMED_STATUS;
-  else if (filters.status !== ALL) query.status = filters.status;
-  return query;
-}
-
-export function hasActiveFilters(filters: StockListFilters): boolean {
-  return (
-    filters.q.trim() !== "" ||
-    filters.barcode.trim() !== "" ||
-    filters.product !== ALL ||
-    filters.status !== ALL
-  );
-}
 
 /**
  * The purchase price column is shown only when at least one row carries a

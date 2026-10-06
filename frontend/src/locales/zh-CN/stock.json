@@ -56,5 +56,7 @@
   "widget.empty": "库存中没有产品。",
   "widget.meters_value": "{{meters}} 米",
   "widget.quantity_value": "{{quantity}} 件",
-  "widget.truncated": "概览涵盖前 {{limit}} 个产品。"
+  "widget.truncated": "概览涵盖前 {{limit}} 个产品。",
+  "filters.product_search": "产品名称或 SKU",
+  "filters.product_none": "此库存中没有产品。"
 }

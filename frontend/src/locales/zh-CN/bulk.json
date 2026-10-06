@@ -76,5 +76,6 @@
   "params.lead_status.quoted": "已报价",
   "params.lead_status.won": "已赢单",
   "params.lead_status.lost": "已丢单",
-  "params.lost_reason": "丢单原因"
+  "params.lost_reason": "丢单原因",
+  "actions.stock_units.print_labels": "打印标签"
 }

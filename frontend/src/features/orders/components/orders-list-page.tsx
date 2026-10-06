@@ -1,74 +1,292 @@
 "use client";
 
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Plus, ShoppingCart } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import type { ColumnDef } from "@tanstack/react-table";
+import { ArrowRightLeft, Eye, Pencil, Plus, ShoppingCart } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
+import {
+  EntityRowActions,
+  EntityTable,
+  EntityToolbar,
+  useServerListState,
+  type EntityRowAction,
+} from "@/components/entity";
 import { PageHeader } from "@/components/layout/page-header";
+import { createColumn } from "@/components/tables";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { DatePicker } from "@/components/ui/date-picker";
-import { Label } from "@/components/ui/label";
+import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
-import { resolveOrderListAccess } from "@/features/orders/lib/access";
+import { OrderActionDialog } from "@/features/orders/components/order-action-dialog";
+import {
+  activeOrderSide,
+  canEditDraft,
+  orderActions,
+  resolveOrderListAccess,
+  type OrderAction,
+} from "@/features/orders/lib/access";
 import { amountNumber, orderStatusTone } from "@/features/orders/lib/form";
+import { ORDER_FILTER_STATUSES } from "@/features/orders/lib/list-filters";
 import {
-  ALL_STATUSES,
-  EMPTY_ORDER_FILTERS,
-  ORDER_FILTER_STATUSES,
-  buildOrderListQuery,
-  hasActiveFilters,
-  invalidDateRange,
-  pageCount,
-  type OrderListFilters,
-} from "@/features/orders/lib/list-filters";
-import {
+  ORDERS_EXPORT_PATH,
   orderKeys,
   ordersService,
+  type Order,
+  type OrderListQuery,
   type OrderSide,
 } from "@/features/orders/services/orders.service";
+import { ExportMenu } from "@/features/io/components/export-menu";
 import { useActiveOrganization } from "@/hooks/use-active-organization";
-import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 
 export const ORDER_PAGE_SIZE = 20;
+export const ORDERS_PERSIST_KEY = "tenant-orders-v1";
+
+/** The counterpart column: the buyer on incoming, the seller on outgoing. */
+const PARTY_COLUMN = "party";
 
 /**
- * Tenant > Orders (TEC-170): incoming orders (the organization sells) and
- * outgoing orders (it buys) with status and created date filters, paged.
+ * Tenant > Orders (TEC-170, TEC-374): incoming orders (the organization
+ * sells) and outgoing orders (it buys) as tabs, over a server DataTable
+ * with sort (order no, status, total, created), search, status / party /
+ * total / created filters, row actions (view, edit draft, status moves),
+ * export (csv, xlsx, pdf) and mobile cards.
  */
 export function OrdersListPage({ slug }: { slug: string }) {
   const { t, format } = useLocale();
   const { can } = usePermission();
+  const router = useRouter();
   const org = useActiveOrganization(slug);
   const access = resolveOrderListAccess(can, org?.type);
   const [pickedSide, setSide] = useState<OrderSide | null>(null);
-  const side: OrderSide =
-    pickedSide && access.sides.includes(pickedSide)
-      ? pickedSide
-      : access.sides[0];
-  const [filters, setFilters] = useState<OrderListFilters>(EMPTY_ORDER_FILTERS);
-  const [page, setPage] = useState(0);
+  const side = activeOrderSide(pickedSide, org?.type);
+  const [action, setAction] = useState<{
+    order: Order;
+    action: OrderAction;
+  } | null>(null);
 
-  const query = buildOrderListQuery(side, filters, {
-    limit: ORDER_PAGE_SIZE,
-    offset: page * ORDER_PAGE_SIZE,
+  // Center and distributor sell to organizations of their scope: the buyer
+  // filter offers them on the incoming tab (TEC-373 buyer_org_uuid).
+  const canFilterParty =
+    can(permissions.orders.read) &&
+    side === "seller" &&
+    can(permissions.organizations.tenantRead) &&
+    (org?.type === "center" || org?.type === "distributor");
+  const organizations = useQuery({
+    queryKey: orderKeys.organizations,
+    queryFn: () => ordersService.listOrganizations(),
+    enabled: canFilterParty,
+    staleTime: 5 * 60_000,
   });
+  const partyOptions = useMemo(
+    () =>
+      (organizations.data ?? []).map((o) => ({ value: o.uuid, label: o.name })),
+    [organizations.data],
+  );
+
+  const columns = useMemo(
+    () =>
+      [
+        createColumn<Order>({
+          accessorKey: "order_no",
+          labelKey: "orders.list.columns.order_no",
+          enableSorting: true,
+          gridPrimary: true,
+          cell: ({ row }) => (
+            <Link
+              href={routes.tenant.orders.detail(slug, row.original.uuid)}
+              className="font-mono font-medium hover:underline"
+              dir="ltr"
+              data-testid="order-row"
+              data-uuid={row.original.uuid}
+              onClick={(event) => event.stopPropagation()}
+            >
+              {row.original.order_no}
+            </Link>
+          ),
+        }),
+        createColumn<Order>({
+          accessorKey: "status",
+          labelKey: "orders.list.columns.status",
+          enableSorting: true,
+          filterVariant: "faceted",
+          filterOptions: ORDER_FILTER_STATUSES.map((value) => ({
+            value,
+            label: value,
+            labelKey: `orders.status.${value}`,
+          })),
+          param: "status",
+          cell: ({ row }) => (
+            <StatusChip
+              label={row.original.status_label}
+              tone={orderStatusTone(row.original.status)}
+            />
+          ),
+        }),
+        createColumn<Order>({
+          id: PARTY_COLUMN,
+          accessorFn: (o) => (side === "seller" ? o.buyer.uuid : o.seller.uuid),
+          labelKey:
+            side === "seller"
+              ? "orders.list.columns.buyer"
+              : "orders.list.columns.seller",
+          enableSorting: false,
+          gridSecondary: true,
+          filterVariant: "faceted",
+          filterOptions: partyOptions,
+          enableColumnFilter: canFilterParty && partyOptions.length > 0,
+          param: side === "seller" ? "buyer_org_uuid" : "seller_org_uuid",
+          cell: ({ row }) =>
+            side === "seller"
+              ? row.original.buyer.name
+              : row.original.seller.name,
+        }),
+        createColumn<Order>({
+          id: "total",
+          accessorFn: (o) => amountNumber(o.total),
+          labelKey: "orders.list.columns.total",
+          enableSorting: true,
+          filterVariant: "number-range",
+          param: "total",
+          meta: { cellClassName: "text-end", headerClassName: "text-end" },
+          cell: ({ row }) => (
+            <span className="whitespace-nowrap tabular-nums">
+              {format.currency(
+                amountNumber(row.original.total),
+                row.original.currency,
+              )}
+            </span>
+          ),
+        }),
+        createColumn<Order>({
+          accessorKey: "created_at",
+          labelKey: "orders.list.columns.created_at",
+          enableSorting: true,
+          filterVariant: "date-range",
+          param: "created",
+          cell: ({ row }) => (
+            <span className="whitespace-nowrap">
+              {format.dateTime(row.original.created_at)}
+            </span>
+          ),
+        }),
+        createColumn<Order>({
+          accessorKey: "approved_at",
+          labelKey: "orders.detail.approved_at",
+          enableSorting: false,
+          defaultHidden: true,
+          cell: ({ row }) =>
+            row.original.approved_at
+              ? format.dateTime(row.original.approved_at)
+              : "—",
+        }),
+        createColumn<Order>({
+          accessorKey: "shipped_at",
+          labelKey: "orders.detail.shipped_at",
+          enableSorting: false,
+          defaultHidden: true,
+          cell: ({ row }) =>
+            row.original.shipped_at
+              ? format.dateTime(row.original.shipped_at)
+              : "—",
+        }),
+        createColumn<Order>({
+          id: "actions",
+          labelKey: "common.actions",
+          enableSorting: false,
+          enableHiding: false,
+          enableResizing: false,
+          cell: ({ row }) => {
+            const order = row.original;
+            const items: EntityRowAction[] = [
+              {
+                id: "view",
+                label: t("common.view"),
+                icon: Eye,
+                onSelect: () =>
+                  router.push(routes.tenant.orders.detail(slug, order.uuid)),
+              },
+            ];
+            if (canEditDraft(can, order)) {
+              items.push({
+                id: "edit",
+                label: t("orders.actions.edit"),
+                icon: Pencil,
+                onSelect: () =>
+                  router.push(routes.tenant.orders.edit(slug, order.uuid)),
+              });
+            }
+            // Marking ready needs every line assigned: the detail page
+            // shows the lines, so the list leaves that move to it.
+            for (const move of orderActions(order)) {
+              if (move.kind === "mark_ready") continue;
+              items.push({
+                id: move.kind,
+                label: t(`orders.actions.${move.kind}.button`),
+                icon: ArrowRightLeft,
+                variant: move.destructive ? "destructive" : "default",
+                onSelect: () => setAction({ order, action: move }),
+              });
+            }
+            return <EntityRowActions actions={items} />;
+          },
+        }),
+      ] as ColumnDef<Order, unknown>[],
+    [
+      can,
+      canFilterParty,
+      format,
+      partyOptions,
+      router,
+      side,
+      slug,
+      t,
+      setAction,
+    ],
+  );
+
+  // Column meta drives the params: status / party (CSV), total
+  // (total_min/_max), created (created_from/_to).
+  const listState = useServerListState({
+    columns,
+    initialSort: "-created_at",
+    initialPageSize: ORDER_PAGE_SIZE,
+    persistKey: ORDERS_PERSIST_KEY,
+  });
+  const params: OrderListQuery = useMemo(
+    () => ({ ...listState.params, side }),
+    [listState.params, side],
+  );
 
   const list = useQuery({
-    queryKey: orderKeys.list(query),
-    queryFn: () => ordersService.list(query),
+    queryKey: orderKeys.list(params),
+    queryFn: () => ordersService.list(params),
     enabled: access.canRead,
-    placeholderData: keepPreviousData,
   });
+  const total = list.data?.total ?? 0;
 
-  const change = (patch: Partial<OrderListFilters>) => {
-    setFilters((f) => ({ ...f, ...patch }));
-    setPage(0);
+  // Export uses the same tab, filters, search and sort as the list.
+  const exportQuery = useMemo(
+    () => ({
+      ...listState.filterParams,
+      side,
+      q: params.q,
+      sort: params.sort,
+    }),
+    [listState.filterParams, params.q, params.sort, side],
+  );
+
+  const { onColumnFiltersChange, setPagination } = listState;
+  const pickSide = (next: OrderSide) => {
+    setSide(next);
+    // The party filter means buyer on one tab and seller on the other.
+    onColumnFiltersChange((prev) => prev.filter((f) => f.id !== PARTY_COLUMN));
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
   };
 
   const title = t("orders.list.title");
@@ -109,12 +327,6 @@ export function OrdersListPage({ slug }: { slug: string }) {
     );
   }
 
-  const total = list.data?.total ?? 0;
-  const pages = pageCount(total, ORDER_PAGE_SIZE);
-  const rows = list.data?.items ?? [];
-  const badRange = invalidDateRange(filters.from, filters.to);
-  const filtered = hasActiveFilters(filters);
-
   return (
     <div className="space-y-6">
       {header}
@@ -132,10 +344,7 @@ export function OrdersListPage({ slug }: { slug: string }) {
               aria-selected={side === s}
               variant={side === s ? "default" : "outline"}
               data-testid={`side-${s}`}
-              onClick={() => {
-                setSide(s);
-                setPage(0);
-              }}
+              onClick={() => pickSide(s)}
             >
               {s === "seller"
                 ? t("orders.list.incoming")
@@ -144,201 +353,77 @@ export function OrdersListPage({ slug }: { slug: string }) {
           ))}
         </div>
       ) : null}
-      <Card>
-        <CardContent className="space-y-4 pt-6" data-testid="order-filters">
-          <div
-            className="flex flex-wrap gap-2"
-            role="group"
-            aria-label={t("orders.list.status")}
-          >
-            {[ALL_STATUSES, ...ORDER_FILTER_STATUSES].map((status) => {
-              const active = filters.status === status;
-              return (
-                <Button
-                  key={status}
-                  type="button"
-                  size="sm"
-                  variant={active ? "default" : "outline"}
-                  aria-pressed={active}
-                  data-status={status}
-                  onClick={() =>
-                    change({ status: status as OrderListFilters["status"] })
-                  }
-                >
-                  {status === ALL_STATUSES
-                    ? t("orders.list.all_statuses")
-                    : t(`orders.status.${status}`)}
-                </Button>
-              );
-            })}
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="order-from">{t("orders.list.date_from")}</Label>
-              <DatePicker
-                id="order-from"
-                value={filters.from}
-                placeholder={t("orders.list.date_from")}
-                onChange={(from) => change({ from })}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="order-to">{t("orders.list.date_to")}</Label>
-              <DatePicker
-                id="order-to"
-                value={filters.to}
-                placeholder={t("orders.list.date_to")}
-                aria-invalid={badRange || undefined}
-                onChange={(to) => change({ to })}
-              />
-            </div>
-          </div>
-          {badRange ? (
-            <p className="text-destructive text-sm" data-testid="date-error">
-              {t("orders.list.date_invalid")}
-            </p>
-          ) : null}
-          {filtered ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              data-testid="clear-filters"
-              onClick={() => {
-                setFilters(EMPTY_ORDER_FILTERS);
-                setPage(0);
-              }}
-            >
-              {t("orders.list.clear_filters")}
-            </Button>
-          ) : null}
-        </CardContent>
-      </Card>
-
-      {list.isError ? (
-        <ErrorState
-          title={t("common.error_generic")}
-          onRetry={() => void list.refetch()}
-          retryLabel={t("common.retry")}
-        />
-      ) : (
-        <Card>
-          <CardContent className="pt-6">
-            {list.isLoading ? (
-              <p className="text-muted-foreground text-sm">
-                {t("orders.loading")}
-              </p>
-            ) : rows.length === 0 ? (
-              <div className="py-8 text-center" data-testid="orders-empty">
-                <p className="font-medium">{t("orders.list.empty_title")}</p>
-                <p className="text-muted-foreground text-sm">
-                  {filtered
-                    ? t("orders.list.empty_filtered")
-                    : t("orders.list.empty_description")}
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm" data-testid="orders-table">
-                  <thead>
-                    <tr className="text-muted-foreground border-b text-start text-xs">
-                      <th className="p-2 text-start font-medium">
-                        {t("orders.list.columns.order_no")}
-                      </th>
-                      <th className="p-2 text-start font-medium">
-                        {t("orders.list.columns.status")}
-                      </th>
-                      <th className="p-2 text-start font-medium">
-                        {side === "seller"
-                          ? t("orders.list.columns.buyer")
-                          : t("orders.list.columns.seller")}
-                      </th>
-                      <th className="p-2 text-end font-medium">
-                        {t("orders.list.columns.total")}
-                      </th>
-                      <th className="p-2 text-start font-medium">
-                        {t("orders.list.columns.created_at")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((o) => (
-                      <tr
-                        key={o.uuid}
-                        className="hover:bg-accent/50 border-b last:border-0"
-                        data-testid="order-row"
-                        data-uuid={o.uuid}
-                      >
-                        <td className="p-2">
-                          <Link
-                            href={routes.tenant.orders.detail(slug, o.uuid)}
-                            className="font-mono font-medium hover:underline"
-                            dir="ltr"
-                          >
-                            {o.order_no}
-                          </Link>
-                        </td>
-                        <td className="p-2">
-                          <StatusChip
-                            label={o.status_label}
-                            tone={orderStatusTone(o.status)}
-                          />
-                        </td>
-                        <td className="p-2">
-                          {side === "seller" ? o.buyer.name : o.seller.name}
-                        </td>
-                        <td className="p-2 text-end whitespace-nowrap">
-                          {format.currency(amountNumber(o.total), o.currency)}
-                        </td>
-                        <td className="p-2 whitespace-nowrap">
-                          {format.dateTime(o.created_at)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            <div
-              className={cn(
-                "mt-4 flex flex-wrap items-center justify-between gap-2",
-                rows.length === 0 && page === 0 && "hidden",
-              )}
-            >
-              <p
-                className="text-muted-foreground text-sm"
-                data-testid="page-info"
+      <EntityTable
+        columns={columns}
+        data={list.data?.items ?? []}
+        getRowId={(row) => row.uuid}
+        onRowClick={(row) =>
+          router.push(routes.tenant.orders.detail(slug, row.uuid))
+        }
+        isLoading={list.isLoading}
+        isError={list.isError}
+        onRetry={() => void list.refetch()}
+        emptyTitle={t("orders.list.empty_title")}
+        emptyDescription={
+          listState.columnFilters.length > 0 || params.q
+            ? t("orders.list.empty_filtered")
+            : t("orders.list.empty_description")
+        }
+        rowCount={total}
+        state={listState.tableState}
+        features={{
+          persistKey: ORDERS_PERSIST_KEY,
+          rowSelection: false,
+          viewMode: true,
+        }}
+        renderGridItem={(order) => (
+          <div className="space-y-2">
+            <div className="flex items-start justify-between gap-2">
+              <Link
+                href={routes.tenant.orders.detail(slug, order.uuid)}
+                className="font-mono font-semibold hover:underline"
+                dir="ltr"
+                onClick={(event) => event.stopPropagation()}
               >
-                {t("orders.list.page", { page: page + 1, pages, total })}
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  data-testid="page-prev"
-                  disabled={page === 0 || list.isFetching}
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                >
-                  <ChevronLeft className="size-4 rtl:rotate-180" />
-                  {t("orders.list.prev")}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  data-testid="page-next"
-                  disabled={page + 1 >= pages || list.isFetching}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  {t("orders.list.next")}
-                  <ChevronRight className="size-4 rtl:rotate-180" />
-                </Button>
-              </div>
+                {order.order_no}
+              </Link>
+              <StatusChip
+                label={order.status_label}
+                tone={orderStatusTone(order.status)}
+              />
             </div>
-          </CardContent>
-        </Card>
-      )}
+            <p className="text-sm">
+              {side === "seller" ? order.buyer.name : order.seller.name}
+            </p>
+            <div className="text-muted-foreground flex justify-between gap-2 text-xs">
+              <span>{format.dateTime(order.created_at)}</span>
+              <span className="text-foreground font-medium tabular-nums">
+                {format.currency(amountNumber(order.total), order.currency)}
+              </span>
+            </div>
+          </div>
+        )}
+        toolbarExtra={
+          <>
+            <ExportMenu
+              exportPath={ORDERS_EXPORT_PATH}
+              query={exportQuery}
+              formats={["xlsx", "csv", "pdf"]}
+              jobsHref={routes.tenant.exports.root(slug)}
+            />
+            <EntityToolbar
+              onRefresh={() => void list.refetch()}
+              refreshDisabled={list.isFetching}
+            />
+          </>
+        }
+      />
+      <OrderActionDialog
+        key={action ? `${action.order.uuid}-${action.action.kind}` : "closed"}
+        order={action?.order ?? null}
+        action={action?.action ?? null}
+        onClose={() => setAction(null)}
+      />
     </div>
   );
 }

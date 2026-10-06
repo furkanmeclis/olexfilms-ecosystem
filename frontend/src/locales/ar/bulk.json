@@ -76,5 +76,6 @@
   "params.lead_status.quoted": "تم تقديم عرض",
   "params.lead_status.won": "تم الفوز",
   "params.lead_status.lost": "خسارة",
-  "params.lost_reason": "سبب الخسارة"
+  "params.lost_reason": "سبب الخسارة",
+  "actions.stock_units.print_labels": "طباعة الملصقات"
 }

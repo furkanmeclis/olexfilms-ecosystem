@@ -76,5 +76,6 @@
   "params.lead_status.quoted": "Στάλθηκε προσφορά",
   "params.lead_status.won": "Κερδήθηκε",
   "params.lead_status.lost": "Χάθηκε",
-  "params.lost_reason": "Αιτία απώλειας"
+  "params.lost_reason": "Αιτία απώλειας",
+  "actions.stock_units.print_labels": "Εκτύπωση ετικετών"
 }
