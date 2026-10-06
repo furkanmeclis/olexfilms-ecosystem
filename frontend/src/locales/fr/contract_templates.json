@@ -52,5 +52,13 @@
   "toast.locale_saved": "Version linguistique enregistrée.",
   "toast.save_failed": "Le modèle n’a pas pu être enregistré.",
   "toast.default_set": "Modèle par défaut mis à jour.",
-  "toast.default_failed": "Le modèle par défaut n’a pas pu être modifié."
+  "toast.default_failed": "Le modèle par défaut n’a pas pu être modifié.",
+  "fields.is_default": "Par défaut",
+  "fields.updated_at": "Dernière mise à jour",
+  "actions.delete": "Supprimer",
+  "delete_confirm.title": "Supprimer ce modèle ?",
+  "delete_confirm.description": "« {{name}} » est supprimé. Un modèle déjà utilisé par des contrats est désactivé à la place, afin que les contrats signés conservent leur texte.",
+  "toast.deleted": "Modèle de contrat supprimé.",
+  "toast.deactivated": "Le modèle est utilisé par des contrats ; il a été désactivé au lieu d'être supprimé.",
+  "toast.delete_failed": "Le modèle n'a pas pu être supprimé."
 }

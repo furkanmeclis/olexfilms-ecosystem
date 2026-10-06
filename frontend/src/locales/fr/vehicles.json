@@ -99,5 +99,6 @@
   "transfer.status.pending": "En attente",
   "transfer.status.completed": "Terminé",
   "transfer.status.cancelled": "Annulé",
-  "transfer.status.expired": "Expiré"
+  "transfer.status.expired": "Expiré",
+  "columns.created_at": "Créé le"
 }

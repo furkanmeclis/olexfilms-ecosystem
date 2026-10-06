@@ -1,9 +1,17 @@
 "use client";
 
+import type { ColumnDef } from "@tanstack/react-table";
 import { Pencil, Trash2 } from "lucide-react";
+import { useMemo } from "react";
 
+import {
+  CLIENT_SIDE_MANUAL,
+  EntityRowActions,
+  EntityTable,
+  type EntityRowAction,
+} from "@/components/entity";
+import { createColumn } from "@/components/tables";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   priceNumber,
   visiblePriceColumns,
@@ -24,9 +32,12 @@ type PriceTableProps = {
   canDelete?: (row: EffectivePrice) => boolean;
 };
 
+export const PRICE_TABLE_PERSIST_KEY = "tenant-catalog-product-prices-v1";
+
 /**
- * Effective price view of one product (TEC-146). Columns follow the masked
- * API answer: a field the caller may not see never gets a column (K8).
+ * Effective price view of one product (TEC-146) as a nested client-side
+ * DataTable (TEC-370), one row per currency. Columns follow the masked API
+ * answer: a field the caller may not see never gets a column (K8).
  */
 export function PriceTable({
   view,
@@ -36,8 +47,103 @@ export function PriceTable({
   canDelete,
 }: PriceTableProps) {
   const { t, format } = useLocale();
-  const columns = visiblePriceColumns(view.viewer, view.prices);
+  const priceColumns = useMemo(
+    () => visiblePriceColumns(view.viewer, view.prices),
+    [view.prices, view.viewer],
+  );
   const showSource = view.prices.some((p) => p.purchase_price_source);
+
+  const columns = useMemo(() => {
+    const cols: ColumnDef<EffectivePrice, unknown>[] = [
+      createColumn<EffectivePrice>({
+        accessorKey: "currency",
+        labelKey: "catalog.prices.currency",
+        enableSorting: true,
+        gridPrimary: true,
+        cell: ({ row }) => (
+          <span className="font-mono">{row.original.currency}</span>
+        ),
+      }) as ColumnDef<EffectivePrice, unknown>,
+      ...priceColumns.map(
+        (col) =>
+          createColumn<EffectivePrice>({
+            id: col.field,
+            accessorFn: (row) => priceNumber(row[col.field]),
+            labelKey: col.labelKey,
+            enableSorting: true,
+            sortUndefined: "last",
+            cell: ({ row }) => (
+              <span className="tabular-nums" data-price-column={col.field}>
+                {format.currency(
+                  priceNumber(row.original[col.field]),
+                  row.original.currency,
+                )}
+              </span>
+            ),
+          }) as ColumnDef<EffectivePrice, unknown>,
+      ),
+    ];
+    if (showSource) {
+      cols.push(
+        createColumn<EffectivePrice>({
+          accessorKey: "purchase_price_source",
+          labelKey: "catalog.prices.source",
+          enableSorting: true,
+          cell: ({ row }) =>
+            row.original.purchase_price_source ? (
+              <Badge variant="outline">
+                {t(
+                  `catalog.prices.sources.${row.original.purchase_price_source}`,
+                )}
+              </Badge>
+            ) : (
+              "—"
+            ),
+        }) as ColumnDef<EffectivePrice, unknown>,
+      );
+    }
+    if (canEdit) {
+      cols.push(
+        createColumn<EffectivePrice>({
+          id: "actions",
+          labelKey: "common.actions",
+          enableSorting: false,
+          enableHiding: false,
+          enableResizing: false,
+          cell: ({ row }) => {
+            const actions: EntityRowAction[] = [
+              {
+                id: "edit",
+                label: t("common.edit"),
+                icon: Pencil,
+                onSelect: () => onEdit?.(row.original),
+              },
+            ];
+            if (!canDelete || canDelete(row.original)) {
+              actions.push({
+                id: "delete",
+                label: t("common.delete"),
+                icon: Trash2,
+                variant: "destructive",
+                onSelect: () => onDelete?.(row.original),
+              });
+            }
+            return <EntityRowActions actions={actions} />;
+          },
+        }) as ColumnDef<EffectivePrice, unknown>,
+      );
+    }
+    return cols;
+  }, [
+    canDelete,
+    canEdit,
+    format,
+    onDelete,
+    onEdit,
+    priceColumns,
+    showSource,
+    t,
+  ]);
 
   if (!view.prices.length) {
     return (
@@ -48,84 +154,20 @@ export function PriceTable({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm" data-testid="price-table">
-        <thead>
-          <tr className="text-muted-foreground border-b text-start">
-            <th className="py-2 pe-4 text-start font-medium">
-              {t("catalog.prices.currency")}
-            </th>
-            {columns.map((col) => (
-              <th
-                key={col.field}
-                className="py-2 pe-4 text-end font-medium"
-                data-price-column={col.field}
-              >
-                {t(col.labelKey)}
-              </th>
-            ))}
-            {showSource ? (
-              <th className="py-2 pe-4 text-start font-medium">
-                {t("catalog.prices.source")}
-              </th>
-            ) : null}
-            {canEdit ? (
-              <th className="py-2 text-end font-medium">
-                <span className="sr-only">{t("common.actions")}</span>
-              </th>
-            ) : null}
-          </tr>
-        </thead>
-        <tbody>
-          {view.prices.map((row) => (
-            <tr key={row.currency} className="border-b last:border-0">
-              <td className="py-2 pe-4 font-mono">{row.currency}</td>
-              {columns.map((col) => (
-                <td key={col.field} className="py-2 pe-4 text-end tabular-nums">
-                  {format.currency(priceNumber(row[col.field]), row.currency)}
-                </td>
-              ))}
-              {showSource ? (
-                <td className="py-2 pe-4">
-                  {row.purchase_price_source ? (
-                    <Badge variant="outline">
-                      {t(`catalog.prices.sources.${row.purchase_price_source}`)}
-                    </Badge>
-                  ) : (
-                    "—"
-                  )}
-                </td>
-              ) : null}
-              {canEdit ? (
-                <td className="py-2 text-end whitespace-nowrap">
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    className="size-8"
-                    aria-label={t("common.edit")}
-                    onClick={() => onEdit?.(row)}
-                  >
-                    <Pencil className="size-4" />
-                  </Button>
-                  {!canDelete || canDelete(row) ? (
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      className="text-destructive size-8"
-                      aria-label={t("common.delete")}
-                      onClick={() => onDelete?.(row)}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  ) : null}
-                </td>
-              ) : null}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div data-testid="price-table">
+      <EntityTable
+        columns={columns}
+        data={view.prices}
+        getRowId={(row) => row.currency}
+        manual={CLIENT_SIDE_MANUAL}
+        initialState={{ pagination: { pageIndex: 0, pageSize: 20 } }}
+        features={{
+          persistKey: PRICE_TABLE_PERSIST_KEY,
+          rowSelection: false,
+          columnFilters: false,
+          facetedFilters: false,
+        }}
+      />
     </div>
   );
 }

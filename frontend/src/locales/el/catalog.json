@@ -135,5 +135,6 @@
   "services.categories.other": "Άλλο",
   "services.recurrences.one_time": "Μία φορά",
   "services.recurrences.monthly": "Μηνιαία",
-  "services.recurrences.yearly": "Ετήσια"
+  "services.recurrences.yearly": "Ετήσια",
+  "fields.created_at": "Δημιουργία"
 }

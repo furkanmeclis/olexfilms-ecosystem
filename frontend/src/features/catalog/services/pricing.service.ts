@@ -12,6 +12,19 @@ export type DistributorPrice = Schemas["DistributorPrice"];
 
 export type DistributorOption = { uuid: string; name: string };
 
+/**
+ * `GET /v1/tenant/pricing/distributor-prices` query (TEC-369): paging,
+ * `sort` (product, distributor, currency, price, updated_at), `q` (SKU,
+ * product or distributor name) and `currency` (ISO-4217 CSV).
+ */
+export type DistributorPriceListParams = {
+  limit?: number;
+  offset?: number;
+  sort?: string;
+  q?: string;
+  currency?: string;
+};
+
 const enc = encodeURIComponent;
 
 /**
@@ -42,11 +55,14 @@ export const pricingService = {
     );
   },
 
-  listDistributorPrices(productUuid: string) {
+  listDistributorPrices(
+    productUuid: string,
+    params: DistributorPriceListParams = { limit: 100 },
+  ) {
     return platformRequest<CatalogPage<DistributorPrice>>(
       "GET",
       "/v1/tenant/pricing/distributor-prices",
-      { query: { product_uuid: productUuid, limit: 100 } },
+      { query: { product_uuid: productUuid, ...params } },
     );
   },
 

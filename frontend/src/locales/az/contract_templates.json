@@ -52,5 +52,13 @@
   "toast.locale_saved": "Dil versiyası saxlanıldı.",
   "toast.save_failed": "Şablonu saxlamaq mümkün olmadı.",
   "toast.default_set": "Defolt şablon yeniləndi.",
-  "toast.default_failed": "Defolt şablonu dəyişmək mümkün olmadı."
+  "toast.default_failed": "Defolt şablonu dəyişmək mümkün olmadı.",
+  "fields.is_default": "Defolt",
+  "fields.updated_at": "Son yenilənmə",
+  "actions.delete": "Sil",
+  "delete_confirm.title": "Bu şablon silinsin?",
+  "delete_confirm.description": "\"{{name}}\" silinir. Müqavilələrdə artıq istifadə olunmuş şablon silinmir, deaktiv edilir; imzalanmış müqavilələrin mətni qorunur.",
+  "toast.deleted": "Müqavilə şablonu silindi.",
+  "toast.deactivated": "Şablon müqavilələrdə istifadə olunduğu üçün silinmədi, deaktiv edildi.",
+  "toast.delete_failed": "Şablon silinə bilmədi."
 }

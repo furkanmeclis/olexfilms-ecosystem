@@ -1,13 +1,21 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import type { ColumnDef } from "@tanstack/react-table";
+import { BadgePercent, Pencil, Plus, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
-import { Loading } from "@/components/common/loading";
-import { EntityPage } from "@/components/entity";
+import {
+  CLIENT_SIDE_MANUAL,
+  EntityPage,
+  EntityRowActions,
+  EntityTable,
+  EntityToolbar,
+  type EntityRowAction,
+} from "@/components/entity";
+import { createColumn } from "@/components/tables";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -154,6 +162,22 @@ export function showsModulePicker(category: ServiceCatalogCategory) {
   return category === "module_bundle";
 }
 
+export const SERVICE_CATALOG_PERSIST_KEYS: Record<Mode, string> = {
+  platform: "platform-service-catalog-v1",
+  tenant: "tenant-service-catalog-v1",
+};
+export const SERVICE_OVERRIDES_PERSIST_KEY = "platform-service-overrides-v1";
+
+/** Shown price: the default (platform) or the effective price (tenant). */
+export function servicePrice(item: ServiceCatalogItem, platform: boolean) {
+  return {
+    amount: platform ? item.default_price : item.effective_price?.amount,
+    currency: platform
+      ? item.currency
+      : item.effective_price?.currency || item.currency,
+  };
+}
+
 export function ServiceCatalogPage({
   mode,
   slug,
@@ -235,6 +259,160 @@ export function ServiceCatalogPage({
     onError,
   });
 
+  const removeItem = remove.mutate;
+  const removePending = remove.isPending;
+  const patchActive = useMutation({
+    mutationFn: ({ uuid, isActive }: { uuid: string; isActive: boolean }) =>
+      serviceCatalogService.patch(uuid, { is_active: isActive }),
+    onSuccess: async () => {
+      await invalidate();
+      appToast.success(t("table.cell_saved"));
+    },
+    onError,
+  });
+
+  // Full-array endpoints (TEC-369): client-side sort, search and facets.
+  const columns = useMemo<ColumnDef<ServiceCatalogItem, unknown>[]>(() => {
+    const cols: ColumnDef<ServiceCatalogItem, unknown>[] = [
+      createColumn<ServiceCatalogItem>({
+        accessorKey: "name",
+        labelKey: "catalog.fields.name",
+        enableSorting: true,
+        gridPrimary: true,
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <div className="min-w-0">
+              <div className="font-medium">{item.name}</div>
+              {item.description ? (
+                <div className="text-muted-foreground max-w-xl text-sm whitespace-normal">
+                  {item.description}
+                </div>
+              ) : null}
+              {item.modules?.length ? (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {item.modules.map((key) => (
+                    <Badge key={key} variant="outline">
+                      {moduleName(t, key)}
+                    </Badge>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          );
+        },
+      }) as ColumnDef<ServiceCatalogItem, unknown>,
+      createColumn<ServiceCatalogItem>({
+        accessorKey: "description",
+        labelKey: "catalog.fields.description_md",
+        enableSorting: false,
+        defaultHidden: true,
+      }) as ColumnDef<ServiceCatalogItem, unknown>,
+      createColumn<ServiceCatalogItem>({
+        accessorKey: "category",
+        labelKey: "catalog.fields.category",
+        enableSorting: true,
+        filterVariant: "faceted",
+        filterOptions: SERVICE_CATALOG_CATEGORIES.map((value) => ({
+          value,
+          label: value,
+          labelKey: `catalog.services.categories.${value}`,
+        })),
+        cell: ({ row }) =>
+          t(`catalog.services.categories.${row.original.category}`),
+      }) as ColumnDef<ServiceCatalogItem, unknown>,
+      createColumn<ServiceCatalogItem>({
+        accessorKey: "recurrence",
+        labelKey: "catalog.services.recurrence",
+        enableSorting: true,
+        filterVariant: "faceted",
+        filterOptions: SERVICE_CATALOG_RECURRENCES.map((value) => ({
+          value,
+          label: value,
+          labelKey: `catalog.services.recurrences.${value}`,
+        })),
+        cell: ({ row }) =>
+          t(`catalog.services.recurrences.${row.original.recurrence}`),
+      }) as ColumnDef<ServiceCatalogItem, unknown>,
+      createColumn<ServiceCatalogItem>({
+        id: "price",
+        accessorFn: (item) => moneyValue(servicePrice(item, platform).amount),
+        labelKey: "catalog.distributor_prices.price",
+        enableSorting: true,
+        sortUndefined: "last",
+        gridSecondary: true,
+        cell: ({ row }) => {
+          const price = servicePrice(row.original, platform);
+          return (
+            <span
+              className="tabular-nums"
+              data-testid={`service-price-${row.original.uuid}`}
+            >
+              {price.amount
+                ? format.currency(moneyValue(price.amount), price.currency)
+                : t("catalog.services.price_masked")}
+            </span>
+          );
+        },
+      }) as ColumnDef<ServiceCatalogItem, unknown>,
+      createColumn<ServiceCatalogItem>({
+        accessorKey: "is_active",
+        labelKey: "catalog.fields.active",
+        enableSorting: true,
+        // The tenant list only returns active items.
+        filterVariant: platform ? "boolean" : undefined,
+        editVariant: platform ? "boolean" : undefined,
+        cell: ({ row }) => (
+          <Badge variant={row.original.is_active ? "success" : "outline"}>
+            {t(
+              row.original.is_active
+                ? "catalog.status.active"
+                : "catalog.status.inactive",
+            )}
+          </Badge>
+        ),
+      }) as ColumnDef<ServiceCatalogItem, unknown>,
+    ];
+    if (platform) {
+      cols.push(
+        createColumn<ServiceCatalogItem>({
+          id: "actions",
+          labelKey: "common.actions",
+          enableSorting: false,
+          enableHiding: false,
+          enableResizing: false,
+          cell: ({ row }) => {
+            const item = row.original;
+            const actions: EntityRowAction[] = [
+              {
+                id: "edit",
+                label: t("common.edit"),
+                icon: Pencil,
+                onSelect: () => setEditing(formFromItem(item)),
+              },
+              {
+                id: "overrides",
+                label: t("catalog.services.overrides.tab"),
+                icon: BadgePercent,
+                onSelect: () => setOverrideFor(item),
+              },
+              {
+                id: "delete",
+                label: t("common.delete"),
+                icon: Trash2,
+                variant: "destructive",
+                disabled: removePending,
+                onSelect: () => removeItem(item.uuid),
+              },
+            ];
+            return <EntityRowActions actions={actions} />;
+          },
+        }) as ColumnDef<ServiceCatalogItem, unknown>,
+      );
+    }
+    return cols;
+  }, [format, platform, removeItem, removePending, t]);
+
   return (
     <EntityPage
       title={t("catalog.services.title")}
@@ -272,134 +450,40 @@ export function ServiceCatalogPage({
         ) : null
       }
     >
-      {list.isLoading ? <Loading label={t("common.loading")} /> : null}
-      {list.isError ? (
-        <ErrorState
-          title={t("common.error_generic")}
-          description={t("catalog.services.load_failed")}
-          retryLabel={t("common.retry")}
-          onRetry={() => void list.refetch()}
-        />
-      ) : null}
-
-      {!list.isLoading && !rows.length ? (
-        <div className="text-muted-foreground rounded-lg border p-6 text-sm">
-          {t("catalog.services.empty")}
-        </div>
-      ) : null}
-
-      {rows.length ? (
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 text-start font-medium">
-                  {t("catalog.fields.name")}
-                </th>
-                <th className="px-3 py-2 text-start font-medium">
-                  {t("catalog.fields.category")}
-                </th>
-                <th className="px-3 py-2 text-start font-medium">
-                  {t("catalog.services.recurrence")}
-                </th>
-                <th className="px-3 py-2 text-end font-medium">
-                  {t("catalog.distributor_prices.price")}
-                </th>
-                <th className="px-3 py-2 text-start font-medium">
-                  {t("catalog.fields.active")}
-                </th>
-                {platform ? <th className="px-3 py-2" /> : null}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((item) => {
-                const price = platform
-                  ? item.default_price
-                  : item.effective_price?.amount;
-                const currency = platform
-                  ? item.currency
-                  : item.effective_price?.currency || item.currency;
-                return (
-                  <tr key={item.uuid} className="border-t align-top">
-                    <td className="px-3 py-2">
-                      <div className="font-medium">{item.name}</div>
-                      {item.description ? (
-                        <div className="text-muted-foreground max-w-xl">
-                          {item.description}
-                        </div>
-                      ) : null}
-                      {item.modules?.length ? (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {item.modules.map((key) => (
-                            <Badge key={key} variant="outline">
-                              {moduleName(t, key)}
-                            </Badge>
-                          ))}
-                        </div>
-                      ) : null}
-                    </td>
-                    <td className="px-3 py-2">
-                      {t(`catalog.services.categories.${item.category}`)}
-                    </td>
-                    <td className="px-3 py-2">
-                      {t(`catalog.services.recurrences.${item.recurrence}`)}
-                    </td>
-                    <td
-                      className="px-3 py-2 text-end tabular-nums"
-                      data-testid={`service-price-${item.uuid}`}
-                    >
-                      {price
-                        ? format.currency(moneyValue(price), currency)
-                        : t("catalog.services.price_masked")}
-                    </td>
-                    <td className="px-3 py-2">
-                      <Badge variant={item.is_active ? "success" : "outline"}>
-                        {t(
-                          item.is_active
-                            ? "catalog.status.active"
-                            : "catalog.status.inactive",
-                        )}
-                      </Badge>
-                    </td>
-                    {platform ? (
-                      <td className="px-3 py-2 text-end whitespace-nowrap">
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          aria-label={t("common.edit")}
-                          onClick={() => setEditing(formFromItem(item))}
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setOverrideFor(item)}
-                        >
-                          {t("catalog.services.overrides.tab")}
-                        </Button>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="text-destructive"
-                          aria-label={t("common.delete")}
-                          disabled={remove.isPending}
-                          onClick={() => remove.mutate(item.uuid)}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </td>
-                    ) : null}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      ) : null}
+      <EntityTable
+        columns={columns}
+        data={rows}
+        getRowId={(row) => row.uuid}
+        manual={CLIENT_SIDE_MANUAL}
+        isLoading={list.isLoading}
+        isError={list.isError}
+        errorDescription={t("catalog.services.load_failed")}
+        onRetry={() => void list.refetch()}
+        emptyTitle={t("catalog.services.empty")}
+        emptyDescription=""
+        initialState={{ pagination: { pageIndex: 0, pageSize: 20 } }}
+        features={{
+          persistKey: SERVICE_CATALOG_PERSIST_KEYS[mode],
+          rowSelection: false,
+          inlineEdit: platform,
+        }}
+        onCellEdit={
+          platform
+            ? ({ row, columnId, value }) => {
+                if (columnId !== "is_active") return;
+                const next = Boolean(value);
+                if (next === row.is_active) return;
+                patchActive.mutate({ uuid: row.uuid, isActive: next });
+              }
+            : undefined
+        }
+        toolbarExtra={
+          <EntityToolbar
+            onRefresh={() => void list.refetch()}
+            refreshDisabled={list.isFetching}
+          />
+        }
+      />
 
       {platform ? (
         <>
@@ -733,6 +817,65 @@ function OverridesDialog({
     onError,
   });
 
+  const removeOverride = remove.mutate;
+  const removeOverridePending = remove.isPending;
+  // Nested client-side table of the overrides saved in this dialog.
+  const overrideColumns = useMemo<ColumnDef<OverrideRow, unknown>[]>(
+    () => [
+      createColumn<OverrideRow>({
+        id: "distributor",
+        accessorFn: (row) => row.org.name,
+        labelKey: "catalog.distributor_prices.distributor",
+        enableSorting: true,
+        gridPrimary: true,
+      }) as ColumnDef<OverrideRow, unknown>,
+      createColumn<OverrideRow>({
+        id: "price",
+        accessorFn: (row) => moneyValue(row.price),
+        labelKey: "catalog.distributor_prices.price",
+        enableSorting: true,
+        cell: ({ row }) => (
+          <span className="tabular-nums">
+            {format.currency(
+              moneyValue(row.original.price),
+              row.original.currency,
+            )}
+          </span>
+        ),
+      }) as ColumnDef<OverrideRow, unknown>,
+      createColumn<OverrideRow>({
+        accessorKey: "currency",
+        labelKey: "catalog.prices.currency",
+        enableSorting: true,
+        cell: ({ row }) => (
+          <span className="font-mono">{row.original.currency}</span>
+        ),
+      }) as ColumnDef<OverrideRow, unknown>,
+      createColumn<OverrideRow>({
+        id: "actions",
+        labelKey: "common.actions",
+        enableSorting: false,
+        enableHiding: false,
+        enableResizing: false,
+        cell: ({ row }) => (
+          <EntityRowActions
+            actions={[
+              {
+                id: "delete",
+                label: t("common.delete"),
+                icon: Trash2,
+                variant: "destructive",
+                disabled: removeOverridePending,
+                onSelect: () => removeOverride(row.original.org),
+              },
+            ]}
+          />
+        ),
+      }) as ColumnDef<OverrideRow, unknown>,
+    ],
+    [format, removeOverride, removeOverridePending, t],
+  );
+
   return (
     <Dialog open={Boolean(item)} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
@@ -789,41 +932,24 @@ function OverridesDialog({
                 </Button>
               </div>
             </div>
-            <div className="rounded-lg border">
-              {overrides.length ? (
-                <table className="w-full text-sm">
-                  <tbody>
-                    {overrides.map((row) => (
-                      <tr
-                        key={row.org.uuid}
-                        className="border-t first:border-0"
-                      >
-                        <td className="px-3 py-2">{row.org.name}</td>
-                        <td className="px-3 py-2 text-end tabular-nums">
-                          {format.currency(moneyValue(row.price), row.currency)}
-                        </td>
-                        <td className="px-3 py-2 text-end">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            aria-label={t("common.delete")}
-                            disabled={remove.isPending}
-                            onClick={() => remove.mutate(row.org)}
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <p className="text-muted-foreground p-3 text-sm">
-                  {t("catalog.services.overrides.empty")}
-                </p>
-              )}
-            </div>
+            <EntityTable
+              columns={overrideColumns}
+              data={overrides}
+              getRowId={(row) => row.org.uuid}
+              manual={CLIENT_SIDE_MANUAL}
+              emptyTitle={t("catalog.services.overrides.empty")}
+              emptyDescription=""
+              initialState={{ pagination: { pageIndex: 0, pageSize: 10 } }}
+              pageSizeOptions={[10, 20, 50]}
+              features={{
+                persistKey: SERVICE_OVERRIDES_PERSIST_KEY,
+                rowSelection: false,
+                columnFilters: false,
+                facetedFilters: false,
+                viewMode: false,
+                density: false,
+              }}
+            />
           </TabsContent>
         </Tabs>
       </DialogContent>

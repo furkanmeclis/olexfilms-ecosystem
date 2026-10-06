@@ -135,5 +135,6 @@
   "services.categories.other": "Друго",
   "services.recurrences.one_time": "Еднократно",
   "services.recurrences.monthly": "Месечно",
-  "services.recurrences.yearly": "Годишно"
+  "services.recurrences.yearly": "Годишно",
+  "fields.created_at": "Създаден"
 }
