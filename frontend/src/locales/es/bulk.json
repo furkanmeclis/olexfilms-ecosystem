@@ -76,5 +76,6 @@
   "params.lead_status.quoted": "Presupuestado",
   "params.lead_status.won": "Ganado",
   "params.lead_status.lost": "Perdido",
-  "params.lost_reason": "Motivo de pérdida"
+  "params.lost_reason": "Motivo de pérdida",
+  "actions.warehouse_count_lines.set_resolution": "Aplicar resolución: {{resolution}}"
 }

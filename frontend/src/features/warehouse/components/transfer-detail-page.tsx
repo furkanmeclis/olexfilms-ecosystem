@@ -5,7 +5,6 @@ import {
   ArrowLeftRight,
   CheckCircle2,
   MapPin,
-  Trash2,
   Truck,
   XCircle,
 } from "lucide-react";
@@ -20,6 +19,7 @@ import { routes } from "@/config/routes";
 import { Info } from "@/features/warehouse/components/list-controls";
 import { LocationPicker } from "@/features/warehouse/components/location-picker";
 import { ScanInput } from "@/features/warehouse/components/scan-input";
+import { TransferLinesTable } from "@/features/warehouse/components/transfer-lines-table";
 import {
   useWarehouseAccess,
   WarehouseShell,
@@ -67,6 +67,7 @@ export function TransferDetailPage({
   const [locationUuid, setLocationUuid] = useState("");
   const [lineError, setLineError] = useState<string | null>(null);
   const [placeError, setPlaceError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string[]>([]);
 
   const key = warehouseKeys.transfer(uuid);
   const transferQuery = useQuery({
@@ -107,11 +108,17 @@ export function TransferDetailPage({
       warehouseService.placeTransfer(uuid, {
         ...target,
         ...(transfer
-          ? { line_uuids: untargetedLines(transfer).map((l) => l.uuid) }
+          ? {
+              line_uuids:
+                selected.length > 0
+                  ? selected
+                  : untargetedLines(transfer).map((l) => l.uuid),
+            }
           : {}),
       }),
     onSuccess: (next) => {
       setPlaceError(null);
+      setSelected([]);
       apply(next);
       appToast.success(t("warehouse.entry.placed"));
     },
@@ -321,10 +328,14 @@ export function TransferDetailPage({
                   {t("warehouse.transfer.target_title")}
                 </CardTitle>
                 <p className="text-muted-foreground text-sm">
-                  {t("warehouse.transfer.target_hint", {
-                    count: untargetedLines(transfer).length,
-                    warehouse: transfer.to_warehouse.code,
-                  })}
+                  {selected.length > 0
+                    ? t("warehouse.entry.place_selected", {
+                        count: selected.length,
+                      })
+                    : t("warehouse.transfer.target_hint", {
+                        count: untargetedLines(transfer).length,
+                        warehouse: transfer.to_warehouse.code,
+                      })}
                 </p>
               </CardHeader>
               <CardContent className="grid gap-6 lg:grid-cols-2">
@@ -381,95 +392,15 @@ export function TransferDetailPage({
                   {t("warehouse.entry.no_lines")}
                 </p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table
-                    className="w-full text-sm"
-                    data-testid="transfer-lines"
-                  >
-                    <thead>
-                      <tr className="text-muted-foreground border-b text-xs">
-                        <th className="p-2 text-start font-medium">
-                          {t("warehouse.fields.barcode")}
-                        </th>
-                        <th className="p-2 text-start font-medium">
-                          {t("warehouse.fields.product")}
-                        </th>
-                        <th className="p-2 text-start font-medium">
-                          {t("warehouse.transfer.source")}
-                        </th>
-                        <th className="p-2 text-start font-medium">
-                          {t("warehouse.transfer.target")}
-                        </th>
-                        <th className="p-2 text-end font-medium">
-                          <span className="sr-only">
-                            {t("warehouse.entry.actions")}
-                          </span>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {lines.map((l) => (
-                        <tr
-                          key={l.uuid}
-                          className="border-b last:border-0"
-                          data-testid="transfer-line"
-                          data-barcode={l.barcode}
-                        >
-                          <td className="p-2 font-mono text-xs" dir="ltr">
-                            {l.barcode}
-                          </td>
-                          <td className="p-2">
-                            {l.product.name}
-                            <div
-                              className="text-muted-foreground font-mono text-xs"
-                              dir="ltr"
-                            >
-                              {l.product.sku}
-                            </div>
-                          </td>
-                          <td className="p-2 font-mono text-xs" dir="ltr">
-                            {l.source_location?.full_code ??
-                              l.source_location?.code ??
-                              "—"}
-                          </td>
-                          <td
-                            className="p-2"
-                            data-testid="transfer-line-target"
-                          >
-                            {l.target_location ? (
-                              <span className="font-mono text-xs" dir="ltr">
-                                {l.target_location.full_code ??
-                                  l.target_location.code}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground text-xs">
-                                {t("warehouse.entry.unplaced")}
-                              </span>
-                            )}
-                          </td>
-                          <td className="p-2">
-                            {writable && canEditLines(transfer) ? (
-                              <div className="flex justify-end">
-                                <Button
-                                  type="button"
-                                  size="icon-sm"
-                                  variant="ghost"
-                                  aria-label={t("warehouse.entry.remove_line", {
-                                    barcode: l.barcode,
-                                  })}
-                                  onClick={() => removeLine.mutate(l.uuid)}
-                                  disabled={removeLine.isPending}
-                                >
-                                  <Trash2 className="size-4" />
-                                </Button>
-                              </div>
-                            ) : null}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <TransferLinesTable
+                  lines={lines}
+                  selectable={writable && canPlace(transfer)}
+                  removable={writable && canEditLines(transfer)}
+                  selected={selected}
+                  onSelectedChange={setSelected}
+                  onRemove={removeLine.mutate}
+                  removing={removeLine.isPending}
+                />
               )}
             </CardContent>
           </Card>

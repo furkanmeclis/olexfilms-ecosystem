@@ -1,13 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  CheckCircle2,
-  MapPin,
-  PackagePlus,
-  Trash2,
-  XCircle,
-} from "lucide-react";
+import { CheckCircle2, MapPin, PackagePlus, XCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
@@ -17,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import { EntryLinesTable } from "@/features/warehouse/components/entry-lines-table";
 import { GenerateForm } from "@/features/warehouse/components/generate-form";
 import { LabelButton } from "@/features/warehouse/components/label-button";
 import { nativeSelectClass } from "@/features/warehouse/components/native-select-field";
@@ -73,7 +68,7 @@ export function StockEntryDetailPage({
   slug: string;
   uuid: string;
 }) {
-  const { t, format } = useLocale();
+  const { t } = useLocale();
   const access = useWarehouseAccess(slug);
   const canWrite = access.can(Permission.WarehouseWrite);
   const qc = useQueryClient();
@@ -201,7 +196,6 @@ export function StockEntryDetailPage({
   const title = t("warehouse.entry.title");
   const lines = entry?.lines ?? [];
   const unplaced = entry ? unplacedLines(entry).length : 0;
-  const allSelected = lines.length > 0 && selected.length === lines.length;
 
   return (
     <WarehouseShell
@@ -450,124 +444,14 @@ export function StockEntryDetailPage({
                   {t("warehouse.entry.no_lines")}
                 </p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm" data-testid="entry-lines">
-                    <thead>
-                      <tr className="text-muted-foreground border-b text-xs">
-                        {editable ? (
-                          <th className="w-8 p-2">
-                            <input
-                              type="checkbox"
-                              aria-label={t("warehouse.entry.select_all")}
-                              checked={allSelected}
-                              onChange={(e) =>
-                                setSelected(
-                                  e.target.checked
-                                    ? lines.map((l) => l.uuid)
-                                    : [],
-                                )
-                              }
-                            />
-                          </th>
-                        ) : null}
-                        <th className="p-2 text-start font-medium">
-                          {t("warehouse.fields.barcode")}
-                        </th>
-                        <th className="p-2 text-start font-medium">
-                          {t("warehouse.fields.product")}
-                        </th>
-                        <th className="p-2 text-start font-medium">
-                          {t("warehouse.fields.quantity")}
-                        </th>
-                        <th className="p-2 text-start font-medium">
-                          {t("warehouse.fields.location")}
-                        </th>
-                        <th className="p-2 text-end font-medium">
-                          <span className="sr-only">
-                            {t("warehouse.entry.actions")}
-                          </span>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {lines.map((l) => (
-                        <tr
-                          key={l.uuid}
-                          className="border-b last:border-0"
-                          data-testid="entry-line"
-                          data-barcode={l.barcode}
-                        >
-                          {editable ? (
-                            <td className="p-2">
-                              <input
-                                type="checkbox"
-                                aria-label={t("warehouse.entry.select_line", {
-                                  barcode: l.barcode,
-                                })}
-                                checked={selected.includes(l.uuid)}
-                                onChange={(e) =>
-                                  setSelected((prev) =>
-                                    e.target.checked
-                                      ? [...prev, l.uuid]
-                                      : prev.filter((x) => x !== l.uuid),
-                                  )
-                                }
-                              />
-                            </td>
-                          ) : null}
-                          <td className="p-2 font-mono text-xs" dir="ltr">
-                            {l.barcode}
-                          </td>
-                          <td className="p-2">
-                            {l.product.name}
-                            <div
-                              className="text-muted-foreground font-mono text-xs"
-                              dir="ltr"
-                            >
-                              {l.product.sku}
-                            </div>
-                          </td>
-                          <td className="p-2">{format.number(l.quantity)}</td>
-                          <td className="p-2" data-testid="entry-line-location">
-                            {l.location ? (
-                              <span className="font-mono text-xs" dir="ltr">
-                                {l.location.full_code ?? l.location.code}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground text-xs">
-                                {t("warehouse.entry.unplaced")}
-                              </span>
-                            )}
-                          </td>
-                          <td className="p-2">
-                            <div className="flex justify-end gap-1">
-                              <LabelButton
-                                path={l.label_url}
-                                filename={`${l.barcode}.pdf`}
-                                size="icon-sm"
-                                variant="ghost"
-                              />
-                              {editable ? (
-                                <Button
-                                  type="button"
-                                  size="icon-sm"
-                                  variant="ghost"
-                                  aria-label={t("warehouse.entry.remove_line", {
-                                    barcode: l.barcode,
-                                  })}
-                                  onClick={() => removeLine.mutate(l.uuid)}
-                                  disabled={removeLine.isPending}
-                                >
-                                  <Trash2 className="size-4" />
-                                </Button>
-                              ) : null}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <EntryLinesTable
+                  lines={lines}
+                  editable={editable}
+                  selected={selected}
+                  onSelectedChange={setSelected}
+                  onRemove={removeLine.mutate}
+                  removing={removeLine.isPending}
+                />
               )}
             </CardContent>
           </Card>

@@ -3,6 +3,7 @@ import type {
   StockCountLine,
   StockCountMethod,
   StockCountResolution,
+  StockCountScan,
   StockCountScopeType,
   StockCountStatus,
   StockCountVisibility,
@@ -31,6 +32,32 @@ export const COUNT_SCOPES: StockCountScopeType[] = [
   "warehouse",
   "room",
   "location",
+  "product",
+];
+
+/** Results of a difference line (matched lines need no resolution). */
+export const COUNT_RESULTS: StockCountLine["result"][] = [
+  "matched",
+  "missing",
+  "wrong_location",
+  "unlocated",
+  "unexpected",
+  "qty_variance",
+  "meter_variance",
+];
+
+/** Resolutions a difference line may allow. */
+export const COUNT_RESOLUTIONS: StockCountResolution[] = [
+  "ignore",
+  "relocate",
+  "void_missing",
+  "increase_unlocated",
+];
+
+/** Counted scan kinds (location scans only set the context). */
+export const COUNT_SCAN_KINDS: StockCountScan["kind"][] = [
+  "serial",
+  "fixed",
   "product",
 ];
 

@@ -76,5 +76,6 @@
   "params.lead_status.quoted": "Предложение отправлено",
   "params.lead_status.won": "Выигран",
   "params.lead_status.lost": "Проигран",
-  "params.lost_reason": "Причина проигрыша"
+  "params.lost_reason": "Причина проигрыша",
+  "actions.warehouse_count_lines.set_resolution": "Назначить решение: {{resolution}}"
 }

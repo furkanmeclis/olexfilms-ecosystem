@@ -76,5 +76,6 @@
   "params.lead_status.quoted": "Təklif verildi",
   "params.lead_status.won": "Qazanıldı",
   "params.lead_status.lost": "İtirildi",
-  "params.lost_reason": "İtirmə səbəbi"
+  "params.lost_reason": "İtirmə səbəbi",
+  "actions.warehouse_count_lines.set_resolution": "Həll təyin et: {{resolution}}"
 }

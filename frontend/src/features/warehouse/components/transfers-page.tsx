@@ -1,17 +1,28 @@
 "use client";
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ColumnDef } from "@tanstack/react-table";
 import {
-  keepPreviousData,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
-import { ArrowLeftRight, MoveRight, Plus } from "lucide-react";
+  ArrowLeftRight,
+  Eye,
+  MoveRight,
+  Plus,
+  Truck,
+  XCircle,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { StatusChip } from "@/components/common/status-chip";
+import {
+  EntityRowActions,
+  EntityTable,
+  EntityToolbar,
+  useServerListState,
+  type EntityRowAction,
+} from "@/components/entity";
+import { createColumn } from "@/components/tables";
 import { AppForm, AppInput } from "@/components/forms";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,22 +30,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
-import {
-  ALL,
-  ListBody,
-  Pager,
-  StatusFilter,
-} from "@/features/warehouse/components/list-controls";
 import { NativeSelectField } from "@/features/warehouse/components/native-select-field";
 import { ScanInput } from "@/features/warehouse/components/scan-input";
+import {
+  enumFilterOptions,
+  useWarehouseFilterOptions,
+} from "@/features/warehouse/components/table-options";
 import {
   useWarehouseAccess,
   WarehouseShell,
 } from "@/features/warehouse/components/warehouse-shell";
-import {
-  pageCount,
-  warehouseErrorMessage,
-} from "@/features/warehouse/lib/errors";
+import { warehouseErrorMessage } from "@/features/warehouse/lib/errors";
 import {
   parseBarcodes,
   transferFormSchema,
@@ -51,44 +57,229 @@ import {
   type TransferListQuery,
   type Warehouse,
   type WarehouseMoveResult,
-  type WarehouseTransferStatus,
+  type WarehouseTransfer,
 } from "@/features/warehouse/services/warehouse.service";
+import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
+import { appToast } from "@/providers/toast-provider";
 
 export const TRANSFER_PAGE_SIZE = 20;
+export const TRANSFERS_PERSIST_KEY = "tenant-warehouse-transfers-v1";
+
+type TransferRowAction = "ship" | "cancel";
 
 /**
- * Warehouse > Transfers (TEC-205): a bin ↔ bin move inside a warehouse in
- * one step (scan units, scan the target bin) and the warehouse ↔ warehouse
- * transfer documents (draft → in transit → completed, or cancelled).
+ * Warehouse > Transfers (TEC-205, TEC-376): a bin ↔ bin move inside a
+ * warehouse in one step (scan units, scan the target bin) and the
+ * warehouse ↔ warehouse transfer documents (draft → in transit →
+ * completed, or cancelled) over a server DataTable — sort (no, created,
+ * status), search (no, note), status / source / target / created filters,
+ * row actions (open, ship a draft with lines, cancel) and mobile cards.
  */
 export function TransfersPage({ slug }: { slug: string }) {
   const { t, format } = useLocale();
+  const router = useRouter();
+  const qc = useQueryClient();
+  const { confirm } = useDialogs();
   const access = useWarehouseAccess(slug);
   const canWrite = access.can(Permission.WarehouseWrite);
-  const [status, setStatus] = useState<WarehouseTransferStatus | typeof ALL>(
-    ALL,
-  );
-  const [page, setPage] = useState(0);
   const [creating, setCreating] = useState(false);
+  const warehouseOptions = useWarehouseFilterOptions(access.allowed);
 
-  const query = useMemo<TransferListQuery>(
-    () => ({
-      ...(status === ALL ? {} : { status }),
-      limit: TRANSFER_PAGE_SIZE,
-      offset: page * TRANSFER_PAGE_SIZE,
-    }),
-    [status, page],
-  );
+  const finish = useMutation({
+    mutationFn: (v: { uuid: string; action: TransferRowAction }) =>
+      v.action === "ship"
+        ? warehouseService.shipTransfer(v.uuid)
+        : warehouseService.cancelTransfer(v.uuid),
+    onSuccess: async (next, v) => {
+      qc.setQueryData(warehouseKeys.transfer(next.uuid), next);
+      await qc.invalidateQueries({ queryKey: ["warehouse", "transfers"] });
+      appToast.success(t(`warehouse.transfer.${v.action}_done`));
+    },
+    onError: (err) =>
+      appToast.error(warehouseErrorMessage(err, t, t("warehouse.form.error"))),
+  });
+  const runFinish = finish.mutate;
+  const finishPending = finish.isPending;
+
+  const columns = useMemo(() => {
+    const ask = async (
+      transfer: WarehouseTransfer,
+      action: TransferRowAction,
+    ) => {
+      const ok = await confirm({
+        title: t(`warehouse.transfer.${action}_title`),
+        description: t(`warehouse.transfer.${action}_description`),
+        confirmLabel: t(`warehouse.transfer.${action}`),
+        variant: action === "cancel" ? "destructive" : "default",
+      });
+      if (ok) runFinish({ uuid: transfer.uuid, action });
+    };
+    return [
+      createColumn<WarehouseTransfer>({
+        accessorKey: "transfer_no",
+        labelKey: "warehouse.transfers.columns.no",
+        enableSorting: true,
+        gridPrimary: true,
+        cell: ({ row }) => (
+          <div className="min-w-0">
+            <Link
+              href={routes.tenant.warehouse.transfer(slug, row.original.uuid)}
+              className="font-mono font-medium hover:underline"
+              dir="ltr"
+              data-testid="transfer-row"
+              data-uuid={row.original.uuid}
+              onClick={(event) => event.stopPropagation()}
+            >
+              {row.original.transfer_no}
+            </Link>
+            {row.original.note ? (
+              <div className="text-muted-foreground truncate text-xs">
+                {row.original.note}
+              </div>
+            ) : null}
+          </div>
+        ),
+      }),
+      createColumn<WarehouseTransfer>({
+        id: "from_warehouse",
+        accessorFn: (r) => r.from_warehouse.code,
+        labelKey: "warehouse.fields.from_warehouse",
+        enableSorting: false,
+        filterVariant: "faceted",
+        filterOptions: warehouseOptions,
+        enableColumnFilter: warehouseOptions.length > 0,
+        param: "from_warehouse_uuid",
+        gridSecondary: true,
+        cell: ({ row }) => (
+          <span className="inline-flex items-center gap-1">
+            {row.original.from_warehouse.code}
+            <MoveRight className="text-muted-foreground size-3 rtl:rotate-180" />
+          </span>
+        ),
+      }),
+      createColumn<WarehouseTransfer>({
+        id: "to_warehouse",
+        accessorFn: (r) => r.to_warehouse.code,
+        labelKey: "warehouse.fields.to_warehouse",
+        enableSorting: false,
+        filterVariant: "faceted",
+        filterOptions: warehouseOptions,
+        enableColumnFilter: warehouseOptions.length > 0,
+        param: "to_warehouse_uuid",
+        cell: ({ row }) => row.original.to_warehouse.code,
+      }),
+      createColumn<WarehouseTransfer>({
+        accessorKey: "status",
+        labelKey: "warehouse.entries.columns.status",
+        enableSorting: true,
+        filterVariant: "faceted",
+        filterOptions: enumFilterOptions(
+          TRANSFER_STATUSES,
+          "warehouse.transfer_status",
+        ),
+        param: "status",
+        cell: ({ row }) => (
+          <StatusChip
+            label={t(`warehouse.transfer_status.${row.original.status}`)}
+            tone={transferStatusTone(row.original.status)}
+          />
+        ),
+      }),
+      createColumn<WarehouseTransfer>({
+        accessorKey: "line_count",
+        labelKey: "warehouse.entries.columns.lines",
+        enableSorting: false,
+        cell: ({ row }) => format.number(row.original.line_count),
+      }),
+      createColumn<WarehouseTransfer>({
+        accessorKey: "created_at",
+        labelKey: "warehouse.entries.columns.created",
+        enableSorting: true,
+        filterVariant: "date-range",
+        param: "created",
+        cell: ({ row }) => (
+          <span className="text-muted-foreground text-xs whitespace-nowrap">
+            {format.dateTime(row.original.created_at)}
+          </span>
+        ),
+      }),
+      createColumn<WarehouseTransfer>({
+        id: "actions",
+        labelKey: "common.actions",
+        enableSorting: false,
+        enableHiding: false,
+        enableResizing: false,
+        cell: ({ row }) => {
+          const transfer = row.original;
+          const items: EntityRowAction[] = [
+            {
+              id: "view",
+              label: t("common.view"),
+              icon: Eye,
+              onSelect: () =>
+                router.push(
+                  routes.tenant.warehouse.transfer(slug, transfer.uuid),
+                ),
+            },
+          ];
+          // Receiving needs target locations: it stays on the detail page.
+          if (
+            canWrite &&
+            transfer.status === "draft" &&
+            transfer.line_count > 0
+          ) {
+            items.push({
+              id: "ship",
+              label: t("warehouse.transfer.ship"),
+              icon: Truck,
+              disabled: finishPending,
+              onSelect: () => void ask(transfer, "ship"),
+            });
+          }
+          if (
+            canWrite &&
+            (transfer.status === "draft" || transfer.status === "in_transit")
+          ) {
+            items.push({
+              id: "cancel",
+              label: t("warehouse.transfer.cancel"),
+              icon: XCircle,
+              variant: "destructive",
+              disabled: finishPending,
+              onSelect: () => void ask(transfer, "cancel"),
+            });
+          }
+          return <EntityRowActions actions={items} />;
+        },
+      }),
+    ] as ColumnDef<WarehouseTransfer, unknown>[];
+  }, [
+    canWrite,
+    confirm,
+    finishPending,
+    format,
+    router,
+    runFinish,
+    slug,
+    t,
+    warehouseOptions,
+  ]);
+
+  // Column meta drives the params: from_/to_warehouse_uuid / status (CSV),
+  // created (created_from/_to); sort transfer_no | created_at | status.
+  const listState = useServerListState({
+    columns,
+    initialSort: "-created_at",
+    initialPageSize: TRANSFER_PAGE_SIZE,
+    persistKey: TRANSFERS_PERSIST_KEY,
+  });
+  const query: TransferListQuery = listState.params;
   const list = useQuery({
     queryKey: warehouseKeys.transfers(query),
     queryFn: () => warehouseService.listTransfers(query),
     enabled: access.allowed,
-    placeholderData: keepPreviousData,
   });
-  const rows = list.data?.items ?? [];
-  const total = list.data?.total ?? 0;
-  const pages = pageCount(total, TRANSFER_PAGE_SIZE);
 
   return (
     <WarehouseShell
@@ -120,98 +311,54 @@ export function TransfersPage({ slug }: { slug: string }) {
         <CardHeader>
           <CardTitle>{t("warehouse.transfers.list_title")}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <StatusFilter
-            value={status}
-            statuses={TRANSFER_STATUSES}
-            labelKey="warehouse.transfer_status"
-            ariaLabel={t("warehouse.entries.status_filter")}
-            onChange={(s) => {
-              setStatus(s);
-              setPage(0);
-            }}
-          />
-          <ListBody
-            isError={list.isError}
+        <CardContent>
+          <EntityTable
+            columns={columns}
+            data={list.data?.items ?? []}
+            getRowId={(row) => row.uuid}
+            onRowClick={(row) =>
+              router.push(routes.tenant.warehouse.transfer(slug, row.uuid))
+            }
             isLoading={list.isLoading}
-            isEmpty={rows.length === 0}
+            isError={list.isError}
             onRetry={() => void list.refetch()}
             emptyTitle={t("warehouse.transfers.empty_title")}
             emptyDescription={t("warehouse.transfers.empty_description")}
-            emptyTestId="transfers-empty"
-          >
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm" data-testid="transfers-table">
-                <thead>
-                  <tr className="text-muted-foreground border-b text-xs">
-                    <th className="p-2 text-start font-medium">
-                      {t("warehouse.transfers.columns.no")}
-                    </th>
-                    <th className="p-2 text-start font-medium">
-                      {t("warehouse.transfers.columns.route")}
-                    </th>
-                    <th className="p-2 text-start font-medium">
-                      {t("warehouse.entries.columns.status")}
-                    </th>
-                    <th className="p-2 text-start font-medium">
-                      {t("warehouse.entries.columns.lines")}
-                    </th>
-                    <th className="p-2 text-start font-medium">
-                      {t("warehouse.entries.columns.created")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => (
-                    <tr
-                      key={r.uuid}
-                      className="hover:bg-accent/50 border-b last:border-0"
-                      data-testid="transfer-row"
-                    >
-                      <td className="p-2">
-                        <Link
-                          href={routes.tenant.warehouse.transfer(slug, r.uuid)}
-                          className="font-mono font-medium hover:underline"
-                          dir="ltr"
-                        >
-                          {r.transfer_no}
-                        </Link>
-                        {r.note ? (
-                          <div className="text-muted-foreground truncate text-xs">
-                            {r.note}
-                          </div>
-                        ) : null}
-                      </td>
-                      <td className="p-2">
-                        <span className="inline-flex items-center gap-1">
-                          {r.from_warehouse.code}
-                          <MoveRight className="size-3 rtl:rotate-180" />
-                          {r.to_warehouse.code}
-                        </span>
-                      </td>
-                      <td className="p-2">
-                        <StatusChip
-                          label={t(`warehouse.transfer_status.${r.status}`)}
-                          tone={transferStatusTone(r.status)}
-                        />
-                      </td>
-                      <td className="p-2">{format.number(r.line_count)}</td>
-                      <td className="text-muted-foreground p-2 text-xs whitespace-nowrap">
-                        {format.dateTime(r.created_at)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </ListBody>
-          <Pager
-            page={page}
-            pages={pages}
-            total={total}
-            busy={list.isFetching}
-            hidden={rows.length === 0 && page === 0}
-            onPage={setPage}
+            rowCount={list.data?.total ?? 0}
+            state={listState.tableState}
+            features={{
+              persistKey: TRANSFERS_PERSIST_KEY,
+              rowSelection: false,
+              viewMode: true,
+            }}
+            renderGridItem={(r) => (
+              <div className="space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-mono text-sm font-semibold" dir="ltr">
+                    {r.transfer_no}
+                  </span>
+                  <StatusChip
+                    label={t(`warehouse.transfer_status.${r.status}`)}
+                    tone={transferStatusTone(r.status)}
+                  />
+                </div>
+                <p className="inline-flex items-center gap-1 text-sm">
+                  {r.from_warehouse.code}
+                  <MoveRight className="size-3 rtl:rotate-180" />
+                  {r.to_warehouse.code}
+                </p>
+                <div className="text-muted-foreground flex justify-between gap-2 text-xs">
+                  <span>{format.number(r.line_count)}</span>
+                  <span>{format.dateTime(r.created_at)}</span>
+                </div>
+              </div>
+            )}
+            toolbarExtra={
+              <EntityToolbar
+                onRefresh={() => void list.refetch()}
+                refreshDisabled={list.isFetching}
+              />
+            }
           />
         </CardContent>
       </Card>
